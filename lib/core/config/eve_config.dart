@@ -31,20 +31,17 @@ abstract class EveConfig {
   static const String oauthRevokeUrl =
       'https://login.eveonline.com/v2/oauth/revoke';
 
-  /// OAuth redirect URI for mobile platforms.
-  static const String mobileRedirectUri = 'mimir://callback';
+  /// OAuth redirect URI (same for all platforms).
+  /// EVE requires custom schemes to start with "eveauth".
+  static const String redirectUri = 'eveauth-mimir://callback';
 
-  /// OAuth redirect URI for desktop platforms.
-  /// Uses a local server to receive the callback.
-  static const String desktopRedirectUri = 'http://localhost:23741/callback';
-
-  /// Port for desktop OAuth callback server.
-  static const int desktopCallbackPort = 23741;
+  /// URL scheme for deep linking.
+  static const String urlScheme = 'eveauth-mimir';
 
   /// EVE Developer Application Client ID.
-  /// This should be set after registering at developers.eveonline.com.
-  /// TODO: Replace with actual client ID after registration.
-  static const String clientId = 'YOUR_CLIENT_ID_HERE';
+  /// Registered at developers.eveonline.com for Mimir app.
+  /// Public per OAuth PKCE spec - no client secret needed.
+  static const String clientId = '43d0fef53e004c3e856ca3a716769125';
 
   // ==========================================================================
   // OAuth Scopes (Phase 1)

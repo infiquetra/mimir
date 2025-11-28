@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../features/characters/presentation/add_character_screen.dart';
+import '../../features/characters/presentation/character_selector.dart';
 
 /// Application route paths.
 abstract class AppRoutes {
@@ -65,17 +69,14 @@ GoRouter createRouter() {
       // Add character route (modal)
       GoRoute(
         path: AppRoutes.addCharacter,
-        builder: (context, state) => const PlaceholderScreen(
-          title: 'Add Character',
-          icon: Icons.person_add,
-        ),
+        builder: (context, state) => const AddCharacterScreen(),
       ),
     ],
   );
 }
 
 /// Main scaffold with adaptive navigation (bottom nav on mobile, rail on desktop).
-class MainScaffold extends StatelessWidget {
+class MainScaffold extends ConsumerWidget {
   const MainScaffold({
     required this.navigationShell,
     super.key,
@@ -84,7 +85,7 @@ class MainScaffold extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDesktop = MediaQuery.sizeOf(context).width >= 600;
 
     if (isDesktop) {
@@ -93,8 +94,12 @@ class MainScaffold extends StatelessWidget {
           children: [
             NavigationRail(
               selectedIndex: navigationShell.currentIndex,
-              onDestinationSelected: _onDestinationSelected,
+              onDestinationSelected: (index) => _onDestinationSelected(index),
               labelType: NavigationRailLabelType.all,
+              leading: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: CharacterSelector(),
+              ),
               destinations: const [
                 NavigationRailDestination(
                   icon: Icon(Icons.dashboard_outlined),
@@ -124,7 +129,7 @@ class MainScaffold extends StatelessWidget {
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: _onDestinationSelected,
+        onDestinationSelected: (index) => _onDestinationSelected(index),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
@@ -155,7 +160,7 @@ class MainScaffold extends StatelessWidget {
 }
 
 /// Placeholder screen for routes not yet implemented.
-class PlaceholderScreen extends StatelessWidget {
+class PlaceholderScreen extends ConsumerWidget {
   const PlaceholderScreen({
     required this.title,
     required this.icon,
@@ -166,10 +171,16 @@ class PlaceholderScreen extends StatelessWidget {
   final IconData icon;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
+        actions: [
+          // Show character selector in AppBar on mobile.
+          if (isMobile) const CharacterSelector(),
+        ],
       ),
       body: Center(
         child: Column(

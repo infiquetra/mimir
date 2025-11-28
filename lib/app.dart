@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/auth/deep_link_handler.dart';
 import 'core/di/providers.dart';
 import 'core/theme/app_theme.dart';
 
@@ -10,6 +11,7 @@ import 'core/theme/app_theme.dart';
 /// - Material app with go_router for navigation
 /// - Theme switching (light/dark/system)
 /// - Riverpod state management
+/// - Deep link handling for OAuth callbacks
 class MimirApp extends ConsumerWidget {
   const MimirApp({super.key});
 
@@ -17,6 +19,10 @@ class MimirApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+
+    // Initialize deep link handler for OAuth callbacks.
+    // Reading the provider causes it to be created and start listening.
+    ref.watch(deepLinkHandlerProvider);
 
     return MaterialApp.router(
       title: 'Mimir',
