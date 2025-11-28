@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../database/app_database.dart';
 import '../router/app_router.dart';
 
 /// Provider for the application router.
@@ -8,6 +9,16 @@ import '../router/app_router.dart';
 /// This is a singleton that persists for the lifetime of the app.
 final routerProvider = Provider<GoRouter>((ref) {
   return createRouter();
+});
+
+/// Provider for the application database.
+///
+/// This is a singleton that persists for the lifetime of the app.
+/// Drift handles connection pooling and thread safety.
+final databaseProvider = Provider<AppDatabase>((ref) {
+  final db = AppDatabase();
+  ref.onDispose(() => db.close());
+  return db;
 });
 
 /// Provider for tracking the current theme mode.
