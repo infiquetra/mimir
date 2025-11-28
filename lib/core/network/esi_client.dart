@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../auth/auth_providers.dart';
@@ -17,6 +18,12 @@ class EsiClient {
   final Dio _dio;
   final TokenManager _tokenManager;
   final OAuthService _oauthService;
+
+  /// Tracks remaining error limit (ESI returns 429 if this hits 0).
+  int _errorLimitRemain = 100;
+
+  /// Timestamp when the error limit will reset.
+  DateTime? _errorLimitReset;
 
   EsiClient({
     required TokenManager tokenManager,
@@ -39,7 +46,35 @@ class EsiClient {
     _dio.options.queryParameters = {
       'datasource': EveConfig.datasource,
     };
+
+    // Add interceptor for error handling and logging.
+    _dio.interceptors.add(_EsiInterceptor(this));
   }
+
+  /// Updates error limit tracking from response headers.
+  void _updateErrorLimit(Response response) {
+    final remainHeader = response.headers.value('X-ESI-Error-Limit-Remain');
+    final resetHeader = response.headers.value('X-ESI-Error-Limit-Reset');
+
+    if (remainHeader != null) {
+      _errorLimitRemain = int.tryParse(remainHeader) ?? _errorLimitRemain;
+    }
+    if (resetHeader != null) {
+      final resetSeconds = int.tryParse(resetHeader);
+      if (resetSeconds != null) {
+        _errorLimitReset = DateTime.now().add(Duration(seconds: resetSeconds));
+      }
+    }
+  }
+
+  /// Gets the current error limit remaining.
+  int get errorLimitRemain => _errorLimitRemain;
+
+  /// Gets when the error limit will reset (if known).
+  DateTime? get errorLimitReset => _errorLimitReset;
+
+  /// Whether we're at risk of being rate limited.
+  bool get isNearRateLimit => _errorLimitRemain < 20;
 
   /// Makes an authenticated GET request to ESI.
   ///
@@ -127,6 +162,66 @@ class EsiClient {
     return '${EveConfig.imageServerUrl}/characters/$characterId/portrait?size=$size';
   }
 
+  /// Gets the character's trained skills.
+  ///
+  /// Returns all skills the character has trained, with levels and SP.
+  Future<CharacterSkills> getCharacterSkills(int characterId) async {
+    final response = await authenticatedGet<Map<String, dynamic>>(
+      '/characters/$characterId/skills/',
+      characterId: characterId,
+    );
+
+    return CharacterSkills.fromJson(response.data!);
+  }
+
+  /// Gets the character's attributes.
+  ///
+  /// Returns intelligence, memory, perception, willpower, charisma.
+  Future<CharacterAttributes> getCharacterAttributes(int characterId) async {
+    final response = await authenticatedGet<Map<String, dynamic>>(
+      '/characters/$characterId/attributes/',
+      characterId: characterId,
+    );
+
+    return CharacterAttributes.fromJson(response.data!);
+  }
+
+  // ============================================================================
+  // Corporation API
+  // ============================================================================
+
+  /// Gets public corporation information.
+  Future<CorporationInfo> getCorporationInfo(int corporationId) async {
+    final response = await publicGet<Map<String, dynamic>>(
+      '/corporations/$corporationId/',
+    );
+
+    return CorporationInfo.fromJson(response.data!);
+  }
+
+  /// Gets the corporation's logo URL.
+  String getCorporationLogoUrl(int corporationId, {int size = 128}) {
+    return '${EveConfig.imageServerUrl}/corporations/$corporationId/logo?size=$size';
+  }
+
+  // ============================================================================
+  // Alliance API
+  // ============================================================================
+
+  /// Gets public alliance information.
+  Future<AllianceInfo> getAllianceInfo(int allianceId) async {
+    final response = await publicGet<Map<String, dynamic>>(
+      '/alliances/$allianceId/',
+    );
+
+    return AllianceInfo.fromJson(response.data!);
+  }
+
+  /// Gets the alliance's logo URL.
+  String getAllianceLogoUrl(int allianceId, {int size = 128}) {
+    return '${EveConfig.imageServerUrl}/alliances/$allianceId/logo?size=$size';
+  }
+
   // ============================================================================
   // Skills API
   // ============================================================================
@@ -175,6 +270,70 @@ class EsiClient {
 }
 
 // ============================================================================
+// Dio Interceptor
+// ============================================================================
+
+/// Interceptor for ESI-specific error handling and logging.
+class _EsiInterceptor extends Interceptor {
+  final EsiClient _client;
+
+  _EsiInterceptor(this._client);
+
+  @override
+  void onResponse(Response response, ResponseInterceptorHandler handler) {
+    // Update error limit tracking from headers.
+    _client._updateErrorLimit(response);
+
+    // Log successful requests in debug mode.
+    if (kDebugMode) {
+      debugPrint('ESI ${response.requestOptions.method} ${response.requestOptions.path} '
+          '-> ${response.statusCode}');
+    }
+
+    handler.next(response);
+  }
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    // Convert Dio errors to ESI exceptions.
+    final statusCode = err.response?.statusCode;
+    final data = err.response?.data;
+
+    String message;
+    String? errorCode;
+
+    if (data is Map<String, dynamic>) {
+      message = data['error'] as String? ?? err.message ?? 'Unknown error';
+      errorCode = data['error_code'] as String?;
+    } else {
+      message = err.message ?? 'Unknown error';
+    }
+
+    // Log errors.
+    debugPrint('ESI Error: $message (status: $statusCode, code: $errorCode)');
+
+    // Update error limit if present in error response.
+    if (err.response != null) {
+      _client._updateErrorLimit(err.response!);
+    }
+
+    // Wrap in EsiException for consistent handling.
+    handler.reject(
+      DioException(
+        requestOptions: err.requestOptions,
+        response: err.response,
+        type: err.type,
+        error: EsiException(
+          message,
+          statusCode: statusCode,
+          errorCode: errorCode,
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
 // Response Models
 // ============================================================================
 
@@ -184,12 +343,18 @@ class CharacterPublicInfo {
   final DateTime birthday;
   final String name;
   final int? allianceId;
+  final String? description;
+  final int? factionId;
+  final String? title;
 
   const CharacterPublicInfo({
     required this.corporationId,
     required this.birthday,
     required this.name,
     this.allianceId,
+    this.description,
+    this.factionId,
+    this.title,
   });
 
   factory CharacterPublicInfo.fromJson(Map<String, dynamic> json) {
@@ -198,6 +363,200 @@ class CharacterPublicInfo {
       birthday: DateTime.parse(json['birthday'] as String),
       name: json['name'] as String,
       allianceId: json['alliance_id'] as int?,
+      description: json['description'] as String?,
+      factionId: json['faction_id'] as int?,
+      title: json['title'] as String?,
+    );
+  }
+}
+
+/// Character skills summary from ESI.
+class CharacterSkills {
+  final int totalSp;
+  final int? unallocatedSp;
+  final List<Skill> skills;
+
+  const CharacterSkills({
+    required this.totalSp,
+    this.unallocatedSp,
+    required this.skills,
+  });
+
+  factory CharacterSkills.fromJson(Map<String, dynamic> json) {
+    return CharacterSkills(
+      totalSp: json['total_sp'] as int,
+      unallocatedSp: json['unallocated_sp'] as int?,
+      skills: (json['skills'] as List<dynamic>)
+          .map((s) => Skill.fromJson(s as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+/// A single trained skill.
+class Skill {
+  final int skillId;
+  final int trainedSkillLevel;
+  final int skillpointsInSkill;
+  final int activeSkillLevel;
+
+  const Skill({
+    required this.skillId,
+    required this.trainedSkillLevel,
+    required this.skillpointsInSkill,
+    required this.activeSkillLevel,
+  });
+
+  factory Skill.fromJson(Map<String, dynamic> json) {
+    return Skill(
+      skillId: json['skill_id'] as int,
+      trainedSkillLevel: json['trained_skill_level'] as int,
+      skillpointsInSkill: json['skillpoints_in_skill'] as int,
+      activeSkillLevel: json['active_skill_level'] as int,
+    );
+  }
+}
+
+/// Character attributes from ESI.
+class CharacterAttributes {
+  final int intelligence;
+  final int memory;
+  final int perception;
+  final int willpower;
+  final int charisma;
+  final int? bonusRemaps;
+  final DateTime? lastRemapDate;
+  final DateTime? accruedRemapCooldownDate;
+
+  const CharacterAttributes({
+    required this.intelligence,
+    required this.memory,
+    required this.perception,
+    required this.willpower,
+    required this.charisma,
+    this.bonusRemaps,
+    this.lastRemapDate,
+    this.accruedRemapCooldownDate,
+  });
+
+  factory CharacterAttributes.fromJson(Map<String, dynamic> json) {
+    return CharacterAttributes(
+      intelligence: json['intelligence'] as int,
+      memory: json['memory'] as int,
+      perception: json['perception'] as int,
+      willpower: json['willpower'] as int,
+      charisma: json['charisma'] as int,
+      bonusRemaps: json['bonus_remaps'] as int?,
+      lastRemapDate: json['last_remap_date'] != null
+          ? DateTime.parse(json['last_remap_date'] as String)
+          : null,
+      accruedRemapCooldownDate: json['accrued_remap_cooldown_date'] != null
+          ? DateTime.parse(json['accrued_remap_cooldown_date'] as String)
+          : null,
+    );
+  }
+
+  /// Calculates SP per hour for training a skill with given attributes.
+  double spPerHour(int primaryAttribute, int secondaryAttribute) {
+    final primary = _getAttributeValue(primaryAttribute);
+    final secondary = _getAttributeValue(secondaryAttribute);
+    return (primary + secondary / 2) * 60;
+  }
+
+  int _getAttributeValue(int attributeId) {
+    switch (attributeId) {
+      case 164: // Charisma
+        return charisma;
+      case 165: // Intelligence
+        return intelligence;
+      case 166: // Memory
+        return memory;
+      case 167: // Perception
+        return perception;
+      case 168: // Willpower
+        return willpower;
+      default:
+        return 0;
+    }
+  }
+}
+
+/// Corporation information from ESI.
+class CorporationInfo {
+  final String name;
+  final String ticker;
+  final int memberCount;
+  final int ceoId;
+  final int? allianceId;
+  final String? description;
+  final DateTime? dateFounded;
+  final int? homeStationId;
+  final double? taxRate;
+  final String? url;
+  final bool? warEligible;
+
+  const CorporationInfo({
+    required this.name,
+    required this.ticker,
+    required this.memberCount,
+    required this.ceoId,
+    this.allianceId,
+    this.description,
+    this.dateFounded,
+    this.homeStationId,
+    this.taxRate,
+    this.url,
+    this.warEligible,
+  });
+
+  factory CorporationInfo.fromJson(Map<String, dynamic> json) {
+    return CorporationInfo(
+      name: json['name'] as String,
+      ticker: json['ticker'] as String,
+      memberCount: json['member_count'] as int,
+      ceoId: json['ceo_id'] as int,
+      allianceId: json['alliance_id'] as int?,
+      description: json['description'] as String?,
+      dateFounded: json['date_founded'] != null
+          ? DateTime.parse(json['date_founded'] as String)
+          : null,
+      homeStationId: json['home_station_id'] as int?,
+      taxRate: (json['tax_rate'] as num?)?.toDouble(),
+      url: json['url'] as String?,
+      warEligible: json['war_eligible'] as bool?,
+    );
+  }
+}
+
+/// Alliance information from ESI.
+class AllianceInfo {
+  final String name;
+  final String ticker;
+  final int creatorCorporationId;
+  final int creatorId;
+  final DateTime dateFounded;
+  final int? executorCorporationId;
+  final int? factionId;
+
+  const AllianceInfo({
+    required this.name,
+    required this.ticker,
+    required this.creatorCorporationId,
+    required this.creatorId,
+    required this.dateFounded,
+    this.executorCorporationId,
+    this.factionId,
+  });
+
+  factory AllianceInfo.fromJson(Map<String, dynamic> json) {
+    return AllianceInfo(
+      name: json['name'] as String,
+      ticker: json['ticker'] as String,
+      creatorCorporationId: json['creator_corporation_id'] as int,
+      creatorId: json['creator_id'] as int,
+      dateFounded: DateTime.parse(json['date_founded'] as String),
+      executorCorporationId: json['executor_corporation_id'] as int?,
+      factionId: json['faction_id'] as int?,
     );
   }
 }
@@ -252,6 +611,9 @@ class WalletJournalItem {
   final int? secondPartyId;
   final String? description;
   final DateTime date;
+  final String? reason;
+  final int? contextId;
+  final String? contextIdType;
 
   const WalletJournalItem({
     required this.id,
@@ -262,6 +624,9 @@ class WalletJournalItem {
     this.secondPartyId,
     this.description,
     required this.date,
+    this.reason,
+    this.contextId,
+    this.contextIdType,
   });
 
   factory WalletJournalItem.fromJson(Map<String, dynamic> json) {
@@ -274,6 +639,9 @@ class WalletJournalItem {
       secondPartyId: json['second_party_id'] as int?,
       description: json['description'] as String?,
       date: DateTime.parse(json['date'] as String),
+      reason: json['reason'] as String?,
+      contextId: json['context_id'] as int?,
+      contextIdType: json['context_id_type'] as String?,
     );
   }
 }
@@ -301,6 +669,14 @@ class EsiException implements Exception {
 
   /// Whether this error indicates rate limiting.
   bool get isRateLimited => statusCode == 420;
+
+  /// Whether this error is a server error (5xx).
+  bool get isServerError =>
+      statusCode != null && statusCode! >= 500 && statusCode! < 600;
+
+  /// Whether this error is a client error (4xx).
+  bool get isClientError =>
+      statusCode != null && statusCode! >= 400 && statusCode! < 500;
 }
 
 /// Provider for the ESI client.
