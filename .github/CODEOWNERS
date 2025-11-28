@@ -1,0 +1,19 @@
+# Default owners for everything in the repo
+* @namredips
+
+# Core application
+/lib/ @namredips
+
+# Platform-specific code
+/android/ @namredips
+/ios/ @namredips
+/macos/ @namredips
+/windows/ @namredips
+/linux/ @namredips
+/web/ @namredips
+
+# Internal packages
+/packages/ @namredips
+
+# CI/CD and configuration
+/.github/ @namredips
