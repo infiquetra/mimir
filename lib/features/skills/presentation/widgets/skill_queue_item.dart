@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/sde/sde_providers.dart';
 import '../../../../core/utils/formatters.dart';
 
 /// Widget displaying a single skill queue entry.
 ///
-/// Shows the skill ID (name will come from SDE later), target level,
-/// and training time remaining.
-class SkillQueueItemWidget extends StatelessWidget {
+/// Shows the skill name from SDE, target level, and training time remaining.
+/// Falls back to "Skill #<id>" if the SDE data is not available.
+class SkillQueueItemWidget extends ConsumerWidget {
   const SkillQueueItemWidget({
     required this.entry,
     this.isCurrentlyTraining = false,
@@ -18,8 +20,9 @@ class SkillQueueItemWidget extends StatelessWidget {
   final bool isCurrentlyTraining;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final skillNameAsync = ref.watch(skillNameProvider(entry.skillId));
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -36,12 +39,31 @@ class SkillQueueItemWidget extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Skill name (ID for now, SDE will provide names later).
-                  Text(
-                    'Skill #${entry.skillId}',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight:
-                          isCurrentlyTraining ? FontWeight.bold : FontWeight.normal,
+                  // Skill name from SDE.
+                  skillNameAsync.when(
+                    data: (skillName) => Text(
+                      skillName,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: isCurrentlyTraining
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    loading: () => Container(
+                      height: 20,
+                      width: 120,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    error: (_, __) => Text(
+                      'Skill #${entry.skillId}',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: isCurrentlyTraining
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/sde/sde_providers.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/refresh_app_bar_action.dart';
 import '../../characters/data/character_providers.dart';
@@ -301,14 +302,18 @@ class _WalletBalanceCard extends StatelessWidget {
 }
 
 /// Card displaying the currently training skill.
-class _CurrentTrainingCard extends StatelessWidget {
+class _CurrentTrainingCard extends ConsumerWidget {
   const _CurrentTrainingCard({required this.entry});
 
   final SkillQueueEntry? entry;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+
+    // Fetch skill name from SDE if entry exists.
+    final skillNameAsync =
+        entry != null ? ref.watch(skillNameProvider(entry!.skillId)) : null;
 
     return Card(
       child: Padding(
@@ -339,10 +344,26 @@ class _CurrentTrainingCard extends StatelessWidget {
                 ),
               )
             else ...[
-              Text(
-                'Skill #${entry!.skillId}',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
+              skillNameAsync!.when(
+                data: (skillName) => Text(
+                  skillName,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                loading: () => Container(
+                  height: 24,
+                  width: 150,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                error: (_, __) => Text(
+                  'Skill #${entry!.skillId}',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(height: 4),
@@ -408,7 +429,7 @@ class _CurrentTrainingCard extends StatelessWidget {
 }
 
 /// Card showing a preview of the skill queue.
-class _SkillQueuePreviewCard extends StatelessWidget {
+class _SkillQueuePreviewCard extends ConsumerWidget {
   const _SkillQueuePreviewCard({
     required this.skills,
     required this.onViewAll,
@@ -418,7 +439,7 @@ class _SkillQueuePreviewCard extends StatelessWidget {
   final VoidCallback onViewAll;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
     return Card(
@@ -462,15 +483,20 @@ class _SkillQueuePreviewCard extends StatelessWidget {
                 ),
               )
             else
-              ...skills.map((entry) => _buildSkillRow(context, entry)),
+              ...skills.map((entry) => _buildSkillRow(context, ref, entry)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSkillRow(BuildContext context, SkillQueueEntry entry) {
+  Widget _buildSkillRow(
+    BuildContext context,
+    WidgetRef ref,
+    SkillQueueEntry entry,
+  ) {
     final theme = Theme.of(context);
+    final skillNameAsync = ref.watch(skillNameProvider(entry.skillId));
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -499,9 +525,23 @@ class _SkillQueuePreviewCard extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              'Skill #${entry.skillId} → Level ${entry.finishedLevel}',
-              style: theme.textTheme.bodyMedium,
+            child: skillNameAsync.when(
+              data: (skillName) => Text(
+                '$skillName → Level ${entry.finishedLevel}',
+                style: theme.textTheme.bodyMedium,
+              ),
+              loading: () => Container(
+                height: 16,
+                width: 120,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              error: (_, __) => Text(
+                'Skill #${entry.skillId} → Level ${entry.finishedLevel}',
+                style: theme.textTheme.bodyMedium,
+              ),
             ),
           ),
         ],
