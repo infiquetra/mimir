@@ -1,0 +1,2 @@
+# SDE extraction script dependencies
+PyYAML>=6.0

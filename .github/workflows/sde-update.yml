@@ -1,0 +1,221 @@
+# SDE Auto-Update Workflow
+#
+# Automatically checks for new EVE Online Static Data Export (SDE) releases
+# and creates GitHub releases with extracted game data.
+#
+# Schedule: Weekly on Sundays at 00:00 UTC
+# Manual: Can be triggered manually via workflow_dispatch
+#
+# To add new data types:
+# 1. Create a new extractor in scripts/sde/extractors/
+# 2. Register it in scripts/sde/extractors/__init__.py
+# 3. The workflow will automatically include it in releases
+
+name: SDE Update
+
+on:
+  schedule:
+    # Run weekly on Sunday at midnight UTC
+    # CCP typically releases SDE updates with major patches
+    - cron: "0 0 * * 0"
+
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: "Force update even if version matches"
+        required: false
+        default: "false"
+        type: boolean
+      version_override:
+        description: "Override version string (YYYYMMDD format)"
+        required: false
+        type: string
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  check-and-update:
+    name: Check for SDE Updates
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install -r scripts/sde/requirements.txt
+
+      - name: Get current manifest version
+        id: current
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          # Try to fetch current manifest from releases
+          CURRENT_VERSION=$(curl -sL "https://github.com/${REPO}/releases/download/sde-latest/manifest.json" 2>/dev/null | jq -r '.version // "none"' || echo "none")
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current SDE version: $CURRENT_VERSION"
+
+      - name: Download SDE from Fuzzwork
+        id: download
+        env:
+          VERSION_OVERRIDE: ${{ inputs.version_override }}
+        run: |
+          mkdir -p /tmp/sde-work
+          cd /tmp/sde-work
+
+          echo "Downloading SDE from Fuzzwork..."
+          curl -L -o sde.zip https://www.fuzzwork.co.uk/dump/latest/sde.zip
+
+          echo "Extracting SDE..."
+          unzip -q sde.zip
+
+          # Try to determine version from SDE content
+          # Check for version in common locations
+          if [ -f sde/version.txt ]; then
+            SDE_VERSION=$(grep -oE '[0-9]{8}' sde/version.txt | head -1)
+          else
+            # Fallback: use date from Fuzzwork (check last-modified header)
+            LAST_MODIFIED=$(curl -sI https://www.fuzzwork.co.uk/dump/latest/sde.zip | grep -i 'last-modified' | cut -d' ' -f2-)
+            if [ -n "$LAST_MODIFIED" ]; then
+              SDE_VERSION=$(date -d "$LAST_MODIFIED" +%Y%m%d 2>/dev/null || date +%Y%m%d)
+            else
+              SDE_VERSION=$(date +%Y%m%d)
+            fi
+          fi
+
+          # Allow version override via env var
+          if [ -n "$VERSION_OVERRIDE" ]; then
+            SDE_VERSION="$VERSION_OVERRIDE"
+          fi
+
+          echo "version=$SDE_VERSION" >> $GITHUB_OUTPUT
+          echo "Detected SDE version: $SDE_VERSION"
+
+      - name: Check if update needed
+        id: check
+        env:
+          CURRENT_VERSION: ${{ steps.current.outputs.version }}
+          NEW_VERSION: ${{ steps.download.outputs.version }}
+          FORCE_UPDATE: ${{ inputs.force_update }}
+        run: |
+          if [ "$FORCE_UPDATE" = "true" ]; then
+            echo "Force update requested"
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+          elif [ "$CURRENT_VERSION" = "none" ]; then
+            echo "No current version found, update needed"
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+          elif [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
+            echo "New version available: $NEW_VERSION (current: $CURRENT_VERSION)"
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+          else
+            echo "Already up to date: $CURRENT_VERSION"
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run extraction
+        if: steps.check.outputs.needs_update == 'true'
+        env:
+          SDE_VERSION: ${{ steps.download.outputs.version }}
+        run: |
+          mkdir -p /tmp/sde-output
+
+          python scripts/sde/extract_sde.py \
+            --sde-path /tmp/sde-work/sde \
+            --output-dir /tmp/sde-output \
+            --version "$SDE_VERSION"
+
+          echo "Extraction complete. Output files:"
+          ls -la /tmp/sde-output/
+
+      - name: Create versioned release
+        if: steps.check.outputs.needs_update == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SDE_VERSION: ${{ steps.download.outputs.version }}
+        run: |
+          TAG="sde-v${SDE_VERSION}"
+
+          # Check if release already exists
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists, deleting..."
+            gh release delete "$TAG" --yes
+          fi
+
+          # Delete tag if it exists
+          git tag -d "$TAG" 2>/dev/null || true
+          git push origin ":refs/tags/$TAG" 2>/dev/null || true
+
+          # Read skill count from manifest
+          SKILL_COUNT=$(jq -r '.skillCount' /tmp/sde-output/manifest.json)
+
+          # Create release with data files
+          gh release create "$TAG" \
+            --title "SDE v${SDE_VERSION} - EVE Online Static Data" \
+            --notes "EVE Online Static Data Export version ${SDE_VERSION}
+
+          ## Contents
+          - **skills.json**: ${SKILL_COUNT} skills with groups and categories
+
+          ## Usage
+          This data is automatically downloaded by Mimir when updates are available.
+
+          ## Source
+          Extracted from [Fuzzwork SDE](https://www.fuzzwork.co.uk/dump/)" \
+            /tmp/sde-output/skills.json
+
+          echo "Created release: $TAG"
+
+      - name: Update latest manifest release
+        if: steps.check.outputs.needs_update == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SDE_VERSION: ${{ steps.download.outputs.version }}
+        run: |
+          # Delete existing sde-latest release if it exists
+          if gh release view "sde-latest" > /dev/null 2>&1; then
+            echo "Deleting existing sde-latest release..."
+            gh release delete "sde-latest" --yes
+          fi
+
+          # Delete tag if it exists
+          git tag -d "sde-latest" 2>/dev/null || true
+          git push origin ":refs/tags/sde-latest" 2>/dev/null || true
+
+          # Create new sde-latest release with manifest
+          gh release create "sde-latest" \
+            --title "SDE Latest - Version Manifest" \
+            --notes "Current SDE version manifest for auto-updates.
+
+          **Current Version**: ${SDE_VERSION}
+
+          This release always contains the latest manifest.json pointing to the current SDE version.
+          The app checks this manifest on startup and in Settings to determine if an update is available." \
+            /tmp/sde-output/manifest.json
+
+          echo "Updated sde-latest manifest"
+
+      - name: Summary
+        if: always()
+        env:
+          CURRENT_VERSION: ${{ steps.current.outputs.version }}
+          NEW_VERSION: ${{ steps.download.outputs.version }}
+          NEEDS_UPDATE: ${{ steps.check.outputs.needs_update }}
+          FORCE_UPDATE: ${{ inputs.force_update }}
+        run: |
+          echo "## SDE Update Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Current Version | $CURRENT_VERSION |" >> $GITHUB_STEP_SUMMARY
+          echo "| New Version | $NEW_VERSION |" >> $GITHUB_STEP_SUMMARY
+          echo "| Update Needed | $NEEDS_UPDATE |" >> $GITHUB_STEP_SUMMARY
+          echo "| Force Update | $FORCE_UPDATE |" >> $GITHUB_STEP_SUMMARY
