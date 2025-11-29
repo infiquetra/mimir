@@ -95,6 +95,11 @@ class TrayService with TrayListener {
       ),
       MenuItem.separator(),
       MenuItem(
+        key: 'onboarding',
+        label: 'Show Tutorial',
+      ),
+      MenuItem.separator(),
+      MenuItem(
         key: 'quit',
         label: 'Quit Mimir',
       ),
@@ -157,6 +162,10 @@ class TrayService with TrayListener {
         break;
       case 'settings':
         await windowService.openWindow(WindowType.settings);
+        await refreshMenu();
+        break;
+      case 'onboarding':
+        await windowService.openWindow(WindowType.onboarding);
         await refreshMenu();
         break;
       case 'quit':

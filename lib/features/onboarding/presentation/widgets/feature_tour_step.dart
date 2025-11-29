@@ -16,14 +16,15 @@ class FeatureTourStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 700),
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+    return SingleChildScrollView(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 700),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
               // Title
               Text(
                 'What Mimir Can Do',
@@ -76,7 +77,8 @@ class FeatureTourStep extends StatelessWidget {
                   ),
                 ],
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
