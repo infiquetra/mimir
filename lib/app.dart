@@ -8,12 +8,16 @@ import 'core/auth/deep_link_handler.dart';
 import 'core/di/providers.dart';
 import 'core/sde/sde_providers.dart';
 import 'core/sde/sde_update_providers.dart';
+import 'core/settings/app_settings.dart';
+import 'core/settings/settings_providers.dart';
 import 'core/theme/app_theme.dart';
+import 'core/window/window_service.dart';
+import 'core/window/window_types.dart';
 import 'features/characters/data/character_repository.dart';
 import 'features/skills/data/skill_repository.dart';
 import 'features/wallet/data/wallet_repository.dart';
 
-/// Provider that refreshes all data for the active character on app startup.
+/// Provider that handles app startup initialization.
 ///
 /// Initializes:
 /// - SDE (Static Data Export) for skill names and type data
@@ -23,7 +27,10 @@ import 'features/wallet/data/wallet_repository.dart';
 /// - Skill queue
 /// - Wallet balance and journal
 ///
-/// This ensures users see fresh data when they launch the app.
+/// Opens windows:
+/// - Onboarding (if first launch)
+/// - Dashboard (if user preference is set to openDashboard)
+/// - Nothing (if user preference is tray-only mode)
 final startupRefreshProvider = FutureProvider<void>((ref) async {
   // Initialize SDE first so skill names are available when UI renders.
   try {
@@ -84,6 +91,27 @@ final startupRefreshProvider = FutureProvider<void>((ref) async {
   } catch (e) {
     debugPrint('Startup refresh: Failed to refresh data: $e');
     // Don't rethrow - startup should continue even if refresh fails.
+  }
+
+  // Check startup settings and open appropriate window
+  try {
+    final settings = await ref.read(appSettingsProvider.future);
+
+    if (!settings.onboardingComplete) {
+      // First launch - show onboarding
+      debugPrint('Startup: Opening onboarding (first launch)');
+      await WindowService.instance.openWindow(WindowType.onboarding);
+    } else if (settings.startupBehavior == StartupBehavior.openDashboard) {
+      // Open Dashboard on startup (user preference)
+      debugPrint('Startup: Opening Dashboard (user preference)');
+      await WindowService.instance.openWindow(WindowType.dashboard);
+    } else {
+      // Tray only mode - do nothing
+      debugPrint('Startup: Tray only mode (user preference)');
+    }
+  } catch (e) {
+    debugPrint('Startup: Failed to check settings: $e');
+    // Continue - if settings check fails, just stay in tray mode
   }
 });
 

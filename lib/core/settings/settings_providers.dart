@@ -12,7 +12,7 @@ part 'settings_providers.g.dart';
 /// Settings repository provider.
 @riverpod
 SettingsRepository settingsRepository(SettingsRepositoryRef ref) {
-  final db = ref.watch(appDatabaseProvider);
+  final db = ref.watch(databaseProvider);
   return SettingsRepository(db);
 }
 
