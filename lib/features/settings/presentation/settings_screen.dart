@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/settings/app_settings.dart';
 import '../../../core/settings/settings_providers.dart';
-import '../../../core/settings/settings_repository.dart';
 import 'widgets/sde_update_card.dart';
 
 /// Settings screen for app configuration.

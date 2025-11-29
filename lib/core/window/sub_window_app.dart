@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/skills/presentation/skills_screen.dart';
 import '../../features/wallet/presentation/wallet_screen.dart';
@@ -119,12 +120,8 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
         // Main window shouldn't be opened as a sub-window
         return const StandaloneDashboardScreen();
       case WindowType.onboarding:
-        // Onboarding wizard for first-time users (placeholder for now)
-        return const Scaffold(
-          body: Center(
-            child: Text('Onboarding screen coming soon'),
-          ),
-        );
+        // Onboarding wizard for first-time users
+        return const OnboardingScreen();
     }
   }
 }
