@@ -386,25 +386,28 @@ class _AddCharacterIconButton extends StatelessWidget {
       padding: const EdgeInsets.only(left: 8),
       child: Tooltip(
         message: 'Add Character',
-        child: InkWell(
-          onTap: () => context.push(AppRoutes.addCharacter),
-          borderRadius: BorderRadius.circular(size / 2),
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.transparent,
-              border: Border.all(
-                color: theme.colorScheme.outline.withAlpha(77),
-                width: 1,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => context.push(AppRoutes.addCharacter),
+            borderRadius: BorderRadius.circular(size / 2),
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.transparent,
+                border: Border.all(
+                  color: theme.colorScheme.outline.withAlpha(77),
+                  width: 1,
+                ),
               ),
-            ),
-            alignment: Alignment.center,
-            child: Icon(
-              Icons.add,
-              size: size * 0.6,
-              color: theme.colorScheme.onSurfaceVariant,
+              alignment: Alignment.center,
+              child: Icon(
+                Icons.add,
+                size: size * 0.6,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ),
