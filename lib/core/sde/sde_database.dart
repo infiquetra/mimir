@@ -60,6 +60,25 @@ class SdeCategories extends Table {
   Set<Column> get primaryKey => {categoryId};
 }
 
+/// Metadata about the SDE data version and update status.
+///
+/// Stores key-value pairs for:
+/// - `version` - Installed SDE version (e.g., "20250805")
+/// - `eve_version` - EVE SDE release name (e.g., "sde-20250805-TRANQUILITY")
+/// - `last_check` - ISO8601 timestamp of last update check
+/// - `checksum` - SHA256 of installed skills.json
+/// - `skill_count` - Number of skills in the database
+class SdeMetadata extends Table {
+  /// Key for the metadata entry.
+  TextColumn get key => text()();
+
+  /// Value for the metadata entry.
+  TextColumn get value => text()();
+
+  @override
+  Set<Column> get primaryKey => {key};
+}
+
 /// Static Data Export database using Drift.
 ///
 /// Stores EVE Online reference data for offline lookups:
@@ -73,6 +92,7 @@ class SdeCategories extends Table {
   SdeTypes,
   SdeGroups,
   SdeCategories,
+  SdeMetadata,
 ])
 class SdeDatabase extends _$SdeDatabase {
   SdeDatabase() : super(_openConnection());
@@ -81,13 +101,19 @@ class SdeDatabase extends _$SdeDatabase {
   SdeDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (Migrator m) async {
         await m.createAll();
+      },
+      onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 2) {
+          // Version 2: Add SdeMetadata table for version tracking
+          await m.createTable(sdeMetadata);
+        }
       },
     );
   }
@@ -211,6 +237,38 @@ class SdeDatabase extends _$SdeDatabase {
       await delete(sdeGroups).go();
       await delete(sdeCategories).go();
     });
+  }
+
+  // Metadata operations
+
+  /// Get a metadata value by key.
+  Future<String?> getMetadata(String key) async {
+    final row = await (select(sdeMetadata)..where((m) => m.key.equals(key)))
+        .getSingleOrNull();
+    return row?.value;
+  }
+
+  /// Set a metadata value.
+  Future<void> setMetadata(String key, String value) async {
+    await into(sdeMetadata).insertOnConflictUpdate(
+      SdeMetadataCompanion.insert(key: key, value: value),
+    );
+  }
+
+  /// Get all metadata as a map.
+  Future<Map<String, String>> getAllMetadata() async {
+    final rows = await select(sdeMetadata).get();
+    return {for (final row in rows) row.key: row.value};
+  }
+
+  /// Delete a metadata key.
+  Future<void> deleteMetadata(String key) async {
+    await (delete(sdeMetadata)..where((m) => m.key.equals(key))).go();
+  }
+
+  /// Clear all metadata.
+  Future<void> clearMetadata() async {
+    await delete(sdeMetadata).go();
   }
 }
 
