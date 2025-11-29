@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/skills/presentation/skills_screen.dart';
 import '../../features/wallet/presentation/wallet_screen.dart';
 import '../sde/sde_providers.dart';
@@ -78,7 +79,10 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme(),
       home: sdeAsync.when(
-        data: (_) => _SubWindowScaffold(child: _buildScreen(_windowType)),
+        data: (_) => _SubWindowScaffold(
+          windowType: _windowType,
+          child: _buildScreen(_windowType),
+        ),
         loading: () => const _LoadingScreen(message: 'Loading skill data...'),
         error: (error, _) => _ErrorScreen(
           message: 'Failed to load skill data',
@@ -108,9 +112,11 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
       case WindowType.characters:
         // Standalone version with OAuth capability
         return const StandaloneCharactersScreen();
-      case WindowType.main:
       case WindowType.settings:
-        // Main window and Settings shouldn't be opened as sub-windows
+        // Settings screen without router dependencies
+        return const SettingsScreen();
+      case WindowType.main:
+        // Main window shouldn't be opened as a sub-window
         return const StandaloneDashboardScreen();
     }
   }
@@ -202,11 +208,16 @@ class _ErrorScreen extends StatelessWidget {
 
 /// Scaffold wrapper for all sub-window screens.
 ///
-/// Adds the character header bar above all content, with proper
-/// spacing for macOS traffic light buttons.
+/// Conditionally shows the character header bar based on window type.
+/// Dashboard, Skills, and Wallet windows show the header with refresh button.
+/// Characters and Settings windows do not show the header.
 class _SubWindowScaffold extends StatelessWidget {
-  const _SubWindowScaffold({required this.child});
+  const _SubWindowScaffold({
+    required this.windowType,
+    required this.child,
+  });
 
+  final WindowType windowType;
   final Widget child;
 
   /// Height of the macOS traffic light buttons safe area.
@@ -215,14 +226,17 @@ class _SubWindowScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMacOS = !kIsWeb && Platform.isMacOS;
+    final showHeader = windowType == WindowType.dashboard ||
+        windowType == WindowType.skills ||
+        windowType == WindowType.wallet;
 
     return Scaffold(
       body: Column(
         children: [
           // macOS traffic light buttons safe area.
           if (isMacOS) const SizedBox(height: _macOSTrafficLightHeight),
-          // Character header bar (full width).
-          const CharacterHeaderBar(),
+          // Character header bar (only for Dashboard, Skills, Wallet).
+          if (showHeader) CharacterHeaderBar(windowType: windowType),
           // Screen content.
           Expanded(child: child),
         ],

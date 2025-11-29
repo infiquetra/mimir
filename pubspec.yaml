@@ -32,13 +32,20 @@ dependencies:
   flutter_secure_storage: ^9.2.2
 
   # Auth & Deep Links
-  app_links: ^6.1.1
+  app_links: ^6.3.3
   url_launcher: ^6.2.6
 
   # UI
   cupertino_icons: ^1.0.6
   cached_network_image: ^3.3.1
   shimmer: ^3.0.0
+  flutter_staggered_grid_view: ^0.7.0
+  flutter_svg: ^2.0.9
+
+  # Desktop Multi-Window & System Tray
+  desktop_multi_window: ^0.2.0
+  tray_manager: ^0.5.2
+  window_manager: ^0.3.8
 
   # Crypto (for PKCE)
   crypto: ^3.0.3
@@ -72,3 +79,4 @@ flutter:
 
   assets:
     - assets/sde/
+    - assets/icons/eve/

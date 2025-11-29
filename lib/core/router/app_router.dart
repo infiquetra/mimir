@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/characters/presentation/add_character_screen.dart';
-import '../../features/characters/presentation/character_selector.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/skills/presentation/skills_screen.dart';
 import '../../features/wallet/presentation/wallet_screen.dart';
+import '../theme/eve_colors.dart';
+import '../widgets/neocom_navigation_rail.dart';
+import '../window/window_types.dart';
 
 /// Application route paths.
 abstract class AppRoutes {
@@ -95,47 +97,55 @@ class MainScaffold extends ConsumerWidget {
 
     if (isDesktop) {
       return Scaffold(
+        backgroundColor: EveColors.darkBackground,
         body: Row(
           children: [
-            NavigationRail(
+            NeocomNavigationRail(
               selectedIndex: navigationShell.currentIndex,
               onDestinationSelected: (index) => _onDestinationSelected(index),
-              labelType: NavigationRailLabelType.all,
-              leading: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: CharacterSelector(),
-              ),
               destinations: const [
-                NavigationRailDestination(
-                  icon: Icon(Icons.dashboard_outlined),
-                  selectedIcon: Icon(Icons.dashboard),
-                  label: Text('Dashboard'),
+                NeocomDestination(
+                  windowType: WindowType.dashboard,
+                  label: 'Dashboard',
                 ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.school_outlined),
-                  selectedIcon: Icon(Icons.school),
-                  label: Text('Skills'),
+                NeocomDestination(
+                  windowType: WindowType.skills,
+                  label: 'Skills',
                 ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.account_balance_wallet_outlined),
-                  selectedIcon: Icon(Icons.account_balance_wallet),
-                  label: Text('Wallet'),
+                NeocomDestination(
+                  windowType: WindowType.wallet,
+                  label: 'Wallet',
                 ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.settings_outlined),
-                  selectedIcon: Icon(Icons.settings),
-                  label: Text('Settings'),
+                NeocomDestination(
+                  windowType: WindowType.settings,
+                  label: 'Settings',
                 ),
               ],
             ),
-            const VerticalDivider(thickness: 1, width: 1),
+            // Subtle glowing divider.
+            Container(
+              width: 1,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    EveColors.evePrimary.withAlpha(13),
+                    EveColors.evePrimary.withAlpha(51),
+                    EveColors.evePrimary.withAlpha(13),
+                  ],
+                ),
+              ),
+            ),
             Expanded(child: navigationShell),
           ],
         ),
       );
     }
 
+    // Mobile layout with bottom navigation.
     return Scaffold(
+      backgroundColor: EveColors.darkBackground,
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
@@ -187,15 +197,9 @@ class PlaceholderScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isMobile = MediaQuery.sizeOf(context).width < 600;
-
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
-        actions: [
-          // Show character selector in AppBar on mobile.
-          if (isMobile) const CharacterSelector(),
-        ],
       ),
       body: Center(
         child: Column(
@@ -215,7 +219,8 @@ class PlaceholderScreen extends ConsumerWidget {
             Text(
               'Coming soon...',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
+                    color:
+                        Theme.of(context).colorScheme.onSurface.withAlpha(153),
                   ),
             ),
           ],

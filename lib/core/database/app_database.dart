@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -320,11 +321,53 @@ class AppDatabase extends _$AppDatabase {
   }
 }
 
+/// Global database path, set during main window initialization.
+/// Sub-windows should set this before creating AppDatabase.
+String? _globalDbPath;
+
+/// Whether this is a sub-window (set by main.dart).
+/// Sub-windows don't have access to native plugins like path_provider.
+bool _isSubWindow = false;
+
+/// Returns true if running in a sub-window context.
+///
+/// Sub-windows can't use native plugins (path_provider, etc.) because
+/// they run in separate Flutter engines without registered plugin channels.
+/// Use this to conditionally disable features that require native plugins.
+bool get isSubWindow => _isSubWindow;
+
+/// Sets the global database path for sub-windows.
+///
+/// Also marks this as a sub-window context, disabling native plugin usage.
+void setDatabasePath(String path) {
+  _globalDbPath = path;
+  _isSubWindow = true; // Path is only set for sub-windows
+  debugPrint('Database path set: $path');
+}
+
+/// Gets the database path (resolves it if not already set).
+Future<String> getDatabasePath() async {
+  if (_globalDbPath != null) return _globalDbPath!;
+
+  final dbFolder = await getApplicationDocumentsDirectory();
+  _globalDbPath = p.join(dbFolder.path, 'mimir.db');
+  return _globalDbPath!;
+}
+
 /// Opens the database connection.
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'mimir.db'));
-    return NativeDatabase.createInBackground(file);
+    try {
+      final path = await getDatabasePath();
+      final file = File(path);
+      debugPrint('Database: Opening at $path');
+      final db = NativeDatabase.createInBackground(file);
+      debugPrint('Database: Connection established successfully');
+      return db;
+    } catch (e, stack) {
+      debugPrint('Database: ERROR opening connection: $e');
+      debugPrint('Database: Stack trace: $stack');
+      rethrow;
+    }
   });
 }

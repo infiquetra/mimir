@@ -2,8 +2,10 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+
+import '../database/app_database.dart' show getDatabasePath;
 
 part 'sde_database.g.dart';
 
@@ -273,10 +275,26 @@ class SdeDatabase extends _$SdeDatabase {
 }
 
 /// Opens the SDE database connection.
+///
+/// Uses the shared database path from app_database.dart to ensure
+/// sub-windows can access the database without path_provider.
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'mimir_sde.db'));
-    return NativeDatabase.createInBackground(file);
+    try {
+      // Get the app database path and derive SDE path from it.
+      // This works in sub-windows because getDatabasePath() uses the
+      // global path set by main.dart before ProviderScope creation.
+      final appDbPath = await getDatabasePath();
+      final dbFolder = p.dirname(appDbPath);
+      final file = File(p.join(dbFolder, 'mimir_sde.db'));
+      debugPrint('SdeDatabase: Opening at ${file.path}');
+      final db = NativeDatabase.createInBackground(file);
+      debugPrint('SdeDatabase: Connection established successfully');
+      return db;
+    } catch (e, stack) {
+      debugPrint('SdeDatabase: ERROR opening connection: $e');
+      debugPrint('SdeDatabase: Stack trace: $stack');
+      rethrow;
+    }
   });
 }

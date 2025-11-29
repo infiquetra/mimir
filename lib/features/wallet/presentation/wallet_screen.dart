@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/database/app_database.dart';
+import '../../../core/database/app_database.dart' show WalletJournalEntry;
+import '../../../core/theme/eve_colors.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/eve_card.dart';
 import '../../../core/widgets/refresh_app_bar_action.dart';
+import '../../../core/widgets/space_background.dart';
 import '../../characters/data/character_providers.dart';
-import '../../characters/presentation/character_selector.dart';
 import '../data/wallet_providers.dart';
 import '../data/wallet_repository.dart';
 
@@ -22,58 +24,104 @@ class WalletScreen extends ConsumerWidget {
     final activeCharacter = ref.watch(activeCharacterProvider).valueOrNull;
     final walletJournal = ref.watch(walletJournalProvider);
     final walletBalance = ref.watch(walletBalanceProvider);
-    final isMobile = MediaQuery.sizeOf(context).width < 600;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Wallet'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          'Wallet',
+          style: TextStyle(
+            color: Colors.white,
+            shadows: [
+              Shadow(
+                color: EveColors.evePrimary.withAlpha(128),
+                blurRadius: 8,
+              ),
+            ],
+          ),
+        ),
         actions: [
           if (activeCharacter != null)
             RefreshAppBarAction(
               onRefresh: () => _refreshWallet(ref, activeCharacter.characterId),
             ),
-          if (isMobile) const CharacterSelector(),
         ],
       ),
-      body: activeCharacter == null
-          ? _buildNoCharacterState(context)
-          : RefreshIndicator(
-              onRefresh: () => _refreshWallet(ref, activeCharacter.characterId),
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  // Balance header.
-                  SliverToBoxAdapter(
-                    child: _buildBalanceHeader(context, ref, walletBalance),
-                  ),
+      body: SpaceBackground(
+        starDensity: 0.3,
+        nebulaOpacity: 0.06,
+        child: activeCharacter == null
+            ? _buildNoCharacterState(context)
+            : RefreshIndicator(
+                onRefresh: () =>
+                    _refreshWallet(ref, activeCharacter.characterId),
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    // Top padding for AppBar.
+                    SliverPadding(
+                      padding: EdgeInsets.only(
+                        top: MediaQuery.of(context).padding.top +
+                            kToolbarHeight +
+                            8,
+                      ),
+                    ),
 
-                  // Journal list.
-                  walletJournal.when(
-                    data: (journal) => journal.isEmpty
-                        ? SliverFillRemaining(
-                            child: _buildEmptyJournalState(context),
-                          )
-                        : SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) => _WalletJournalItem(
-                                entry: journal[index],
-                              ),
-                              childCount: journal.length,
-                            ),
+                    // Balance header.
+                    SliverToBoxAdapter(
+                      child: _buildBalanceHeader(context, ref, walletBalance),
+                    ),
+
+                    // Section header for journal.
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
+                        child: Text(
+                          'Recent Transactions',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: EveColors.evePrimary,
+                            letterSpacing: 0.5,
                           ),
-                    loading: () => const SliverFillRemaining(
-                      child: Center(child: CircularProgressIndicator()),
+                        ),
+                      ),
                     ),
-                    error: (error, stack) => SliverFillRemaining(
-                      child: _buildErrorState(context, ref, error),
-                    ),
-                  ),
 
-                  // Bottom padding.
-                  const SliverPadding(padding: EdgeInsets.only(bottom: 16)),
-                ],
+                    // Journal list.
+                    walletJournal.when(
+                      data: (journal) => journal.isEmpty
+                          ? SliverFillRemaining(
+                              child: _buildEmptyJournalState(context),
+                            )
+                          : SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) => _WalletJournalItem(
+                                  entry: journal[index],
+                                ),
+                                childCount: journal.length,
+                              ),
+                            ),
+                      loading: () => const SliverFillRemaining(
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: EveColors.evePrimary,
+                          ),
+                        ),
+                      ),
+                      error: (error, stack) => SliverFillRemaining(
+                        child: _buildErrorState(context, ref, error),
+                      ),
+                    ),
+
+                    // Bottom padding.
+                    const SliverPadding(padding: EdgeInsets.only(bottom: 16)),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 
@@ -82,58 +130,84 @@ class WalletScreen extends ConsumerWidget {
     WidgetRef ref,
     AsyncValue<double?> balanceAsync,
   ) {
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-        border: Border(
-          bottom: BorderSide(
-            color: theme.colorScheme.outlineVariant,
-            width: 1,
-          ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: EveCard(
+        glowColor: EveColors.eveSecondary,
+        glowIntensity: 0.5,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: EveColors.eveSecondary.withAlpha(26),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: EveColors.eveSecondary.withAlpha(77),
+                      width: 1,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.account_balance_wallet,
+                    color: EveColors.eveSecondary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'ISK Balance',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withAlpha(179),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            balanceAsync.when(
+              data: (balance) => Text(
+                balance != null ? formatIsk(balance) : 'No balance data',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: EveColors.eveSecondary,
+                  shadows: [
+                    Shadow(
+                      color: EveColors.eveSecondary.withAlpha(128),
+                      blurRadius: 12,
+                    ),
+                  ],
+                ),
+              ),
+              loading: () => Text(
+                'Loading...',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white.withAlpha(128),
+                ),
+              ),
+              error: (_, __) => const Text(
+                'Error loading balance',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: EveColors.error,
+                ),
+              ),
+            ),
+          ],
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Wallet Balance',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 8),
-          balanceAsync.when(
-            data: (balance) => Text(
-              balance != null ? formatIsk(balance) : 'No balance data',
-              style: theme.textTheme.headlineLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            loading: () => Text(
-              'Loading...',
-              style: theme.textTheme.headlineLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            error: (_, __) => Text(
-              'Error loading balance',
-              style: theme.textTheme.headlineLarge?.copyWith(
-                color: theme.colorScheme.error,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
 
   Widget _buildNoCharacterState(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -143,18 +217,23 @@ class WalletScreen extends ConsumerWidget {
             Icon(
               Icons.person_off_outlined,
               size: 64,
-              color: theme.colorScheme.onSurfaceVariant,
+              color: Colors.white.withAlpha(128),
             ),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               'No Character Selected',
-              style: theme.textTheme.titleLarge,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Add a character to view your wallet.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white.withAlpha(179),
               ),
               textAlign: TextAlign.center,
             ),
@@ -165,8 +244,6 @@ class WalletScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyJournalState(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -176,18 +253,23 @@ class WalletScreen extends ConsumerWidget {
             Icon(
               Icons.receipt_long_outlined,
               size: 64,
-              color: theme.colorScheme.onSurfaceVariant,
+              color: Colors.white.withAlpha(128),
             ),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               'No Transactions',
-              style: theme.textTheme.titleLarge,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Your wallet journal is empty.\nTransactions will appear here.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white.withAlpha(179),
               ),
               textAlign: TextAlign.center,
             ),
@@ -198,7 +280,6 @@ class WalletScreen extends ConsumerWidget {
   }
 
   Widget _buildErrorState(BuildContext context, WidgetRef ref, Object error) {
-    final theme = Theme.of(context);
     final activeCharacter = ref.watch(activeCharacterProvider).valueOrNull;
 
     return Center(
@@ -207,29 +288,38 @@ class WalletScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.error_outline,
               size: 64,
-              color: theme.colorScheme.error,
+              color: EveColors.error,
             ),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               'Failed to Load Wallet',
-              style: theme.textTheme.titleLarge,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               error.toString(),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white.withAlpha(179),
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             if (activeCharacter != null)
-              FilledButton.icon(
+              ElevatedButton.icon(
                 onPressed: () =>
                     _refreshWallet(ref, activeCharacter.characterId),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: EveColors.evePrimary,
+                  foregroundColor: Colors.white,
+                ),
                 icon: const Icon(Icons.refresh),
                 label: const Text('Retry'),
               ),
@@ -258,15 +348,15 @@ class _WalletJournalItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isIncome = entry.amount >= 0;
-    final amountColor =
-        isIncome ? Colors.green.shade600 : Colors.red.shade600;
+    final amountColor = isIncome ? EveColors.success : EveColors.error;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: EveCard(
+        glowColor: isIncome ? EveColors.success : null,
+        glowIntensity: isIncome ? 0.15 : 0.0,
+        padding: const EdgeInsets.all(12),
         child: Row(
           children: [
             // Transaction type icon.
@@ -275,9 +365,11 @@ class _WalletJournalItem extends StatelessWidget {
               height: 40,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isIncome
-                    ? Colors.green.withValues(alpha: 0.1)
-                    : Colors.red.withValues(alpha: 0.1),
+                color: amountColor.withAlpha(26),
+                border: Border.all(
+                  color: amountColor.withAlpha(77),
+                  width: 1,
+                ),
               ),
               child: Icon(
                 isIncome ? Icons.arrow_downward : Icons.arrow_upward,
@@ -285,7 +377,7 @@ class _WalletJournalItem extends StatelessWidget {
                 size: 20,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
 
             // Transaction details.
             Expanded(
@@ -295,8 +387,10 @@ class _WalletJournalItem extends StatelessWidget {
                   // Reference type (formatted).
                   Text(
                     formatSnakeCase(entry.refType),
-                    style: theme.textTheme.titleSmall?.copyWith(
+                    style: const TextStyle(
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
+                      color: Colors.white,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -304,8 +398,9 @@ class _WalletJournalItem extends StatelessWidget {
                   // Description or date.
                   Text(
                     entry.description ?? _formatDate(entry.date),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withAlpha(128),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -320,16 +415,18 @@ class _WalletJournalItem extends StatelessWidget {
               children: [
                 Text(
                   '${isIncome ? '+' : ''}${formatIskCompact(entry.amount)}',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: amountColor,
+                  style: TextStyle(
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
+                    color: amountColor,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   _formatDate(entry.date),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.white.withAlpha(128),
                   ),
                 ),
               ],

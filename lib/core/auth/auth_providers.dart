@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../database/app_database.dart';
 import '../di/providers.dart';
+import '../../features/characters/data/character_repository.dart';
 import 'oauth_service.dart';
 import 'token_manager.dart';
 
@@ -77,14 +78,17 @@ class AuthController extends StateNotifier<AuthState> {
   final OAuthService _oauthService;
   final TokenManager _tokenManager;
   final AppDatabase _database;
+  final CharacterRepository _characterRepository;
 
   AuthController({
     required OAuthService oauthService,
     required TokenManager tokenManager,
     required AppDatabase database,
+    required CharacterRepository characterRepository,
   })  : _oauthService = oauthService,
         _tokenManager = tokenManager,
         _database = database,
+        _characterRepository = characterRepository,
         super(const AuthState());
 
   /// Starts the OAuth authentication flow.
@@ -179,6 +183,10 @@ class AuthController extends StateNotifier<AuthState> {
       // Create or update the character in the database.
       await _createOrUpdateCharacter(characterInfo, tokenResponse);
 
+      // Fetch full character data from ESI (corporation, alliance).
+      // This runs in background - don't block OAuth completion on it.
+      _refreshCharacterData(characterInfo.characterId);
+
       state = state.copyWith(
         flowState: AuthFlowState.success,
         clearPending: true,
@@ -233,9 +241,23 @@ class AuthController extends StateNotifier<AuthState> {
       // Delete tokens from secure storage.
       await _tokenManager.deleteTokens(characterId);
 
+      // Check if we're deleting the active character.
+      final activeCharacter = await _database.getActiveCharacter();
+      final isActiveCharacter = activeCharacter?.characterId == characterId;
+
       // Delete character from database.
       await _database.deleteCharacter(characterId);
+
+      // If we deleted the active character, set another one as active.
+      if (isActiveCharacter) {
+        final remainingCharacters = await _database.getAllCharacters();
+        if (remainingCharacters.isNotEmpty) {
+          await _database
+              .setActiveCharacter(remainingCharacters.first.characterId);
+        }
+      }
     } catch (e) {
+      debugPrint('Error during logout: $e');
       // Log but don't throw - we want to clean up as much as possible.
     }
   }
@@ -260,11 +282,21 @@ class AuthController extends StateNotifier<AuthState> {
 
     await _database.upsertCharacter(companion);
 
-    // Set as active character if this is the first one.
-    final characters = await _database.getAllCharacters();
-    if (characters.length == 1) {
-      await _database.setActiveCharacter(characterInfo.characterId);
-    }
+    // Always set the newly added character as active.
+    // The user explicitly added this character, so they want to use it.
+    await _database.setActiveCharacter(characterInfo.characterId);
+  }
+
+  /// Refreshes character data from ESI in the background.
+  ///
+  /// This fetches corporation/alliance names and updates the database.
+  /// Errors are logged but don't interrupt the auth flow.
+  void _refreshCharacterData(int characterId) {
+    _characterRepository.refreshCharacter(characterId).then((_) {
+      debugPrint('Character $characterId data refreshed from ESI');
+    }).catchError((error) {
+      debugPrint('Failed to refresh character $characterId: $error');
+    });
   }
 }
 
@@ -275,6 +307,7 @@ final authControllerProvider =
     oauthService: ref.watch(oauthServiceProvider),
     tokenManager: ref.watch(tokenManagerProvider),
     database: ref.watch(databaseProvider),
+    characterRepository: ref.watch(characterRepositoryProvider),
   );
 });
 

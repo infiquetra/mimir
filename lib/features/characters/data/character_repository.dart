@@ -41,8 +41,8 @@ class CharacterRepository {
   }
 
   /// Sets the active character.
-  Future<void> setActiveCharacter(int characterId) {
-    return _database.setActiveCharacter(characterId);
+  Future<void> setActiveCharacter(int characterId) async {
+    await _database.setActiveCharacter(characterId);
   }
 
   /// Refreshes a character's data from ESI.
@@ -87,8 +87,8 @@ class CharacterRepository {
   }
 
   /// Deletes a character from the database.
-  Future<void> deleteCharacter(int characterId) {
-    return _database.deleteCharacter(characterId);
+  Future<void> deleteCharacter(int characterId) async {
+    await _database.deleteCharacter(characterId);
   }
 
   /// Fetches a corporation name from ESI.

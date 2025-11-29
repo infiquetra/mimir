@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../features/characters/presentation/character_selector.dart';
 import 'widgets/sde_update_card.dart';
 
 /// Settings screen for app configuration.
@@ -18,15 +17,9 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isMobile = MediaQuery.sizeOf(context).width < 600;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
-        actions: [
-          // Show character selector in AppBar on mobile.
-          if (isMobile) const CharacterSelector(),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

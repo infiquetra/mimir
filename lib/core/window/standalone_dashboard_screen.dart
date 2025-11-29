@@ -1,40 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../core/database/app_database.dart';
-import '../../../core/router/app_router.dart';
-import '../../../core/sde/sde_providers.dart';
-import '../../../core/theme/eve_colors.dart';
-import '../../../core/utils/formatters.dart';
-import '../../../core/widgets/eve_card.dart';
-import '../../../core/widgets/eve_skill_icon.dart';
-import '../../../core/widgets/refresh_app_bar_action.dart';
-import '../../../core/widgets/space_background.dart';
-import '../../characters/data/character_providers.dart';
-import '../../characters/data/character_repository.dart';
-import '../../skills/data/skill_providers.dart';
-import '../../skills/data/skill_repository.dart';
-import '../../wallet/data/wallet_providers.dart';
-import '../../wallet/data/wallet_repository.dart';
+import '../../features/characters/data/character_providers.dart';
+import '../../features/characters/data/character_repository.dart';
+import '../../features/skills/data/skill_providers.dart';
+import '../../features/skills/data/skill_repository.dart';
+import '../../features/wallet/data/wallet_providers.dart';
+import '../../features/wallet/data/wallet_repository.dart';
+import '../database/app_database.dart';
+import '../sde/sde_providers.dart';
+import '../theme/eve_colors.dart';
+import '../utils/formatters.dart';
+import '../widgets/eve_card.dart';
+import '../widgets/eve_skill_icon.dart';
+import '../widgets/space_background.dart';
 
-/// Dashboard screen showing an overview of the active character.
+/// Standalone dashboard screen for sub-windows.
 ///
-/// Displays in a responsive masonry grid:
-/// - Character card with portrait, name, and corporation
-/// - Wallet balance with glow effect
-/// - Currently training skill with icon
-/// - Skill queue preview with icons
-/// - Recent wallet transactions
-class DashboardScreen extends ConsumerWidget {
-  const DashboardScreen({super.key});
+/// This is a simplified version of the main dashboard that:
+/// - Uses regular providers (directly accesses database)
+/// - Removes "View All" navigation buttons (standalone windows)
+/// - Includes character selector for switching characters
+class StandaloneDashboardScreen extends ConsumerWidget {
+  const StandaloneDashboardScreen({super.key});
 
-  /// Calculate number of columns based on screen width.
   int _getColumnCount(double width) {
-    if (width < 600) return 1; // Compact: single column
-    if (width < 900) return 2; // Medium: two columns
-    return 2; // Expanded: keep at 2 for better card sizing
+    if (width < 600) return 1;
+    if (width < 900) return 2;
+    return 2;
   }
 
   @override
@@ -48,22 +42,9 @@ class DashboardScreen extends ConsumerWidget {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final columnCount = _getColumnCount(screenWidth);
 
-    // Extract characterId for refresh action (null when no character).
     final characterId = activeCharacter.valueOrNull?.characterId;
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text('Dashboard'),
-        actions: [
-          if (characterId != null)
-            RefreshAppBarAction(
-              onRefresh: () => _refreshAll(ref, characterId),
-            ),
-        ],
-      ),
       body: SpaceBackground(
         starDensity: 0.3,
         nebulaOpacity: 0.06,
@@ -77,37 +58,23 @@ class DashboardScreen extends ConsumerWidget {
               onRefresh: () => _refreshAll(ref, character.characterId),
               child: CustomScrollView(
                 slivers: [
-                  // Top padding for app bar
                   SliverPadding(
-                    padding: EdgeInsets.only(
-                      top: MediaQuery.of(context).padding.top + kToolbarHeight + 8,
-                      left: 16,
-                      right: 16,
-                      bottom: 16,
-                    ),
+                    padding: const EdgeInsets.all(16),
                     sliver: SliverMasonryGrid.count(
                       crossAxisCount: columnCount,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
-                      childCount: 5,
+                      childCount: 4,
                       itemBuilder: (context, index) {
                         switch (index) {
                           case 0:
-                            return _CharacterCard(character: character);
-                          case 1:
                             return _WalletBalanceCard(balance: walletBalance);
-                          case 2:
+                          case 1:
                             return _CurrentTrainingCard(entry: currentTraining);
+                          case 2:
+                            return _SkillQueuePreviewCard(skills: skillPreview);
                           case 3:
-                            return _SkillQueuePreviewCard(
-                              skills: skillPreview,
-                              onViewAll: () => context.go(AppRoutes.skills),
-                            );
-                          case 4:
-                            return _RecentTransactionsCard(
-                              journal: walletJournal,
-                              onViewAll: () => context.go(AppRoutes.wallet),
-                            );
+                            return _RecentTransactionsCard(journal: walletJournal);
                           default:
                             return const SizedBox.shrink();
                         }
@@ -144,22 +111,16 @@ class DashboardScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Welcome to Mimir',
+                'No Character Selected',
                 style: theme.textTheme.headlineSmall,
               ),
               const SizedBox(height: 8),
               Text(
-                'Add a character to get started.',
+                'Use the character selector to choose a character,\nor open the Characters window to add one.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: () => context.push(AppRoutes.addCharacter),
-                icon: const Icon(Icons.add),
-                label: const Text('Add Character'),
               ),
             ],
           ),
@@ -206,92 +167,16 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Future<void> _refreshAll(WidgetRef ref, int characterId) async {
-    // Refresh all data in parallel.
     await Future.wait([
       ref.read(characterRepositoryProvider).refreshCharacter(characterId),
       ref.read(skillRepositoryProvider).refreshSkillQueue(characterId),
       ref.read(walletRepositoryProvider).refreshWalletBalance(characterId),
       ref.read(walletRepositoryProvider).refreshWalletJournal(characterId),
     ]);
-
-    // Invalidate providers to refresh UI.
     ref.invalidate(walletBalanceProvider);
   }
 }
 
-/// Card displaying the active character's info.
-class _CharacterCard extends StatelessWidget {
-  const _CharacterCard({required this.character});
-
-  final Character character;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return EveCard(
-      glowColor: EveColors.evePrimary,
-      glowIntensity: 0.15,
-      child: Row(
-        children: [
-          // Character portrait with glow.
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: EveColors.evePrimary.withAlpha(77),
-                  blurRadius: 12,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: CircleAvatar(
-              radius: 36,
-              backgroundImage: NetworkImage(
-                'https://images.evetech.net/characters/${character.characterId}/portrait?size=128',
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-
-          // Character info.
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  character.name,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  character.corporationName,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                if (character.allianceName != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    character.allianceName!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Card displaying the wallet balance with ISK styling.
 class _WalletBalanceCard extends StatelessWidget {
   const _WalletBalanceCard({required this.balance});
 
@@ -349,7 +234,6 @@ class _WalletBalanceCard extends StatelessWidget {
   }
 }
 
-/// Card displaying the currently training skill with icon.
 class _CurrentTrainingCard extends ConsumerWidget {
   const _CurrentTrainingCard({required this.entry});
 
@@ -358,8 +242,6 @@ class _CurrentTrainingCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-
-    // Fetch skill name from SDE if entry exists.
     final skillNameAsync =
         entry != null ? ref.watch(skillNameProvider(entry!.skillId)) : null;
 
@@ -394,7 +276,6 @@ class _CurrentTrainingCard extends ConsumerWidget {
           else ...[
             Row(
               children: [
-                // Skill icon
                 EveSkillIcon(
                   typeId: entry!.skillId,
                   size: 48,
@@ -456,11 +337,7 @@ class _CurrentTrainingCard extends ConsumerWidget {
     if (remaining.isNegative) {
       return Row(
         children: [
-          const Icon(
-            Icons.check_circle,
-            size: 16,
-            color: EveColors.success,
-          ),
+          const Icon(Icons.check_circle, size: 16, color: EveColors.success),
           const SizedBox(width: 4),
           Text(
             'Completed',
@@ -473,7 +350,6 @@ class _CurrentTrainingCard extends ConsumerWidget {
       );
     }
 
-    // Calculate progress percentage
     final startDate = entry!.startDate;
     if (startDate != null) {
       final totalDuration = finishDate.difference(startDate);
@@ -485,11 +361,7 @@ class _CurrentTrainingCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.schedule,
-                size: 16,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+              Icon(Icons.schedule, size: 16, color: theme.colorScheme.onSurfaceVariant),
               const SizedBox(width: 4),
               Text(
                 formatDuration(remaining),
@@ -501,7 +373,6 @@ class _CurrentTrainingCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 8),
-          // Progress bar
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
@@ -517,11 +388,7 @@ class _CurrentTrainingCard extends ConsumerWidget {
 
     return Row(
       children: [
-        Icon(
-          Icons.schedule,
-          size: 16,
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
+        Icon(Icons.schedule, size: 16, color: theme.colorScheme.onSurfaceVariant),
         const SizedBox(width: 4),
         Text(
           formatDuration(remaining),
@@ -535,15 +402,11 @@ class _CurrentTrainingCard extends ConsumerWidget {
   }
 }
 
-/// Card showing a preview of the skill queue with icons.
+/// Skill queue preview without "View All" button.
 class _SkillQueuePreviewCard extends ConsumerWidget {
-  const _SkillQueuePreviewCard({
-    required this.skills,
-    required this.onViewAll,
-  });
+  const _SkillQueuePreviewCard({required this.skills});
 
   final List<SkillQueueEntry> skills;
-  final VoidCallback onViewAll;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -554,26 +417,10 @@ class _SkillQueuePreviewCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.queue,
-                    size: 20,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Skill Queue',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                ],
-              ),
-              TextButton(
-                onPressed: onViewAll,
-                child: const Text('View All'),
-              ),
+              Icon(Icons.queue, size: 20, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Text('Skill Queue', style: theme.textTheme.titleMedium),
             ],
           ),
           const SizedBox(height: 8),
@@ -594,11 +441,7 @@ class _SkillQueuePreviewCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildSkillRow(
-    BuildContext context,
-    WidgetRef ref,
-    SkillQueueEntry entry,
-  ) {
+  Widget _buildSkillRow(BuildContext context, WidgetRef ref, SkillQueueEntry entry) {
     final theme = Theme.of(context);
     final skillNameAsync = ref.watch(skillNameProvider(entry.skillId));
 
@@ -606,11 +449,7 @@ class _SkillQueuePreviewCard extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          // Skill icon
-          EveSkillIcon(
-            typeId: entry.skillId,
-            size: 32,
-          ),
+          EveSkillIcon(typeId: entry.skillId, size: 32),
           const SizedBox(width: 12),
           Expanded(
             child: skillNameAsync.when(
@@ -632,7 +471,6 @@ class _SkillQueuePreviewCard extends ConsumerWidget {
               ),
             ),
           ),
-          // Queue position badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
@@ -657,15 +495,11 @@ class _SkillQueuePreviewCard extends ConsumerWidget {
   }
 }
 
-/// Card showing recent wallet transactions.
+/// Recent transactions without "View All" button.
 class _RecentTransactionsCard extends StatelessWidget {
-  const _RecentTransactionsCard({
-    required this.journal,
-    required this.onViewAll,
-  });
+  const _RecentTransactionsCard({required this.journal});
 
   final AsyncValue<List<WalletJournalEntry>> journal;
-  final VoidCallback onViewAll;
 
   @override
   Widget build(BuildContext context) {
@@ -676,26 +510,10 @@ class _RecentTransactionsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.receipt_long,
-                    size: 20,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Recent Transactions',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                ],
-              ),
-              TextButton(
-                onPressed: onViewAll,
-                child: const Text('View All'),
-              ),
+              Icon(Icons.receipt_long, size: 20, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Text('Recent Transactions', style: theme.textTheme.titleMedium),
             ],
           ),
           const SizedBox(height: 8),
@@ -712,7 +530,6 @@ class _RecentTransactionsCard extends StatelessWidget {
                   ),
                 );
               }
-              // Show first 3 transactions.
               return Column(
                 children: entries
                     .take(3)
