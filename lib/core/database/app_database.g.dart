@@ -50,6 +50,18 @@ class $CharactersTable extends Characters
   late final GeneratedColumn<String> portraitUrl = GeneratedColumn<String>(
       'portrait_url', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _refreshTokenMeta =
+      const VerificationMeta('refreshToken');
+  @override
+  late final GeneratedColumn<String> refreshToken = GeneratedColumn<String>(
+      'refresh_token', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _accessTokenMeta =
+      const VerificationMeta('accessToken');
+  @override
+  late final GeneratedColumn<String> accessToken = GeneratedColumn<String>(
+      'access_token', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _tokenExpiryMeta =
       const VerificationMeta('tokenExpiry');
   @override
@@ -81,6 +93,8 @@ class $CharactersTable extends Characters
         allianceId,
         allianceName,
         portraitUrl,
+        refreshToken,
+        accessToken,
         tokenExpiry,
         lastUpdated,
         isActive
@@ -143,6 +157,18 @@ class $CharactersTable extends Characters
     } else if (isInserting) {
       context.missing(_portraitUrlMeta);
     }
+    if (data.containsKey('refresh_token')) {
+      context.handle(
+          _refreshTokenMeta,
+          refreshToken.isAcceptableOrUnknown(
+              data['refresh_token']!, _refreshTokenMeta));
+    }
+    if (data.containsKey('access_token')) {
+      context.handle(
+          _accessTokenMeta,
+          accessToken.isAcceptableOrUnknown(
+              data['access_token']!, _accessTokenMeta));
+    }
     if (data.containsKey('token_expiry')) {
       context.handle(
           _tokenExpiryMeta,
@@ -186,6 +212,10 @@ class $CharactersTable extends Characters
           .read(DriftSqlType.string, data['${effectivePrefix}alliance_name']),
       portraitUrl: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}portrait_url'])!,
+      refreshToken: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}refresh_token']),
+      accessToken: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}access_token']),
       tokenExpiry: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}token_expiry'])!,
       lastUpdated: attachedDatabase.typeMapping
@@ -223,6 +253,12 @@ class Character extends DataClass implements Insertable<Character> {
   /// URL to character portrait image.
   final String portraitUrl;
 
+  /// OAuth refresh token for this character.
+  final String? refreshToken;
+
+  /// Current OAuth access token (cached).
+  final String? accessToken;
+
   /// When the OAuth token expires.
   final DateTime tokenExpiry;
 
@@ -239,6 +275,8 @@ class Character extends DataClass implements Insertable<Character> {
       this.allianceId,
       this.allianceName,
       required this.portraitUrl,
+      this.refreshToken,
+      this.accessToken,
       required this.tokenExpiry,
       required this.lastUpdated,
       required this.isActive});
@@ -256,6 +294,12 @@ class Character extends DataClass implements Insertable<Character> {
       map['alliance_name'] = Variable<String>(allianceName);
     }
     map['portrait_url'] = Variable<String>(portraitUrl);
+    if (!nullToAbsent || refreshToken != null) {
+      map['refresh_token'] = Variable<String>(refreshToken);
+    }
+    if (!nullToAbsent || accessToken != null) {
+      map['access_token'] = Variable<String>(accessToken);
+    }
     map['token_expiry'] = Variable<DateTime>(tokenExpiry);
     map['last_updated'] = Variable<DateTime>(lastUpdated);
     map['is_active'] = Variable<bool>(isActive);
@@ -275,6 +319,12 @@ class Character extends DataClass implements Insertable<Character> {
           ? const Value.absent()
           : Value(allianceName),
       portraitUrl: Value(portraitUrl),
+      refreshToken: refreshToken == null && nullToAbsent
+          ? const Value.absent()
+          : Value(refreshToken),
+      accessToken: accessToken == null && nullToAbsent
+          ? const Value.absent()
+          : Value(accessToken),
       tokenExpiry: Value(tokenExpiry),
       lastUpdated: Value(lastUpdated),
       isActive: Value(isActive),
@@ -292,6 +342,8 @@ class Character extends DataClass implements Insertable<Character> {
       allianceId: serializer.fromJson<int?>(json['allianceId']),
       allianceName: serializer.fromJson<String?>(json['allianceName']),
       portraitUrl: serializer.fromJson<String>(json['portraitUrl']),
+      refreshToken: serializer.fromJson<String?>(json['refreshToken']),
+      accessToken: serializer.fromJson<String?>(json['accessToken']),
       tokenExpiry: serializer.fromJson<DateTime>(json['tokenExpiry']),
       lastUpdated: serializer.fromJson<DateTime>(json['lastUpdated']),
       isActive: serializer.fromJson<bool>(json['isActive']),
@@ -308,6 +360,8 @@ class Character extends DataClass implements Insertable<Character> {
       'allianceId': serializer.toJson<int?>(allianceId),
       'allianceName': serializer.toJson<String?>(allianceName),
       'portraitUrl': serializer.toJson<String>(portraitUrl),
+      'refreshToken': serializer.toJson<String?>(refreshToken),
+      'accessToken': serializer.toJson<String?>(accessToken),
       'tokenExpiry': serializer.toJson<DateTime>(tokenExpiry),
       'lastUpdated': serializer.toJson<DateTime>(lastUpdated),
       'isActive': serializer.toJson<bool>(isActive),
@@ -322,6 +376,8 @@ class Character extends DataClass implements Insertable<Character> {
           Value<int?> allianceId = const Value.absent(),
           Value<String?> allianceName = const Value.absent(),
           String? portraitUrl,
+          Value<String?> refreshToken = const Value.absent(),
+          Value<String?> accessToken = const Value.absent(),
           DateTime? tokenExpiry,
           DateTime? lastUpdated,
           bool? isActive}) =>
@@ -334,6 +390,9 @@ class Character extends DataClass implements Insertable<Character> {
         allianceName:
             allianceName.present ? allianceName.value : this.allianceName,
         portraitUrl: portraitUrl ?? this.portraitUrl,
+        refreshToken:
+            refreshToken.present ? refreshToken.value : this.refreshToken,
+        accessToken: accessToken.present ? accessToken.value : this.accessToken,
         tokenExpiry: tokenExpiry ?? this.tokenExpiry,
         lastUpdated: lastUpdated ?? this.lastUpdated,
         isActive: isActive ?? this.isActive,
@@ -356,6 +415,11 @@ class Character extends DataClass implements Insertable<Character> {
           : this.allianceName,
       portraitUrl:
           data.portraitUrl.present ? data.portraitUrl.value : this.portraitUrl,
+      refreshToken: data.refreshToken.present
+          ? data.refreshToken.value
+          : this.refreshToken,
+      accessToken:
+          data.accessToken.present ? data.accessToken.value : this.accessToken,
       tokenExpiry:
           data.tokenExpiry.present ? data.tokenExpiry.value : this.tokenExpiry,
       lastUpdated:
@@ -374,6 +438,8 @@ class Character extends DataClass implements Insertable<Character> {
           ..write('allianceId: $allianceId, ')
           ..write('allianceName: $allianceName, ')
           ..write('portraitUrl: $portraitUrl, ')
+          ..write('refreshToken: $refreshToken, ')
+          ..write('accessToken: $accessToken, ')
           ..write('tokenExpiry: $tokenExpiry, ')
           ..write('lastUpdated: $lastUpdated, ')
           ..write('isActive: $isActive')
@@ -390,6 +456,8 @@ class Character extends DataClass implements Insertable<Character> {
       allianceId,
       allianceName,
       portraitUrl,
+      refreshToken,
+      accessToken,
       tokenExpiry,
       lastUpdated,
       isActive);
@@ -404,6 +472,8 @@ class Character extends DataClass implements Insertable<Character> {
           other.allianceId == this.allianceId &&
           other.allianceName == this.allianceName &&
           other.portraitUrl == this.portraitUrl &&
+          other.refreshToken == this.refreshToken &&
+          other.accessToken == this.accessToken &&
           other.tokenExpiry == this.tokenExpiry &&
           other.lastUpdated == this.lastUpdated &&
           other.isActive == this.isActive);
@@ -417,6 +487,8 @@ class CharactersCompanion extends UpdateCompanion<Character> {
   final Value<int?> allianceId;
   final Value<String?> allianceName;
   final Value<String> portraitUrl;
+  final Value<String?> refreshToken;
+  final Value<String?> accessToken;
   final Value<DateTime> tokenExpiry;
   final Value<DateTime> lastUpdated;
   final Value<bool> isActive;
@@ -428,6 +500,8 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     this.allianceId = const Value.absent(),
     this.allianceName = const Value.absent(),
     this.portraitUrl = const Value.absent(),
+    this.refreshToken = const Value.absent(),
+    this.accessToken = const Value.absent(),
     this.tokenExpiry = const Value.absent(),
     this.lastUpdated = const Value.absent(),
     this.isActive = const Value.absent(),
@@ -440,6 +514,8 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     this.allianceId = const Value.absent(),
     this.allianceName = const Value.absent(),
     required String portraitUrl,
+    this.refreshToken = const Value.absent(),
+    this.accessToken = const Value.absent(),
     required DateTime tokenExpiry,
     required DateTime lastUpdated,
     this.isActive = const Value.absent(),
@@ -457,6 +533,8 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     Expression<int>? allianceId,
     Expression<String>? allianceName,
     Expression<String>? portraitUrl,
+    Expression<String>? refreshToken,
+    Expression<String>? accessToken,
     Expression<DateTime>? tokenExpiry,
     Expression<DateTime>? lastUpdated,
     Expression<bool>? isActive,
@@ -469,6 +547,8 @@ class CharactersCompanion extends UpdateCompanion<Character> {
       if (allianceId != null) 'alliance_id': allianceId,
       if (allianceName != null) 'alliance_name': allianceName,
       if (portraitUrl != null) 'portrait_url': portraitUrl,
+      if (refreshToken != null) 'refresh_token': refreshToken,
+      if (accessToken != null) 'access_token': accessToken,
       if (tokenExpiry != null) 'token_expiry': tokenExpiry,
       if (lastUpdated != null) 'last_updated': lastUpdated,
       if (isActive != null) 'is_active': isActive,
@@ -483,6 +563,8 @@ class CharactersCompanion extends UpdateCompanion<Character> {
       Value<int?>? allianceId,
       Value<String?>? allianceName,
       Value<String>? portraitUrl,
+      Value<String?>? refreshToken,
+      Value<String?>? accessToken,
       Value<DateTime>? tokenExpiry,
       Value<DateTime>? lastUpdated,
       Value<bool>? isActive}) {
@@ -494,6 +576,8 @@ class CharactersCompanion extends UpdateCompanion<Character> {
       allianceId: allianceId ?? this.allianceId,
       allianceName: allianceName ?? this.allianceName,
       portraitUrl: portraitUrl ?? this.portraitUrl,
+      refreshToken: refreshToken ?? this.refreshToken,
+      accessToken: accessToken ?? this.accessToken,
       tokenExpiry: tokenExpiry ?? this.tokenExpiry,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       isActive: isActive ?? this.isActive,
@@ -524,6 +608,12 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     if (portraitUrl.present) {
       map['portrait_url'] = Variable<String>(portraitUrl.value);
     }
+    if (refreshToken.present) {
+      map['refresh_token'] = Variable<String>(refreshToken.value);
+    }
+    if (accessToken.present) {
+      map['access_token'] = Variable<String>(accessToken.value);
+    }
     if (tokenExpiry.present) {
       map['token_expiry'] = Variable<DateTime>(tokenExpiry.value);
     }
@@ -546,6 +636,8 @@ class CharactersCompanion extends UpdateCompanion<Character> {
           ..write('allianceId: $allianceId, ')
           ..write('allianceName: $allianceName, ')
           ..write('portraitUrl: $portraitUrl, ')
+          ..write('refreshToken: $refreshToken, ')
+          ..write('accessToken: $accessToken, ')
           ..write('tokenExpiry: $tokenExpiry, ')
           ..write('lastUpdated: $lastUpdated, ')
           ..write('isActive: $isActive')
@@ -1904,6 +1996,8 @@ typedef $$CharactersTableCreateCompanionBuilder = CharactersCompanion Function({
   Value<int?> allianceId,
   Value<String?> allianceName,
   required String portraitUrl,
+  Value<String?> refreshToken,
+  Value<String?> accessToken,
   required DateTime tokenExpiry,
   required DateTime lastUpdated,
   Value<bool> isActive,
@@ -1916,6 +2010,8 @@ typedef $$CharactersTableUpdateCompanionBuilder = CharactersCompanion Function({
   Value<int?> allianceId,
   Value<String?> allianceName,
   Value<String> portraitUrl,
+  Value<String?> refreshToken,
+  Value<String?> accessToken,
   Value<DateTime> tokenExpiry,
   Value<DateTime> lastUpdated,
   Value<bool> isActive,
@@ -2010,6 +2106,12 @@ class $$CharactersTableFilterComposer
 
   ColumnFilters<String> get portraitUrl => $composableBuilder(
       column: $table.portraitUrl, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get refreshToken => $composableBuilder(
+      column: $table.refreshToken, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get accessToken => $composableBuilder(
+      column: $table.accessToken, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get tokenExpiry => $composableBuilder(
       column: $table.tokenExpiry, builder: (column) => ColumnFilters(column));
@@ -2118,6 +2220,13 @@ class $$CharactersTableOrderingComposer
   ColumnOrderings<String> get portraitUrl => $composableBuilder(
       column: $table.portraitUrl, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get refreshToken => $composableBuilder(
+      column: $table.refreshToken,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get accessToken => $composableBuilder(
+      column: $table.accessToken, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get tokenExpiry => $composableBuilder(
       column: $table.tokenExpiry, builder: (column) => ColumnOrderings(column));
 
@@ -2157,6 +2266,12 @@ class $$CharactersTableAnnotationComposer
 
   GeneratedColumn<String> get portraitUrl => $composableBuilder(
       column: $table.portraitUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get refreshToken => $composableBuilder(
+      column: $table.refreshToken, builder: (column) => column);
+
+  GeneratedColumn<String> get accessToken => $composableBuilder(
+      column: $table.accessToken, builder: (column) => column);
 
   GeneratedColumn<DateTime> get tokenExpiry => $composableBuilder(
       column: $table.tokenExpiry, builder: (column) => column);
@@ -2267,6 +2382,8 @@ class $$CharactersTableTableManager extends RootTableManager<
             Value<int?> allianceId = const Value.absent(),
             Value<String?> allianceName = const Value.absent(),
             Value<String> portraitUrl = const Value.absent(),
+            Value<String?> refreshToken = const Value.absent(),
+            Value<String?> accessToken = const Value.absent(),
             Value<DateTime> tokenExpiry = const Value.absent(),
             Value<DateTime> lastUpdated = const Value.absent(),
             Value<bool> isActive = const Value.absent(),
@@ -2279,6 +2396,8 @@ class $$CharactersTableTableManager extends RootTableManager<
             allianceId: allianceId,
             allianceName: allianceName,
             portraitUrl: portraitUrl,
+            refreshToken: refreshToken,
+            accessToken: accessToken,
             tokenExpiry: tokenExpiry,
             lastUpdated: lastUpdated,
             isActive: isActive,
@@ -2291,6 +2410,8 @@ class $$CharactersTableTableManager extends RootTableManager<
             Value<int?> allianceId = const Value.absent(),
             Value<String?> allianceName = const Value.absent(),
             required String portraitUrl,
+            Value<String?> refreshToken = const Value.absent(),
+            Value<String?> accessToken = const Value.absent(),
             required DateTime tokenExpiry,
             required DateTime lastUpdated,
             Value<bool> isActive = const Value.absent(),
@@ -2303,6 +2424,8 @@ class $$CharactersTableTableManager extends RootTableManager<
             allianceId: allianceId,
             allianceName: allianceName,
             portraitUrl: portraitUrl,
+            refreshToken: refreshToken,
+            accessToken: accessToken,
             tokenExpiry: tokenExpiry,
             lastUpdated: lastUpdated,
             isActive: isActive,

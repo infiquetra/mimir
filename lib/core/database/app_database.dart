@@ -34,6 +34,12 @@ class Characters extends Table {
   /// URL to character portrait image.
   TextColumn get portraitUrl => text()();
 
+  /// OAuth refresh token for this character.
+  TextColumn get refreshToken => text().nullable()();
+
+  /// Current OAuth access token (cached).
+  TextColumn get accessToken => text().nullable()();
+
   /// When the OAuth token expires.
   DateTimeColumn get tokenExpiry => dateTime()();
 
@@ -155,7 +161,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration {
@@ -164,11 +170,11 @@ class AppDatabase extends _$AppDatabase {
         await m.createAll();
       },
       onUpgrade: (Migrator m, int from, int to) async {
-        // Future migrations will be handled here.
-        // Example:
-        // if (from < 2) {
-        //   await m.addColumn(characters, characters.someNewColumn);
-        // }
+        // Migration from version 1 to 2: Add token storage columns.
+        if (from < 2) {
+          await m.addColumn(characters, characters.refreshToken);
+          await m.addColumn(characters, characters.accessToken);
+        }
       },
     );
   }

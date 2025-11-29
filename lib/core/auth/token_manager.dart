@@ -1,7 +1,6 @@
-import 'dart:convert';
+import 'package:drift/drift.dart';
 
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
+import '../database/app_database.dart';
 import 'oauth_service.dart';
 
 /// Stored token data for a character.
@@ -28,75 +27,38 @@ class StoredTokens {
       accessTokenExpiry.subtract(const Duration(seconds: 60)),
     );
   }
-
-  Map<String, dynamic> toJson() => {
-        'refreshToken': refreshToken,
-        'accessTokenExpiry': accessTokenExpiry.toIso8601String(),
-        'accessToken': accessToken,
-      };
-
-  factory StoredTokens.fromJson(Map<String, dynamic> json) {
-    return StoredTokens(
-      refreshToken: json['refreshToken'] as String,
-      accessTokenExpiry: DateTime.parse(json['accessTokenExpiry'] as String),
-      accessToken: json['accessToken'] as String?,
-    );
-  }
 }
 
-/// Manages secure storage of OAuth tokens for multiple characters.
+/// Manages OAuth tokens for multiple characters using database storage.
 ///
-/// Uses platform-specific secure storage:
-/// - macOS/iOS: Keychain
-/// - Android: EncryptedSharedPreferences
-/// - Windows: Windows Credential Locker
-/// - Linux: libsecret
+/// Tokens are stored in the Characters table in the SQLite database,
+/// which is accessible by all windows including sub-windows created
+/// with desktop_multi_window.
 ///
-/// Each character's tokens are stored independently, allowing multi-account support.
+/// This approach works in sub-windows where native plugins like
+/// flutter_secure_storage are not available.
 class TokenManager {
-  final FlutterSecureStorage _storage;
+  final AppDatabase _database;
 
-  /// Key prefix for token storage.
-  static const String _keyPrefix = 'mimir_tokens_';
-
-  /// Key for storing the list of authenticated character IDs.
-  static const String _characterListKey = 'mimir_authenticated_characters';
-
-  TokenManager({FlutterSecureStorage? storage})
-      : _storage = storage ??
-            const FlutterSecureStorage(
-              aOptions: AndroidOptions(
-                encryptedSharedPreferences: true,
-              ),
-              iOptions: IOSOptions(
-                accessibility: KeychainAccessibility.first_unlock,
-              ),
-              mOptions: MacOsOptions(
-                accessibility: KeychainAccessibility.first_unlock,
-              ),
-            );
+  TokenManager({required AppDatabase database}) : _database = database;
 
   /// Stores tokens for a character after successful authentication.
   Future<void> storeTokens({
     required int characterId,
     required TokenResponse tokenResponse,
   }) async {
-    final tokens = StoredTokens(
-      refreshToken: tokenResponse.refreshToken,
-      accessTokenExpiry: DateTime.now().add(
-        Duration(seconds: tokenResponse.expiresIn),
-      ),
-      accessToken: tokenResponse.accessToken,
+    final expiry = DateTime.now().add(
+      Duration(seconds: tokenResponse.expiresIn),
     );
 
-    // Store the tokens.
-    await _storage.write(
-      key: _tokenKey(characterId),
-      value: json.encode(tokens.toJson()),
-    );
-
-    // Add character to the list of authenticated characters.
-    await _addToCharacterList(characterId);
+    await _database.into(_database.characters).insertOnConflictUpdate(
+          CharactersCompanion(
+            characterId: Value(characterId),
+            refreshToken: Value(tokenResponse.refreshToken),
+            accessToken: Value(tokenResponse.accessToken),
+            tokenExpiry: Value(expiry),
+          ),
+        );
   }
 
   /// Updates the access token for a character after refresh.
@@ -104,94 +66,66 @@ class TokenManager {
     required int characterId,
     required TokenResponse tokenResponse,
   }) async {
-    final existing = await getTokens(characterId);
-    if (existing == null) {
-      // No existing tokens, store as new.
-      await storeTokens(
-        characterId: characterId,
-        tokenResponse: tokenResponse,
-      );
-      return;
-    }
-
-    final updated = StoredTokens(
-      refreshToken: tokenResponse.refreshToken,
-      accessTokenExpiry: DateTime.now().add(
-        Duration(seconds: tokenResponse.expiresIn),
-      ),
-      accessToken: tokenResponse.accessToken,
+    final expiry = DateTime.now().add(
+      Duration(seconds: tokenResponse.expiresIn),
     );
 
-    await _storage.write(
-      key: _tokenKey(characterId),
-      value: json.encode(updated.toJson()),
+    await (_database.update(_database.characters)
+          ..where((c) => c.characterId.equals(characterId)))
+        .write(
+      CharactersCompanion(
+        refreshToken: Value(tokenResponse.refreshToken),
+        accessToken: Value(tokenResponse.accessToken),
+        tokenExpiry: Value(expiry),
+      ),
     );
   }
 
   /// Gets stored tokens for a character.
   Future<StoredTokens?> getTokens(int characterId) async {
-    final data = await _storage.read(key: _tokenKey(characterId));
-    if (data == null) return null;
+    final character = await (_database.select(_database.characters)
+          ..where((c) => c.characterId.equals(characterId)))
+        .getSingleOrNull();
 
-    try {
-      return StoredTokens.fromJson(json.decode(data) as Map<String, dynamic>);
-    } catch (_) {
-      // Invalid data, clear it.
-      await deleteTokens(characterId);
+    if (character == null || character.refreshToken == null) {
       return null;
     }
+
+    return StoredTokens(
+      refreshToken: character.refreshToken!,
+      accessTokenExpiry: character.tokenExpiry,
+      accessToken: character.accessToken,
+    );
   }
 
   /// Deletes tokens for a character (logout).
   Future<void> deleteTokens(int characterId) async {
-    await _storage.delete(key: _tokenKey(characterId));
-    await _removeFromCharacterList(characterId);
+    await (_database.update(_database.characters)
+          ..where((c) => c.characterId.equals(characterId)))
+        .write(
+      const CharactersCompanion(
+        refreshToken: Value(null),
+        accessToken: Value(null),
+      ),
+    );
   }
 
   /// Gets the list of character IDs with stored tokens.
   Future<List<int>> getAuthenticatedCharacterIds() async {
-    final data = await _storage.read(key: _characterListKey);
-    if (data == null) return [];
+    final characters = await (_database.select(_database.characters)
+          ..where((c) => c.refreshToken.isNotNull()))
+        .get();
 
-    try {
-      final list = json.decode(data) as List<dynamic>;
-      return list.cast<int>();
-    } catch (_) {
-      return [];
-    }
+    return characters.map((c) => c.characterId).toList();
   }
 
   /// Clears all stored tokens (full logout).
   Future<void> clearAll() async {
-    final characterIds = await getAuthenticatedCharacterIds();
-    for (final id in characterIds) {
-      await _storage.delete(key: _tokenKey(id));
-    }
-    await _storage.delete(key: _characterListKey);
-  }
-
-  /// Generates the storage key for a character's tokens.
-  String _tokenKey(int characterId) => '$_keyPrefix$characterId';
-
-  /// Adds a character ID to the authenticated list.
-  Future<void> _addToCharacterList(int characterId) async {
-    final ids = await getAuthenticatedCharacterIds();
-    if (!ids.contains(characterId)) {
-      ids.add(characterId);
-      await _storage.write(
-        key: _characterListKey,
-        value: json.encode(ids),
-      );
-    }
-  }
-
-  /// Removes a character ID from the authenticated list.
-  Future<void> _removeFromCharacterList(int characterId) async {
-    final ids = await getAuthenticatedCharacterIds();
-    ids.remove(characterId);
-    await _storage.write(
-      key: _characterListKey,
-      value: json.encode(ids),
-    );
+    await _database.update(_database.characters).write(
+          const CharactersCompanion(
+            refreshToken: Value(null),
+            accessToken: Value(null),
+          ),
+        );
   }
 }

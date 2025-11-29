@@ -16,7 +16,8 @@ final oauthServiceProvider = Provider<OAuthService>((ref) {
 
 /// Provider for the token manager.
 final tokenManagerProvider = Provider<TokenManager>((ref) {
-  return TokenManager();
+  final database = ref.watch(databaseProvider);
+  return TokenManager(database: database);
 });
 
 /// Current authentication flow state.

@@ -208,23 +208,5 @@ void main() {
 
       expect(tokens.isAccessTokenExpired, isFalse);
     });
-
-    test('should serialize and deserialize correctly', () {
-      final original = StoredTokens(
-        refreshToken: 'refresh_123',
-        accessTokenExpiry: DateTime(2024, 1, 15, 12, 0, 0),
-        accessToken: 'access_456',
-      );
-
-      final json = original.toJson();
-      final restored = StoredTokens.fromJson(json);
-
-      expect(restored.refreshToken, equals(original.refreshToken));
-      expect(restored.accessToken, equals(original.accessToken));
-      expect(
-        restored.accessTokenExpiry.toIso8601String(),
-        equals(original.accessTokenExpiry.toIso8601String()),
-      );
-    });
   });
 }
