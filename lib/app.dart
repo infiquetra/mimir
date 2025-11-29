@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/auth/auth_providers.dart';
 import 'core/auth/deep_link_handler.dart';
 import 'core/di/providers.dart';
 import 'core/sde/sde_providers.dart';
@@ -40,6 +41,17 @@ final startupRefreshProvider = FutureProvider<void>((ref) async {
   } catch (e) {
     debugPrint('Startup: SDE initialization failed: $e');
     // Continue - the app can function without SDE, just shows skill IDs.
+  }
+
+  // Migrate tokens from secure storage to database (one-time migration).
+  // This only runs in main window and only for characters that don't
+  // have tokens in the database yet.
+  try {
+    final tokenManager = ref.read(tokenManagerProvider);
+    await tokenManager.migrateFromSecureStorage();
+  } catch (e) {
+    debugPrint('Startup: Token migration failed: $e');
+    // Continue - migration failures shouldn't block app startup.
   }
 
   final characterRepo = ref.read(characterRepositoryProvider);

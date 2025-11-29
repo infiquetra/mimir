@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../database/app_database.dart';
 import 'oauth_service.dart';
@@ -127,5 +131,98 @@ class TokenManager {
             accessToken: Value(null),
           ),
         );
+  }
+
+  /// Migrates tokens from FlutterSecureStorage to database.
+  ///
+  /// This is a one-time migration for existing users who had tokens
+  /// stored in secure storage before the database migration.
+  ///
+  /// Only runs in main window (where secure storage is available).
+  /// Skips characters that already have tokens in database.
+  /// Deletes from secure storage after successful migration.
+  Future<void> migrateFromSecureStorage() async {
+    // Can't access secure storage in sub-windows
+    if (isSubWindow) {
+      debugPrint('TokenManager: Skipping migration (sub-window)');
+      return;
+    }
+
+    try {
+      debugPrint('TokenManager: Starting migration from secure storage');
+
+      const secureStorage = FlutterSecureStorage(
+        aOptions: AndroidOptions(
+          encryptedSharedPreferences: true,
+        ),
+        iOptions: IOSOptions(
+          accessibility: KeychainAccessibility.first_unlock,
+        ),
+        mOptions: MacOsOptions(
+          accessibility: KeychainAccessibility.first_unlock,
+        ),
+      );
+
+      // Get all characters from database
+      final characters = await _database.getAllCharacters();
+      debugPrint(
+        'TokenManager: Found ${characters.length} characters to check',
+      );
+
+      var migratedCount = 0;
+      for (final character in characters) {
+        // Skip if already has tokens in database
+        if (character.refreshToken != null) {
+          debugPrint(
+            'TokenManager: Character ${character.characterId} already has tokens in database',
+          );
+          continue;
+        }
+
+        // Try to read from secure storage
+        final key = 'mimir_tokens_${character.characterId}';
+        final data = await secureStorage.read(key: key);
+        if (data == null) {
+          debugPrint(
+            'TokenManager: No secure storage data for character ${character.characterId}',
+          );
+          continue;
+        }
+
+        try {
+          // Parse and write to database
+          final tokens = json.decode(data) as Map<String, dynamic>;
+          await (_database.update(_database.characters)
+                ..where((c) => c.characterId.equals(character.characterId)))
+              .write(
+            CharactersCompanion(
+              refreshToken: Value(tokens['refreshToken'] as String),
+              accessToken: Value(tokens['accessToken'] as String?),
+              tokenExpiry: Value(
+                DateTime.parse(tokens['accessTokenExpiry'] as String),
+              ),
+            ),
+          );
+
+          // Delete from secure storage after successful migration
+          await secureStorage.delete(key: key);
+
+          migratedCount++;
+          debugPrint(
+            'TokenManager: Migrated tokens for character ${character.characterId}',
+          );
+        } catch (e) {
+          debugPrint(
+            'TokenManager: Failed to migrate character ${character.characterId}: $e',
+          );
+        }
+      }
+
+      debugPrint('TokenManager: Migration complete ($migratedCount migrated)');
+    } catch (e, stack) {
+      debugPrint('TokenManager: Migration failed: $e');
+      debugPrint('TokenManager: Stack trace: $stack');
+      // Don't throw - migration failures shouldn't block app startup
+    }
   }
 }
