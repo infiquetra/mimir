@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/auth/deep_link_handler.dart';
 import 'core/di/providers.dart';
 import 'core/sde/sde_providers.dart';
+import 'core/sde/sde_update_providers.dart';
 import 'core/theme/app_theme.dart';
 import 'features/characters/data/character_repository.dart';
 import 'features/skills/data/skill_repository.dart';
@@ -26,6 +29,15 @@ final startupRefreshProvider = FutureProvider<void>((ref) async {
   try {
     await ref.read(sdeInitializerProvider.future);
     debugPrint('Startup: SDE initialized');
+
+    // Check for SDE updates in background (fire-and-forget).
+    // This doesn't block startup - it just logs results and updates
+    // state if an update is available.
+    unawaited(
+      ref
+          .read(sdeUpdateControllerProvider.notifier)
+          .checkForUpdatesInBackground(),
+    );
   } catch (e) {
     debugPrint('Startup: SDE initialization failed: $e');
     // Continue - the app can function without SDE, just shows skill IDs.

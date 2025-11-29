@@ -4,11 +4,16 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/characters/presentation/add_character_screen.dart';
 import '../../features/characters/presentation/character_selector.dart';
+import '../../features/dashboard/presentation/dashboard_screen.dart';
+import '../../features/settings/presentation/settings_screen.dart';
+import '../../features/skills/presentation/skills_screen.dart';
+import '../../features/wallet/presentation/wallet_screen.dart';
 
 /// Application route paths.
 abstract class AppRoutes {
   static const String home = '/';
   static const String skills = '/skills';
+  static const String wallet = '/wallet';
   static const String settings = '/settings';
   static const String addCharacter = '/add-character';
   static const String characterDetail = '/character/:characterId';
@@ -33,10 +38,7 @@ GoRouter createRouter() {
             routes: [
               GoRoute(
                 path: AppRoutes.home,
-                builder: (context, state) => const PlaceholderScreen(
-                  title: 'Dashboard',
-                  icon: Icons.dashboard,
-                ),
+                builder: (context, state) => const DashboardScreen(),
               ),
             ],
           ),
@@ -45,10 +47,16 @@ GoRouter createRouter() {
             routes: [
               GoRoute(
                 path: AppRoutes.skills,
-                builder: (context, state) => const PlaceholderScreen(
-                  title: 'Skills',
-                  icon: Icons.school,
-                ),
+                builder: (context, state) => const SkillsScreen(),
+              ),
+            ],
+          ),
+          // Wallet branch
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.wallet,
+                builder: (context, state) => const WalletScreen(),
               ),
             ],
           ),
@@ -57,10 +65,7 @@ GoRouter createRouter() {
             routes: [
               GoRoute(
                 path: AppRoutes.settings,
-                builder: (context, state) => const PlaceholderScreen(
-                  title: 'Settings',
-                  icon: Icons.settings,
-                ),
+                builder: (context, state) => const SettingsScreen(),
               ),
             ],
           ),
@@ -112,6 +117,11 @@ class MainScaffold extends ConsumerWidget {
                   label: Text('Skills'),
                 ),
                 NavigationRailDestination(
+                  icon: Icon(Icons.account_balance_wallet_outlined),
+                  selectedIcon: Icon(Icons.account_balance_wallet),
+                  label: Text('Wallet'),
+                ),
+                NavigationRailDestination(
                   icon: Icon(Icons.settings_outlined),
                   selectedIcon: Icon(Icons.settings),
                   label: Text('Settings'),
@@ -140,6 +150,11 @@ class MainScaffold extends ConsumerWidget {
             icon: Icon(Icons.school_outlined),
             selectedIcon: Icon(Icons.school),
             label: 'Skills',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.account_balance_wallet_outlined),
+            selectedIcon: Icon(Icons.account_balance_wallet),
+            label: 'Wallet',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
