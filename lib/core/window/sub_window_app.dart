@@ -233,8 +233,21 @@ class _SubWindowScaffold extends StatelessWidget {
     return Scaffold(
       body: Column(
         children: [
-          // macOS traffic light buttons safe area.
-          if (isMacOS) const SizedBox(height: _macOSTrafficLightHeight),
+          // macOS title bar with centered title text.
+          if (isMacOS)
+            SizedBox(
+              height: _macOSTrafficLightHeight,
+              child: Center(
+                child: Text(
+                  windowType.title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Theme.of(context).colorScheme.onSurface.withAlpha(179),
+                  ),
+                ),
+              ),
+            ),
           // Character header bar (only for Dashboard, Skills, Wallet).
           if (showHeader) CharacterHeaderBar(windowType: windowType),
           // Screen content.
