@@ -142,6 +142,25 @@ class WalletBalances extends Table {
   DateTimeColumn get recordedAt => dateTime()();
 }
 
+/// App-wide settings table (singleton pattern).
+///
+/// Stores application preferences and state. Only one row exists (id = 1).
+class AppSettingsTable extends Table {
+  /// Primary key (always 1 for singleton).
+  IntColumn get id => integer().withDefault(const Constant(1))();
+
+  /// Startup behavior ('dashboard' or 'tray_only').
+  TextColumn get startupBehavior =>
+      text().withDefault(const Constant('dashboard'))();
+
+  /// Whether the user has completed onboarding.
+  BoolColumn get onboardingComplete =>
+      boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Application database using Drift.
 ///
 /// Handles all local persistence for Mimir including:
@@ -153,6 +172,7 @@ class WalletBalances extends Table {
   SkillQueueEntries,
   WalletJournalEntries,
   WalletBalances,
+  AppSettingsTable,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -161,7 +181,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -174,6 +194,15 @@ class AppDatabase extends _$AppDatabase {
         if (from < 2) {
           await m.addColumn(characters, characters.refreshToken);
           await m.addColumn(characters, characters.accessToken);
+        }
+
+        // Migration from version 2 to 3: Add app settings table.
+        if (from < 3) {
+          await m.createTable(appSettingsTable);
+          // Insert default settings row.
+          await into(appSettingsTable).insert(
+            AppSettingsTableCompanion.insert(),
+          );
         }
       },
     );
@@ -324,6 +353,42 @@ class AppDatabase extends _$AppDatabase {
           ..limit(1))
         .getSingleOrNull();
     return result?.balance;
+  }
+
+  // App settings operations
+
+  /// Get app settings (returns defaults if not found).
+  Future<AppSettingsTableData> getAppSettings() async {
+    final result = await (select(appSettingsTable)
+          ..where((s) => s.id.equals(1)))
+        .getSingleOrNull();
+
+    if (result != null) return result;
+
+    // Settings don't exist yet, insert defaults.
+    await into(appSettingsTable).insert(
+      AppSettingsTableCompanion.insert(),
+    );
+    return (await (select(appSettingsTable)
+              ..where((s) => s.id.equals(1)))
+            .getSingleOrNull()) ??
+        const AppSettingsTableData(
+          id: 1,
+          startupBehavior: 'dashboard',
+          onboardingComplete: false,
+        );
+  }
+
+  /// Watch app settings for reactive updates.
+  Stream<AppSettingsTableData> watchAppSettings() {
+    return (select(appSettingsTable)..where((s) => s.id.equals(1)))
+        .watchSingle();
+  }
+
+  /// Update app settings.
+  Future<void> updateAppSettings(AppSettingsTableCompanion settings) {
+    return (update(appSettingsTable)..where((s) => s.id.equals(1)))
+        .write(settings);
   }
 }
 
