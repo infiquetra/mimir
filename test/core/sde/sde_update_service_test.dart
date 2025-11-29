@@ -164,10 +164,14 @@ void main() {
   });
 
   group('SdeUpdateService.checkForUpdates', () {
+    // JSON string for mock manifest response
+    const manifestJson = '{"version":"20250805","checksum":"sha256:abc123",'
+        '"eveVersion":"sde-20250805-TRANQUILITY","skillCount":517}';
+
     test('should return SdeUpdateCheckFailed when manifest fetch fails',
         () async {
       when(
-        () => mockDio.get<Map<String, dynamic>>(
+        () => mockDio.get<String>(
           any(),
           options: any(named: 'options'),
         ),
@@ -185,21 +189,16 @@ void main() {
       // Set current version
       await database.setMetadata('version', '20250805');
 
-      // Mock manifest response
+      // Mock manifest response (now returns String, not Map)
       when(
-        () => mockDio.get<Map<String, dynamic>>(
+        () => mockDio.get<String>(
           any(),
           options: any(named: 'options'),
         ),
       ).thenAnswer((_) async => Response(
             requestOptions: RequestOptions(path: ''),
             statusCode: 200,
-            data: {
-              'version': '20250805',
-              'checksum': 'sha256:abc123',
-              'eveVersion': 'sde-20250805-TRANQUILITY',
-              'skillCount': 517,
-            },
+            data: manifestJson,
           ));
 
       final result = await service.checkForUpdates();
@@ -213,21 +212,16 @@ void main() {
       // Set current version
       await database.setMetadata('version', '20250801');
 
-      // Mock manifest response with newer version
+      // Mock manifest response with newer version (returns String)
       when(
-        () => mockDio.get<Map<String, dynamic>>(
+        () => mockDio.get<String>(
           any(),
           options: any(named: 'options'),
         ),
       ).thenAnswer((_) async => Response(
             requestOptions: RequestOptions(path: ''),
             statusCode: 200,
-            data: {
-              'version': '20250805',
-              'checksum': 'sha256:abc123',
-              'eveVersion': 'sde-20250805-TRANQUILITY',
-              'skillCount': 517,
-            },
+            data: manifestJson,
           ));
 
       final result = await service.checkForUpdates();
@@ -242,21 +236,16 @@ void main() {
     test('should return SdeUpdateAvailable when no current version', () async {
       // No version set
 
-      // Mock manifest response
+      // Mock manifest response (returns String)
       when(
-        () => mockDio.get<Map<String, dynamic>>(
+        () => mockDio.get<String>(
           any(),
           options: any(named: 'options'),
         ),
       ).thenAnswer((_) async => Response(
             requestOptions: RequestOptions(path: ''),
             statusCode: 200,
-            data: {
-              'version': '20250805',
-              'checksum': 'sha256:abc123',
-              'eveVersion': 'sde-20250805-TRANQUILITY',
-              'skillCount': 517,
-            },
+            data: manifestJson,
           ));
 
       final result = await service.checkForUpdates();

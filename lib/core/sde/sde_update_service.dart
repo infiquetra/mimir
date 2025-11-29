@@ -222,17 +222,22 @@ class SdeUpdateService {
       // The URL points to the "latest" release tag
       const url = '$_releaseBaseUrl/sde-latest/manifest.json';
 
-      final response = await _dio.get<Map<String, dynamic>>(
+      // Fetch as plain text and parse manually.
+      // GitHub release URLs redirect to a CDN and sometimes Dio doesn't
+      // correctly detect the content-type after redirects.
+      final response = await _dio.get<String>(
         url,
         options: Options(
-          responseType: ResponseType.json,
+          responseType: ResponseType.plain,
+          followRedirects: true,
           receiveTimeout: const Duration(seconds: 10),
           sendTimeout: const Duration(seconds: 5),
         ),
       );
 
       if (response.statusCode == 200 && response.data != null) {
-        return SdeManifest.fromJson(response.data!);
+        final data = json.decode(response.data!) as Map<String, dynamic>;
+        return SdeManifest.fromJson(data);
       }
     } catch (e) {
       debugPrint('SDE Update: Failed to fetch manifest: $e');
@@ -245,17 +250,21 @@ class SdeUpdateService {
     try {
       final url = '$_releaseBaseUrl/sde-v$version/skills.json';
 
-      final response = await _dio.get<Map<String, dynamic>>(
+      // Fetch as plain text and parse manually.
+      // GitHub release URLs redirect to a CDN and sometimes Dio doesn't
+      // correctly detect the content-type after redirects.
+      final response = await _dio.get<String>(
         url,
         options: Options(
-          responseType: ResponseType.json,
+          responseType: ResponseType.plain,
+          followRedirects: true,
           receiveTimeout: const Duration(seconds: 30),
           sendTimeout: const Duration(seconds: 10),
         ),
       );
 
       if (response.statusCode == 200 && response.data != null) {
-        return response.data;
+        return json.decode(response.data!) as Map<String, dynamic>;
       }
     } catch (e) {
       debugPrint('SDE Update: Failed to download skills: $e');
