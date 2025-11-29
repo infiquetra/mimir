@@ -497,6 +497,7 @@ class _RefreshIconButton extends ConsumerWidget {
       case WindowType.characters:
       case WindowType.settings:
       case WindowType.main:
+      case WindowType.onboarding:
         // No refresh for these windows.
         break;
     }

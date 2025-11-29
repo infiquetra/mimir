@@ -118,6 +118,13 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
       case WindowType.main:
         // Main window shouldn't be opened as a sub-window
         return const StandaloneDashboardScreen();
+      case WindowType.onboarding:
+        // Onboarding wizard for first-time users (placeholder for now)
+        return const Scaffold(
+          body: Center(
+            child: Text('Onboarding screen coming soon'),
+          ),
+        );
     }
   }
 }

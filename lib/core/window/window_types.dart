@@ -26,6 +26,9 @@ enum WindowType {
 
   /// Settings screen for app configuration.
   settings,
+
+  /// Onboarding wizard for first-time users.
+  onboarding,
 }
 
 /// Extension methods for [WindowType].
@@ -45,6 +48,8 @@ extension WindowTypeExtension on WindowType {
         return 'Characters - Mimir';
       case WindowType.settings:
         return 'Settings - Mimir';
+      case WindowType.onboarding:
+        return 'Welcome to Mimir';
     }
   }
 
@@ -65,6 +70,8 @@ extension WindowTypeExtension on WindowType {
         return 4;
       case WindowType.settings:
         return 5;
+      case WindowType.onboarding:
+        return 6;
     }
   }
 
@@ -83,6 +90,8 @@ extension WindowTypeExtension on WindowType {
         return WindowType.characters;
       case 5:
         return WindowType.settings;
+      case 6:
+        return WindowType.onboarding;
       default:
         return WindowType.dashboard;
     }
@@ -103,6 +112,8 @@ extension WindowTypeExtension on WindowType {
         return (width: 600, height: 500);
       case WindowType.settings:
         return (width: 500, height: 450);
+      case WindowType.onboarding:
+        return (width: 800, height: 600);
     }
   }
 
@@ -124,6 +135,8 @@ extension WindowTypeExtension on WindowType {
         return 'assets/icons/eve/characters.png';
       case WindowType.settings:
         return 'assets/icons/eve/settings.png';
+      case WindowType.onboarding:
+        return 'assets/icons/eve/app_icon.png';
     }
   }
 }
