@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/eve_colors.dart';
-import '../../../core/widgets/refresh_app_bar_action.dart';
 import '../../../core/widgets/space_background.dart';
 import '../../characters/data/character_providers.dart';
 import '../data/skill_providers.dart';
@@ -22,30 +20,6 @@ class SkillsScreen extends ConsumerWidget {
     final activeCharacter = ref.watch(activeCharacterProvider).valueOrNull;
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          'Skills',
-          style: TextStyle(
-            color: Colors.white,
-            shadows: [
-              Shadow(
-                color: EveColors.evePrimary.withAlpha(128),
-                blurRadius: 8,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          if (activeCharacter != null)
-            RefreshAppBarAction(
-              onRefresh: () =>
-                  _refreshSkillQueue(ref, activeCharacter.characterId),
-            ),
-        ],
-      ),
       body: SpaceBackground(
         starDensity: 0.3,
         nebulaOpacity: 0.06,

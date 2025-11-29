@@ -47,20 +47,6 @@ class _StandaloneCharactersScreenState
     }
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text('Characters'),
-        actions: [
-          if (!_showAddCharacter)
-            IconButton(
-              icon: const Icon(Icons.person_add),
-              tooltip: 'Add Character',
-              onPressed: () => setState(() => _showAddCharacter = true),
-            ),
-        ],
-      ),
       body: SpaceBackground(
         starDensity: 0.3,
         nebulaOpacity: 0.06,
@@ -103,14 +89,17 @@ class _CharacterListView extends ConsumerWidget {
         }
 
         return ListView.builder(
-          padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top + kToolbarHeight + 16,
-            left: 16,
-            right: 16,
-            bottom: 16,
-          ),
-          itemCount: chars.length,
+          padding: const EdgeInsets.all(16),
+          itemCount: chars.length + 1,
           itemBuilder: (context, index) {
+            // Add character card as the last item
+            if (index == chars.length) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _AddCharacterCard(onTap: onAddCharacter),
+              );
+            }
+
             final character = chars[index];
             final isActive = character.characterId == activeCharacterId;
 
@@ -631,6 +620,77 @@ class _AddCharacterView extends ConsumerWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Card widget for adding a new character.
+class _AddCharacterCard extends StatelessWidget {
+  const _AddCharacterCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return EveCard(
+      glowColor: EveColors.evePrimary,
+      glowIntensity: 0.15,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: EveColors.evePrimary.withAlpha(26),
+                  border: Border.all(
+                    color: EveColors.evePrimary.withAlpha(77),
+                    width: 2,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.person_add,
+                  color: EveColors.evePrimary,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Add Character',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: EveColors.evePrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Authenticate with EVE Online',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward,
+                color: EveColors.evePrimary.withAlpha(179),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

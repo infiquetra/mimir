@@ -6,7 +6,6 @@ import '../../../core/database/app_database.dart' show WalletJournalEntry;
 import '../../../core/theme/eve_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/eve_card.dart';
-import '../../../core/widgets/refresh_app_bar_action.dart';
 import '../../../core/widgets/space_background.dart';
 import '../../characters/data/character_providers.dart';
 import '../data/wallet_providers.dart';
@@ -26,29 +25,6 @@ class WalletScreen extends ConsumerWidget {
     final walletBalance = ref.watch(walletBalanceProvider);
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          'Wallet',
-          style: TextStyle(
-            color: Colors.white,
-            shadows: [
-              Shadow(
-                color: EveColors.evePrimary.withAlpha(128),
-                blurRadius: 8,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          if (activeCharacter != null)
-            RefreshAppBarAction(
-              onRefresh: () => _refreshWallet(ref, activeCharacter.characterId),
-            ),
-        ],
-      ),
       body: SpaceBackground(
         starDensity: 0.3,
         nebulaOpacity: 0.06,
