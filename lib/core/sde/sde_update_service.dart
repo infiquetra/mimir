@@ -164,16 +164,20 @@ class SdeUpdateService {
         return const SdeUpdateFailed(error: 'Could not fetch update manifest');
       }
 
-      // Download skills data
-      final skillsData = await _downloadSkillsData(manifest.version);
-      if (skillsData == null) {
+      // Download skills data as raw string for checksum validation
+      final downloadResult = await _downloadSkillsDataRaw(manifest.version);
+      if (downloadResult == null) {
         return const SdeUpdateFailed(error: 'Could not download skills data');
       }
 
-      // Validate checksum
-      final jsonString = json.encode(skillsData);
-      final actualChecksum = _calculateChecksum(jsonString);
+      final (rawJson, skillsData) = downloadResult;
+
+      // Validate checksum on the raw downloaded content
+      final actualChecksum = _calculateChecksum(rawJson);
       if (!_validateChecksum(actualChecksum, manifest.checksum)) {
+        debugPrint('SDE Update: Checksum mismatch');
+        debugPrint('  Expected: ${manifest.checksum}');
+        debugPrint('  Actual: $actualChecksum');
         return const SdeUpdateFailed(
           error: 'Checksum validation failed - data may be corrupted',
         );
@@ -246,7 +250,12 @@ class SdeUpdateService {
   }
 
   /// Download skills data for a specific version.
-  Future<Map<String, dynamic>?> _downloadSkillsData(String version) async {
+  ///
+  /// Returns a tuple of (rawJson, parsedData) for checksum validation.
+  /// The raw string is needed because re-encoding JSON changes formatting.
+  Future<(String, Map<String, dynamic>)?> _downloadSkillsDataRaw(
+    String version,
+  ) async {
     try {
       final url = '$_releaseBaseUrl/sde-v$version/skills.json';
 
@@ -264,7 +273,9 @@ class SdeUpdateService {
       );
 
       if (response.statusCode == 200 && response.data != null) {
-        return json.decode(response.data!) as Map<String, dynamic>;
+        final rawJson = response.data!;
+        final parsed = json.decode(rawJson) as Map<String, dynamic>;
+        return (rawJson, parsed);
       }
     } catch (e) {
       debugPrint('SDE Update: Failed to download skills: $e');
