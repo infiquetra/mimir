@@ -1,6 +1,8 @@
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/di/providers.dart';
 import '../../characters/data/character_providers.dart';
 import '../../skills/data/skill_repository.dart';
 import '../../wallet/data/wallet_repository.dart';
@@ -103,4 +105,125 @@ final nextSkillsCompletingProvider =
   });
 
   return completions;
+});
+
+/// Data model for wallet trends chart.
+class WalletTrendsData {
+  /// List of data points for the chart (date, balance).
+  final List<WalletTrendsPoint> chartPoints;
+
+  /// Total income over the period (sum of positive transactions).
+  final double income;
+
+  /// Total expenses over the period (sum of negative transactions).
+  final double expenses;
+
+  /// Net change (income - expenses).
+  final double net;
+
+  const WalletTrendsData({
+    required this.chartPoints,
+    required this.income,
+    required this.expenses,
+  }) : net = income - expenses;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! WalletTrendsData) return false;
+    if (chartPoints.length != other.chartPoints.length) return false;
+
+    for (var i = 0; i < chartPoints.length; i++) {
+      if (chartPoints[i] != other.chartPoints[i]) return false;
+    }
+
+    return income == other.income && expenses == other.expenses;
+  }
+
+  @override
+  int get hashCode =>
+      chartPoints.hashCode ^ income.hashCode ^ expenses.hashCode;
+}
+
+/// Single data point for wallet trends chart.
+class WalletTrendsPoint {
+  final DateTime date;
+  final double balance;
+
+  const WalletTrendsPoint({
+    required this.date,
+    required this.balance,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is WalletTrendsPoint &&
+          runtimeType == other.runtimeType &&
+          date == other.date &&
+          balance == other.balance;
+
+  @override
+  int get hashCode => date.hashCode ^ balance.hashCode;
+}
+
+/// Provider that calculates wallet trends over the last 30 days.
+///
+/// Returns:
+/// - List of daily balance snapshots (combined across all characters)
+/// - Income/expense/net totals from wallet journal entries
+///
+/// Returns empty data if no balance history exists.
+final walletTrendsProvider = FutureProvider<WalletTrendsData>((ref) async {
+  final database = ref.watch(databaseProvider);
+
+  // Query balance history for the last 30 days
+  final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+
+  // Get all balance snapshots from the last 30 days
+  final balances = await database.customSelect(
+    '''
+    SELECT
+      DATE(recorded_at) as date,
+      SUM(balance) as total_balance
+    FROM wallet_balances
+    WHERE recorded_at >= ?
+    GROUP BY DATE(recorded_at)
+    ORDER BY DATE(recorded_at) ASC
+    ''',
+    variables: [Variable.withDateTime(thirtyDaysAgo)],
+    readsFrom: {database.walletBalances},
+  ).get();
+
+  // Convert to chart points
+  final chartPoints = balances.map((row) {
+    final dateStr = row.read<String>('date');
+    final balance = row.read<double>('total_balance');
+    return WalletTrendsPoint(
+      date: DateTime.parse(dateStr),
+      balance: balance,
+    );
+  }).toList();
+
+  // Calculate income and expenses from journal entries
+  final transactions = await database.customSelect(
+    '''
+    SELECT
+      SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as total_income,
+      SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as total_expenses
+    FROM wallet_journal_entries
+    WHERE date >= ?
+    ''',
+    variables: [Variable.withDateTime(thirtyDaysAgo)],
+    readsFrom: {database.walletJournalEntries},
+  ).getSingleOrNull();
+
+  final income = transactions?.read<double?>('total_income') ?? 0.0;
+  final expenses = transactions?.read<double?>('total_expenses') ?? 0.0;
+
+  return WalletTrendsData(
+    chartPoints: chartPoints,
+    income: income,
+    expenses: expenses,
+  );
 });
