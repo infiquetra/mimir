@@ -1,7 +1,8 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../database/app_database.dart';
 import '../di/providers.dart';
@@ -107,16 +108,17 @@ class AuthController extends StateNotifier<AuthState> {
         clearError: true,
       );
 
-      // Launch the browser for authentication.
-      final launched = await launchUrl(
-        request.authorizationUrl,
-        mode: LaunchMode.externalApplication,
+      // Use Process.run to bypass url_launcher plugin issues in sub-windows.
+      // macOS 'open' command opens URLs in default browser.
+      final result = await Process.run(
+        'open',
+        [request.authorizationUrl.toString()],
       );
 
-      if (!launched) {
+      if (result.exitCode != 0) {
         state = state.copyWith(
           flowState: AuthFlowState.error,
-          errorMessage: 'Failed to launch browser for authentication',
+          errorMessage: 'Failed to launch browser: ${result.stderr}',
           clearPending: true,
         );
         return false;
