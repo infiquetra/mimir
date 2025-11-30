@@ -161,6 +161,34 @@ class AppSettingsTable extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Combat statistics from zkillboard.
+///
+/// Caches combat stats for characters to avoid excessive zkillboard API calls.
+/// Data is refreshed periodically (minimum 1 hour between fetches).
+class CombatStats extends Table {
+  /// Character ID (primary key).
+  IntColumn get characterId =>
+      integer().references(Characters, #characterId)();
+
+  /// Total kills (ships destroyed).
+  IntColumn get kills => integer().withDefault(const Constant(0))();
+
+  /// Total deaths (ships lost).
+  IntColumn get deaths => integer().withDefault(const Constant(0))();
+
+  /// ISK destroyed (from killing other ships).
+  RealColumn get iskDestroyed => real().withDefault(const Constant(0.0))();
+
+  /// ISK lost (from own ships destroyed).
+  RealColumn get iskLost => real().withDefault(const Constant(0.0))();
+
+  /// When this data was last fetched from zkillboard.
+  DateTimeColumn get lastUpdated => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {characterId};
+}
+
 /// Application database using Drift.
 ///
 /// Handles all local persistence for Mimir including:
@@ -173,6 +201,7 @@ class AppSettingsTable extends Table {
   WalletJournalEntries,
   WalletBalances,
   AppSettingsTable,
+  CombatStats,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -181,7 +210,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -203,6 +232,11 @@ class AppDatabase extends _$AppDatabase {
           await into(appSettingsTable).insert(
             AppSettingsTableCompanion.insert(),
           );
+        }
+
+        // Migration from version 3 to 4: Add combat stats table.
+        if (from < 4) {
+          await m.createTable(combatStats);
         }
       },
     );
@@ -259,6 +293,9 @@ class AppDatabase extends _$AppDatabase {
           .go();
       await (delete(walletBalances)
             ..where((e) => e.characterId.equals(characterId)))
+          .go();
+      await (delete(combatStats)
+            ..where((s) => s.characterId.equals(characterId)))
           .go();
       await (delete(characters)
             ..where((c) => c.characterId.equals(characterId)))
@@ -389,6 +426,30 @@ class AppDatabase extends _$AppDatabase {
   Future<void> updateAppSettings(AppSettingsTableCompanion settings) {
     return (update(appSettingsTable)..where((s) => s.id.equals(1)))
         .write(settings);
+  }
+
+  // Combat stats operations
+
+  /// Get combat stats for a character.
+  Future<CombatStat?> getCombatStats(int characterId) {
+    return (select(combatStats)..where((s) => s.characterId.equals(characterId)))
+        .getSingleOrNull();
+  }
+
+  /// Get all combat stats.
+  Future<List<CombatStat>> getAllCombatStats() {
+    return select(combatStats).get();
+  }
+
+  /// Insert or update combat stats for a character.
+  Future<void> upsertCombatStats(CombatStatsCompanion stats) {
+    return into(combatStats).insertOnConflictUpdate(stats);
+  }
+
+  /// Delete combat stats for a character.
+  Future<void> deleteCombatStats(int characterId) {
+    return (delete(combatStats)..where((s) => s.characterId.equals(characterId)))
+        .go();
   }
 }
 

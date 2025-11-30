@@ -2208,6 +2208,359 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
   }
 }
 
+class $CombatStatsTable extends CombatStats
+    with TableInfo<$CombatStatsTable, CombatStat> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CombatStatsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _characterIdMeta =
+      const VerificationMeta('characterId');
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+      'character_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES characters (character_id)'));
+  static const VerificationMeta _killsMeta = const VerificationMeta('kills');
+  @override
+  late final GeneratedColumn<int> kills = GeneratedColumn<int>(
+      'kills', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _deathsMeta = const VerificationMeta('deaths');
+  @override
+  late final GeneratedColumn<int> deaths = GeneratedColumn<int>(
+      'deaths', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _iskDestroyedMeta =
+      const VerificationMeta('iskDestroyed');
+  @override
+  late final GeneratedColumn<double> iskDestroyed = GeneratedColumn<double>(
+      'isk_destroyed', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0.0));
+  static const VerificationMeta _iskLostMeta =
+      const VerificationMeta('iskLost');
+  @override
+  late final GeneratedColumn<double> iskLost = GeneratedColumn<double>(
+      'isk_lost', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0.0));
+  static const VerificationMeta _lastUpdatedMeta =
+      const VerificationMeta('lastUpdated');
+  @override
+  late final GeneratedColumn<DateTime> lastUpdated = GeneratedColumn<DateTime>(
+      'last_updated', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [characterId, kills, deaths, iskDestroyed, iskLost, lastUpdated];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'combat_stats';
+  @override
+  VerificationContext validateIntegrity(Insertable<CombatStat> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('character_id')) {
+      context.handle(
+          _characterIdMeta,
+          characterId.isAcceptableOrUnknown(
+              data['character_id']!, _characterIdMeta));
+    }
+    if (data.containsKey('kills')) {
+      context.handle(
+          _killsMeta, kills.isAcceptableOrUnknown(data['kills']!, _killsMeta));
+    }
+    if (data.containsKey('deaths')) {
+      context.handle(_deathsMeta,
+          deaths.isAcceptableOrUnknown(data['deaths']!, _deathsMeta));
+    }
+    if (data.containsKey('isk_destroyed')) {
+      context.handle(
+          _iskDestroyedMeta,
+          iskDestroyed.isAcceptableOrUnknown(
+              data['isk_destroyed']!, _iskDestroyedMeta));
+    }
+    if (data.containsKey('isk_lost')) {
+      context.handle(_iskLostMeta,
+          iskLost.isAcceptableOrUnknown(data['isk_lost']!, _iskLostMeta));
+    }
+    if (data.containsKey('last_updated')) {
+      context.handle(
+          _lastUpdatedMeta,
+          lastUpdated.isAcceptableOrUnknown(
+              data['last_updated']!, _lastUpdatedMeta));
+    } else if (isInserting) {
+      context.missing(_lastUpdatedMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {characterId};
+  @override
+  CombatStat map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CombatStat(
+      characterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}character_id'])!,
+      kills: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}kills'])!,
+      deaths: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}deaths'])!,
+      iskDestroyed: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}isk_destroyed'])!,
+      iskLost: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}isk_lost'])!,
+      lastUpdated: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}last_updated'])!,
+    );
+  }
+
+  @override
+  $CombatStatsTable createAlias(String alias) {
+    return $CombatStatsTable(attachedDatabase, alias);
+  }
+}
+
+class CombatStat extends DataClass implements Insertable<CombatStat> {
+  /// Character ID (primary key).
+  final int characterId;
+
+  /// Total kills (ships destroyed).
+  final int kills;
+
+  /// Total deaths (ships lost).
+  final int deaths;
+
+  /// ISK destroyed (from killing other ships).
+  final double iskDestroyed;
+
+  /// ISK lost (from own ships destroyed).
+  final double iskLost;
+
+  /// When this data was last fetched from zkillboard.
+  final DateTime lastUpdated;
+  const CombatStat(
+      {required this.characterId,
+      required this.kills,
+      required this.deaths,
+      required this.iskDestroyed,
+      required this.iskLost,
+      required this.lastUpdated});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['character_id'] = Variable<int>(characterId);
+    map['kills'] = Variable<int>(kills);
+    map['deaths'] = Variable<int>(deaths);
+    map['isk_destroyed'] = Variable<double>(iskDestroyed);
+    map['isk_lost'] = Variable<double>(iskLost);
+    map['last_updated'] = Variable<DateTime>(lastUpdated);
+    return map;
+  }
+
+  CombatStatsCompanion toCompanion(bool nullToAbsent) {
+    return CombatStatsCompanion(
+      characterId: Value(characterId),
+      kills: Value(kills),
+      deaths: Value(deaths),
+      iskDestroyed: Value(iskDestroyed),
+      iskLost: Value(iskLost),
+      lastUpdated: Value(lastUpdated),
+    );
+  }
+
+  factory CombatStat.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CombatStat(
+      characterId: serializer.fromJson<int>(json['characterId']),
+      kills: serializer.fromJson<int>(json['kills']),
+      deaths: serializer.fromJson<int>(json['deaths']),
+      iskDestroyed: serializer.fromJson<double>(json['iskDestroyed']),
+      iskLost: serializer.fromJson<double>(json['iskLost']),
+      lastUpdated: serializer.fromJson<DateTime>(json['lastUpdated']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'characterId': serializer.toJson<int>(characterId),
+      'kills': serializer.toJson<int>(kills),
+      'deaths': serializer.toJson<int>(deaths),
+      'iskDestroyed': serializer.toJson<double>(iskDestroyed),
+      'iskLost': serializer.toJson<double>(iskLost),
+      'lastUpdated': serializer.toJson<DateTime>(lastUpdated),
+    };
+  }
+
+  CombatStat copyWith(
+          {int? characterId,
+          int? kills,
+          int? deaths,
+          double? iskDestroyed,
+          double? iskLost,
+          DateTime? lastUpdated}) =>
+      CombatStat(
+        characterId: characterId ?? this.characterId,
+        kills: kills ?? this.kills,
+        deaths: deaths ?? this.deaths,
+        iskDestroyed: iskDestroyed ?? this.iskDestroyed,
+        iskLost: iskLost ?? this.iskLost,
+        lastUpdated: lastUpdated ?? this.lastUpdated,
+      );
+  CombatStat copyWithCompanion(CombatStatsCompanion data) {
+    return CombatStat(
+      characterId:
+          data.characterId.present ? data.characterId.value : this.characterId,
+      kills: data.kills.present ? data.kills.value : this.kills,
+      deaths: data.deaths.present ? data.deaths.value : this.deaths,
+      iskDestroyed: data.iskDestroyed.present
+          ? data.iskDestroyed.value
+          : this.iskDestroyed,
+      iskLost: data.iskLost.present ? data.iskLost.value : this.iskLost,
+      lastUpdated:
+          data.lastUpdated.present ? data.lastUpdated.value : this.lastUpdated,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CombatStat(')
+          ..write('characterId: $characterId, ')
+          ..write('kills: $kills, ')
+          ..write('deaths: $deaths, ')
+          ..write('iskDestroyed: $iskDestroyed, ')
+          ..write('iskLost: $iskLost, ')
+          ..write('lastUpdated: $lastUpdated')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      characterId, kills, deaths, iskDestroyed, iskLost, lastUpdated);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CombatStat &&
+          other.characterId == this.characterId &&
+          other.kills == this.kills &&
+          other.deaths == this.deaths &&
+          other.iskDestroyed == this.iskDestroyed &&
+          other.iskLost == this.iskLost &&
+          other.lastUpdated == this.lastUpdated);
+}
+
+class CombatStatsCompanion extends UpdateCompanion<CombatStat> {
+  final Value<int> characterId;
+  final Value<int> kills;
+  final Value<int> deaths;
+  final Value<double> iskDestroyed;
+  final Value<double> iskLost;
+  final Value<DateTime> lastUpdated;
+  const CombatStatsCompanion({
+    this.characterId = const Value.absent(),
+    this.kills = const Value.absent(),
+    this.deaths = const Value.absent(),
+    this.iskDestroyed = const Value.absent(),
+    this.iskLost = const Value.absent(),
+    this.lastUpdated = const Value.absent(),
+  });
+  CombatStatsCompanion.insert({
+    this.characterId = const Value.absent(),
+    this.kills = const Value.absent(),
+    this.deaths = const Value.absent(),
+    this.iskDestroyed = const Value.absent(),
+    this.iskLost = const Value.absent(),
+    required DateTime lastUpdated,
+  }) : lastUpdated = Value(lastUpdated);
+  static Insertable<CombatStat> custom({
+    Expression<int>? characterId,
+    Expression<int>? kills,
+    Expression<int>? deaths,
+    Expression<double>? iskDestroyed,
+    Expression<double>? iskLost,
+    Expression<DateTime>? lastUpdated,
+  }) {
+    return RawValuesInsertable({
+      if (characterId != null) 'character_id': characterId,
+      if (kills != null) 'kills': kills,
+      if (deaths != null) 'deaths': deaths,
+      if (iskDestroyed != null) 'isk_destroyed': iskDestroyed,
+      if (iskLost != null) 'isk_lost': iskLost,
+      if (lastUpdated != null) 'last_updated': lastUpdated,
+    });
+  }
+
+  CombatStatsCompanion copyWith(
+      {Value<int>? characterId,
+      Value<int>? kills,
+      Value<int>? deaths,
+      Value<double>? iskDestroyed,
+      Value<double>? iskLost,
+      Value<DateTime>? lastUpdated}) {
+    return CombatStatsCompanion(
+      characterId: characterId ?? this.characterId,
+      kills: kills ?? this.kills,
+      deaths: deaths ?? this.deaths,
+      iskDestroyed: iskDestroyed ?? this.iskDestroyed,
+      iskLost: iskLost ?? this.iskLost,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (kills.present) {
+      map['kills'] = Variable<int>(kills.value);
+    }
+    if (deaths.present) {
+      map['deaths'] = Variable<int>(deaths.value);
+    }
+    if (iskDestroyed.present) {
+      map['isk_destroyed'] = Variable<double>(iskDestroyed.value);
+    }
+    if (iskLost.present) {
+      map['isk_lost'] = Variable<double>(iskLost.value);
+    }
+    if (lastUpdated.present) {
+      map['last_updated'] = Variable<DateTime>(lastUpdated.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CombatStatsCompanion(')
+          ..write('characterId: $characterId, ')
+          ..write('kills: $kills, ')
+          ..write('deaths: $deaths, ')
+          ..write('iskDestroyed: $iskDestroyed, ')
+          ..write('iskLost: $iskLost, ')
+          ..write('lastUpdated: $lastUpdated')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2219,6 +2572,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $WalletBalancesTable walletBalances = $WalletBalancesTable(this);
   late final $AppSettingsTableTable appSettingsTable =
       $AppSettingsTableTable(this);
+  late final $CombatStatsTable combatStats = $CombatStatsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2228,7 +2582,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         skillQueueEntries,
         walletJournalEntries,
         walletBalances,
-        appSettingsTable
+        appSettingsTable,
+        combatStats
       ];
 }
 
@@ -2312,6 +2667,21 @@ final class $$CharactersTableReferences
         .filter((f) => f.characterId.characterId($_item.characterId));
 
     final cache = $_typedResult.readTableOrNull(_walletBalancesRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$CombatStatsTable, List<CombatStat>>
+      _combatStatsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.combatStats,
+              aliasName: $_aliasNameGenerator(
+                  db.characters.characterId, db.combatStats.characterId));
+
+  $$CombatStatsTableProcessedTableManager get combatStatsRefs {
+    final manager = $$CombatStatsTableTableManager($_db, $_db.combatStats)
+        .filter((f) => f.characterId.characterId($_item.characterId));
+
+    final cache = $_typedResult.readTableOrNull(_combatStatsRefsTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -2419,6 +2789,27 @@ class $$CharactersTableFilterComposer
             $$WalletBalancesTableFilterComposer(
               $db: $db,
               $table: $db.walletBalances,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> combatStatsRefs(
+      Expression<bool> Function($$CombatStatsTableFilterComposer f) f) {
+    final $$CombatStatsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.combatStats,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CombatStatsTableFilterComposer(
+              $db: $db,
+              $table: $db.combatStats,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -2588,6 +2979,27 @@ class $$CharactersTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> combatStatsRefs<T extends Object>(
+      Expression<T> Function($$CombatStatsTableAnnotationComposer a) f) {
+    final $$CombatStatsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.combatStats,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CombatStatsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.combatStats,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$CharactersTableTableManager extends RootTableManager<
@@ -2604,7 +3016,8 @@ class $$CharactersTableTableManager extends RootTableManager<
     PrefetchHooks Function(
         {bool skillQueueEntriesRefs,
         bool walletJournalEntriesRefs,
-        bool walletBalancesRefs})> {
+        bool walletBalancesRefs,
+        bool combatStatsRefs})> {
   $$CharactersTableTableManager(_$AppDatabase db, $CharactersTable table)
       : super(TableManagerState(
           db: db,
@@ -2680,13 +3093,15 @@ class $$CharactersTableTableManager extends RootTableManager<
           prefetchHooksCallback: (
               {skillQueueEntriesRefs = false,
               walletJournalEntriesRefs = false,
-              walletBalancesRefs = false}) {
+              walletBalancesRefs = false,
+              combatStatsRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
                 if (skillQueueEntriesRefs) db.skillQueueEntries,
                 if (walletJournalEntriesRefs) db.walletJournalEntries,
-                if (walletBalancesRefs) db.walletBalances
+                if (walletBalancesRefs) db.walletBalances,
+                if (combatStatsRefs) db.combatStats
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
@@ -2726,6 +3141,18 @@ class $$CharactersTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems.where(
                                 (e) => e.characterId == item.characterId),
+                        typedResults: items),
+                  if (combatStatsRefs)
+                    await $_getPrefetchedData(
+                        currentTable: table,
+                        referencedTable: $$CharactersTableReferences
+                            ._combatStatsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$CharactersTableReferences(db, table, p0)
+                                .combatStatsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.characterId),
                         typedResults: items)
                 ];
               },
@@ -2748,7 +3175,8 @@ typedef $$CharactersTableProcessedTableManager = ProcessedTableManager<
     PrefetchHooks Function(
         {bool skillQueueEntriesRefs,
         bool walletJournalEntriesRefs,
-        bool walletBalancesRefs})>;
+        bool walletBalancesRefs,
+        bool combatStatsRefs})>;
 typedef $$SkillQueueEntriesTableCreateCompanionBuilder
     = SkillQueueEntriesCompanion Function({
   Value<int> id,
@@ -3837,6 +4265,291 @@ typedef $$AppSettingsTableTableProcessedTableManager = ProcessedTableManager<
     ),
     AppSettingsTableData,
     PrefetchHooks Function()>;
+typedef $$CombatStatsTableCreateCompanionBuilder = CombatStatsCompanion
+    Function({
+  Value<int> characterId,
+  Value<int> kills,
+  Value<int> deaths,
+  Value<double> iskDestroyed,
+  Value<double> iskLost,
+  required DateTime lastUpdated,
+});
+typedef $$CombatStatsTableUpdateCompanionBuilder = CombatStatsCompanion
+    Function({
+  Value<int> characterId,
+  Value<int> kills,
+  Value<int> deaths,
+  Value<double> iskDestroyed,
+  Value<double> iskLost,
+  Value<DateTime> lastUpdated,
+});
+
+final class $$CombatStatsTableReferences
+    extends BaseReferences<_$AppDatabase, $CombatStatsTable, CombatStat> {
+  $$CombatStatsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias($_aliasNameGenerator(
+          db.combatStats.characterId, db.characters.characterId));
+
+  $$CharactersTableProcessedTableManager? get characterId {
+    if ($_item.characterId == null) return null;
+    final manager = $$CharactersTableTableManager($_db, $_db.characters)
+        .filter((f) => f.characterId($_item.characterId!));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$CombatStatsTableFilterComposer
+    extends Composer<_$AppDatabase, $CombatStatsTable> {
+  $$CombatStatsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get kills => $composableBuilder(
+      column: $table.kills, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get deaths => $composableBuilder(
+      column: $table.deaths, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get iskDestroyed => $composableBuilder(
+      column: $table.iskDestroyed, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get iskLost => $composableBuilder(
+      column: $table.iskLost, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => ColumnFilters(column));
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableFilterComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$CombatStatsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CombatStatsTable> {
+  $$CombatStatsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get kills => $composableBuilder(
+      column: $table.kills, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get deaths => $composableBuilder(
+      column: $table.deaths, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get iskDestroyed => $composableBuilder(
+      column: $table.iskDestroyed,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get iskLost => $composableBuilder(
+      column: $table.iskLost, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => ColumnOrderings(column));
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableOrderingComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$CombatStatsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CombatStatsTable> {
+  $$CombatStatsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get kills =>
+      $composableBuilder(column: $table.kills, builder: (column) => column);
+
+  GeneratedColumn<int> get deaths =>
+      $composableBuilder(column: $table.deaths, builder: (column) => column);
+
+  GeneratedColumn<double> get iskDestroyed => $composableBuilder(
+      column: $table.iskDestroyed, builder: (column) => column);
+
+  GeneratedColumn<double> get iskLost =>
+      $composableBuilder(column: $table.iskLost, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => column);
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$CombatStatsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $CombatStatsTable,
+    CombatStat,
+    $$CombatStatsTableFilterComposer,
+    $$CombatStatsTableOrderingComposer,
+    $$CombatStatsTableAnnotationComposer,
+    $$CombatStatsTableCreateCompanionBuilder,
+    $$CombatStatsTableUpdateCompanionBuilder,
+    (CombatStat, $$CombatStatsTableReferences),
+    CombatStat,
+    PrefetchHooks Function({bool characterId})> {
+  $$CombatStatsTableTableManager(_$AppDatabase db, $CombatStatsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CombatStatsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CombatStatsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CombatStatsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> characterId = const Value.absent(),
+            Value<int> kills = const Value.absent(),
+            Value<int> deaths = const Value.absent(),
+            Value<double> iskDestroyed = const Value.absent(),
+            Value<double> iskLost = const Value.absent(),
+            Value<DateTime> lastUpdated = const Value.absent(),
+          }) =>
+              CombatStatsCompanion(
+            characterId: characterId,
+            kills: kills,
+            deaths: deaths,
+            iskDestroyed: iskDestroyed,
+            iskLost: iskLost,
+            lastUpdated: lastUpdated,
+          ),
+          createCompanionCallback: ({
+            Value<int> characterId = const Value.absent(),
+            Value<int> kills = const Value.absent(),
+            Value<int> deaths = const Value.absent(),
+            Value<double> iskDestroyed = const Value.absent(),
+            Value<double> iskLost = const Value.absent(),
+            required DateTime lastUpdated,
+          }) =>
+              CombatStatsCompanion.insert(
+            characterId: characterId,
+            kills: kills,
+            deaths: deaths,
+            iskDestroyed: iskDestroyed,
+            iskLost: iskLost,
+            lastUpdated: lastUpdated,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$CombatStatsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({characterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (characterId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.characterId,
+                    referencedTable:
+                        $$CombatStatsTableReferences._characterIdTable(db),
+                    referencedColumn: $$CombatStatsTableReferences
+                        ._characterIdTable(db)
+                        .characterId,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$CombatStatsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $CombatStatsTable,
+    CombatStat,
+    $$CombatStatsTableFilterComposer,
+    $$CombatStatsTableOrderingComposer,
+    $$CombatStatsTableAnnotationComposer,
+    $$CombatStatsTableCreateCompanionBuilder,
+    $$CombatStatsTableUpdateCompanionBuilder,
+    (CombatStat, $$CombatStatsTableReferences),
+    CombatStat,
+    PrefetchHooks Function({bool characterId})>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3851,4 +4564,6 @@ class $AppDatabaseManager {
       $$WalletBalancesTableTableManager(_db, _db.walletBalances);
   $$AppSettingsTableTableTableManager get appSettingsTable =>
       $$AppSettingsTableTableTableManager(_db, _db.appSettingsTable);
+  $$CombatStatsTableTableManager get combatStats =>
+      $$CombatStatsTableTableManager(_db, _db.combatStats);
 }

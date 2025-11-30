@@ -5,6 +5,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../../features/characters/data/character_providers.dart';
 import '../../features/characters/data/character_repository.dart';
 import '../../features/dashboard/data/dashboard_providers.dart';
+import '../../features/dashboard/presentation/widgets/cards/combat_stats_card.dart';
 import '../../features/dashboard/presentation/widgets/cards/combined_wealth_card.dart';
 import '../../features/dashboard/presentation/widgets/cards/quick_actions_card.dart';
 import '../../features/dashboard/presentation/widgets/cards/training_overview_card.dart';
@@ -65,7 +66,7 @@ class _StandaloneDashboardScreenState
                       crossAxisCount: columnCount,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
-                      childCount: 5,
+                      childCount: 6,
                       itemBuilder: (context, index) => _buildCard(index),
                     ),
                   ),
@@ -92,6 +93,8 @@ class _StandaloneDashboardScreenState
         return const WalletTrendsCard();
       case 4:
         return const TrainingTimelineCard();
+      case 5:
+        return const CombatStatsCard();
       default:
         return const SizedBox.shrink();
     }
