@@ -77,14 +77,21 @@ final nextSkillsCompletingProvider =
     final queue = queues[character.characterId];
     if (queue == null || queue.isEmpty) continue;
 
-    // Find skills with finish dates
+    // Find the first skill with a finish date (currently training or next to train)
+    // Skills are already sorted by queuePosition, so first one is the active/next skill
+    SkillQueueEntry? nextSkill;
     for (final skill in queue) {
       if (skill.finishDate != null) {
-        completions.add(NextSkillCompletion(
-          character: character,
-          skillEntry: skill,
-        ));
+        nextSkill = skill;
+        break;
       }
+    }
+
+    if (nextSkill != null) {
+      completions.add(NextSkillCompletion(
+        character: character,
+        skillEntry: nextSkill,
+      ));
     }
   }
 

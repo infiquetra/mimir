@@ -321,7 +321,8 @@ void main() {
       expect(completions, isEmpty);
     });
 
-    test('should return skills sorted by finish time', () async {
+    test('should return next skill per character sorted by finish time',
+        () async {
       final now = DateTime.now();
       final soon = now.add(const Duration(hours: 2));
       final later = now.add(const Duration(hours: 5));
@@ -365,14 +366,14 @@ void main() {
           queuePosition: 0,
           skillId: 3301,
           finishedLevel: 5,
-          finishDate: Value(soon), // Finishes soon
+          finishDate: Value(soon), // Finishes soon (first in queue)
         ),
         SkillQueueEntriesCompanion.insert(
           characterId: 22222222,
           queuePosition: 1,
           skillId: 3302,
           finishedLevel: 3,
-          finishDate: Value(muchLater), // Finishes much later
+          finishDate: Value(muchLater), // Later skill (not returned)
         ),
       ]);
 
@@ -383,20 +384,19 @@ void main() {
       final completions =
           await container.read(nextSkillsCompletingProvider.future);
 
-      expect(completions, hasLength(3));
+      // Should return only 2 skills - one per character (first skill from each queue)
+      expect(completions, hasLength(2));
 
-      // Verify sorting: soon → later → muchLater
+      // Verify sorting: soon → later
       expect(completions[0].skillEntry.skillId, equals(3301)); // soon
       expect(completions[1].skillEntry.skillId, equals(3300)); // later
-      expect(completions[2].skillEntry.skillId, equals(3302)); // muchLater
 
-      // Verify character associations
+      // Verify character associations (should only be one skill per character)
       expect(completions[0].character.characterId, equals(22222222));
       expect(completions[1].character.characterId, equals(11111111));
-      expect(completions[2].character.characterId, equals(22222222));
     });
 
-    test('should exclude skills without finish dates', () async {
+    test('should return first skill with finish date per character', () async {
       final now = DateTime.now();
 
       await database.upsertCharacter(CharactersCompanion.insert(
@@ -409,7 +409,7 @@ void main() {
         lastUpdated: now,
       ));
 
-      // Add queue with mixed finish dates
+      // Add queue with mixed finish dates - should only return first one with finish date
       await database.replaceSkillQueue(11111111, [
         SkillQueueEntriesCompanion.insert(
           characterId: 11111111,
@@ -441,9 +441,9 @@ void main() {
       final completions =
           await container.read(nextSkillsCompletingProvider.future);
 
-      expect(completions, hasLength(2)); // Only skills with finish dates
+      // Should only return first skill from queue (one per character)
+      expect(completions, hasLength(1));
       expect(completions[0].skillEntry.skillId, equals(3300));
-      expect(completions[1].skillEntry.skillId, equals(3302));
     });
 
     test('should handle characters with empty queues', () async {
