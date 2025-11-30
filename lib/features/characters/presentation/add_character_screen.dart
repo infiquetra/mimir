@@ -133,7 +133,7 @@ class AddCharacterScreen extends ConsumerWidget {
               style: theme.textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
-            ...EveConfig.phase1Scopes.map((scope) => Padding(
+            ...[...EveConfig.phase1Scopes, ...EveConfig.phase2FleetScopes].map((scope) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
                     children: [
