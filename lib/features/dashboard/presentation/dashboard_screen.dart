@@ -3,53 +3,76 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/database/app_database.dart';
 import '../../../core/router/app_router.dart';
-import '../../../core/sde/sde_providers.dart';
 import '../../../core/theme/eve_colors.dart';
-import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/eve_card.dart';
-import '../../../core/widgets/eve_skill_icon.dart';
 import '../../../core/widgets/refresh_app_bar_action.dart';
 import '../../../core/widgets/space_background.dart';
 import '../../characters/data/character_providers.dart';
 import '../../characters/data/character_repository.dart';
-import '../../skills/data/skill_providers.dart';
 import '../../skills/data/skill_repository.dart';
-import '../../wallet/data/wallet_providers.dart';
 import '../../wallet/data/wallet_repository.dart';
+import '../data/dashboard_providers.dart';
+import 'widgets/cards/combined_wealth_card.dart';
+import 'widgets/cards/quick_actions_card.dart';
+import 'widgets/cards/training_overview_card.dart';
 
-/// Dashboard screen showing an overview of the active character.
+/// Dashboard screen showing multi-character overview.
 ///
 /// Displays in a responsive masonry grid:
-/// - Character card with portrait, name, and corporation
-/// - Wallet balance with glow effect
-/// - Currently training skill with icon
-/// - Skill queue preview with icons
-/// - Recent wallet transactions
-class DashboardScreen extends ConsumerWidget {
+/// - Combined wealth across all characters
+/// - Training overview with upcoming skill completions
+/// - Quick actions for refreshing all data and alerts
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
+  @override
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   /// Calculate number of columns based on screen width.
   int _getColumnCount(double width) {
-    if (width < 600) return 1; // Compact: single column
-    if (width < 900) return 2; // Medium: two columns
-    return 2; // Expanded: keep at 2 for better card sizing
+    if (width < 600) return 1; // Mobile: single column
+    if (width < 900) return 2; // Tablet: two columns
+    return 2; // Desktop: keep at 2 for better card sizing
+  }
+
+  /// Refresh all multi-character data.
+  Future<void> _refreshAll() async {
+    // Get all characters
+    final characters = await ref.read(allCharactersProvider.future);
+
+    // Invalidate all multi-character providers
+    ref.invalidate(allCharacterBalancesProvider);
+    ref.invalidate(allCharacterSkillQueuesProvider);
+
+    // Refresh data for each character
+    final characterRepo = ref.read(characterRepositoryProvider);
+    final walletRepo = ref.read(walletRepositoryProvider);
+    final skillRepo = ref.read(skillRepositoryProvider);
+
+    for (final character in characters) {
+      try {
+        await Future.wait([
+          characterRepo.refreshCharacter(character.characterId),
+          walletRepo.refreshWalletBalance(character.characterId),
+          walletRepo.refreshWalletJournal(character.characterId),
+          skillRepo.refreshSkillQueue(character.characterId),
+        ]);
+      } catch (e) {
+        // Continue refreshing other characters even if one fails
+        debugPrint('Failed to refresh character ${character.characterId}: $e');
+      }
+    }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final activeCharacter = ref.watch(activeCharacterProvider);
-    final walletBalance = ref.watch(walletBalanceProvider);
-    final currentTraining = ref.watch(currentTrainingProvider);
-    final skillPreview = ref.watch(skillQueuePreviewProvider);
-    final walletJournal = ref.watch(walletJournalProvider);
+  Widget build(BuildContext context) {
+    final characters = ref.watch(allCharactersProvider);
 
     final screenWidth = MediaQuery.sizeOf(context).width;
     final columnCount = _getColumnCount(screenWidth);
-
-    // Extract characterId for refresh action (null when no character).
-    final characterId = activeCharacter.valueOrNull?.characterId;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -58,29 +81,30 @@ class DashboardScreen extends ConsumerWidget {
         elevation: 0,
         title: const Text('Dashboard'),
         actions: [
-          if (characterId != null)
-            RefreshAppBarAction(
-              onRefresh: () => _refreshAll(ref, characterId),
-            ),
+          RefreshAppBarAction(
+            onRefresh: _refreshAll,
+          ),
         ],
       ),
       body: SpaceBackground(
         starDensity: 0.3,
         nebulaOpacity: 0.06,
-        child: activeCharacter.when(
-          data: (character) {
-            if (character == null) {
+        child: characters.when(
+          data: (chars) {
+            if (chars.isEmpty) {
               return _buildNoCharacterState(context);
             }
 
             return RefreshIndicator(
-              onRefresh: () => _refreshAll(ref, character.characterId),
+              onRefresh: _refreshAll,
               child: CustomScrollView(
                 slivers: [
                   // Top padding for app bar
                   SliverPadding(
                     padding: EdgeInsets.only(
-                      top: MediaQuery.of(context).padding.top + kToolbarHeight + 8,
+                      top: MediaQuery.of(context).padding.top +
+                          kToolbarHeight +
+                          8,
                       left: 16,
                       right: 16,
                       bottom: 16,
@@ -89,40 +113,33 @@ class DashboardScreen extends ConsumerWidget {
                       crossAxisCount: columnCount,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
-                      childCount: 5,
-                      itemBuilder: (context, index) {
-                        switch (index) {
-                          case 0:
-                            return _CharacterCard(character: character);
-                          case 1:
-                            return _WalletBalanceCard(balance: walletBalance);
-                          case 2:
-                            return _CurrentTrainingCard(entry: currentTraining);
-                          case 3:
-                            return _SkillQueuePreviewCard(
-                              skills: skillPreview,
-                              onViewAll: () => context.go(AppRoutes.skills),
-                            );
-                          case 4:
-                            return _RecentTransactionsCard(
-                              journal: walletJournal,
-                              onViewAll: () => context.go(AppRoutes.wallet),
-                            );
-                          default:
-                            return const SizedBox.shrink();
-                        }
-                      },
+                      childCount: 3,
+                      itemBuilder: (context, index) => _buildCard(index),
                     ),
                   ),
                 ],
               ),
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => _buildLoadingState(context),
           error: (error, stack) => _buildErrorState(context, error),
         ),
       ),
     );
+  }
+
+  /// Build card at the given index.
+  Widget _buildCard(int index) {
+    switch (index) {
+      case 0:
+        return const CombinedWealthCard();
+      case 1:
+        return const TrainingOverviewCard();
+      case 2:
+        return const QuickActionsCard();
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
   Widget _buildNoCharacterState(BuildContext context) {
@@ -130,7 +147,12 @@ class DashboardScreen extends ConsumerWidget {
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + kToolbarHeight + 32,
+          left: 32,
+          right: 32,
+          bottom: 32,
+        ),
         child: EveCard(
           glowColor: EveColors.evePrimary,
           glowIntensity: 0.2,
@@ -168,12 +190,28 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildLoadingState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + kToolbarHeight,
+        ),
+        child: const CircularProgressIndicator(),
+      ),
+    );
+  }
+
   Widget _buildErrorState(BuildContext context, Object error) {
     final theme = Theme.of(context);
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + kToolbarHeight + 32,
+          left: 32,
+          right: 32,
+          bottom: 32,
+        ),
         child: EveCard(
           glowColor: EveColors.error,
           glowIntensity: 0.2,
@@ -198,585 +236,15 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _refreshAll,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Future<void> _refreshAll(WidgetRef ref, int characterId) async {
-    // Refresh all data in parallel.
-    await Future.wait([
-      ref.read(characterRepositoryProvider).refreshCharacter(characterId),
-      ref.read(skillRepositoryProvider).refreshSkillQueue(characterId),
-      ref.read(walletRepositoryProvider).refreshWalletBalance(characterId),
-      ref.read(walletRepositoryProvider).refreshWalletJournal(characterId),
-    ]);
-
-    // Invalidate providers to refresh UI.
-    ref.invalidate(walletBalanceProvider);
-  }
-}
-
-/// Card displaying the active character's info.
-class _CharacterCard extends StatelessWidget {
-  const _CharacterCard({required this.character});
-
-  final Character character;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return EveCard(
-      glowColor: EveColors.evePrimary,
-      glowIntensity: 0.15,
-      child: Row(
-        children: [
-          // Character portrait with glow.
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: EveColors.evePrimary.withAlpha(77),
-                  blurRadius: 12,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: CircleAvatar(
-              radius: 36,
-              backgroundImage: NetworkImage(
-                'https://images.evetech.net/characters/${character.characterId}/portrait?size=128',
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-
-          // Character info.
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  character.name,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  character.corporationName,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                if (character.allianceName != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    character.allianceName!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Card displaying the wallet balance with ISK styling.
-class _WalletBalanceCard extends StatelessWidget {
-  const _WalletBalanceCard({required this.balance});
-
-  final AsyncValue<double?> balance;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return EveCard(
-      glowColor: EveColors.eveSecondary,
-      glowIntensity: 0.2,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.account_balance_wallet,
-                size: 20,
-                color: EveColors.eveSecondary,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Wallet Balance',
-                style: theme.textTheme.titleMedium,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          balance.when(
-            data: (value) => Text(
-              value != null ? formatIsk(value) : 'No data',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: EveColors.eveSecondary,
-              ),
-            ),
-            loading: () => Text(
-              'Loading...',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            error: (_, __) => Text(
-              'Error',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color: theme.colorScheme.error,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Card displaying the currently training skill with icon.
-class _CurrentTrainingCard extends ConsumerWidget {
-  const _CurrentTrainingCard({required this.entry});
-
-  final SkillQueueEntry? entry;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
-    // Fetch skill name from SDE if entry exists.
-    final skillNameAsync =
-        entry != null ? ref.watch(skillNameProvider(entry!.skillId)) : null;
-
-    return EveCard(
-      glowColor: EveColors.evePrimary,
-      glowIntensity: entry != null ? 0.25 : 0.1,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.school,
-                size: 20,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Currently Training',
-                style: theme.textTheme.titleMedium,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (entry == null)
-            Text(
-              'No skill in training',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            )
-          else ...[
-            Row(
-              children: [
-                // Skill icon
-                EveSkillIcon(
-                  typeId: entry!.skillId,
-                  size: 48,
-                  showBorder: true,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      skillNameAsync!.when(
-                        data: (skillName) => Text(
-                          skillName,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        loading: () => Container(
-                          height: 24,
-                          width: 150,
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        error: (_, __) => Text(
-                          'Skill #${entry!.skillId}',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Training to Level ${entry!.finishedLevel}',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (entry!.finishDate != null) ...[
-              const SizedBox(height: 12),
-              _buildTimeRemaining(context, entry!.finishDate!),
-            ],
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimeRemaining(BuildContext context, DateTime finishDate) {
-    final theme = Theme.of(context);
-    final remaining = finishDate.difference(DateTime.now());
-
-    if (remaining.isNegative) {
-      return Row(
-        children: [
-          const Icon(
-            Icons.check_circle,
-            size: 16,
-            color: EveColors.success,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            'Completed',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: EveColors.success,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      );
-    }
-
-    // Calculate progress percentage
-    final startDate = entry!.startDate;
-    if (startDate != null) {
-      final totalDuration = finishDate.difference(startDate);
-      final elapsed = DateTime.now().difference(startDate);
-      final progress = (elapsed.inSeconds / totalDuration.inSeconds).clamp(0.0, 1.0);
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.schedule,
-                size: 16,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                formatDuration(remaining),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: EveColors.evePrimary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Progress bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: EveColors.darkSurfaceVariant,
-              valueColor: const AlwaysStoppedAnimation<Color>(EveColors.evePrimary),
-              minHeight: 6,
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Row(
-      children: [
-        Icon(
-          Icons.schedule,
-          size: 16,
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-        const SizedBox(width: 4),
-        Text(
-          formatDuration(remaining),
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: EveColors.evePrimary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Card showing a preview of the skill queue with icons.
-class _SkillQueuePreviewCard extends ConsumerWidget {
-  const _SkillQueuePreviewCard({
-    required this.skills,
-    required this.onViewAll,
-  });
-
-  final List<SkillQueueEntry> skills;
-  final VoidCallback onViewAll;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
-    return EveCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.queue,
-                    size: 20,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Skill Queue',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                ],
-              ),
-              TextButton(
-                onPressed: onViewAll,
-                child: const Text('View All'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (skills.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'No skills in queue',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            )
-          else
-            ...skills.map((entry) => _buildSkillRow(context, ref, entry)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSkillRow(
-    BuildContext context,
-    WidgetRef ref,
-    SkillQueueEntry entry,
-  ) {
-    final theme = Theme.of(context);
-    final skillNameAsync = ref.watch(skillNameProvider(entry.skillId));
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          // Skill icon
-          EveSkillIcon(
-            typeId: entry.skillId,
-            size: 32,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: skillNameAsync.when(
-              data: (skillName) => Text(
-                '$skillName → Level ${entry.finishedLevel}',
-                style: theme.textTheme.bodyMedium,
-              ),
-              loading: () => Container(
-                height: 16,
-                width: 120,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              error: (_, __) => Text(
-                'Skill #${entry.skillId} → Level ${entry.finishedLevel}',
-                style: theme.textTheme.bodyMedium,
-              ),
-            ),
-          ),
-          // Queue position badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: entry.queuePosition == 0
-                  ? EveColors.evePrimary.withAlpha(51)
-                  : EveColors.darkSurfaceVariant,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              '#${entry.queuePosition + 1}',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: entry.queuePosition == 0
-                    ? EveColors.evePrimary
-                    : theme.colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Card showing recent wallet transactions.
-class _RecentTransactionsCard extends StatelessWidget {
-  const _RecentTransactionsCard({
-    required this.journal,
-    required this.onViewAll,
-  });
-
-  final AsyncValue<List<WalletJournalEntry>> journal;
-  final VoidCallback onViewAll;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return EveCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.receipt_long,
-                    size: 20,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Recent Transactions',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                ],
-              ),
-              TextButton(
-                onPressed: onViewAll,
-                child: const Text('View All'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          journal.when(
-            data: (entries) {
-              if (entries.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    'No transactions',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                );
-              }
-              // Show first 3 transactions.
-              return Column(
-                children: entries
-                    .take(3)
-                    .map((entry) => _buildTransactionRow(context, entry))
-                    .toList(),
-              );
-            },
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            ),
-            error: (_, __) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'Error loading transactions',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.error,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTransactionRow(BuildContext context, WalletJournalEntry entry) {
-    final theme = Theme.of(context);
-    final isIncome = entry.amount >= 0;
-    final amountColor = isIncome ? EveColors.iskPositive : EveColors.iskNegative;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: amountColor.withAlpha(26),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(
-              isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-              size: 16,
-              color: amountColor,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              formatSnakeCase(entry.refType),
-              style: theme.textTheme.bodyMedium,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Text(
-            '${isIncome ? '+' : ''}${formatIskCompact(entry.amount)}',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: amountColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
       ),
     );
   }
