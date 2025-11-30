@@ -7,9 +7,9 @@ list(APPEND FLUTTER_PLUGIN_LIST
   connectivity_plus
   desktop_multi_window
   flutter_secure_storage_windows
-  screen_retriever
+  screen_retriever_windows
   sqlite3_flutter_libs
-  system_tray
+  tray_manager
   url_launcher_windows
   window_manager
 )

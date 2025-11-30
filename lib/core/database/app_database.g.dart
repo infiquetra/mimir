@@ -3198,7 +3198,8 @@ final class $$CharactersTableReferences
   $$SkillQueueEntriesTableProcessedTableManager get skillQueueEntriesRefs {
     final manager =
         $$SkillQueueEntriesTableTableManager($_db, $_db.skillQueueEntries)
-            .filter((f) => f.characterId.characterId($_item.characterId));
+            .filter((f) => f.characterId.characterId
+                .sqlEquals($_itemColumn<int>('character_id')!));
 
     final cache =
         $_typedResult.readTableOrNull(_skillQueueEntriesRefsTable($_db));
@@ -3217,7 +3218,8 @@ final class $$CharactersTableReferences
       get walletJournalEntriesRefs {
     final manager =
         $$WalletJournalEntriesTableTableManager($_db, $_db.walletJournalEntries)
-            .filter((f) => f.characterId.characterId($_item.characterId));
+            .filter((f) => f.characterId.characterId
+                .sqlEquals($_itemColumn<int>('character_id')!));
 
     final cache =
         $_typedResult.readTableOrNull(_walletJournalEntriesRefsTable($_db));
@@ -3233,7 +3235,8 @@ final class $$CharactersTableReferences
 
   $$WalletBalancesTableProcessedTableManager get walletBalancesRefs {
     final manager = $$WalletBalancesTableTableManager($_db, $_db.walletBalances)
-        .filter((f) => f.characterId.characterId($_item.characterId));
+        .filter((f) => f.characterId.characterId
+            .sqlEquals($_itemColumn<int>('character_id')!));
 
     final cache = $_typedResult.readTableOrNull(_walletBalancesRefsTable($_db));
     return ProcessedTableManager(
@@ -3248,7 +3251,8 @@ final class $$CharactersTableReferences
 
   $$CombatStatsTableProcessedTableManager get combatStatsRefs {
     final manager = $$CombatStatsTableTableManager($_db, $_db.combatStats)
-        .filter((f) => f.characterId.characterId($_item.characterId));
+        .filter((f) => f.characterId.characterId
+            .sqlEquals($_itemColumn<int>('character_id')!));
 
     final cache = $_typedResult.readTableOrNull(_combatStatsRefsTable($_db));
     return ProcessedTableManager(
@@ -3264,7 +3268,8 @@ final class $$CharactersTableReferences
   $$CharacterStatusesTableProcessedTableManager get characterStatusesRefs {
     final manager =
         $$CharacterStatusesTableTableManager($_db, $_db.characterStatuses)
-            .filter((f) => f.characterId.characterId($_item.characterId));
+            .filter((f) => f.characterId.characterId
+                .sqlEquals($_itemColumn<int>('character_id')!));
 
     final cache =
         $_typedResult.readTableOrNull(_characterStatusesRefsTable($_db));
@@ -3739,7 +3744,8 @@ class $$CharactersTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (skillQueueEntriesRefs)
-                    await $_getPrefetchedData(
+                    await $_getPrefetchedData<Character, $CharactersTable,
+                            SkillQueueEntry>(
                         currentTable: table,
                         referencedTable: $$CharactersTableReferences
                             ._skillQueueEntriesRefsTable(db),
@@ -3751,7 +3757,8 @@ class $$CharactersTableTableManager extends RootTableManager<
                                 (e) => e.characterId == item.characterId),
                         typedResults: items),
                   if (walletJournalEntriesRefs)
-                    await $_getPrefetchedData(
+                    await $_getPrefetchedData<Character, $CharactersTable,
+                            WalletJournalEntry>(
                         currentTable: table,
                         referencedTable: $$CharactersTableReferences
                             ._walletJournalEntriesRefsTable(db),
@@ -3763,7 +3770,8 @@ class $$CharactersTableTableManager extends RootTableManager<
                                 (e) => e.characterId == item.characterId),
                         typedResults: items),
                   if (walletBalancesRefs)
-                    await $_getPrefetchedData(
+                    await $_getPrefetchedData<Character, $CharactersTable,
+                            WalletBalance>(
                         currentTable: table,
                         referencedTable: $$CharactersTableReferences
                             ._walletBalancesRefsTable(db),
@@ -3775,7 +3783,8 @@ class $$CharactersTableTableManager extends RootTableManager<
                                 (e) => e.characterId == item.characterId),
                         typedResults: items),
                   if (combatStatsRefs)
-                    await $_getPrefetchedData(
+                    await $_getPrefetchedData<Character, $CharactersTable,
+                            CombatStat>(
                         currentTable: table,
                         referencedTable: $$CharactersTableReferences
                             ._combatStatsRefsTable(db),
@@ -3787,7 +3796,8 @@ class $$CharactersTableTableManager extends RootTableManager<
                                 (e) => e.characterId == item.characterId),
                         typedResults: items),
                   if (characterStatusesRefs)
-                    await $_getPrefetchedData(
+                    await $_getPrefetchedData<Character, $CharactersTable,
+                            CharacterStatuse>(
                         currentTable: table,
                         referencedTable: $$CharactersTableReferences
                             ._characterStatusesRefsTable(db),
@@ -3858,10 +3868,11 @@ final class $$SkillQueueEntriesTableReferences extends BaseReferences<
       db.characters.createAlias($_aliasNameGenerator(
           db.skillQueueEntries.characterId, db.characters.characterId));
 
-  $$CharactersTableProcessedTableManager? get characterId {
-    if ($_item.characterId == null) return null;
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
     final manager = $$CharactersTableTableManager($_db, $_db.characters)
-        .filter((f) => f.characterId($_item.characterId!));
+        .filter((f) => f.characterId.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -4208,10 +4219,11 @@ final class $$WalletJournalEntriesTableReferences extends BaseReferences<
       db.characters.createAlias($_aliasNameGenerator(
           db.walletJournalEntries.characterId, db.characters.characterId));
 
-  $$CharactersTableProcessedTableManager? get characterId {
-    if ($_item.characterId == null) return null;
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
     final manager = $$CharactersTableTableManager($_db, $_db.characters)
-        .filter((f) => f.characterId($_item.characterId!));
+        .filter((f) => f.characterId.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -4534,10 +4546,11 @@ final class $$WalletBalancesTableReferences
       db.characters.createAlias($_aliasNameGenerator(
           db.walletBalances.characterId, db.characters.characterId));
 
-  $$CharactersTableProcessedTableManager? get characterId {
-    if ($_item.characterId == null) return null;
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
     final manager = $$CharactersTableTableManager($_db, $_db.characters)
-        .filter((f) => f.characterId($_item.characterId!));
+        .filter((f) => f.characterId.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -4937,10 +4950,11 @@ final class $$CombatStatsTableReferences
       db.characters.createAlias($_aliasNameGenerator(
           db.combatStats.characterId, db.characters.characterId));
 
-  $$CharactersTableProcessedTableManager? get characterId {
-    if ($_item.characterId == null) return null;
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
     final manager = $$CharactersTableTableManager($_db, $_db.characters)
-        .filter((f) => f.characterId($_item.characterId!));
+        .filter((f) => f.characterId.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -5231,10 +5245,11 @@ final class $$CharacterStatusesTableReferences extends BaseReferences<
       db.characters.createAlias($_aliasNameGenerator(
           db.characterStatuses.characterId, db.characters.characterId));
 
-  $$CharactersTableProcessedTableManager? get characterId {
-    if ($_item.characterId == null) return null;
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
     final manager = $$CharactersTableTableManager($_db, $_db.characters)
-        .filter((f) => f.characterId($_item.characterId!));
+        .filter((f) => f.characterId.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
