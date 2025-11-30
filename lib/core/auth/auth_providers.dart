@@ -204,16 +204,9 @@ class AuthController extends StateNotifier<AuthState> {
           _oauthService.parseAccessToken(tokenResponse.accessToken);
       debugPrint('[AUTH] handleCallback: Character ${characterInfo.characterId} (${characterInfo.characterName})');
 
-      // Store the tokens securely.
-      await _tokenManager.storeTokens(
-        characterId: characterInfo.characterId,
-        tokenResponse: tokenResponse,
-      );
-      debugPrint('[AUTH] handleCallback: Tokens stored securely');
-
-      // Create or update the character in the database.
+      // Create or update the character in the database (includes tokens).
       await _createOrUpdateCharacter(characterInfo, tokenResponse);
-      debugPrint('[AUTH] handleCallback: Character saved to database');
+      debugPrint('[AUTH] handleCallback: Character and tokens saved to database');
 
       // Fetch full character data from ESI (corporation, alliance).
       // This runs in background - don't block OAuth completion on it.
@@ -311,7 +304,7 @@ class AuthController extends StateNotifier<AuthState> {
     JwtCharacterInfo characterInfo,
     TokenResponse tokenResponse,
   ) async {
-    // For now, create a basic character record.
+    // Create character record with all fields including tokens.
     // Corporation info will be fetched via ESI in a later step.
     final companion = CharactersCompanion.insert(
       characterId: Value(characterInfo.characterId),
@@ -322,6 +315,8 @@ class AuthController extends StateNotifier<AuthState> {
           'https://images.evetech.net/characters/${characterInfo.characterId}/portrait',
       tokenExpiry: characterInfo.expiresAt,
       lastUpdated: DateTime.now(),
+      refreshToken: Value(tokenResponse.refreshToken),
+      accessToken: Value(tokenResponse.accessToken),
     );
 
     await _database.upsertCharacter(companion);
