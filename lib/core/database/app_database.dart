@@ -189,6 +189,46 @@ class CombatStats extends Table {
   Set<Column> get primaryKey => {characterId};
 }
 
+/// Character location and status information from ESI.
+///
+/// Caches current location, ship, and online status for fleet monitoring.
+/// Data is refreshed periodically (minimum 5 minutes between fetches).
+class CharacterStatuses extends Table {
+  /// Character ID (primary key).
+  IntColumn get characterId =>
+      integer().references(Characters, #characterId)();
+
+  /// Solar system ID where the character is located.
+  IntColumn get solarSystemId => integer().nullable()();
+
+  /// Solar system name (cached from SDE).
+  TextColumn get solarSystemName => text().nullable()();
+
+  /// Security status of the solar system (0.0 to 1.0).
+  RealColumn get securityStatus => real().nullable()();
+
+  /// Ship type ID the character is currently flying.
+  IntColumn get shipTypeId => integer().nullable()();
+
+  /// Ship type name (cached from SDE).
+  TextColumn get shipTypeName => text().nullable()();
+
+  /// Whether the character is currently online.
+  BoolColumn get isOnline => boolean().withDefault(const Constant(false))();
+
+  /// When the character last logged in.
+  DateTimeColumn get lastLogin => dateTime().nullable()();
+
+  /// When the character last logged out.
+  DateTimeColumn get lastLogout => dateTime().nullable()();
+
+  /// When this data was last refreshed from ESI.
+  DateTimeColumn get lastUpdated => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {characterId};
+}
+
 /// Application database using Drift.
 ///
 /// Handles all local persistence for Mimir including:
@@ -202,6 +242,7 @@ class CombatStats extends Table {
   WalletBalances,
   AppSettingsTable,
   CombatStats,
+  CharacterStatuses,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -210,7 +251,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -237,6 +278,11 @@ class AppDatabase extends _$AppDatabase {
         // Migration from version 3 to 4: Add combat stats table.
         if (from < 4) {
           await m.createTable(combatStats);
+        }
+
+        // Migration from version 4 to 5: Add character statuses table.
+        if (from < 5) {
+          await m.createTable(characterStatuses);
         }
       },
     );
@@ -295,6 +341,9 @@ class AppDatabase extends _$AppDatabase {
             ..where((e) => e.characterId.equals(characterId)))
           .go();
       await (delete(combatStats)
+            ..where((s) => s.characterId.equals(characterId)))
+          .go();
+      await (delete(characterStatuses)
             ..where((s) => s.characterId.equals(characterId)))
           .go();
       await (delete(characters)
@@ -449,6 +498,32 @@ class AppDatabase extends _$AppDatabase {
   /// Delete combat stats for a character.
   Future<void> deleteCombatStats(int characterId) {
     return (delete(combatStats)..where((s) => s.characterId.equals(characterId)))
+        .go();
+  }
+
+  // Character status operations
+
+  /// Get character status for a specific character.
+  Future<CharacterStatus?> getCharacterStatus(int characterId) {
+    return (select(characterStatuses)
+          ..where((s) => s.characterId.equals(characterId)))
+        .getSingleOrNull();
+  }
+
+  /// Get all character statuses.
+  Future<List<CharacterStatus>> getAllCharacterStatuses() {
+    return select(characterStatuses).get();
+  }
+
+  /// Insert or update character status.
+  Future<void> upsertCharacterStatus(CharacterStatusesCompanion status) {
+    return into(characterStatuses).insertOnConflictUpdate(status);
+  }
+
+  /// Delete character status for a character.
+  Future<void> deleteCharacterStatus(int characterId) {
+    return (delete(characterStatuses)
+          ..where((s) => s.characterId.equals(characterId)))
         .go();
   }
 }
