@@ -184,19 +184,21 @@ final walletTrendsProvider = FutureProvider<WalletTrendsData>((ref) async {
   final balances = await database.customSelect(
     '''
     SELECT
-      DATE(recorded_at) as date,
+      strftime('%Y-%m-%d', recorded_at) as date,
       SUM(balance) as total_balance
     FROM wallet_balances
     WHERE recorded_at >= ?
-    GROUP BY DATE(recorded_at)
-    ORDER BY DATE(recorded_at) ASC
+    GROUP BY date
+    ORDER BY date ASC
     ''',
     variables: [Variable.withDateTime(thirtyDaysAgo)],
     readsFrom: {database.walletBalances},
   ).get();
 
-  // Convert to chart points
-  final chartPoints = balances.map((row) {
+  // Convert to chart points, filtering out any null dates
+  final chartPoints = balances
+      .where((row) => row.read<String?>('date') != null)
+      .map((row) {
     final dateStr = row.read<String>('date');
     final balance = row.read<double>('total_balance');
     return WalletTrendsPoint(
