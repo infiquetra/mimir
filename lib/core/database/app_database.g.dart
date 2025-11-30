@@ -2561,6 +2561,572 @@ class CombatStatsCompanion extends UpdateCompanion<CombatStat> {
   }
 }
 
+class $CharacterStatusesTable extends CharacterStatuses
+    with TableInfo<$CharacterStatusesTable, CharacterStatuse> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CharacterStatusesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _characterIdMeta =
+      const VerificationMeta('characterId');
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+      'character_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES characters (character_id)'));
+  static const VerificationMeta _solarSystemIdMeta =
+      const VerificationMeta('solarSystemId');
+  @override
+  late final GeneratedColumn<int> solarSystemId = GeneratedColumn<int>(
+      'solar_system_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _solarSystemNameMeta =
+      const VerificationMeta('solarSystemName');
+  @override
+  late final GeneratedColumn<String> solarSystemName = GeneratedColumn<String>(
+      'solar_system_name', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _securityStatusMeta =
+      const VerificationMeta('securityStatus');
+  @override
+  late final GeneratedColumn<double> securityStatus = GeneratedColumn<double>(
+      'security_status', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _shipTypeIdMeta =
+      const VerificationMeta('shipTypeId');
+  @override
+  late final GeneratedColumn<int> shipTypeId = GeneratedColumn<int>(
+      'ship_type_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _shipTypeNameMeta =
+      const VerificationMeta('shipTypeName');
+  @override
+  late final GeneratedColumn<String> shipTypeName = GeneratedColumn<String>(
+      'ship_type_name', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _isOnlineMeta =
+      const VerificationMeta('isOnline');
+  @override
+  late final GeneratedColumn<bool> isOnline = GeneratedColumn<bool>(
+      'is_online', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_online" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _lastLoginMeta =
+      const VerificationMeta('lastLogin');
+  @override
+  late final GeneratedColumn<DateTime> lastLogin = GeneratedColumn<DateTime>(
+      'last_login', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _lastLogoutMeta =
+      const VerificationMeta('lastLogout');
+  @override
+  late final GeneratedColumn<DateTime> lastLogout = GeneratedColumn<DateTime>(
+      'last_logout', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _lastUpdatedMeta =
+      const VerificationMeta('lastUpdated');
+  @override
+  late final GeneratedColumn<DateTime> lastUpdated = GeneratedColumn<DateTime>(
+      'last_updated', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        characterId,
+        solarSystemId,
+        solarSystemName,
+        securityStatus,
+        shipTypeId,
+        shipTypeName,
+        isOnline,
+        lastLogin,
+        lastLogout,
+        lastUpdated
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'character_statuses';
+  @override
+  VerificationContext validateIntegrity(Insertable<CharacterStatuse> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('character_id')) {
+      context.handle(
+          _characterIdMeta,
+          characterId.isAcceptableOrUnknown(
+              data['character_id']!, _characterIdMeta));
+    }
+    if (data.containsKey('solar_system_id')) {
+      context.handle(
+          _solarSystemIdMeta,
+          solarSystemId.isAcceptableOrUnknown(
+              data['solar_system_id']!, _solarSystemIdMeta));
+    }
+    if (data.containsKey('solar_system_name')) {
+      context.handle(
+          _solarSystemNameMeta,
+          solarSystemName.isAcceptableOrUnknown(
+              data['solar_system_name']!, _solarSystemNameMeta));
+    }
+    if (data.containsKey('security_status')) {
+      context.handle(
+          _securityStatusMeta,
+          securityStatus.isAcceptableOrUnknown(
+              data['security_status']!, _securityStatusMeta));
+    }
+    if (data.containsKey('ship_type_id')) {
+      context.handle(
+          _shipTypeIdMeta,
+          shipTypeId.isAcceptableOrUnknown(
+              data['ship_type_id']!, _shipTypeIdMeta));
+    }
+    if (data.containsKey('ship_type_name')) {
+      context.handle(
+          _shipTypeNameMeta,
+          shipTypeName.isAcceptableOrUnknown(
+              data['ship_type_name']!, _shipTypeNameMeta));
+    }
+    if (data.containsKey('is_online')) {
+      context.handle(_isOnlineMeta,
+          isOnline.isAcceptableOrUnknown(data['is_online']!, _isOnlineMeta));
+    }
+    if (data.containsKey('last_login')) {
+      context.handle(_lastLoginMeta,
+          lastLogin.isAcceptableOrUnknown(data['last_login']!, _lastLoginMeta));
+    }
+    if (data.containsKey('last_logout')) {
+      context.handle(
+          _lastLogoutMeta,
+          lastLogout.isAcceptableOrUnknown(
+              data['last_logout']!, _lastLogoutMeta));
+    }
+    if (data.containsKey('last_updated')) {
+      context.handle(
+          _lastUpdatedMeta,
+          lastUpdated.isAcceptableOrUnknown(
+              data['last_updated']!, _lastUpdatedMeta));
+    } else if (isInserting) {
+      context.missing(_lastUpdatedMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {characterId};
+  @override
+  CharacterStatuse map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CharacterStatuse(
+      characterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}character_id'])!,
+      solarSystemId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}solar_system_id']),
+      solarSystemName: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}solar_system_name']),
+      securityStatus: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}security_status']),
+      shipTypeId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}ship_type_id']),
+      shipTypeName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}ship_type_name']),
+      isOnline: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_online'])!,
+      lastLogin: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}last_login']),
+      lastLogout: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}last_logout']),
+      lastUpdated: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}last_updated'])!,
+    );
+  }
+
+  @override
+  $CharacterStatusesTable createAlias(String alias) {
+    return $CharacterStatusesTable(attachedDatabase, alias);
+  }
+}
+
+class CharacterStatuse extends DataClass
+    implements Insertable<CharacterStatuse> {
+  /// Character ID (primary key).
+  final int characterId;
+
+  /// Solar system ID where the character is located.
+  final int? solarSystemId;
+
+  /// Solar system name (cached from SDE).
+  final String? solarSystemName;
+
+  /// Security status of the solar system (0.0 to 1.0).
+  final double? securityStatus;
+
+  /// Ship type ID the character is currently flying.
+  final int? shipTypeId;
+
+  /// Ship type name (cached from SDE).
+  final String? shipTypeName;
+
+  /// Whether the character is currently online.
+  final bool isOnline;
+
+  /// When the character last logged in.
+  final DateTime? lastLogin;
+
+  /// When the character last logged out.
+  final DateTime? lastLogout;
+
+  /// When this data was last refreshed from ESI.
+  final DateTime lastUpdated;
+  const CharacterStatuse(
+      {required this.characterId,
+      this.solarSystemId,
+      this.solarSystemName,
+      this.securityStatus,
+      this.shipTypeId,
+      this.shipTypeName,
+      required this.isOnline,
+      this.lastLogin,
+      this.lastLogout,
+      required this.lastUpdated});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['character_id'] = Variable<int>(characterId);
+    if (!nullToAbsent || solarSystemId != null) {
+      map['solar_system_id'] = Variable<int>(solarSystemId);
+    }
+    if (!nullToAbsent || solarSystemName != null) {
+      map['solar_system_name'] = Variable<String>(solarSystemName);
+    }
+    if (!nullToAbsent || securityStatus != null) {
+      map['security_status'] = Variable<double>(securityStatus);
+    }
+    if (!nullToAbsent || shipTypeId != null) {
+      map['ship_type_id'] = Variable<int>(shipTypeId);
+    }
+    if (!nullToAbsent || shipTypeName != null) {
+      map['ship_type_name'] = Variable<String>(shipTypeName);
+    }
+    map['is_online'] = Variable<bool>(isOnline);
+    if (!nullToAbsent || lastLogin != null) {
+      map['last_login'] = Variable<DateTime>(lastLogin);
+    }
+    if (!nullToAbsent || lastLogout != null) {
+      map['last_logout'] = Variable<DateTime>(lastLogout);
+    }
+    map['last_updated'] = Variable<DateTime>(lastUpdated);
+    return map;
+  }
+
+  CharacterStatusesCompanion toCompanion(bool nullToAbsent) {
+    return CharacterStatusesCompanion(
+      characterId: Value(characterId),
+      solarSystemId: solarSystemId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(solarSystemId),
+      solarSystemName: solarSystemName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(solarSystemName),
+      securityStatus: securityStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(securityStatus),
+      shipTypeId: shipTypeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shipTypeId),
+      shipTypeName: shipTypeName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shipTypeName),
+      isOnline: Value(isOnline),
+      lastLogin: lastLogin == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastLogin),
+      lastLogout: lastLogout == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastLogout),
+      lastUpdated: Value(lastUpdated),
+    );
+  }
+
+  factory CharacterStatuse.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CharacterStatuse(
+      characterId: serializer.fromJson<int>(json['characterId']),
+      solarSystemId: serializer.fromJson<int?>(json['solarSystemId']),
+      solarSystemName: serializer.fromJson<String?>(json['solarSystemName']),
+      securityStatus: serializer.fromJson<double?>(json['securityStatus']),
+      shipTypeId: serializer.fromJson<int?>(json['shipTypeId']),
+      shipTypeName: serializer.fromJson<String?>(json['shipTypeName']),
+      isOnline: serializer.fromJson<bool>(json['isOnline']),
+      lastLogin: serializer.fromJson<DateTime?>(json['lastLogin']),
+      lastLogout: serializer.fromJson<DateTime?>(json['lastLogout']),
+      lastUpdated: serializer.fromJson<DateTime>(json['lastUpdated']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'characterId': serializer.toJson<int>(characterId),
+      'solarSystemId': serializer.toJson<int?>(solarSystemId),
+      'solarSystemName': serializer.toJson<String?>(solarSystemName),
+      'securityStatus': serializer.toJson<double?>(securityStatus),
+      'shipTypeId': serializer.toJson<int?>(shipTypeId),
+      'shipTypeName': serializer.toJson<String?>(shipTypeName),
+      'isOnline': serializer.toJson<bool>(isOnline),
+      'lastLogin': serializer.toJson<DateTime?>(lastLogin),
+      'lastLogout': serializer.toJson<DateTime?>(lastLogout),
+      'lastUpdated': serializer.toJson<DateTime>(lastUpdated),
+    };
+  }
+
+  CharacterStatuse copyWith(
+          {int? characterId,
+          Value<int?> solarSystemId = const Value.absent(),
+          Value<String?> solarSystemName = const Value.absent(),
+          Value<double?> securityStatus = const Value.absent(),
+          Value<int?> shipTypeId = const Value.absent(),
+          Value<String?> shipTypeName = const Value.absent(),
+          bool? isOnline,
+          Value<DateTime?> lastLogin = const Value.absent(),
+          Value<DateTime?> lastLogout = const Value.absent(),
+          DateTime? lastUpdated}) =>
+      CharacterStatuse(
+        characterId: characterId ?? this.characterId,
+        solarSystemId:
+            solarSystemId.present ? solarSystemId.value : this.solarSystemId,
+        solarSystemName: solarSystemName.present
+            ? solarSystemName.value
+            : this.solarSystemName,
+        securityStatus:
+            securityStatus.present ? securityStatus.value : this.securityStatus,
+        shipTypeId: shipTypeId.present ? shipTypeId.value : this.shipTypeId,
+        shipTypeName:
+            shipTypeName.present ? shipTypeName.value : this.shipTypeName,
+        isOnline: isOnline ?? this.isOnline,
+        lastLogin: lastLogin.present ? lastLogin.value : this.lastLogin,
+        lastLogout: lastLogout.present ? lastLogout.value : this.lastLogout,
+        lastUpdated: lastUpdated ?? this.lastUpdated,
+      );
+  CharacterStatuse copyWithCompanion(CharacterStatusesCompanion data) {
+    return CharacterStatuse(
+      characterId:
+          data.characterId.present ? data.characterId.value : this.characterId,
+      solarSystemId: data.solarSystemId.present
+          ? data.solarSystemId.value
+          : this.solarSystemId,
+      solarSystemName: data.solarSystemName.present
+          ? data.solarSystemName.value
+          : this.solarSystemName,
+      securityStatus: data.securityStatus.present
+          ? data.securityStatus.value
+          : this.securityStatus,
+      shipTypeId:
+          data.shipTypeId.present ? data.shipTypeId.value : this.shipTypeId,
+      shipTypeName: data.shipTypeName.present
+          ? data.shipTypeName.value
+          : this.shipTypeName,
+      isOnline: data.isOnline.present ? data.isOnline.value : this.isOnline,
+      lastLogin: data.lastLogin.present ? data.lastLogin.value : this.lastLogin,
+      lastLogout:
+          data.lastLogout.present ? data.lastLogout.value : this.lastLogout,
+      lastUpdated:
+          data.lastUpdated.present ? data.lastUpdated.value : this.lastUpdated,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CharacterStatuse(')
+          ..write('characterId: $characterId, ')
+          ..write('solarSystemId: $solarSystemId, ')
+          ..write('solarSystemName: $solarSystemName, ')
+          ..write('securityStatus: $securityStatus, ')
+          ..write('shipTypeId: $shipTypeId, ')
+          ..write('shipTypeName: $shipTypeName, ')
+          ..write('isOnline: $isOnline, ')
+          ..write('lastLogin: $lastLogin, ')
+          ..write('lastLogout: $lastLogout, ')
+          ..write('lastUpdated: $lastUpdated')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      characterId,
+      solarSystemId,
+      solarSystemName,
+      securityStatus,
+      shipTypeId,
+      shipTypeName,
+      isOnline,
+      lastLogin,
+      lastLogout,
+      lastUpdated);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CharacterStatuse &&
+          other.characterId == this.characterId &&
+          other.solarSystemId == this.solarSystemId &&
+          other.solarSystemName == this.solarSystemName &&
+          other.securityStatus == this.securityStatus &&
+          other.shipTypeId == this.shipTypeId &&
+          other.shipTypeName == this.shipTypeName &&
+          other.isOnline == this.isOnline &&
+          other.lastLogin == this.lastLogin &&
+          other.lastLogout == this.lastLogout &&
+          other.lastUpdated == this.lastUpdated);
+}
+
+class CharacterStatusesCompanion extends UpdateCompanion<CharacterStatuse> {
+  final Value<int> characterId;
+  final Value<int?> solarSystemId;
+  final Value<String?> solarSystemName;
+  final Value<double?> securityStatus;
+  final Value<int?> shipTypeId;
+  final Value<String?> shipTypeName;
+  final Value<bool> isOnline;
+  final Value<DateTime?> lastLogin;
+  final Value<DateTime?> lastLogout;
+  final Value<DateTime> lastUpdated;
+  const CharacterStatusesCompanion({
+    this.characterId = const Value.absent(),
+    this.solarSystemId = const Value.absent(),
+    this.solarSystemName = const Value.absent(),
+    this.securityStatus = const Value.absent(),
+    this.shipTypeId = const Value.absent(),
+    this.shipTypeName = const Value.absent(),
+    this.isOnline = const Value.absent(),
+    this.lastLogin = const Value.absent(),
+    this.lastLogout = const Value.absent(),
+    this.lastUpdated = const Value.absent(),
+  });
+  CharacterStatusesCompanion.insert({
+    this.characterId = const Value.absent(),
+    this.solarSystemId = const Value.absent(),
+    this.solarSystemName = const Value.absent(),
+    this.securityStatus = const Value.absent(),
+    this.shipTypeId = const Value.absent(),
+    this.shipTypeName = const Value.absent(),
+    this.isOnline = const Value.absent(),
+    this.lastLogin = const Value.absent(),
+    this.lastLogout = const Value.absent(),
+    required DateTime lastUpdated,
+  }) : lastUpdated = Value(lastUpdated);
+  static Insertable<CharacterStatuse> custom({
+    Expression<int>? characterId,
+    Expression<int>? solarSystemId,
+    Expression<String>? solarSystemName,
+    Expression<double>? securityStatus,
+    Expression<int>? shipTypeId,
+    Expression<String>? shipTypeName,
+    Expression<bool>? isOnline,
+    Expression<DateTime>? lastLogin,
+    Expression<DateTime>? lastLogout,
+    Expression<DateTime>? lastUpdated,
+  }) {
+    return RawValuesInsertable({
+      if (characterId != null) 'character_id': characterId,
+      if (solarSystemId != null) 'solar_system_id': solarSystemId,
+      if (solarSystemName != null) 'solar_system_name': solarSystemName,
+      if (securityStatus != null) 'security_status': securityStatus,
+      if (shipTypeId != null) 'ship_type_id': shipTypeId,
+      if (shipTypeName != null) 'ship_type_name': shipTypeName,
+      if (isOnline != null) 'is_online': isOnline,
+      if (lastLogin != null) 'last_login': lastLogin,
+      if (lastLogout != null) 'last_logout': lastLogout,
+      if (lastUpdated != null) 'last_updated': lastUpdated,
+    });
+  }
+
+  CharacterStatusesCompanion copyWith(
+      {Value<int>? characterId,
+      Value<int?>? solarSystemId,
+      Value<String?>? solarSystemName,
+      Value<double?>? securityStatus,
+      Value<int?>? shipTypeId,
+      Value<String?>? shipTypeName,
+      Value<bool>? isOnline,
+      Value<DateTime?>? lastLogin,
+      Value<DateTime?>? lastLogout,
+      Value<DateTime>? lastUpdated}) {
+    return CharacterStatusesCompanion(
+      characterId: characterId ?? this.characterId,
+      solarSystemId: solarSystemId ?? this.solarSystemId,
+      solarSystemName: solarSystemName ?? this.solarSystemName,
+      securityStatus: securityStatus ?? this.securityStatus,
+      shipTypeId: shipTypeId ?? this.shipTypeId,
+      shipTypeName: shipTypeName ?? this.shipTypeName,
+      isOnline: isOnline ?? this.isOnline,
+      lastLogin: lastLogin ?? this.lastLogin,
+      lastLogout: lastLogout ?? this.lastLogout,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (solarSystemId.present) {
+      map['solar_system_id'] = Variable<int>(solarSystemId.value);
+    }
+    if (solarSystemName.present) {
+      map['solar_system_name'] = Variable<String>(solarSystemName.value);
+    }
+    if (securityStatus.present) {
+      map['security_status'] = Variable<double>(securityStatus.value);
+    }
+    if (shipTypeId.present) {
+      map['ship_type_id'] = Variable<int>(shipTypeId.value);
+    }
+    if (shipTypeName.present) {
+      map['ship_type_name'] = Variable<String>(shipTypeName.value);
+    }
+    if (isOnline.present) {
+      map['is_online'] = Variable<bool>(isOnline.value);
+    }
+    if (lastLogin.present) {
+      map['last_login'] = Variable<DateTime>(lastLogin.value);
+    }
+    if (lastLogout.present) {
+      map['last_logout'] = Variable<DateTime>(lastLogout.value);
+    }
+    if (lastUpdated.present) {
+      map['last_updated'] = Variable<DateTime>(lastUpdated.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CharacterStatusesCompanion(')
+          ..write('characterId: $characterId, ')
+          ..write('solarSystemId: $solarSystemId, ')
+          ..write('solarSystemName: $solarSystemName, ')
+          ..write('securityStatus: $securityStatus, ')
+          ..write('shipTypeId: $shipTypeId, ')
+          ..write('shipTypeName: $shipTypeName, ')
+          ..write('isOnline: $isOnline, ')
+          ..write('lastLogin: $lastLogin, ')
+          ..write('lastLogout: $lastLogout, ')
+          ..write('lastUpdated: $lastUpdated')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2573,6 +3139,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AppSettingsTableTable appSettingsTable =
       $AppSettingsTableTable(this);
   late final $CombatStatsTable combatStats = $CombatStatsTable(this);
+  late final $CharacterStatusesTable characterStatuses =
+      $CharacterStatusesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2583,7 +3151,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         walletJournalEntries,
         walletBalances,
         appSettingsTable,
-        combatStats
+        combatStats,
+        characterStatuses
       ];
 }
 
@@ -2682,6 +3251,23 @@ final class $$CharactersTableReferences
         .filter((f) => f.characterId.characterId($_item.characterId));
 
     final cache = $_typedResult.readTableOrNull(_combatStatsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$CharacterStatusesTable, List<CharacterStatuse>>
+      _characterStatusesRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.characterStatuses,
+              aliasName: $_aliasNameGenerator(
+                  db.characters.characterId, db.characterStatuses.characterId));
+
+  $$CharacterStatusesTableProcessedTableManager get characterStatusesRefs {
+    final manager =
+        $$CharacterStatusesTableTableManager($_db, $_db.characterStatuses)
+            .filter((f) => f.characterId.characterId($_item.characterId));
+
+    final cache =
+        $_typedResult.readTableOrNull(_characterStatusesRefsTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -2810,6 +3396,27 @@ class $$CharactersTableFilterComposer
             $$CombatStatsTableFilterComposer(
               $db: $db,
               $table: $db.combatStats,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> characterStatusesRefs(
+      Expression<bool> Function($$CharacterStatusesTableFilterComposer f) f) {
+    final $$CharacterStatusesTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characterStatuses,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharacterStatusesTableFilterComposer(
+              $db: $db,
+              $table: $db.characterStatuses,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -3000,6 +3607,28 @@ class $$CharactersTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> characterStatusesRefs<T extends Object>(
+      Expression<T> Function($$CharacterStatusesTableAnnotationComposer a) f) {
+    final $$CharacterStatusesTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.characterId,
+            referencedTable: $db.characterStatuses,
+            getReferencedColumn: (t) => t.characterId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$CharacterStatusesTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.characterStatuses,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
 }
 
 class $$CharactersTableTableManager extends RootTableManager<
@@ -3017,7 +3646,8 @@ class $$CharactersTableTableManager extends RootTableManager<
         {bool skillQueueEntriesRefs,
         bool walletJournalEntriesRefs,
         bool walletBalancesRefs,
-        bool combatStatsRefs})> {
+        bool combatStatsRefs,
+        bool characterStatusesRefs})> {
   $$CharactersTableTableManager(_$AppDatabase db, $CharactersTable table)
       : super(TableManagerState(
           db: db,
@@ -3094,14 +3724,16 @@ class $$CharactersTableTableManager extends RootTableManager<
               {skillQueueEntriesRefs = false,
               walletJournalEntriesRefs = false,
               walletBalancesRefs = false,
-              combatStatsRefs = false}) {
+              combatStatsRefs = false,
+              characterStatusesRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
                 if (skillQueueEntriesRefs) db.skillQueueEntries,
                 if (walletJournalEntriesRefs) db.walletJournalEntries,
                 if (walletBalancesRefs) db.walletBalances,
-                if (combatStatsRefs) db.combatStats
+                if (combatStatsRefs) db.combatStats,
+                if (characterStatusesRefs) db.characterStatuses
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
@@ -3153,6 +3785,18 @@ class $$CharactersTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems.where(
                                 (e) => e.characterId == item.characterId),
+                        typedResults: items),
+                  if (characterStatusesRefs)
+                    await $_getPrefetchedData(
+                        currentTable: table,
+                        referencedTable: $$CharactersTableReferences
+                            ._characterStatusesRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$CharactersTableReferences(db, table, p0)
+                                .characterStatusesRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.characterId),
                         typedResults: items)
                 ];
               },
@@ -3176,7 +3820,8 @@ typedef $$CharactersTableProcessedTableManager = ProcessedTableManager<
         {bool skillQueueEntriesRefs,
         bool walletJournalEntriesRefs,
         bool walletBalancesRefs,
-        bool combatStatsRefs})>;
+        bool combatStatsRefs,
+        bool characterStatusesRefs})>;
 typedef $$SkillQueueEntriesTableCreateCompanionBuilder
     = SkillQueueEntriesCompanion Function({
   Value<int> id,
@@ -4550,6 +5195,359 @@ typedef $$CombatStatsTableProcessedTableManager = ProcessedTableManager<
     (CombatStat, $$CombatStatsTableReferences),
     CombatStat,
     PrefetchHooks Function({bool characterId})>;
+typedef $$CharacterStatusesTableCreateCompanionBuilder
+    = CharacterStatusesCompanion Function({
+  Value<int> characterId,
+  Value<int?> solarSystemId,
+  Value<String?> solarSystemName,
+  Value<double?> securityStatus,
+  Value<int?> shipTypeId,
+  Value<String?> shipTypeName,
+  Value<bool> isOnline,
+  Value<DateTime?> lastLogin,
+  Value<DateTime?> lastLogout,
+  required DateTime lastUpdated,
+});
+typedef $$CharacterStatusesTableUpdateCompanionBuilder
+    = CharacterStatusesCompanion Function({
+  Value<int> characterId,
+  Value<int?> solarSystemId,
+  Value<String?> solarSystemName,
+  Value<double?> securityStatus,
+  Value<int?> shipTypeId,
+  Value<String?> shipTypeName,
+  Value<bool> isOnline,
+  Value<DateTime?> lastLogin,
+  Value<DateTime?> lastLogout,
+  Value<DateTime> lastUpdated,
+});
+
+final class $$CharacterStatusesTableReferences extends BaseReferences<
+    _$AppDatabase, $CharacterStatusesTable, CharacterStatuse> {
+  $$CharacterStatusesTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias($_aliasNameGenerator(
+          db.characterStatuses.characterId, db.characters.characterId));
+
+  $$CharactersTableProcessedTableManager? get characterId {
+    if ($_item.characterId == null) return null;
+    final manager = $$CharactersTableTableManager($_db, $_db.characters)
+        .filter((f) => f.characterId($_item.characterId!));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$CharacterStatusesTableFilterComposer
+    extends Composer<_$AppDatabase, $CharacterStatusesTable> {
+  $$CharacterStatusesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get solarSystemId => $composableBuilder(
+      column: $table.solarSystemId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get solarSystemName => $composableBuilder(
+      column: $table.solarSystemName,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get securityStatus => $composableBuilder(
+      column: $table.securityStatus,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get shipTypeId => $composableBuilder(
+      column: $table.shipTypeId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get shipTypeName => $composableBuilder(
+      column: $table.shipTypeName, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isOnline => $composableBuilder(
+      column: $table.isOnline, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastLogin => $composableBuilder(
+      column: $table.lastLogin, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastLogout => $composableBuilder(
+      column: $table.lastLogout, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => ColumnFilters(column));
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableFilterComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$CharacterStatusesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CharacterStatusesTable> {
+  $$CharacterStatusesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get solarSystemId => $composableBuilder(
+      column: $table.solarSystemId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get solarSystemName => $composableBuilder(
+      column: $table.solarSystemName,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get securityStatus => $composableBuilder(
+      column: $table.securityStatus,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get shipTypeId => $composableBuilder(
+      column: $table.shipTypeId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get shipTypeName => $composableBuilder(
+      column: $table.shipTypeName,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isOnline => $composableBuilder(
+      column: $table.isOnline, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastLogin => $composableBuilder(
+      column: $table.lastLogin, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastLogout => $composableBuilder(
+      column: $table.lastLogout, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => ColumnOrderings(column));
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableOrderingComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$CharacterStatusesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CharacterStatusesTable> {
+  $$CharacterStatusesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get solarSystemId => $composableBuilder(
+      column: $table.solarSystemId, builder: (column) => column);
+
+  GeneratedColumn<String> get solarSystemName => $composableBuilder(
+      column: $table.solarSystemName, builder: (column) => column);
+
+  GeneratedColumn<double> get securityStatus => $composableBuilder(
+      column: $table.securityStatus, builder: (column) => column);
+
+  GeneratedColumn<int> get shipTypeId => $composableBuilder(
+      column: $table.shipTypeId, builder: (column) => column);
+
+  GeneratedColumn<String> get shipTypeName => $composableBuilder(
+      column: $table.shipTypeName, builder: (column) => column);
+
+  GeneratedColumn<bool> get isOnline =>
+      $composableBuilder(column: $table.isOnline, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastLogin =>
+      $composableBuilder(column: $table.lastLogin, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastLogout => $composableBuilder(
+      column: $table.lastLogout, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => column);
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$CharacterStatusesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $CharacterStatusesTable,
+    CharacterStatuse,
+    $$CharacterStatusesTableFilterComposer,
+    $$CharacterStatusesTableOrderingComposer,
+    $$CharacterStatusesTableAnnotationComposer,
+    $$CharacterStatusesTableCreateCompanionBuilder,
+    $$CharacterStatusesTableUpdateCompanionBuilder,
+    (CharacterStatuse, $$CharacterStatusesTableReferences),
+    CharacterStatuse,
+    PrefetchHooks Function({bool characterId})> {
+  $$CharacterStatusesTableTableManager(
+      _$AppDatabase db, $CharacterStatusesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CharacterStatusesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CharacterStatusesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CharacterStatusesTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> characterId = const Value.absent(),
+            Value<int?> solarSystemId = const Value.absent(),
+            Value<String?> solarSystemName = const Value.absent(),
+            Value<double?> securityStatus = const Value.absent(),
+            Value<int?> shipTypeId = const Value.absent(),
+            Value<String?> shipTypeName = const Value.absent(),
+            Value<bool> isOnline = const Value.absent(),
+            Value<DateTime?> lastLogin = const Value.absent(),
+            Value<DateTime?> lastLogout = const Value.absent(),
+            Value<DateTime> lastUpdated = const Value.absent(),
+          }) =>
+              CharacterStatusesCompanion(
+            characterId: characterId,
+            solarSystemId: solarSystemId,
+            solarSystemName: solarSystemName,
+            securityStatus: securityStatus,
+            shipTypeId: shipTypeId,
+            shipTypeName: shipTypeName,
+            isOnline: isOnline,
+            lastLogin: lastLogin,
+            lastLogout: lastLogout,
+            lastUpdated: lastUpdated,
+          ),
+          createCompanionCallback: ({
+            Value<int> characterId = const Value.absent(),
+            Value<int?> solarSystemId = const Value.absent(),
+            Value<String?> solarSystemName = const Value.absent(),
+            Value<double?> securityStatus = const Value.absent(),
+            Value<int?> shipTypeId = const Value.absent(),
+            Value<String?> shipTypeName = const Value.absent(),
+            Value<bool> isOnline = const Value.absent(),
+            Value<DateTime?> lastLogin = const Value.absent(),
+            Value<DateTime?> lastLogout = const Value.absent(),
+            required DateTime lastUpdated,
+          }) =>
+              CharacterStatusesCompanion.insert(
+            characterId: characterId,
+            solarSystemId: solarSystemId,
+            solarSystemName: solarSystemName,
+            securityStatus: securityStatus,
+            shipTypeId: shipTypeId,
+            shipTypeName: shipTypeName,
+            isOnline: isOnline,
+            lastLogin: lastLogin,
+            lastLogout: lastLogout,
+            lastUpdated: lastUpdated,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$CharacterStatusesTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({characterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (characterId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.characterId,
+                    referencedTable: $$CharacterStatusesTableReferences
+                        ._characterIdTable(db),
+                    referencedColumn: $$CharacterStatusesTableReferences
+                        ._characterIdTable(db)
+                        .characterId,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$CharacterStatusesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $CharacterStatusesTable,
+    CharacterStatuse,
+    $$CharacterStatusesTableFilterComposer,
+    $$CharacterStatusesTableOrderingComposer,
+    $$CharacterStatusesTableAnnotationComposer,
+    $$CharacterStatusesTableCreateCompanionBuilder,
+    $$CharacterStatusesTableUpdateCompanionBuilder,
+    (CharacterStatuse, $$CharacterStatusesTableReferences),
+    CharacterStatuse,
+    PrefetchHooks Function({bool characterId})>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4566,4 +5564,6 @@ class $AppDatabaseManager {
       $$AppSettingsTableTableTableManager(_db, _db.appSettingsTable);
   $$CombatStatsTableTableManager get combatStats =>
       $$CombatStatsTableTableManager(_db, _db.combatStats);
+  $$CharacterStatusesTableTableManager get characterStatuses =>
+      $$CharacterStatusesTableTableManager(_db, _db.characterStatuses);
 }
