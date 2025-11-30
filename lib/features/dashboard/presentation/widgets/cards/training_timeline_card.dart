@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/database/app_database.dart';
+import '../../../../../core/sde/sde_providers.dart';
 import '../../../../../core/theme/eve_colors.dart';
-import '../../../../../core/utils/formatters.dart';
 import '../../../../../core/widgets/character_avatar.dart';
 import '../../../data/dashboard_providers.dart';
 import '../../../../characters/data/character_providers.dart';
-import '../../../../skills/data/skill_providers.dart';
-import '../../../../../core/sde/sde_providers.dart';
-import '../../../../../core/database/app_database.dart';
 import '../dashboard_card.dart';
 
 /// Dashboard card showing skill training timeline across all characters

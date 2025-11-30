@@ -16,6 +16,8 @@ import '../data/dashboard_providers.dart';
 import 'widgets/cards/combined_wealth_card.dart';
 import 'widgets/cards/quick_actions_card.dart';
 import 'widgets/cards/training_overview_card.dart';
+import 'widgets/cards/training_timeline_card.dart';
+import 'widgets/cards/wallet_trends_card.dart';
 
 /// Dashboard screen showing multi-character overview.
 ///
@@ -113,7 +115,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       crossAxisCount: columnCount,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
-                      childCount: 3,
+                      childCount: 5,
                       itemBuilder: (context, index) => _buildCard(index),
                     ),
                   ),
@@ -137,6 +139,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         return const TrainingOverviewCard();
       case 2:
         return const QuickActionsCard();
+      case 3:
+        return const WalletTrendsCard();
+      case 4:
+        return const TrainingTimelineCard();
       default:
         return const SizedBox.shrink();
     }

@@ -8,6 +8,8 @@ import '../../features/dashboard/data/dashboard_providers.dart';
 import '../../features/dashboard/presentation/widgets/cards/combined_wealth_card.dart';
 import '../../features/dashboard/presentation/widgets/cards/quick_actions_card.dart';
 import '../../features/dashboard/presentation/widgets/cards/training_overview_card.dart';
+import '../../features/dashboard/presentation/widgets/cards/training_timeline_card.dart';
+import '../../features/dashboard/presentation/widgets/cards/wallet_trends_card.dart';
 import '../../features/skills/data/skill_repository.dart';
 import '../../features/wallet/data/wallet_repository.dart';
 import '../theme/eve_colors.dart';
@@ -63,7 +65,7 @@ class _StandaloneDashboardScreenState
                       crossAxisCount: columnCount,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
-                      childCount: 3,
+                      childCount: 5,
                       itemBuilder: (context, index) => _buildCard(index),
                     ),
                   ),
@@ -86,6 +88,10 @@ class _StandaloneDashboardScreenState
         return const TrainingOverviewCard();
       case 2:
         return const QuickActionsCard();
+      case 3:
+        return const WalletTrendsCard();
+      case 4:
+        return const TrainingTimelineCard();
       default:
         return const SizedBox.shrink();
     }
