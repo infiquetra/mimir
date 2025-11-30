@@ -15,6 +15,7 @@ import '../../wallet/data/wallet_repository.dart';
 import '../data/dashboard_providers.dart';
 import 'widgets/cards/combat_stats_card.dart';
 import 'widgets/cards/combined_wealth_card.dart';
+import 'widgets/cards/fleet_status_card.dart';
 import 'widgets/cards/quick_actions_card.dart';
 import 'widgets/cards/training_overview_card.dart';
 import 'widgets/cards/training_timeline_card.dart';
@@ -116,7 +117,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       crossAxisCount: columnCount,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
-                      childCount: 6,
+                      childCount: 7,
                       itemBuilder: (context, index) => _buildCard(index),
                     ),
                   ),
@@ -141,10 +142,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       case 2:
         return const QuickActionsCard();
       case 3:
-        return const WalletTrendsCard();
+        return const FleetStatusCard();
       case 4:
-        return const TrainingTimelineCard();
+        return const WalletTrendsCard();
       case 5:
+        return const TrainingTimelineCard();
+      case 6:
         return const CombatStatsCard();
       default:
         return const SizedBox.shrink();
