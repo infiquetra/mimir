@@ -24,8 +24,6 @@ final settingsRepositoryProvider =
   allTransitiveDependencies: null,
 );
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
 typedef SettingsRepositoryRef = AutoDisposeProviderRef<SettingsRepository>;
 String _$appSettingsHash() => r'73ebbd2a9940eb908814e85ec5cad9866886d71e';
 
@@ -42,8 +40,6 @@ final appSettingsProvider = AutoDisposeFutureProvider<AppSettings>.internal(
   allTransitiveDependencies: null,
 );
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
 typedef AppSettingsRef = AutoDisposeFutureProviderRef<AppSettings>;
 String _$appSettingsStreamHash() => r'0738fee81863b32299abc47899332f9d15db3912';
 
@@ -62,8 +58,6 @@ final appSettingsStreamProvider =
   allTransitiveDependencies: null,
 );
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
 typedef AppSettingsStreamRef = AutoDisposeStreamProviderRef<AppSettings>;
 // ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
+// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member

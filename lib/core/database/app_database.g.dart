@@ -1971,6 +1971,243 @@ class WalletBalancesCompanion extends UpdateCompanion<WalletBalance> {
   }
 }
 
+class $AppSettingsTableTable extends AppSettingsTable
+    with TableInfo<$AppSettingsTableTable, AppSettingsTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AppSettingsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1));
+  static const VerificationMeta _startupBehaviorMeta =
+      const VerificationMeta('startupBehavior');
+  @override
+  late final GeneratedColumn<String> startupBehavior = GeneratedColumn<String>(
+      'startup_behavior', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('dashboard'));
+  static const VerificationMeta _onboardingCompleteMeta =
+      const VerificationMeta('onboardingComplete');
+  @override
+  late final GeneratedColumn<bool> onboardingComplete = GeneratedColumn<bool>(
+      'onboarding_complete', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("onboarding_complete" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, startupBehavior, onboardingComplete];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'app_settings_table';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<AppSettingsTableData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('startup_behavior')) {
+      context.handle(
+          _startupBehaviorMeta,
+          startupBehavior.isAcceptableOrUnknown(
+              data['startup_behavior']!, _startupBehaviorMeta));
+    }
+    if (data.containsKey('onboarding_complete')) {
+      context.handle(
+          _onboardingCompleteMeta,
+          onboardingComplete.isAcceptableOrUnknown(
+              data['onboarding_complete']!, _onboardingCompleteMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AppSettingsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AppSettingsTableData(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      startupBehavior: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}startup_behavior'])!,
+      onboardingComplete: attachedDatabase.typeMapping.read(
+          DriftSqlType.bool, data['${effectivePrefix}onboarding_complete'])!,
+    );
+  }
+
+  @override
+  $AppSettingsTableTable createAlias(String alias) {
+    return $AppSettingsTableTable(attachedDatabase, alias);
+  }
+}
+
+class AppSettingsTableData extends DataClass
+    implements Insertable<AppSettingsTableData> {
+  /// Primary key (always 1 for singleton).
+  final int id;
+
+  /// Startup behavior ('dashboard' or 'tray_only').
+  final String startupBehavior;
+
+  /// Whether the user has completed onboarding.
+  final bool onboardingComplete;
+  const AppSettingsTableData(
+      {required this.id,
+      required this.startupBehavior,
+      required this.onboardingComplete});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['startup_behavior'] = Variable<String>(startupBehavior);
+    map['onboarding_complete'] = Variable<bool>(onboardingComplete);
+    return map;
+  }
+
+  AppSettingsTableCompanion toCompanion(bool nullToAbsent) {
+    return AppSettingsTableCompanion(
+      id: Value(id),
+      startupBehavior: Value(startupBehavior),
+      onboardingComplete: Value(onboardingComplete),
+    );
+  }
+
+  factory AppSettingsTableData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AppSettingsTableData(
+      id: serializer.fromJson<int>(json['id']),
+      startupBehavior: serializer.fromJson<String>(json['startupBehavior']),
+      onboardingComplete: serializer.fromJson<bool>(json['onboardingComplete']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'startupBehavior': serializer.toJson<String>(startupBehavior),
+      'onboardingComplete': serializer.toJson<bool>(onboardingComplete),
+    };
+  }
+
+  AppSettingsTableData copyWith(
+          {int? id, String? startupBehavior, bool? onboardingComplete}) =>
+      AppSettingsTableData(
+        id: id ?? this.id,
+        startupBehavior: startupBehavior ?? this.startupBehavior,
+        onboardingComplete: onboardingComplete ?? this.onboardingComplete,
+      );
+  AppSettingsTableData copyWithCompanion(AppSettingsTableCompanion data) {
+    return AppSettingsTableData(
+      id: data.id.present ? data.id.value : this.id,
+      startupBehavior: data.startupBehavior.present
+          ? data.startupBehavior.value
+          : this.startupBehavior,
+      onboardingComplete: data.onboardingComplete.present
+          ? data.onboardingComplete.value
+          : this.onboardingComplete,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AppSettingsTableData(')
+          ..write('id: $id, ')
+          ..write('startupBehavior: $startupBehavior, ')
+          ..write('onboardingComplete: $onboardingComplete')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, startupBehavior, onboardingComplete);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AppSettingsTableData &&
+          other.id == this.id &&
+          other.startupBehavior == this.startupBehavior &&
+          other.onboardingComplete == this.onboardingComplete);
+}
+
+class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
+  final Value<int> id;
+  final Value<String> startupBehavior;
+  final Value<bool> onboardingComplete;
+  const AppSettingsTableCompanion({
+    this.id = const Value.absent(),
+    this.startupBehavior = const Value.absent(),
+    this.onboardingComplete = const Value.absent(),
+  });
+  AppSettingsTableCompanion.insert({
+    this.id = const Value.absent(),
+    this.startupBehavior = const Value.absent(),
+    this.onboardingComplete = const Value.absent(),
+  });
+  static Insertable<AppSettingsTableData> custom({
+    Expression<int>? id,
+    Expression<String>? startupBehavior,
+    Expression<bool>? onboardingComplete,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (startupBehavior != null) 'startup_behavior': startupBehavior,
+      if (onboardingComplete != null) 'onboarding_complete': onboardingComplete,
+    });
+  }
+
+  AppSettingsTableCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? startupBehavior,
+      Value<bool>? onboardingComplete}) {
+    return AppSettingsTableCompanion(
+      id: id ?? this.id,
+      startupBehavior: startupBehavior ?? this.startupBehavior,
+      onboardingComplete: onboardingComplete ?? this.onboardingComplete,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (startupBehavior.present) {
+      map['startup_behavior'] = Variable<String>(startupBehavior.value);
+    }
+    if (onboardingComplete.present) {
+      map['onboarding_complete'] = Variable<bool>(onboardingComplete.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AppSettingsTableCompanion(')
+          ..write('id: $id, ')
+          ..write('startupBehavior: $startupBehavior, ')
+          ..write('onboardingComplete: $onboardingComplete')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1980,12 +2217,19 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $WalletJournalEntriesTable walletJournalEntries =
       $WalletJournalEntriesTable(this);
   late final $WalletBalancesTable walletBalances = $WalletBalancesTable(this);
+  late final $AppSettingsTableTable appSettingsTable =
+      $AppSettingsTableTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [characters, skillQueueEntries, walletJournalEntries, walletBalances];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+        characters,
+        skillQueueEntries,
+        walletJournalEntries,
+        walletBalances,
+        appSettingsTable
+      ];
 }
 
 typedef $$CharactersTableCreateCompanionBuilder = CharactersCompanion Function({
@@ -2030,8 +2274,7 @@ final class $$CharactersTableReferences
   $$SkillQueueEntriesTableProcessedTableManager get skillQueueEntriesRefs {
     final manager =
         $$SkillQueueEntriesTableTableManager($_db, $_db.skillQueueEntries)
-            .filter((f) => f.characterId.characterId
-                .sqlEquals($_itemColumn<int>('character_id')!));
+            .filter((f) => f.characterId.characterId($_item.characterId));
 
     final cache =
         $_typedResult.readTableOrNull(_skillQueueEntriesRefsTable($_db));
@@ -2050,8 +2293,7 @@ final class $$CharactersTableReferences
       get walletJournalEntriesRefs {
     final manager =
         $$WalletJournalEntriesTableTableManager($_db, $_db.walletJournalEntries)
-            .filter((f) => f.characterId.characterId
-                .sqlEquals($_itemColumn<int>('character_id')!));
+            .filter((f) => f.characterId.characterId($_item.characterId));
 
     final cache =
         $_typedResult.readTableOrNull(_walletJournalEntriesRefsTable($_db));
@@ -2067,8 +2309,7 @@ final class $$CharactersTableReferences
 
   $$WalletBalancesTableProcessedTableManager get walletBalancesRefs {
     final manager = $$WalletBalancesTableTableManager($_db, $_db.walletBalances)
-        .filter((f) => f.characterId.characterId
-            .sqlEquals($_itemColumn<int>('character_id')!));
+        .filter((f) => f.characterId.characterId($_item.characterId));
 
     final cache = $_typedResult.readTableOrNull(_walletBalancesRefsTable($_db));
     return ProcessedTableManager(
@@ -2451,8 +2692,7 @@ class $$CharactersTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (skillQueueEntriesRefs)
-                    await $_getPrefetchedData<Character, $CharactersTable,
-                            SkillQueueEntry>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable: $$CharactersTableReferences
                             ._skillQueueEntriesRefsTable(db),
@@ -2464,8 +2704,7 @@ class $$CharactersTableTableManager extends RootTableManager<
                                 (e) => e.characterId == item.characterId),
                         typedResults: items),
                   if (walletJournalEntriesRefs)
-                    await $_getPrefetchedData<Character, $CharactersTable,
-                            WalletJournalEntry>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable: $$CharactersTableReferences
                             ._walletJournalEntriesRefsTable(db),
@@ -2477,8 +2716,7 @@ class $$CharactersTableTableManager extends RootTableManager<
                                 (e) => e.characterId == item.characterId),
                         typedResults: items),
                   if (walletBalancesRefs)
-                    await $_getPrefetchedData<Character, $CharactersTable,
-                            WalletBalance>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable: $$CharactersTableReferences
                             ._walletBalancesRefsTable(db),
@@ -2547,11 +2785,10 @@ final class $$SkillQueueEntriesTableReferences extends BaseReferences<
       db.characters.createAlias($_aliasNameGenerator(
           db.skillQueueEntries.characterId, db.characters.characterId));
 
-  $$CharactersTableProcessedTableManager get characterId {
-    final $_column = $_itemColumn<int>('character_id')!;
-
+  $$CharactersTableProcessedTableManager? get characterId {
+    if ($_item.characterId == null) return null;
     final manager = $$CharactersTableTableManager($_db, $_db.characters)
-        .filter((f) => f.characterId.sqlEquals($_column));
+        .filter((f) => f.characterId($_item.characterId!));
     final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -2898,11 +3135,10 @@ final class $$WalletJournalEntriesTableReferences extends BaseReferences<
       db.characters.createAlias($_aliasNameGenerator(
           db.walletJournalEntries.characterId, db.characters.characterId));
 
-  $$CharactersTableProcessedTableManager get characterId {
-    final $_column = $_itemColumn<int>('character_id')!;
-
+  $$CharactersTableProcessedTableManager? get characterId {
+    if ($_item.characterId == null) return null;
     final manager = $$CharactersTableTableManager($_db, $_db.characters)
-        .filter((f) => f.characterId.sqlEquals($_column));
+        .filter((f) => f.characterId($_item.characterId!));
     final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -3225,11 +3461,10 @@ final class $$WalletBalancesTableReferences
       db.characters.createAlias($_aliasNameGenerator(
           db.walletBalances.characterId, db.characters.characterId));
 
-  $$CharactersTableProcessedTableManager get characterId {
-    final $_column = $_itemColumn<int>('character_id')!;
-
+  $$CharactersTableProcessedTableManager? get characterId {
+    if ($_item.characterId == null) return null;
     final manager = $$CharactersTableTableManager($_db, $_db.characters)
-        .filter((f) => f.characterId.sqlEquals($_column));
+        .filter((f) => f.characterId($_item.characterId!));
     final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -3458,6 +3693,150 @@ typedef $$WalletBalancesTableProcessedTableManager = ProcessedTableManager<
     (WalletBalance, $$WalletBalancesTableReferences),
     WalletBalance,
     PrefetchHooks Function({bool characterId})>;
+typedef $$AppSettingsTableTableCreateCompanionBuilder
+    = AppSettingsTableCompanion Function({
+  Value<int> id,
+  Value<String> startupBehavior,
+  Value<bool> onboardingComplete,
+});
+typedef $$AppSettingsTableTableUpdateCompanionBuilder
+    = AppSettingsTableCompanion Function({
+  Value<int> id,
+  Value<String> startupBehavior,
+  Value<bool> onboardingComplete,
+});
+
+class $$AppSettingsTableTableFilterComposer
+    extends Composer<_$AppDatabase, $AppSettingsTableTable> {
+  $$AppSettingsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get startupBehavior => $composableBuilder(
+      column: $table.startupBehavior,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get onboardingComplete => $composableBuilder(
+      column: $table.onboardingComplete,
+      builder: (column) => ColumnFilters(column));
+}
+
+class $$AppSettingsTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $AppSettingsTableTable> {
+  $$AppSettingsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get startupBehavior => $composableBuilder(
+      column: $table.startupBehavior,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get onboardingComplete => $composableBuilder(
+      column: $table.onboardingComplete,
+      builder: (column) => ColumnOrderings(column));
+}
+
+class $$AppSettingsTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AppSettingsTableTable> {
+  $$AppSettingsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get startupBehavior => $composableBuilder(
+      column: $table.startupBehavior, builder: (column) => column);
+
+  GeneratedColumn<bool> get onboardingComplete => $composableBuilder(
+      column: $table.onboardingComplete, builder: (column) => column);
+}
+
+class $$AppSettingsTableTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $AppSettingsTableTable,
+    AppSettingsTableData,
+    $$AppSettingsTableTableFilterComposer,
+    $$AppSettingsTableTableOrderingComposer,
+    $$AppSettingsTableTableAnnotationComposer,
+    $$AppSettingsTableTableCreateCompanionBuilder,
+    $$AppSettingsTableTableUpdateCompanionBuilder,
+    (
+      AppSettingsTableData,
+      BaseReferences<_$AppDatabase, $AppSettingsTableTable,
+          AppSettingsTableData>
+    ),
+    AppSettingsTableData,
+    PrefetchHooks Function()> {
+  $$AppSettingsTableTableTableManager(
+      _$AppDatabase db, $AppSettingsTableTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AppSettingsTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AppSettingsTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AppSettingsTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> startupBehavior = const Value.absent(),
+            Value<bool> onboardingComplete = const Value.absent(),
+          }) =>
+              AppSettingsTableCompanion(
+            id: id,
+            startupBehavior: startupBehavior,
+            onboardingComplete: onboardingComplete,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> startupBehavior = const Value.absent(),
+            Value<bool> onboardingComplete = const Value.absent(),
+          }) =>
+              AppSettingsTableCompanion.insert(
+            id: id,
+            startupBehavior: startupBehavior,
+            onboardingComplete: onboardingComplete,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$AppSettingsTableTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $AppSettingsTableTable,
+    AppSettingsTableData,
+    $$AppSettingsTableTableFilterComposer,
+    $$AppSettingsTableTableOrderingComposer,
+    $$AppSettingsTableTableAnnotationComposer,
+    $$AppSettingsTableTableCreateCompanionBuilder,
+    $$AppSettingsTableTableUpdateCompanionBuilder,
+    (
+      AppSettingsTableData,
+      BaseReferences<_$AppDatabase, $AppSettingsTableTable,
+          AppSettingsTableData>
+    ),
+    AppSettingsTableData,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3470,4 +3849,6 @@ class $AppDatabaseManager {
       $$WalletJournalEntriesTableTableManager(_db, _db.walletJournalEntries);
   $$WalletBalancesTableTableManager get walletBalances =>
       $$WalletBalancesTableTableManager(_db, _db.walletBalances);
+  $$AppSettingsTableTableTableManager get appSettingsTable =>
+      $$AppSettingsTableTableTableManager(_db, _db.appSettingsTable);
 }
