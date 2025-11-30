@@ -62,6 +62,23 @@ class SkillRepository {
   Stream<List<SkillQueueEntry>> watchSkillQueue(int characterId) {
     return _database.watchSkillQueue(characterId);
   }
+
+  /// Gets skill queues for all characters.
+  ///
+  /// Returns a map of characterId → skill queue entries for all characters
+  /// that have queue entries. Characters with empty queues are included
+  /// with empty lists.
+  Future<Map<int, List<SkillQueueEntry>>> getAllCharacterQueues() async {
+    final characters = await _database.getAllCharacters();
+    final queueMap = <int, List<SkillQueueEntry>>{};
+
+    for (final character in characters) {
+      final queue = await _database.getSkillQueue(character.characterId);
+      queueMap[character.characterId] = queue;
+    }
+
+    return queueMap;
+  }
 }
 
 /// Provider for the skill repository.

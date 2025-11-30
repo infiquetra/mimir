@@ -41,10 +41,10 @@ class TrayService {
     }
 
     try {
-      // Set up the tray icon
+      // Set up the tray (text-only, using blank icon)
       await _systemTray.initSystemTray(
         title: 'Mimir',
-        iconPath: 'assets/icons/eve/app_icon.png',
+        iconPath: 'assets/icons/eve/blank.png',
         toolTip: 'Mimir - EVE Online Companion',
       );
 

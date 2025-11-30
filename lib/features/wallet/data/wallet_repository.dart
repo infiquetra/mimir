@@ -90,6 +90,24 @@ class WalletRepository {
   }) {
     return _database.getWalletJournal(characterId, limit: limit);
   }
+
+  /// Gets wallet balances for all characters.
+  ///
+  /// Returns a map of characterId → balance for all characters that
+  /// have a recorded balance. Characters without balances are excluded.
+  Future<Map<int, double>> getAllCharacterBalances() async {
+    final characters = await _database.getAllCharacters();
+    final balanceMap = <int, double>{};
+
+    for (final character in characters) {
+      final balance = await _database.getLatestWalletBalance(character.characterId);
+      if (balance != null) {
+        balanceMap[character.characterId] = balance;
+      }
+    }
+
+    return balanceMap;
+  }
 }
 
 /// Provider for the wallet repository.
