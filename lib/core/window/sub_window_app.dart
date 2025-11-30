@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io' show Platform;
 
+import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/skills/presentation/skills_screen.dart';
 import '../../features/wallet/presentation/wallet_screen.dart';
+import '../auth/auth_providers.dart';
 import '../sde/sde_providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/character_header_bar.dart';
@@ -53,6 +55,22 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
     super.initState();
     _windowType = _parseWindowArgs(widget.windowArgs);
     debugPrint('SubWindow: Initializing ${_windowType.title}');
+
+    // Register IPC handler for cross-window communication
+    DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
+      debugPrint('[SUBWINDOW] Received IPC: ${call.method} from window $fromWindowId');
+
+      if (call.method == 'auth_complete') {
+        final characterId = call.arguments as int;
+        debugPrint('[SUBWINDOW] Auth complete notification for character $characterId');
+
+        // Update local auth state
+        ref.read(authControllerProvider.notifier).notifyAuthComplete(characterId);
+        return true;
+      }
+
+      return false;
+    });
   }
 
   /// Parses the window arguments to get the window type.

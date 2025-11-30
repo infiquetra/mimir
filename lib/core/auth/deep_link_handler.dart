@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
+import 'package:desktop_multi_window/desktop_multi_window.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/eve_config.dart';
@@ -54,9 +56,30 @@ class DeepLinkHandler {
   }
 
   /// Handles an OAuth callback by passing it to the auth controller.
-  void _handleOAuthCallback(Uri uri) {
+  Future<void> _handleOAuthCallback(Uri uri) async {
+    debugPrint('[DEEPLINK] Received OAuth callback: $uri');
+
     final authController = _ref.read(authControllerProvider.notifier);
-    authController.handleCallback(uri);
+    final characterId = await authController.handleCallback(uri);
+
+    // If authentication was successful, broadcast to all sub-windows
+    if (characterId != null) {
+      try {
+        final subWindowIds = await DesktopMultiWindow.getAllSubWindowIds();
+        debugPrint('[DEEPLINK] Broadcasting auth_complete to ${subWindowIds.length} sub-windows');
+
+        for (final id in subWindowIds) {
+          try {
+            await DesktopMultiWindow.invokeMethod(id, 'auth_complete', characterId);
+            debugPrint('[DEEPLINK] Notified sub-window $id');
+          } catch (e) {
+            debugPrint('[DEEPLINK] Failed to notify sub-window $id: $e');
+          }
+        }
+      } catch (e) {
+        debugPrint('[DEEPLINK] Error broadcasting auth_complete: $e');
+      }
+    }
   }
 
   /// Disposes of the deep link handler.
