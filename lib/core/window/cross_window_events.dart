@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 
-import '../database/database_path.dart';
+import '../database/app_database.dart';
 
 /// Event types for cross-window communication.
 enum CrossWindowEventType {
