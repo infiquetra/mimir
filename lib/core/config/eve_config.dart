@@ -54,8 +54,23 @@ abstract class EveConfig {
     'esi-wallet.read_character_wallet.v1',
   ];
 
+  // ==========================================================================
+  // OAuth Scopes (Phase 2 - Fleet Status)
+  // ==========================================================================
+
+  /// OAuth scopes required for fleet status features.
+  ///
+  /// WARNING: Adding these scopes requires users to re-authenticate.
+  /// Existing tokens will not have these permissions.
+  static const List<String> phase2FleetScopes = [
+    'esi-location.read_location.v1', // Character location
+    'esi-location.read_ship_type.v1', // Current ship
+    'esi-location.read_online.v1', // Online status
+  ];
+
   /// All OAuth scopes as a space-separated string.
-  static String get scopesString => phase1Scopes.join(' ');
+  static String get scopesString =>
+      [...phase1Scopes, ...phase2FleetScopes].join(' ');
 
   // ==========================================================================
   // Token Configuration
