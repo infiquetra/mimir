@@ -7,6 +7,7 @@ import '../../features/characters/data/character_repository.dart';
 import '../../features/dashboard/data/dashboard_providers.dart';
 import '../../features/dashboard/presentation/widgets/cards/combat_stats_card.dart';
 import '../../features/dashboard/presentation/widgets/cards/combined_wealth_card.dart';
+import '../../features/dashboard/presentation/widgets/cards/fleet_status_card.dart';
 import '../../features/dashboard/presentation/widgets/cards/quick_actions_card.dart';
 import '../../features/dashboard/presentation/widgets/cards/training_overview_card.dart';
 import '../../features/dashboard/presentation/widgets/cards/training_timeline_card.dart';
@@ -66,7 +67,7 @@ class _StandaloneDashboardScreenState
                       crossAxisCount: columnCount,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
-                      childCount: 6,
+                      childCount: 7,
                       itemBuilder: (context, index) => _buildCard(index),
                     ),
                   ),
@@ -90,10 +91,12 @@ class _StandaloneDashboardScreenState
       case 2:
         return const QuickActionsCard();
       case 3:
-        return const WalletTrendsCard();
+        return const FleetStatusCard();
       case 4:
-        return const TrainingTimelineCard();
+        return const WalletTrendsCard();
       case 5:
+        return const TrainingTimelineCard();
+      case 6:
         return const CombatStatsCard();
       default:
         return const SizedBox.shrink();
