@@ -85,9 +85,9 @@ def draw_eye_tray_style(size, color=None, is_template=False):
         draw = ImageDraw.Draw(base_image)
         stroke_color = color
 
-    # Elliptical eye outline (almond shape)
-    eye_width = int(size * 0.7)
-    eye_height = int(size * 0.35)
+    # Elliptical eye outline (almond shape) - sized for visibility at small sizes
+    eye_width = int(size * 0.85)
+    eye_height = int(size * 0.45)
     stroke = max(2, size // 20)
 
     # Eye outline bounding box
@@ -102,7 +102,7 @@ def draw_eye_tray_style(size, color=None, is_template=False):
     draw.ellipse(eye_bbox, outline=stroke_color, width=stroke)
 
     # Iris circle (outline)
-    iris_radius = int(size * 0.18)
+    iris_radius = int(size * 0.22)
     iris_stroke = max(2, size // 25)
     iris_bbox = [
         center_x - iris_radius,
@@ -113,7 +113,7 @@ def draw_eye_tray_style(size, color=None, is_template=False):
     draw.ellipse(iris_bbox, outline=stroke_color, width=iris_stroke)
 
     # Pupil (filled)
-    pupil_radius = int(size * 0.08)
+    pupil_radius = int(size * 0.10)
     pupil_bbox = [
         center_x - pupil_radius,
         center_y - pupil_radius,
@@ -129,6 +129,252 @@ def draw_eye_tray_style(size, color=None, is_template=False):
         draw.ellipse(pupil_bbox, fill=pupil_color)
 
     return base_image
+
+
+def draw_eye_menu_icon(size):
+    """Draw eye icon for Dashboard menu item (template mode)."""
+    return draw_eye_tray_style(size, is_template=True)
+
+
+def draw_skillbook_menu_icon(size):
+    """Draw skill book icon for Skills menu item (template mode)."""
+    image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+
+    # Book dimensions
+    book_width = int(size * 0.60)
+    book_height = int(size * 0.70)
+    center_x = size // 2
+    center_y = size // 2
+
+    stroke = max(1, size // 16)
+
+    # Book rectangle
+    book_left = center_x - book_width // 2
+    book_top = center_y - book_height // 2
+    book_right = center_x + book_width // 2
+    book_bottom = center_y + book_height // 2
+
+    # Draw book outline
+    draw.rectangle(
+        [book_left, book_top, book_right, book_bottom],
+        outline=BLACK,
+        width=stroke
+    )
+
+    # Draw spine (vertical line in middle)
+    draw.line(
+        [(center_x, book_top), (center_x, book_bottom)],
+        fill=BLACK,
+        width=stroke
+    )
+
+    # Draw bookmark (small triangle at top)
+    bookmark_width = int(book_width * 0.25)
+    bookmark_height = int(book_height * 0.30)
+    draw.polygon([
+        (center_x + book_width // 4, book_top),
+        (center_x + book_width // 4 - bookmark_width // 2, book_top + bookmark_height),
+        (center_x + book_width // 4 + bookmark_width // 2, book_top + bookmark_height),
+    ], fill=BLACK)
+
+    return image
+
+
+def draw_isk_menu_icon(size):
+    """Draw ISK symbol (Z with strokes) for Wallet menu item (template mode)."""
+    image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+
+    # Z dimensions
+    z_width = int(size * 0.50)
+    z_height = int(size * 0.65)
+    center_x = size // 2
+    center_y = size // 2
+
+    stroke = max(2, size // 12)
+
+    # Z bounds
+    left = center_x - z_width // 2
+    right = center_x + z_width // 2
+    top = center_y - z_height // 2
+    bottom = center_y + z_height // 2
+
+    # Draw Z shape (top horizontal, diagonal, bottom horizontal)
+    # Top line
+    draw.line([(left, top), (right, top)], fill=BLACK, width=stroke)
+    # Diagonal
+    draw.line([(right, top), (left, bottom)], fill=BLACK, width=stroke)
+    # Bottom line
+    draw.line([(left, bottom), (right, bottom)], fill=BLACK, width=stroke)
+
+    # Add horizontal strokes through middle (ISK currency symbol)
+    middle_y = center_y
+    stroke_offset = int(size * 0.08)
+
+    # Upper stroke
+    draw.line(
+        [(left - stroke, middle_y - stroke_offset), (right + stroke, middle_y - stroke_offset)],
+        fill=BLACK,
+        width=max(1, stroke // 2)
+    )
+    # Lower stroke
+    draw.line(
+        [(left - stroke, middle_y + stroke_offset), (right + stroke, middle_y + stroke_offset)],
+        fill=BLACK,
+        width=max(1, stroke // 2)
+    )
+
+    return image
+
+
+def draw_character_menu_icon(size):
+    """Draw human in octagon for Characters menu item (template mode)."""
+    image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+
+    center_x = size // 2
+    center_y = size // 2
+    radius = int(size * 0.42)
+    stroke = max(1, size // 16)
+
+    # Draw octagon
+    import math
+    points = []
+    for i in range(8):
+        angle = i * (2 * math.pi / 8) - math.pi / 8  # Start from top-right
+        x = center_x + radius * math.cos(angle)
+        y = center_y + radius * math.sin(angle)
+        points.append((x, y))
+
+    draw.polygon(points, outline=BLACK, width=stroke)
+
+    # Draw human silhouette (head and shoulders)
+    # Head (circle)
+    head_radius = int(size * 0.12)
+    head_y = center_y - int(size * 0.10)
+    head_bbox = [
+        center_x - head_radius,
+        head_y - head_radius,
+        center_x + head_radius,
+        head_y + head_radius
+    ]
+    draw.ellipse(head_bbox, fill=BLACK)
+
+    # Shoulders (trapezoid/arc)
+    shoulder_width = int(size * 0.35)
+    shoulder_top_y = head_y + head_radius + max(1, size // 32)
+    shoulder_bottom_y = center_y + int(size * 0.20)
+
+    # Simple shoulders as filled polygon
+    shoulder_points = [
+        (center_x - shoulder_width // 3, shoulder_top_y),
+        (center_x + shoulder_width // 3, shoulder_top_y),
+        (center_x + shoulder_width // 2, shoulder_bottom_y),
+        (center_x - shoulder_width // 2, shoulder_bottom_y),
+    ]
+    draw.polygon(shoulder_points, fill=BLACK)
+
+    return image
+
+
+def draw_question_menu_icon(size):
+    """Draw question mark for Tutorial menu item (template mode)."""
+    image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+
+    center_x = size // 2
+    center_y = size // 2
+    stroke = max(2, size // 10)
+
+    # Question mark dimensions
+    arc_radius = int(size * 0.20)
+    arc_top_y = center_y - int(size * 0.25)
+
+    # Top arc of question mark (draw as thick arc)
+    arc_bbox = [
+        center_x - arc_radius,
+        arc_top_y - arc_radius // 2,
+        center_x + arc_radius,
+        arc_top_y + arc_radius + arc_radius // 2
+    ]
+    draw.arc(arc_bbox, start=180, end=0, fill=BLACK, width=stroke)
+
+    # Vertical stem
+    stem_top_y = arc_top_y + arc_radius // 2
+    stem_bottom_y = center_y + int(size * 0.05)
+    draw.line(
+        [(center_x, stem_top_y), (center_x, stem_bottom_y)],
+        fill=BLACK,
+        width=stroke
+    )
+
+    # Dot at bottom
+    dot_radius = max(1, size // 16)
+    dot_y = center_y + int(size * 0.20)
+    dot_bbox = [
+        center_x - dot_radius,
+        dot_y - dot_radius,
+        center_x + dot_radius,
+        dot_y + dot_radius
+    ]
+    draw.ellipse(dot_bbox, fill=BLACK)
+
+    return image
+
+
+def draw_gear_menu_icon(size):
+    """Draw gear/cog for Settings menu item (template mode)."""
+    image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+
+    import math
+    center_x = size // 2
+    center_y = size // 2
+
+    # Gear parameters
+    outer_radius = int(size * 0.42)
+    inner_radius = int(size * 0.28)
+    center_hole_radius = int(size * 0.12)
+    num_teeth = 6
+    tooth_width = math.pi / (num_teeth * 1.5)
+
+    # Draw gear teeth as polygon
+    points = []
+    for i in range(num_teeth * 2):
+        angle = i * math.pi / num_teeth
+        if i % 2 == 0:
+            # Tooth tip
+            radius = outer_radius
+        else:
+            # Tooth valley
+            radius = inner_radius
+
+        x = center_x + radius * math.cos(angle)
+        y = center_y + radius * math.sin(angle)
+        points.append((x, y))
+
+    # Draw filled gear
+    draw.polygon(points, fill=BLACK)
+
+    # Cut out center hole
+    hole_bbox = [
+        center_x - center_hole_radius,
+        center_y - center_hole_radius,
+        center_x + center_hole_radius,
+        center_y + center_hole_radius
+    ]
+    # Draw hole as transparent circle (draw white then composite)
+    mask = Image.new('L', (size, size), 0)
+    mask_draw = ImageDraw.Draw(mask)
+    mask_draw.polygon(points, fill=255)
+    mask_draw.ellipse(hole_bbox, fill=0)
+
+    # Apply mask
+    final_image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    final_image.paste(BLACK, (0, 0), mask)
+
+    return final_image
 
 
 def generate_icon_set():
@@ -163,12 +409,38 @@ def generate_icon_set():
     print("  ✓ app_icon@2x.png (44x44, template mode)")
 
     print()
+
+    # Generate menu icons (template mode)
+    print("Generating tray menu icons...")
+
+    menu_icons = {
+        'dashboard': draw_eye_menu_icon,
+        'skills': draw_skillbook_menu_icon,
+        'wallet': draw_isk_menu_icon,
+        'characters': draw_character_menu_icon,
+        'tutorial': draw_question_menu_icon,
+        'settings': draw_gear_menu_icon,
+    }
+
+    for name, draw_func in menu_icons.items():
+        # 1x size (16x16)
+        icon_16 = draw_func(16)
+        icon_16.save(f"assets/icons/tray/{name}.png")
+        print(f"  ✓ {name}.png (16x16)")
+
+        # 2x size (32x32)
+        icon_32 = draw_func(32)
+        icon_32.save(f"assets/icons/tray/{name}@2x.png")
+        print(f"  ✓ {name}@2x.png (32x32)")
+
+    print()
     print("=" * 60)
     print("✓ Final icon set generated!")
     print()
     print("Files created:")
     print("  - macOS app icons: macos/.../AppIcon.appiconset/app_icon_*.png")
     print("  - System tray: assets/icons/eve/app_icon.png + @2x")
+    print("  - Menu icons: assets/icons/tray/*.png + @2x")
 
 
 if __name__ == "__main__":
