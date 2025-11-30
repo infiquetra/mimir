@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:tray_manager/tray_manager.dart';
+import 'package:system_tray/system_tray.dart';
 
 import '../window/window_service.dart';
 import '../window/window_types.dart';
@@ -10,15 +10,22 @@ import '../window/window_types.dart';
 ///
 /// Provides a macOS menu bar icon with a dropdown menu for:
 /// - Opening specific feature windows (Dashboard, Skills, Wallet, Settings)
+/// - Showing the tutorial/onboarding
 /// - Quitting the application
 ///
 /// The app stays running in the menu bar even when all windows are closed,
 /// similar to apps like Slack or Discord.
-class TrayService with TrayListener {
+///
+/// Uses the system_tray package which supports:
+/// - Menu item icons (EVE-themed PNG images)
+/// - Menu title/header with divider
+/// - Separators between menu sections
+class TrayService {
   TrayService._();
 
   static final TrayService instance = TrayService._();
 
+  final SystemTray _systemTray = SystemTray();
   bool _isInitialized = false;
 
   /// Initializes the system tray icon and menu.
@@ -35,20 +42,26 @@ class TrayService with TrayListener {
 
     try {
       // Set up the tray icon
-      // Note: We need a PNG icon for the system tray
-      await trayManager.setIcon(
-        'assets/icons/eve/app_icon.png',
-        isTemplate: true, // Use template mode for macOS dark/light menu bar
+      await _systemTray.initSystemTray(
+        title: 'Mimir',
+        iconPath: 'assets/icons/eve/app_icon.png',
+        toolTip: 'Mimir - EVE Online Companion',
       );
 
-      // Build the menu
+      // Build the menu with icons and title
       await _updateMenu();
 
-      // Listen for menu item clicks
-      trayManager.addListener(this);
+      // Listen for tray icon clicks
+      _systemTray.registerSystemTrayEventHandler((eventName) {
+        if (eventName == kSystemTrayEventClick) {
+          _systemTray.popUpContextMenu();
+        } else if (eventName == kSystemTrayEventRightClick) {
+          _systemTray.popUpContextMenu();
+        }
+      });
 
       _isInitialized = true;
-      debugPrint('TrayService: Initialized successfully');
+      debugPrint('TrayService: Initialized successfully with system_tray');
     } catch (e) {
       debugPrint('TrayService: Failed to initialize: $e');
     }
@@ -60,90 +73,76 @@ class TrayService with TrayListener {
   Future<void> _updateMenu() async {
     final windowService = WindowService.instance;
 
-    // Note: tray_manager doesn't support icons in menu items
-    // Using circle indicators: ◆ = open, ○ = closed
-    final menuItems = <MenuItem>[
-      MenuItem(
-        key: 'dashboard',
+    final menu = Menu();
+    await menu.buildFrom([
+      // App title header (disabled, acts as label)
+      MenuItemLabel(
+        label: 'Mimir',
+        enabled: false, // Non-clickable title
+      ),
+      MenuSeparator(),
+
+      // Main feature windows
+      MenuItemLabel(
         label: windowService.isWindowOpen(WindowType.dashboard)
             ? '◆ Dashboard'
-            : '○ Dashboard',
+            : 'Dashboard',
+        image: 'assets/icons/tray/dashboard.png',
+        onClicked: (menuItem) => _handleMenuClick('dashboard'),
       ),
-      MenuItem(
-        key: 'skills',
+      MenuItemLabel(
         label: windowService.isWindowOpen(WindowType.skills)
             ? '◆ Skills'
-            : '○ Skills',
+            : 'Skills',
+        image: 'assets/icons/tray/skills.png',
+        onClicked: (menuItem) => _handleMenuClick('skills'),
       ),
-      MenuItem(
-        key: 'wallet',
+      MenuItemLabel(
         label: windowService.isWindowOpen(WindowType.wallet)
             ? '◆ Wallet'
-            : '○ Wallet',
+            : 'Wallet',
+        image: 'assets/icons/tray/wallet.png',
+        onClicked: (menuItem) => _handleMenuClick('wallet'),
       ),
-      MenuItem(
-        key: 'characters',
+      MenuItemLabel(
         label: windowService.isWindowOpen(WindowType.characters)
             ? '◆ Characters'
-            : '○ Characters',
+            : 'Characters',
+        image: 'assets/icons/tray/characters.png',
+        onClicked: (menuItem) => _handleMenuClick('characters'),
       ),
-      MenuItem(
-        key: 'settings',
+      MenuItemLabel(
         label: windowService.isWindowOpen(WindowType.settings)
             ? '◆ Settings'
-            : '○ Settings',
+            : 'Settings',
+        image: 'assets/icons/tray/settings.png',
+        onClicked: (menuItem) => _handleMenuClick('settings'),
       ),
-      MenuItem.separator(),
-      MenuItem(
-        key: 'onboarding',
+
+      MenuSeparator(),
+
+      MenuItemLabel(
         label: 'Show Tutorial',
+        image: 'assets/icons/tray/tutorial.png',
+        onClicked: (menuItem) => _handleMenuClick('onboarding'),
       ),
-      MenuItem.separator(),
-      MenuItem(
-        key: 'quit',
+
+      MenuSeparator(),
+
+      MenuItemLabel(
         label: 'Quit Mimir',
+        onClicked: (menuItem) => _handleMenuClick('quit'),
       ),
-    ];
+    ]);
 
-    await trayManager.setContextMenu(Menu(items: menuItems));
+    await _systemTray.setContextMenu(menu);
   }
 
-  /// Refreshes the menu to reflect current window state.
-  Future<void> refreshMenu() async {
-    if (!_isInitialized) return;
-    await _updateMenu();
-  }
-
-  /// Disposes of the tray service.
-  Future<void> dispose() async {
-    if (!_isInitialized) return;
-
-    trayManager.removeListener(this);
-    await trayManager.destroy();
-    _isInitialized = false;
-
-    debugPrint('TrayService: Disposed');
-  }
-
-  // TrayListener implementation
-
-  @override
-  void onTrayIconMouseDown() {
-    // Show menu on click (macOS default behavior)
-    trayManager.popUpContextMenu();
-  }
-
-  @override
-  void onTrayIconRightMouseDown() {
-    // Also show menu on right-click
-    trayManager.popUpContextMenu();
-  }
-
-  @override
-  void onTrayMenuItemClick(MenuItem menuItem) async {
+  /// Handles menu item clicks.
+  Future<void> _handleMenuClick(String action) async {
     final windowService = WindowService.instance;
 
-    switch (menuItem.key) {
+    switch (action) {
       case 'dashboard':
         await windowService.openWindow(WindowType.dashboard);
         await refreshMenu();
@@ -174,13 +173,19 @@ class TrayService with TrayListener {
     }
   }
 
-  @override
-  void onTrayIconMouseUp() {
-    // Not used
+  /// Refreshes the menu to reflect current window state.
+  Future<void> refreshMenu() async {
+    if (!_isInitialized) return;
+    await _updateMenu();
   }
 
-  @override
-  void onTrayIconRightMouseUp() {
-    // Not used
+  /// Disposes of the tray service.
+  Future<void> dispose() async {
+    if (!_isInitialized) return;
+
+    await _systemTray.destroy();
+    _isInitialized = false;
+
+    debugPrint('TrayService: Disposed');
   }
 }

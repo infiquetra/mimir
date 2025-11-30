@@ -8,7 +8,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   gtk
   screen_retriever
   sqlite3_flutter_libs
-  tray_manager
+  system_tray
   url_launcher_linux
   window_manager
 )

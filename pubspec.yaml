@@ -44,7 +44,7 @@ dependencies:
 
   # Desktop Multi-Window & System Tray
   desktop_multi_window: ^0.2.0
-  tray_manager: ^0.5.2
+  system_tray: ^2.0.3
   window_manager: ^0.3.8
 
   # Crypto (for PKCE)
@@ -80,3 +80,4 @@ flutter:
   assets:
     - assets/sde/
     - assets/icons/eve/
+    - assets/icons/tray/
