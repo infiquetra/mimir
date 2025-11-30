@@ -8,6 +8,7 @@ import '../database/app_database.dart';
 import '../di/providers.dart';
 import '../../features/characters/data/character_repository.dart';
 import 'oauth_service.dart';
+import 'pending_auth_store.dart';
 import 'token_manager.dart';
 
 /// Provider for the OAuth service.
@@ -102,6 +103,12 @@ class AuthController extends StateNotifier<AuthState> {
       // Create the authorization request with PKCE.
       final request = _oauthService.createAuthorizationRequest();
 
+      // Save to shared storage before launching browser.
+      // This allows the main window to access the code_verifier when
+      // the OAuth callback arrives, even though it was created in a sub-window.
+      await PendingAuthStore.save(request);
+      debugPrint('[AUTH] startAuthFlow: Saved pending request to shared storage');
+
       // Update state to track the pending request.
       state = state.copyWith(
         flowState: AuthFlowState.awaitingCallback,
@@ -145,7 +152,17 @@ class AuthController extends StateNotifier<AuthState> {
   /// [callbackUri] - The full callback URI including query parameters.
   Future<int?> handleCallback(Uri callbackUri) async {
     debugPrint('[AUTH] handleCallback: Received callback');
-    final pendingRequest = state.pendingRequest;
+
+    // First try local state, then shared storage.
+    // This handles both same-window auth (pendingRequest exists) and
+    // cross-window auth (pendingRequest null, load from shared file).
+    var pendingRequest = state.pendingRequest;
+
+    if (pendingRequest == null) {
+      debugPrint('[AUTH] handleCallback: No local pending request, checking shared storage');
+      pendingRequest = await PendingAuthStore.loadAndClear();
+    }
+
     if (pendingRequest == null) {
       debugPrint('[AUTH] handleCallback: ERROR - No pending authentication request');
       state = state.copyWith(
