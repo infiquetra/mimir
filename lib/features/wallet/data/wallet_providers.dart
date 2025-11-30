@@ -7,7 +7,7 @@ import 'wallet_repository.dart';
 
 /// Provider that streams the wallet journal for the active character.
 final walletJournalProvider = StreamProvider<List<WalletJournalEntry>>((ref) {
-  final activeCharacter = ref.watch(activeCharacterProvider).valueOrNull;
+  final activeCharacter = ref.watch(activeCharacterProvider).value;
   if (activeCharacter == null) {
     return Stream.value([]);
   }
@@ -32,7 +32,7 @@ final refreshWalletProvider =
 ///
 /// Returns the balance from the most recent journal entry, or fetches from ESI.
 final walletBalanceProvider = FutureProvider<double?>((ref) async {
-  final activeCharacter = ref.watch(activeCharacterProvider).valueOrNull;
+  final activeCharacter = ref.watch(activeCharacterProvider).value;
   if (activeCharacter == null) {
     return null;
   }

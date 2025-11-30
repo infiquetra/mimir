@@ -55,7 +55,7 @@ final class SettingsRepositoryProvider extends $FunctionalProvider<
 }
 
 String _$settingsRepositoryHash() =>
-    r'9134e8f83b21eab1b79ad05bf930d7d99a51da73';
+    r'8b8d87bf14edf6b4a7e2d50f1917265a34e9f56a';
 
 /// Current app settings provider (async).
 
@@ -94,7 +94,7 @@ final class AppSettingsProvider extends $FunctionalProvider<
   }
 }
 
-String _$appSettingsHash() => r'73ebbd2a9940eb908814e85ec5cad9866886d71e';
+String _$appSettingsHash() => r'4343a1487addff1a3051d6747c185484ea388e59';
 
 /// Stream of app settings for reactive updates.
 
@@ -133,4 +133,4 @@ final class AppSettingsStreamProvider extends $FunctionalProvider<
   }
 }
 
-String _$appSettingsStreamHash() => r'0738fee81863b32299abc47899332f9d15db3912';
+String _$appSettingsStreamHash() => r'bbfc5f2f7ccdd0c54f380a96b60b92498c5df25a';

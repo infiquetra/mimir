@@ -66,7 +66,7 @@ class CharacterHeaderBar extends ConsumerWidget {
             context,
             ref,
             character,
-            allCharacters.valueOrNull ?? [],
+            allCharacters.value ?? [],
             isDesktop,
           );
         },

@@ -60,7 +60,7 @@ class _StandaloneCharactersScreenState
               )
             : _CharacterListView(
                 characters: characters,
-                activeCharacterId: activeCharacter.valueOrNull?.characterId,
+                activeCharacterId: activeCharacter.value?.characterId,
                 onAddCharacter: () => setState(() => _showAddCharacter = true),
               ),
       ),

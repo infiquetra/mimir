@@ -17,7 +17,7 @@ class SkillsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final skillQueue = ref.watch(skillQueueProvider);
-    final activeCharacter = ref.watch(activeCharacterProvider).valueOrNull;
+    final activeCharacter = ref.watch(activeCharacterProvider).value;
 
     return Scaffold(
       body: SpaceBackground(
@@ -146,7 +146,7 @@ class SkillsScreen extends ConsumerWidget {
 
   Widget _buildErrorState(BuildContext context, WidgetRef ref, Object error) {
     final theme = Theme.of(context);
-    final activeCharacter = ref.watch(activeCharacterProvider).valueOrNull;
+    final activeCharacter = ref.watch(activeCharacterProvider).value;
 
     return Center(
       child: Padding(

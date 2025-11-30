@@ -9,7 +9,7 @@ import 'skill_repository.dart';
 /// Automatically updates when the active character changes or
 /// when the skill queue is refreshed.
 final skillQueueProvider = StreamProvider<List<SkillQueueEntry>>((ref) {
-  final activeCharacter = ref.watch(activeCharacterProvider).valueOrNull;
+  final activeCharacter = ref.watch(activeCharacterProvider).value;
   if (activeCharacter == null) {
     return Stream.value([]);
   }
@@ -20,7 +20,7 @@ final skillQueueProvider = StreamProvider<List<SkillQueueEntry>>((ref) {
 
 /// Provider for the currently training skill (position 0 in queue).
 final currentTrainingProvider = Provider<SkillQueueEntry?>((ref) {
-  final queue = ref.watch(skillQueueProvider).valueOrNull ?? [];
+  final queue = ref.watch(skillQueueProvider).value ?? [];
   if (queue.isEmpty) return null;
 
   // Find the skill at position 0 (currently training).
@@ -32,7 +32,7 @@ final currentTrainingProvider = Provider<SkillQueueEntry?>((ref) {
 
 /// Provider for the skill queue preview (first 3 skills for Dashboard).
 final skillQueuePreviewProvider = Provider<List<SkillQueueEntry>>((ref) {
-  final queue = ref.watch(skillQueueProvider).valueOrNull ?? [];
+  final queue = ref.watch(skillQueueProvider).value ?? [];
   return queue.take(3).toList();
 });
 
@@ -45,7 +45,7 @@ final refreshSkillQueueProvider =
 
 /// Provider that indicates if the skill queue is empty.
 final isSkillQueueEmptyProvider = Provider<bool>((ref) {
-  final queue = ref.watch(skillQueueProvider).valueOrNull ?? [];
+  final queue = ref.watch(skillQueueProvider).value ?? [];
   return queue.isEmpty;
 });
 

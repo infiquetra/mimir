@@ -20,7 +20,7 @@ class WalletScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeCharacter = ref.watch(activeCharacterProvider).valueOrNull;
+    final activeCharacter = ref.watch(activeCharacterProvider).value;
     final walletJournal = ref.watch(walletJournalProvider);
     final walletBalance = ref.watch(walletBalanceProvider);
 
@@ -256,7 +256,7 @@ class WalletScreen extends ConsumerWidget {
   }
 
   Widget _buildErrorState(BuildContext context, WidgetRef ref, Object error) {
-    final activeCharacter = ref.watch(activeCharacterProvider).valueOrNull;
+    final activeCharacter = ref.watch(activeCharacterProvider).value;
 
     return Center(
       child: Padding(

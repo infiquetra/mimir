@@ -11,21 +11,21 @@ part 'settings_providers.g.dart';
 
 /// Settings repository provider.
 @riverpod
-SettingsRepository settingsRepository(SettingsRepositoryRef ref) {
+SettingsRepository settingsRepository(Ref ref) {
   final db = ref.watch(databaseProvider);
   return SettingsRepository(db);
 }
 
 /// Current app settings provider (async).
 @riverpod
-Future<AppSettings> appSettings(AppSettingsRef ref) async {
+Future<AppSettings> appSettings(Ref ref) async {
   final repository = ref.watch(settingsRepositoryProvider);
   return repository.getSettings();
 }
 
 /// Stream of app settings for reactive updates.
 @riverpod
-Stream<AppSettings> appSettingsStream(AppSettingsStreamRef ref) {
+Stream<AppSettings> appSettingsStream(Ref ref) {
   final repository = ref.watch(settingsRepositoryProvider);
   return repository.watchSettings();
 }

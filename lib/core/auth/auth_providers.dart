@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 import '../database/app_database.dart';
 import '../di/providers.dart';

@@ -82,35 +82,35 @@ class TrayService extends TrayListener {
           label: windowService.isWindowOpen(WindowType.dashboard)
               ? '◆ Dashboard'
               : 'Dashboard',
-          image: 'assets/icons/tray/dashboard.png',
+          icon: 'assets/icons/tray/dashboard.png',
         ),
         MenuItem(
           key: 'skills',
           label: windowService.isWindowOpen(WindowType.skills)
               ? '◆ Skills'
               : 'Skills',
-          image: 'assets/icons/tray/skills.png',
+          icon: 'assets/icons/tray/skills.png',
         ),
         MenuItem(
           key: 'wallet',
           label: windowService.isWindowOpen(WindowType.wallet)
               ? '◆ Wallet'
               : 'Wallet',
-          image: 'assets/icons/tray/wallet.png',
+          icon: 'assets/icons/tray/wallet.png',
         ),
         MenuItem(
           key: 'characters',
           label: windowService.isWindowOpen(WindowType.characters)
               ? '◆ Characters'
               : 'Characters',
-          image: 'assets/icons/tray/characters.png',
+          icon: 'assets/icons/tray/characters.png',
         ),
         MenuItem(
           key: 'settings',
           label: windowService.isWindowOpen(WindowType.settings)
               ? '◆ Settings'
               : 'Settings',
-          image: 'assets/icons/tray/settings.png',
+          icon: 'assets/icons/tray/settings.png',
         ),
 
         MenuItem.separator(),
@@ -118,7 +118,7 @@ class TrayService extends TrayListener {
         MenuItem(
           key: 'onboarding',
           label: 'Show Tutorial',
-          image: 'assets/icons/tray/tutorial.png',
+          icon: 'assets/icons/tray/tutorial.png',
         ),
 
         MenuItem.separator(),

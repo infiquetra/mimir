@@ -35,7 +35,7 @@ class CharacterSelector extends ConsumerWidget {
           context,
           ref,
           character,
-          allCharacters.valueOrNull ?? [],
+          allCharacters.value ?? [],
           compact,
         );
       },
@@ -361,7 +361,7 @@ class SubWindowCharacterSwitcher extends ConsumerWidget {
           return const SizedBox.shrink();
         }
 
-        final activeId = activeCharacter.valueOrNull?.characterId;
+        final activeId = activeCharacter.value?.characterId;
 
         return Row(
           mainAxisSize: MainAxisSize.min,

@@ -5,6 +5,7 @@ import 'dart:ui';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../database/app_database.dart';
@@ -66,7 +67,8 @@ class WindowService {
       final controller = _windows[type]!;
 
       // Verify the window actually still exists by checking active sub-windows
-      final activeWindowIds = await DesktopMultiWindow.getAllSubWindowIds();
+      final activeWindows = await WindowController.getAll();
+      final activeWindowIds = activeWindows.map((w) => w.windowId).toList();
       if (activeWindowIds.contains(controller.windowId)) {
         // Window is still alive, bring to front
         try {
@@ -95,16 +97,12 @@ class WindowService {
         'dbPath': dbPath,
       });
 
-      final controller = await DesktopMultiWindow.createWindow(args);
+      final controller = await WindowController.create(
+        WindowConfiguration(arguments: args),
+      );
 
-      await controller.setFrame(Rect.fromLTWH(
-        100 + (type.windowId * 50), // Offset each window slightly
-        100 + (type.windowId * 30),
-        size.width,
-        size.height,
-      ));
-
-      await controller.setTitle(type.title);
+      // Note: setFrame and setTitle are not available in desktop_multi_window 0.3.0
+      // Windows will use default size and title
       await controller.show();
       // Note: show() brings window to front; WindowController doesn't have focus()
 
@@ -126,7 +124,7 @@ class WindowService {
     final controller = _windows.remove(type);
     if (controller != null) {
       try {
-        await controller.close();
+        await controller.hide();
         debugPrint('WindowService: Closed ${type.name} window');
       } catch (e) {
         debugPrint('WindowService: Error closing ${type.name} window: $e');
