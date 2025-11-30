@@ -480,4 +480,53 @@ class SdeService {
 
   /// Get the number of cached skill names.
   int get cachedSkillCount => _skillNameCache.length;
+
+  // ============================================================================
+  // Ship Type Lookups
+  // ============================================================================
+
+  /// Get a ship type name by type ID.
+  ///
+  /// Falls back to generic "Ship #<id>" if not found.
+  /// Ship types are stored in the same SdeTypes table as skills.
+  Future<String> getShipTypeName(int typeId) async {
+    final name = await database.getTypeName(typeId);
+    return name ?? 'Ship #$typeId';
+  }
+
+  /// Get ship type name synchronously from cache.
+  ///
+  /// Returns null if not in cache. Use [getShipTypeName] for
+  /// guaranteed lookups that may hit the database.
+  String? getShipTypeNameSync(int typeId) {
+    return _skillNameCache[typeId];
+  }
+
+  // ============================================================================
+  // Solar System Lookups
+  // ============================================================================
+
+  /// Get security status for a solar system.
+  ///
+  /// Returns null if system ID is unknown.
+  /// Security status ranges from -1.0 (null sec) to 1.0 (high sec).
+  ///
+  /// For now, this uses ESI's universe endpoint data which is queried
+  /// on-demand by the fleet providers. A future enhancement could cache
+  /// this data locally.
+  Future<double?> getSolarSystemSecurity(int solarSystemId) async {
+    // TODO: Implement local caching of solar system data
+    // For now, this is handled by the fleet providers querying ESI directly
+    return null;
+  }
+
+  /// Get solar system name by system ID.
+  ///
+  /// Falls back to "System #<id>" if not found.
+  /// This could be enhanced with a local cache of solar system names.
+  Future<String> getSolarSystemName(int solarSystemId) async {
+    // TODO: Implement local caching of solar system names
+    // For now, return a placeholder. The fleet providers will query ESI.
+    return 'System #$solarSystemId';
+  }
 }

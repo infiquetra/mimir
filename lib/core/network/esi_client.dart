@@ -269,6 +269,21 @@ class EsiClient {
   }
 
   // ============================================================================
+  // Universe API
+  // ============================================================================
+
+  /// Gets information about a solar system.
+  ///
+  /// This is a public endpoint - no authentication required.
+  Future<SolarSystemInfo> getSolarSystemInfo(int solarSystemId) async {
+    final response = await publicGet<Map<String, dynamic>>(
+      '/universe/systems/$solarSystemId/',
+    );
+
+    return SolarSystemInfo.fromJson(response.data!);
+  }
+
+  // ============================================================================
   // Location API
   // ============================================================================
 
@@ -704,6 +719,42 @@ class WalletJournalItem {
       contextIdType: json['context_id_type'] as String?,
     );
   }
+}
+
+/// Solar system information from ESI.
+class SolarSystemInfo {
+  final int systemId;
+  final String name;
+  final double securityStatus;
+  final int? constellationId;
+  final int? starId;
+
+  const SolarSystemInfo({
+    required this.systemId,
+    required this.name,
+    required this.securityStatus,
+    this.constellationId,
+    this.starId,
+  });
+
+  factory SolarSystemInfo.fromJson(Map<String, dynamic> json) {
+    return SolarSystemInfo(
+      systemId: json['system_id'] as int,
+      name: json['name'] as String,
+      securityStatus: (json['security_status'] as num).toDouble(),
+      constellationId: json['constellation_id'] as int?,
+      starId: json['star_id'] as int?,
+    );
+  }
+
+  /// Returns true if this is high security space (≥0.5).
+  bool get isHighSec => securityStatus >= 0.5;
+
+  /// Returns true if this is low security space (0.0 to 0.5).
+  bool get isLowSec => securityStatus > 0.0 && securityStatus < 0.5;
+
+  /// Returns true if this is null security space (≤0.0).
+  bool get isNullSec => securityStatus <= 0.0;
 }
 
 /// Character location from ESI.
