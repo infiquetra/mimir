@@ -4,8 +4,10 @@ import 'dart:io' show Platform;
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/characters/data/character_providers.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/skills/presentation/skills_screen.dart';
@@ -67,7 +69,15 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
         // Schedule state update on UI thread to ensure widget rebuilds
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ref.read(authControllerProvider.notifier).notifyAuthComplete(characterId);
-          debugPrint('[SUBWINDOW] Auth state updated on UI thread');
+
+          // Invalidate character providers to trigger fresh data fetch
+          ref.invalidate(allCharactersProvider);
+          ref.invalidate(activeCharacterProvider);
+
+          debugPrint('[SUBWINDOW] Auth state updated and character providers invalidated');
+
+          // Force a visual update to ensure widget rebuilds
+          SchedulerBinding.instance.ensureVisualUpdate();
         });
         return true;
       }

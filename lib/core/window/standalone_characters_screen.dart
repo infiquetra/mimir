@@ -390,7 +390,7 @@ class _AddCharacterView extends ConsumerWidget {
         return _buildExchangingState(theme);
 
       case AuthFlowState.success:
-        return _buildSuccessState(theme);
+        return _buildSuccessState(ref, theme);
 
       case AuthFlowState.error:
         return _buildErrorState(context, ref, theme);
@@ -551,7 +551,7 @@ class _AddCharacterView extends ConsumerWidget {
     );
   }
 
-  Widget _buildSuccessState(ThemeData theme) {
+  Widget _buildSuccessState(WidgetRef ref, ThemeData theme) {
     return EveCard(
       glowColor: EveColors.success,
       glowIntensity: 0.2,
@@ -567,6 +567,15 @@ class _AddCharacterView extends ConsumerWidget {
           Text(
             'Character Added!',
             style: theme.textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: () {
+              ref.read(authControllerProvider.notifier).reset();
+              onCancel();
+            },
+            icon: const Icon(Icons.check),
+            label: const Text('Done'),
           ),
         ],
       ),
