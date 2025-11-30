@@ -267,6 +267,66 @@ class EsiClient {
         .map((item) => WalletJournalItem.fromJson(item as Map<String, dynamic>))
         .toList();
   }
+
+  // ============================================================================
+  // Location API
+  // ============================================================================
+
+  /// Gets the character's current location.
+  ///
+  /// Returns null if the character is offline or location is inaccessible.
+  /// Throws [EsiException] with 403 if missing required scopes.
+  Future<CharacterLocation?> getCharacterLocation(int characterId) async {
+    try {
+      final response = await authenticatedGet<Map<String, dynamic>>(
+        '/characters/$characterId/location/',
+        characterId: characterId,
+      );
+
+      return CharacterLocation.fromJson(response.data!);
+    } on DioException catch (e) {
+      // 403 = missing scope (esi-location.read_location.v1)
+      if (e.error is EsiException && (e.error as EsiException).isScopeError) {
+        rethrow;
+      }
+      // Character offline or location inaccessible
+      return null;
+    }
+  }
+
+  /// Gets the character's current ship.
+  ///
+  /// Returns null if the character is offline or ship data is inaccessible.
+  /// Throws [EsiException] with 403 if missing required scopes.
+  Future<CharacterShip?> getCharacterShip(int characterId) async {
+    try {
+      final response = await authenticatedGet<Map<String, dynamic>>(
+        '/characters/$characterId/ship/',
+        characterId: characterId,
+      );
+
+      return CharacterShip.fromJson(response.data!);
+    } on DioException catch (e) {
+      // 403 = missing scope (esi-location.read_ship_type.v1)
+      if (e.error is EsiException && (e.error as EsiException).isScopeError) {
+        rethrow;
+      }
+      // Character offline or ship data inaccessible
+      return null;
+    }
+  }
+
+  /// Gets the character's online status.
+  ///
+  /// Throws [EsiException] with 403 if missing required scopes.
+  Future<CharacterOnline> getCharacterOnline(int characterId) async {
+    final response = await authenticatedGet<Map<String, dynamic>>(
+      '/characters/$characterId/online/',
+      characterId: characterId,
+    );
+
+    return CharacterOnline.fromJson(response.data!);
+  }
 }
 
 // ============================================================================
@@ -642,6 +702,76 @@ class WalletJournalItem {
       reason: json['reason'] as String?,
       contextId: json['context_id'] as int?,
       contextIdType: json['context_id_type'] as String?,
+    );
+  }
+}
+
+/// Character location from ESI.
+class CharacterLocation {
+  final int solarSystemId;
+  final int? stationId;
+  final int? structureId;
+
+  const CharacterLocation({
+    required this.solarSystemId,
+    this.stationId,
+    this.structureId,
+  });
+
+  factory CharacterLocation.fromJson(Map<String, dynamic> json) {
+    return CharacterLocation(
+      solarSystemId: json['solar_system_id'] as int,
+      stationId: json['station_id'] as int?,
+      structureId: json['structure_id'] as int?,
+    );
+  }
+}
+
+/// Character ship from ESI.
+class CharacterShip {
+  final int shipTypeId;
+  final String shipTypeName;
+  final int shipItemId;
+
+  const CharacterShip({
+    required this.shipTypeId,
+    required this.shipTypeName,
+    required this.shipItemId,
+  });
+
+  factory CharacterShip.fromJson(Map<String, dynamic> json) {
+    return CharacterShip(
+      shipTypeId: json['ship_type_id'] as int,
+      shipTypeName: json['ship_type_name'] as String,
+      shipItemId: json['ship_item_id'] as int,
+    );
+  }
+}
+
+/// Character online status from ESI.
+class CharacterOnline {
+  final bool online;
+  final DateTime? lastLogin;
+  final DateTime? lastLogout;
+  final int? logins;
+
+  const CharacterOnline({
+    required this.online,
+    this.lastLogin,
+    this.lastLogout,
+    this.logins,
+  });
+
+  factory CharacterOnline.fromJson(Map<String, dynamic> json) {
+    return CharacterOnline(
+      online: json['online'] as bool,
+      lastLogin: json['last_login'] != null
+          ? DateTime.parse(json['last_login'] as String)
+          : null,
+      lastLogout: json['last_logout'] != null
+          ? DateTime.parse(json['last_logout'] as String)
+          : null,
+      logins: json['logins'] as int?,
     );
   }
 }
