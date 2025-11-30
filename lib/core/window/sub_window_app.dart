@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
 
@@ -16,6 +17,7 @@ import '../auth/auth_providers.dart';
 import '../sde/sde_providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/character_header_bar.dart';
+import 'cross_window_events.dart';
 import 'standalone_characters_screen.dart';
 import 'standalone_dashboard_screen.dart';
 import 'window_types.dart';
@@ -51,39 +53,77 @@ class SubWindowApp extends ConsumerStatefulWidget {
 
 class _SubWindowAppState extends ConsumerState<SubWindowApp> {
   late final WindowType _windowType;
+  late final CrossWindowEventService _eventService;
+  StreamSubscription<CrossWindowEvent>? _eventSubscription;
 
   @override
   void initState() {
     super.initState();
     _windowType = _parseWindowArgs(widget.windowArgs);
+    _eventService = CrossWindowEventService();
+
     debugPrint('SubWindow: Initializing ${_windowType.title}');
 
-    // Register IPC handler for cross-window communication
-    DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
-      debugPrint('[SUBWINDOW] Received IPC: ${call.method} from window $fromWindowId');
+    // Start file-based event watching (replaces IPC handler)
+    _initEventWatcher();
+  }
 
-      if (call.method == 'auth_complete') {
-        final characterId = call.arguments as int;
-        debugPrint('[SUBWINDOW] Auth complete notification for character $characterId');
+  /// Initializes the file watcher for cross-window events.
+  Future<void> _initEventWatcher() async {
+    await _eventService.startWatching();
 
-        // Schedule state update on UI thread to ensure widget rebuilds
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ref.read(authControllerProvider.notifier).notifyAuthComplete(characterId);
+    _eventSubscription = _eventService.events.listen((event) {
+      debugPrint('[SUBWINDOW] Received event: ${event.type.name}');
 
-          // Invalidate character providers to trigger fresh data fetch
-          ref.invalidate(allCharactersProvider);
-          ref.invalidate(activeCharacterProvider);
-
-          debugPrint('[SUBWINDOW] Auth state updated and character providers invalidated');
-
-          // Force a visual update to ensure widget rebuilds
-          SchedulerBinding.instance.ensureVisualUpdate();
-        });
-        return true;
+      switch (event.type) {
+        case CrossWindowEventType.authComplete:
+          _handleAuthComplete(event.data['characterId'] as int);
+        case CrossWindowEventType.characterDeleted:
+          _handleCharacterDeleted(event.data['characterId'] as int);
+        case CrossWindowEventType.characterRefreshed:
+          _handleCharacterRefreshed(event.data['characterId'] as int);
       }
-
-      return false;
     });
+  }
+
+  /// Handles authentication complete events.
+  void _handleAuthComplete(int characterId) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(authControllerProvider.notifier).notifyAuthComplete(characterId);
+
+      // Invalidate character providers to trigger fresh data fetch
+      ref.invalidate(allCharactersProvider);
+      ref.invalidate(activeCharacterProvider);
+
+      debugPrint('[SUBWINDOW] Auth state updated for character $characterId');
+
+      // Force a visual update to ensure widget rebuilds
+      SchedulerBinding.instance.ensureVisualUpdate();
+    });
+  }
+
+  /// Handles character deleted events.
+  void _handleCharacterDeleted(int characterId) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(allCharactersProvider);
+      ref.invalidate(activeCharacterProvider);
+      debugPrint('[SUBWINDOW] Character $characterId deleted, providers invalidated');
+    });
+  }
+
+  /// Handles character refreshed events.
+  void _handleCharacterRefreshed(int characterId) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(allCharactersProvider);
+      debugPrint('[SUBWINDOW] Character $characterId refreshed, providers invalidated');
+    });
+  }
+
+  @override
+  void dispose() {
+    _eventSubscription?.cancel();
+    _eventService.dispose();
+    super.dispose();
   }
 
   /// Parses the window arguments to get the window type.

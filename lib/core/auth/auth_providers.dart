@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../database/app_database.dart';
 import '../di/providers.dart';
+import '../window/cross_window_events.dart';
 import '../../features/characters/data/character_repository.dart';
 import 'oauth_service.dart';
 import 'pending_auth_store.dart';
@@ -293,6 +294,13 @@ class AuthController extends StateNotifier<AuthState> {
               .setActiveCharacter(remainingCharacters.first.characterId);
         }
       }
+
+      // Broadcast deletion to all windows
+      await CrossWindowEventService.broadcast(CrossWindowEvent(
+        type: CrossWindowEventType.characterDeleted,
+        data: {'characterId': characterId},
+      ));
+      debugPrint('[AUTH] Broadcast character_deleted event for character $characterId');
     } catch (e) {
       debugPrint('Error during logout: $e');
       // Log but don't throw - we want to clean up as much as possible.

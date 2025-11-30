@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
-import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../config/eve_config.dart';
+import '../window/cross_window_events.dart';
 import 'auth_providers.dart';
 
 /// Service that handles deep links for OAuth callbacks.
@@ -71,20 +71,14 @@ class DeepLinkHandler {
       debugPrint('[DEEPLINK] Failed to hide main window: $e');
     }
 
-    // If authentication was successful, broadcast to all sub-windows
+    // If authentication was successful, broadcast to all sub-windows via file-based events
     if (characterId != null) {
       try {
-        final subWindowIds = await DesktopMultiWindow.getAllSubWindowIds();
-        debugPrint('[DEEPLINK] Broadcasting auth_complete to ${subWindowIds.length} sub-windows');
-
-        for (final id in subWindowIds) {
-          try {
-            await DesktopMultiWindow.invokeMethod(id, 'auth_complete', characterId);
-            debugPrint('[DEEPLINK] Notified sub-window $id');
-          } catch (e) {
-            debugPrint('[DEEPLINK] Failed to notify sub-window $id: $e');
-          }
-        }
+        await CrossWindowEventService.broadcast(CrossWindowEvent(
+          type: CrossWindowEventType.authComplete,
+          data: {'characterId': characterId},
+        ));
+        debugPrint('[DEEPLINK] Broadcast auth_complete event for character $characterId');
       } catch (e) {
         debugPrint('[DEEPLINK] Error broadcasting auth_complete: $e');
       }
