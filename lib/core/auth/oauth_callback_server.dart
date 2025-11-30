@@ -19,9 +19,14 @@ class OAuthCallbackServer {
   /// Future that completes when a callback is received.
   Future<Uri> get onCallback => _callbackCompleter.future;
 
-  /// Starts the server on a random available port.
+  /// Port for the local OAuth callback server.
+  /// Must match the callback URL registered in EVE Developer portal.
+  static const int _callbackPort = 54321;
+
+  /// Starts the server on port 54321.
+  /// This port must be registered in the EVE Developer application settings.
   Future<void> start() async {
-    _server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    _server = await HttpServer.bind(InternetAddress.loopbackIPv4, _callbackPort);
     debugPrint('[OAUTH_SERVER] Listening on $callbackUrl');
 
     _server!.listen(_handleRequest);
