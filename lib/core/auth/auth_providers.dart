@@ -8,6 +8,7 @@ import '../database/app_database.dart';
 import '../di/providers.dart';
 import '../window/cross_window_events.dart';
 import '../../features/characters/data/character_repository.dart';
+import 'oauth_callback_server.dart';
 import 'oauth_service.dart';
 import 'pending_auth_store.dart';
 import 'token_manager.dart';
@@ -99,10 +100,20 @@ class AuthController extends StateNotifier<AuthState> {
   ///
   /// Returns true if the browser was launched successfully.
   Future<bool> startAuthFlow() async {
+    OAuthCallbackServer? server;
+
     try {
+      debugPrint('[AUTH] startAuthFlow: Starting local HTTP server for OAuth callback');
+      // Start local HTTP server to receive OAuth callback and show success page.
+      server = OAuthCallbackServer();
+      await server.start();
+      debugPrint('[AUTH] startAuthFlow: Server started at ${server.callbackUrl}');
+
       debugPrint('[AUTH] startAuthFlow: Creating authorization request');
-      // Create the authorization request with PKCE.
-      final request = _oauthService.createAuthorizationRequest();
+      // Create the authorization request with PKCE, using localhost callback.
+      final request = _oauthService.createAuthorizationRequest(
+        redirectUri: server.callbackUrl,
+      );
 
       // Save to shared storage before launching browser.
       // This allows the main window to access the code_verifier when
@@ -127,6 +138,7 @@ class AuthController extends StateNotifier<AuthState> {
 
       if (result.exitCode != 0) {
         debugPrint('[AUTH] startAuthFlow: Failed to launch browser: ${result.stderr}');
+        await server.stop();
         state = state.copyWith(
           flowState: AuthFlowState.error,
           errorMessage: 'Failed to launch browser: ${result.stderr}',
@@ -135,10 +147,34 @@ class AuthController extends StateNotifier<AuthState> {
         return false;
       }
 
-      debugPrint('[AUTH] startAuthFlow: Browser launched successfully, awaiting callback');
-      return true;
+      debugPrint('[AUTH] startAuthFlow: Browser launched, waiting for callback on local server...');
+
+      // Wait for the OAuth callback on the local server.
+      // The server will display a success page to the browser and give us the callback URI.
+      final callbackUri = await server.onCallback;
+      debugPrint('[AUTH] startAuthFlow: Received callback from server: $callbackUri');
+
+      // Process the callback.
+      final characterId = await handleCallback(callbackUri);
+
+      // Stop the server.
+      await server.stop();
+
+      if (characterId != null) {
+        // Broadcast success to other windows.
+        await CrossWindowEventService.broadcast(CrossWindowEvent(
+          type: CrossWindowEventType.authComplete,
+          data: {'characterId': characterId},
+        ));
+        debugPrint('[AUTH] startAuthFlow: Broadcast auth_complete event for character $characterId');
+      }
+
+      return characterId != null;
     } catch (e) {
       debugPrint('[AUTH] startAuthFlow: Exception: $e');
+      if (server != null) {
+        await server.stop();
+      }
       state = state.copyWith(
         flowState: AuthFlowState.error,
         errorMessage: 'Failed to start authentication: $e',

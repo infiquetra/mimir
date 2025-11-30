@@ -104,14 +104,18 @@ class OAuthService {
   /// - The authorization URL to open in the browser
   /// - The code verifier to store for token exchange
   /// - The state parameter for CSRF protection
-  AuthorizationRequest createAuthorizationRequest() {
+  ///
+  /// [redirectUri] - Optional redirect URI. If not provided, uses the default
+  ///                 from [EveConfig.redirectUri]. This allows using a local
+  ///                 HTTP server for OAuth callbacks instead of custom URL scheme.
+  AuthorizationRequest createAuthorizationRequest({String? redirectUri}) {
     final codeVerifier = _generateCodeVerifier();
     final codeChallenge = _generateCodeChallenge(codeVerifier);
     final state = _generateState();
 
     final queryParams = {
       'response_type': 'code',
-      'redirect_uri': EveConfig.redirectUri,
+      'redirect_uri': redirectUri ?? EveConfig.redirectUri,
       'client_id': EveConfig.clientId,
       'scope': EveConfig.scopesString,
       'state': state,
