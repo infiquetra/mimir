@@ -504,14 +504,14 @@ class AppDatabase extends _$AppDatabase {
   // Character status operations
 
   /// Get character status for a specific character.
-  Future<CharacterStatus?> getCharacterStatus(int characterId) {
+  Future<CharacterStatuse?> getCharacterStatus(int characterId) {
     return (select(characterStatuses)
           ..where((s) => s.characterId.equals(characterId)))
         .getSingleOrNull();
   }
 
   /// Get all character statuses.
-  Future<List<CharacterStatus>> getAllCharacterStatuses() {
+  Future<List<CharacterStatuse>> getAllCharacterStatuses() {
     return select(characterStatuses).get();
   }
 

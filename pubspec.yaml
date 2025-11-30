@@ -57,6 +57,7 @@ dependencies:
   json_annotation: ^4.9.0
   equatable: ^2.0.5
   logger: ^2.2.0
+  timeago: ^3.7.1
 
 dev_dependencies:
   flutter_test:
