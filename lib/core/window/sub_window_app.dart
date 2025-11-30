@@ -64,8 +64,11 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
         final characterId = call.arguments as int;
         debugPrint('[SUBWINDOW] Auth complete notification for character $characterId');
 
-        // Update local auth state
-        ref.read(authControllerProvider.notifier).notifyAuthComplete(characterId);
+        // Schedule state update on UI thread to ensure widget rebuilds
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(authControllerProvider.notifier).notifyAuthComplete(characterId);
+          debugPrint('[SUBWINDOW] Auth state updated on UI thread');
+        });
         return true;
       }
 

@@ -4,6 +4,7 @@ import 'package:app_links/app_links.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../config/eve_config.dart';
 import 'auth_providers.dart';
@@ -61,6 +62,14 @@ class DeepLinkHandler {
 
     final authController = _ref.read(authControllerProvider.notifier);
     final characterId = await authController.handleCallback(uri);
+
+    // Re-hide main window (macOS may have shown it when activating the app via deep link)
+    try {
+      await windowManager.hide();
+      debugPrint('[DEEPLINK] Main window re-hidden');
+    } catch (e) {
+      debugPrint('[DEEPLINK] Failed to hide main window: $e');
+    }
 
     // If authentication was successful, broadcast to all sub-windows
     if (characterId != null) {
