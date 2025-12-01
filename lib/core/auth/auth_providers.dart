@@ -7,8 +7,11 @@ import 'package:flutter_riverpod/legacy.dart';
 
 import '../database/app_database.dart';
 import '../di/providers.dart';
+import '../logging/logger.dart';
 import '../window/cross_window_events.dart';
 import '../../features/characters/data/character_repository.dart';
+import '../../features/skills/data/skill_repository.dart';
+import '../../features/wallet/data/wallet_repository.dart';
 import 'oauth_callback_server.dart';
 import 'oauth_service.dart';
 import 'pending_auth_store.dart';
@@ -85,16 +88,22 @@ class AuthController extends StateNotifier<AuthState> {
   final TokenManager _tokenManager;
   final AppDatabase _database;
   final CharacterRepository _characterRepository;
+  final WalletRepository _walletRepository;
+  final SkillRepository _skillRepository;
 
   AuthController({
     required OAuthService oauthService,
     required TokenManager tokenManager,
     required AppDatabase database,
     required CharacterRepository characterRepository,
+    required WalletRepository walletRepository,
+    required SkillRepository skillRepository,
   })  : _oauthService = oauthService,
         _tokenManager = tokenManager,
         _database = database,
         _characterRepository = characterRepository,
+        _walletRepository = walletRepository,
+        _skillRepository = skillRepository,
         super(const AuthState());
 
   /// Starts the OAuth authentication flow.
@@ -371,16 +380,30 @@ class AuthController extends StateNotifier<AuthState> {
     await _database.setActiveCharacter(characterInfo.characterId);
   }
 
-  /// Refreshes character data from ESI in the background.
+  /// Refreshes all character data from ESI in the background.
   ///
-  /// This fetches corporation/alliance names and updates the database.
+  /// Fetches:
+  /// - Basic character info (corporation, alliance names)
+  /// - Wallet balance and journal
+  /// - Skill queue
+  ///
   /// Errors are logged but don't interrupt the auth flow.
-  void _refreshCharacterData(int characterId) {
-    _characterRepository.refreshCharacter(characterId).then((_) {
-      debugPrint('Character $characterId data refreshed from ESI');
-    }).catchError((error) {
-      debugPrint('Failed to refresh character $characterId: $error');
-    });
+  Future<void> _refreshCharacterData(int characterId) async {
+    Log.d('AUTH', '_refreshCharacterData($characterId) - START');
+
+    try {
+      // Run all refreshes in parallel for speed
+      await Future.wait([
+        _characterRepository.refreshCharacter(characterId),
+        _walletRepository.refreshWalletBalance(characterId),
+        _walletRepository.refreshWalletJournal(characterId),
+        _skillRepository.refreshSkillQueue(characterId),
+      ]);
+      Log.i('AUTH', '_refreshCharacterData - all data refreshed for character $characterId');
+    } catch (error, stack) {
+      // Log but don't rethrow - auth flow should complete even if data refresh fails
+      Log.e('AUTH', '_refreshCharacterData($characterId) - FAILED', error, stack);
+    }
   }
 }
 
@@ -392,6 +415,8 @@ final authControllerProvider =
     tokenManager: ref.watch(tokenManagerProvider),
     database: ref.watch(databaseProvider),
     characterRepository: ref.watch(characterRepositoryProvider),
+    walletRepository: ref.watch(walletRepositoryProvider),
+    skillRepository: ref.watch(skillRepositoryProvider),
   );
 });
 
