@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/characters/presentation/add_character_screen.dart';
+import '../../features/characters/presentation/widgets/character_sidebar.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/skills/presentation/skills_screen.dart';
@@ -122,6 +123,23 @@ class MainScaffold extends ConsumerWidget {
                 ),
               ],
             ),
+            // Subtle glowing divider.
+            Container(
+              width: 1,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    EveColors.evePrimary.withAlpha(13),
+                    EveColors.evePrimary.withAlpha(51),
+                    EveColors.evePrimary.withAlpha(13),
+                  ],
+                ),
+              ),
+            ),
+            // Character sidebar (desktop only).
+            const CharacterSidebar(),
             // Subtle glowing divider.
             Container(
               width: 1,
