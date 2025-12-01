@@ -334,6 +334,7 @@ class OverviewTab extends ConsumerWidget {
     final theme = Theme.of(context);
     final clones = ref.watch(characterClonesProvider(characterId));
     final implants = ref.watch(characterImplantsProvider(characterId));
+    final locationNames = ref.watch(characterCloneLocationNamesProvider(characterId));
 
     return Card(
       elevation: 0,
@@ -374,25 +375,71 @@ class OverviewTab extends ConsumerWidget {
               data: (cloneData) {
                 if (cloneData.homeLocation != null) {
                   final home = cloneData.homeLocation!;
-                  return Row(
-                    children: [
-                      Icon(
-                        home.locationType == 'station'
-                            ? Icons.location_city_outlined
-                            : Icons.place_outlined,
-                        size: 16,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Home: Location ${home.locationId}',
-                          style: theme.textTheme.bodyMedium?.copyWith(
+                  final locationId = home.locationId;
+
+                  return locationNames.when(
+                    data: (nameMap) {
+                      final locationName = locationId != null
+                          ? nameMap[locationId] ?? 'Location $locationId'
+                          : 'Unknown';
+                      return Row(
+                        children: [
+                          Icon(
+                            home.locationType == 'station'
+                                ? Icons.location_city_outlined
+                                : Icons.place_outlined,
+                            size: 16,
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Home: $locationName',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                    loading: () => Row(
+                      children: [
+                        Icon(
+                          home.locationType == 'station'
+                              ? Icons.location_city_outlined
+                              : Icons.place_outlined,
+                          size: 16,
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ],
+                    ),
+                    error: (_, __) => Row(
+                      children: [
+                        Icon(
+                          home.locationType == 'station'
+                              ? Icons.location_city_outlined
+                              : Icons.place_outlined,
+                          size: 16,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Home: Location ${home.locationId}',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   );
                 }
                 return Text(
