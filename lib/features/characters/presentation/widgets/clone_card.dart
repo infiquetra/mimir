@@ -4,7 +4,7 @@ import 'package:mimir/features/characters/presentation/widgets/implant_row.dart'
 
 /// Displays information about a single jump clone.
 ///
-/// Shows clone name, location, and implants.
+/// Shows clone avatar icon, name, location, and implants.
 /// Used in both Overview tab (compact) and Jump Clones sub-tab (detailed).
 class CloneCard extends StatelessWidget {
   /// The jump clone to display.
@@ -30,12 +30,24 @@ class CloneCard extends StatelessWidget {
     this.compact = false,
   });
 
+  /// Generates a clone name from the jump clone ID.
+  ///
+  /// Uses format: "Clone JC-XXXX" where XXXX is the first 4 hex digits
+  /// of the jump clone ID.
+  String _generateCloneName(int jumpCloneId) {
+    final hexId = jumpCloneId.toRadixString(16).toUpperCase();
+    final shortId = hexId.length >= 4
+        ? hexId.substring(0, 4)
+        : hexId.padLeft(4, '0');
+    return 'Clone JC-$shortId';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cloneName = clone.name?.isNotEmpty == true
         ? clone.name!
-        : 'Jump Clone #${clone.jumpCloneId}';
+        : _generateCloneName(clone.jumpCloneId);
 
     return Card(
       elevation: 0,
@@ -51,73 +63,108 @@ class CloneCard extends StatelessWidget {
         padding: compact
             ? const EdgeInsets.all(12.0)
             : const EdgeInsets.all(16.0),
-        child: Column(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
-            // Clone name
-            Text(
-              cloneName,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+            // Clone avatar icon (holographic blue style)
+            Container(
+              width: compact ? 48 : 56,
+              height: compact ? 48 : 56,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.person_outline,
+                size: compact ? 28 : 32,
+                color: theme.colorScheme.primary,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(width: 12),
 
-            // Location
-            Row(
-              children: [
-                Icon(
-                  clone.locationType == 'station'
-                      ? Icons.location_city_outlined
-                      : Icons.place_outlined,
-                  size: 16,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    locationName ?? 'Unknown Location',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+            // Clone details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Clone name
+                  Text(
+                    cloneName,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(height: 8),
 
-            // Implants
-            if (showImplants) ...[
-              const SizedBox(height: 12),
-              if (clone.implants.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
+                  // Location
+                  Row(
                     children: [
                       Icon(
-                        Icons.info_outline,
+                        clone.locationType == 'station'
+                            ? Icons.location_city_outlined
+                            : Icons.place_outlined,
                         size: 16,
-                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        'No implants',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                          fontStyle: FontStyle.italic,
+                      Expanded(
+                        child: Text(
+                          locationName ?? 'Unknown Location',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
-                )
-              else
-                ImplantRow(
-                  implants: _buildImplantMap(clone.implants),
-                  iconSize: compact ? 28.0 : 32.0,
-                  spacing: compact ? 3.0 : 4.0,
-                ),
-            ],
+
+                  // Implants
+                  if (showImplants) ...[
+                    const SizedBox(height: 12),
+                    if (clone.implants.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 16,
+                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'No implants',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      ImplantRow(
+                        implants: _buildImplantMap(clone.implants),
+                        iconSize: compact ? 28.0 : 32.0,
+                        spacing: compact ? 3.0 : 4.0,
+                      ),
+                  ],
+                ],
+              ),
+            ),
           ],
         ),
       ),
