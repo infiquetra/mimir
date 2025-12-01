@@ -1,18 +1,20 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/config/eve_config.dart';
-import '../../core/database/app_database.dart' show Character;
+import '../../core/database/app_database.dart' show Character, isSubWindow;
+import '../../core/logging/logger.dart';
 import '../../features/characters/data/character_providers.dart';
 import '../../features/wallet/data/wallet_repository.dart';
 import 'corporation_logo.dart';
 import 'faction_logo.dart';
 
-/// Panel displaying a full-body character render with info overlay.
+/// Panel displaying a character portrait with info overlay.
 ///
 /// Layout:
-/// - Full-body character render as background
+/// - Character portrait as background (square image, fills panel)
 /// - Corporation logo in top-right corner (48px)
 /// - Faction logo in bottom-left corner (48px)
 /// - Info overlay at bottom with character stats:
@@ -21,25 +23,20 @@ import 'faction_logo.dart';
 ///   - Wallet balance (ISK)
 ///   - Security status
 ///   - Total skill points
-///   - Skills button
 ///
 /// Matches EVE Online's character sheet portrait panel design.
 class CharacterPortraitPanel extends ConsumerWidget {
   /// The character to display.
   final Character character;
 
-  /// Optional callback when Skills button is pressed.
-  final VoidCallback? onSkillsPressed;
-
   const CharacterPortraitPanel({
     super.key,
     required this.character,
-    this.onSkillsPressed,
   });
 
-  /// Returns the full-body character render URL.
-  String get _renderUrl {
-    return '${EveConfig.imageServerUrl}/characters/${character.characterId}/render?size=512';
+  /// Returns the character portrait URL.
+  String get _portraitUrl {
+    return '${EveConfig.imageServerUrl}/characters/${character.characterId}/portrait?size=512';
   }
 
   @override
@@ -51,6 +48,9 @@ class CharacterPortraitPanel extends ConsumerWidget {
     final walletBalance = ref.watch(_walletBalanceProvider(character.characterId));
     final totalSp = ref.watch(characterTotalSpProvider(character.characterId));
 
+    // Debug logging
+    Log.d('CHAR', 'CharacterPortraitPanel: Loading portrait from $_portraitUrl');
+
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
@@ -61,32 +61,30 @@ class CharacterPortraitPanel extends ConsumerWidget {
       ),
       child: Stack(
         children: [
-          // Full-body character render.
+          // Character portrait (use CachedNetworkImage for main window).
           Positioned.fill(
-            child: Image.network(
-              _renderUrl,
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return Center(
-                  child: CircularProgressIndicator(
-                    value: loadingProgress.expectedTotalBytes != null
-                        ? loadingProgress.cumulativeBytesLoaded /
-                            loadingProgress.expectedTotalBytes!
-                        : null,
+            child: isSubWindow
+                ? Image.network(
+                    _portraitUrl,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return _LoadingPlaceholder(colorScheme: colorScheme);
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      Log.e('CHAR', 'Failed to load character portrait (sub-window)', error, stackTrace);
+                      return _ErrorPlaceholder(colorScheme: colorScheme);
+                    },
+                  )
+                : CachedNetworkImage(
+                    imageUrl: _portraitUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => _LoadingPlaceholder(colorScheme: colorScheme),
+                    errorWidget: (context, url, error) {
+                      Log.e('CHAR', 'Failed to load character portrait (main window)', error);
+                      return _ErrorPlaceholder(colorScheme: colorScheme);
+                    },
                   ),
-                );
-              },
-              errorBuilder: (context, error, stackTrace) {
-                return Center(
-                  child: Icon(
-                    Icons.person_outline,
-                    size: 120,
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-                  ),
-                );
-              },
-            ),
           ),
           // Corporation logo (top-right).
           Positioned(
@@ -116,7 +114,6 @@ class CharacterPortraitPanel extends ConsumerWidget {
               character: character,
               walletBalance: walletBalance,
               totalSp: totalSp,
-              onSkillsPressed: onSkillsPressed,
             ),
           ),
         ],
@@ -130,19 +127,16 @@ class _InfoOverlay extends StatelessWidget {
   final Character character;
   final AsyncValue<double?> walletBalance;
   final AsyncValue<int> totalSp;
-  final VoidCallback? onSkillsPressed;
 
   const _InfoOverlay({
     required this.character,
     required this.walletBalance,
     required this.totalSp,
-    this.onSkillsPressed,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -182,22 +176,6 @@ class _InfoOverlay extends StatelessWidget {
             walletBalance: walletBalance,
             totalSp: totalSp,
           ),
-          const SizedBox(height: 12),
-          // Skills button.
-          if (onSkillsPressed != null)
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: onSkillsPressed,
-                icon: const Icon(Icons.psychology_outlined, size: 18),
-                label: const Text('Skills'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: BorderSide(color: colorScheme.primary),
-                  backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -293,6 +271,40 @@ class _StatRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Loading placeholder for character render.
+class _LoadingPlaceholder extends StatelessWidget {
+  final ColorScheme colorScheme;
+
+  const _LoadingPlaceholder({required this.colorScheme});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: CircularProgressIndicator(
+        color: colorScheme.primary,
+      ),
+    );
+  }
+}
+
+/// Error placeholder for character render.
+class _ErrorPlaceholder extends StatelessWidget {
+  final ColorScheme colorScheme;
+
+  const _ErrorPlaceholder({required this.colorScheme});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Icon(
+        Icons.person_outline,
+        size: 120,
+        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+      ),
     );
   }
 }
