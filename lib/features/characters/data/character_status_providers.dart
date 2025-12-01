@@ -101,30 +101,52 @@ Future<Map<int, String>> characterCloneLocationNames(
   final repository = ref.watch(characterStatusRepositoryProvider);
   final clones = await ref.watch(characterClonesProvider(characterId).future);
 
-  // Collect all location IDs from clones.
-  final idsToResolve = <int>[];
+  // Separate station IDs from structure IDs.
+  // Stations: NPC stations (int32) resolved via /universe/names/
+  // Structures: Player-owned (int64) resolved via /universe/structures/{id}/
+  final stationIds = <int>[];
+  final structureIds = <int>[];
 
   if (clones.homeLocation?.locationId != null) {
-    idsToResolve.add(clones.homeLocation!.locationId!);
+    if (clones.homeLocation!.locationType == 'station') {
+      stationIds.add(clones.homeLocation!.locationId!);
+    } else {
+      structureIds.add(clones.homeLocation!.locationId!);
+    }
   }
 
   for (final clone in clones.jumpClones) {
     if (clone.locationId != null) {
-      idsToResolve.add(clone.locationId!);
+      if (clone.locationType == 'station') {
+        stationIds.add(clone.locationId!);
+      } else {
+        structureIds.add(clone.locationId!);
+      }
     }
   }
 
-  // Resolve names if we have IDs.
-  if (idsToResolve.isEmpty) {
+  // Resolve both types of locations.
+  if (stationIds.isEmpty && structureIds.isEmpty) {
     Log.d('PROVIDERS', 'characterCloneLocationNames($characterId) - No IDs to resolve');
     return {};
   }
 
-  Log.d('PROVIDERS', 'characterCloneLocationNames($characterId) - Resolving ${idsToResolve.length} location IDs');
-  final names = await repository.resolveNames(idsToResolve);
-  final nameMap = {for (var n in names) n.id: n.name};
+  Log.d('PROVIDERS', 'characterCloneLocationNames($characterId) - Resolving ${stationIds.length} stations, ${structureIds.length} structures');
 
-  Log.d('PROVIDERS', 'characterCloneLocationNames($characterId) - Resolved ${nameMap.length} names');
+  // Resolve stations via /universe/names/ endpoint.
+  final stationNames = await repository.resolveNames(stationIds);
+  final stationNameMap = {for (var n in stationNames) n.id: n.name};
+
+  // Resolve structures via authenticated /universe/structures/ endpoint.
+  final structureNameMap = await repository.resolveStructureNames(
+    structureIds,
+    characterId,
+  );
+
+  // Merge both maps.
+  final nameMap = {...stationNameMap, ...structureNameMap};
+
+  Log.d('PROVIDERS', 'characterCloneLocationNames($characterId) - Resolved ${nameMap.length} names total');
   return nameMap;
 }
 
