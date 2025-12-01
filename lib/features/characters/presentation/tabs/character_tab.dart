@@ -4,14 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/eve_colors.dart';
 import 'character_sub_tabs/attributes_sub_tab.dart';
 import 'character_sub_tabs/jump_clones_sub_tab.dart';
-import 'character_sub_tabs/skills_sub_tab.dart';
 
 /// Character tab with nested sub-tabs for detailed information.
 ///
 /// Sub-tabs:
 /// - Attributes: Detailed attribute display with bonuses
 /// - Jump Clones: List of all jump clones with locations and implants
-/// - Skills: Skills overview and training information
 class CharacterTab extends ConsumerStatefulWidget {
   const CharacterTab({super.key});
 
@@ -26,7 +24,7 @@ class _CharacterTabState extends ConsumerState<CharacterTab>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -49,7 +47,6 @@ class _CharacterTabState extends ConsumerState<CharacterTab>
             tabs: const [
               Tab(text: 'Attributes'),
               Tab(text: 'Jump Clones'),
-              Tab(text: 'Skills'),
             ],
           ),
         ),
@@ -59,7 +56,6 @@ class _CharacterTabState extends ConsumerState<CharacterTab>
             children: const [
               AttributesSubTab(),
               JumpClonesSubTab(),
-              SkillsSubTab(),
             ],
           ),
         ),

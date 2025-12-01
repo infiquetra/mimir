@@ -5,23 +5,26 @@ import '../../features/characters/data/character_providers.dart';
 import '../../features/characters/data/character_repository.dart';
 import '../../features/characters/presentation/tabs/character_tab.dart';
 import '../../features/characters/presentation/tabs/interactions_tab.dart';
-import '../../features/characters/presentation/tabs/overview_tab.dart';
 import '../auth/auth_providers.dart';
 import '../config/eve_config.dart';
 import '../theme/eve_colors.dart';
 import '../widgets/character_header_bar.dart';
+import '../widgets/character_portrait_panel.dart';
 import '../widgets/eve_card.dart';
 import '../widgets/space_background.dart';
+import '../widgets/streamlined_tab_bar.dart';
 import 'window_types.dart';
 
 /// Standalone characters screen for sub-windows.
 ///
-/// This screen combines:
-/// - Character management (add/remove/switch) via CharacterHeaderBar
-/// - Enhanced character details (Overview/Character/Interactions tabs)
+/// Layout:
+/// - Character header bar (switcher, add button)
+/// - Row with split panels:
+///   - Left panel (~40%): Full-body character portrait with info overlay
+///   - Right panel (~60%): Streamlined tabs (Character/Interactions/History)
 ///
-/// Unlike the main app's character management, this is a full-featured
-/// standalone screen that doesn't depend on go_router navigation.
+/// This matches EVE Online's character sheet design with portrait panel
+/// and compact tab navigation.
 class StandaloneCharactersScreen extends ConsumerStatefulWidget {
   const StandaloneCharactersScreen({super.key});
 
@@ -92,41 +95,12 @@ class _StandaloneCharactersScreenState
                             _removeCharacter(context, characterId),
                       ),
 
-                      // Tab navigation
-                      Container(
-                        color: EveColors.darkSurface,
-                        child: TabBar(
-                          controller: _tabController,
-                          indicatorColor: EveColors.evePrimary,
-                          labelColor: EveColors.evePrimary,
-                          unselectedLabelColor: Colors.white.withAlpha(179),
-                          tabs: const [
-                            Tab(
-                              icon: Icon(Icons.dashboard_outlined),
-                              text: 'Overview',
-                            ),
-                            Tab(
-                              icon: Icon(Icons.person_outlined),
-                              text: 'Character',
-                            ),
-                            Tab(
-                              icon: Icon(Icons.people_outlined),
-                              text: 'Interactions',
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Tab content
+                      // Split panel content
                       Expanded(
                         child: activeCharacter.value != null
-                            ? TabBarView(
-                                controller: _tabController,
-                                children: const [
-                                  OverviewTab(),
-                                  CharacterTab(),
-                                  InteractionsTab(),
-                                ],
+                            ? _buildSplitPanelContent(
+                                context,
+                                activeCharacter.value!,
                               )
                             : _buildNoCharacterState(context),
                       ),
@@ -166,6 +140,58 @@ class _StandaloneCharactersScreenState
                 ),
               ),
       ),
+    );
+  }
+
+  /// Builds the split panel layout (portrait panel + tabs).
+  Widget _buildSplitPanelContent(BuildContext context, character) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Left panel: Character portrait with info overlay (~40%)
+        Expanded(
+          flex: 40,
+          child: CharacterPortraitPanel(
+            character: character,
+            onSkillsPressed: () {
+              // TODO: Open skills window or navigate to skills tab
+              // For now, this will be a placeholder
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Skills functionality coming soon!'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+        ),
+
+        // Right panel: Streamlined tabs (~60%)
+        Expanded(
+          flex: 60,
+          child: Column(
+            children: [
+              // Streamlined tab bar
+              StreamlinedTabBar(
+                controller: _tabController,
+                tabs: const ['Character', 'Interactions', 'History'],
+              ),
+
+              // Tab content
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: const [
+                    CharacterTab(),
+                    InteractionsTab(),
+                    _HistoryTabPlaceholder(),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -277,6 +303,49 @@ class _StandaloneCharactersScreenState
           .read(characterRepositoryProvider)
           .deleteCharacter(characterId);
     }
+  }
+}
+
+/// Placeholder for employment history tab.
+///
+/// Will show character's employment history (previous corporations).
+class _HistoryTabPlaceholder extends StatelessWidget {
+  const _HistoryTabPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.history,
+              size: 64,
+              color: theme.colorScheme.onSurfaceVariant.withAlpha(128),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Employment History',
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Coming soon',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant.withAlpha(153),
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
