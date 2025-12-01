@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/logging/logger.dart';
 import '../../../core/utils/formatters.dart';
 import '../../characters/data/character_providers.dart';
 import 'wallet_repository.dart';
@@ -9,9 +10,11 @@ import 'wallet_repository.dart';
 final walletJournalProvider = StreamProvider<List<WalletJournalEntry>>((ref) {
   final activeCharacter = ref.watch(activeCharacterProvider).value;
   if (activeCharacter == null) {
+    Log.d('WALLET', 'walletJournalProvider - no active character, returning empty stream');
     return Stream.value([]);
   }
 
+  Log.d('WALLET', 'walletJournalProvider - setting up stream for character ${activeCharacter.characterId}');
   final repository = ref.watch(walletRepositoryProvider);
   return repository.watchWalletJournal(activeCharacter.characterId);
 });
@@ -19,12 +22,15 @@ final walletJournalProvider = StreamProvider<List<WalletJournalEntry>>((ref) {
 /// Provider for refreshing wallet data (balance + journal) from ESI.
 final refreshWalletProvider =
     FutureProvider.family<double, int>((ref, characterId) async {
+  Log.i('WALLET', 'refreshWalletProvider - invoked for character $characterId');
   final repository = ref.read(walletRepositoryProvider);
 
   // Refresh both balance and journal.
+  Log.d('WALLET', 'refreshWalletProvider - refreshing balance and journal');
   final balance = await repository.refreshWalletBalance(characterId);
   await repository.refreshWalletJournal(characterId);
 
+  Log.i('WALLET', 'refreshWalletProvider - completed, balance: $balance ISK');
   return balance;
 });
 
@@ -34,9 +40,11 @@ final refreshWalletProvider =
 final walletBalanceProvider = FutureProvider<double?>((ref) async {
   final activeCharacter = ref.watch(activeCharacterProvider).value;
   if (activeCharacter == null) {
+    Log.d('WALLET', 'walletBalanceProvider - no active character');
     return null;
   }
 
+  Log.d('WALLET', 'walletBalanceProvider - fetching for character ${activeCharacter.characterId}');
   final repository = ref.read(walletRepositoryProvider);
   return repository.getLatestWalletBalance(activeCharacter.characterId);
 });

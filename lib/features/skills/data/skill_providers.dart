@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/logging/logger.dart';
 import '../../characters/data/character_providers.dart';
 import 'skill_repository.dart';
 
@@ -11,9 +12,11 @@ import 'skill_repository.dart';
 final skillQueueProvider = StreamProvider<List<SkillQueueEntry>>((ref) {
   final activeCharacter = ref.watch(activeCharacterProvider).value;
   if (activeCharacter == null) {
+    Log.d('SKILLS', 'skillQueueProvider - no active character, returning empty stream');
     return Stream.value([]);
   }
 
+  Log.d('SKILLS', 'skillQueueProvider - setting up stream for character ${activeCharacter.characterId}');
   final repository = ref.watch(skillRepositoryProvider);
   return repository.watchSkillQueue(activeCharacter.characterId);
 });
@@ -39,6 +42,7 @@ final skillQueuePreviewProvider = Provider<List<SkillQueueEntry>>((ref) {
 /// Provider for refreshing the skill queue from ESI.
 final refreshSkillQueueProvider =
     FutureProvider.family<void, int>((ref, characterId) async {
+  Log.i('SKILLS', 'refreshSkillQueueProvider - invoked for character $characterId');
   final repository = ref.read(skillRepositoryProvider);
   await repository.refreshSkillQueue(characterId);
 });
