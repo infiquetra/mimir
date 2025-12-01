@@ -42,11 +42,14 @@ class TrayService extends TrayListener {
     }
 
     try {
-      // Set up the tray icon
+      // Set up the tray icon (REQUIRED - creates the status item)
       await trayManager.setIcon(
-        'assets/icons/eve/blank.png',
+        'assets/icons/tray/dashboard.png',
         isTemplate: true,
       );
+
+      // Add title text next to icon
+      await trayManager.setTitle('Mimir');
 
       // Set tooltip
       await trayManager.setToolTip('Mimir - EVE Online Companion');
