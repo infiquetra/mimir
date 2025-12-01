@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/characters/data/character_providers.dart';
 import '../../features/characters/data/character_repository.dart';
-import '../../features/characters/presentation/tabs/character_tab.dart';
-import '../../features/characters/presentation/tabs/interactions_tab.dart';
+import '../../features/characters/presentation/widgets/character_content_grid.dart';
 import '../auth/auth_providers.dart';
 import '../config/eve_config.dart';
 import '../theme/eve_colors.dart';
@@ -12,7 +11,6 @@ import '../widgets/character_header_bar.dart';
 import '../widgets/character_portrait_panel.dart';
 import '../widgets/eve_card.dart';
 import '../widgets/space_background.dart';
-import '../widgets/streamlined_tab_bar.dart';
 import 'window_types.dart';
 
 /// Standalone characters screen for sub-windows.
@@ -20,11 +18,11 @@ import 'window_types.dart';
 /// Layout:
 /// - Character header bar (switcher, add button)
 /// - Row with split panels:
-///   - Left panel (~40%): Full-body character portrait with info overlay
-///   - Right panel (~60%): Streamlined tabs (Character/Interactions/History)
+///   - Left panel (~40%): Character portrait with info overlay
+///   - Right panel (~60%): Multi-column card grid
 ///
 /// This matches EVE Online's character sheet design with portrait panel
-/// and compact tab navigation.
+/// and efficient card-based information display.
 class StandaloneCharactersScreen extends ConsumerStatefulWidget {
   const StandaloneCharactersScreen({super.key});
 
@@ -34,22 +32,8 @@ class StandaloneCharactersScreen extends ConsumerStatefulWidget {
 }
 
 class _StandaloneCharactersScreenState
-    extends ConsumerState<StandaloneCharactersScreen>
-    with SingleTickerProviderStateMixin {
+    extends ConsumerState<StandaloneCharactersScreen> {
   bool _showAddCharacter = false;
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +127,7 @@ class _StandaloneCharactersScreenState
     );
   }
 
-  /// Builds the split panel layout (portrait panel + tabs).
+  /// Builds the split panel layout (portrait panel + card grid).
   Widget _buildSplitPanelContent(BuildContext context, character) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -153,43 +137,13 @@ class _StandaloneCharactersScreenState
           flex: 40,
           child: CharacterPortraitPanel(
             character: character,
-            onSkillsPressed: () {
-              // TODO: Open skills window or navigate to skills tab
-              // For now, this will be a placeholder
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Skills functionality coming soon!'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
           ),
         ),
 
-        // Right panel: Streamlined tabs (~60%)
-        Expanded(
+        // Right panel: Multi-column card grid (~60%)
+        const Expanded(
           flex: 60,
-          child: Column(
-            children: [
-              // Streamlined tab bar
-              StreamlinedTabBar(
-                controller: _tabController,
-                tabs: const ['Character', 'Interactions', 'History'],
-              ),
-
-              // Tab content
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: const [
-                    CharacterTab(),
-                    InteractionsTab(),
-                    _HistoryTabPlaceholder(),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          child: CharacterContentGrid(),
         ),
       ],
     );
