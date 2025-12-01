@@ -122,21 +122,22 @@ class CharacterPortraitPanel extends ConsumerWidget {
               totalSp: totalSp,
             ),
           ),
-          // Delete button (bottom-right).
+          // Delete button (upper-left).
           if (onDeleteCharacter != null)
             Positioned(
-              bottom: 16,
-              right: 16,
+              top: 16,
+              left: 16,
               child: Material(
                 color: Colors.transparent,
-                child: IconButton(
+                child: IconButton.filled(
                   onPressed: onDeleteCharacter,
-                  icon: const Icon(Icons.delete_outline),
+                  icon: const Icon(Icons.delete_outline, size: 18),
                   tooltip: 'Remove Character',
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.red.shade900.withValues(alpha: 0.8),
+                    backgroundColor: Colors.red.shade900.withValues(alpha: 0.7),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.all(8),
+                    minimumSize: const Size(32, 32),
+                    padding: const EdgeInsets.all(6),
                   ),
                 ),
               ),
