@@ -6,6 +6,7 @@ import '../auth/auth_providers.dart';
 import '../auth/oauth_service.dart';
 import '../auth/token_manager.dart';
 import '../config/eve_config.dart';
+import '../logging/logger.dart';
 
 /// ESI API client for making requests to the EVE Online API.
 ///
