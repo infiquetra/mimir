@@ -5,6 +5,7 @@ import '../../../core/theme/eve_colors.dart';
 import '../../../core/widgets/refresh_app_bar_action.dart';
 import '../data/character_providers.dart';
 import 'character_selector.dart';
+import 'tabs/character_tab.dart';
 import 'tabs/overview_tab.dart';
 
 /// Enhanced character screen with tabbed interface.
@@ -85,12 +86,7 @@ class _EnhancedCharacterScreenState
         controller: _tabController,
         children: [
           const OverviewTab(),
-          _buildPlaceholderTab(
-            context,
-            'Character',
-            Icons.person_outlined,
-            'Detailed character information',
-          ),
+          const CharacterTab(),
           _buildPlaceholderTab(
             context,
             'Interactions',
