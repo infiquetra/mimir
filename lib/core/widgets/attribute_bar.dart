@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// Displays a character attribute as a labeled progress bar.
+/// Displays a character attribute as a simple row (EVE-style).
 ///
 /// Used for displaying Intelligence, Memory, Willpower, Perception, and Charisma.
-/// Shows the attribute name, value, and a visual bar representation.
+/// Shows icon, attribute name, and value in a minimal design without progress bars.
 class AttributeBar extends StatelessWidget {
   /// Attribute name (e.g., "Intelligence", "Memory").
   final String name;
@@ -14,12 +14,8 @@ class AttributeBar extends StatelessWidget {
   /// Icon to display next to the attribute name.
   final IconData icon;
 
-  /// Color for the progress bar.
+  /// Color for the icon.
   final Color? color;
-
-  /// Maximum possible attribute value for bar visualization.
-  /// EVE Online attributes can go up to ~50 with implants and remaps.
-  final int maxValue;
 
   const AttributeBar({
     super.key,
@@ -27,79 +23,38 @@ class AttributeBar extends StatelessWidget {
     required this.value,
     required this.icon,
     this.color,
-    this.maxValue = 50,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final barColor = color ?? theme.colorScheme.primary;
-    final progress = (value / maxValue).clamp(0.0, 1.0);
+    final iconColor = color ?? theme.colorScheme.onSurfaceVariant;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         children: [
           // Icon
           Icon(
             icon,
             size: 20,
-            color: theme.colorScheme.onSurfaceVariant,
+            color: iconColor,
           ),
           const SizedBox(width: 12),
 
           // Attribute name
-          SizedBox(
-            width: 100,
+          Expanded(
             child: Text(
               name,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+              style: theme.textTheme.bodyMedium,
             ),
           ),
-
-          const SizedBox(width: 16),
-
-          // Progress bar
-          Expanded(
-            child: Stack(
-              children: [
-                // Background bar
-                Container(
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                // Progress bar
-                FractionallySizedBox(
-                  widthFactor: progress,
-                  child: Container(
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: barColor,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 12),
 
           // Value label
-          SizedBox(
-            width: 50,
-            child: Text(
-              '$value points',
-              textAlign: TextAlign.end,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: barColor,
-              ),
+          Text(
+            '$value points',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
