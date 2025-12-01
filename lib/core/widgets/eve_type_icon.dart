@@ -6,6 +6,9 @@ import 'package:mimir/core/logging/logger.dart';
 ///
 /// Uses the EVE image server to fetch type icons.
 /// Shows a placeholder icon on error or while loading.
+///
+/// The EVE Image Server only accepts specific size values (powers of 2).
+/// This widget automatically normalizes requested sizes to the nearest valid size.
 class EveTypeIcon extends StatelessWidget {
   /// Type ID from EVE SDE.
   final int typeId;
@@ -19,6 +22,9 @@ class EveTypeIcon extends StatelessWidget {
   /// Background color for the icon container.
   final Color? backgroundColor;
 
+  /// Valid EVE image server sizes (powers of 2)
+  static const List<int> _validSizes = [32, 64, 128, 256, 512, 1024];
+
   const EveTypeIcon({
     super.key,
     required this.typeId,
@@ -27,8 +33,18 @@ class EveTypeIcon extends StatelessWidget {
     this.backgroundColor,
   });
 
+  /// Normalizes size to nearest valid EVE server size (rounds up)
+  static int _normalizeSize(double requestedSize) {
+    final requested = requestedSize.ceil();
+    for (final validSize in _validSizes) {
+      if (requested <= validSize) return validSize;
+    }
+    return _validSizes.last; // Cap at 1024
+  }
+
   String get _imageUrl {
-    return '${EveConfig.imageServerUrl}/types/$typeId/icon?size=${size.toInt()}';
+    final normalizedSize = _normalizeSize(size);
+    return '${EveConfig.imageServerUrl}/types/$typeId/icon?size=$normalizedSize';
   }
 
   @override
