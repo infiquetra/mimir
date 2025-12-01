@@ -312,6 +312,30 @@ class EsiClient {
         .toList();
   }
 
+  /// Gets information about a player-owned structure.
+  ///
+  /// Requires scope: `esi-universe.read_structures.v1`
+  /// Returns null if the structure cannot be accessed (forbidden, not docked, etc.)
+  /// Throws [EsiException] if authentication fails or other errors occur.
+  Future<String?> getStructureName(int structureId, int characterId) async {
+    try {
+      final response = await authenticatedGet<Map<String, dynamic>>(
+        '/universe/structures/$structureId/',
+        characterId: characterId,
+      );
+
+      return response.data?['name'] as String?;
+    } on DioException catch (e) {
+      // 403 Forbidden - character lacks docking access to structure
+      if (e.response?.statusCode == 403) {
+        Log.w('ESI', 'Cannot access structure $structureId: no docking rights');
+        return null;
+      }
+      // Rethrow other errors
+      rethrow;
+    }
+  }
+
   // ============================================================================
   // Location API
   // ============================================================================
