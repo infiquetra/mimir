@@ -229,12 +229,36 @@ class CharacterStatuses extends Table {
   Set<Column> get primaryKey => {characterId};
 }
 
+/// Universe names cache for EVE entity name resolution.
+///
+/// Provides hybrid caching (memory + database) for resolving
+/// EVE IDs to names (factions, corporations, stations, types, etc.).
+/// Names are fetched from ESI /universe/names/ endpoint.
+class UniverseNames extends Table {
+  /// EVE ID (primary key).
+  IntColumn get id => integer()();
+
+  /// Resolved name.
+  TextColumn get name => text()();
+
+  /// Entity category ('character', 'corporation', 'alliance', 'faction',
+  /// 'inventory_type', 'solar_system', 'station', etc.).
+  TextColumn get category => text()();
+
+  /// When this name was last fetched from ESI (Unix timestamp).
+  IntColumn get lastUpdated => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Application database using Drift.
 ///
 /// Handles all local persistence for Mimir including:
 /// - Character profiles and authentication state
 /// - Skill queue caching
 /// - Wallet transaction history
+/// - Universe name resolution cache
 @DriftDatabase(tables: [
   Characters,
   SkillQueueEntries,
@@ -243,6 +267,7 @@ class CharacterStatuses extends Table {
   AppSettingsTable,
   CombatStats,
   CharacterStatuses,
+  UniverseNames,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -251,7 +276,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
@@ -283,6 +308,11 @@ class AppDatabase extends _$AppDatabase {
         // Migration from version 4 to 5: Add character statuses table.
         if (from < 5) {
           await m.createTable(characterStatuses);
+        }
+
+        // Migration from version 5 to 6: Add universe names cache table.
+        if (from < 6) {
+          await m.createTable(universeNames);
         }
       },
     );
@@ -524,6 +554,33 @@ class AppDatabase extends _$AppDatabase {
   Future<void> deleteCharacterStatus(int characterId) {
     return (delete(characterStatuses)
           ..where((s) => s.characterId.equals(characterId)))
+        .go();
+  }
+
+  // Universe names cache operations
+
+  /// Get a universe name by ID.
+  Future<UniverseName?> getUniverseName(int id) {
+    return (select(universeNames)..where((n) => n.id.equals(id)))
+        .getSingleOrNull();
+  }
+
+  /// Get multiple universe names by IDs.
+  Future<List<UniverseName>> getUniverseNames(List<int> ids) {
+    return (select(universeNames)..where((n) => n.id.isIn(ids))).get();
+  }
+
+  /// Insert or update universe names (batch operation).
+  Future<void> upsertUniverseNames(List<UniverseNamesCompanion> names) async {
+    await batch((b) {
+      b.insertAllOnConflictUpdate(universeNames, names);
+    });
+  }
+
+  /// Delete old universe names (older than specified timestamp).
+  Future<void> deleteOldUniverseNames(int olderThanTimestamp) {
+    return (delete(universeNames)
+          ..where((n) => n.lastUpdated.isSmallerThanValue(olderThanTimestamp)))
         .go();
   }
 }

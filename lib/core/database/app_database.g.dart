@@ -3127,6 +3127,270 @@ class CharacterStatusesCompanion extends UpdateCompanion<CharacterStatuse> {
   }
 }
 
+class $UniverseNamesTable extends UniverseNames
+    with TableInfo<$UniverseNamesTable, UniverseName> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $UniverseNamesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _categoryMeta =
+      const VerificationMeta('category');
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+      'category', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _lastUpdatedMeta =
+      const VerificationMeta('lastUpdated');
+  @override
+  late final GeneratedColumn<int> lastUpdated = GeneratedColumn<int>(
+      'last_updated', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [id, name, category, lastUpdated];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'universe_names';
+  @override
+  VerificationContext validateIntegrity(Insertable<UniverseName> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('category')) {
+      context.handle(_categoryMeta,
+          category.isAcceptableOrUnknown(data['category']!, _categoryMeta));
+    } else if (isInserting) {
+      context.missing(_categoryMeta);
+    }
+    if (data.containsKey('last_updated')) {
+      context.handle(
+          _lastUpdatedMeta,
+          lastUpdated.isAcceptableOrUnknown(
+              data['last_updated']!, _lastUpdatedMeta));
+    } else if (isInserting) {
+      context.missing(_lastUpdatedMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  UniverseName map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return UniverseName(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      category: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}category'])!,
+      lastUpdated: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}last_updated'])!,
+    );
+  }
+
+  @override
+  $UniverseNamesTable createAlias(String alias) {
+    return $UniverseNamesTable(attachedDatabase, alias);
+  }
+}
+
+class UniverseName extends DataClass implements Insertable<UniverseName> {
+  /// EVE ID (primary key).
+  final int id;
+
+  /// Resolved name.
+  final String name;
+
+  /// Entity category ('character', 'corporation', 'alliance', 'faction',
+  /// 'inventory_type', 'solar_system', 'station', etc.).
+  final String category;
+
+  /// When this name was last fetched from ESI (Unix timestamp).
+  final int lastUpdated;
+  const UniverseName(
+      {required this.id,
+      required this.name,
+      required this.category,
+      required this.lastUpdated});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    map['category'] = Variable<String>(category);
+    map['last_updated'] = Variable<int>(lastUpdated);
+    return map;
+  }
+
+  UniverseNamesCompanion toCompanion(bool nullToAbsent) {
+    return UniverseNamesCompanion(
+      id: Value(id),
+      name: Value(name),
+      category: Value(category),
+      lastUpdated: Value(lastUpdated),
+    );
+  }
+
+  factory UniverseName.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return UniverseName(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      category: serializer.fromJson<String>(json['category']),
+      lastUpdated: serializer.fromJson<int>(json['lastUpdated']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'category': serializer.toJson<String>(category),
+      'lastUpdated': serializer.toJson<int>(lastUpdated),
+    };
+  }
+
+  UniverseName copyWith(
+          {int? id, String? name, String? category, int? lastUpdated}) =>
+      UniverseName(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        category: category ?? this.category,
+        lastUpdated: lastUpdated ?? this.lastUpdated,
+      );
+  UniverseName copyWithCompanion(UniverseNamesCompanion data) {
+    return UniverseName(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      category: data.category.present ? data.category.value : this.category,
+      lastUpdated:
+          data.lastUpdated.present ? data.lastUpdated.value : this.lastUpdated,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('UniverseName(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('category: $category, ')
+          ..write('lastUpdated: $lastUpdated')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, category, lastUpdated);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is UniverseName &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.category == this.category &&
+          other.lastUpdated == this.lastUpdated);
+}
+
+class UniverseNamesCompanion extends UpdateCompanion<UniverseName> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<String> category;
+  final Value<int> lastUpdated;
+  const UniverseNamesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.category = const Value.absent(),
+    this.lastUpdated = const Value.absent(),
+  });
+  UniverseNamesCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    required String category,
+    required int lastUpdated,
+  })  : name = Value(name),
+        category = Value(category),
+        lastUpdated = Value(lastUpdated);
+  static Insertable<UniverseName> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<String>? category,
+    Expression<int>? lastUpdated,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (category != null) 'category': category,
+      if (lastUpdated != null) 'last_updated': lastUpdated,
+    });
+  }
+
+  UniverseNamesCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? name,
+      Value<String>? category,
+      Value<int>? lastUpdated}) {
+    return UniverseNamesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      category: category ?? this.category,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
+    }
+    if (lastUpdated.present) {
+      map['last_updated'] = Variable<int>(lastUpdated.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('UniverseNamesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('category: $category, ')
+          ..write('lastUpdated: $lastUpdated')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3141,6 +3405,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CombatStatsTable combatStats = $CombatStatsTable(this);
   late final $CharacterStatusesTable characterStatuses =
       $CharacterStatusesTable(this);
+  late final $UniverseNamesTable universeNames = $UniverseNamesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3152,7 +3417,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         walletBalances,
         appSettingsTable,
         combatStats,
-        characterStatuses
+        characterStatuses,
+        universeNames
       ];
 }
 
@@ -5563,6 +5829,158 @@ typedef $$CharacterStatusesTableProcessedTableManager = ProcessedTableManager<
     (CharacterStatuse, $$CharacterStatusesTableReferences),
     CharacterStatuse,
     PrefetchHooks Function({bool characterId})>;
+typedef $$UniverseNamesTableCreateCompanionBuilder = UniverseNamesCompanion
+    Function({
+  Value<int> id,
+  required String name,
+  required String category,
+  required int lastUpdated,
+});
+typedef $$UniverseNamesTableUpdateCompanionBuilder = UniverseNamesCompanion
+    Function({
+  Value<int> id,
+  Value<String> name,
+  Value<String> category,
+  Value<int> lastUpdated,
+});
+
+class $$UniverseNamesTableFilterComposer
+    extends Composer<_$AppDatabase, $UniverseNamesTable> {
+  $$UniverseNamesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get category => $composableBuilder(
+      column: $table.category, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => ColumnFilters(column));
+}
+
+class $$UniverseNamesTableOrderingComposer
+    extends Composer<_$AppDatabase, $UniverseNamesTable> {
+  $$UniverseNamesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get category => $composableBuilder(
+      column: $table.category, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => ColumnOrderings(column));
+}
+
+class $$UniverseNamesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $UniverseNamesTable> {
+  $$UniverseNamesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumn<int> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => column);
+}
+
+class $$UniverseNamesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $UniverseNamesTable,
+    UniverseName,
+    $$UniverseNamesTableFilterComposer,
+    $$UniverseNamesTableOrderingComposer,
+    $$UniverseNamesTableAnnotationComposer,
+    $$UniverseNamesTableCreateCompanionBuilder,
+    $$UniverseNamesTableUpdateCompanionBuilder,
+    (
+      UniverseName,
+      BaseReferences<_$AppDatabase, $UniverseNamesTable, UniverseName>
+    ),
+    UniverseName,
+    PrefetchHooks Function()> {
+  $$UniverseNamesTableTableManager(_$AppDatabase db, $UniverseNamesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$UniverseNamesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$UniverseNamesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$UniverseNamesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<String> category = const Value.absent(),
+            Value<int> lastUpdated = const Value.absent(),
+          }) =>
+              UniverseNamesCompanion(
+            id: id,
+            name: name,
+            category: category,
+            lastUpdated: lastUpdated,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String name,
+            required String category,
+            required int lastUpdated,
+          }) =>
+              UniverseNamesCompanion.insert(
+            id: id,
+            name: name,
+            category: category,
+            lastUpdated: lastUpdated,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$UniverseNamesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $UniverseNamesTable,
+    UniverseName,
+    $$UniverseNamesTableFilterComposer,
+    $$UniverseNamesTableOrderingComposer,
+    $$UniverseNamesTableAnnotationComposer,
+    $$UniverseNamesTableCreateCompanionBuilder,
+    $$UniverseNamesTableUpdateCompanionBuilder,
+    (
+      UniverseName,
+      BaseReferences<_$AppDatabase, $UniverseNamesTable, UniverseName>
+    ),
+    UniverseName,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5581,4 +5999,6 @@ class $AppDatabaseManager {
       $$CombatStatsTableTableManager(_db, _db.combatStats);
   $$CharacterStatusesTableTableManager get characterStatuses =>
       $$CharacterStatusesTableTableManager(_db, _db.characterStatuses);
+  $$UniverseNamesTableTableManager get universeNames =>
+      $$UniverseNamesTableTableManager(_db, _db.universeNames);
 }
