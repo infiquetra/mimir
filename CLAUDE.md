@@ -166,3 +166,73 @@ flutter test --coverage
 - Prefer `const` constructors where possible
 - Use `final` for immutable variables
 - Follow Effective Dart guidelines
+
+## 🔍 Debug Logging Requirements
+
+**MANDATORY**: Every code change MUST include appropriate debug logging.
+
+### Logging Rules
+
+1. **Use the Log utility**: `import 'package:mimir/core/logging/logger.dart';`
+2. **Tag format**: `[FEATURE]` or `[FEATURE.COMPONENT]`
+3. **Log levels**:
+   - `Log.d()` - Debug: Method entry/exit, state changes
+   - `Log.i()` - Info: Important operations (fetch, save, navigation)
+   - `Log.w()` - Warning: Unexpected but handled situations
+   - `Log.e()` - Error: Caught exceptions (include stack trace)
+
+### What MUST Be Logged
+
+- Every public method entry (with parameters)
+- State changes in providers
+- API calls (request and response status)
+- Database operations
+- User interactions (button presses, navigation)
+- Error catches (with stack trace)
+- Lifecycle events (init, dispose)
+
+### Standard Tags
+
+| Tag | Usage |
+|-----|-------|
+| `[AUTH]` | Authentication, OAuth, tokens |
+| `[CHAR]` | Character management |
+| `[SKILLS]` | Skill queue |
+| `[WALLET]` | Wallet/transactions |
+| `[DB]` | Database operations |
+| `[ESI]` | API calls |
+| `[WINDOW]` | Window management |
+| `[TRAY]` | System tray |
+| `[ROUTER]` | Navigation |
+| `[DASH]` | Dashboard |
+
+### Example
+
+```dart
+Future<void> refreshSkillQueue(int characterId) async {
+  Log.d('SKILLS', 'refreshSkillQueue($characterId) - START');
+  try {
+    final skills = await esiClient.getSkillQueue(characterId);
+    Log.i('SKILLS', 'Fetched ${skills.length} skills from ESI');
+    await database.saveSkillQueue(characterId, skills);
+    Log.d('SKILLS', 'refreshSkillQueue($characterId) - SUCCESS');
+  } catch (e, stack) {
+    Log.e('SKILLS', 'refreshSkillQueue($characterId) - FAILED', e, stack);
+    rethrow;
+  }
+}
+```
+
+### Why This Matters
+
+Without comprehensive logging:
+- Debugging takes hours longer (like the tray menu issue)
+- Silent failures go unnoticed
+- No visibility into what the app is actually doing
+- Cannot diagnose user-reported issues
+
+With proper logging:
+- See exactly what happens at every step
+- Catch issues immediately in development
+- Diagnose production issues from user logs
+- Understand performance bottlenecks
