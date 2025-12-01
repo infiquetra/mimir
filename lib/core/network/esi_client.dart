@@ -517,6 +517,7 @@ class CharacterPublicInfo {
   final String? description;
   final int? factionId;
   final String? title;
+  final double? securityStatus;
 
   const CharacterPublicInfo({
     required this.corporationId,
@@ -526,6 +527,7 @@ class CharacterPublicInfo {
     this.description,
     this.factionId,
     this.title,
+    this.securityStatus,
   });
 
   factory CharacterPublicInfo.fromJson(Map<String, dynamic> json) {
@@ -537,6 +539,7 @@ class CharacterPublicInfo {
       description: json['description'] as String?,
       factionId: json['faction_id'] as int?,
       title: json['title'] as String?,
+      securityStatus: (json['security_status'] as num?)?.toDouble(),
     );
   }
 }
