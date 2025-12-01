@@ -414,6 +414,110 @@ final class CharacterAttributesFamily extends $Family
   String toString() => r'characterAttributesProvider';
 }
 
+/// Provides resolved location names for character clones.
+///
+/// Returns a map of location ID → location name for all clone locations
+/// (home location + all jump clone locations).
+
+@ProviderFor(characterCloneLocationNames)
+const characterCloneLocationNamesProvider =
+    CharacterCloneLocationNamesFamily._();
+
+/// Provides resolved location names for character clones.
+///
+/// Returns a map of location ID → location name for all clone locations
+/// (home location + all jump clone locations).
+
+final class CharacterCloneLocationNamesProvider extends $FunctionalProvider<
+        AsyncValue<Map<int, String>>,
+        Map<int, String>,
+        FutureOr<Map<int, String>>>
+    with $FutureModifier<Map<int, String>>, $FutureProvider<Map<int, String>> {
+  /// Provides resolved location names for character clones.
+  ///
+  /// Returns a map of location ID → location name for all clone locations
+  /// (home location + all jump clone locations).
+  const CharacterCloneLocationNamesProvider._(
+      {required CharacterCloneLocationNamesFamily super.from,
+      required int super.argument})
+      : super(
+          retry: null,
+          name: r'characterCloneLocationNamesProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$characterCloneLocationNamesHash();
+
+  @override
+  String toString() {
+    return r'characterCloneLocationNamesProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<Map<int, String>> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Map<int, String>> create(Ref ref) {
+    final argument = this.argument as int;
+    return characterCloneLocationNames(
+      ref,
+      argument,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is CharacterCloneLocationNamesProvider &&
+        other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$characterCloneLocationNamesHash() =>
+    r'c97944715d37f8305c1aaa023af1bc11a4d5cc11';
+
+/// Provides resolved location names for character clones.
+///
+/// Returns a map of location ID → location name for all clone locations
+/// (home location + all jump clone locations).
+
+final class CharacterCloneLocationNamesFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<Map<int, String>>, int> {
+  const CharacterCloneLocationNamesFamily._()
+      : super(
+          retry: null,
+          name: r'characterCloneLocationNamesProvider',
+          dependencies: null,
+          $allTransitiveDependencies: null,
+          isAutoDispose: true,
+        );
+
+  /// Provides resolved location names for character clones.
+  ///
+  /// Returns a map of location ID → location name for all clone locations
+  /// (home location + all jump clone locations).
+
+  CharacterCloneLocationNamesProvider call(
+    int characterId,
+  ) =>
+      CharacterCloneLocationNamesProvider._(argument: characterId, from: this);
+
+  @override
+  String toString() => r'characterCloneLocationNamesProvider';
+}
+
 /// Provides aggregated online status including location and ship.
 
 @ProviderFor(characterOnlineStatus)

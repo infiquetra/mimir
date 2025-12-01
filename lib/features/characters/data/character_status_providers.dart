@@ -85,6 +85,50 @@ Future<CharacterAttributes> characterAttributes(
 }
 
 // ==========================================================================
+// Character Clone Location Names Provider
+// ==========================================================================
+
+/// Provides resolved location names for character clones.
+///
+/// Returns a map of location ID → location name for all clone locations
+/// (home location + all jump clone locations).
+@riverpod
+Future<Map<int, String>> characterCloneLocationNames(
+  Ref ref,
+  int characterId,
+) async {
+  Log.d('PROVIDERS', 'characterCloneLocationNames($characterId) - START');
+  final repository = ref.watch(characterStatusRepositoryProvider);
+  final clones = await ref.watch(characterClonesProvider(characterId).future);
+
+  // Collect all location IDs from clones.
+  final idsToResolve = <int>[];
+
+  if (clones.homeLocation?.locationId != null) {
+    idsToResolve.add(clones.homeLocation!.locationId!);
+  }
+
+  for (final clone in clones.jumpClones) {
+    if (clone.locationId != null) {
+      idsToResolve.add(clone.locationId!);
+    }
+  }
+
+  // Resolve names if we have IDs.
+  if (idsToResolve.isEmpty) {
+    Log.d('PROVIDERS', 'characterCloneLocationNames($characterId) - No IDs to resolve');
+    return {};
+  }
+
+  Log.d('PROVIDERS', 'characterCloneLocationNames($characterId) - Resolving ${idsToResolve.length} location IDs');
+  final names = await repository.resolveNames(idsToResolve);
+  final nameMap = {for (var n in names) n.id: n.name};
+
+  Log.d('PROVIDERS', 'characterCloneLocationNames($characterId) - Resolved ${nameMap.length} names');
+  return nameMap;
+}
+
+// ==========================================================================
 // Character Online Status Provider
 // ==========================================================================
 
