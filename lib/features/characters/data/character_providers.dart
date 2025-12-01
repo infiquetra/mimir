@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/di/providers.dart';
 import '../../../core/logging/logger.dart';
 import 'character_repository.dart';
 
@@ -38,4 +39,14 @@ final refreshCharacterProvider =
 final hasCharactersProvider = Provider<AsyncValue<bool>>((ref) {
   final characters = ref.watch(allCharactersProvider);
   return characters.whenData((list) => list.isNotEmpty);
+});
+
+/// Provider for getting a character's total skill points.
+final characterTotalSpProvider =
+    FutureProvider.family<int, int>((ref, characterId) async {
+  Log.d('CHAR', 'characterTotalSpProvider($characterId) - START');
+  final esiClient = ref.watch(esiClientProvider);
+  final skills = await esiClient.getCharacterSkills(characterId);
+  Log.i('CHAR', 'characterTotalSpProvider($characterId) - Total SP: ${skills.totalSp}');
+  return skills.totalSp;
 });
