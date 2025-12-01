@@ -241,6 +241,7 @@ class AttributesSubTab extends ConsumerWidget {
                         children: [
                           ImplantRow(
                             implants: implantSlots,
+                            implantNames: implantMap,
                             iconSize: 40,
                             spacing: 8,
                             showSlotNumbers: true,

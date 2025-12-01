@@ -9,6 +9,10 @@ class ImplantRow extends StatelessWidget {
   /// Map of slot number (1-10) to implant type ID.
   final Map<int, int> implants;
 
+  /// Map of implant type ID to implant name (for tooltips).
+  /// If provided, implant icons will show tooltips on hover.
+  final Map<int, String>? implantNames;
+
   /// Size of each implant icon.
   final double iconSize;
 
@@ -21,6 +25,7 @@ class ImplantRow extends StatelessWidget {
   const ImplantRow({
     super.key,
     required this.implants,
+    this.implantNames,
     this.iconSize = 32.0,
     this.spacing = 4.0,
     this.showSlotNumbers = false,
@@ -60,11 +65,23 @@ class ImplantRow extends StatelessWidget {
   Widget _buildSlot(BuildContext context, int slotNumber, int? implantTypeId) {
     if (implantTypeId != null) {
       // Show implant icon
-      return EveTypeIcon(
+      final implantIcon = EveTypeIcon(
         typeId: implantTypeId,
         size: iconSize,
         borderRadius: 4.0,
       );
+
+      // Wrap with tooltip if name is available
+      final implantName = implantNames?[implantTypeId];
+      if (implantName != null && implantName.isNotEmpty) {
+        return Tooltip(
+          message: implantName,
+          waitDuration: const Duration(milliseconds: 300),
+          child: implantIcon,
+        );
+      }
+
+      return implantIcon;
     } else {
       // Show empty slot placeholder
       return Container(
