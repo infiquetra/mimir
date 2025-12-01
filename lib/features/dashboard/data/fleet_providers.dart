@@ -246,6 +246,28 @@ final characterFleetStatusProvider =
     // Don't throw to avoid blocking the dashboard.
     Log.w('FLEET', 'characterFleetStatusProvider - no cached data, returning null due to ESI error');
     return null;
+  } catch (e, stack) {
+    // Catch any other unexpected errors (parsing, database, type casting, etc.)
+    Log.e('FLEET', 'characterFleetStatusProvider($characterId) - unexpected error', e, stack);
+
+    // Return cached data if available, otherwise null.
+    if (cached != null) {
+      Log.d('FLEET', 'characterFleetStatusProvider - returning cached data due to unexpected error');
+      return CharacterStatusData(
+        characterId: cached.characterId,
+        characterName: character.name,
+        solarSystemName: cached.solarSystemName,
+        securityStatus: cached.securityStatus,
+        shipTypeName: cached.shipTypeName,
+        isOnline: cached.isOnline,
+        lastLogin: cached.lastLogin,
+        lastLogout: cached.lastLogout,
+      );
+    }
+
+    // No cached data and unexpected error - return null to avoid blocking dashboard.
+    Log.w('FLEET', 'characterFleetStatusProvider - no cached data, returning null due to unexpected error');
+    return null;
   }
 });
 
