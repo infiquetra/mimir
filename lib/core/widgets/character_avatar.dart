@@ -163,18 +163,20 @@ class StyledCharacterAvatar extends StatelessWidget {
       ),
     );
 
+    // Apply tooltip FIRST (innermost) so it doesn't interfere with gestures
+    if (tooltip != null) {
+      avatar = Tooltip(
+        message: tooltip!,
+        child: avatar,
+      );
+    }
+
+    // Apply gesture detector LAST (outermost) for proper event handling
     if (onTap != null || onLongPress != null || onSecondaryTap != null) {
       avatar = GestureDetector(
         onTap: onTap,
         onLongPress: onLongPress,
         onSecondaryTap: onSecondaryTap,
-        child: avatar,
-      );
-    }
-
-    if (tooltip != null) {
-      avatar = Tooltip(
-        message: tooltip!,
         child: avatar,
       );
     }
