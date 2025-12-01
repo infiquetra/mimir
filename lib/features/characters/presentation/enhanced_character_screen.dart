@@ -6,6 +6,7 @@ import '../../../core/widgets/refresh_app_bar_action.dart';
 import '../data/character_providers.dart';
 import 'character_selector.dart';
 import 'tabs/character_tab.dart';
+import 'tabs/interactions_tab.dart';
 import 'tabs/overview_tab.dart';
 
 /// Enhanced character screen with tabbed interface.
@@ -84,15 +85,10 @@ class _EnhancedCharacterScreenState
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [
-          const OverviewTab(),
-          const CharacterTab(),
-          _buildPlaceholderTab(
-            context,
-            'Interactions',
-            Icons.people_outlined,
-            'Contacts, standings, and mail',
-          ),
+        children: const [
+          OverviewTab(),
+          CharacterTab(),
+          InteractionsTab(),
         ],
       ),
     );
@@ -102,51 +98,5 @@ class _EnhancedCharacterScreenState
     // Refresh character status data
     // This will be expanded in later phases
     await Future.delayed(const Duration(milliseconds: 500));
-  }
-
-  Widget _buildPlaceholderTab(
-    BuildContext context,
-    String title,
-    IconData icon,
-    String description,
-  ) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 64,
-              color: EveColors.evePrimary.withAlpha(128),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: EveColors.evePrimary,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              description,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Coming in Phase ${title == "Character" ? "6" : "7"}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(128),
-                    fontStyle: FontStyle.italic,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
