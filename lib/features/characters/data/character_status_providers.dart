@@ -14,7 +14,7 @@ part 'character_status_providers.g.dart';
 /// Provider for the character status repository.
 @riverpod
 CharacterStatusRepository characterStatusRepository(
-  CharacterStatusRepositoryRef ref,
+  Ref ref,
 ) {
   return CharacterStatusRepository(
     database: ref.watch(databaseProvider),
@@ -29,7 +29,7 @@ CharacterStatusRepository characterStatusRepository(
 /// Provides character clones (jump clones + home location).
 @riverpod
 Future<CharacterClones> characterClones(
-  CharacterClonesRef ref,
+  Ref ref,
   int characterId,
 ) async {
   Log.d('PROVIDERS', 'characterClones($characterId) - START');
@@ -46,7 +46,7 @@ Future<CharacterClones> characterClones(
 /// Returns a map of implant type ID to name.
 @riverpod
 Future<Map<int, String>> characterImplants(
-  CharacterImplantsRef ref,
+  Ref ref,
   int characterId,
 ) async {
   Log.d('PROVIDERS', 'characterImplants($characterId) - START');
@@ -61,7 +61,7 @@ Future<Map<int, String>> characterImplants(
 /// Provides character standings with resolved entity names.
 @riverpod
 Future<List<StandingWithName>> characterStandings(
-  CharacterStandingsRef ref,
+  Ref ref,
   int characterId,
 ) async {
   Log.d('PROVIDERS', 'characterStandings($characterId) - START');
@@ -76,7 +76,7 @@ Future<List<StandingWithName>> characterStandings(
 /// Provides character attributes (already implemented in ESI client).
 @riverpod
 Future<CharacterAttributes> characterAttributes(
-  CharacterAttributesRef ref,
+  Ref ref,
   int characterId,
 ) async {
   Log.d('PROVIDERS', 'characterAttributes($characterId) - START');
@@ -91,7 +91,7 @@ Future<CharacterAttributes> characterAttributes(
 /// Provides aggregated online status including location and ship.
 @riverpod
 Future<OnlineStatus> characterOnlineStatus(
-  CharacterOnlineStatusRef ref,
+  Ref ref,
   int characterId,
 ) async {
   Log.d('PROVIDERS', 'characterOnlineStatus($characterId) - START');

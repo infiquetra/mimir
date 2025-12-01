@@ -55,7 +55,7 @@ final class CharacterStatusRepositoryProvider extends $FunctionalProvider<
 }
 
 String _$characterStatusRepositoryHash() =>
-    r'3bc1af7daf7ed8142b074c4db29cf3074e1a23ed';
+    r'f5a24524efbb2258d8793f537dad904c9e605ae2';
 
 /// Provides character clones (jump clones + home location).
 
@@ -114,7 +114,7 @@ final class CharacterClonesProvider extends $FunctionalProvider<
   }
 }
 
-String _$characterClonesHash() => r'7de8d15af7f522ff92c76b602709162d2ee682af';
+String _$characterClonesHash() => r'5611bc77b15e6e4f773eb1909783fdfb615f5634';
 
 /// Provides character clones (jump clones + home location).
 
@@ -206,7 +206,7 @@ final class CharacterImplantsProvider extends $FunctionalProvider<
   }
 }
 
-String _$characterImplantsHash() => r'a0af26a8d59b4204fafde6832dd44f3c547c3b6c';
+String _$characterImplantsHash() => r'54d914121a3544103e9b1fe776da0aacefdbf966';
 
 /// Provides character implants with resolved type names.
 ///
@@ -299,7 +299,7 @@ final class CharacterStandingsProvider extends $FunctionalProvider<
 }
 
 String _$characterStandingsHash() =>
-    r'7a42340c08cd39dcff716b11250bedfd42645170';
+    r'1c8b7a04de53e431252268417dcbf43b4eed8d5f';
 
 /// Provides character standings with resolved entity names.
 
@@ -388,7 +388,7 @@ final class CharacterAttributesProvider extends $FunctionalProvider<
 }
 
 String _$characterAttributesHash() =>
-    r'e617dd588a8b4089ec5322a1011b29ca7cbbcdd6';
+    r'a637d40105a52838d1bef37bf52394e8f1ce848a';
 
 /// Provides character attributes (already implemented in ESI client).
 
@@ -473,7 +473,7 @@ final class CharacterOnlineStatusProvider extends $FunctionalProvider<
 }
 
 String _$characterOnlineStatusHash() =>
-    r'c053b5d4de7d83eebd99ec5428fcef93f6022dce';
+    r'975e1338f6b71f20ce389f084e917777859260e1';
 
 /// Provides aggregated online status including location and ship.
 
