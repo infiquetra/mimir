@@ -117,19 +117,18 @@ final startupRefreshProvider = FutureProvider<void>((ref) async {
 
 /// The root widget of the Mimir application.
 ///
-/// This widget sets up:
-/// - Material app with go_router for navigation
-/// - Theme switching (light/dark/system)
-/// - Riverpod state management
-/// - Deep link handling for OAuth callbacks
+/// This is a minimal container for the hidden main window.
+/// The actual UI is displayed in standalone sub-windows opened from the tray menu.
+///
+/// This widget:
+/// - Initializes deep link handler for OAuth callbacks
+/// - Runs startup refresh for character data
+/// - Provides a minimal (hidden) 1x1 window
 class MimirApp extends ConsumerWidget {
   const MimirApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final router = ref.watch(routerProvider);
-    final themeMode = ref.watch(themeModeProvider);
-
     // Initialize deep link handler for OAuth callbacks.
     // Reading the provider causes it to be created and start listening.
     ref.watch(deepLinkHandlerProvider);
@@ -139,28 +138,8 @@ class MimirApp extends ConsumerWidget {
     // placeholder corporation names.
     ref.watch(startupRefreshProvider);
 
-    return MaterialApp.router(
-      title: 'Mimir',
-      debugShowCheckedModeBanner: false,
-
-      // Theme configuration
-      theme: AppTheme.lightTheme(),
-      darkTheme: AppTheme.darkTheme(),
-      themeMode: _toThemeMode(themeMode),
-
-      // Router configuration
-      routerConfig: router,
-    );
-  }
-
-  ThemeMode _toThemeMode(ThemeModeOption option) {
-    switch (option) {
-      case ThemeModeOption.light:
-        return ThemeMode.light;
-      case ThemeModeOption.dark:
-        return ThemeMode.dark;
-      case ThemeModeOption.system:
-        return ThemeMode.system;
-    }
+    // Return minimal container - the main window is hidden and never shown.
+    // All actual UI happens in standalone sub-windows.
+    return const SizedBox.shrink();
   }
 }

@@ -1,16 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:go_router/go_router.dart';
 
 import '../database/app_database.dart';
-import '../router/app_router.dart';
-
-/// Provider for the application router.
-///
-/// This is a singleton that persists for the lifetime of the app.
-final routerProvider = Provider<GoRouter>((ref) {
-  return createRouter();
-});
 
 /// Provider for the application database.
 ///

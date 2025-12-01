@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../features/characters/data/character_providers.dart';
 import '../../features/characters/data/character_repository.dart';
 import '../../features/skills/data/skill_repository.dart';
 import '../../features/wallet/data/wallet_repository.dart';
 import '../database/app_database.dart' show Character;
-import '../router/app_router.dart';
 import '../theme/eve_colors.dart';
 import '../window/window_types.dart';
 import 'character_avatar.dart';
@@ -361,8 +359,9 @@ class _AddCharacterSection extends StatelessWidget {
           ],
         ),
         const Spacer(),
+        // Note: Character addition is handled in the Characters screen sidebar
         FilledButton.icon(
-          onPressed: () => context.push(AppRoutes.addCharacter),
+          onPressed: null, // Disabled - use Characters window to add
           icon: const Icon(Icons.person_add, size: 18),
           label: const Text('Add Character'),
         ),
@@ -389,7 +388,7 @@ class _AddCharacterIconButton extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () => context.push(AppRoutes.addCharacter),
+            onTap: null, // Disabled - use Characters window to add
             borderRadius: BorderRadius.circular(size / 2),
             child: Container(
               width: size,

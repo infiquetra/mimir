@@ -88,33 +88,33 @@ class TrayIntroStep extends StatelessWidget {
                     const SizedBox(height: 16),
 
                     // Radio options
-                    RadioGroup<StartupBehavior>(
-                      value: selectedBehavior,
+                    RadioListTile<StartupBehavior>(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Open Dashboard'),
+                      subtitle: const Text(
+                        'Show the Dashboard window automatically',
+                      ),
+                      value: StartupBehavior.openDashboard,
+                      groupValue: selectedBehavior,
                       onChanged: (value) {
                         if (value != null) {
                           onBehaviorChanged(value);
                         }
                       },
-                      child: Column(
-                        children: [
-                          RadioListTile<StartupBehavior>(
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text('Open Dashboard'),
-                            subtitle: const Text(
-                              'Show the Dashboard window automatically',
-                            ),
-                            value: StartupBehavior.openDashboard,
-                          ),
-                          RadioListTile<StartupBehavior>(
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text('Show tray icon only'),
-                            subtitle: const Text(
-                              'Launch silently in the menu bar',
-                            ),
-                            value: StartupBehavior.trayOnly,
-                          ),
-                        ],
+                    ),
+                    RadioListTile<StartupBehavior>(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Show tray icon only'),
+                      subtitle: const Text(
+                        'Launch silently in the menu bar',
                       ),
+                      value: StartupBehavior.trayOnly,
+                      groupValue: selectedBehavior,
+                      onChanged: (value) {
+                        if (value != null) {
+                          onBehaviorChanged(value);
+                        }
+                      },
                     ),
 
                     const SizedBox(height: 8),
