@@ -67,6 +67,7 @@ class JumpClonesSubTab extends ConsumerWidget {
   ) {
     final theme = Theme.of(context);
     final clones = ref.watch(characterClonesProvider(characterId));
+    final locationNames = ref.watch(characterCloneLocationNamesProvider(characterId));
 
     return clones.when(
       data: (cloneData) {
@@ -171,25 +172,70 @@ class JumpClonesSubTab extends ConsumerWidget {
                       const SizedBox(height: 12),
 
                       if (cloneData.homeLocation != null)
-                        Row(
-                          children: [
-                            Icon(
-                              cloneData.homeLocation!.locationType == 'station'
-                                  ? Icons.location_city_outlined
-                                  : Icons.place_outlined,
-                              size: 16,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Location ID: ${cloneData.homeLocation!.locationId}',
-                                style: theme.textTheme.bodyMedium?.copyWith(
+                        locationNames.when(
+                          data: (nameMap) {
+                            final locationId = cloneData.homeLocation!.locationId;
+                            final locationName = locationId != null
+                                ? nameMap[locationId] ?? 'Location $locationId'
+                                : 'Unknown';
+                            return Row(
+                              children: [
+                                Icon(
+                                  cloneData.homeLocation!.locationType == 'station'
+                                      ? Icons.location_city_outlined
+                                      : Icons.place_outlined,
+                                  size: 16,
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    locationName,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                          loading: () => Row(
+                            children: [
+                              Icon(
+                                cloneData.homeLocation!.locationType == 'station'
+                                    ? Icons.location_city_outlined
+                                    : Icons.place_outlined,
+                                size: 16,
+                                color: theme.colorScheme.onSurfaceVariant,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 8),
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ],
+                          ),
+                          error: (_, __) => Row(
+                            children: [
+                              Icon(
+                                cloneData.homeLocation!.locationType == 'station'
+                                    ? Icons.location_city_outlined
+                                    : Icons.place_outlined,
+                                size: 16,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Location ${cloneData.homeLocation!.locationId}',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         )
                       else
                         Text(
@@ -279,17 +325,42 @@ class JumpClonesSubTab extends ConsumerWidget {
                   ),
                 )
               else
-                ...cloneData.jumpClones.map((clone) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: CloneCard(
-                      clone: clone,
-                      locationName: 'Location ${clone.locationId}',
-                      showImplants: true,
-                      compact: false,
+                ...locationNames.when(
+                  data: (nameMap) => cloneData.jumpClones.map((clone) {
+                    final locationId = clone.locationId;
+                    final locationName = locationId != null
+                        ? nameMap[locationId] ?? 'Location $locationId'
+                        : 'Unknown Location';
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: CloneCard(
+                        clone: clone,
+                        locationName: locationName,
+                        showImplants: true,
+                        compact: false,
+                      ),
+                    );
+                  }).toList(),
+                  loading: () => [
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: CircularProgressIndicator(),
+                      ),
                     ),
-                  );
-                }),
+                  ],
+                  error: (_, __) => cloneData.jumpClones.map((clone) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: CloneCard(
+                        clone: clone,
+                        locationName: 'Location ${clone.locationId}',
+                        showImplants: true,
+                        compact: false,
+                      ),
+                    );
+                  }).toList(),
+                ),
             ],
           ),
         );
