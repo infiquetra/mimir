@@ -25,7 +25,8 @@ void main(List<String> args) async {
   // NOTE: No double-hyphen prefix (it's 'multi_window', not '--multi_window')
   if (args.firstOrNull == 'multi_window') {
     // This is a sub-window - parse the window ID and arguments
-    final windowId = int.parse(args[1]);
+    // Note: desktop_multi_window 0.3.0 uses UUID strings, not integers
+    final windowId = args[1]; // String UUID (e.g., '7906EAC4-B83A-43C7-B965-FFB3185ECF2F')
     final windowArgs = args[2];
 
     debugPrint('SubWindow[$windowId]: Starting with args=$windowArgs');
