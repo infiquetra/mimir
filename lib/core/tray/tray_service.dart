@@ -179,6 +179,18 @@ class TrayService extends TrayListener {
   }
 
   @override
+  void onTrayIconMouseDown() {
+    Log.d('TRAY', 'onTrayIconMouseDown - left click detected');
+    trayManager.popUpContextMenu();
+  }
+
+  @override
+  void onTrayIconRightMouseDown() {
+    Log.d('TRAY', 'onTrayIconRightMouseDown - right click detected');
+    trayManager.popUpContextMenu();
+  }
+
+  @override
   void onTrayMenuItemClick(MenuItem menuItem) {
     Log.i('TRAY', 'onTrayMenuItemClick - label="${menuItem.label}", key="${menuItem.key}"');
     final action = menuItem.key;
