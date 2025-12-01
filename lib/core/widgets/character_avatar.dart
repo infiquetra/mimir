@@ -101,6 +101,8 @@ class StyledCharacterAvatar extends StatelessWidget {
     this.size = CharacterAvatarSize.medium,
     this.isActive = false,
     this.onTap,
+    this.onLongPress,
+    this.onSecondaryTap,
     this.tooltip,
     super.key,
   });
@@ -116,6 +118,14 @@ class StyledCharacterAvatar extends StatelessWidget {
 
   /// Callback when tapped. If null, the avatar is not tappable.
   final VoidCallback? onTap;
+
+  /// Callback when long-pressed (mobile) or right-clicked (desktop).
+  /// Used for showing context menus (e.g., remove character).
+  final VoidCallback? onLongPress;
+
+  /// Callback when right-clicked/secondary-tapped (desktop).
+  /// Used for showing context menus (e.g., remove character).
+  final VoidCallback? onSecondaryTap;
 
   /// Optional tooltip to show on hover.
   final String? tooltip;
@@ -153,9 +163,11 @@ class StyledCharacterAvatar extends StatelessWidget {
       ),
     );
 
-    if (onTap != null) {
+    if (onTap != null || onLongPress != null || onSecondaryTap != null) {
       avatar = GestureDetector(
         onTap: onTap,
+        onLongPress: onLongPress,
+        onSecondaryTap: onSecondaryTap,
         child: avatar,
       );
     }
