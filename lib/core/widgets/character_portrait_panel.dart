@@ -326,19 +326,22 @@ class _StatRow extends StatelessWidget {
           color: Colors.white70,
         ),
         const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: Colors.white70,
-            ),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: Colors.white70,
           ),
         ),
-        Text(
-          value,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w500,
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.right,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

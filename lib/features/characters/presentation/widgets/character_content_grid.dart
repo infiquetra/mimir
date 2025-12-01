@@ -14,7 +14,7 @@ import '../tabs/interactions_sub_tabs/standings_sub_tab.dart';
 /// - Standings
 /// - Employment History (placeholder)
 ///
-/// Uses 2 columns on wide screens (>=600px), 1 column on narrow screens.
+/// Uses 2 columns on wide screens (panel width >=450px), 1 column on narrow screens.
 class CharacterContentGrid extends ConsumerWidget {
   const CharacterContentGrid({super.key});
 
@@ -24,7 +24,7 @@ class CharacterContentGrid extends ConsumerWidget {
     // Right panel is ~60% of screen width
     final screenWidth = MediaQuery.of(context).size.width;
     final panelWidth = screenWidth * 0.6;
-    final useWideLayout = panelWidth >= 600;
+    final useWideLayout = panelWidth >= 450;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
