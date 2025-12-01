@@ -20,16 +20,16 @@ class CharacterContentGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Use MediaQuery for reliable width detection
+    // Right panel is ~60% of screen width
+    final screenWidth = MediaQuery.of(context).size.width;
+    final panelWidth = screenWidth * 0.6;
+    final useWideLayout = panelWidth >= 600;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          // Determine column count based on available width
-          final useWideLayout = constraints.maxWidth >= 600;
-
-          if (useWideLayout) {
-            // 2-column layout for wide screens
-            return Row(
+      child: useWideLayout
+          ? Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Left column
@@ -54,10 +54,8 @@ class CharacterContentGrid extends ConsumerWidget {
                   ),
                 ),
               ],
-            );
-          } else {
-            // Single column layout for narrow screens
-            return Column(
+            )
+          : Column(
               children: [
                 _AttributesCard(),
                 const SizedBox(height: 16),
@@ -67,10 +65,7 @@ class CharacterContentGrid extends ConsumerWidget {
                 const SizedBox(height: 16),
                 _EmploymentHistoryCard(),
               ],
-            );
-          }
-        },
-      ),
+            ),
     );
   }
 }
@@ -79,10 +74,8 @@ class CharacterContentGrid extends ConsumerWidget {
 class _AttributesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
-      height: 600, // Fixed height for consistent card sizing
-      child: AttributesSubTab(),
-    );
+    // No fixed height - let content determine size
+    return const AttributesSubTab();
   }
 }
 
@@ -90,10 +83,8 @@ class _AttributesCard extends StatelessWidget {
 class _JumpClonesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
-      height: 600, // Fixed height for consistent card sizing
-      child: JumpClonesSubTab(),
-    );
+    // No fixed height - let content determine size
+    return const JumpClonesSubTab();
   }
 }
 
@@ -101,10 +92,8 @@ class _JumpClonesCard extends StatelessWidget {
 class _StandingsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
-      height: 400, // Shorter height for standings
-      child: StandingsSubTab(),
-    );
+    // No fixed height - let content determine size
+    return const StandingsSubTab();
   }
 }
 
@@ -124,37 +113,33 @@ class _EmploymentHistoryCard extends StatelessWidget {
           width: 1,
         ),
       ),
-      child: SizedBox(
-        height: 300,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.history_outlined,
-                  size: 64,
-                  color: EveColors.evePrimary.withAlpha(128),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Employment History',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    color: EveColors.evePrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Corporation and alliance history coming soon',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+      // Removed fixed height - content determines size
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.history_outlined,
+              size: 64,
+              color: EveColors.evePrimary.withAlpha(128),
             ),
-          ),
+            const SizedBox(height: 16),
+            Text(
+              'Employment History',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                color: EveColors.evePrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Corporation and alliance history coming soon',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
