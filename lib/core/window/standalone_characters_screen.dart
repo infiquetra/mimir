@@ -8,15 +8,16 @@ import '../../features/characters/presentation/tabs/interactions_tab.dart';
 import '../../features/characters/presentation/tabs/overview_tab.dart';
 import '../auth/auth_providers.dart';
 import '../config/eve_config.dart';
-import '../database/app_database.dart';
 import '../theme/eve_colors.dart';
+import '../widgets/character_header_bar.dart';
 import '../widgets/eve_card.dart';
 import '../widgets/space_background.dart';
+import 'window_types.dart';
 
 /// Standalone characters screen for sub-windows.
 ///
 /// This screen combines:
-/// - Character management (add/remove/switch) in a sidebar
+/// - Character management (add/remove/switch) via CharacterHeaderBar
 /// - Enhanced character details (Overview/Character/Interactions tabs)
 ///
 /// Unlike the main app's character management, this is a full-featured
@@ -80,69 +81,54 @@ class _StandaloneCharactersScreenState
                     return _buildEmptyState(context);
                   }
 
-                  return Row(
+                  return Column(
                     children: [
-                      // Character sidebar
-                      Container(
-                        width: 240,
-                        decoration: BoxDecoration(
-                          color: EveColors.darkSurface,
-                          border: Border(
-                            right: BorderSide(
-                              color: EveColors.evePrimary.withAlpha(51),
-                            ),
-                          ),
-                        ),
-                        child: _CharacterSidebar(
-                          characters: chars,
-                          activeCharacterId: activeCharacter.value?.characterId,
-                          onAddCharacter: () =>
-                              setState(() => _showAddCharacter = true),
-                        ),
+                      // Character header bar with switcher and add button
+                      CharacterHeaderBar(
+                        windowType: WindowType.characters,
+                        onAddCharacter: () =>
+                            setState(() => _showAddCharacter = true),
+                        onRemoveCharacter: (characterId) =>
+                            _removeCharacter(context, characterId),
                       ),
 
-                      // Enhanced character details tabs
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Container(
-                              color: EveColors.darkSurface,
-                              child: TabBar(
-                                controller: _tabController,
-                                indicatorColor: EveColors.evePrimary,
-                                labelColor: EveColors.evePrimary,
-                                unselectedLabelColor:
-                                    Colors.white.withAlpha(179),
-                                tabs: const [
-                                  Tab(
-                                    icon: Icon(Icons.dashboard_outlined),
-                                    text: 'Overview',
-                                  ),
-                                  Tab(
-                                    icon: Icon(Icons.person_outlined),
-                                    text: 'Character',
-                                  ),
-                                  Tab(
-                                    icon: Icon(Icons.people_outlined),
-                                    text: 'Interactions',
-                                  ),
-                                ],
-                              ),
+                      // Tab navigation
+                      Container(
+                        color: EveColors.darkSurface,
+                        child: TabBar(
+                          controller: _tabController,
+                          indicatorColor: EveColors.evePrimary,
+                          labelColor: EveColors.evePrimary,
+                          unselectedLabelColor: Colors.white.withAlpha(179),
+                          tabs: const [
+                            Tab(
+                              icon: Icon(Icons.dashboard_outlined),
+                              text: 'Overview',
                             ),
-                            Expanded(
-                              child: activeCharacter.value != null
-                                  ? TabBarView(
-                                      controller: _tabController,
-                                      children: const [
-                                        OverviewTab(),
-                                        CharacterTab(),
-                                        InteractionsTab(),
-                                      ],
-                                    )
-                                  : _buildNoCharacterState(context),
+                            Tab(
+                              icon: Icon(Icons.person_outlined),
+                              text: 'Character',
+                            ),
+                            Tab(
+                              icon: Icon(Icons.people_outlined),
+                              text: 'Interactions',
                             ),
                           ],
                         ),
+                      ),
+
+                      // Tab content
+                      Expanded(
+                        child: activeCharacter.value != null
+                            ? TabBarView(
+                                controller: _tabController,
+                                children: const [
+                                  OverviewTab(),
+                                  CharacterTab(),
+                                  InteractionsTab(),
+                                ],
+                              )
+                            : _buildNoCharacterState(context),
                       ),
                     ],
                   );
@@ -245,7 +231,7 @@ class _StandaloneCharactersScreenState
           ),
           const SizedBox(height: 8),
           Text(
-            'Select a character from the sidebar',
+            'Select a character from the header',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -254,59 +240,15 @@ class _StandaloneCharactersScreenState
       ),
     );
   }
-}
 
-/// Compact character sidebar for switching between characters.
-class _CharacterSidebar extends ConsumerWidget {
-  const _CharacterSidebar({
-    required this.characters,
-    required this.activeCharacterId,
-    required this.onAddCharacter,
-  });
-
-  final List<Character> characters;
-  final int? activeCharacterId;
-  final VoidCallback onAddCharacter;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(8),
-      itemCount: characters.length + 1,
-      itemBuilder: (context, index) {
-        // Add character button as the last item
-        if (index == characters.length) {
-          return Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: _AddCharacterButton(onTap: onAddCharacter),
-          );
-        }
-
-        final character = characters[index];
-        final isActive = character.characterId == activeCharacterId;
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: _CompactCharacterTile(
-            character: character,
-            isActive: isActive,
-            onTap: () => _setActiveCharacter(ref, character.characterId),
-            onRemove: () => _removeCharacter(context, ref, character),
-          ),
+  Future<void> _removeCharacter(BuildContext context, int characterId) async {
+    final character = ref.read(allCharactersProvider).value?.firstWhere(
+          (c) => c.characterId == characterId,
+          orElse: () => throw Exception('Character not found'),
         );
-      },
-    );
-  }
 
-  Future<void> _setActiveCharacter(WidgetRef ref, int characterId) async {
-    await ref.read(characterRepositoryProvider).setActiveCharacter(characterId);
-  }
+    if (character == null) return;
 
-  Future<void> _removeCharacter(
-    BuildContext context,
-    WidgetRef ref,
-    Character character,
-  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -330,151 +272,11 @@ class _CharacterSidebar extends ConsumerWidget {
       ),
     );
 
-    if (confirmed == true) {
+    if (confirmed == true && context.mounted) {
       await ref
           .read(characterRepositoryProvider)
-          .deleteCharacter(character.characterId);
+          .deleteCharacter(characterId);
     }
-  }
-}
-
-/// Compact tile displaying a single character in the sidebar.
-class _CompactCharacterTile extends StatelessWidget {
-  const _CompactCharacterTile({
-    required this.character,
-    required this.isActive,
-    required this.onTap,
-    required this.onRemove,
-  });
-
-  final Character character;
-  final bool isActive;
-  final VoidCallback onTap;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    return EveCard(
-      glowColor: isActive ? EveColors.evePrimary : null,
-      glowIntensity: isActive ? 0.3 : 0.0,
-      padding: const EdgeInsets.all(8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Row(
-          children: [
-            // Character portrait
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: isActive
-                    ? Border.all(color: EveColors.evePrimary, width: 2)
-                    : null,
-              ),
-              child: CircleAvatar(
-                radius: 20,
-                backgroundImage: NetworkImage(
-                  'https://images.evetech.net/characters/${character.characterId}/portrait?size=64',
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-
-            // Character info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    character.name,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: isActive ? FontWeight.bold : null,
-                        ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (isActive)
-                    Text(
-                      'Active',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: EveColors.evePrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                ],
-              ),
-            ),
-
-            // Remove button
-            IconButton(
-              icon: const Icon(Icons.close, size: 16),
-              color: EveColors.error.withAlpha(179),
-              tooltip: 'Remove character',
-              onPressed: onRemove,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                minWidth: 24,
-                minHeight: 24,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Button for adding a new character.
-class _AddCharacterButton extends StatelessWidget {
-  const _AddCharacterButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return EveCard(
-      glowColor: EveColors.evePrimary,
-      glowIntensity: 0.15,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: EveColors.evePrimary.withAlpha(26),
-                  border: Border.all(
-                    color: EveColors.evePrimary.withAlpha(77),
-                    width: 2,
-                  ),
-                ),
-                child: const Icon(
-                  Icons.person_add,
-                  color: EveColors.evePrimary,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Add Character',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: EveColors.evePrimary,
-                      ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
 
