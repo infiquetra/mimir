@@ -26,8 +26,8 @@ const int _maxVisibleCharacters = 4;
 /// When [windowType] is provided (Dashboard/Skills/Wallet), shows a refresh
 /// button. For Characters window, shows "Add Character" button.
 ///
-/// Characters can be removed via long-press (mobile) or right-click (desktop)
-/// on their avatar, which shows a confirmation dialog.
+/// Note: Character removal is handled by the character portrait panel's
+/// delete button (not via avatar interactions).
 class CharacterHeaderBar extends ConsumerWidget {
   const CharacterHeaderBar({
     this.windowType,
@@ -243,9 +243,6 @@ class _CharacterSwitcherRow extends StatelessWidget {
       children: [
         // Visible character avatars.
         ...visibleCharacters.map((character) {
-          final contextMenuHandler = onRemoveCharacter != null
-              ? () => onRemoveCharacter!(character.characterId)
-              : null;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: StyledCharacterAvatar(
@@ -254,8 +251,6 @@ class _CharacterSwitcherRow extends StatelessWidget {
               isActive: false,
               tooltip: character.name,
               onTap: () => onCharacterTap(character.characterId),
-              onLongPress: contextMenuHandler,
-              onSecondaryTap: contextMenuHandler,
             ),
           );
         }),

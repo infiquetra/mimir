@@ -137,6 +137,7 @@ class _StandaloneCharactersScreenState
           flex: 40,
           child: CharacterPortraitPanel(
             character: character,
+            onDeleteCharacter: () => _removeCharacter(context, character.characterId),
           ),
         ),
 

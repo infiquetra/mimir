@@ -23,15 +23,21 @@ import 'faction_logo.dart';
 ///   - Wallet balance (ISK)
 ///   - Security status
 ///   - Total skill points
+/// - Delete button in bottom-right corner (if callback provided)
 ///
 /// Matches EVE Online's character sheet portrait panel design.
 class CharacterPortraitPanel extends ConsumerWidget {
   /// The character to display.
   final Character character;
 
+  /// Callback when the delete button is pressed.
+  /// If null, delete button is not shown.
+  final VoidCallback? onDeleteCharacter;
+
   const CharacterPortraitPanel({
     super.key,
     required this.character,
+    this.onDeleteCharacter,
   });
 
   /// Returns the character portrait URL.
@@ -116,6 +122,25 @@ class CharacterPortraitPanel extends ConsumerWidget {
               totalSp: totalSp,
             ),
           ),
+          // Delete button (bottom-right).
+          if (onDeleteCharacter != null)
+            Positioned(
+              bottom: 16,
+              right: 16,
+              child: Material(
+                color: Colors.transparent,
+                child: IconButton(
+                  onPressed: onDeleteCharacter,
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: 'Remove Character',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.red.shade900.withValues(alpha: 0.8),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.all(8),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
