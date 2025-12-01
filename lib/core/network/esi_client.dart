@@ -781,19 +781,19 @@ class CharacterLocation {
 /// Character ship from ESI.
 class CharacterShip {
   final int shipTypeId;
-  final String shipTypeName;
+  final String? shipTypeName;
   final int shipItemId;
 
   const CharacterShip({
     required this.shipTypeId,
-    required this.shipTypeName,
+    this.shipTypeName,
     required this.shipItemId,
   });
 
   factory CharacterShip.fromJson(Map<String, dynamic> json) {
     return CharacterShip(
       shipTypeId: json['ship_type_id'] as int,
-      shipTypeName: json['ship_type_name'] as String,
+      // shipTypeName not in ESI response - must be looked up from SDE
       shipItemId: json['ship_item_id'] as int,
     );
   }

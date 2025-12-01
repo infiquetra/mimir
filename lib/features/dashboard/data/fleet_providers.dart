@@ -5,6 +5,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/network/esi_client.dart';
+import '../../../core/sde/sde_providers.dart';
 import '../../characters/data/character_providers.dart';
 
 /// Minimum time between fleet status fetches (5 minutes).
@@ -158,7 +159,15 @@ final characterFleetStatusProvider =
     final online = results[0] as CharacterOnline;
     final location = results[1] as CharacterLocation?;
     final ship = results[2] as CharacterShip?;
-    Log.i('FLEET', 'characterFleetStatusProvider - fetched ESI data: online=${online.online}, location=${location?.solarSystemId}, ship=${ship?.shipTypeName}');
+
+    // Look up ship type name from SDE if we have a ship.
+    String? shipTypeName;
+    if (ship != null) {
+      final sdeService = ref.read(sdeServiceProvider);
+      shipTypeName = await sdeService.getTypeName(ship.shipTypeId);
+    }
+
+    Log.i('FLEET', 'characterFleetStatusProvider - fetched ESI data: online=${online.online}, location=${location?.solarSystemId}, ship=$shipTypeName');
 
     // Fetch solar system info if we have a location.
     String? systemName;
@@ -183,7 +192,7 @@ final characterFleetStatusProvider =
         solarSystemName: Value(systemName),
         securityStatus: Value(secStatus),
         shipTypeId: Value(ship?.shipTypeId),
-        shipTypeName: Value(ship?.shipTypeName),
+        shipTypeName: Value(shipTypeName),
         isOnline: Value(online.online),
         lastLogin: Value(online.lastLogin),
         lastLogout: Value(online.lastLogout),
@@ -197,7 +206,7 @@ final characterFleetStatusProvider =
       characterName: character.name,
       solarSystemName: systemName,
       securityStatus: secStatus,
-      shipTypeName: ship?.shipTypeName,
+      shipTypeName: shipTypeName,
       isOnline: online.online,
       lastLogin: online.lastLogin,
       lastLogout: online.lastLogout,
