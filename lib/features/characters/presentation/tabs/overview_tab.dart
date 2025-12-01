@@ -2,6 +2,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/database/app_database.dart' show isSubWindow;
+import '../../../../core/logging/logger.dart';
 import '../../../../core/theme/eve_colors.dart';
 import '../../../../core/widgets/corporation_logo.dart';
 import '../../../../core/widgets/online_indicator.dart';
@@ -136,26 +138,7 @@ class OverviewTab extends ConsumerWidget {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(6),
-                  child: CachedNetworkImage(
-                    imageUrl: character.portraitUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      child: Icon(
-                        Icons.person,
-                        size: 60,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      child: Icon(
-                        Icons.person,
-                        size: 60,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
+                  child: _buildPortraitImage(context, character.portraitUrl),
                 ),
               ),
 
@@ -617,6 +600,54 @@ class OverviewTab extends ConsumerWidget {
           fontWeight: FontWeight.bold,
         ),
       ),
+    );
+  }
+
+  /// Builds character portrait image with isSubWindow awareness.
+  ///
+  /// Uses [Image.network] for sub-windows (since [CachedNetworkImage] uses
+  /// path_provider which isn't available in sub-window isolates).
+  Widget _buildPortraitImage(BuildContext context, String portraitUrl) {
+    final theme = Theme.of(context);
+    final placeholder = Container(
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Icon(
+        Icons.person,
+        size: 60,
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
+    );
+
+    // Use Image.network for sub-windows to avoid path_provider issues.
+    if (isSubWindow) {
+      Log.d('OVERVIEW', 'Using Image.network for portrait (sub-window context)');
+      return Image.network(
+        portraitUrl,
+        width: 120,
+        height: 120,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return placeholder;
+        },
+        errorBuilder: (context, error, stackTrace) {
+          Log.e('OVERVIEW', 'Failed to load portrait: $portraitUrl', error, stackTrace);
+          return placeholder;
+        },
+      );
+    }
+
+    // Use CachedNetworkImage for main window (disk caching available).
+    return CachedNetworkImage(
+      imageUrl: portraitUrl,
+      width: 120,
+      height: 120,
+      fit: BoxFit.cover,
+      placeholder: (context, url) => placeholder,
+      errorWidget: (context, url, error) {
+        Log.e('OVERVIEW', 'Failed to load cached portrait: $portraitUrl', error, null);
+        return placeholder;
+      },
     );
   }
 }
