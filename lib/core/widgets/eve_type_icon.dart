@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mimir/core/config/eve_config.dart';
+import 'package:mimir/core/logging/logger.dart';
 
 /// Displays an EVE Online type icon (ship, implant, module, etc.).
 ///
@@ -62,6 +63,7 @@ class EveTypeIcon extends StatelessWidget {
           );
         },
         errorBuilder: (context, error, stackTrace) {
+          Log.e('EveTypeIcon', 'Failed to load icon for type $typeId from $_imageUrl', error, stackTrace);
           return Center(
             child: Icon(
               Icons.help_outline,
