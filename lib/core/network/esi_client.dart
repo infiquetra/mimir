@@ -283,6 +283,35 @@ class EsiClient {
     return SolarSystemInfo.fromJson(response.data!);
   }
 
+  /// Gets information about a station.
+  ///
+  /// This is a public endpoint - no authentication required.
+  Future<StationInfo> getStationInfo(int stationId) async {
+    final response = await publicGet<Map<String, dynamic>>(
+      '/universe/stations/$stationId/',
+    );
+
+    return StationInfo.fromJson(response.data!);
+  }
+
+  /// Resolves a list of IDs to names.
+  ///
+  /// This is a public endpoint - no authentication required.
+  /// Accepts up to 1000 IDs at a time.
+  /// Returns a list of entities with their IDs, names, and categories.
+  Future<List<UniverseName>> getUniverseNames(List<int> ids) async {
+    if (ids.isEmpty) return [];
+
+    final response = await _dio.post<List<dynamic>>(
+      '/universe/names/',
+      data: ids,
+    );
+
+    return (response.data ?? [])
+        .map((item) => UniverseName.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
   // ============================================================================
   // Location API
   // ============================================================================
@@ -341,6 +370,48 @@ class EsiClient {
     );
 
     return CharacterOnline.fromJson(response.data!);
+  }
+
+  /// Gets the character's clones (jump clones and home location).
+  ///
+  /// Requires scope: `esi-clones.read_clones.v1`
+  /// Throws [EsiException] with 403 if missing required scopes.
+  Future<CharacterClones> getCharacterClones(int characterId) async {
+    final response = await authenticatedGet<Map<String, dynamic>>(
+      '/characters/$characterId/clones/',
+      characterId: characterId,
+    );
+
+    return CharacterClones.fromJson(response.data!);
+  }
+
+  /// Gets the character's active implants.
+  ///
+  /// Returns a list of implant type IDs currently plugged into the character.
+  /// Requires scope: `esi-clones.read_implants.v1`
+  /// Throws [EsiException] with 403 if missing required scopes.
+  Future<List<int>> getCharacterImplants(int characterId) async {
+    final response = await authenticatedGet<List<dynamic>>(
+      '/characters/$characterId/implants/',
+      characterId: characterId,
+    );
+
+    return (response.data ?? []).cast<int>();
+  }
+
+  /// Gets the character's standings with NPC factions and corporations.
+  ///
+  /// Requires scope: `esi-characters.read_standings.v1`
+  /// Throws [EsiException] with 403 if missing required scopes.
+  Future<List<Standing>> getCharacterStandings(int characterId) async {
+    final response = await authenticatedGet<List<dynamic>>(
+      '/characters/$characterId/standings/',
+      characterId: characterId,
+    );
+
+    return (response.data ?? [])
+        .map((item) => Standing.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 }
 
@@ -823,6 +894,171 @@ class CharacterOnline {
           ? DateTime.parse(json['last_logout'] as String)
           : null,
       logins: json['logins'] as int?,
+    );
+  }
+}
+
+/// Character clones from ESI.
+class CharacterClones {
+  final HomeLocation? homeLocation;
+  final List<JumpClone> jumpClones;
+  final DateTime? lastCloneJumpDate;
+  final DateTime? lastStationChangeDate;
+
+  const CharacterClones({
+    this.homeLocation,
+    required this.jumpClones,
+    this.lastCloneJumpDate,
+    this.lastStationChangeDate,
+  });
+
+  factory CharacterClones.fromJson(Map<String, dynamic> json) {
+    return CharacterClones(
+      homeLocation: json['home_location'] != null
+          ? HomeLocation.fromJson(json['home_location'] as Map<String, dynamic>)
+          : null,
+      jumpClones: (json['jump_clones'] as List<dynamic>?)
+              ?.map((item) => JumpClone.fromJson(item as Map<String, dynamic>))
+              .toList() ??
+          [],
+      lastCloneJumpDate: json['last_clone_jump_date'] != null
+          ? DateTime.parse(json['last_clone_jump_date'] as String)
+          : null,
+      lastStationChangeDate: json['last_station_change_date'] != null
+          ? DateTime.parse(json['last_station_change_date'] as String)
+          : null,
+    );
+  }
+}
+
+/// Home location information.
+class HomeLocation {
+  final int? locationId;
+  final String locationType; // 'station' or 'structure'
+
+  const HomeLocation({
+    this.locationId,
+    required this.locationType,
+  });
+
+  factory HomeLocation.fromJson(Map<String, dynamic> json) {
+    return HomeLocation(
+      locationId: json['location_id'] as int?,
+      locationType: json['location_type'] as String,
+    );
+  }
+}
+
+/// Jump clone information.
+class JumpClone {
+  final int jumpCloneId;
+  final int? locationId;
+  final String locationType; // 'station' or 'structure'
+  final List<int> implants;
+  final String? name;
+
+  const JumpClone({
+    required this.jumpCloneId,
+    this.locationId,
+    required this.locationType,
+    required this.implants,
+    this.name,
+  });
+
+  factory JumpClone.fromJson(Map<String, dynamic> json) {
+    return JumpClone(
+      jumpCloneId: json['jump_clone_id'] as int,
+      locationId: json['location_id'] as int?,
+      locationType: json['location_type'] as String,
+      implants: (json['implants'] as List<dynamic>?)?.cast<int>() ?? [],
+      name: json['name'] as String?,
+    );
+  }
+}
+
+/// Standing with an NPC faction or corporation.
+class Standing {
+  final int fromId;
+  final String fromType; // 'faction', 'npc_corp', or 'agent'
+  final double standing;
+
+  const Standing({
+    required this.fromId,
+    required this.fromType,
+    required this.standing,
+  });
+
+  factory Standing.fromJson(Map<String, dynamic> json) {
+    return Standing(
+      fromId: json['from_id'] as int,
+      fromType: json['from_type'] as String,
+      standing: (json['standing'] as num).toDouble(),
+    );
+  }
+}
+
+/// Station information from ESI.
+class StationInfo {
+  final int stationId;
+  final String name;
+  final int systemId;
+  final int? typeId;
+  final int? ownerId;
+  final double? maxDockableShipVolume;
+  final int? officeRentalCost;
+  final List<String>? services;
+  final double? reprocessingEfficiency;
+  final double? reprocessingStationsTake;
+
+  const StationInfo({
+    required this.stationId,
+    required this.name,
+    required this.systemId,
+    this.typeId,
+    this.ownerId,
+    this.maxDockableShipVolume,
+    this.officeRentalCost,
+    this.services,
+    this.reprocessingEfficiency,
+    this.reprocessingStationsTake,
+  });
+
+  factory StationInfo.fromJson(Map<String, dynamic> json) {
+    return StationInfo(
+      stationId: json['station_id'] as int,
+      name: json['name'] as String,
+      systemId: json['system_id'] as int,
+      typeId: json['type_id'] as int?,
+      ownerId: json['owner'] as int?,
+      maxDockableShipVolume:
+          (json['max_dockable_ship_volume'] as num?)?.toDouble(),
+      officeRentalCost: json['office_rental_cost'] as int?,
+      services: (json['services'] as List<dynamic>?)?.cast<String>(),
+      reprocessingEfficiency:
+          (json['reprocessing_efficiency'] as num?)?.toDouble(),
+      reprocessingStationsTake:
+          (json['reprocessing_stations_take'] as num?)?.toDouble(),
+    );
+  }
+}
+
+/// Universe name resolution result.
+class UniverseName {
+  final int id;
+  final String name;
+  final String category; // 'character', 'corporation', 'alliance', 'faction', 'inventory_type', 'solar_system', 'station', etc.
+
+  const UniverseName({
+    required this.id,
+    required this.name,
+    required this.category,
+  });
+
+  factory UniverseName.fromJson(Map<String, dynamic> json) {
+    return UniverseName(
+      id: json['id'] as int,
+      name: json['name'] as String,
+      category: json['category'] as String,
     );
   }
 }

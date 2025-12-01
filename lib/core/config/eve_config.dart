@@ -68,9 +68,24 @@ abstract class EveConfig {
     'esi-location.read_online.v1', // Online status
   ];
 
+  // ==========================================================================
+  // OAuth Scopes (Phase 3 - Character Screen)
+  // ==========================================================================
+
+  /// OAuth scopes required for enhanced character screen.
+  ///
+  /// WARNING: Adding these scopes requires users to re-authenticate.
+  /// Existing tokens will not have these permissions.
+  static const List<String> phase3CharacterScopes = [
+    'esi-clones.read_clones.v1', // Jump clones + home location
+    'esi-clones.read_implants.v1', // Active implants
+    'esi-characters.read_standings.v1', // Faction/corp standings
+  ];
+
   /// All OAuth scopes as a space-separated string.
   static String get scopesString =>
-      [...phase1Scopes, ...phase2FleetScopes].join(' ');
+      [...phase1Scopes, ...phase2FleetScopes, ...phase3CharacterScopes]
+          .join(' ');
 
   // ==========================================================================
   // Token Configuration
