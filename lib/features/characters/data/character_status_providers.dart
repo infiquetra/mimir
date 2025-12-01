@@ -104,8 +104,9 @@ Future<Map<int, String>> characterCloneLocationNames(
   // Separate station IDs from structure IDs.
   // Stations: NPC stations (int32) resolved via /universe/names/
   // Structures: Player-owned (int64) resolved via /universe/structures/{id}/
-  final stationIds = <int>[];
-  final structureIds = <int>[];
+  // Using Set to automatically deduplicate (multiple clones in same location)
+  final stationIds = <int>{};
+  final structureIds = <int>{};
 
   if (clones.homeLocation?.locationId != null) {
     if (clones.homeLocation!.locationType == 'station') {
@@ -134,12 +135,12 @@ Future<Map<int, String>> characterCloneLocationNames(
   Log.d('PROVIDERS', 'characterCloneLocationNames($characterId) - Resolving ${stationIds.length} stations, ${structureIds.length} structures');
 
   // Resolve stations via /universe/names/ endpoint.
-  final stationNames = await repository.resolveNames(stationIds);
+  final stationNames = await repository.resolveNames(stationIds.toList());
   final stationNameMap = {for (var n in stationNames) n.id: n.name};
 
   // Resolve structures via authenticated /universe/structures/ endpoint.
   final structureNameMap = await repository.resolveStructureNames(
-    structureIds,
+    structureIds.toList(),
     characterId,
   );
 
