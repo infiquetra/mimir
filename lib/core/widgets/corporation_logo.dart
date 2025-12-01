@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mimir/core/config/eve_config.dart';
+import 'package:mimir/core/logging/logger.dart';
 
 /// Displays a corporation or alliance logo from the EVE image server.
 ///
@@ -19,6 +20,9 @@ class CorporationLogo extends StatelessWidget {
 
   /// Background color for the logo container.
   final Color? backgroundColor;
+
+  /// Valid EVE image server sizes (powers of 2)
+  static const List<int> _validSizes = [32, 64, 128, 256, 512];
 
   const CorporationLogo({
     super.key,
@@ -49,9 +53,21 @@ class CorporationLogo extends StatelessWidget {
   })  : id = allianceId,
         isAlliance = true;
 
+  /// Normalizes size to nearest valid EVE server size (rounds up)
+  static int _normalizeSize(double requestedSize) {
+    final requested = requestedSize.ceil();
+    for (final validSize in _validSizes) {
+      if (requested <= validSize) return validSize;
+    }
+    return _validSizes.last; // Cap at 512
+  }
+
   String get _imageUrl {
+    final normalizedSize = _normalizeSize(size);
     final endpoint = isAlliance ? 'alliances' : 'corporations';
-    return '${EveConfig.imageServerUrl}/$endpoint/$id/logo?size=${size.toInt()}';
+    final url = '${EveConfig.imageServerUrl}/$endpoint/$id/logo?size=$normalizedSize';
+    Log.d('CORP_LOGO', 'Loading ${isAlliance ? 'alliance' : 'corporation'} logo: $url');
+    return url;
   }
 
   @override

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mimir/core/network/esi_client.dart';
+import 'package:mimir/core/widgets/eve_type_icon.dart';
 import 'package:mimir/features/characters/presentation/widgets/implant_row.dart';
 
 /// Displays information about a single jump clone.
@@ -66,29 +67,23 @@ class CloneCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Clone avatar icon (holographic blue style)
+            // Clone avatar icon (EVE-style holographic clone)
             Container(
-              width: compact ? 48 : 56,
-              height: compact ? 48 : 56,
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                  width: 1.5,
-                ),
                 boxShadow: [
                   BoxShadow(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                    blurRadius: 8,
-                    spreadRadius: 0,
+                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    spreadRadius: 2,
                   ),
                 ],
               ),
-              child: Icon(
-                Icons.person_outline,
-                size: compact ? 28 : 32,
-                color: theme.colorScheme.primary,
+              child: EveTypeIcon(
+                typeId: 34126, // Alpha Clone type ID
+                size: compact ? 48 : 56,
+                borderRadius: 8,
+                backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
               ),
             ),
             const SizedBox(width: 12),
