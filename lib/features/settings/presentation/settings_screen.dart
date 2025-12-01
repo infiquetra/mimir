@@ -96,12 +96,8 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 16),
-            RadioListTile<StartupBehavior>(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Open Dashboard'),
-              subtitle: const Text('Show the Dashboard window automatically'),
-              value: StartupBehavior.openDashboard,
-              groupValue: settings.startupBehavior,
+            RadioGroup<StartupBehavior>(
+              value: settings.startupBehavior,
               onChanged: (value) {
                 if (value != null) {
                   ref
@@ -109,20 +105,22 @@ class SettingsScreen extends ConsumerWidget {
                       .setStartupBehavior(value);
                 }
               },
-            ),
-            RadioListTile<StartupBehavior>(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Show tray icon only'),
-              subtitle: const Text('Launch silently in the menu bar'),
-              value: StartupBehavior.trayOnly,
-              groupValue: settings.startupBehavior,
-              onChanged: (value) {
-                if (value != null) {
-                  ref
-                      .read(settingsRepositoryProvider)
-                      .setStartupBehavior(value);
-                }
-              },
+              child: Column(
+                children: [
+                  RadioListTile<StartupBehavior>(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Open Dashboard'),
+                    subtitle: const Text('Show the Dashboard window automatically'),
+                    value: StartupBehavior.openDashboard,
+                  ),
+                  RadioListTile<StartupBehavior>(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Show tray icon only'),
+                    subtitle: const Text('Launch silently in the menu bar'),
+                    value: StartupBehavior.trayOnly,
+                  ),
+                ],
+              ),
             ),
           ],
         ),

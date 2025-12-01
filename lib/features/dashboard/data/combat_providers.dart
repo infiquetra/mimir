@@ -198,7 +198,7 @@ final combatStatsProvider =
       iskDestroyed: stats.iskDestroyed,
       iskLost: stats.iskLost,
     );
-  } on ZkillboardException catch (e) {
+  } on ZkillboardException {
     // Log error but don't fail the entire dashboard.
     // Return cached data if available, otherwise null.
     if (cached != null) {

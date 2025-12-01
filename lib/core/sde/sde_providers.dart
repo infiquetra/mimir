@@ -27,7 +27,7 @@ final sdeInitializerProvider = FutureProvider<void>((ref) async {
 
 /// Provider to get a skill name by type ID.
 ///
-/// Returns the skill name or "Skill #<id>" if not found.
+/// Returns the skill name or "Skill #`<id>`" if not found.
 final skillNameProvider = FutureProvider.family<String, int>((ref, typeId) async {
   final service = ref.watch(sdeServiceProvider);
 

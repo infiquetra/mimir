@@ -42,7 +42,7 @@ void main() {
       isActive: false,
     );
 
-    Widget buildWidget(List<Override> overrides) {
+    Widget buildWidget(List<Object> overrides) {
       return ProviderScope(
         overrides: overrides,
         child: const MaterialApp(

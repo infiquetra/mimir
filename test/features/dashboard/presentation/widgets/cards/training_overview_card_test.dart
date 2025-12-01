@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/core/database/app_database.dart';
 import 'package:mimir/features/dashboard/data/dashboard_providers.dart';
 import 'package:mimir/features/dashboard/presentation/widgets/cards/training_overview_card.dart';
-import 'package:mimir/features/skills/data/skill_providers.dart';
 import 'package:mimir/core/sde/sde_providers.dart';
 
 void main() {

@@ -158,7 +158,7 @@ class CharacterRepository {
       Log.i('CHAR', '_fetchCorporationName - fetched: $name');
       Log.d('CHAR', '_fetchCorporationName($corporationId) - SUCCESS');
       return name;
-    } catch (e, stack) {
+    } catch (e) {
       Log.w('CHAR', '_fetchCorporationName($corporationId) - FAILED, using fallback: $e');
       return 'Unknown Corporation';
     }
@@ -175,7 +175,7 @@ class CharacterRepository {
       Log.i('CHAR', '_fetchAllianceName - fetched: $name');
       Log.d('CHAR', '_fetchAllianceName($allianceId) - SUCCESS');
       return name;
-    } catch (e, stack) {
+    } catch (e) {
       Log.w('CHAR', '_fetchAllianceName($allianceId) - FAILED, using fallback: $e');
       return 'Unknown Alliance';
     }

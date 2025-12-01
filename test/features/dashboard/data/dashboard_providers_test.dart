@@ -6,8 +6,6 @@ import 'package:mimir/core/database/app_database.dart';
 import 'package:mimir/core/di/providers.dart';
 import 'package:mimir/features/characters/data/character_providers.dart';
 import 'package:mimir/features/dashboard/data/dashboard_providers.dart';
-import 'package:mimir/features/skills/data/skill_repository.dart';
-import 'package:mimir/features/wallet/data/wallet_repository.dart';
 
 void main() {
   late AppDatabase database;

@@ -87,8 +87,6 @@ class WindowService {
 
     // Create new window
     try {
-      final size = type.defaultSize;
-
       // Get database path to pass to sub-window.
       // Sub-windows can't use path_provider, so we resolve the path here.
       final dbPath = await getDatabasePath();

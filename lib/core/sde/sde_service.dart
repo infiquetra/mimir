@@ -487,7 +487,7 @@ class SdeService {
 
   /// Get a ship type name by type ID.
   ///
-  /// Falls back to generic "Ship #<id>" if not found.
+  /// Falls back to generic "Ship #`<id>`" if not found.
   /// Ship types are stored in the same SdeTypes table as skills.
   Future<String> getShipTypeName(int typeId) async {
     final name = await database.getTypeName(typeId);
@@ -522,7 +522,7 @@ class SdeService {
 
   /// Get solar system name by system ID.
   ///
-  /// Falls back to "System #<id>" if not found.
+  /// Falls back to "System #`<id>`" if not found.
   /// This could be enhanced with a local cache of solar system names.
   Future<String> getSolarSystemName(int solarSystemId) async {
     // TODO: Implement local caching of solar system names

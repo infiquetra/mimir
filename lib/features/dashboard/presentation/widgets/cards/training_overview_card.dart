@@ -6,7 +6,6 @@ import '../../../../../core/utils/formatters.dart';
 import '../../../../../core/widgets/character_avatar.dart';
 import '../../../../../core/widgets/eve_skill_icon.dart';
 import '../../../data/dashboard_providers.dart';
-import '../../../../skills/data/skill_providers.dart';
 import '../../../../../core/sde/sde_providers.dart';
 import '../dashboard_card.dart';
 
@@ -222,9 +221,8 @@ class TrainingOverviewCard extends ConsumerWidget {
 
     return queuesAsync.when(
       data: (queuesMap) {
-        // Calculate total SP and unallocated SP
+        // Calculate total SP
         int totalSp = 0;
-        int unallocatedSp = 0;
 
         // For each character's queue, sum up the SP
         for (final queue in queuesMap.values) {

@@ -11,7 +11,7 @@ import '../../../../core/widgets/eve_skill_icon.dart';
 /// Widget displaying a single skill queue entry.
 ///
 /// Shows the skill icon, name from SDE, target level, and training time remaining.
-/// Falls back to "Skill #<id>" if the SDE data is not available.
+/// Falls back to "Skill #`<id>`" if the SDE data is not available.
 class SkillQueueItemWidget extends ConsumerWidget {
   const SkillQueueItemWidget({
     required this.entry,
