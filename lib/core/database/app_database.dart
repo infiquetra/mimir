@@ -31,6 +31,12 @@ class Characters extends Table {
   /// Alliance name (null if not in an alliance).
   TextColumn get allianceName => text().nullable()();
 
+  /// Faction ID (null if not in a faction warfare corp).
+  IntColumn get factionId => integer().nullable()();
+
+  /// Character security status (-10 to +10).
+  RealColumn get securityStatus => real().withDefault(const Constant(0.0))();
+
   /// URL to character portrait image.
   TextColumn get portraitUrl => text()();
 
@@ -276,7 +282,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration {
@@ -313,6 +319,12 @@ class AppDatabase extends _$AppDatabase {
         // Migration from version 5 to 6: Add universe names cache table.
         if (from < 6) {
           await m.createTable(universeNames);
+        }
+
+        // Migration from version 6 to 7: Add faction ID and security status to characters.
+        if (from < 7) {
+          await m.addColumn(characters, characters.factionId);
+          await m.addColumn(characters, characters.securityStatus);
         }
       },
     );
