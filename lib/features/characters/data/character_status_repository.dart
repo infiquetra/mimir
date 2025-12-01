@@ -232,6 +232,46 @@ class CharacterStatusRepository {
     return names.isEmpty ? null : names.first.name;
   }
 
+  /// Resolves player-owned structure IDs to names.
+  ///
+  /// Unlike stations, structures require authenticated access via the
+  /// `/universe/structures/{id}/` endpoint. Returns a map of structure ID
+  /// to name, with "Player Structure" as fallback if access is denied.
+  ///
+  /// Note: This does not use caching because structure names can change
+  /// and access permissions vary by character.
+  Future<Map<int, String>> resolveStructureNames(
+    List<int> structureIds,
+    int characterId,
+  ) async {
+    if (structureIds.isEmpty) return {};
+
+    Log.d('NAME.RESOLVE', 'resolveStructureNames(${structureIds.length} structures) - START');
+
+    final result = <int, String>{};
+
+    for (final structureId in structureIds) {
+      try {
+        final name = await _esiClient.getStructureName(structureId, characterId);
+        if (name != null) {
+          result[structureId] = name;
+          Log.d('NAME.RESOLVE', 'Structure $structureId → $name');
+        } else {
+          // Access denied (403) or structure not found
+          result[structureId] = 'Player Structure';
+          Log.w('NAME.RESOLVE', 'Structure $structureId → Player Structure (access denied)');
+        }
+      } catch (e) {
+        // Network error or other issue
+        result[structureId] = 'Player Structure';
+        Log.e('NAME.RESOLVE', 'Failed to resolve structure $structureId', e, null);
+      }
+    }
+
+    Log.d('NAME.RESOLVE', 'Resolved ${result.length} structure names');
+    return result;
+  }
+
   /// Clears old entries from the name cache.
   ///
   /// Removes entries older than [daysOld] from the database.
