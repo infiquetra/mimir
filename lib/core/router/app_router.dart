@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/characters/presentation/add_character_screen.dart';
+import '../../features/characters/presentation/enhanced_character_screen.dart';
 import '../../features/characters/presentation/widgets/character_sidebar.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
@@ -15,6 +16,7 @@ import '../window/window_types.dart';
 /// Application route paths.
 abstract class AppRoutes {
   static const String home = '/';
+  static const String character = '/character';
   static const String skills = '/skills';
   static const String wallet = '/wallet';
   static const String settings = '/settings';
@@ -42,6 +44,15 @@ GoRouter createRouter() {
               GoRoute(
                 path: AppRoutes.home,
                 builder: (context, state) => const DashboardScreen(),
+              ),
+            ],
+          ),
+          // Character branch
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.character,
+                builder: (context, state) => const EnhancedCharacterScreen(),
               ),
             ],
           ),
@@ -110,6 +121,11 @@ class MainScaffold extends ConsumerWidget {
                   label: 'Dashboard',
                 ),
                 NeocomDestination(
+                  icon: Icons.person_outlined,
+                  selectedIcon: Icons.person,
+                  label: 'Character',
+                ),
+                NeocomDestination(
                   windowType: WindowType.skills,
                   label: 'Skills',
                 ),
@@ -173,6 +189,11 @@ class MainScaffold extends ConsumerWidget {
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard),
             label: 'Dashboard',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outlined),
+            selectedIcon: Icon(Icons.person),
+            label: 'Character',
           ),
           NavigationDestination(
             icon: Icon(Icons.school_outlined),
