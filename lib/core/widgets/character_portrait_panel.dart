@@ -93,7 +93,7 @@ class CharacterPortraitPanel extends ConsumerWidget {
             top: 16,
             right: 16,
             child: CorporationLogo(
-              corporationId: character.corporationId,
+              id: character.corporationId,
               size: 48,
             ),
           ),
@@ -221,12 +221,6 @@ class _StatsGrid extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _StatRow(
-          icon: Icons.cake_outlined,
-          label: 'Birth Date',
-          value: DateFormat('yyyy-MM-dd').format(character.birthday),
-        ),
-        const SizedBox(height: 6),
         _StatRow(
           icon: Icons.account_balance_wallet_outlined,
           label: 'Wallet',

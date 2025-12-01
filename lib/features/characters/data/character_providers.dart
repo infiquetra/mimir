@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/logging/logger.dart';
+import '../../../core/network/esi_client.dart';
 import 'character_repository.dart';
 
 /// Provider that streams all characters from the database.

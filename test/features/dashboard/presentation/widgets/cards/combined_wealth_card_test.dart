@@ -16,6 +16,8 @@ void main() {
       corporationName: 'Corp One',
       allianceId: null,
       allianceName: null,
+      factionId: null,
+      securityStatus: 0.0,
       portraitUrl: 'https://example.com/portrait1.jpg',
       refreshToken: null,
       accessToken: null,
@@ -31,6 +33,8 @@ void main() {
       corporationName: 'Corp Two',
       allianceId: null,
       allianceName: null,
+      factionId: null,
+      securityStatus: 0.0,
       portraitUrl: 'https://example.com/portrait2.jpg',
       refreshToken: null,
       accessToken: null,
@@ -46,6 +50,8 @@ void main() {
       corporationName: 'Corp Three',
       allianceId: null,
       allianceName: null,
+      factionId: null,
+      securityStatus: 0.0,
       portraitUrl: 'https://example.com/portrait3.jpg',
       refreshToken: null,
       accessToken: null,
@@ -54,9 +60,9 @@ void main() {
       isActive: false,
     );
 
-    Widget buildWidget(List<Object> overrides) {
+    Widget buildWidget(List<dynamic> overrides) {
       return ProviderScope(
-        overrides: overrides,
+        overrides: overrides.cast(),
         child: const MaterialApp(
           home: Scaffold(
             body: CombinedWealthCard(),
