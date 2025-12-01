@@ -164,7 +164,7 @@ final characterFleetStatusProvider =
     String? shipTypeName;
     if (ship != null) {
       final sdeService = ref.read(sdeServiceProvider);
-      shipTypeName = await sdeService.getTypeName(ship.shipTypeId);
+      shipTypeName = await sdeService.getShipTypeName(ship.shipTypeId);
     }
 
     Log.i('FLEET', 'characterFleetStatusProvider - fetched ESI data: online=${online.online}, location=${location?.solarSystemId}, ship=$shipTypeName');
