@@ -103,7 +103,7 @@ extension WindowTypeExtension on WindowType {
       case WindowType.main:
         return (width: 100, height: 400); // Narrow, just nav rail
       case WindowType.dashboard:
-        return (width: 900, height: 700);
+        return (width: 1100, height: 850);
       case WindowType.skills:
         return (width: 800, height: 600);
       case WindowType.wallet:
