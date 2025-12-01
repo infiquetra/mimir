@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/eve_colors.dart';
 import '../../../core/widgets/refresh_app_bar_action.dart';
 import '../data/character_providers.dart';
+import '../data/character_status_providers.dart';
 import 'character_selector.dart';
 import 'tabs/character_tab.dart';
 import 'tabs/interactions_tab.dart';
@@ -95,8 +96,23 @@ class _EnhancedCharacterScreenState
   }
 
   Future<void> _refresh(WidgetRef ref, int characterId) async {
-    // Refresh character status data
-    // This will be expanded in later phases
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Refresh character info from ESI
+    await ref.read(refreshCharacterProvider(characterId).future);
+
+    // Invalidate all character status providers to force re-fetch from ESI
+    ref.invalidate(characterClonesProvider(characterId));
+    ref.invalidate(characterImplantsProvider(characterId));
+    ref.invalidate(characterStandingsProvider(characterId));
+    ref.invalidate(characterAttributesProvider(characterId));
+    ref.invalidate(characterOnlineStatusProvider(characterId));
+
+    // Wait for the status data to be fetched
+    await Future.wait([
+      ref.read(characterClonesProvider(characterId).future),
+      ref.read(characterImplantsProvider(characterId).future),
+      ref.read(characterStandingsProvider(characterId).future),
+      ref.read(characterAttributesProvider(characterId).future),
+      ref.read(characterOnlineStatusProvider(characterId).future),
+    ]);
   }
 }

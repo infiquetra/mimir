@@ -203,7 +203,7 @@ class CharacterStatusRepository {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final companions = esiNames.map((esiName) {
       return db.UniverseNamesCompanion.insert(
-        id: esiName.id,
+        id: Value(esiName.id),
         name: esiName.name,
         category: esiName.category,
         lastUpdated: now,

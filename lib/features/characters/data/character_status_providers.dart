@@ -100,7 +100,7 @@ Future<OnlineStatus> characterOnlineStatus(
 
   try {
     // Fetch all data in parallel.
-    final results = await Future.wait([
+    final results = await Future.wait<dynamic>([
       esiClient.getCharacterOnline(characterId),
       esiClient.getCharacterLocation(characterId),
       esiClient.getCharacterShip(characterId),
