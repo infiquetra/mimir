@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/eve_colors.dart';
+import '../../../../../core/widgets/corporation_logo.dart';
+import '../../../../../core/widgets/faction_logo.dart';
+import '../../../../../core/widgets/standing_indicator.dart';
 import '../../../data/character_providers.dart';
 import '../../../data/character_status_providers.dart';
 
@@ -9,8 +12,8 @@ import '../../../data/character_status_providers.dart';
 ///
 /// Displays:
 /// - Grouped standings by type (agents, NPCs, corporations, factions)
-/// - Standing value with color-coded indicators
-/// - Entity names resolved from ESI
+/// - Standing value with color-coded row background tinting
+/// - Entity logos (corporation/faction/agent avatars)
 class StandingsSubTab extends ConsumerWidget {
   const StandingsSubTab({super.key});
 
@@ -95,6 +98,7 @@ class StandingsSubTab extends ConsumerWidget {
               if (grouped.containsKey('faction'))
                 _buildStandingsSection(
                   theme,
+                  context,
                   'Factions',
                   Icons.flag_outlined,
                   grouped['faction']!,
@@ -102,6 +106,7 @@ class StandingsSubTab extends ConsumerWidget {
               if (grouped.containsKey('npc_corp'))
                 _buildStandingsSection(
                   theme,
+                  context,
                   'NPC Corporations',
                   Icons.business_outlined,
                   grouped['npc_corp']!,
@@ -109,6 +114,7 @@ class StandingsSubTab extends ConsumerWidget {
               if (grouped.containsKey('agent'))
                 _buildStandingsSection(
                   theme,
+                  context,
                   'Agents',
                   Icons.person_outlined,
                   grouped['agent']!,
@@ -224,6 +230,7 @@ class StandingsSubTab extends ConsumerWidget {
 
   Widget _buildStandingsSection(
     ThemeData theme,
+    BuildContext context,
     String title,
     IconData icon,
     List<dynamic> standings,
@@ -276,14 +283,11 @@ class StandingsSubTab extends ConsumerWidget {
               width: 1,
             ),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
             child: Column(
               children: standings.map((standing) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildStandingRow(theme, standing),
-                );
+                return _buildStandingRow(context, theme, standing);
               }).toList(),
             ),
           ),
@@ -293,72 +297,124 @@ class StandingsSubTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildStandingRow(ThemeData theme, dynamic standing) {
+  Widget _buildStandingRow(BuildContext context, ThemeData theme, dynamic standing) {
     final standingValue = standing.standing as double;
     final color = _getStandingColor(standingValue);
-    final icon = _getStandingIcon(standingValue);
 
-    return Row(
-      children: [
-        // Entity icon/indicator
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color.withAlpha(51),
-            border: Border.all(
-              color: color,
-              width: 1.5,
-            ),
-          ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: color,
+    // Get background tint color using StandingIndicator
+    final backgroundColor = StandingIndicator.getBackgroundColor(
+      standingValue,
+      context: context,
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+            width: 1,
           ),
         ),
-        const SizedBox(width: 12),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          // Entity logo/icon
+          _buildEntityIcon(context, standing),
+          const SizedBox(width: 12),
 
-        // Entity name
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Entity name
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  standing.name,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  StandingIndicator.getStandingLabel(standingValue),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: color.withAlpha(179),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Standing value
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                standing.name,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
+                StandingIndicator.formatStanding(standingValue),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: color,
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                _getStandingLabel(standingValue),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: color.withAlpha(179),
-                ),
-              ),
+              _buildStandingBar(standingValue),
             ],
           ),
-        ),
+        ],
+      ),
+    );
+  }
 
-        // Standing value
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              standingValue.toStringAsFixed(2),
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 2),
-            _buildStandingBar(standingValue),
-          ],
+  /// Builds entity-specific icon (corporation logo, faction logo, or agent avatar).
+  Widget _buildEntityIcon(BuildContext context, dynamic standing) {
+    final fromType = standing.fromType as String;
+    final fromId = standing.fromId as int;
+
+    if (fromType == 'faction') {
+      return FactionLogo(
+        factionId: fromId,
+        size: 40,
+        borderRadius: 8,
+      );
+    } else if (fromType == 'npc_corp') {
+      return CorporationLogo.corporation(
+        corporationId: fromId,
+        size: 40,
+        borderRadius: 8,
+      );
+    } else if (fromType == 'agent') {
+      // Agents use character portrait endpoint
+      final theme = Theme.of(context);
+      return Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: theme.colorScheme.surfaceContainerHighest,
         ),
-      ],
+        child: Icon(
+          Icons.person_outline,
+          size: 24,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      );
+    }
+
+    // Fallback icon
+    final theme = Theme.of(context);
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: theme.colorScheme.surfaceContainerHighest,
+      ),
+      child: Icon(
+        Icons.help_outline,
+        size: 24,
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
     );
   }
 
@@ -392,22 +448,6 @@ class StandingsSubTab extends ConsumerWidget {
     if (standing > -0.5) return Colors.grey; // Neutral
     if (standing > -5.0) return Colors.orange; // Bad
     return EveColors.error; // Terrible (red)
-  }
-
-  IconData _getStandingIcon(double standing) {
-    if (standing >= 5.0) return Icons.sentiment_very_satisfied;
-    if (standing >= 0.5) return Icons.sentiment_satisfied;
-    if (standing > -0.5) return Icons.sentiment_neutral;
-    if (standing > -5.0) return Icons.sentiment_dissatisfied;
-    return Icons.sentiment_very_dissatisfied;
-  }
-
-  String _getStandingLabel(double standing) {
-    if (standing >= 5.0) return 'Excellent';
-    if (standing >= 0.5) return 'Good';
-    if (standing > -0.5) return 'Neutral';
-    if (standing > -5.0) return 'Bad';
-    return 'Terrible';
   }
 
   Widget _buildEmptyState(BuildContext context) {
