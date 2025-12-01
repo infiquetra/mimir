@@ -10,10 +10,11 @@ import '../../widgets/clone_card.dart';
 /// Jump Clones sub-tab showing all character jump clones.
 ///
 /// Displays:
-/// - Home clone location
 /// - List of all jump clones with locations and implants
 /// - Last clone jump date
 /// - Last station change date
+///
+/// Note: Home clone location is shown in the character portrait overlay.
 class JumpClonesSubTab extends ConsumerWidget {
   const JumpClonesSubTab({super.key});
 
@@ -135,122 +136,6 @@ class JumpClonesSubTab extends ConsumerWidget {
               if (cloneData.lastCloneJumpDate != null ||
                   cloneData.lastStationChangeDate != null)
                 const SizedBox(height: 16),
-
-              // Home clone card
-              Card(
-                elevation: 0,
-                color: EveColors.darkSurface,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(
-                    color: EveColors.evePrimary.withAlpha(51),
-                    width: 1,
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.home_outlined,
-                            size: 20,
-                            color: EveColors.evePrimary,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Home Clone',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: EveColors.evePrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      if (cloneData.homeLocation != null)
-                        locationNames.when(
-                          data: (nameMap) {
-                            final locationId = cloneData.homeLocation!.locationId;
-                            final locationName = locationId != null
-                                ? nameMap[locationId] ?? 'Location $locationId'
-                                : 'Unknown';
-                            return Row(
-                              children: [
-                                Icon(
-                                  cloneData.homeLocation!.locationType == 'station'
-                                      ? Icons.location_city_outlined
-                                      : Icons.place_outlined,
-                                  size: 16,
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    locationName,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                          loading: () => Row(
-                            children: [
-                              Icon(
-                                cloneData.homeLocation!.locationType == 'station'
-                                    ? Icons.location_city_outlined
-                                    : Icons.place_outlined,
-                                size: 16,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                              const SizedBox(width: 8),
-                              const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            ],
-                          ),
-                          error: (_, __) => Row(
-                            children: [
-                              Icon(
-                                cloneData.homeLocation!.locationType == 'station'
-                                    ? Icons.location_city_outlined
-                                    : Icons.place_outlined,
-                                size: 16,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Location ${cloneData.homeLocation!.locationId}',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      else
-                        Text(
-                          'No home location set',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant.withAlpha(128),
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
 
               // Jump clones header
               Padding(

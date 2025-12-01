@@ -54,6 +54,10 @@ class CharacterPortraitPanel extends ConsumerWidget {
     final walletBalance = ref.watch(_walletBalanceProvider(character.characterId));
     final totalSp = ref.watch(characterTotalSpProvider(character.characterId));
 
+    // Fetch home location.
+    final clones = ref.watch(characterClonesProvider(character.characterId));
+    final locationNames = ref.watch(characterCloneLocationNamesProvider(character.characterId));
+
     // Debug logging
     Log.d('CHAR', 'CharacterPortraitPanel: Loading portrait from $_portraitUrl');
 
@@ -120,6 +124,8 @@ class CharacterPortraitPanel extends ConsumerWidget {
               character: character,
               walletBalance: walletBalance,
               totalSp: totalSp,
+              clones: clones,
+              locationNames: locationNames,
             ),
           ),
           // Delete button (upper-left).
@@ -153,11 +159,15 @@ class _InfoOverlay extends StatelessWidget {
   final Character character;
   final AsyncValue<double?> walletBalance;
   final AsyncValue<int> totalSp;
+  final AsyncValue<dynamic> clones;
+  final AsyncValue<Map<int, String>> locationNames;
 
   const _InfoOverlay({
     required this.character,
     required this.walletBalance,
     required this.totalSp,
+    required this.clones,
+    required this.locationNames,
   });
 
   @override
@@ -201,6 +211,8 @@ class _InfoOverlay extends StatelessWidget {
             character: character,
             walletBalance: walletBalance,
             totalSp: totalSp,
+            clones: clones,
+            locationNames: locationNames,
           ),
         ],
       ),
@@ -213,11 +225,15 @@ class _StatsGrid extends StatelessWidget {
   final Character character;
   final AsyncValue<double?> walletBalance;
   final AsyncValue<int> totalSp;
+  final AsyncValue<dynamic> clones;
+  final AsyncValue<Map<int, String>> locationNames;
 
   const _StatsGrid({
     required this.character,
     required this.walletBalance,
     required this.totalSp,
+    required this.clones,
+    required this.locationNames,
   });
 
   @override
@@ -243,6 +259,13 @@ class _StatsGrid extends StatelessWidget {
           value: character.securityStatus.toStringAsFixed(2),
         ),
         const SizedBox(height: 6),
+        // Home station row
+        _StatRow(
+          icon: Icons.home_outlined,
+          label: 'Home Station',
+          value: _getHomeLocationValue(),
+        ),
+        const SizedBox(height: 6),
         _StatRow(
           icon: Icons.stars_outlined,
           label: 'Total SP',
@@ -253,6 +276,27 @@ class _StatsGrid extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  /// Get the home location value, handling async states.
+  String _getHomeLocationValue() {
+    return clones.when(
+      data: (cloneData) {
+        final homeLocation = cloneData?.homeLocation;
+        if (homeLocation == null) return 'Unknown';
+
+        final locationId = homeLocation.locationId;
+        if (locationId == null) return 'Unknown';
+
+        return locationNames.when(
+          data: (nameMap) => nameMap[locationId] ?? 'Unknown',
+          loading: () => 'Loading...',
+          error: (_, __) => 'Unknown',
+        );
+      },
+      loading: () => 'Loading...',
+      error: (_, __) => 'Unknown',
     );
   }
 }
