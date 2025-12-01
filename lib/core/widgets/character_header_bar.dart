@@ -24,15 +24,28 @@ const int _maxVisibleCharacters = 4;
 /// When no character is logged in, shows an "Add Character" button.
 ///
 /// When [windowType] is provided (Dashboard/Skills/Wallet), shows a refresh
-/// button instead of the "Add Character" icon button.
+/// button. For Characters window, shows "Add Character" button.
+///
+/// Characters can be removed via long-press (mobile) or right-click (desktop)
+/// on their avatar, which shows a confirmation dialog.
 class CharacterHeaderBar extends ConsumerWidget {
   const CharacterHeaderBar({
     this.windowType,
+    this.onAddCharacter,
+    this.onRemoveCharacter,
     super.key,
   });
 
-  /// The type of window this header is shown in, determines refresh behavior.
+  /// The type of window this header is shown in, determines button behavior.
   final WindowType? windowType;
+
+  /// Callback when "Add Character" button is pressed.
+  /// Used by Characters window to show OAuth flow.
+  final VoidCallback? onAddCharacter;
+
+  /// Callback when a character should be removed.
+  /// Receives the character ID to remove.
+  final void Function(int characterId)? onRemoveCharacter;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -58,7 +71,10 @@ class CharacterHeaderBar extends ConsumerWidget {
       child: activeCharacter.when(
         data: (character) {
           if (character == null) {
-            return _AddCharacterSection(isDesktop: isDesktop);
+            return _AddCharacterSection(
+              isDesktop: isDesktop,
+              onAddCharacter: onAddCharacter,
+            );
           }
           return _buildCharacterRow(
             context,
@@ -75,7 +91,10 @@ class CharacterHeaderBar extends ConsumerWidget {
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
         ),
-        error: (_, __) => _AddCharacterSection(isDesktop: isDesktop),
+        error: (_, __) => _AddCharacterSection(
+          isDesktop: isDesktop,
+          onAddCharacter: onAddCharacter,
+        ),
       ),
     );
   }
@@ -110,15 +129,24 @@ class CharacterHeaderBar extends ConsumerWidget {
                   .read(characterRepositoryProvider)
                   .setActiveCharacter(characterId);
             },
+            onRemoveCharacter: onRemoveCharacter,
           ),
-        // Refresh button (when windowType is provided) or add character button.
-        if (windowType != null)
+        // Action button based on window type.
+        if (windowType == WindowType.characters)
+          // Add Character button for Characters window.
+          _AddCharacterIconButton(
+            isDesktop: isDesktop,
+            onAddCharacter: onAddCharacter,
+          )
+        else if (windowType != null)
+          // Refresh button for Dashboard/Skills/Wallet windows.
           _RefreshIconButton(
             isDesktop: isDesktop,
             windowType: windowType!,
             characterId: activeCharacter.characterId,
           )
         else
+          // Default Add Character button (disabled).
           _AddCharacterIconButton(isDesktop: isDesktop),
       ],
     );
@@ -196,11 +224,13 @@ class _CharacterSwitcherRow extends StatelessWidget {
     required this.characters,
     required this.isDesktop,
     required this.onCharacterTap,
+    this.onRemoveCharacter,
   });
 
   final List<Character> characters;
   final bool isDesktop;
   final void Function(int characterId) onCharacterTap;
+  final void Function(int characterId)? onRemoveCharacter;
 
   @override
   Widget build(BuildContext context) {
@@ -212,16 +242,23 @@ class _CharacterSwitcherRow extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         // Visible character avatars.
-        ...visibleCharacters.map((character) => Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: StyledCharacterAvatar(
-                portraitUrl: character.portraitUrl,
-                size: avatarSize,
-                isActive: false,
-                tooltip: character.name,
-                onTap: () => onCharacterTap(character.characterId),
-              ),
-            )),
+        ...visibleCharacters.map((character) {
+          final contextMenuHandler = onRemoveCharacter != null
+              ? () => onRemoveCharacter!(character.characterId)
+              : null;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: StyledCharacterAvatar(
+              portraitUrl: character.portraitUrl,
+              size: avatarSize,
+              isActive: false,
+              tooltip: character.name,
+              onTap: () => onCharacterTap(character.characterId),
+              onLongPress: contextMenuHandler,
+              onSecondaryTap: contextMenuHandler,
+            ),
+          );
+        }),
         // Overflow badge.
         if (overflowCount > 0)
           _OverflowBadge(
@@ -312,9 +349,13 @@ class _OverflowBadge extends StatelessWidget {
 
 /// "Add Character" section shown when no character is logged in.
 class _AddCharacterSection extends StatelessWidget {
-  const _AddCharacterSection({required this.isDesktop});
+  const _AddCharacterSection({
+    required this.isDesktop,
+    this.onAddCharacter,
+  });
 
   final bool isDesktop;
+  final VoidCallback? onAddCharacter;
 
   @override
   Widget build(BuildContext context) {
@@ -359,9 +400,9 @@ class _AddCharacterSection extends StatelessWidget {
           ],
         ),
         const Spacer(),
-        // Note: Character addition is handled in the Characters screen sidebar
+        // Enabled when onAddCharacter callback is provided (Characters window)
         FilledButton.icon(
-          onPressed: null, // Disabled - use Characters window to add
+          onPressed: onAddCharacter,
           icon: const Icon(Icons.person_add, size: 18),
           label: const Text('Add Character'),
         ),
@@ -372,9 +413,13 @@ class _AddCharacterSection extends StatelessWidget {
 
 /// Small "+" button to add more characters.
 class _AddCharacterIconButton extends StatelessWidget {
-  const _AddCharacterIconButton({required this.isDesktop});
+  const _AddCharacterIconButton({
+    required this.isDesktop,
+    this.onAddCharacter,
+  });
 
   final bool isDesktop;
+  final VoidCallback? onAddCharacter;
 
   @override
   Widget build(BuildContext context) {
@@ -388,7 +433,7 @@ class _AddCharacterIconButton extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: null, // Disabled - use Characters window to add
+            onTap: onAddCharacter, // Enabled when callback provided
             borderRadius: BorderRadius.circular(size / 2),
             child: Container(
               width: size,
