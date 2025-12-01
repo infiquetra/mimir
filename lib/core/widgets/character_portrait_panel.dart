@@ -7,6 +7,7 @@ import '../../core/config/eve_config.dart';
 import '../../core/database/app_database.dart' show Character, isSubWindow;
 import '../../core/logging/logger.dart';
 import '../../features/characters/data/character_providers.dart';
+import '../../features/characters/data/character_status_providers.dart';
 import '../../features/wallet/data/wallet_repository.dart';
 import 'corporation_logo.dart';
 import 'faction_logo.dart';
