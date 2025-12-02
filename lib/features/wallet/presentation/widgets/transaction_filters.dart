@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../data/wallet_providers.dart';
-
 /// Transaction filter controls for type and date range.
 ///
 /// Provides dropdowns for filtering wallet journal transactions.
