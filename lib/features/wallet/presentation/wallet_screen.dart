@@ -79,18 +79,86 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
         Expanded(
           child: TabBarView(
             controller: _tabController,
-            children: const [
+            children: [
               // Overview Tab
-              Padding(
-                padding: EdgeInsets.all(16),
-                child: OverviewPanel(),
+              Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    color: const Color(0xFF1A1A1A),
+                    child: Row(
+                      children: [
+                        Icon(Icons.assessment, size: 16, color: Colors.white.withAlpha(179)),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Overview (30 Days)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withAlpha(179),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: OverviewPanel(),
+                    ),
+                  ),
+                ],
               ),
 
               // Transactions Tab
-              TransactionsPanel(),
+              Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    color: const Color(0xFF1A1A1A),
+                    child: Row(
+                      children: [
+                        Icon(Icons.receipt_long, size: 16, color: Colors.white.withAlpha(179)),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Wallet Journal',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withAlpha(179),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Expanded(child: TransactionsPanel()),
+                ],
+              ),
 
               // Market Transactions Tab
-              MarketTransactionsPanel(),
+              Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    color: const Color(0xFF1A1A1A),
+                    child: Row(
+                      children: [
+                        Icon(Icons.shopping_cart, size: 16, color: Colors.white.withAlpha(179)),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Market Transactions',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withAlpha(179),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Expanded(child: MarketTransactionsPanel()),
+                ],
+              ),
             ],
           ),
         ),
