@@ -56,3 +56,131 @@ final formattedBalanceProvider =
     Provider.family<String, double>((ref, balance) {
   return formatIsk(balance);
 });
+
+/// Provider for PLEX count.
+final plexCountProvider = FutureProvider<int>((ref) async {
+  final activeCharacter = ref.watch(activeCharacterProvider).value;
+  if (activeCharacter == null) {
+    Log.d('WALLET', 'plexCountProvider - no active character');
+    return 0;
+  }
+
+  Log.d('WALLET',
+      'plexCountProvider - fetching for character ${activeCharacter.characterId}');
+  final repository = ref.read(walletRepositoryProvider);
+  return repository.getPlexCount(activeCharacter.characterId);
+});
+
+/// Provider for total loyalty points across all corporations.
+final totalLoyaltyPointsProvider = FutureProvider<int>((ref) async {
+  final activeCharacter = ref.watch(activeCharacterProvider).value;
+  if (activeCharacter == null) {
+    Log.d('WALLET', 'totalLoyaltyPointsProvider - no active character');
+    return 0;
+  }
+
+  Log.d('WALLET',
+      'totalLoyaltyPointsProvider - fetching for character ${activeCharacter.characterId}');
+  final repository = ref.read(walletRepositoryProvider);
+  return repository.getTotalLoyaltyPoints(activeCharacter.characterId);
+});
+
+/// Provider for loyalty points by corporation.
+final loyaltyPointsByCorporationProvider =
+    FutureProvider<List<LoyaltyPoint>>((ref) async {
+  final activeCharacter = ref.watch(activeCharacterProvider).value;
+  if (activeCharacter == null) {
+    Log.d('WALLET', 'loyaltyPointsByCorporationProvider - no active character');
+    return [];
+  }
+
+  Log.d('WALLET',
+      'loyaltyPointsByCorporationProvider - fetching for character ${activeCharacter.characterId}');
+  final repository = ref.read(walletRepositoryProvider);
+  return repository.getLoyaltyPointsByCorporation(activeCharacter.characterId);
+});
+
+/// Provider for 30-day wallet summary (income/expenses).
+final walletSummaryProvider = FutureProvider<WalletSummary>((ref) async {
+  final activeCharacter = ref.watch(activeCharacterProvider).value;
+  if (activeCharacter == null) {
+    Log.d('WALLET', 'walletSummaryProvider - no active character');
+    return const WalletSummary(income: 0, expenses: 0);
+  }
+
+  Log.d('WALLET',
+      'walletSummaryProvider - fetching for character ${activeCharacter.characterId}');
+  final repository = ref.read(walletRepositoryProvider);
+  return repository.get30DaySummary(activeCharacter.characterId);
+});
+
+/// Provider that streams wallet transactions for the active character.
+final walletTransactionsProvider =
+    StreamProvider<List<WalletTransaction>>((ref) {
+  final activeCharacter = ref.watch(activeCharacterProvider).value;
+  if (activeCharacter == null) {
+    Log.d('WALLET',
+        'walletTransactionsProvider - no active character, returning empty stream');
+    return Stream.value([]);
+  }
+
+  Log.d('WALLET',
+      'walletTransactionsProvider - setting up stream for character ${activeCharacter.characterId}');
+  final repository = ref.watch(walletRepositoryProvider);
+  return repository.watchWalletTransactions(activeCharacter.characterId);
+});
+
+/// Filter for wallet journal transactions.
+class TransactionFilter {
+  final String? refType;
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  const TransactionFilter({
+    this.refType,
+    this.startDate,
+    this.endDate,
+  });
+
+  /// Creates a filter for a specific date range.
+  factory TransactionFilter.dateRange(int days) {
+    final now = DateTime.now();
+    return TransactionFilter(
+      startDate: now.subtract(Duration(days: days)),
+      endDate: now,
+    );
+  }
+
+  /// Last 7 days filter.
+  static TransactionFilter get last7Days => TransactionFilter.dateRange(7);
+
+  /// Last 30 days filter.
+  static TransactionFilter get last30Days => TransactionFilter.dateRange(30);
+
+  /// Last 90 days filter.
+  static TransactionFilter get last90Days => TransactionFilter.dateRange(90);
+}
+
+/// Filter for market transactions.
+class MarketFilter {
+  final bool? isBuy; // true = buy, false = sell, null = all
+  final int? minQuantity;
+  final double? minValue;
+  final int? typeId;
+
+  const MarketFilter({
+    this.isBuy,
+    this.minQuantity,
+    this.minValue,
+    this.typeId,
+  });
+
+  /// No filter (show all).
+  static const MarketFilter all = MarketFilter();
+
+  /// Buy transactions only.
+  static const MarketFilter buys = MarketFilter(isBuy: true);
+
+  /// Sell transactions only.
+  static const MarketFilter sells = MarketFilter(isBuy: false);
+}
