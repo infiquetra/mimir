@@ -61,7 +61,7 @@ class SpaceBackground extends StatelessWidget {
         ),
 
         // Content
-        child,
+        Positioned.fill(child: child),
       ],
     );
   }

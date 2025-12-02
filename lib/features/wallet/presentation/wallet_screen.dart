@@ -78,18 +78,13 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
           tabs: const ['Overview', 'Transactions', 'Market'],
         ),
 
-        // Tab Views
+        // Tab Views - takes remaining space
         Expanded(
           child: TabBarView(
             controller: _tabController,
             children: const [
-              // Overview Tab
               OverviewPanel(),
-
-              // Transactions Tab
               TransactionsPanel(),
-
-              // Market Transactions Tab
               MarketTransactionsPanel(),
             ],
           ),
