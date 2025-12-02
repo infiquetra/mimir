@@ -148,6 +148,95 @@ class WalletBalances extends Table {
   DateTimeColumn get recordedAt => dateTime()();
 }
 
+/// Wallet market transactions (buy/sell on the market).
+///
+/// Stores market transaction history for tracking market activity.
+/// Separate from journal entries as they contain market-specific details.
+class WalletTransactions extends Table {
+  /// Transaction ID (primary key).
+  IntColumn get transactionId => integer()();
+
+  /// Character ID this transaction belongs to.
+  IntColumn get characterId =>
+      integer().references(Characters, #characterId)();
+
+  /// Item type ID from EVE SDE.
+  IntColumn get typeId => integer()();
+
+  /// Location ID (station or structure).
+  IntColumn get locationId => integer()();
+
+  /// Price per unit in ISK.
+  RealColumn get unitPrice => real()();
+
+  /// Quantity of items.
+  IntColumn get quantity => integer()();
+
+  /// Whether this is a buy (true) or sell (false) transaction.
+  BoolColumn get isBuy => boolean()();
+
+  /// Client ID (counterparty character/corporation).
+  IntColumn get clientId => integer()();
+
+  /// When the transaction occurred.
+  DateTimeColumn get date => dateTime()();
+
+  /// Reference to journal entry ID (if applicable).
+  IntColumn get journalRefId => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {transactionId};
+}
+
+/// Loyalty points per corporation.
+///
+/// Tracks LP holdings across different corporations for the character.
+class LoyaltyPoints extends Table {
+  /// Auto-incrementing ID.
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Character ID.
+  IntColumn get characterId =>
+      integer().references(Characters, #characterId)();
+
+  /// Corporation ID offering these loyalty points.
+  IntColumn get corporationId => integer()();
+
+  /// Amount of loyalty points.
+  IntColumn get loyaltyPoints => integer()();
+
+  /// When this data was last updated.
+  DateTimeColumn get lastUpdated => dateTime()();
+}
+
+/// Asset cache for character assets (primarily for PLEX count).
+///
+/// Caches selected assets from the character's inventory.
+/// Used to track PLEX (type_id 44992) without loading full asset list.
+class AssetCache extends Table {
+  /// Item ID (unique asset instance, primary key).
+  IntColumn get itemId => integer()();
+
+  /// Character ID this asset belongs to.
+  IntColumn get characterId =>
+      integer().references(Characters, #characterId)();
+
+  /// Item type ID from EVE SDE.
+  IntColumn get typeId => integer()();
+
+  /// Quantity of this item.
+  IntColumn get quantity => integer()();
+
+  /// Location ID where the asset is stored.
+  IntColumn get locationId => integer()();
+
+  /// When this cache was last updated.
+  DateTimeColumn get lastUpdated => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {itemId};
+}
+
 /// App-wide settings table (singleton pattern).
 ///
 /// Stores application preferences and state. Only one row exists (id = 1).
@@ -270,6 +359,9 @@ class UniverseNames extends Table {
   SkillQueueEntries,
   WalletJournalEntries,
   WalletBalances,
+  WalletTransactions,
+  LoyaltyPoints,
+  AssetCache,
   AppSettingsTable,
   CombatStats,
   CharacterStatuses,
@@ -282,7 +374,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration {
@@ -325,6 +417,13 @@ class AppDatabase extends _$AppDatabase {
         if (from < 7) {
           await m.addColumn(characters, characters.factionId);
           await m.addColumn(characters, characters.securityStatus);
+        }
+
+        // Migration from version 7 to 8: Add wallet enhancement tables.
+        if (from < 8) {
+          await m.createTable(walletTransactions);
+          await m.createTable(loyaltyPoints);
+          await m.createTable(assetCache);
         }
       },
     );
@@ -380,6 +479,15 @@ class AppDatabase extends _$AppDatabase {
             ..where((e) => e.characterId.equals(characterId)))
           .go();
       await (delete(walletBalances)
+            ..where((e) => e.characterId.equals(characterId)))
+          .go();
+      await (delete(walletTransactions)
+            ..where((e) => e.characterId.equals(characterId)))
+          .go();
+      await (delete(loyaltyPoints)
+            ..where((e) => e.characterId.equals(characterId)))
+          .go();
+      await (delete(assetCache)
             ..where((e) => e.characterId.equals(characterId)))
           .go();
       await (delete(combatStats)
@@ -481,6 +589,109 @@ class AppDatabase extends _$AppDatabase {
           ..limit(1))
         .getSingleOrNull();
     return result?.balance;
+  }
+
+  // Wallet transactions operations
+
+  /// Insert wallet transactions (ignores duplicates).
+  Future<void> insertWalletTransactions(
+    List<WalletTransactionsCompanion> transactions,
+  ) async {
+    await batch((b) {
+      b.insertAllOnConflictUpdate(walletTransactions, transactions);
+    });
+  }
+
+  /// Get wallet transactions for a character.
+  Future<List<WalletTransaction>> getWalletTransactions(
+    int characterId, {
+    int limit = 100,
+  }) {
+    return (select(walletTransactions)
+          ..where((t) => t.characterId.equals(characterId))
+          ..orderBy([(t) => OrderingTerm.desc(t.date)])
+          ..limit(limit))
+        .get();
+  }
+
+  /// Watch wallet transactions for reactive updates.
+  Stream<List<WalletTransaction>> watchWalletTransactions(
+    int characterId, {
+    int limit = 100,
+  }) {
+    return (select(walletTransactions)
+          ..where((t) => t.characterId.equals(characterId))
+          ..orderBy([(t) => OrderingTerm.desc(t.date)])
+          ..limit(limit))
+        .watch();
+  }
+
+  // Loyalty points operations
+
+  /// Replace loyalty points for a character.
+  Future<void> replaceLoyaltyPoints(
+    int characterId,
+    List<LoyaltyPointsCompanion> points,
+  ) async {
+    await transaction(() async {
+      await (delete(loyaltyPoints)
+            ..where((lp) => lp.characterId.equals(characterId)))
+          .go();
+      await batch((b) {
+        b.insertAll(loyaltyPoints, points);
+      });
+    });
+  }
+
+  /// Get loyalty points for a character.
+  Future<List<LoyaltyPoint>> getLoyaltyPoints(int characterId) {
+    return (select(loyaltyPoints)
+          ..where((lp) => lp.characterId.equals(characterId)))
+        .get();
+  }
+
+  /// Watch loyalty points for reactive updates.
+  Stream<List<LoyaltyPoint>> watchLoyaltyPoints(int characterId) {
+    return (select(loyaltyPoints)
+          ..where((lp) => lp.characterId.equals(characterId)))
+        .watch();
+  }
+
+  // Asset cache operations
+
+  /// Insert or update assets in cache.
+  Future<void> upsertAssets(List<AssetCacheCompanion> assets) async {
+    await batch((b) {
+      b.insertAllOnConflictUpdate(assetCache, assets);
+    });
+  }
+
+  /// Get assets for a character (optionally filtered by type ID).
+  Future<List<AssetCacheData>> getAssets(
+    int characterId, {
+    int? typeId,
+  }) {
+    final query = select(assetCache)
+      ..where((a) => a.characterId.equals(characterId));
+
+    if (typeId != null) {
+      query.where((a) => a.typeId.equals(typeId));
+    }
+
+    return query.get();
+  }
+
+  /// Get PLEX count for a character (type_id 44992).
+  Future<int> getPlexCount(int characterId) async {
+    final plexAssets = await getAssets(characterId, typeId: 44992);
+    return plexAssets.fold<int>(0, (sum, asset) => sum + asset.quantity);
+  }
+
+  /// Clear asset cache for a character.
+  Future<void> clearAssetCache(int characterId) {
+    return (delete(assetCache)
+          ..where((a) => a.characterId.equals(characterId)))
+        .go();
   }
 
   // App settings operations

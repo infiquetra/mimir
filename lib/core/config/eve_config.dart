@@ -82,10 +82,27 @@ abstract class EveConfig {
     'esi-characters.read_standings.v1', // Faction/corp standings
   ];
 
+  // ==========================================================================
+  // OAuth Scopes (Phase 4 - Enhanced Wallet)
+  // ==========================================================================
+
+  /// OAuth scopes required for enhanced wallet screen.
+  ///
+  /// WARNING: Adding these scopes requires users to re-authenticate.
+  /// Existing tokens will not have these permissions.
+  static const List<String> phase4WalletScopes = [
+    'esi-wallet.read_character_wallet.v1', // Already in phase1, kept for clarity
+    'esi-assets.read_assets.v1', // Character assets (for PLEX count)
+    'esi-characters.read_loyalty.v1', // Loyalty points
+  ];
+
   /// All OAuth scopes as a space-separated string.
-  static String get scopesString =>
-      [...phase1Scopes, ...phase2FleetScopes, ...phase3CharacterScopes]
-          .join(' ');
+  static String get scopesString => [
+        ...phase1Scopes,
+        ...phase2FleetScopes,
+        ...phase3CharacterScopes,
+        ...phase4WalletScopes
+      ].toSet().toList().join(' '); // Use Set to remove duplicates
 
   // ==========================================================================
   // Token Configuration

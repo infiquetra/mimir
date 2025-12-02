@@ -44,6 +44,20 @@ class $CharactersTable extends Characters
   late final GeneratedColumn<String> allianceName = GeneratedColumn<String>(
       'alliance_name', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _factionIdMeta =
+      const VerificationMeta('factionId');
+  @override
+  late final GeneratedColumn<int> factionId = GeneratedColumn<int>(
+      'faction_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _securityStatusMeta =
+      const VerificationMeta('securityStatus');
+  @override
+  late final GeneratedColumn<double> securityStatus = GeneratedColumn<double>(
+      'security_status', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0.0));
   static const VerificationMeta _portraitUrlMeta =
       const VerificationMeta('portraitUrl');
   @override
@@ -92,6 +106,8 @@ class $CharactersTable extends Characters
         corporationName,
         allianceId,
         allianceName,
+        factionId,
+        securityStatus,
         portraitUrl,
         refreshToken,
         accessToken,
@@ -148,6 +164,16 @@ class $CharactersTable extends Characters
           _allianceNameMeta,
           allianceName.isAcceptableOrUnknown(
               data['alliance_name']!, _allianceNameMeta));
+    }
+    if (data.containsKey('faction_id')) {
+      context.handle(_factionIdMeta,
+          factionId.isAcceptableOrUnknown(data['faction_id']!, _factionIdMeta));
+    }
+    if (data.containsKey('security_status')) {
+      context.handle(
+          _securityStatusMeta,
+          securityStatus.isAcceptableOrUnknown(
+              data['security_status']!, _securityStatusMeta));
     }
     if (data.containsKey('portrait_url')) {
       context.handle(
@@ -210,6 +236,10 @@ class $CharactersTable extends Characters
           .read(DriftSqlType.int, data['${effectivePrefix}alliance_id']),
       allianceName: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}alliance_name']),
+      factionId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}faction_id']),
+      securityStatus: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}security_status'])!,
       portraitUrl: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}portrait_url'])!,
       refreshToken: attachedDatabase.typeMapping
@@ -250,6 +280,12 @@ class Character extends DataClass implements Insertable<Character> {
   /// Alliance name (null if not in an alliance).
   final String? allianceName;
 
+  /// Faction ID (null if not in a faction warfare corp).
+  final int? factionId;
+
+  /// Character security status (-10 to +10).
+  final double securityStatus;
+
   /// URL to character portrait image.
   final String portraitUrl;
 
@@ -274,6 +310,8 @@ class Character extends DataClass implements Insertable<Character> {
       required this.corporationName,
       this.allianceId,
       this.allianceName,
+      this.factionId,
+      required this.securityStatus,
       required this.portraitUrl,
       this.refreshToken,
       this.accessToken,
@@ -293,6 +331,10 @@ class Character extends DataClass implements Insertable<Character> {
     if (!nullToAbsent || allianceName != null) {
       map['alliance_name'] = Variable<String>(allianceName);
     }
+    if (!nullToAbsent || factionId != null) {
+      map['faction_id'] = Variable<int>(factionId);
+    }
+    map['security_status'] = Variable<double>(securityStatus);
     map['portrait_url'] = Variable<String>(portraitUrl);
     if (!nullToAbsent || refreshToken != null) {
       map['refresh_token'] = Variable<String>(refreshToken);
@@ -318,6 +360,10 @@ class Character extends DataClass implements Insertable<Character> {
       allianceName: allianceName == null && nullToAbsent
           ? const Value.absent()
           : Value(allianceName),
+      factionId: factionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(factionId),
+      securityStatus: Value(securityStatus),
       portraitUrl: Value(portraitUrl),
       refreshToken: refreshToken == null && nullToAbsent
           ? const Value.absent()
@@ -341,6 +387,8 @@ class Character extends DataClass implements Insertable<Character> {
       corporationName: serializer.fromJson<String>(json['corporationName']),
       allianceId: serializer.fromJson<int?>(json['allianceId']),
       allianceName: serializer.fromJson<String?>(json['allianceName']),
+      factionId: serializer.fromJson<int?>(json['factionId']),
+      securityStatus: serializer.fromJson<double>(json['securityStatus']),
       portraitUrl: serializer.fromJson<String>(json['portraitUrl']),
       refreshToken: serializer.fromJson<String?>(json['refreshToken']),
       accessToken: serializer.fromJson<String?>(json['accessToken']),
@@ -359,6 +407,8 @@ class Character extends DataClass implements Insertable<Character> {
       'corporationName': serializer.toJson<String>(corporationName),
       'allianceId': serializer.toJson<int?>(allianceId),
       'allianceName': serializer.toJson<String?>(allianceName),
+      'factionId': serializer.toJson<int?>(factionId),
+      'securityStatus': serializer.toJson<double>(securityStatus),
       'portraitUrl': serializer.toJson<String>(portraitUrl),
       'refreshToken': serializer.toJson<String?>(refreshToken),
       'accessToken': serializer.toJson<String?>(accessToken),
@@ -375,6 +425,8 @@ class Character extends DataClass implements Insertable<Character> {
           String? corporationName,
           Value<int?> allianceId = const Value.absent(),
           Value<String?> allianceName = const Value.absent(),
+          Value<int?> factionId = const Value.absent(),
+          double? securityStatus,
           String? portraitUrl,
           Value<String?> refreshToken = const Value.absent(),
           Value<String?> accessToken = const Value.absent(),
@@ -389,6 +441,8 @@ class Character extends DataClass implements Insertable<Character> {
         allianceId: allianceId.present ? allianceId.value : this.allianceId,
         allianceName:
             allianceName.present ? allianceName.value : this.allianceName,
+        factionId: factionId.present ? factionId.value : this.factionId,
+        securityStatus: securityStatus ?? this.securityStatus,
         portraitUrl: portraitUrl ?? this.portraitUrl,
         refreshToken:
             refreshToken.present ? refreshToken.value : this.refreshToken,
@@ -413,6 +467,10 @@ class Character extends DataClass implements Insertable<Character> {
       allianceName: data.allianceName.present
           ? data.allianceName.value
           : this.allianceName,
+      factionId: data.factionId.present ? data.factionId.value : this.factionId,
+      securityStatus: data.securityStatus.present
+          ? data.securityStatus.value
+          : this.securityStatus,
       portraitUrl:
           data.portraitUrl.present ? data.portraitUrl.value : this.portraitUrl,
       refreshToken: data.refreshToken.present
@@ -437,6 +495,8 @@ class Character extends DataClass implements Insertable<Character> {
           ..write('corporationName: $corporationName, ')
           ..write('allianceId: $allianceId, ')
           ..write('allianceName: $allianceName, ')
+          ..write('factionId: $factionId, ')
+          ..write('securityStatus: $securityStatus, ')
           ..write('portraitUrl: $portraitUrl, ')
           ..write('refreshToken: $refreshToken, ')
           ..write('accessToken: $accessToken, ')
@@ -455,6 +515,8 @@ class Character extends DataClass implements Insertable<Character> {
       corporationName,
       allianceId,
       allianceName,
+      factionId,
+      securityStatus,
       portraitUrl,
       refreshToken,
       accessToken,
@@ -471,6 +533,8 @@ class Character extends DataClass implements Insertable<Character> {
           other.corporationName == this.corporationName &&
           other.allianceId == this.allianceId &&
           other.allianceName == this.allianceName &&
+          other.factionId == this.factionId &&
+          other.securityStatus == this.securityStatus &&
           other.portraitUrl == this.portraitUrl &&
           other.refreshToken == this.refreshToken &&
           other.accessToken == this.accessToken &&
@@ -486,6 +550,8 @@ class CharactersCompanion extends UpdateCompanion<Character> {
   final Value<String> corporationName;
   final Value<int?> allianceId;
   final Value<String?> allianceName;
+  final Value<int?> factionId;
+  final Value<double> securityStatus;
   final Value<String> portraitUrl;
   final Value<String?> refreshToken;
   final Value<String?> accessToken;
@@ -499,6 +565,8 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     this.corporationName = const Value.absent(),
     this.allianceId = const Value.absent(),
     this.allianceName = const Value.absent(),
+    this.factionId = const Value.absent(),
+    this.securityStatus = const Value.absent(),
     this.portraitUrl = const Value.absent(),
     this.refreshToken = const Value.absent(),
     this.accessToken = const Value.absent(),
@@ -513,6 +581,8 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     required String corporationName,
     this.allianceId = const Value.absent(),
     this.allianceName = const Value.absent(),
+    this.factionId = const Value.absent(),
+    this.securityStatus = const Value.absent(),
     required String portraitUrl,
     this.refreshToken = const Value.absent(),
     this.accessToken = const Value.absent(),
@@ -532,6 +602,8 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     Expression<String>? corporationName,
     Expression<int>? allianceId,
     Expression<String>? allianceName,
+    Expression<int>? factionId,
+    Expression<double>? securityStatus,
     Expression<String>? portraitUrl,
     Expression<String>? refreshToken,
     Expression<String>? accessToken,
@@ -546,6 +618,8 @@ class CharactersCompanion extends UpdateCompanion<Character> {
       if (corporationName != null) 'corporation_name': corporationName,
       if (allianceId != null) 'alliance_id': allianceId,
       if (allianceName != null) 'alliance_name': allianceName,
+      if (factionId != null) 'faction_id': factionId,
+      if (securityStatus != null) 'security_status': securityStatus,
       if (portraitUrl != null) 'portrait_url': portraitUrl,
       if (refreshToken != null) 'refresh_token': refreshToken,
       if (accessToken != null) 'access_token': accessToken,
@@ -562,6 +636,8 @@ class CharactersCompanion extends UpdateCompanion<Character> {
       Value<String>? corporationName,
       Value<int?>? allianceId,
       Value<String?>? allianceName,
+      Value<int?>? factionId,
+      Value<double>? securityStatus,
       Value<String>? portraitUrl,
       Value<String?>? refreshToken,
       Value<String?>? accessToken,
@@ -575,6 +651,8 @@ class CharactersCompanion extends UpdateCompanion<Character> {
       corporationName: corporationName ?? this.corporationName,
       allianceId: allianceId ?? this.allianceId,
       allianceName: allianceName ?? this.allianceName,
+      factionId: factionId ?? this.factionId,
+      securityStatus: securityStatus ?? this.securityStatus,
       portraitUrl: portraitUrl ?? this.portraitUrl,
       refreshToken: refreshToken ?? this.refreshToken,
       accessToken: accessToken ?? this.accessToken,
@@ -604,6 +682,12 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     }
     if (allianceName.present) {
       map['alliance_name'] = Variable<String>(allianceName.value);
+    }
+    if (factionId.present) {
+      map['faction_id'] = Variable<int>(factionId.value);
+    }
+    if (securityStatus.present) {
+      map['security_status'] = Variable<double>(securityStatus.value);
     }
     if (portraitUrl.present) {
       map['portrait_url'] = Variable<String>(portraitUrl.value);
@@ -635,6 +719,8 @@ class CharactersCompanion extends UpdateCompanion<Character> {
           ..write('corporationName: $corporationName, ')
           ..write('allianceId: $allianceId, ')
           ..write('allianceName: $allianceName, ')
+          ..write('factionId: $factionId, ')
+          ..write('securityStatus: $securityStatus, ')
           ..write('portraitUrl: $portraitUrl, ')
           ..write('refreshToken: $refreshToken, ')
           ..write('accessToken: $accessToken, ')
@@ -1966,6 +2052,1220 @@ class WalletBalancesCompanion extends UpdateCompanion<WalletBalance> {
           ..write('characterId: $characterId, ')
           ..write('balance: $balance, ')
           ..write('recordedAt: $recordedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $WalletTransactionsTable extends WalletTransactions
+    with TableInfo<$WalletTransactionsTable, WalletTransaction> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WalletTransactionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _transactionIdMeta =
+      const VerificationMeta('transactionId');
+  @override
+  late final GeneratedColumn<int> transactionId = GeneratedColumn<int>(
+      'transaction_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _characterIdMeta =
+      const VerificationMeta('characterId');
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+      'character_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES characters (character_id)'));
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+      'type_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _locationIdMeta =
+      const VerificationMeta('locationId');
+  @override
+  late final GeneratedColumn<int> locationId = GeneratedColumn<int>(
+      'location_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _unitPriceMeta =
+      const VerificationMeta('unitPrice');
+  @override
+  late final GeneratedColumn<double> unitPrice = GeneratedColumn<double>(
+      'unit_price', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _quantityMeta =
+      const VerificationMeta('quantity');
+  @override
+  late final GeneratedColumn<int> quantity = GeneratedColumn<int>(
+      'quantity', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _isBuyMeta = const VerificationMeta('isBuy');
+  @override
+  late final GeneratedColumn<bool> isBuy = GeneratedColumn<bool>(
+      'is_buy', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_buy" IN (0, 1))'));
+  static const VerificationMeta _clientIdMeta =
+      const VerificationMeta('clientId');
+  @override
+  late final GeneratedColumn<int> clientId = GeneratedColumn<int>(
+      'client_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
+      'date', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _journalRefIdMeta =
+      const VerificationMeta('journalRefId');
+  @override
+  late final GeneratedColumn<int> journalRefId = GeneratedColumn<int>(
+      'journal_ref_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        transactionId,
+        characterId,
+        typeId,
+        locationId,
+        unitPrice,
+        quantity,
+        isBuy,
+        clientId,
+        date,
+        journalRefId
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'wallet_transactions';
+  @override
+  VerificationContext validateIntegrity(Insertable<WalletTransaction> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('transaction_id')) {
+      context.handle(
+          _transactionIdMeta,
+          transactionId.isAcceptableOrUnknown(
+              data['transaction_id']!, _transactionIdMeta));
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+          _characterIdMeta,
+          characterId.isAcceptableOrUnknown(
+              data['character_id']!, _characterIdMeta));
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('type_id')) {
+      context.handle(_typeIdMeta,
+          typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta));
+    } else if (isInserting) {
+      context.missing(_typeIdMeta);
+    }
+    if (data.containsKey('location_id')) {
+      context.handle(
+          _locationIdMeta,
+          locationId.isAcceptableOrUnknown(
+              data['location_id']!, _locationIdMeta));
+    } else if (isInserting) {
+      context.missing(_locationIdMeta);
+    }
+    if (data.containsKey('unit_price')) {
+      context.handle(_unitPriceMeta,
+          unitPrice.isAcceptableOrUnknown(data['unit_price']!, _unitPriceMeta));
+    } else if (isInserting) {
+      context.missing(_unitPriceMeta);
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(_quantityMeta,
+          quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta));
+    } else if (isInserting) {
+      context.missing(_quantityMeta);
+    }
+    if (data.containsKey('is_buy')) {
+      context.handle(
+          _isBuyMeta, isBuy.isAcceptableOrUnknown(data['is_buy']!, _isBuyMeta));
+    } else if (isInserting) {
+      context.missing(_isBuyMeta);
+    }
+    if (data.containsKey('client_id')) {
+      context.handle(_clientIdMeta,
+          clientId.isAcceptableOrUnknown(data['client_id']!, _clientIdMeta));
+    } else if (isInserting) {
+      context.missing(_clientIdMeta);
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+          _dateMeta, date.isAcceptableOrUnknown(data['date']!, _dateMeta));
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('journal_ref_id')) {
+      context.handle(
+          _journalRefIdMeta,
+          journalRefId.isAcceptableOrUnknown(
+              data['journal_ref_id']!, _journalRefIdMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {transactionId};
+  @override
+  WalletTransaction map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WalletTransaction(
+      transactionId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}transaction_id'])!,
+      characterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}character_id'])!,
+      typeId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}type_id'])!,
+      locationId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}location_id'])!,
+      unitPrice: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}unit_price'])!,
+      quantity: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}quantity'])!,
+      isBuy: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_buy'])!,
+      clientId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}client_id'])!,
+      date: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}date'])!,
+      journalRefId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}journal_ref_id']),
+    );
+  }
+
+  @override
+  $WalletTransactionsTable createAlias(String alias) {
+    return $WalletTransactionsTable(attachedDatabase, alias);
+  }
+}
+
+class WalletTransaction extends DataClass
+    implements Insertable<WalletTransaction> {
+  /// Transaction ID (primary key).
+  final int transactionId;
+
+  /// Character ID this transaction belongs to.
+  final int characterId;
+
+  /// Item type ID from EVE SDE.
+  final int typeId;
+
+  /// Location ID (station or structure).
+  final int locationId;
+
+  /// Price per unit in ISK.
+  final double unitPrice;
+
+  /// Quantity of items.
+  final int quantity;
+
+  /// Whether this is a buy (true) or sell (false) transaction.
+  final bool isBuy;
+
+  /// Client ID (counterparty character/corporation).
+  final int clientId;
+
+  /// When the transaction occurred.
+  final DateTime date;
+
+  /// Reference to journal entry ID (if applicable).
+  final int? journalRefId;
+  const WalletTransaction(
+      {required this.transactionId,
+      required this.characterId,
+      required this.typeId,
+      required this.locationId,
+      required this.unitPrice,
+      required this.quantity,
+      required this.isBuy,
+      required this.clientId,
+      required this.date,
+      this.journalRefId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['transaction_id'] = Variable<int>(transactionId);
+    map['character_id'] = Variable<int>(characterId);
+    map['type_id'] = Variable<int>(typeId);
+    map['location_id'] = Variable<int>(locationId);
+    map['unit_price'] = Variable<double>(unitPrice);
+    map['quantity'] = Variable<int>(quantity);
+    map['is_buy'] = Variable<bool>(isBuy);
+    map['client_id'] = Variable<int>(clientId);
+    map['date'] = Variable<DateTime>(date);
+    if (!nullToAbsent || journalRefId != null) {
+      map['journal_ref_id'] = Variable<int>(journalRefId);
+    }
+    return map;
+  }
+
+  WalletTransactionsCompanion toCompanion(bool nullToAbsent) {
+    return WalletTransactionsCompanion(
+      transactionId: Value(transactionId),
+      characterId: Value(characterId),
+      typeId: Value(typeId),
+      locationId: Value(locationId),
+      unitPrice: Value(unitPrice),
+      quantity: Value(quantity),
+      isBuy: Value(isBuy),
+      clientId: Value(clientId),
+      date: Value(date),
+      journalRefId: journalRefId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(journalRefId),
+    );
+  }
+
+  factory WalletTransaction.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WalletTransaction(
+      transactionId: serializer.fromJson<int>(json['transactionId']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      typeId: serializer.fromJson<int>(json['typeId']),
+      locationId: serializer.fromJson<int>(json['locationId']),
+      unitPrice: serializer.fromJson<double>(json['unitPrice']),
+      quantity: serializer.fromJson<int>(json['quantity']),
+      isBuy: serializer.fromJson<bool>(json['isBuy']),
+      clientId: serializer.fromJson<int>(json['clientId']),
+      date: serializer.fromJson<DateTime>(json['date']),
+      journalRefId: serializer.fromJson<int?>(json['journalRefId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'transactionId': serializer.toJson<int>(transactionId),
+      'characterId': serializer.toJson<int>(characterId),
+      'typeId': serializer.toJson<int>(typeId),
+      'locationId': serializer.toJson<int>(locationId),
+      'unitPrice': serializer.toJson<double>(unitPrice),
+      'quantity': serializer.toJson<int>(quantity),
+      'isBuy': serializer.toJson<bool>(isBuy),
+      'clientId': serializer.toJson<int>(clientId),
+      'date': serializer.toJson<DateTime>(date),
+      'journalRefId': serializer.toJson<int?>(journalRefId),
+    };
+  }
+
+  WalletTransaction copyWith(
+          {int? transactionId,
+          int? characterId,
+          int? typeId,
+          int? locationId,
+          double? unitPrice,
+          int? quantity,
+          bool? isBuy,
+          int? clientId,
+          DateTime? date,
+          Value<int?> journalRefId = const Value.absent()}) =>
+      WalletTransaction(
+        transactionId: transactionId ?? this.transactionId,
+        characterId: characterId ?? this.characterId,
+        typeId: typeId ?? this.typeId,
+        locationId: locationId ?? this.locationId,
+        unitPrice: unitPrice ?? this.unitPrice,
+        quantity: quantity ?? this.quantity,
+        isBuy: isBuy ?? this.isBuy,
+        clientId: clientId ?? this.clientId,
+        date: date ?? this.date,
+        journalRefId:
+            journalRefId.present ? journalRefId.value : this.journalRefId,
+      );
+  WalletTransaction copyWithCompanion(WalletTransactionsCompanion data) {
+    return WalletTransaction(
+      transactionId: data.transactionId.present
+          ? data.transactionId.value
+          : this.transactionId,
+      characterId:
+          data.characterId.present ? data.characterId.value : this.characterId,
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      locationId:
+          data.locationId.present ? data.locationId.value : this.locationId,
+      unitPrice: data.unitPrice.present ? data.unitPrice.value : this.unitPrice,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      isBuy: data.isBuy.present ? data.isBuy.value : this.isBuy,
+      clientId: data.clientId.present ? data.clientId.value : this.clientId,
+      date: data.date.present ? data.date.value : this.date,
+      journalRefId: data.journalRefId.present
+          ? data.journalRefId.value
+          : this.journalRefId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WalletTransaction(')
+          ..write('transactionId: $transactionId, ')
+          ..write('characterId: $characterId, ')
+          ..write('typeId: $typeId, ')
+          ..write('locationId: $locationId, ')
+          ..write('unitPrice: $unitPrice, ')
+          ..write('quantity: $quantity, ')
+          ..write('isBuy: $isBuy, ')
+          ..write('clientId: $clientId, ')
+          ..write('date: $date, ')
+          ..write('journalRefId: $journalRefId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(transactionId, characterId, typeId,
+      locationId, unitPrice, quantity, isBuy, clientId, date, journalRefId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WalletTransaction &&
+          other.transactionId == this.transactionId &&
+          other.characterId == this.characterId &&
+          other.typeId == this.typeId &&
+          other.locationId == this.locationId &&
+          other.unitPrice == this.unitPrice &&
+          other.quantity == this.quantity &&
+          other.isBuy == this.isBuy &&
+          other.clientId == this.clientId &&
+          other.date == this.date &&
+          other.journalRefId == this.journalRefId);
+}
+
+class WalletTransactionsCompanion extends UpdateCompanion<WalletTransaction> {
+  final Value<int> transactionId;
+  final Value<int> characterId;
+  final Value<int> typeId;
+  final Value<int> locationId;
+  final Value<double> unitPrice;
+  final Value<int> quantity;
+  final Value<bool> isBuy;
+  final Value<int> clientId;
+  final Value<DateTime> date;
+  final Value<int?> journalRefId;
+  const WalletTransactionsCompanion({
+    this.transactionId = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.typeId = const Value.absent(),
+    this.locationId = const Value.absent(),
+    this.unitPrice = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.isBuy = const Value.absent(),
+    this.clientId = const Value.absent(),
+    this.date = const Value.absent(),
+    this.journalRefId = const Value.absent(),
+  });
+  WalletTransactionsCompanion.insert({
+    this.transactionId = const Value.absent(),
+    required int characterId,
+    required int typeId,
+    required int locationId,
+    required double unitPrice,
+    required int quantity,
+    required bool isBuy,
+    required int clientId,
+    required DateTime date,
+    this.journalRefId = const Value.absent(),
+  })  : characterId = Value(characterId),
+        typeId = Value(typeId),
+        locationId = Value(locationId),
+        unitPrice = Value(unitPrice),
+        quantity = Value(quantity),
+        isBuy = Value(isBuy),
+        clientId = Value(clientId),
+        date = Value(date);
+  static Insertable<WalletTransaction> custom({
+    Expression<int>? transactionId,
+    Expression<int>? characterId,
+    Expression<int>? typeId,
+    Expression<int>? locationId,
+    Expression<double>? unitPrice,
+    Expression<int>? quantity,
+    Expression<bool>? isBuy,
+    Expression<int>? clientId,
+    Expression<DateTime>? date,
+    Expression<int>? journalRefId,
+  }) {
+    return RawValuesInsertable({
+      if (transactionId != null) 'transaction_id': transactionId,
+      if (characterId != null) 'character_id': characterId,
+      if (typeId != null) 'type_id': typeId,
+      if (locationId != null) 'location_id': locationId,
+      if (unitPrice != null) 'unit_price': unitPrice,
+      if (quantity != null) 'quantity': quantity,
+      if (isBuy != null) 'is_buy': isBuy,
+      if (clientId != null) 'client_id': clientId,
+      if (date != null) 'date': date,
+      if (journalRefId != null) 'journal_ref_id': journalRefId,
+    });
+  }
+
+  WalletTransactionsCompanion copyWith(
+      {Value<int>? transactionId,
+      Value<int>? characterId,
+      Value<int>? typeId,
+      Value<int>? locationId,
+      Value<double>? unitPrice,
+      Value<int>? quantity,
+      Value<bool>? isBuy,
+      Value<int>? clientId,
+      Value<DateTime>? date,
+      Value<int?>? journalRefId}) {
+    return WalletTransactionsCompanion(
+      transactionId: transactionId ?? this.transactionId,
+      characterId: characterId ?? this.characterId,
+      typeId: typeId ?? this.typeId,
+      locationId: locationId ?? this.locationId,
+      unitPrice: unitPrice ?? this.unitPrice,
+      quantity: quantity ?? this.quantity,
+      isBuy: isBuy ?? this.isBuy,
+      clientId: clientId ?? this.clientId,
+      date: date ?? this.date,
+      journalRefId: journalRefId ?? this.journalRefId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (transactionId.present) {
+      map['transaction_id'] = Variable<int>(transactionId.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (locationId.present) {
+      map['location_id'] = Variable<int>(locationId.value);
+    }
+    if (unitPrice.present) {
+      map['unit_price'] = Variable<double>(unitPrice.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<int>(quantity.value);
+    }
+    if (isBuy.present) {
+      map['is_buy'] = Variable<bool>(isBuy.value);
+    }
+    if (clientId.present) {
+      map['client_id'] = Variable<int>(clientId.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<DateTime>(date.value);
+    }
+    if (journalRefId.present) {
+      map['journal_ref_id'] = Variable<int>(journalRefId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WalletTransactionsCompanion(')
+          ..write('transactionId: $transactionId, ')
+          ..write('characterId: $characterId, ')
+          ..write('typeId: $typeId, ')
+          ..write('locationId: $locationId, ')
+          ..write('unitPrice: $unitPrice, ')
+          ..write('quantity: $quantity, ')
+          ..write('isBuy: $isBuy, ')
+          ..write('clientId: $clientId, ')
+          ..write('date: $date, ')
+          ..write('journalRefId: $journalRefId')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LoyaltyPointsTable extends LoyaltyPoints
+    with TableInfo<$LoyaltyPointsTable, LoyaltyPoint> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LoyaltyPointsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _characterIdMeta =
+      const VerificationMeta('characterId');
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+      'character_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES characters (character_id)'));
+  static const VerificationMeta _corporationIdMeta =
+      const VerificationMeta('corporationId');
+  @override
+  late final GeneratedColumn<int> corporationId = GeneratedColumn<int>(
+      'corporation_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _loyaltyPointsMeta =
+      const VerificationMeta('loyaltyPoints');
+  @override
+  late final GeneratedColumn<int> loyaltyPoints = GeneratedColumn<int>(
+      'loyalty_points', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _lastUpdatedMeta =
+      const VerificationMeta('lastUpdated');
+  @override
+  late final GeneratedColumn<DateTime> lastUpdated = GeneratedColumn<DateTime>(
+      'last_updated', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, characterId, corporationId, loyaltyPoints, lastUpdated];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'loyalty_points';
+  @override
+  VerificationContext validateIntegrity(Insertable<LoyaltyPoint> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+          _characterIdMeta,
+          characterId.isAcceptableOrUnknown(
+              data['character_id']!, _characterIdMeta));
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('corporation_id')) {
+      context.handle(
+          _corporationIdMeta,
+          corporationId.isAcceptableOrUnknown(
+              data['corporation_id']!, _corporationIdMeta));
+    } else if (isInserting) {
+      context.missing(_corporationIdMeta);
+    }
+    if (data.containsKey('loyalty_points')) {
+      context.handle(
+          _loyaltyPointsMeta,
+          loyaltyPoints.isAcceptableOrUnknown(
+              data['loyalty_points']!, _loyaltyPointsMeta));
+    } else if (isInserting) {
+      context.missing(_loyaltyPointsMeta);
+    }
+    if (data.containsKey('last_updated')) {
+      context.handle(
+          _lastUpdatedMeta,
+          lastUpdated.isAcceptableOrUnknown(
+              data['last_updated']!, _lastUpdatedMeta));
+    } else if (isInserting) {
+      context.missing(_lastUpdatedMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LoyaltyPoint map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LoyaltyPoint(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      characterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}character_id'])!,
+      corporationId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}corporation_id'])!,
+      loyaltyPoints: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}loyalty_points'])!,
+      lastUpdated: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}last_updated'])!,
+    );
+  }
+
+  @override
+  $LoyaltyPointsTable createAlias(String alias) {
+    return $LoyaltyPointsTable(attachedDatabase, alias);
+  }
+}
+
+class LoyaltyPoint extends DataClass implements Insertable<LoyaltyPoint> {
+  /// Auto-incrementing ID.
+  final int id;
+
+  /// Character ID.
+  final int characterId;
+
+  /// Corporation ID offering these loyalty points.
+  final int corporationId;
+
+  /// Amount of loyalty points.
+  final int loyaltyPoints;
+
+  /// When this data was last updated.
+  final DateTime lastUpdated;
+  const LoyaltyPoint(
+      {required this.id,
+      required this.characterId,
+      required this.corporationId,
+      required this.loyaltyPoints,
+      required this.lastUpdated});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['character_id'] = Variable<int>(characterId);
+    map['corporation_id'] = Variable<int>(corporationId);
+    map['loyalty_points'] = Variable<int>(loyaltyPoints);
+    map['last_updated'] = Variable<DateTime>(lastUpdated);
+    return map;
+  }
+
+  LoyaltyPointsCompanion toCompanion(bool nullToAbsent) {
+    return LoyaltyPointsCompanion(
+      id: Value(id),
+      characterId: Value(characterId),
+      corporationId: Value(corporationId),
+      loyaltyPoints: Value(loyaltyPoints),
+      lastUpdated: Value(lastUpdated),
+    );
+  }
+
+  factory LoyaltyPoint.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LoyaltyPoint(
+      id: serializer.fromJson<int>(json['id']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      corporationId: serializer.fromJson<int>(json['corporationId']),
+      loyaltyPoints: serializer.fromJson<int>(json['loyaltyPoints']),
+      lastUpdated: serializer.fromJson<DateTime>(json['lastUpdated']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'characterId': serializer.toJson<int>(characterId),
+      'corporationId': serializer.toJson<int>(corporationId),
+      'loyaltyPoints': serializer.toJson<int>(loyaltyPoints),
+      'lastUpdated': serializer.toJson<DateTime>(lastUpdated),
+    };
+  }
+
+  LoyaltyPoint copyWith(
+          {int? id,
+          int? characterId,
+          int? corporationId,
+          int? loyaltyPoints,
+          DateTime? lastUpdated}) =>
+      LoyaltyPoint(
+        id: id ?? this.id,
+        characterId: characterId ?? this.characterId,
+        corporationId: corporationId ?? this.corporationId,
+        loyaltyPoints: loyaltyPoints ?? this.loyaltyPoints,
+        lastUpdated: lastUpdated ?? this.lastUpdated,
+      );
+  LoyaltyPoint copyWithCompanion(LoyaltyPointsCompanion data) {
+    return LoyaltyPoint(
+      id: data.id.present ? data.id.value : this.id,
+      characterId:
+          data.characterId.present ? data.characterId.value : this.characterId,
+      corporationId: data.corporationId.present
+          ? data.corporationId.value
+          : this.corporationId,
+      loyaltyPoints: data.loyaltyPoints.present
+          ? data.loyaltyPoints.value
+          : this.loyaltyPoints,
+      lastUpdated:
+          data.lastUpdated.present ? data.lastUpdated.value : this.lastUpdated,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LoyaltyPoint(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('corporationId: $corporationId, ')
+          ..write('loyaltyPoints: $loyaltyPoints, ')
+          ..write('lastUpdated: $lastUpdated')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, characterId, corporationId, loyaltyPoints, lastUpdated);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LoyaltyPoint &&
+          other.id == this.id &&
+          other.characterId == this.characterId &&
+          other.corporationId == this.corporationId &&
+          other.loyaltyPoints == this.loyaltyPoints &&
+          other.lastUpdated == this.lastUpdated);
+}
+
+class LoyaltyPointsCompanion extends UpdateCompanion<LoyaltyPoint> {
+  final Value<int> id;
+  final Value<int> characterId;
+  final Value<int> corporationId;
+  final Value<int> loyaltyPoints;
+  final Value<DateTime> lastUpdated;
+  const LoyaltyPointsCompanion({
+    this.id = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.corporationId = const Value.absent(),
+    this.loyaltyPoints = const Value.absent(),
+    this.lastUpdated = const Value.absent(),
+  });
+  LoyaltyPointsCompanion.insert({
+    this.id = const Value.absent(),
+    required int characterId,
+    required int corporationId,
+    required int loyaltyPoints,
+    required DateTime lastUpdated,
+  })  : characterId = Value(characterId),
+        corporationId = Value(corporationId),
+        loyaltyPoints = Value(loyaltyPoints),
+        lastUpdated = Value(lastUpdated);
+  static Insertable<LoyaltyPoint> custom({
+    Expression<int>? id,
+    Expression<int>? characterId,
+    Expression<int>? corporationId,
+    Expression<int>? loyaltyPoints,
+    Expression<DateTime>? lastUpdated,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (characterId != null) 'character_id': characterId,
+      if (corporationId != null) 'corporation_id': corporationId,
+      if (loyaltyPoints != null) 'loyalty_points': loyaltyPoints,
+      if (lastUpdated != null) 'last_updated': lastUpdated,
+    });
+  }
+
+  LoyaltyPointsCompanion copyWith(
+      {Value<int>? id,
+      Value<int>? characterId,
+      Value<int>? corporationId,
+      Value<int>? loyaltyPoints,
+      Value<DateTime>? lastUpdated}) {
+    return LoyaltyPointsCompanion(
+      id: id ?? this.id,
+      characterId: characterId ?? this.characterId,
+      corporationId: corporationId ?? this.corporationId,
+      loyaltyPoints: loyaltyPoints ?? this.loyaltyPoints,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (corporationId.present) {
+      map['corporation_id'] = Variable<int>(corporationId.value);
+    }
+    if (loyaltyPoints.present) {
+      map['loyalty_points'] = Variable<int>(loyaltyPoints.value);
+    }
+    if (lastUpdated.present) {
+      map['last_updated'] = Variable<DateTime>(lastUpdated.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LoyaltyPointsCompanion(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('corporationId: $corporationId, ')
+          ..write('loyaltyPoints: $loyaltyPoints, ')
+          ..write('lastUpdated: $lastUpdated')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $AssetCacheTable extends AssetCache
+    with TableInfo<$AssetCacheTable, AssetCacheData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AssetCacheTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _itemIdMeta = const VerificationMeta('itemId');
+  @override
+  late final GeneratedColumn<int> itemId = GeneratedColumn<int>(
+      'item_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _characterIdMeta =
+      const VerificationMeta('characterId');
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+      'character_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES characters (character_id)'));
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+      'type_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _quantityMeta =
+      const VerificationMeta('quantity');
+  @override
+  late final GeneratedColumn<int> quantity = GeneratedColumn<int>(
+      'quantity', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _locationIdMeta =
+      const VerificationMeta('locationId');
+  @override
+  late final GeneratedColumn<int> locationId = GeneratedColumn<int>(
+      'location_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _lastUpdatedMeta =
+      const VerificationMeta('lastUpdated');
+  @override
+  late final GeneratedColumn<DateTime> lastUpdated = GeneratedColumn<DateTime>(
+      'last_updated', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [itemId, characterId, typeId, quantity, locationId, lastUpdated];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'asset_cache';
+  @override
+  VerificationContext validateIntegrity(Insertable<AssetCacheData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('item_id')) {
+      context.handle(_itemIdMeta,
+          itemId.isAcceptableOrUnknown(data['item_id']!, _itemIdMeta));
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+          _characterIdMeta,
+          characterId.isAcceptableOrUnknown(
+              data['character_id']!, _characterIdMeta));
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('type_id')) {
+      context.handle(_typeIdMeta,
+          typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta));
+    } else if (isInserting) {
+      context.missing(_typeIdMeta);
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(_quantityMeta,
+          quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta));
+    } else if (isInserting) {
+      context.missing(_quantityMeta);
+    }
+    if (data.containsKey('location_id')) {
+      context.handle(
+          _locationIdMeta,
+          locationId.isAcceptableOrUnknown(
+              data['location_id']!, _locationIdMeta));
+    } else if (isInserting) {
+      context.missing(_locationIdMeta);
+    }
+    if (data.containsKey('last_updated')) {
+      context.handle(
+          _lastUpdatedMeta,
+          lastUpdated.isAcceptableOrUnknown(
+              data['last_updated']!, _lastUpdatedMeta));
+    } else if (isInserting) {
+      context.missing(_lastUpdatedMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {itemId};
+  @override
+  AssetCacheData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AssetCacheData(
+      itemId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}item_id'])!,
+      characterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}character_id'])!,
+      typeId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}type_id'])!,
+      quantity: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}quantity'])!,
+      locationId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}location_id'])!,
+      lastUpdated: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}last_updated'])!,
+    );
+  }
+
+  @override
+  $AssetCacheTable createAlias(String alias) {
+    return $AssetCacheTable(attachedDatabase, alias);
+  }
+}
+
+class AssetCacheData extends DataClass implements Insertable<AssetCacheData> {
+  /// Item ID (unique asset instance, primary key).
+  final int itemId;
+
+  /// Character ID this asset belongs to.
+  final int characterId;
+
+  /// Item type ID from EVE SDE.
+  final int typeId;
+
+  /// Quantity of this item.
+  final int quantity;
+
+  /// Location ID where the asset is stored.
+  final int locationId;
+
+  /// When this cache was last updated.
+  final DateTime lastUpdated;
+  const AssetCacheData(
+      {required this.itemId,
+      required this.characterId,
+      required this.typeId,
+      required this.quantity,
+      required this.locationId,
+      required this.lastUpdated});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['item_id'] = Variable<int>(itemId);
+    map['character_id'] = Variable<int>(characterId);
+    map['type_id'] = Variable<int>(typeId);
+    map['quantity'] = Variable<int>(quantity);
+    map['location_id'] = Variable<int>(locationId);
+    map['last_updated'] = Variable<DateTime>(lastUpdated);
+    return map;
+  }
+
+  AssetCacheCompanion toCompanion(bool nullToAbsent) {
+    return AssetCacheCompanion(
+      itemId: Value(itemId),
+      characterId: Value(characterId),
+      typeId: Value(typeId),
+      quantity: Value(quantity),
+      locationId: Value(locationId),
+      lastUpdated: Value(lastUpdated),
+    );
+  }
+
+  factory AssetCacheData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AssetCacheData(
+      itemId: serializer.fromJson<int>(json['itemId']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      typeId: serializer.fromJson<int>(json['typeId']),
+      quantity: serializer.fromJson<int>(json['quantity']),
+      locationId: serializer.fromJson<int>(json['locationId']),
+      lastUpdated: serializer.fromJson<DateTime>(json['lastUpdated']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'itemId': serializer.toJson<int>(itemId),
+      'characterId': serializer.toJson<int>(characterId),
+      'typeId': serializer.toJson<int>(typeId),
+      'quantity': serializer.toJson<int>(quantity),
+      'locationId': serializer.toJson<int>(locationId),
+      'lastUpdated': serializer.toJson<DateTime>(lastUpdated),
+    };
+  }
+
+  AssetCacheData copyWith(
+          {int? itemId,
+          int? characterId,
+          int? typeId,
+          int? quantity,
+          int? locationId,
+          DateTime? lastUpdated}) =>
+      AssetCacheData(
+        itemId: itemId ?? this.itemId,
+        characterId: characterId ?? this.characterId,
+        typeId: typeId ?? this.typeId,
+        quantity: quantity ?? this.quantity,
+        locationId: locationId ?? this.locationId,
+        lastUpdated: lastUpdated ?? this.lastUpdated,
+      );
+  AssetCacheData copyWithCompanion(AssetCacheCompanion data) {
+    return AssetCacheData(
+      itemId: data.itemId.present ? data.itemId.value : this.itemId,
+      characterId:
+          data.characterId.present ? data.characterId.value : this.characterId,
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      locationId:
+          data.locationId.present ? data.locationId.value : this.locationId,
+      lastUpdated:
+          data.lastUpdated.present ? data.lastUpdated.value : this.lastUpdated,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetCacheData(')
+          ..write('itemId: $itemId, ')
+          ..write('characterId: $characterId, ')
+          ..write('typeId: $typeId, ')
+          ..write('quantity: $quantity, ')
+          ..write('locationId: $locationId, ')
+          ..write('lastUpdated: $lastUpdated')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      itemId, characterId, typeId, quantity, locationId, lastUpdated);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AssetCacheData &&
+          other.itemId == this.itemId &&
+          other.characterId == this.characterId &&
+          other.typeId == this.typeId &&
+          other.quantity == this.quantity &&
+          other.locationId == this.locationId &&
+          other.lastUpdated == this.lastUpdated);
+}
+
+class AssetCacheCompanion extends UpdateCompanion<AssetCacheData> {
+  final Value<int> itemId;
+  final Value<int> characterId;
+  final Value<int> typeId;
+  final Value<int> quantity;
+  final Value<int> locationId;
+  final Value<DateTime> lastUpdated;
+  const AssetCacheCompanion({
+    this.itemId = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.typeId = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.locationId = const Value.absent(),
+    this.lastUpdated = const Value.absent(),
+  });
+  AssetCacheCompanion.insert({
+    this.itemId = const Value.absent(),
+    required int characterId,
+    required int typeId,
+    required int quantity,
+    required int locationId,
+    required DateTime lastUpdated,
+  })  : characterId = Value(characterId),
+        typeId = Value(typeId),
+        quantity = Value(quantity),
+        locationId = Value(locationId),
+        lastUpdated = Value(lastUpdated);
+  static Insertable<AssetCacheData> custom({
+    Expression<int>? itemId,
+    Expression<int>? characterId,
+    Expression<int>? typeId,
+    Expression<int>? quantity,
+    Expression<int>? locationId,
+    Expression<DateTime>? lastUpdated,
+  }) {
+    return RawValuesInsertable({
+      if (itemId != null) 'item_id': itemId,
+      if (characterId != null) 'character_id': characterId,
+      if (typeId != null) 'type_id': typeId,
+      if (quantity != null) 'quantity': quantity,
+      if (locationId != null) 'location_id': locationId,
+      if (lastUpdated != null) 'last_updated': lastUpdated,
+    });
+  }
+
+  AssetCacheCompanion copyWith(
+      {Value<int>? itemId,
+      Value<int>? characterId,
+      Value<int>? typeId,
+      Value<int>? quantity,
+      Value<int>? locationId,
+      Value<DateTime>? lastUpdated}) {
+    return AssetCacheCompanion(
+      itemId: itemId ?? this.itemId,
+      characterId: characterId ?? this.characterId,
+      typeId: typeId ?? this.typeId,
+      quantity: quantity ?? this.quantity,
+      locationId: locationId ?? this.locationId,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (itemId.present) {
+      map['item_id'] = Variable<int>(itemId.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<int>(quantity.value);
+    }
+    if (locationId.present) {
+      map['location_id'] = Variable<int>(locationId.value);
+    }
+    if (lastUpdated.present) {
+      map['last_updated'] = Variable<DateTime>(lastUpdated.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetCacheCompanion(')
+          ..write('itemId: $itemId, ')
+          ..write('characterId: $characterId, ')
+          ..write('typeId: $typeId, ')
+          ..write('quantity: $quantity, ')
+          ..write('locationId: $locationId, ')
+          ..write('lastUpdated: $lastUpdated')
           ..write(')'))
         .toString();
   }
@@ -3400,6 +4700,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $WalletJournalEntriesTable walletJournalEntries =
       $WalletJournalEntriesTable(this);
   late final $WalletBalancesTable walletBalances = $WalletBalancesTable(this);
+  late final $WalletTransactionsTable walletTransactions =
+      $WalletTransactionsTable(this);
+  late final $LoyaltyPointsTable loyaltyPoints = $LoyaltyPointsTable(this);
+  late final $AssetCacheTable assetCache = $AssetCacheTable(this);
   late final $AppSettingsTableTable appSettingsTable =
       $AppSettingsTableTable(this);
   late final $CombatStatsTable combatStats = $CombatStatsTable(this);
@@ -3415,6 +4719,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         skillQueueEntries,
         walletJournalEntries,
         walletBalances,
+        walletTransactions,
+        loyaltyPoints,
+        assetCache,
         appSettingsTable,
         combatStats,
         characterStatuses,
@@ -3429,6 +4736,8 @@ typedef $$CharactersTableCreateCompanionBuilder = CharactersCompanion Function({
   required String corporationName,
   Value<int?> allianceId,
   Value<String?> allianceName,
+  Value<int?> factionId,
+  Value<double> securityStatus,
   required String portraitUrl,
   Value<String?> refreshToken,
   Value<String?> accessToken,
@@ -3443,6 +4752,8 @@ typedef $$CharactersTableUpdateCompanionBuilder = CharactersCompanion Function({
   Value<String> corporationName,
   Value<int?> allianceId,
   Value<String?> allianceName,
+  Value<int?> factionId,
+  Value<double> securityStatus,
   Value<String> portraitUrl,
   Value<String?> refreshToken,
   Value<String?> accessToken,
@@ -3509,6 +4820,56 @@ final class $$CharactersTableReferences
         manager.$state.copyWith(prefetchedData: cache));
   }
 
+  static MultiTypedResultKey<$WalletTransactionsTable, List<WalletTransaction>>
+      _walletTransactionsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.walletTransactions,
+              aliasName: $_aliasNameGenerator(db.characters.characterId,
+                  db.walletTransactions.characterId));
+
+  $$WalletTransactionsTableProcessedTableManager get walletTransactionsRefs {
+    final manager =
+        $$WalletTransactionsTableTableManager($_db, $_db.walletTransactions)
+            .filter((f) => f.characterId.characterId
+                .sqlEquals($_itemColumn<int>('character_id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_walletTransactionsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$LoyaltyPointsTable, List<LoyaltyPoint>>
+      _loyaltyPointsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.loyaltyPoints,
+              aliasName: $_aliasNameGenerator(
+                  db.characters.characterId, db.loyaltyPoints.characterId));
+
+  $$LoyaltyPointsTableProcessedTableManager get loyaltyPointsRefs {
+    final manager = $$LoyaltyPointsTableTableManager($_db, $_db.loyaltyPoints)
+        .filter((f) => f.characterId.characterId
+            .sqlEquals($_itemColumn<int>('character_id')!));
+
+    final cache = $_typedResult.readTableOrNull(_loyaltyPointsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$AssetCacheTable, List<AssetCacheData>>
+      _assetCacheRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.assetCache,
+              aliasName: $_aliasNameGenerator(
+                  db.characters.characterId, db.assetCache.characterId));
+
+  $$AssetCacheTableProcessedTableManager get assetCacheRefs {
+    final manager = $$AssetCacheTableTableManager($_db, $_db.assetCache).filter(
+        (f) => f.characterId.characterId
+            .sqlEquals($_itemColumn<int>('character_id')!));
+
+    final cache = $_typedResult.readTableOrNull(_assetCacheRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
   static MultiTypedResultKey<$CombatStatsTable, List<CombatStat>>
       _combatStatsRefsTable(_$AppDatabase db) =>
           MultiTypedResultKey.fromTable(db.combatStats,
@@ -3571,6 +4932,13 @@ class $$CharactersTableFilterComposer
 
   ColumnFilters<String> get allianceName => $composableBuilder(
       column: $table.allianceName, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get factionId => $composableBuilder(
+      column: $table.factionId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get securityStatus => $composableBuilder(
+      column: $table.securityStatus,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get portraitUrl => $composableBuilder(
       column: $table.portraitUrl, builder: (column) => ColumnFilters(column));
@@ -3654,6 +5022,69 @@ class $$CharactersTableFilterComposer
     return f(composer);
   }
 
+  Expression<bool> walletTransactionsRefs(
+      Expression<bool> Function($$WalletTransactionsTableFilterComposer f) f) {
+    final $$WalletTransactionsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.walletTransactions,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$WalletTransactionsTableFilterComposer(
+              $db: $db,
+              $table: $db.walletTransactions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> loyaltyPointsRefs(
+      Expression<bool> Function($$LoyaltyPointsTableFilterComposer f) f) {
+    final $$LoyaltyPointsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.loyaltyPoints,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LoyaltyPointsTableFilterComposer(
+              $db: $db,
+              $table: $db.loyaltyPoints,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> assetCacheRefs(
+      Expression<bool> Function($$AssetCacheTableFilterComposer f) f) {
+    final $$AssetCacheTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.assetCache,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$AssetCacheTableFilterComposer(
+              $db: $db,
+              $table: $db.assetCache,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
   Expression<bool> combatStatsRefs(
       Expression<bool> Function($$CombatStatsTableFilterComposer f) f) {
     final $$CombatStatsTableFilterComposer composer = $composerBuilder(
@@ -3727,6 +5158,13 @@ class $$CharactersTableOrderingComposer
       column: $table.allianceName,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get factionId => $composableBuilder(
+      column: $table.factionId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get securityStatus => $composableBuilder(
+      column: $table.securityStatus,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get portraitUrl => $composableBuilder(
       column: $table.portraitUrl, builder: (column) => ColumnOrderings(column));
 
@@ -3773,6 +5211,12 @@ class $$CharactersTableAnnotationComposer
 
   GeneratedColumn<String> get allianceName => $composableBuilder(
       column: $table.allianceName, builder: (column) => column);
+
+  GeneratedColumn<int> get factionId =>
+      $composableBuilder(column: $table.factionId, builder: (column) => column);
+
+  GeneratedColumn<double> get securityStatus => $composableBuilder(
+      column: $table.securityStatus, builder: (column) => column);
 
   GeneratedColumn<String> get portraitUrl => $composableBuilder(
       column: $table.portraitUrl, builder: (column) => column);
@@ -3858,6 +5302,70 @@ class $$CharactersTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> walletTransactionsRefs<T extends Object>(
+      Expression<T> Function($$WalletTransactionsTableAnnotationComposer a) f) {
+    final $$WalletTransactionsTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.characterId,
+            referencedTable: $db.walletTransactions,
+            getReferencedColumn: (t) => t.characterId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$WalletTransactionsTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.walletTransactions,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
+
+  Expression<T> loyaltyPointsRefs<T extends Object>(
+      Expression<T> Function($$LoyaltyPointsTableAnnotationComposer a) f) {
+    final $$LoyaltyPointsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.loyaltyPoints,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LoyaltyPointsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.loyaltyPoints,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> assetCacheRefs<T extends Object>(
+      Expression<T> Function($$AssetCacheTableAnnotationComposer a) f) {
+    final $$AssetCacheTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.assetCache,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$AssetCacheTableAnnotationComposer(
+              $db: $db,
+              $table: $db.assetCache,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
   Expression<T> combatStatsRefs<T extends Object>(
       Expression<T> Function($$CombatStatsTableAnnotationComposer a) f) {
     final $$CombatStatsTableAnnotationComposer composer = $composerBuilder(
@@ -3917,6 +5425,9 @@ class $$CharactersTableTableManager extends RootTableManager<
         {bool skillQueueEntriesRefs,
         bool walletJournalEntriesRefs,
         bool walletBalancesRefs,
+        bool walletTransactionsRefs,
+        bool loyaltyPointsRefs,
+        bool assetCacheRefs,
         bool combatStatsRefs,
         bool characterStatusesRefs})> {
   $$CharactersTableTableManager(_$AppDatabase db, $CharactersTable table)
@@ -3936,6 +5447,8 @@ class $$CharactersTableTableManager extends RootTableManager<
             Value<String> corporationName = const Value.absent(),
             Value<int?> allianceId = const Value.absent(),
             Value<String?> allianceName = const Value.absent(),
+            Value<int?> factionId = const Value.absent(),
+            Value<double> securityStatus = const Value.absent(),
             Value<String> portraitUrl = const Value.absent(),
             Value<String?> refreshToken = const Value.absent(),
             Value<String?> accessToken = const Value.absent(),
@@ -3950,6 +5463,8 @@ class $$CharactersTableTableManager extends RootTableManager<
             corporationName: corporationName,
             allianceId: allianceId,
             allianceName: allianceName,
+            factionId: factionId,
+            securityStatus: securityStatus,
             portraitUrl: portraitUrl,
             refreshToken: refreshToken,
             accessToken: accessToken,
@@ -3964,6 +5479,8 @@ class $$CharactersTableTableManager extends RootTableManager<
             required String corporationName,
             Value<int?> allianceId = const Value.absent(),
             Value<String?> allianceName = const Value.absent(),
+            Value<int?> factionId = const Value.absent(),
+            Value<double> securityStatus = const Value.absent(),
             required String portraitUrl,
             Value<String?> refreshToken = const Value.absent(),
             Value<String?> accessToken = const Value.absent(),
@@ -3978,6 +5495,8 @@ class $$CharactersTableTableManager extends RootTableManager<
             corporationName: corporationName,
             allianceId: allianceId,
             allianceName: allianceName,
+            factionId: factionId,
+            securityStatus: securityStatus,
             portraitUrl: portraitUrl,
             refreshToken: refreshToken,
             accessToken: accessToken,
@@ -3995,6 +5514,9 @@ class $$CharactersTableTableManager extends RootTableManager<
               {skillQueueEntriesRefs = false,
               walletJournalEntriesRefs = false,
               walletBalancesRefs = false,
+              walletTransactionsRefs = false,
+              loyaltyPointsRefs = false,
+              assetCacheRefs = false,
               combatStatsRefs = false,
               characterStatusesRefs = false}) {
             return PrefetchHooks(
@@ -4003,6 +5525,9 @@ class $$CharactersTableTableManager extends RootTableManager<
                 if (skillQueueEntriesRefs) db.skillQueueEntries,
                 if (walletJournalEntriesRefs) db.walletJournalEntries,
                 if (walletBalancesRefs) db.walletBalances,
+                if (walletTransactionsRefs) db.walletTransactions,
+                if (loyaltyPointsRefs) db.loyaltyPoints,
+                if (assetCacheRefs) db.assetCache,
                 if (combatStatsRefs) db.combatStats,
                 if (characterStatusesRefs) db.characterStatuses
               ],
@@ -4044,6 +5569,45 @@ class $$CharactersTableTableManager extends RootTableManager<
                         managerFromTypedResult: (p0) =>
                             $$CharactersTableReferences(db, table, p0)
                                 .walletBalancesRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.characterId),
+                        typedResults: items),
+                  if (walletTransactionsRefs)
+                    await $_getPrefetchedData<Character, $CharactersTable,
+                            WalletTransaction>(
+                        currentTable: table,
+                        referencedTable: $$CharactersTableReferences
+                            ._walletTransactionsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$CharactersTableReferences(db, table, p0)
+                                .walletTransactionsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.characterId),
+                        typedResults: items),
+                  if (loyaltyPointsRefs)
+                    await $_getPrefetchedData<Character, $CharactersTable,
+                            LoyaltyPoint>(
+                        currentTable: table,
+                        referencedTable: $$CharactersTableReferences
+                            ._loyaltyPointsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$CharactersTableReferences(db, table, p0)
+                                .loyaltyPointsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.characterId),
+                        typedResults: items),
+                  if (assetCacheRefs)
+                    await $_getPrefetchedData<Character, $CharactersTable,
+                            AssetCacheData>(
+                        currentTable: table,
+                        referencedTable: $$CharactersTableReferences
+                            ._assetCacheRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$CharactersTableReferences(db, table, p0)
+                                .assetCacheRefs,
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems.where(
                                 (e) => e.characterId == item.characterId),
@@ -4096,6 +5660,9 @@ typedef $$CharactersTableProcessedTableManager = ProcessedTableManager<
         {bool skillQueueEntriesRefs,
         bool walletJournalEntriesRefs,
         bool walletBalancesRefs,
+        bool walletTransactionsRefs,
+        bool loyaltyPointsRefs,
+        bool assetCacheRefs,
         bool combatStatsRefs,
         bool characterStatusesRefs})>;
 typedef $$SkillQueueEntriesTableCreateCompanionBuilder
@@ -5045,6 +6612,912 @@ typedef $$WalletBalancesTableProcessedTableManager = ProcessedTableManager<
     (WalletBalance, $$WalletBalancesTableReferences),
     WalletBalance,
     PrefetchHooks Function({bool characterId})>;
+typedef $$WalletTransactionsTableCreateCompanionBuilder
+    = WalletTransactionsCompanion Function({
+  Value<int> transactionId,
+  required int characterId,
+  required int typeId,
+  required int locationId,
+  required double unitPrice,
+  required int quantity,
+  required bool isBuy,
+  required int clientId,
+  required DateTime date,
+  Value<int?> journalRefId,
+});
+typedef $$WalletTransactionsTableUpdateCompanionBuilder
+    = WalletTransactionsCompanion Function({
+  Value<int> transactionId,
+  Value<int> characterId,
+  Value<int> typeId,
+  Value<int> locationId,
+  Value<double> unitPrice,
+  Value<int> quantity,
+  Value<bool> isBuy,
+  Value<int> clientId,
+  Value<DateTime> date,
+  Value<int?> journalRefId,
+});
+
+final class $$WalletTransactionsTableReferences extends BaseReferences<
+    _$AppDatabase, $WalletTransactionsTable, WalletTransaction> {
+  $$WalletTransactionsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias($_aliasNameGenerator(
+          db.walletTransactions.characterId, db.characters.characterId));
+
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
+    final manager = $$CharactersTableTableManager($_db, $_db.characters)
+        .filter((f) => f.characterId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$WalletTransactionsTableFilterComposer
+    extends Composer<_$AppDatabase, $WalletTransactionsTable> {
+  $$WalletTransactionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get transactionId => $composableBuilder(
+      column: $table.transactionId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get typeId => $composableBuilder(
+      column: $table.typeId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get unitPrice => $composableBuilder(
+      column: $table.unitPrice, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get quantity => $composableBuilder(
+      column: $table.quantity, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isBuy => $composableBuilder(
+      column: $table.isBuy, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get clientId => $composableBuilder(
+      column: $table.clientId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get date => $composableBuilder(
+      column: $table.date, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get journalRefId => $composableBuilder(
+      column: $table.journalRefId, builder: (column) => ColumnFilters(column));
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableFilterComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$WalletTransactionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $WalletTransactionsTable> {
+  $$WalletTransactionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get transactionId => $composableBuilder(
+      column: $table.transactionId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get typeId => $composableBuilder(
+      column: $table.typeId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get unitPrice => $composableBuilder(
+      column: $table.unitPrice, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get quantity => $composableBuilder(
+      column: $table.quantity, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isBuy => $composableBuilder(
+      column: $table.isBuy, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get clientId => $composableBuilder(
+      column: $table.clientId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get date => $composableBuilder(
+      column: $table.date, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get journalRefId => $composableBuilder(
+      column: $table.journalRefId,
+      builder: (column) => ColumnOrderings(column));
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableOrderingComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$WalletTransactionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $WalletTransactionsTable> {
+  $$WalletTransactionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get transactionId => $composableBuilder(
+      column: $table.transactionId, builder: (column) => column);
+
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => column);
+
+  GeneratedColumn<double> get unitPrice =>
+      $composableBuilder(column: $table.unitPrice, builder: (column) => column);
+
+  GeneratedColumn<int> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  GeneratedColumn<bool> get isBuy =>
+      $composableBuilder(column: $table.isBuy, builder: (column) => column);
+
+  GeneratedColumn<int> get clientId =>
+      $composableBuilder(column: $table.clientId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<int> get journalRefId => $composableBuilder(
+      column: $table.journalRefId, builder: (column) => column);
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$WalletTransactionsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $WalletTransactionsTable,
+    WalletTransaction,
+    $$WalletTransactionsTableFilterComposer,
+    $$WalletTransactionsTableOrderingComposer,
+    $$WalletTransactionsTableAnnotationComposer,
+    $$WalletTransactionsTableCreateCompanionBuilder,
+    $$WalletTransactionsTableUpdateCompanionBuilder,
+    (WalletTransaction, $$WalletTransactionsTableReferences),
+    WalletTransaction,
+    PrefetchHooks Function({bool characterId})> {
+  $$WalletTransactionsTableTableManager(
+      _$AppDatabase db, $WalletTransactionsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WalletTransactionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WalletTransactionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WalletTransactionsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> transactionId = const Value.absent(),
+            Value<int> characterId = const Value.absent(),
+            Value<int> typeId = const Value.absent(),
+            Value<int> locationId = const Value.absent(),
+            Value<double> unitPrice = const Value.absent(),
+            Value<int> quantity = const Value.absent(),
+            Value<bool> isBuy = const Value.absent(),
+            Value<int> clientId = const Value.absent(),
+            Value<DateTime> date = const Value.absent(),
+            Value<int?> journalRefId = const Value.absent(),
+          }) =>
+              WalletTransactionsCompanion(
+            transactionId: transactionId,
+            characterId: characterId,
+            typeId: typeId,
+            locationId: locationId,
+            unitPrice: unitPrice,
+            quantity: quantity,
+            isBuy: isBuy,
+            clientId: clientId,
+            date: date,
+            journalRefId: journalRefId,
+          ),
+          createCompanionCallback: ({
+            Value<int> transactionId = const Value.absent(),
+            required int characterId,
+            required int typeId,
+            required int locationId,
+            required double unitPrice,
+            required int quantity,
+            required bool isBuy,
+            required int clientId,
+            required DateTime date,
+            Value<int?> journalRefId = const Value.absent(),
+          }) =>
+              WalletTransactionsCompanion.insert(
+            transactionId: transactionId,
+            characterId: characterId,
+            typeId: typeId,
+            locationId: locationId,
+            unitPrice: unitPrice,
+            quantity: quantity,
+            isBuy: isBuy,
+            clientId: clientId,
+            date: date,
+            journalRefId: journalRefId,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$WalletTransactionsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({characterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (characterId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.characterId,
+                    referencedTable: $$WalletTransactionsTableReferences
+                        ._characterIdTable(db),
+                    referencedColumn: $$WalletTransactionsTableReferences
+                        ._characterIdTable(db)
+                        .characterId,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$WalletTransactionsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $WalletTransactionsTable,
+    WalletTransaction,
+    $$WalletTransactionsTableFilterComposer,
+    $$WalletTransactionsTableOrderingComposer,
+    $$WalletTransactionsTableAnnotationComposer,
+    $$WalletTransactionsTableCreateCompanionBuilder,
+    $$WalletTransactionsTableUpdateCompanionBuilder,
+    (WalletTransaction, $$WalletTransactionsTableReferences),
+    WalletTransaction,
+    PrefetchHooks Function({bool characterId})>;
+typedef $$LoyaltyPointsTableCreateCompanionBuilder = LoyaltyPointsCompanion
+    Function({
+  Value<int> id,
+  required int characterId,
+  required int corporationId,
+  required int loyaltyPoints,
+  required DateTime lastUpdated,
+});
+typedef $$LoyaltyPointsTableUpdateCompanionBuilder = LoyaltyPointsCompanion
+    Function({
+  Value<int> id,
+  Value<int> characterId,
+  Value<int> corporationId,
+  Value<int> loyaltyPoints,
+  Value<DateTime> lastUpdated,
+});
+
+final class $$LoyaltyPointsTableReferences
+    extends BaseReferences<_$AppDatabase, $LoyaltyPointsTable, LoyaltyPoint> {
+  $$LoyaltyPointsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias($_aliasNameGenerator(
+          db.loyaltyPoints.characterId, db.characters.characterId));
+
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
+    final manager = $$CharactersTableTableManager($_db, $_db.characters)
+        .filter((f) => f.characterId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$LoyaltyPointsTableFilterComposer
+    extends Composer<_$AppDatabase, $LoyaltyPointsTable> {
+  $$LoyaltyPointsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get corporationId => $composableBuilder(
+      column: $table.corporationId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get loyaltyPoints => $composableBuilder(
+      column: $table.loyaltyPoints, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => ColumnFilters(column));
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableFilterComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$LoyaltyPointsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LoyaltyPointsTable> {
+  $$LoyaltyPointsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get corporationId => $composableBuilder(
+      column: $table.corporationId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get loyaltyPoints => $composableBuilder(
+      column: $table.loyaltyPoints,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => ColumnOrderings(column));
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableOrderingComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$LoyaltyPointsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LoyaltyPointsTable> {
+  $$LoyaltyPointsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get corporationId => $composableBuilder(
+      column: $table.corporationId, builder: (column) => column);
+
+  GeneratedColumn<int> get loyaltyPoints => $composableBuilder(
+      column: $table.loyaltyPoints, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => column);
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$LoyaltyPointsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LoyaltyPointsTable,
+    LoyaltyPoint,
+    $$LoyaltyPointsTableFilterComposer,
+    $$LoyaltyPointsTableOrderingComposer,
+    $$LoyaltyPointsTableAnnotationComposer,
+    $$LoyaltyPointsTableCreateCompanionBuilder,
+    $$LoyaltyPointsTableUpdateCompanionBuilder,
+    (LoyaltyPoint, $$LoyaltyPointsTableReferences),
+    LoyaltyPoint,
+    PrefetchHooks Function({bool characterId})> {
+  $$LoyaltyPointsTableTableManager(_$AppDatabase db, $LoyaltyPointsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LoyaltyPointsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LoyaltyPointsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LoyaltyPointsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> characterId = const Value.absent(),
+            Value<int> corporationId = const Value.absent(),
+            Value<int> loyaltyPoints = const Value.absent(),
+            Value<DateTime> lastUpdated = const Value.absent(),
+          }) =>
+              LoyaltyPointsCompanion(
+            id: id,
+            characterId: characterId,
+            corporationId: corporationId,
+            loyaltyPoints: loyaltyPoints,
+            lastUpdated: lastUpdated,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required int characterId,
+            required int corporationId,
+            required int loyaltyPoints,
+            required DateTime lastUpdated,
+          }) =>
+              LoyaltyPointsCompanion.insert(
+            id: id,
+            characterId: characterId,
+            corporationId: corporationId,
+            loyaltyPoints: loyaltyPoints,
+            lastUpdated: lastUpdated,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$LoyaltyPointsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({characterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (characterId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.characterId,
+                    referencedTable:
+                        $$LoyaltyPointsTableReferences._characterIdTable(db),
+                    referencedColumn: $$LoyaltyPointsTableReferences
+                        ._characterIdTable(db)
+                        .characterId,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$LoyaltyPointsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $LoyaltyPointsTable,
+    LoyaltyPoint,
+    $$LoyaltyPointsTableFilterComposer,
+    $$LoyaltyPointsTableOrderingComposer,
+    $$LoyaltyPointsTableAnnotationComposer,
+    $$LoyaltyPointsTableCreateCompanionBuilder,
+    $$LoyaltyPointsTableUpdateCompanionBuilder,
+    (LoyaltyPoint, $$LoyaltyPointsTableReferences),
+    LoyaltyPoint,
+    PrefetchHooks Function({bool characterId})>;
+typedef $$AssetCacheTableCreateCompanionBuilder = AssetCacheCompanion Function({
+  Value<int> itemId,
+  required int characterId,
+  required int typeId,
+  required int quantity,
+  required int locationId,
+  required DateTime lastUpdated,
+});
+typedef $$AssetCacheTableUpdateCompanionBuilder = AssetCacheCompanion Function({
+  Value<int> itemId,
+  Value<int> characterId,
+  Value<int> typeId,
+  Value<int> quantity,
+  Value<int> locationId,
+  Value<DateTime> lastUpdated,
+});
+
+final class $$AssetCacheTableReferences
+    extends BaseReferences<_$AppDatabase, $AssetCacheTable, AssetCacheData> {
+  $$AssetCacheTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias($_aliasNameGenerator(
+          db.assetCache.characterId, db.characters.characterId));
+
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
+    final manager = $$CharactersTableTableManager($_db, $_db.characters)
+        .filter((f) => f.characterId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$AssetCacheTableFilterComposer
+    extends Composer<_$AppDatabase, $AssetCacheTable> {
+  $$AssetCacheTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get itemId => $composableBuilder(
+      column: $table.itemId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get typeId => $composableBuilder(
+      column: $table.typeId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get quantity => $composableBuilder(
+      column: $table.quantity, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => ColumnFilters(column));
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableFilterComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$AssetCacheTableOrderingComposer
+    extends Composer<_$AppDatabase, $AssetCacheTable> {
+  $$AssetCacheTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get itemId => $composableBuilder(
+      column: $table.itemId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get typeId => $composableBuilder(
+      column: $table.typeId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get quantity => $composableBuilder(
+      column: $table.quantity, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => ColumnOrderings(column));
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableOrderingComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$AssetCacheTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AssetCacheTable> {
+  $$AssetCacheTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get itemId =>
+      $composableBuilder(column: $table.itemId, builder: (column) => column);
+
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<int> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  GeneratedColumn<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => column);
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$AssetCacheTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $AssetCacheTable,
+    AssetCacheData,
+    $$AssetCacheTableFilterComposer,
+    $$AssetCacheTableOrderingComposer,
+    $$AssetCacheTableAnnotationComposer,
+    $$AssetCacheTableCreateCompanionBuilder,
+    $$AssetCacheTableUpdateCompanionBuilder,
+    (AssetCacheData, $$AssetCacheTableReferences),
+    AssetCacheData,
+    PrefetchHooks Function({bool characterId})> {
+  $$AssetCacheTableTableManager(_$AppDatabase db, $AssetCacheTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AssetCacheTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AssetCacheTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AssetCacheTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> itemId = const Value.absent(),
+            Value<int> characterId = const Value.absent(),
+            Value<int> typeId = const Value.absent(),
+            Value<int> quantity = const Value.absent(),
+            Value<int> locationId = const Value.absent(),
+            Value<DateTime> lastUpdated = const Value.absent(),
+          }) =>
+              AssetCacheCompanion(
+            itemId: itemId,
+            characterId: characterId,
+            typeId: typeId,
+            quantity: quantity,
+            locationId: locationId,
+            lastUpdated: lastUpdated,
+          ),
+          createCompanionCallback: ({
+            Value<int> itemId = const Value.absent(),
+            required int characterId,
+            required int typeId,
+            required int quantity,
+            required int locationId,
+            required DateTime lastUpdated,
+          }) =>
+              AssetCacheCompanion.insert(
+            itemId: itemId,
+            characterId: characterId,
+            typeId: typeId,
+            quantity: quantity,
+            locationId: locationId,
+            lastUpdated: lastUpdated,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$AssetCacheTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({characterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (characterId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.characterId,
+                    referencedTable:
+                        $$AssetCacheTableReferences._characterIdTable(db),
+                    referencedColumn: $$AssetCacheTableReferences
+                        ._characterIdTable(db)
+                        .characterId,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$AssetCacheTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $AssetCacheTable,
+    AssetCacheData,
+    $$AssetCacheTableFilterComposer,
+    $$AssetCacheTableOrderingComposer,
+    $$AssetCacheTableAnnotationComposer,
+    $$AssetCacheTableCreateCompanionBuilder,
+    $$AssetCacheTableUpdateCompanionBuilder,
+    (AssetCacheData, $$AssetCacheTableReferences),
+    AssetCacheData,
+    PrefetchHooks Function({bool characterId})>;
 typedef $$AppSettingsTableTableCreateCompanionBuilder
     = AppSettingsTableCompanion Function({
   Value<int> id,
@@ -5993,6 +8466,12 @@ class $AppDatabaseManager {
       $$WalletJournalEntriesTableTableManager(_db, _db.walletJournalEntries);
   $$WalletBalancesTableTableManager get walletBalances =>
       $$WalletBalancesTableTableManager(_db, _db.walletBalances);
+  $$WalletTransactionsTableTableManager get walletTransactions =>
+      $$WalletTransactionsTableTableManager(_db, _db.walletTransactions);
+  $$LoyaltyPointsTableTableManager get loyaltyPoints =>
+      $$LoyaltyPointsTableTableManager(_db, _db.loyaltyPoints);
+  $$AssetCacheTableTableManager get assetCache =>
+      $$AssetCacheTableTableManager(_db, _db.assetCache);
   $$AppSettingsTableTableTableManager get appSettingsTable =>
       $$AppSettingsTableTableTableManager(_db, _db.appSettingsTable);
   $$CombatStatsTableTableManager get combatStats =>

@@ -269,6 +269,51 @@ class EsiClient {
         .toList();
   }
 
+  /// Gets the character's market transactions.
+  Future<List<WalletTransactionItem>> getWalletTransactions(
+    int characterId, {
+    int? fromId,
+  }) async {
+    final response = await authenticatedGet<List<dynamic>>(
+      '/characters/$characterId/wallet/transactions/',
+      characterId: characterId,
+      queryParameters: fromId != null ? {'from_id': fromId} : null,
+    );
+
+    return (response.data ?? [])
+        .map((item) =>
+            WalletTransactionItem.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Gets the character's assets.
+  Future<List<AssetItem>> getCharacterAssets(
+    int characterId, {
+    int page = 1,
+  }) async {
+    final response = await authenticatedGet<List<dynamic>>(
+      '/characters/$characterId/assets/',
+      characterId: characterId,
+      queryParameters: {'page': page},
+    );
+
+    return (response.data ?? [])
+        .map((item) => AssetItem.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Gets the character's loyalty points.
+  Future<List<LoyaltyPointItem>> getLoyaltyPoints(int characterId) async {
+    final response = await authenticatedGet<List<dynamic>>(
+      '/characters/$characterId/loyalty/points/',
+      characterId: characterId,
+    );
+
+    return (response.data ?? [])
+        .map((item) => LoyaltyPointItem.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
   // ============================================================================
   // Universe API
   // ============================================================================
@@ -816,6 +861,93 @@ class WalletJournalItem {
       reason: json['reason'] as String?,
       contextId: json['context_id'] as int?,
       contextIdType: json['context_id_type'] as String?,
+    );
+  }
+}
+
+/// Wallet market transaction from ESI.
+class WalletTransactionItem {
+  final int transactionId;
+  final int typeId;
+  final int locationId;
+  final double unitPrice;
+  final int quantity;
+  final bool isBuy;
+  final int clientId;
+  final DateTime date;
+  final int journalRefId;
+
+  const WalletTransactionItem({
+    required this.transactionId,
+    required this.typeId,
+    required this.locationId,
+    required this.unitPrice,
+    required this.quantity,
+    required this.isBuy,
+    required this.clientId,
+    required this.date,
+    required this.journalRefId,
+  });
+
+  factory WalletTransactionItem.fromJson(Map<String, dynamic> json) {
+    return WalletTransactionItem(
+      transactionId: json['transaction_id'] as int,
+      typeId: json['type_id'] as int,
+      locationId: json['location_id'] as int,
+      unitPrice: (json['unit_price'] as num).toDouble(),
+      quantity: json['quantity'] as int,
+      isBuy: json['is_buy'] as bool,
+      clientId: json['client_id'] as int,
+      date: DateTime.parse(json['date'] as String),
+      journalRefId: json['journal_ref_id'] as int,
+    );
+  }
+}
+
+/// Character asset from ESI.
+class AssetItem {
+  final int itemId;
+  final int typeId;
+  final int quantity;
+  final int locationId;
+  final String locationFlag;
+  final bool isSingleton;
+
+  const AssetItem({
+    required this.itemId,
+    required this.typeId,
+    required this.quantity,
+    required this.locationId,
+    required this.locationFlag,
+    required this.isSingleton,
+  });
+
+  factory AssetItem.fromJson(Map<String, dynamic> json) {
+    return AssetItem(
+      itemId: json['item_id'] as int,
+      typeId: json['type_id'] as int,
+      quantity: json['quantity'] as int,
+      locationId: json['location_id'] as int,
+      locationFlag: json['location_flag'] as String,
+      isSingleton: json['is_singleton'] as bool,
+    );
+  }
+}
+
+/// Loyalty points from ESI.
+class LoyaltyPointItem {
+  final int corporationId;
+  final int loyaltyPoints;
+
+  const LoyaltyPointItem({
+    required this.corporationId,
+    required this.loyaltyPoints,
+  });
+
+  factory LoyaltyPointItem.fromJson(Map<String, dynamic> json) {
+    return LoyaltyPointItem(
+      corporationId: json['corporation_id'] as int,
+      loyaltyPoints: json['loyalty_points'] as int,
     );
   }
 }
