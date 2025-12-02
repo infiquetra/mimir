@@ -515,6 +515,9 @@ class _RefreshIconButton extends ConsumerWidget {
           skillRepo.refreshSkillQueue(characterId),
           walletRepo.refreshWalletBalance(characterId),
           walletRepo.refreshWalletJournal(characterId),
+          walletRepo.refreshWalletTransactions(characterId),
+          walletRepo.refreshLoyaltyPoints(characterId),
+          walletRepo.refreshPlexCount(characterId),
         ]);
         break;
 
@@ -525,11 +528,14 @@ class _RefreshIconButton extends ConsumerWidget {
         break;
 
       case WindowType.wallet:
-        // Refresh wallet balance and journal.
+        // Refresh all wallet data.
         final walletRepo = ref.read(walletRepositoryProvider);
         await Future.wait([
           walletRepo.refreshWalletBalance(characterId),
           walletRepo.refreshWalletJournal(characterId),
+          walletRepo.refreshWalletTransactions(characterId),
+          walletRepo.refreshLoyaltyPoints(characterId),
+          walletRepo.refreshPlexCount(characterId),
         ]);
         break;
 

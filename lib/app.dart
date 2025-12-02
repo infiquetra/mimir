@@ -25,7 +25,7 @@ import 'features/wallet/data/wallet_repository.dart';
 /// Refreshes:
 /// - Character info (always refresh active character)
 /// - Skill queue
-/// - Wallet balance and journal
+/// - Wallet balance, journal, transactions, loyalty points, and PLEX
 ///
 /// Opens windows:
 /// - Onboarding (if first launch)
@@ -86,6 +86,9 @@ final startupRefreshProvider = FutureProvider<void>((ref) async {
       skillRepo.refreshSkillQueue(active.characterId),
       walletRepo.refreshWalletBalance(active.characterId),
       walletRepo.refreshWalletJournal(active.characterId),
+      walletRepo.refreshWalletTransactions(active.characterId),
+      walletRepo.refreshLoyaltyPoints(active.characterId),
+      walletRepo.refreshPlexCount(active.characterId),
     ]);
     debugPrint('Startup refresh: All data refreshed for ${active.name}');
   } catch (e) {
