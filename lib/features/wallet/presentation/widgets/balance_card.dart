@@ -45,7 +45,7 @@ class BalanceCard extends StatelessWidget {
     return EveCard(
       glowColor: accentColor,
       glowIntensity: 0.3,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -55,10 +55,10 @@ class BalanceCard extends StatelessWidget {
             children: [
               if (icon != null) ...[
                 Container(
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: accentColor.withAlpha(26),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(4),
                     border: Border.all(
                       color: accentColor.withAlpha(77),
                       width: 1,
@@ -67,16 +67,16 @@ class BalanceCard extends StatelessWidget {
                   child: Icon(
                     icon,
                     color: accentColor,
-                    size: 16,
+                    size: 14,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
               ],
               Expanded(
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.w500,
                     color: Colors.white.withAlpha(179),
                     letterSpacing: 0.3,
@@ -87,13 +87,13 @@ class BalanceCard extends StatelessWidget {
               if (trailing != null) trailing!,
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 4),
 
           // Value
           isLoading
               ? SizedBox(
-                  height: 20,
-                  width: 20,
+                  height: 14,
+                  width: 14,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     color: accentColor,
@@ -102,14 +102,14 @@ class BalanceCard extends StatelessWidget {
               : Text(
                   value,
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: valueColor,
-                    letterSpacing: 0.5,
+                    letterSpacing: 0.3,
                     shadows: [
                       Shadow(
                         color: accentColor.withAlpha(102),
-                        blurRadius: 8,
+                        blurRadius: 6,
                       ),
                     ],
                   ),

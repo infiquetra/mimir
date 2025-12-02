@@ -64,13 +64,13 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   Widget _buildWalletContent(BuildContext context, int characterId) {
     return Column(
       children: [
-        // Balance Cards Row
+        // Balance Cards Row (compact horizontal layout)
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: const BalanceCardsRow(),
         ),
 
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
 
         // Tab Bar
         StreamlinedTabBar(

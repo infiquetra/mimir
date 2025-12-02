@@ -26,49 +26,51 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Icon
-            Icon(
-              icon,
-              size: 64,
-              color: Colors.white.withAlpha(128),
-            ),
-            const SizedBox(height: 16),
-
-            // Heading
-            Text(
-              heading,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+    return SingleChildScrollView(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon
+              Icon(
+                icon,
+                size: 64,
+                color: Colors.white.withAlpha(128),
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
+              const SizedBox(height: 16),
 
-            // Description
-            Text(
-              description,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white.withAlpha(179),
+              // Heading
+              Text(
+                heading,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
+              const SizedBox(height: 8),
 
-            // Optional action button
-            if (action != null) ...[
-              const SizedBox(height: 24),
-              action!,
+              // Description
+              Text(
+                description,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white.withAlpha(179),
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              // Optional action button
+              if (action != null) ...[
+                const SizedBox(height: 24),
+                action!,
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
