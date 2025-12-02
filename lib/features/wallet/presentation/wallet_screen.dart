@@ -84,10 +84,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
             controller: _tabController,
             children: const [
               // Overview Tab
-              Padding(
-                padding: EdgeInsets.all(16),
-                child: OverviewPanel(),
-              ),
+              OverviewPanel(),
 
               // Transactions Tab
               TransactionsPanel(),

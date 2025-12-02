@@ -27,11 +27,12 @@ class OverviewPanel extends ConsumerWidget {
           );
         }
 
-        return EveCard(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+        return SingleChildScrollView(
+          child: EveCard(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
             children: [
               // Header
               Text(
@@ -84,23 +85,23 @@ class OverviewPanel extends ConsumerWidget {
               ),
             ],
           ),
+        ),
         );
       },
-      loading: () => const EveCard(
-        padding: EdgeInsets.all(16),
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
+      loading: () => const Center(
+        child: CircularProgressIndicator(),
       ),
-      error: (error, stack) => EveCard(
-        padding: const EdgeInsets.all(16),
-        child: EmptyState(
-          icon: Icons.error_outline,
-          heading: 'Failed to Load Summary',
-          description: error.toString(),
-          action: ElevatedButton(
-            onPressed: () => ref.refresh(walletSummaryProvider),
-            child: const Text('Retry'),
+      error: (error, stack) => Center(
+        child: EveCard(
+          padding: const EdgeInsets.all(16),
+          child: EmptyState(
+            icon: Icons.error_outline,
+            heading: 'Failed to Load Summary',
+            description: error.toString(),
+            action: ElevatedButton(
+              onPressed: () => ref.refresh(walletSummaryProvider),
+              child: const Text('Retry'),
+            ),
           ),
         ),
       ),
