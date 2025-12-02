@@ -18,10 +18,8 @@ class BalanceCardsRow extends ConsumerWidget {
     final plexCount = ref.watch(plexCountProvider);
     final lpCorporations = ref.watch(loyaltyPointsByCorporationProvider);
 
-    return SizedBox(
-      height: 56, // Fixed compact height for horizontal row
-      child: Row(
-        children: [
+    return Row(
+      children: [
           // ISK Balance Card
           Expanded(
             child: BalanceCard(
@@ -94,7 +92,6 @@ class BalanceCardsRow extends ConsumerWidget {
             ),
           ),
         ],
-      ),
     );
   }
 }
