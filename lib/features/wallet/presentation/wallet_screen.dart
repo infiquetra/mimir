@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/logging/logger.dart';
-import '../../../core/theme/eve_colors.dart';
 import '../../../core/widgets/space_background.dart';
 import '../../../core/widgets/streamlined_tab_bar.dart';
 import '../../characters/data/character_providers.dart';
-import '../data/wallet_providers.dart';
-import '../data/wallet_repository.dart';
 import 'widgets/balance_cards_row.dart';
 import 'widgets/market_transactions_panel.dart';
 import 'widgets/overview_panel.dart';
@@ -62,50 +59,47 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
 
   /// Builds the main wallet content with tabs.
   Widget _buildWalletContent(BuildContext context, int characterId) {
-    return RefreshIndicator(
-      onRefresh: () => _refreshWallet(characterId),
-      child: Column(
-        children: [
-          // Top padding for AppBar
-          SizedBox(
-            height: MediaQuery.of(context).padding.top + kToolbarHeight + 8,
-          ),
+    return Column(
+      children: [
+        // Top padding for AppBar
+        SizedBox(
+          height: MediaQuery.of(context).padding.top + kToolbarHeight + 8,
+        ),
 
-          // Balance Cards Row
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: BalanceCardsRow(),
-          ),
+        // Balance Cards Row
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: BalanceCardsRow(),
+        ),
 
-          const SizedBox(height: 16),
+        const SizedBox(height: 16),
 
-          // Tab Bar
-          StreamlinedTabBar(
+        // Tab Bar
+        StreamlinedTabBar(
+          controller: _tabController,
+          tabs: const ['Overview', 'Transactions', 'Market'],
+        ),
+
+        // Tab Views
+        Expanded(
+          child: TabBarView(
             controller: _tabController,
-            tabs: const ['Overview', 'Transactions', 'Market'],
+            children: const [
+              // Overview Tab
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: OverviewPanel(),
+              ),
+
+              // Transactions Tab
+              TransactionsPanel(),
+
+              // Market Transactions Tab
+              MarketTransactionsPanel(),
+            ],
           ),
-
-          // Tab Views
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: const [
-                // Overview Tab
-                Padding(
-                  padding: EdgeInsets.all(16),
-                  child: OverviewPanel(),
-                ),
-
-                // Transactions Tab
-                TransactionsPanel(),
-
-                // Market Transactions Tab
-                MarketTransactionsPanel(),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -144,46 +138,5 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
         ),
       ),
     );
-  }
-
-  /// Refreshes all wallet data for the active character.
-  Future<void> _refreshWallet(int characterId) async {
-    Log.i('WALLET', 'WalletScreen._refreshWallet($characterId) - START');
-    try {
-      final repository = ref.read(walletRepositoryProvider);
-
-      // Fetch all wallet data in parallel
-      await Future.wait([
-        repository.refreshWalletBalance(characterId),
-        repository.refreshWalletJournal(characterId),
-        repository.refreshWalletTransactions(characterId),
-        repository.refreshLoyaltyPoints(characterId),
-        repository.refreshPlexCount(characterId),
-      ]);
-
-      // Invalidate all providers to trigger UI refresh
-      ref.invalidate(walletBalanceProvider);
-      ref.invalidate(walletJournalProvider);
-      ref.invalidate(walletTransactionsProvider);
-      ref.invalidate(totalLoyaltyPointsProvider);
-      ref.invalidate(loyaltyPointsByCorporationProvider);
-      ref.invalidate(plexCountProvider);
-      ref.invalidate(walletSummaryProvider);
-
-      Log.i('WALLET', 'WalletScreen._refreshWallet($characterId) - SUCCESS');
-    } catch (e, stack) {
-      Log.e('WALLET', 'WalletScreen._refreshWallet($characterId) - FAILED', e,
-          stack);
-      // Don't rethrow - RefreshIndicator will handle showing error
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to refresh wallet: ${e.toString()}'),
-            backgroundColor: EveColors.error,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    }
   }
 }
