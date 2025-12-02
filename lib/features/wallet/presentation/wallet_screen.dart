@@ -61,15 +61,10 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   Widget _buildWalletContent(BuildContext context, int characterId) {
     return Column(
       children: [
-        // Top padding for AppBar
-        SizedBox(
-          height: MediaQuery.of(context).padding.top + kToolbarHeight + 8,
-        ),
-
         // Balance Cards Row
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: BalanceCardsRow(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: const BalanceCardsRow(),
         ),
 
         const SizedBox(height: 16),
