@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/eve_type_icon.dart';
+import '../../../wallet/data/wallet_providers.dart';
 
 /// List item widget for displaying a market transaction.
 ///
-/// Shows date, item, quantity, price, total, and location in a table-like format.
-class MarketTransactionItem extends StatelessWidget {
+/// Shows date, item icon, item name, quantity, price, total, and location in a table-like format.
+class MarketTransactionItem extends ConsumerWidget {
   /// The wallet transaction to display.
   final WalletTransaction transaction;
 
@@ -17,12 +20,16 @@ class MarketTransactionItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isBuy = transaction.isBuy;
     final typeColor = isBuy
         ? const Color(0xFF4CAF50) // Green for buy
         : const Color(0xFFF44336); // Red for sell
     final total = transaction.unitPrice * transaction.quantity;
+
+    // Watch providers for item name and location name
+    final itemNameAsync = ref.watch(itemNameProvider(transaction.typeId));
+    final locationNameAsync = ref.watch(locationNameProvider(transaction.locationId));
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -91,18 +98,52 @@ class MarketTransactionItem extends StatelessWidget {
 
               const SizedBox(width: 8),
 
-              // Item Type ID (placeholder for item name lookup)
+              // Item icon and name
               Expanded(
                 flex: 3,
-                child: Text(
-                  'Item ${transaction.typeId}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white.withAlpha(179),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  children: [
+                    // Item icon
+                    EveTypeIcon(
+                      typeId: transaction.typeId,
+                      size: 32,
+                      borderRadius: 4,
+                    ),
+                    const SizedBox(width: 8),
+                    // Item name
+                    Expanded(
+                      child: itemNameAsync.when(
+                        data: (itemName) => Text(
+                          itemName,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withAlpha(179),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        loading: () => Container(
+                          height: 13,
+                          width: 80,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(26),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        error: (_, __) => Text(
+                          'Item #${transaction.typeId}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withAlpha(179),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -136,9 +177,10 @@ class MarketTransactionItem extends StatelessWidget {
           const SizedBox(height: 4),
 
           // Row 3: Location
-          _buildInfoRow(
-            'Location',
-            'Location ${transaction.locationId}', // Placeholder for location name lookup
+          locationNameAsync.when(
+            data: (locationName) => _buildInfoRow('Location', locationName),
+            loading: () => _buildInfoRow('Location', 'Loading...'),
+            error: (_, __) => _buildInfoRow('Location', 'Location ${transaction.locationId}'),
           ),
         ],
       ),

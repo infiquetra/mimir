@@ -4,6 +4,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/utils/formatters.dart';
 import '../../characters/data/character_providers.dart';
+import '../../characters/data/character_status_providers.dart';
 import 'wallet_repository.dart';
 
 /// Provider that streams the wallet journal for the active character.
@@ -184,3 +185,48 @@ class MarketFilter {
   /// Sell transactions only.
   static const MarketFilter sells = MarketFilter(isBuy: false);
 }
+
+/// Provider to resolve type IDs to item names.
+///
+/// Uses the CharacterStatusRepository's hybrid caching strategy
+/// (memory → database → ESI) to efficiently resolve item names.
+/// Works for ANY EVE type ID: ships, modules, skills, etc.
+///
+/// Returns the item name or "Unknown Item" if not found.
+final itemNameProvider = FutureProvider.family<String, int>((ref, typeId) async {
+  Log.d('WALLET.ITEM', 'itemNameProvider($typeId) - START');
+
+  final repository = ref.watch(characterStatusRepositoryProvider);
+
+  try {
+    final name = await repository.resolveName(typeId);
+    final result = name ?? 'Unknown Item';
+    Log.d('WALLET.ITEM', 'itemNameProvider($typeId) → $result');
+    return result;
+  } catch (e, stack) {
+    Log.e('WALLET.ITEM', 'itemNameProvider($typeId) - FAILED', e, stack);
+    return 'Unknown Item';
+  }
+});
+
+/// Provider to resolve location IDs to location names.
+///
+/// Uses the CharacterStatusRepository's hybrid caching strategy
+/// (memory → database → ESI) to efficiently resolve location names.
+///
+/// Returns the location name or "Unknown Location" if not found.
+final locationNameProvider = FutureProvider.family<String, int>((ref, locationId) async {
+  Log.d('WALLET.LOCATION', 'locationNameProvider($locationId) - START');
+
+  final repository = ref.watch(characterStatusRepositoryProvider);
+
+  try {
+    final name = await repository.resolveName(locationId);
+    final result = name ?? 'Unknown Location';
+    Log.d('WALLET.LOCATION', 'locationNameProvider($locationId) → $result');
+    return result;
+  } catch (e, stack) {
+    Log.e('WALLET.LOCATION', 'locationNameProvider($locationId) - FAILED', e, stack);
+    return 'Unknown Location';
+  }
+});
