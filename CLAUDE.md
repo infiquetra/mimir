@@ -236,3 +236,88 @@ With proper logging:
 - Catch issues immediately in development
 - Diagnose production issues from user logs
 - Understand performance bottlenecks
+
+## 🎯 EVE ID Resolution (CRITICAL)
+
+EVE Online uses numeric IDs for everything. This app has TWO systems for resolving IDs to names:
+
+### SDE (Static Data Export) - LOCAL, Skills Only
+- **Use for**: Skill names ONLY
+- **Provider**: `skillNameProvider`
+- **Source**: Bundled database, no network needed
+- **Fallback**: "Skill #`<id>`"
+
+### ESI (EVE Swagger Interface) - NETWORK, Everything Else
+- **Use for**: Items, ships, stations, characters, corporations
+- **Provider**: `itemNameProvider`, `locationNameProvider`
+- **Source**: ESI `/universe/names/` endpoint with caching
+- **Fallback**: "Unknown Item" or "Unknown Location"
+
+### Decision Table
+| Data Type | Provider to Use |
+|-----------|-----------------|
+| Skill names | `skillNameProvider` |
+| Item/module/ship names | `itemNameProvider` |
+| Station names | `locationNameProvider` |
+| Structure names | `locationNameProvider` (falls back gracefully) |
+
+## Widget Type Selection
+
+| Need | Widget Type |
+|------|-------------|
+| Display data from providers | `ConsumerWidget` |
+| Display data + local state | `ConsumerStatefulWidget` |
+| Display only passed props | `StatelessWidget` |
+
+**Rule**: If you need `ref.watch()`, use `ConsumerWidget`.
+
+## AsyncValue Handling Pattern
+
+ALWAYS use `.when()` for FutureProvider/StreamProvider data:
+
+```dart
+final nameAsync = ref.watch(itemNameProvider(typeId));
+
+nameAsync.when(
+  data: (name) => Text(name),
+  loading: () => ShimmerPlaceholder(),  // Or loading indicator
+  error: (_, __) => Text('Item #$typeId'),  // Fallback with raw ID
+)
+```
+
+**NEVER** do this:
+```dart
+// WRONG - crashes on loading/error
+Text(nameAsync.value ?? 'Unknown')
+```
+
+## EVE Icon Widgets
+
+| Widget | Use Case | Image Server Path |
+|--------|----------|-------------------|
+| `EveTypeIcon` | Items, ships, modules | `/types/{id}/icon` |
+| `EveSkillIcon` | Skills (with caching) | `/types/{id}/icon` |
+| `CharacterAvatar` | Character portraits | `/characters/{id}/portrait` |
+| `CorporationLogo` | Corp logos | `/corporations/{id}/logo` |
+| `FactionLogo` | Faction logos | `/corporations/{id}/logo` |
+
+**Note**: EVE Image Server only accepts sizes: 32, 64, 128, 256, 512, 1024
+Widgets auto-normalize to nearest valid size.
+
+## ⚠️ Common Pitfalls
+
+### Pitfall 1: Displaying Raw IDs
+**WRONG**: `Text('Item: ${transaction.typeId}')`
+**RIGHT**: Use `itemNameProvider` with `.when()` fallback
+
+### Pitfall 2: Using SDE for Non-Skills
+**WRONG**: `skillNameProvider` for ships/items (returns null!)
+**RIGHT**: Use `itemNameProvider` for non-skill items
+
+### Pitfall 3: StatelessWidget with Providers
+**WRONG**: `class MyWidget extends StatelessWidget` + `ref.watch()`
+**RIGHT**: Use `ConsumerWidget` if you need providers
+
+### Pitfall 4: Missing Loading States
+**WRONG**: `Text(asyncValue.value ?? 'default')`
+**RIGHT**: Use `.when(data:, loading:, error:)` pattern
