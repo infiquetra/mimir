@@ -201,7 +201,8 @@ void main() {
       );
 
       await tester.pumpWidget(createTestWidget(container));
-      await tester.pumpAndSettle();
+      await tester.pump(); // Initial frame
+      await tester.pump(); // Allow error to propagate
 
       // Verify error state
       expect(find.text('Failed to load training timeline'), findsOneWidget);
