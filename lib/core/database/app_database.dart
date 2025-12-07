@@ -347,6 +347,80 @@ class UniverseNames extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Cached trained skills for characters.
+///
+/// Stores all trained skills with current levels and skill points.
+/// Fetched from ESI /characters/{id}/skills/ endpoint.
+class CharacterSkills extends Table {
+  /// Auto-incrementing ID.
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Character ID this skill belongs to.
+  IntColumn get characterId =>
+      integer().references(Characters, #characterId)();
+
+  /// Skill type ID from EVE SDE.
+  IntColumn get skillId => integer()();
+
+  /// Trained skill level (0-5).
+  IntColumn get trainedSkillLevel => integer()();
+
+  /// Active skill level (same as trained unless in skillqueue).
+  IntColumn get activeSkillLevel => integer()();
+
+  /// Skill points in this skill.
+  IntColumn get skillpointsInSkill => integer()();
+
+  /// When this data was last fetched from ESI.
+  DateTimeColumn get lastUpdated => dateTime()();
+}
+
+/// Local skill plans (not synced to ESI).
+///
+/// User-created training plans to track which skills to train.
+/// Plans are stored locally and can contain any skills.
+class SkillPlans extends Table {
+  /// Auto-incrementing ID (primary key).
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Character ID this plan belongs to.
+  IntColumn get characterId =>
+      integer().references(Characters, #characterId)();
+
+  /// Plan name (e.g., "PvP Frigate", "Mining Barge").
+  TextColumn get name => text()();
+
+  /// Optional description of plan purpose.
+  TextColumn get description => text().nullable()();
+
+  /// When this plan was created.
+  DateTimeColumn get createdAt => dateTime()();
+
+  /// When this plan was last modified.
+  DateTimeColumn get updatedAt => dateTime()();
+}
+
+/// Skills within a skill plan.
+///
+/// Each entry represents a skill at a target level in a plan.
+/// Sort order determines the display/training order.
+class SkillPlanEntries extends Table {
+  /// Auto-incrementing ID.
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Skill plan ID this entry belongs to.
+  IntColumn get planId => integer().references(SkillPlans, #id)();
+
+  /// Skill type ID from EVE SDE.
+  IntColumn get skillId => integer()();
+
+  /// Target level for this skill (1-5).
+  IntColumn get targetLevel => integer()();
+
+  /// Sort order within the plan (0 = first).
+  IntColumn get sortOrder => integer()();
+}
+
 /// Application database using Drift.
 ///
 /// Handles all local persistence for Mimir including:
@@ -366,6 +440,9 @@ class UniverseNames extends Table {
   CombatStats,
   CharacterStatuses,
   UniverseNames,
+  CharacterSkills,
+  SkillPlans,
+  SkillPlanEntries,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -374,7 +451,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration {
@@ -425,6 +502,13 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(loyaltyPoints);
           await m.createTable(assetCache);
         }
+
+        // Migration from version 8 to 9: Add skills enhancement tables.
+        if (from < 9) {
+          await m.createTable(characterSkills);
+          await m.createTable(skillPlans);
+          await m.createTable(skillPlanEntries);
+        }
       },
     );
   }
@@ -474,6 +558,21 @@ class AppDatabase extends _$AppDatabase {
     await transaction(() async {
       await (delete(skillQueueEntries)
             ..where((e) => e.characterId.equals(characterId)))
+          .go();
+      await (delete(characterSkills)
+            ..where((cs) => cs.characterId.equals(characterId)))
+          .go();
+      // Delete skill plan entries for plans owned by this character
+      final plans = await (select(skillPlans)
+            ..where((p) => p.characterId.equals(characterId)))
+          .get();
+      for (final plan in plans) {
+        await (delete(skillPlanEntries)
+              ..where((e) => e.planId.equals(plan.id)))
+            .go();
+      }
+      await (delete(skillPlans)
+            ..where((p) => p.characterId.equals(characterId)))
           .go();
       await (delete(walletJournalEntries)
             ..where((e) => e.characterId.equals(characterId)))
@@ -552,6 +651,61 @@ class AppDatabase extends _$AppDatabase {
     }
 
     return queueMap;
+  }
+
+  // Character skills operations
+
+  /// Replace trained skills for a character.
+  ///
+  /// Replaces all existing skills with the provided list. Use this when
+  /// fetching skills from ESI to ensure the cache is up to date.
+  Future<void> replaceCharacterSkills(
+    int characterId,
+    List<CharacterSkillsCompanion> skills,
+  ) async {
+    await transaction(() async {
+      await (delete(characterSkills)
+            ..where((cs) => cs.characterId.equals(characterId)))
+          .go();
+      await batch((b) {
+        b.insertAll(characterSkills, skills);
+      });
+    });
+  }
+
+  /// Get all trained skills for a character.
+  Future<List<CharacterSkill>> getCharacterSkills(int characterId) {
+    return (select(characterSkills)
+          ..where((cs) => cs.characterId.equals(characterId)))
+        .get();
+  }
+
+  /// Watch trained skills for reactive updates.
+  Stream<List<CharacterSkill>> watchCharacterSkills(int characterId) {
+    return (select(characterSkills)
+          ..where((cs) => cs.characterId.equals(characterId)))
+        .watch();
+  }
+
+  /// Get a specific trained skill for a character.
+  ///
+  /// Returns null if the skill is not trained.
+  Future<CharacterSkill?> getCharacterSkill(
+    int characterId,
+    int skillId,
+  ) {
+    return (select(characterSkills)
+          ..where((cs) => cs.characterId.equals(characterId))
+          ..where((cs) => cs.skillId.equals(skillId)))
+        .getSingleOrNull();
+  }
+
+  /// Get total skill points for a character.
+  ///
+  /// Sums all skill points across all trained skills.
+  Future<int> getTotalSkillpoints(int characterId) async {
+    final skills = await getCharacterSkills(characterId);
+    return skills.fold<int>(0, (sum, skill) => sum + skill.skillpointsInSkill);
   }
 
   // Wallet operations
@@ -868,6 +1022,123 @@ class AppDatabase extends _$AppDatabase {
     return (delete(universeNames)
           ..where((n) => n.lastUpdated.isSmallerThanValue(olderThanTimestamp)))
         .go();
+  }
+
+  // Skill plans operations
+
+  /// Create a new skill plan.
+  ///
+  /// Returns the ID of the newly created plan.
+  Future<int> createSkillPlan({
+    required int characterId,
+    required String name,
+    String? description,
+  }) async {
+    final now = DateTime.now();
+    return await into(skillPlans).insert(
+      SkillPlansCompanion.insert(
+        characterId: characterId,
+        name: name,
+        description: Value(description),
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+  }
+
+  /// Update a skill plan.
+  Future<void> updateSkillPlan({
+    required int planId,
+    String? name,
+    String? description,
+  }) async {
+    await (update(skillPlans)..where((p) => p.id.equals(planId))).write(
+      SkillPlansCompanion(
+        name: name != null ? Value(name) : const Value.absent(),
+        description: description != null ? Value(description) : const Value.absent(),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  /// Delete a skill plan and all its entries.
+  Future<void> deleteSkillPlan(int planId) async {
+    await transaction(() async {
+      await (delete(skillPlanEntries)..where((e) => e.planId.equals(planId)))
+          .go();
+      await (delete(skillPlans)..where((p) => p.id.equals(planId))).go();
+    });
+  }
+
+  /// Get all skill plans for a character.
+  Future<List<SkillPlan>> getSkillPlans(int characterId) {
+    return (select(skillPlans)
+          ..where((p) => p.characterId.equals(characterId))
+          ..orderBy([(p) => OrderingTerm.desc(p.updatedAt)]))
+        .get();
+  }
+
+  /// Watch skill plans for reactive updates.
+  Stream<List<SkillPlan>> watchSkillPlans(int characterId) {
+    return (select(skillPlans)
+          ..where((p) => p.characterId.equals(characterId))
+          ..orderBy([(p) => OrderingTerm.desc(p.updatedAt)]))
+        .watch();
+  }
+
+  /// Add a skill to a plan.
+  Future<void> addSkillToPlan({
+    required int planId,
+    required int skillId,
+    required int targetLevel,
+    required int sortOrder,
+  }) {
+    return into(skillPlanEntries).insert(
+      SkillPlanEntriesCompanion.insert(
+        planId: planId,
+        skillId: skillId,
+        targetLevel: targetLevel,
+        sortOrder: sortOrder,
+      ),
+    );
+  }
+
+  /// Remove a skill from a plan.
+  Future<void> removeSkillFromPlan(int planId, int skillId) {
+    return (delete(skillPlanEntries)
+          ..where((e) => e.planId.equals(planId))
+          ..where((e) => e.skillId.equals(skillId)))
+        .go();
+  }
+
+  /// Update the sort order of skills in a plan.
+  ///
+  /// Takes a list of skill IDs in the desired order and updates sort order.
+  Future<void> updatePlanEntryOrder(int planId, List<int> skillIds) async {
+    await transaction(() async {
+      for (var i = 0; i < skillIds.length; i++) {
+        await (update(skillPlanEntries)
+              ..where((e) => e.planId.equals(planId))
+              ..where((e) => e.skillId.equals(skillIds[i])))
+            .write(SkillPlanEntriesCompanion(sortOrder: Value(i)));
+      }
+    });
+  }
+
+  /// Get all entries for a skill plan.
+  Future<List<SkillPlanEntry>> getPlanEntries(int planId) {
+    return (select(skillPlanEntries)
+          ..where((e) => e.planId.equals(planId))
+          ..orderBy([(e) => OrderingTerm.asc(e.sortOrder)]))
+        .get();
+  }
+
+  /// Watch skill plan entries for reactive updates.
+  Stream<List<SkillPlanEntry>> watchPlanEntries(int planId) {
+    return (select(skillPlanEntries)
+          ..where((e) => e.planId.equals(planId))
+          ..orderBy([(e) => OrderingTerm.asc(e.sortOrder)]))
+        .watch();
   }
 }
 

@@ -4691,6 +4691,1092 @@ class UniverseNamesCompanion extends UpdateCompanion<UniverseName> {
   }
 }
 
+class $CharacterSkillsTable extends CharacterSkills
+    with TableInfo<$CharacterSkillsTable, CharacterSkill> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CharacterSkillsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _characterIdMeta =
+      const VerificationMeta('characterId');
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+      'character_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES characters (character_id)'));
+  static const VerificationMeta _skillIdMeta =
+      const VerificationMeta('skillId');
+  @override
+  late final GeneratedColumn<int> skillId = GeneratedColumn<int>(
+      'skill_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _trainedSkillLevelMeta =
+      const VerificationMeta('trainedSkillLevel');
+  @override
+  late final GeneratedColumn<int> trainedSkillLevel = GeneratedColumn<int>(
+      'trained_skill_level', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _activeSkillLevelMeta =
+      const VerificationMeta('activeSkillLevel');
+  @override
+  late final GeneratedColumn<int> activeSkillLevel = GeneratedColumn<int>(
+      'active_skill_level', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _skillpointsInSkillMeta =
+      const VerificationMeta('skillpointsInSkill');
+  @override
+  late final GeneratedColumn<int> skillpointsInSkill = GeneratedColumn<int>(
+      'skillpoints_in_skill', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _lastUpdatedMeta =
+      const VerificationMeta('lastUpdated');
+  @override
+  late final GeneratedColumn<DateTime> lastUpdated = GeneratedColumn<DateTime>(
+      'last_updated', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        characterId,
+        skillId,
+        trainedSkillLevel,
+        activeSkillLevel,
+        skillpointsInSkill,
+        lastUpdated
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'character_skills';
+  @override
+  VerificationContext validateIntegrity(Insertable<CharacterSkill> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+          _characterIdMeta,
+          characterId.isAcceptableOrUnknown(
+              data['character_id']!, _characterIdMeta));
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('skill_id')) {
+      context.handle(_skillIdMeta,
+          skillId.isAcceptableOrUnknown(data['skill_id']!, _skillIdMeta));
+    } else if (isInserting) {
+      context.missing(_skillIdMeta);
+    }
+    if (data.containsKey('trained_skill_level')) {
+      context.handle(
+          _trainedSkillLevelMeta,
+          trainedSkillLevel.isAcceptableOrUnknown(
+              data['trained_skill_level']!, _trainedSkillLevelMeta));
+    } else if (isInserting) {
+      context.missing(_trainedSkillLevelMeta);
+    }
+    if (data.containsKey('active_skill_level')) {
+      context.handle(
+          _activeSkillLevelMeta,
+          activeSkillLevel.isAcceptableOrUnknown(
+              data['active_skill_level']!, _activeSkillLevelMeta));
+    } else if (isInserting) {
+      context.missing(_activeSkillLevelMeta);
+    }
+    if (data.containsKey('skillpoints_in_skill')) {
+      context.handle(
+          _skillpointsInSkillMeta,
+          skillpointsInSkill.isAcceptableOrUnknown(
+              data['skillpoints_in_skill']!, _skillpointsInSkillMeta));
+    } else if (isInserting) {
+      context.missing(_skillpointsInSkillMeta);
+    }
+    if (data.containsKey('last_updated')) {
+      context.handle(
+          _lastUpdatedMeta,
+          lastUpdated.isAcceptableOrUnknown(
+              data['last_updated']!, _lastUpdatedMeta));
+    } else if (isInserting) {
+      context.missing(_lastUpdatedMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CharacterSkill map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CharacterSkill(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      characterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}character_id'])!,
+      skillId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}skill_id'])!,
+      trainedSkillLevel: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}trained_skill_level'])!,
+      activeSkillLevel: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}active_skill_level'])!,
+      skillpointsInSkill: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}skillpoints_in_skill'])!,
+      lastUpdated: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}last_updated'])!,
+    );
+  }
+
+  @override
+  $CharacterSkillsTable createAlias(String alias) {
+    return $CharacterSkillsTable(attachedDatabase, alias);
+  }
+}
+
+class CharacterSkill extends DataClass implements Insertable<CharacterSkill> {
+  /// Auto-incrementing ID.
+  final int id;
+
+  /// Character ID this skill belongs to.
+  final int characterId;
+
+  /// Skill type ID from EVE SDE.
+  final int skillId;
+
+  /// Trained skill level (0-5).
+  final int trainedSkillLevel;
+
+  /// Active skill level (same as trained unless in skillqueue).
+  final int activeSkillLevel;
+
+  /// Skill points in this skill.
+  final int skillpointsInSkill;
+
+  /// When this data was last fetched from ESI.
+  final DateTime lastUpdated;
+  const CharacterSkill(
+      {required this.id,
+      required this.characterId,
+      required this.skillId,
+      required this.trainedSkillLevel,
+      required this.activeSkillLevel,
+      required this.skillpointsInSkill,
+      required this.lastUpdated});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['character_id'] = Variable<int>(characterId);
+    map['skill_id'] = Variable<int>(skillId);
+    map['trained_skill_level'] = Variable<int>(trainedSkillLevel);
+    map['active_skill_level'] = Variable<int>(activeSkillLevel);
+    map['skillpoints_in_skill'] = Variable<int>(skillpointsInSkill);
+    map['last_updated'] = Variable<DateTime>(lastUpdated);
+    return map;
+  }
+
+  CharacterSkillsCompanion toCompanion(bool nullToAbsent) {
+    return CharacterSkillsCompanion(
+      id: Value(id),
+      characterId: Value(characterId),
+      skillId: Value(skillId),
+      trainedSkillLevel: Value(trainedSkillLevel),
+      activeSkillLevel: Value(activeSkillLevel),
+      skillpointsInSkill: Value(skillpointsInSkill),
+      lastUpdated: Value(lastUpdated),
+    );
+  }
+
+  factory CharacterSkill.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CharacterSkill(
+      id: serializer.fromJson<int>(json['id']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      skillId: serializer.fromJson<int>(json['skillId']),
+      trainedSkillLevel: serializer.fromJson<int>(json['trainedSkillLevel']),
+      activeSkillLevel: serializer.fromJson<int>(json['activeSkillLevel']),
+      skillpointsInSkill: serializer.fromJson<int>(json['skillpointsInSkill']),
+      lastUpdated: serializer.fromJson<DateTime>(json['lastUpdated']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'characterId': serializer.toJson<int>(characterId),
+      'skillId': serializer.toJson<int>(skillId),
+      'trainedSkillLevel': serializer.toJson<int>(trainedSkillLevel),
+      'activeSkillLevel': serializer.toJson<int>(activeSkillLevel),
+      'skillpointsInSkill': serializer.toJson<int>(skillpointsInSkill),
+      'lastUpdated': serializer.toJson<DateTime>(lastUpdated),
+    };
+  }
+
+  CharacterSkill copyWith(
+          {int? id,
+          int? characterId,
+          int? skillId,
+          int? trainedSkillLevel,
+          int? activeSkillLevel,
+          int? skillpointsInSkill,
+          DateTime? lastUpdated}) =>
+      CharacterSkill(
+        id: id ?? this.id,
+        characterId: characterId ?? this.characterId,
+        skillId: skillId ?? this.skillId,
+        trainedSkillLevel: trainedSkillLevel ?? this.trainedSkillLevel,
+        activeSkillLevel: activeSkillLevel ?? this.activeSkillLevel,
+        skillpointsInSkill: skillpointsInSkill ?? this.skillpointsInSkill,
+        lastUpdated: lastUpdated ?? this.lastUpdated,
+      );
+  CharacterSkill copyWithCompanion(CharacterSkillsCompanion data) {
+    return CharacterSkill(
+      id: data.id.present ? data.id.value : this.id,
+      characterId:
+          data.characterId.present ? data.characterId.value : this.characterId,
+      skillId: data.skillId.present ? data.skillId.value : this.skillId,
+      trainedSkillLevel: data.trainedSkillLevel.present
+          ? data.trainedSkillLevel.value
+          : this.trainedSkillLevel,
+      activeSkillLevel: data.activeSkillLevel.present
+          ? data.activeSkillLevel.value
+          : this.activeSkillLevel,
+      skillpointsInSkill: data.skillpointsInSkill.present
+          ? data.skillpointsInSkill.value
+          : this.skillpointsInSkill,
+      lastUpdated:
+          data.lastUpdated.present ? data.lastUpdated.value : this.lastUpdated,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CharacterSkill(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('skillId: $skillId, ')
+          ..write('trainedSkillLevel: $trainedSkillLevel, ')
+          ..write('activeSkillLevel: $activeSkillLevel, ')
+          ..write('skillpointsInSkill: $skillpointsInSkill, ')
+          ..write('lastUpdated: $lastUpdated')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, characterId, skillId, trainedSkillLevel,
+      activeSkillLevel, skillpointsInSkill, lastUpdated);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CharacterSkill &&
+          other.id == this.id &&
+          other.characterId == this.characterId &&
+          other.skillId == this.skillId &&
+          other.trainedSkillLevel == this.trainedSkillLevel &&
+          other.activeSkillLevel == this.activeSkillLevel &&
+          other.skillpointsInSkill == this.skillpointsInSkill &&
+          other.lastUpdated == this.lastUpdated);
+}
+
+class CharacterSkillsCompanion extends UpdateCompanion<CharacterSkill> {
+  final Value<int> id;
+  final Value<int> characterId;
+  final Value<int> skillId;
+  final Value<int> trainedSkillLevel;
+  final Value<int> activeSkillLevel;
+  final Value<int> skillpointsInSkill;
+  final Value<DateTime> lastUpdated;
+  const CharacterSkillsCompanion({
+    this.id = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.skillId = const Value.absent(),
+    this.trainedSkillLevel = const Value.absent(),
+    this.activeSkillLevel = const Value.absent(),
+    this.skillpointsInSkill = const Value.absent(),
+    this.lastUpdated = const Value.absent(),
+  });
+  CharacterSkillsCompanion.insert({
+    this.id = const Value.absent(),
+    required int characterId,
+    required int skillId,
+    required int trainedSkillLevel,
+    required int activeSkillLevel,
+    required int skillpointsInSkill,
+    required DateTime lastUpdated,
+  })  : characterId = Value(characterId),
+        skillId = Value(skillId),
+        trainedSkillLevel = Value(trainedSkillLevel),
+        activeSkillLevel = Value(activeSkillLevel),
+        skillpointsInSkill = Value(skillpointsInSkill),
+        lastUpdated = Value(lastUpdated);
+  static Insertable<CharacterSkill> custom({
+    Expression<int>? id,
+    Expression<int>? characterId,
+    Expression<int>? skillId,
+    Expression<int>? trainedSkillLevel,
+    Expression<int>? activeSkillLevel,
+    Expression<int>? skillpointsInSkill,
+    Expression<DateTime>? lastUpdated,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (characterId != null) 'character_id': characterId,
+      if (skillId != null) 'skill_id': skillId,
+      if (trainedSkillLevel != null) 'trained_skill_level': trainedSkillLevel,
+      if (activeSkillLevel != null) 'active_skill_level': activeSkillLevel,
+      if (skillpointsInSkill != null)
+        'skillpoints_in_skill': skillpointsInSkill,
+      if (lastUpdated != null) 'last_updated': lastUpdated,
+    });
+  }
+
+  CharacterSkillsCompanion copyWith(
+      {Value<int>? id,
+      Value<int>? characterId,
+      Value<int>? skillId,
+      Value<int>? trainedSkillLevel,
+      Value<int>? activeSkillLevel,
+      Value<int>? skillpointsInSkill,
+      Value<DateTime>? lastUpdated}) {
+    return CharacterSkillsCompanion(
+      id: id ?? this.id,
+      characterId: characterId ?? this.characterId,
+      skillId: skillId ?? this.skillId,
+      trainedSkillLevel: trainedSkillLevel ?? this.trainedSkillLevel,
+      activeSkillLevel: activeSkillLevel ?? this.activeSkillLevel,
+      skillpointsInSkill: skillpointsInSkill ?? this.skillpointsInSkill,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (skillId.present) {
+      map['skill_id'] = Variable<int>(skillId.value);
+    }
+    if (trainedSkillLevel.present) {
+      map['trained_skill_level'] = Variable<int>(trainedSkillLevel.value);
+    }
+    if (activeSkillLevel.present) {
+      map['active_skill_level'] = Variable<int>(activeSkillLevel.value);
+    }
+    if (skillpointsInSkill.present) {
+      map['skillpoints_in_skill'] = Variable<int>(skillpointsInSkill.value);
+    }
+    if (lastUpdated.present) {
+      map['last_updated'] = Variable<DateTime>(lastUpdated.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CharacterSkillsCompanion(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('skillId: $skillId, ')
+          ..write('trainedSkillLevel: $trainedSkillLevel, ')
+          ..write('activeSkillLevel: $activeSkillLevel, ')
+          ..write('skillpointsInSkill: $skillpointsInSkill, ')
+          ..write('lastUpdated: $lastUpdated')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SkillPlansTable extends SkillPlans
+    with TableInfo<$SkillPlansTable, SkillPlan> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SkillPlansTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _characterIdMeta =
+      const VerificationMeta('characterId');
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+      'character_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES characters (character_id)'));
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _descriptionMeta =
+      const VerificationMeta('description');
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+      'description', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, characterId, name, description, createdAt, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'skill_plans';
+  @override
+  VerificationContext validateIntegrity(Insertable<SkillPlan> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+          _characterIdMeta,
+          characterId.isAcceptableOrUnknown(
+              data['character_id']!, _characterIdMeta));
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+          _descriptionMeta,
+          description.isAcceptableOrUnknown(
+              data['description']!, _descriptionMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SkillPlan map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SkillPlan(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      characterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}character_id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      description: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}description']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $SkillPlansTable createAlias(String alias) {
+    return $SkillPlansTable(attachedDatabase, alias);
+  }
+}
+
+class SkillPlan extends DataClass implements Insertable<SkillPlan> {
+  /// Auto-incrementing ID (primary key).
+  final int id;
+
+  /// Character ID this plan belongs to.
+  final int characterId;
+
+  /// Plan name (e.g., "PvP Frigate", "Mining Barge").
+  final String name;
+
+  /// Optional description of plan purpose.
+  final String? description;
+
+  /// When this plan was created.
+  final DateTime createdAt;
+
+  /// When this plan was last modified.
+  final DateTime updatedAt;
+  const SkillPlan(
+      {required this.id,
+      required this.characterId,
+      required this.name,
+      this.description,
+      required this.createdAt,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['character_id'] = Variable<int>(characterId);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  SkillPlansCompanion toCompanion(bool nullToAbsent) {
+    return SkillPlansCompanion(
+      id: Value(id),
+      characterId: Value(characterId),
+      name: Value(name),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory SkillPlan.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SkillPlan(
+      id: serializer.fromJson<int>(json['id']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      name: serializer.fromJson<String>(json['name']),
+      description: serializer.fromJson<String?>(json['description']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'characterId': serializer.toJson<int>(characterId),
+      'name': serializer.toJson<String>(name),
+      'description': serializer.toJson<String?>(description),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  SkillPlan copyWith(
+          {int? id,
+          int? characterId,
+          String? name,
+          Value<String?> description = const Value.absent(),
+          DateTime? createdAt,
+          DateTime? updatedAt}) =>
+      SkillPlan(
+        id: id ?? this.id,
+        characterId: characterId ?? this.characterId,
+        name: name ?? this.name,
+        description: description.present ? description.value : this.description,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  SkillPlan copyWithCompanion(SkillPlansCompanion data) {
+    return SkillPlan(
+      id: data.id.present ? data.id.value : this.id,
+      characterId:
+          data.characterId.present ? data.characterId.value : this.characterId,
+      name: data.name.present ? data.name.value : this.name,
+      description:
+          data.description.present ? data.description.value : this.description,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SkillPlan(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, characterId, name, description, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SkillPlan &&
+          other.id == this.id &&
+          other.characterId == this.characterId &&
+          other.name == this.name &&
+          other.description == this.description &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class SkillPlansCompanion extends UpdateCompanion<SkillPlan> {
+  final Value<int> id;
+  final Value<int> characterId;
+  final Value<String> name;
+  final Value<String?> description;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const SkillPlansCompanion({
+    this.id = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.description = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  SkillPlansCompanion.insert({
+    this.id = const Value.absent(),
+    required int characterId,
+    required String name,
+    this.description = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  })  : characterId = Value(characterId),
+        name = Value(name),
+        createdAt = Value(createdAt),
+        updatedAt = Value(updatedAt);
+  static Insertable<SkillPlan> custom({
+    Expression<int>? id,
+    Expression<int>? characterId,
+    Expression<String>? name,
+    Expression<String>? description,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (characterId != null) 'character_id': characterId,
+      if (name != null) 'name': name,
+      if (description != null) 'description': description,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  SkillPlansCompanion copyWith(
+      {Value<int>? id,
+      Value<int>? characterId,
+      Value<String>? name,
+      Value<String?>? description,
+      Value<DateTime>? createdAt,
+      Value<DateTime>? updatedAt}) {
+    return SkillPlansCompanion(
+      id: id ?? this.id,
+      characterId: characterId ?? this.characterId,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SkillPlansCompanion(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SkillPlanEntriesTable extends SkillPlanEntries
+    with TableInfo<$SkillPlanEntriesTable, SkillPlanEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SkillPlanEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _planIdMeta = const VerificationMeta('planId');
+  @override
+  late final GeneratedColumn<int> planId = GeneratedColumn<int>(
+      'plan_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES skill_plans (id)'));
+  static const VerificationMeta _skillIdMeta =
+      const VerificationMeta('skillId');
+  @override
+  late final GeneratedColumn<int> skillId = GeneratedColumn<int>(
+      'skill_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _targetLevelMeta =
+      const VerificationMeta('targetLevel');
+  @override
+  late final GeneratedColumn<int> targetLevel = GeneratedColumn<int>(
+      'target_level', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _sortOrderMeta =
+      const VerificationMeta('sortOrder');
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+      'sort_order', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, planId, skillId, targetLevel, sortOrder];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'skill_plan_entries';
+  @override
+  VerificationContext validateIntegrity(Insertable<SkillPlanEntry> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('plan_id')) {
+      context.handle(_planIdMeta,
+          planId.isAcceptableOrUnknown(data['plan_id']!, _planIdMeta));
+    } else if (isInserting) {
+      context.missing(_planIdMeta);
+    }
+    if (data.containsKey('skill_id')) {
+      context.handle(_skillIdMeta,
+          skillId.isAcceptableOrUnknown(data['skill_id']!, _skillIdMeta));
+    } else if (isInserting) {
+      context.missing(_skillIdMeta);
+    }
+    if (data.containsKey('target_level')) {
+      context.handle(
+          _targetLevelMeta,
+          targetLevel.isAcceptableOrUnknown(
+              data['target_level']!, _targetLevelMeta));
+    } else if (isInserting) {
+      context.missing(_targetLevelMeta);
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(_sortOrderMeta,
+          sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta));
+    } else if (isInserting) {
+      context.missing(_sortOrderMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SkillPlanEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SkillPlanEntry(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      planId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}plan_id'])!,
+      skillId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}skill_id'])!,
+      targetLevel: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}target_level'])!,
+      sortOrder: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}sort_order'])!,
+    );
+  }
+
+  @override
+  $SkillPlanEntriesTable createAlias(String alias) {
+    return $SkillPlanEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class SkillPlanEntry extends DataClass implements Insertable<SkillPlanEntry> {
+  /// Auto-incrementing ID.
+  final int id;
+
+  /// Skill plan ID this entry belongs to.
+  final int planId;
+
+  /// Skill type ID from EVE SDE.
+  final int skillId;
+
+  /// Target level for this skill (1-5).
+  final int targetLevel;
+
+  /// Sort order within the plan (0 = first).
+  final int sortOrder;
+  const SkillPlanEntry(
+      {required this.id,
+      required this.planId,
+      required this.skillId,
+      required this.targetLevel,
+      required this.sortOrder});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['plan_id'] = Variable<int>(planId);
+    map['skill_id'] = Variable<int>(skillId);
+    map['target_level'] = Variable<int>(targetLevel);
+    map['sort_order'] = Variable<int>(sortOrder);
+    return map;
+  }
+
+  SkillPlanEntriesCompanion toCompanion(bool nullToAbsent) {
+    return SkillPlanEntriesCompanion(
+      id: Value(id),
+      planId: Value(planId),
+      skillId: Value(skillId),
+      targetLevel: Value(targetLevel),
+      sortOrder: Value(sortOrder),
+    );
+  }
+
+  factory SkillPlanEntry.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SkillPlanEntry(
+      id: serializer.fromJson<int>(json['id']),
+      planId: serializer.fromJson<int>(json['planId']),
+      skillId: serializer.fromJson<int>(json['skillId']),
+      targetLevel: serializer.fromJson<int>(json['targetLevel']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'planId': serializer.toJson<int>(planId),
+      'skillId': serializer.toJson<int>(skillId),
+      'targetLevel': serializer.toJson<int>(targetLevel),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+    };
+  }
+
+  SkillPlanEntry copyWith(
+          {int? id,
+          int? planId,
+          int? skillId,
+          int? targetLevel,
+          int? sortOrder}) =>
+      SkillPlanEntry(
+        id: id ?? this.id,
+        planId: planId ?? this.planId,
+        skillId: skillId ?? this.skillId,
+        targetLevel: targetLevel ?? this.targetLevel,
+        sortOrder: sortOrder ?? this.sortOrder,
+      );
+  SkillPlanEntry copyWithCompanion(SkillPlanEntriesCompanion data) {
+    return SkillPlanEntry(
+      id: data.id.present ? data.id.value : this.id,
+      planId: data.planId.present ? data.planId.value : this.planId,
+      skillId: data.skillId.present ? data.skillId.value : this.skillId,
+      targetLevel:
+          data.targetLevel.present ? data.targetLevel.value : this.targetLevel,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SkillPlanEntry(')
+          ..write('id: $id, ')
+          ..write('planId: $planId, ')
+          ..write('skillId: $skillId, ')
+          ..write('targetLevel: $targetLevel, ')
+          ..write('sortOrder: $sortOrder')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, planId, skillId, targetLevel, sortOrder);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SkillPlanEntry &&
+          other.id == this.id &&
+          other.planId == this.planId &&
+          other.skillId == this.skillId &&
+          other.targetLevel == this.targetLevel &&
+          other.sortOrder == this.sortOrder);
+}
+
+class SkillPlanEntriesCompanion extends UpdateCompanion<SkillPlanEntry> {
+  final Value<int> id;
+  final Value<int> planId;
+  final Value<int> skillId;
+  final Value<int> targetLevel;
+  final Value<int> sortOrder;
+  const SkillPlanEntriesCompanion({
+    this.id = const Value.absent(),
+    this.planId = const Value.absent(),
+    this.skillId = const Value.absent(),
+    this.targetLevel = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+  });
+  SkillPlanEntriesCompanion.insert({
+    this.id = const Value.absent(),
+    required int planId,
+    required int skillId,
+    required int targetLevel,
+    required int sortOrder,
+  })  : planId = Value(planId),
+        skillId = Value(skillId),
+        targetLevel = Value(targetLevel),
+        sortOrder = Value(sortOrder);
+  static Insertable<SkillPlanEntry> custom({
+    Expression<int>? id,
+    Expression<int>? planId,
+    Expression<int>? skillId,
+    Expression<int>? targetLevel,
+    Expression<int>? sortOrder,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (planId != null) 'plan_id': planId,
+      if (skillId != null) 'skill_id': skillId,
+      if (targetLevel != null) 'target_level': targetLevel,
+      if (sortOrder != null) 'sort_order': sortOrder,
+    });
+  }
+
+  SkillPlanEntriesCompanion copyWith(
+      {Value<int>? id,
+      Value<int>? planId,
+      Value<int>? skillId,
+      Value<int>? targetLevel,
+      Value<int>? sortOrder}) {
+    return SkillPlanEntriesCompanion(
+      id: id ?? this.id,
+      planId: planId ?? this.planId,
+      skillId: skillId ?? this.skillId,
+      targetLevel: targetLevel ?? this.targetLevel,
+      sortOrder: sortOrder ?? this.sortOrder,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (planId.present) {
+      map['plan_id'] = Variable<int>(planId.value);
+    }
+    if (skillId.present) {
+      map['skill_id'] = Variable<int>(skillId.value);
+    }
+    if (targetLevel.present) {
+      map['target_level'] = Variable<int>(targetLevel.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SkillPlanEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('planId: $planId, ')
+          ..write('skillId: $skillId, ')
+          ..write('targetLevel: $targetLevel, ')
+          ..write('sortOrder: $sortOrder')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4710,6 +5796,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CharacterStatusesTable characterStatuses =
       $CharacterStatusesTable(this);
   late final $UniverseNamesTable universeNames = $UniverseNamesTable(this);
+  late final $CharacterSkillsTable characterSkills =
+      $CharacterSkillsTable(this);
+  late final $SkillPlansTable skillPlans = $SkillPlansTable(this);
+  late final $SkillPlanEntriesTable skillPlanEntries =
+      $SkillPlanEntriesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4725,7 +5816,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         appSettingsTable,
         combatStats,
         characterStatuses,
-        universeNames
+        universeNames,
+        characterSkills,
+        skillPlans,
+        skillPlanEntries
       ];
 }
 
@@ -4900,6 +5994,40 @@ final class $$CharactersTableReferences
 
     final cache =
         $_typedResult.readTableOrNull(_characterStatusesRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$CharacterSkillsTable, List<CharacterSkill>>
+      _characterSkillsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.characterSkills,
+              aliasName: $_aliasNameGenerator(
+                  db.characters.characterId, db.characterSkills.characterId));
+
+  $$CharacterSkillsTableProcessedTableManager get characterSkillsRefs {
+    final manager =
+        $$CharacterSkillsTableTableManager($_db, $_db.characterSkills).filter(
+            (f) => f.characterId.characterId
+                .sqlEquals($_itemColumn<int>('character_id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_characterSkillsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$SkillPlansTable, List<SkillPlan>>
+      _skillPlansRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.skillPlans,
+              aliasName: $_aliasNameGenerator(
+                  db.characters.characterId, db.skillPlans.characterId));
+
+  $$SkillPlansTableProcessedTableManager get skillPlansRefs {
+    final manager = $$SkillPlansTableTableManager($_db, $_db.skillPlans).filter(
+        (f) => f.characterId.characterId
+            .sqlEquals($_itemColumn<int>('character_id')!));
+
+    final cache = $_typedResult.readTableOrNull(_skillPlansRefsTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -5119,6 +6247,48 @@ class $$CharactersTableFilterComposer
             $$CharacterStatusesTableFilterComposer(
               $db: $db,
               $table: $db.characterStatuses,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> characterSkillsRefs(
+      Expression<bool> Function($$CharacterSkillsTableFilterComposer f) f) {
+    final $$CharacterSkillsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characterSkills,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharacterSkillsTableFilterComposer(
+              $db: $db,
+              $table: $db.characterSkills,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> skillPlansRefs(
+      Expression<bool> Function($$SkillPlansTableFilterComposer f) f) {
+    final $$SkillPlansTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.skillPlans,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SkillPlansTableFilterComposer(
+              $db: $db,
+              $table: $db.skillPlans,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -5408,6 +6578,48 @@ class $$CharactersTableAnnotationComposer
                 ));
     return f(composer);
   }
+
+  Expression<T> characterSkillsRefs<T extends Object>(
+      Expression<T> Function($$CharacterSkillsTableAnnotationComposer a) f) {
+    final $$CharacterSkillsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characterSkills,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharacterSkillsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.characterSkills,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> skillPlansRefs<T extends Object>(
+      Expression<T> Function($$SkillPlansTableAnnotationComposer a) f) {
+    final $$SkillPlansTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.skillPlans,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SkillPlansTableAnnotationComposer(
+              $db: $db,
+              $table: $db.skillPlans,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$CharactersTableTableManager extends RootTableManager<
@@ -5429,7 +6641,9 @@ class $$CharactersTableTableManager extends RootTableManager<
         bool loyaltyPointsRefs,
         bool assetCacheRefs,
         bool combatStatsRefs,
-        bool characterStatusesRefs})> {
+        bool characterStatusesRefs,
+        bool characterSkillsRefs,
+        bool skillPlansRefs})> {
   $$CharactersTableTableManager(_$AppDatabase db, $CharactersTable table)
       : super(TableManagerState(
           db: db,
@@ -5518,7 +6732,9 @@ class $$CharactersTableTableManager extends RootTableManager<
               loyaltyPointsRefs = false,
               assetCacheRefs = false,
               combatStatsRefs = false,
-              characterStatusesRefs = false}) {
+              characterStatusesRefs = false,
+              characterSkillsRefs = false,
+              skillPlansRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
@@ -5529,7 +6745,9 @@ class $$CharactersTableTableManager extends RootTableManager<
                 if (loyaltyPointsRefs) db.loyaltyPoints,
                 if (assetCacheRefs) db.assetCache,
                 if (combatStatsRefs) db.combatStats,
-                if (characterStatusesRefs) db.characterStatuses
+                if (characterStatusesRefs) db.characterStatuses,
+                if (characterSkillsRefs) db.characterSkills,
+                if (skillPlansRefs) db.skillPlans
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
@@ -5637,6 +6855,32 @@ class $$CharactersTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems.where(
                                 (e) => e.characterId == item.characterId),
+                        typedResults: items),
+                  if (characterSkillsRefs)
+                    await $_getPrefetchedData<Character, $CharactersTable,
+                            CharacterSkill>(
+                        currentTable: table,
+                        referencedTable: $$CharactersTableReferences
+                            ._characterSkillsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$CharactersTableReferences(db, table, p0)
+                                .characterSkillsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.characterId),
+                        typedResults: items),
+                  if (skillPlansRefs)
+                    await $_getPrefetchedData<Character, $CharactersTable,
+                            SkillPlan>(
+                        currentTable: table,
+                        referencedTable: $$CharactersTableReferences
+                            ._skillPlansRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$CharactersTableReferences(db, table, p0)
+                                .skillPlansRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.characterId),
                         typedResults: items)
                 ];
               },
@@ -5664,7 +6908,9 @@ typedef $$CharactersTableProcessedTableManager = ProcessedTableManager<
         bool loyaltyPointsRefs,
         bool assetCacheRefs,
         bool combatStatsRefs,
-        bool characterStatusesRefs})>;
+        bool characterStatusesRefs,
+        bool characterSkillsRefs,
+        bool skillPlansRefs})>;
 typedef $$SkillQueueEntriesTableCreateCompanionBuilder
     = SkillQueueEntriesCompanion Function({
   Value<int> id,
@@ -8454,6 +9700,944 @@ typedef $$UniverseNamesTableProcessedTableManager = ProcessedTableManager<
     ),
     UniverseName,
     PrefetchHooks Function()>;
+typedef $$CharacterSkillsTableCreateCompanionBuilder = CharacterSkillsCompanion
+    Function({
+  Value<int> id,
+  required int characterId,
+  required int skillId,
+  required int trainedSkillLevel,
+  required int activeSkillLevel,
+  required int skillpointsInSkill,
+  required DateTime lastUpdated,
+});
+typedef $$CharacterSkillsTableUpdateCompanionBuilder = CharacterSkillsCompanion
+    Function({
+  Value<int> id,
+  Value<int> characterId,
+  Value<int> skillId,
+  Value<int> trainedSkillLevel,
+  Value<int> activeSkillLevel,
+  Value<int> skillpointsInSkill,
+  Value<DateTime> lastUpdated,
+});
+
+final class $$CharacterSkillsTableReferences extends BaseReferences<
+    _$AppDatabase, $CharacterSkillsTable, CharacterSkill> {
+  $$CharacterSkillsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias($_aliasNameGenerator(
+          db.characterSkills.characterId, db.characters.characterId));
+
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
+    final manager = $$CharactersTableTableManager($_db, $_db.characters)
+        .filter((f) => f.characterId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$CharacterSkillsTableFilterComposer
+    extends Composer<_$AppDatabase, $CharacterSkillsTable> {
+  $$CharacterSkillsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get skillId => $composableBuilder(
+      column: $table.skillId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get trainedSkillLevel => $composableBuilder(
+      column: $table.trainedSkillLevel,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get activeSkillLevel => $composableBuilder(
+      column: $table.activeSkillLevel,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get skillpointsInSkill => $composableBuilder(
+      column: $table.skillpointsInSkill,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => ColumnFilters(column));
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableFilterComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$CharacterSkillsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CharacterSkillsTable> {
+  $$CharacterSkillsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get skillId => $composableBuilder(
+      column: $table.skillId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get trainedSkillLevel => $composableBuilder(
+      column: $table.trainedSkillLevel,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get activeSkillLevel => $composableBuilder(
+      column: $table.activeSkillLevel,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get skillpointsInSkill => $composableBuilder(
+      column: $table.skillpointsInSkill,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => ColumnOrderings(column));
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableOrderingComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$CharacterSkillsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CharacterSkillsTable> {
+  $$CharacterSkillsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get skillId =>
+      $composableBuilder(column: $table.skillId, builder: (column) => column);
+
+  GeneratedColumn<int> get trainedSkillLevel => $composableBuilder(
+      column: $table.trainedSkillLevel, builder: (column) => column);
+
+  GeneratedColumn<int> get activeSkillLevel => $composableBuilder(
+      column: $table.activeSkillLevel, builder: (column) => column);
+
+  GeneratedColumn<int> get skillpointsInSkill => $composableBuilder(
+      column: $table.skillpointsInSkill, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => column);
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$CharacterSkillsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $CharacterSkillsTable,
+    CharacterSkill,
+    $$CharacterSkillsTableFilterComposer,
+    $$CharacterSkillsTableOrderingComposer,
+    $$CharacterSkillsTableAnnotationComposer,
+    $$CharacterSkillsTableCreateCompanionBuilder,
+    $$CharacterSkillsTableUpdateCompanionBuilder,
+    (CharacterSkill, $$CharacterSkillsTableReferences),
+    CharacterSkill,
+    PrefetchHooks Function({bool characterId})> {
+  $$CharacterSkillsTableTableManager(
+      _$AppDatabase db, $CharacterSkillsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CharacterSkillsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CharacterSkillsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CharacterSkillsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> characterId = const Value.absent(),
+            Value<int> skillId = const Value.absent(),
+            Value<int> trainedSkillLevel = const Value.absent(),
+            Value<int> activeSkillLevel = const Value.absent(),
+            Value<int> skillpointsInSkill = const Value.absent(),
+            Value<DateTime> lastUpdated = const Value.absent(),
+          }) =>
+              CharacterSkillsCompanion(
+            id: id,
+            characterId: characterId,
+            skillId: skillId,
+            trainedSkillLevel: trainedSkillLevel,
+            activeSkillLevel: activeSkillLevel,
+            skillpointsInSkill: skillpointsInSkill,
+            lastUpdated: lastUpdated,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required int characterId,
+            required int skillId,
+            required int trainedSkillLevel,
+            required int activeSkillLevel,
+            required int skillpointsInSkill,
+            required DateTime lastUpdated,
+          }) =>
+              CharacterSkillsCompanion.insert(
+            id: id,
+            characterId: characterId,
+            skillId: skillId,
+            trainedSkillLevel: trainedSkillLevel,
+            activeSkillLevel: activeSkillLevel,
+            skillpointsInSkill: skillpointsInSkill,
+            lastUpdated: lastUpdated,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$CharacterSkillsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({characterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (characterId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.characterId,
+                    referencedTable:
+                        $$CharacterSkillsTableReferences._characterIdTable(db),
+                    referencedColumn: $$CharacterSkillsTableReferences
+                        ._characterIdTable(db)
+                        .characterId,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$CharacterSkillsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $CharacterSkillsTable,
+    CharacterSkill,
+    $$CharacterSkillsTableFilterComposer,
+    $$CharacterSkillsTableOrderingComposer,
+    $$CharacterSkillsTableAnnotationComposer,
+    $$CharacterSkillsTableCreateCompanionBuilder,
+    $$CharacterSkillsTableUpdateCompanionBuilder,
+    (CharacterSkill, $$CharacterSkillsTableReferences),
+    CharacterSkill,
+    PrefetchHooks Function({bool characterId})>;
+typedef $$SkillPlansTableCreateCompanionBuilder = SkillPlansCompanion Function({
+  Value<int> id,
+  required int characterId,
+  required String name,
+  Value<String?> description,
+  required DateTime createdAt,
+  required DateTime updatedAt,
+});
+typedef $$SkillPlansTableUpdateCompanionBuilder = SkillPlansCompanion Function({
+  Value<int> id,
+  Value<int> characterId,
+  Value<String> name,
+  Value<String?> description,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+});
+
+final class $$SkillPlansTableReferences
+    extends BaseReferences<_$AppDatabase, $SkillPlansTable, SkillPlan> {
+  $$SkillPlansTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias($_aliasNameGenerator(
+          db.skillPlans.characterId, db.characters.characterId));
+
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
+    final manager = $$CharactersTableTableManager($_db, $_db.characters)
+        .filter((f) => f.characterId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static MultiTypedResultKey<$SkillPlanEntriesTable, List<SkillPlanEntry>>
+      _skillPlanEntriesRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.skillPlanEntries,
+              aliasName: $_aliasNameGenerator(
+                  db.skillPlans.id, db.skillPlanEntries.planId));
+
+  $$SkillPlanEntriesTableProcessedTableManager get skillPlanEntriesRefs {
+    final manager =
+        $$SkillPlanEntriesTableTableManager($_db, $_db.skillPlanEntries)
+            .filter((f) => f.planId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_skillPlanEntriesRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+}
+
+class $$SkillPlansTableFilterComposer
+    extends Composer<_$AppDatabase, $SkillPlansTable> {
+  $$SkillPlansTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableFilterComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  Expression<bool> skillPlanEntriesRefs(
+      Expression<bool> Function($$SkillPlanEntriesTableFilterComposer f) f) {
+    final $$SkillPlanEntriesTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.skillPlanEntries,
+        getReferencedColumn: (t) => t.planId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SkillPlanEntriesTableFilterComposer(
+              $db: $db,
+              $table: $db.skillPlanEntries,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+}
+
+class $$SkillPlansTableOrderingComposer
+    extends Composer<_$AppDatabase, $SkillPlansTable> {
+  $$SkillPlansTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableOrderingComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$SkillPlansTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SkillPlansTable> {
+  $$SkillPlansTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  Expression<T> skillPlanEntriesRefs<T extends Object>(
+      Expression<T> Function($$SkillPlanEntriesTableAnnotationComposer a) f) {
+    final $$SkillPlanEntriesTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.skillPlanEntries,
+        getReferencedColumn: (t) => t.planId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SkillPlanEntriesTableAnnotationComposer(
+              $db: $db,
+              $table: $db.skillPlanEntries,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+}
+
+class $$SkillPlansTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $SkillPlansTable,
+    SkillPlan,
+    $$SkillPlansTableFilterComposer,
+    $$SkillPlansTableOrderingComposer,
+    $$SkillPlansTableAnnotationComposer,
+    $$SkillPlansTableCreateCompanionBuilder,
+    $$SkillPlansTableUpdateCompanionBuilder,
+    (SkillPlan, $$SkillPlansTableReferences),
+    SkillPlan,
+    PrefetchHooks Function({bool characterId, bool skillPlanEntriesRefs})> {
+  $$SkillPlansTableTableManager(_$AppDatabase db, $SkillPlansTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SkillPlansTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SkillPlansTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SkillPlansTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> characterId = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<String?> description = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+          }) =>
+              SkillPlansCompanion(
+            id: id,
+            characterId: characterId,
+            name: name,
+            description: description,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required int characterId,
+            required String name,
+            Value<String?> description = const Value.absent(),
+            required DateTime createdAt,
+            required DateTime updatedAt,
+          }) =>
+              SkillPlansCompanion.insert(
+            id: id,
+            characterId: characterId,
+            name: name,
+            description: description,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$SkillPlansTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: (
+              {characterId = false, skillPlanEntriesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (skillPlanEntriesRefs) db.skillPlanEntries
+              ],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (characterId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.characterId,
+                    referencedTable:
+                        $$SkillPlansTableReferences._characterIdTable(db),
+                    referencedColumn: $$SkillPlansTableReferences
+                        ._characterIdTable(db)
+                        .characterId,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (skillPlanEntriesRefs)
+                    await $_getPrefetchedData<SkillPlan, $SkillPlansTable,
+                            SkillPlanEntry>(
+                        currentTable: table,
+                        referencedTable: $$SkillPlansTableReferences
+                            ._skillPlanEntriesRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$SkillPlansTableReferences(db, table, p0)
+                                .skillPlanEntriesRefs,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.planId == item.id),
+                        typedResults: items)
+                ];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$SkillPlansTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $SkillPlansTable,
+    SkillPlan,
+    $$SkillPlansTableFilterComposer,
+    $$SkillPlansTableOrderingComposer,
+    $$SkillPlansTableAnnotationComposer,
+    $$SkillPlansTableCreateCompanionBuilder,
+    $$SkillPlansTableUpdateCompanionBuilder,
+    (SkillPlan, $$SkillPlansTableReferences),
+    SkillPlan,
+    PrefetchHooks Function({bool characterId, bool skillPlanEntriesRefs})>;
+typedef $$SkillPlanEntriesTableCreateCompanionBuilder
+    = SkillPlanEntriesCompanion Function({
+  Value<int> id,
+  required int planId,
+  required int skillId,
+  required int targetLevel,
+  required int sortOrder,
+});
+typedef $$SkillPlanEntriesTableUpdateCompanionBuilder
+    = SkillPlanEntriesCompanion Function({
+  Value<int> id,
+  Value<int> planId,
+  Value<int> skillId,
+  Value<int> targetLevel,
+  Value<int> sortOrder,
+});
+
+final class $$SkillPlanEntriesTableReferences extends BaseReferences<
+    _$AppDatabase, $SkillPlanEntriesTable, SkillPlanEntry> {
+  $$SkillPlanEntriesTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $SkillPlansTable _planIdTable(_$AppDatabase db) =>
+      db.skillPlans.createAlias(
+          $_aliasNameGenerator(db.skillPlanEntries.planId, db.skillPlans.id));
+
+  $$SkillPlansTableProcessedTableManager get planId {
+    final $_column = $_itemColumn<int>('plan_id')!;
+
+    final manager = $$SkillPlansTableTableManager($_db, $_db.skillPlans)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_planIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$SkillPlanEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $SkillPlanEntriesTable> {
+  $$SkillPlanEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get skillId => $composableBuilder(
+      column: $table.skillId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get targetLevel => $composableBuilder(
+      column: $table.targetLevel, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnFilters(column));
+
+  $$SkillPlansTableFilterComposer get planId {
+    final $$SkillPlansTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.planId,
+        referencedTable: $db.skillPlans,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SkillPlansTableFilterComposer(
+              $db: $db,
+              $table: $db.skillPlans,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$SkillPlanEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SkillPlanEntriesTable> {
+  $$SkillPlanEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get skillId => $composableBuilder(
+      column: $table.skillId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get targetLevel => $composableBuilder(
+      column: $table.targetLevel, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnOrderings(column));
+
+  $$SkillPlansTableOrderingComposer get planId {
+    final $$SkillPlansTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.planId,
+        referencedTable: $db.skillPlans,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SkillPlansTableOrderingComposer(
+              $db: $db,
+              $table: $db.skillPlans,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$SkillPlanEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SkillPlanEntriesTable> {
+  $$SkillPlanEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get skillId =>
+      $composableBuilder(column: $table.skillId, builder: (column) => column);
+
+  GeneratedColumn<int> get targetLevel => $composableBuilder(
+      column: $table.targetLevel, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  $$SkillPlansTableAnnotationComposer get planId {
+    final $$SkillPlansTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.planId,
+        referencedTable: $db.skillPlans,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SkillPlansTableAnnotationComposer(
+              $db: $db,
+              $table: $db.skillPlans,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$SkillPlanEntriesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $SkillPlanEntriesTable,
+    SkillPlanEntry,
+    $$SkillPlanEntriesTableFilterComposer,
+    $$SkillPlanEntriesTableOrderingComposer,
+    $$SkillPlanEntriesTableAnnotationComposer,
+    $$SkillPlanEntriesTableCreateCompanionBuilder,
+    $$SkillPlanEntriesTableUpdateCompanionBuilder,
+    (SkillPlanEntry, $$SkillPlanEntriesTableReferences),
+    SkillPlanEntry,
+    PrefetchHooks Function({bool planId})> {
+  $$SkillPlanEntriesTableTableManager(
+      _$AppDatabase db, $SkillPlanEntriesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SkillPlanEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SkillPlanEntriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SkillPlanEntriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> planId = const Value.absent(),
+            Value<int> skillId = const Value.absent(),
+            Value<int> targetLevel = const Value.absent(),
+            Value<int> sortOrder = const Value.absent(),
+          }) =>
+              SkillPlanEntriesCompanion(
+            id: id,
+            planId: planId,
+            skillId: skillId,
+            targetLevel: targetLevel,
+            sortOrder: sortOrder,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required int planId,
+            required int skillId,
+            required int targetLevel,
+            required int sortOrder,
+          }) =>
+              SkillPlanEntriesCompanion.insert(
+            id: id,
+            planId: planId,
+            skillId: skillId,
+            targetLevel: targetLevel,
+            sortOrder: sortOrder,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$SkillPlanEntriesTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({planId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (planId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.planId,
+                    referencedTable:
+                        $$SkillPlanEntriesTableReferences._planIdTable(db),
+                    referencedColumn:
+                        $$SkillPlanEntriesTableReferences._planIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$SkillPlanEntriesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $SkillPlanEntriesTable,
+    SkillPlanEntry,
+    $$SkillPlanEntriesTableFilterComposer,
+    $$SkillPlanEntriesTableOrderingComposer,
+    $$SkillPlanEntriesTableAnnotationComposer,
+    $$SkillPlanEntriesTableCreateCompanionBuilder,
+    $$SkillPlanEntriesTableUpdateCompanionBuilder,
+    (SkillPlanEntry, $$SkillPlanEntriesTableReferences),
+    SkillPlanEntry,
+    PrefetchHooks Function({bool planId})>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -8480,4 +10664,10 @@ class $AppDatabaseManager {
       $$CharacterStatusesTableTableManager(_db, _db.characterStatuses);
   $$UniverseNamesTableTableManager get universeNames =>
       $$UniverseNamesTableTableManager(_db, _db.universeNames);
+  $$CharacterSkillsTableTableManager get characterSkills =>
+      $$CharacterSkillsTableTableManager(_db, _db.characterSkills);
+  $$SkillPlansTableTableManager get skillPlans =>
+      $$SkillPlansTableTableManager(_db, _db.skillPlans);
+  $$SkillPlanEntriesTableTableManager get skillPlanEntries =>
+      $$SkillPlanEntriesTableTableManager(_db, _db.skillPlanEntries);
 }
