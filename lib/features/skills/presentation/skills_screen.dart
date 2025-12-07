@@ -17,28 +17,34 @@ class SkillsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final skillQueue = ref.watch(skillQueueProvider);
-    final activeCharacter = ref.watch(activeCharacterProvider).value;
+    final activeCharacterAsync = ref.watch(activeCharacterProvider);
 
     return Scaffold(
       body: SpaceBackground(
         starDensity: 0.3,
         nebulaOpacity: 0.06,
-        child: skillQueue.when(
-          data: (queue) {
+        child: activeCharacterAsync.when(
+          data: (activeCharacter) {
             if (activeCharacter == null) {
               return _buildNoCharacterState(context);
             }
 
-            if (queue.isEmpty) {
-              return _buildEmptyState(
-                  context, ref, activeCharacter.characterId);
-            }
+            return skillQueue.when(
+              data: (queue) {
+                if (queue.isEmpty) {
+                  return _buildEmptyState(
+                      context, ref, activeCharacter.characterId);
+                }
 
-            return _buildSkillList(
-                context, ref, queue, activeCharacter.characterId);
+                return _buildSkillList(
+                    context, ref, queue, activeCharacter.characterId);
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => _buildErrorState(context, ref, error),
+            );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) => _buildErrorState(context, ref, error),
+          error: (error, stack) => _buildCharacterErrorState(context, error),
         ),
       ),
     );
@@ -146,7 +152,7 @@ class SkillsScreen extends ConsumerWidget {
 
   Widget _buildErrorState(BuildContext context, WidgetRef ref, Object error) {
     final theme = Theme.of(context);
-    final activeCharacter = ref.watch(activeCharacterProvider).value;
+    final activeCharacterAsync = ref.watch(activeCharacterProvider);
 
     return Center(
       child: Padding(
@@ -173,13 +179,50 @@ class SkillsScreen extends ConsumerWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            if (activeCharacter != null)
-              FilledButton.icon(
-                onPressed: () =>
-                    _refreshSkillQueue(ref, activeCharacter.characterId),
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
+            activeCharacterAsync.whenData((character) {
+              if (character != null) {
+                return FilledButton.icon(
+                  onPressed: () =>
+                      _refreshSkillQueue(ref, character.characterId),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                );
+              }
+              return const SizedBox.shrink();
+            }).value ?? const SizedBox.shrink(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCharacterErrorState(BuildContext context, Object error) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: theme.colorScheme.error,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Failed to Load Character',
+              style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error.toString(),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
