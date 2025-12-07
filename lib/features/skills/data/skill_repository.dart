@@ -108,6 +108,80 @@ class SkillRepository {
       rethrow;
     }
   }
+
+  /// Refreshes trained skills from ESI and saves to database.
+  ///
+  /// Fetches the complete skill list for a character including trained
+  /// levels and skill points. Updates the local cache atomically.
+  Future<void> refreshCharacterSkills(int characterId) async {
+    Log.d('SKILLS', 'refreshCharacterSkills($characterId) - START');
+    try {
+      // Fetch character skills from ESI.
+      Log.d('SKILLS', 'refreshCharacterSkills - fetching from ESI');
+      final characterSkills = await _esiClient.getSkills(characterId);
+      Log.i('SKILLS', 'refreshCharacterSkills - fetched ${characterSkills.skills.length} trained skills from ESI');
+      Log.i('SKILLS', 'refreshCharacterSkills - total SP: ${characterSkills.totalSp}, unallocated: ${characterSkills.unallocatedSp ?? 0}');
+
+      // Convert ESI skills to database companions.
+      Log.d('SKILLS', 'refreshCharacterSkills - converting to database companions');
+      final now = DateTime.now();
+      final companions = characterSkills.skills.map((skill) {
+        return CharacterSkillsCompanion.insert(
+          characterId: characterId,
+          skillId: skill.skillId,
+          trainedSkillLevel: skill.trainedSkillLevel,
+          activeSkillLevel: skill.activeSkillLevel,
+          skillpointsInSkill: skill.skillpointsInSkill,
+          lastUpdated: now,
+        );
+      }).toList();
+
+      // Replace trained skills in the database.
+      Log.d('SKILLS', 'refreshCharacterSkills - saving to database');
+      await _database.replaceCharacterSkills(characterId, companions);
+      Log.i('SKILLS', 'refreshCharacterSkills - saved ${companions.length} trained skills to database');
+      Log.d('SKILLS', 'refreshCharacterSkills($characterId) - SUCCESS');
+    } catch (e, stack) {
+      Log.e('SKILLS', 'refreshCharacterSkills($characterId) - FAILED', e, stack);
+      rethrow;
+    }
+  }
+
+  /// Gets trained skills from the local database.
+  Future<List<CharacterSkill>> getCharacterSkills(int characterId) async {
+    Log.d('SKILLS', 'getCharacterSkills($characterId) - START');
+    try {
+      final skills = await _database.getCharacterSkills(characterId);
+      Log.i('SKILLS', 'getCharacterSkills - found ${skills.length} trained skills');
+      Log.d('SKILLS', 'getCharacterSkills($characterId) - SUCCESS');
+      return skills;
+    } catch (e, stack) {
+      Log.e('SKILLS', 'getCharacterSkills($characterId) - FAILED', e, stack);
+      rethrow;
+    }
+  }
+
+  /// Watches trained skills for reactive updates.
+  Stream<List<CharacterSkill>> watchCharacterSkills(int characterId) {
+    Log.d('SKILLS', 'watchCharacterSkills($characterId) - subscribed to stream');
+    return _database.watchCharacterSkills(characterId);
+  }
+
+  /// Gets the trained level for a specific skill.
+  ///
+  /// Returns 0 if the skill is not trained (no entry in database).
+  Future<int> getTrainedLevel(int characterId, int skillId) async {
+    Log.d('SKILLS', 'getTrainedLevel($characterId, $skillId) - START');
+    try {
+      final skill = await _database.getCharacterSkill(characterId, skillId);
+      final level = skill?.trainedSkillLevel ?? 0;
+      Log.d('SKILLS', 'getTrainedLevel - skillId $skillId: level $level');
+      return level;
+    } catch (e, stack) {
+      Log.e('SKILLS', 'getTrainedLevel($characterId, $skillId) - FAILED', e, stack);
+      rethrow;
+    }
+  }
 }
 
 /// Provider for the skill repository.
