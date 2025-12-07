@@ -85,17 +85,22 @@ class SkillRepository {
   Future<Map<int, List<SkillQueueEntry>>> getAllCharacterQueues() async {
     Log.d('SKILLS', 'getAllCharacterQueues() - START');
     try {
+      // Get all characters first to include those with empty queues.
       final characters = await _database.getAllCharacters();
       Log.i('SKILLS', 'getAllCharacterQueues - loading queues for ${characters.length} characters');
-      final queueMap = <int, List<SkillQueueEntry>>{};
 
+      // Use batch query to get all queues in a single database call.
+      // This avoids N+1 query problem (N queries for N characters).
+      final allQueues = await _database.getAllSkillQueues();
+
+      // Ensure all characters are in the map (even with empty queues).
+      final queueMap = <int, List<SkillQueueEntry>>{};
       for (final character in characters) {
-        final queue = await _database.getSkillQueue(character.characterId);
-        queueMap[character.characterId] = queue;
-        Log.d('SKILLS', 'getAllCharacterQueues - character ${character.characterId}: ${queue.length} items');
+        queueMap[character.characterId] = allQueues[character.characterId] ?? [];
+        Log.d('SKILLS', 'getAllCharacterQueues - character ${character.characterId}: ${queueMap[character.characterId]!.length} items');
       }
 
-      Log.i('SKILLS', 'getAllCharacterQueues - loaded queues for ${queueMap.length} characters');
+      Log.i('SKILLS', 'getAllCharacterQueues - loaded queues for ${queueMap.length} characters in single query');
       Log.d('SKILLS', 'getAllCharacterQueues() - SUCCESS');
       return queueMap;
     } catch (e, stack) {

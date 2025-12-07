@@ -535,6 +535,25 @@ class AppDatabase extends _$AppDatabase {
         .watch();
   }
 
+  /// Get all skill queues for all characters.
+  ///
+  /// More efficient than querying each character individually (avoids N+1).
+  /// Returns a map of characterId → skill queue entries.
+  Future<Map<int, List<SkillQueueEntry>>> getAllSkillQueues() async {
+    // Fetch all skill queue entries in a single query.
+    final allEntries = await (select(skillQueueEntries)
+          ..orderBy([(e) => OrderingTerm.asc(e.characterId), (e) => OrderingTerm.asc(e.queuePosition)]))
+        .get();
+
+    // Group by character ID.
+    final queueMap = <int, List<SkillQueueEntry>>{};
+    for (final entry in allEntries) {
+      queueMap.putIfAbsent(entry.characterId, () => []).add(entry);
+    }
+
+    return queueMap;
+  }
+
   // Wallet operations
 
   /// Insert wallet journal entries (ignores duplicates).
@@ -604,6 +623,35 @@ class AppDatabase extends _$AppDatabase {
           ..limit(1))
         .getSingleOrNull();
     return result?.balance;
+  }
+
+  /// Get latest wallet balances for all characters.
+  ///
+  /// More efficient than querying each character individually (avoids N+1).
+  /// Returns a map of characterId → balance.
+  Future<Map<int, double>> getAllLatestWalletBalances() async {
+    // Get the latest balance for each character using a subquery.
+    // This is more efficient than N queries (one per character).
+    final query = '''
+      SELECT character_id, balance
+      FROM wallet_balances wb1
+      WHERE recorded_at = (
+        SELECT MAX(recorded_at)
+        FROM wallet_balances wb2
+        WHERE wb2.character_id = wb1.character_id
+      )
+    ''';
+
+    final result = await customSelect(query).get();
+    final balanceMap = <int, double>{};
+
+    for (final row in result) {
+      final characterId = row.read<int>('character_id');
+      final balance = row.read<double>('balance');
+      balanceMap[characterId] = balance;
+    }
+
+    return balanceMap;
   }
 
   // Wallet transactions operations

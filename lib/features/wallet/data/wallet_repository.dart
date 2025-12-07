@@ -337,19 +337,15 @@ class WalletRepository {
   Future<Map<int, double>> getAllCharacterBalances() async {
     Log.d('WALLET', 'getAllCharacterBalances() - START');
     try {
-      final characters = await _database.getAllCharacters();
-      Log.i('WALLET', 'getAllCharacterBalances - loading balances for ${characters.length} characters');
-      final balanceMap = <int, double>{};
+      // Use batch query to get all balances in a single database call.
+      // This avoids N+1 query problem (N queries for N characters).
+      final balanceMap = await _database.getAllLatestWalletBalances();
 
-      for (final character in characters) {
-        final balance = await _database.getLatestWalletBalance(character.characterId);
-        if (balance != null) {
-          balanceMap[character.characterId] = balance;
-          Log.d('WALLET', 'getAllCharacterBalances - character ${character.characterId}: $balance ISK');
-        }
+      Log.i('WALLET', 'getAllCharacterBalances - loaded balances for ${balanceMap.length} characters in single query');
+      for (final entry in balanceMap.entries) {
+        Log.d('WALLET', 'getAllCharacterBalances - character ${entry.key}: ${entry.value} ISK');
       }
 
-      Log.i('WALLET', 'getAllCharacterBalances - loaded balances for ${balanceMap.length} characters');
       Log.d('WALLET', 'getAllCharacterBalances() - SUCCESS');
       return balanceMap;
     } catch (e, stack) {
