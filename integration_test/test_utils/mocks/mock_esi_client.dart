@@ -209,6 +209,36 @@ class MockEsiClient extends Mock implements EsiClient {
   ];
 
   // =========================================================================
+  // Fleet Status Test Data
+  // =========================================================================
+
+  static final online = CharacterOnline(
+    online: true,
+    lastLogin: DateTime.now().subtract(const Duration(hours: 2)),
+    lastLogout: DateTime.now().subtract(const Duration(hours: 8)),
+    logins: 42,
+  );
+
+  static final offline = CharacterOnline(
+    online: false,
+    lastLogin: DateTime.now().subtract(const Duration(days: 1)),
+    lastLogout: DateTime.now().subtract(const Duration(hours: 3)),
+    logins: 25,
+  );
+
+  static final location = CharacterLocation(
+    solarSystemId: 30000142, // Jita
+    stationId: 60003760, // Jita IV - Moon 4
+    structureId: null,
+  );
+
+  static final ship = CharacterShip(
+    shipTypeId: 587, // Rifter
+    shipTypeName: null, // Looked up from SDE
+    shipItemId: 1234567890,
+  );
+
+  // =========================================================================
   // Name Resolution Test Data
   // =========================================================================
 
@@ -288,6 +318,16 @@ class MockEsiClient extends Mock implements EsiClient {
     when(() => getCharacterStandings(characterId)).thenAnswer((_) async => standings);
   }
 
+  /// Sets up the mock to return fleet status data (online, location, ship).
+  void setupFleetStatus(int characterId, {bool isOnline = true}) {
+    when(() => getCharacterOnline(characterId))
+        .thenAnswer((_) async => isOnline ? online : offline);
+    when(() => getCharacterLocation(characterId))
+        .thenAnswer((_) async => location);
+    when(() => getCharacterShip(characterId))
+        .thenAnswer((_) async => ship);
+  }
+
   /// Sets up the mock to resolve names via universe/names endpoint.
   void setupNameResolution() {
     when(() => getUniverseNames(any())).thenAnswer((invocation) async {
@@ -320,6 +360,7 @@ class MockEsiClient extends Mock implements EsiClient {
     setupWalletData(characterId);
     setupCloneData(characterId);
     setupStandings(characterId);
+    setupFleetStatus(characterId); // Fleet status (online, location, ship)
     setupNameResolution();
   }
 

@@ -59,7 +59,7 @@ void main() {
 
         // AND: Radio buttons should be present
         expect(
-          find.byType(RadioListTile<Object>),
+          find.byWidgetPredicate((widget) => widget is RadioListTile),
           findsNWidgets(2),
           reason: 'Should have 2 radio button options',
         );
