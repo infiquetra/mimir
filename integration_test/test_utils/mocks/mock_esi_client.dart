@@ -69,6 +69,35 @@ class MockEsiClient extends Mock implements EsiClient {
   ];
 
   // =========================================================================
+  // Trained Skills Test Data
+  // =========================================================================
+
+  static final characterSkills = CharacterSkills(
+    totalSp: 5000000, // 5M SP
+    unallocatedSp: 150000, // 150k unallocated
+    skills: [
+      Skill(
+        skillId: 3301, // Mechanics
+        trainedSkillLevel: 4,
+        skillpointsInSkill: 90510,
+        activeSkillLevel: 4,
+      ),
+      Skill(
+        skillId: 3392, // Engineering
+        trainedSkillLevel: 3,
+        skillpointsInSkill: 24000,
+        activeSkillLevel: 3,
+      ),
+      Skill(
+        skillId: 3327, // Spaceship Command
+        trainedSkillLevel: 5,
+        skillpointsInSkill: 256000,
+        activeSkillLevel: 5,
+      ),
+    ],
+  );
+
+  // =========================================================================
   // Wallet Test Data
   // =========================================================================
 
@@ -295,6 +324,12 @@ class MockEsiClient extends Mock implements EsiClient {
         .thenAnswer((_) async => emptySkillQueue);
   }
 
+  /// Sets up the mock to return trained skills data.
+  void setupTrainedSkills(int characterId) {
+    when(() => getSkills(characterId))
+        .thenAnswer((_) async => characterSkills);
+  }
+
   /// Sets up the mock to return wallet data.
   void setupWalletData(int characterId) {
     when(() => getWalletBalance(characterId))
@@ -357,6 +392,7 @@ class MockEsiClient extends Mock implements EsiClient {
   void setupFullCharacterData(int characterId) {
     setupDefaultCharacter(characterId);
     setupActiveSkillQueue(characterId);
+    setupTrainedSkills(characterId); // Trained skills (total SP, unallocated SP, skill list)
     setupWalletData(characterId);
     setupCloneData(characterId);
     setupStandings(characterId);
