@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../core/theme/eve_colors.dart';
+import '../../../../../core/widgets/eve_type_icon.dart';
 import '../../../data/character_providers.dart';
 import '../../../data/character_status_providers.dart';
 import '../../widgets/clone_card.dart';
@@ -142,10 +143,10 @@ class JumpClonesSubTab extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.content_copy_outlined,
+                    EveTypeIcon(
+                      typeId: 34126, // Alpha Clone
                       size: 20,
-                      color: EveColors.evePrimary,
+                      borderRadius: 4,
                     ),
                     const SizedBox(width: 8),
                     Text(
