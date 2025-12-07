@@ -7,6 +7,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'app.dart';
 import 'core/database/app_database.dart';
+import 'core/logging/logger.dart';
 import 'core/tray/tray_service.dart';
 import 'core/window/sub_window_app.dart';
 
@@ -29,7 +30,7 @@ void main(List<String> args) async {
     final windowId = args[1]; // String UUID (e.g., '7906EAC4-B83A-43C7-B965-FFB3185ECF2F')
     final windowArgs = args[2];
 
-    debugPrint('SubWindow[$windowId]: Starting with args=$windowArgs');
+    Log.d('WINDOW', 'SubWindow[$windowId]: Starting with args=$windowArgs');
 
     // CRITICAL: Set database path BEFORE creating ProviderScope.
     // Sub-windows can't use path_provider (plugin not registered), so the
@@ -40,12 +41,12 @@ void main(List<String> args) async {
       final dbPath = decoded['dbPath'] as String?;
       if (dbPath != null) {
         setDatabasePath(dbPath);
-        debugPrint('SubWindow[$windowId]: Database path set to $dbPath');
+        Log.i('WINDOW', 'SubWindow[$windowId]: Database path set to $dbPath');
       } else {
-        debugPrint('SubWindow[$windowId]: ERROR - No dbPath in args!');
+        Log.e('WINDOW', 'SubWindow[$windowId]: ERROR - No dbPath in args!');
       }
     } catch (e) {
-      debugPrint('SubWindow[$windowId]: ERROR parsing args: $e');
+      Log.e('WINDOW', 'SubWindow[$windowId]: ERROR parsing args: $e');
     }
 
     // Note: Sub-windows don't have access to window_manager plugin
@@ -101,5 +102,5 @@ Future<void> _initializeMainWindow() async {
   // Initialize system tray (menu bar icon) - this is the main UI entry point
   await TrayService.instance.initialize();
 
-  debugPrint('Main window initialized (hidden, tray-only mode)');
+  Log.i('WINDOW', 'Main window initialized (hidden, tray-only mode)');
 }
