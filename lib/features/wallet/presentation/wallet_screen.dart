@@ -47,15 +47,22 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
 
   @override
   Widget build(BuildContext context) {
-    final activeCharacter = ref.watch(activeCharacterProvider).value;
+    final activeCharacterAsync = ref.watch(activeCharacterProvider);
 
     return Scaffold(
       body: SpaceBackground(
         starDensity: 0.3,
         nebulaOpacity: 0.06,
-        child: activeCharacter == null
-            ? _buildNoCharacterState(context)
-            : _buildWalletContent(context, activeCharacter.characterId),
+        child: activeCharacterAsync.when(
+          data: (character) {
+            if (character == null) {
+              return _buildNoCharacterState(context);
+            }
+            return _buildWalletContent(context, character.characterId);
+          },
+          loading: () => _buildLoadingState(context),
+          error: (error, stack) => _buildErrorState(context, error),
+        ),
       ),
     );
   }
@@ -118,6 +125,50 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
             const SizedBox(height: 8),
             Text(
               'Add a character to view your wallet.',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white.withAlpha(179),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Builds the loading state.
+  Widget _buildLoadingState(BuildContext context) {
+    return const Center(
+      child: CircularProgressIndicator(),
+    );
+  }
+
+  /// Builds the error state.
+  Widget _buildErrorState(BuildContext context, Object error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red.withAlpha(204),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Failed to Load Character',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error.toString(),
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.white.withAlpha(179),
