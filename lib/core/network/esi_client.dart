@@ -239,6 +239,16 @@ class EsiClient {
         .toList();
   }
 
+  /// Gets the character's trained skills.
+  Future<CharacterSkills> getSkills(int characterId) async {
+    final response = await authenticatedGet<Map<String, dynamic>>(
+      '/characters/$characterId/skills/',
+      characterId: characterId,
+    );
+
+    return CharacterSkills.fromJson(response.data ?? {});
+  }
+
   // ============================================================================
   // Wallet API
   // ============================================================================
