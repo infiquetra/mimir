@@ -58,6 +58,41 @@ String formatDuration(Duration duration) {
   return parts.join(' ');
 }
 
+/// Formats skill points with proper number formatting.
+///
+/// Examples:
+/// - 1234567 → "1,234,567 SP"
+/// - 50000000 → "50,000,000 SP"
+/// - 0 → "0 SP"
+String formatSp(int amount) {
+  final formatter = NumberFormat('#,##0', 'en_US');
+  return '${formatter.format(amount)} SP';
+}
+
+/// Formats skill points in a compact form.
+///
+/// Examples:
+/// - 1234 → "1.23K SP"
+/// - 1234567 → "1.23M SP"
+/// - 1234567890 → "1.23B SP"
+String formatSpCompact(int amount) {
+  final absAmount = amount.abs();
+  final sign = amount < 0 ? '-' : '';
+
+  String formatted;
+  if (absAmount >= 1e9) {
+    formatted = '${(absAmount / 1e9).toStringAsFixed(2)}B';
+  } else if (absAmount >= 1e6) {
+    formatted = '${(absAmount / 1e6).toStringAsFixed(2)}M';
+  } else if (absAmount >= 1e3) {
+    formatted = '${(absAmount / 1e3).toStringAsFixed(2)}K';
+  } else {
+    formatted = absAmount.toString();
+  }
+
+  return '$sign$formatted SP';
+}
+
 /// Formats a snake_case string into Title Case.
 ///
 /// Useful for displaying ESI reference types in a human-readable format.
