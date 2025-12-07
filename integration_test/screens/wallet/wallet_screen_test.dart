@@ -40,12 +40,12 @@ void main() {
               await db.batch((batch) {
                 batch.insertAll(
                   db.loyaltyPoints,
-                  walletData['loyaltyPoints']! as List,
+                  (walletData['loyaltyPoints']! as List).cast(),
                 );
               });
 
               // Insert PLEX assets
-              await db.upsertAssets(walletData['assets']! as List);
+              await db.upsertAssets((walletData['assets']! as List).cast());
             },
             home: const WalletScreen(),
           ),
@@ -172,7 +172,7 @@ void main() {
                 characterId: characterId,
               );
               await db.insertWalletJournalEntries(
-                walletData['journal']! as List,
+                (walletData['journal']! as List).cast(),
               );
             },
             home: const WalletScreen(),
@@ -216,7 +216,7 @@ void main() {
                 characterId: characterId,
               );
               await db.insertWalletTransactions(
-                walletData['transactions']! as List,
+                (walletData['transactions']! as List).cast(),
               );
             },
             home: const WalletScreen(),
@@ -350,7 +350,7 @@ void main() {
                 characterId: characterId,
               );
               await db.insertWalletJournalEntries(
-                walletData['journal']! as List,
+                (walletData['journal']! as List).cast(),
               );
             },
             home: const WalletScreen(),

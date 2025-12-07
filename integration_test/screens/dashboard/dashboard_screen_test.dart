@@ -53,7 +53,7 @@ void main() {
                 characterId: characterId,
               );
               await db.insertWalletJournalEntries(
-                walletData['journal']! as List,
+                (walletData['journal']! as List).cast(),
               );
               await db.recordWalletBalance(characterId, 1500000000.0);
             },
