@@ -277,7 +277,7 @@ class SkillPlansPanel extends ConsumerWidget {
 
     try {
       Log.i('SKILLS', 'SkillPlansPanel - deleting plan ${plan.id}');
-      final notifier = ref.read(skillPlanNotifierProvider.notifier);
+      final notifier = ref.read(skillPlanProvider.notifier);
       await notifier.deletePlan(plan.id);
 
       if (!context.mounted) return;

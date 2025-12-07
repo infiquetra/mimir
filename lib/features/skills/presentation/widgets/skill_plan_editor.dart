@@ -162,7 +162,7 @@ class _SkillPlanEditorState extends ConsumerState<SkillPlanEditor> {
     setState(() => _isSaving = true);
 
     try {
-      final notifier = ref.read(skillPlanNotifierProvider.notifier);
+      final notifier = ref.read(skillPlanProvider.notifier);
       final name = _nameController.text.trim();
       final description = _descriptionController.text.trim();
 
