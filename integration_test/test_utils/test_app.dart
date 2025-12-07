@@ -75,7 +75,7 @@ class TestApp extends StatefulWidget {
   ///
   /// The test database and mock ESI client are already overridden.
   /// Use this for additional providers like themeModeProvider.
-  final List<Override> providerOverrides;
+  final List<dynamic> providerOverrides;
 
   /// Whether to use MockEsiClient (default: true).
   ///
@@ -157,7 +157,7 @@ class _TestAppState extends State<TestApp> {
     }
 
     // Build provider overrides list.
-    final overrides = <Override>[
+    final overrides = [
       // Always override database with in-memory instance.
       databaseProvider.overrideWithValue(_database),
 
@@ -170,7 +170,7 @@ class _TestAppState extends State<TestApp> {
     ];
 
     return ProviderScope(
-      overrides: overrides,
+      overrides: overrides.cast(),
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         home: widget.home ??

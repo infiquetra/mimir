@@ -150,7 +150,6 @@ class MockEsiClient extends Mock implements EsiClient {
       quantity: 50,
       locationId: 60003760, // Jita
       locationFlag: 'Hangar',
-      locationType: 'station',
       isSingleton: false,
     ),
   ];
@@ -159,8 +158,8 @@ class MockEsiClient extends Mock implements EsiClient {
   // Clone & Implant Test Data
   // =========================================================================
 
-  static final cloneInfo = CloneInfo(
-    homeLocation: CloneLocation(
+  static final cloneInfo = CharacterClones(
+    homeLocation: HomeLocation(
       locationId: 60003760, // Jita
       locationType: 'station',
     ),
@@ -192,17 +191,17 @@ class MockEsiClient extends Mock implements EsiClient {
   // =========================================================================
 
   static final standings = [
-    StandingItem(
+    Standing(
       fromId: 500001, // Caldari State
       fromType: 'faction',
       standing: 5.5,
     ),
-    StandingItem(
+    Standing(
       fromId: 500004, // Minmatar Republic
       fromType: 'faction',
       standing: -2.0,
     ),
-    StandingItem(
+    Standing(
       fromId: 1000125, // Serpentis Corporation
       fromType: 'npc_corp',
       standing: 3.2,
@@ -250,7 +249,7 @@ class MockEsiClient extends Mock implements EsiClient {
 
   /// Sets up the mock to return the default test character.
   void setupDefaultCharacter(int characterId) {
-    when(() => getCharacterInfo(characterId))
+    when(() => getCharacterPublicInfo(characterId))
         .thenAnswer((_) async => testCharacter);
   }
 
@@ -280,22 +279,22 @@ class MockEsiClient extends Mock implements EsiClient {
 
   /// Sets up the mock to return clone and implant data.
   void setupCloneData(int characterId) {
-    when(() => getClones(characterId)).thenAnswer((_) async => cloneInfo);
-    when(() => getImplants(characterId)).thenAnswer((_) async => implants);
+    when(() => getCharacterClones(characterId)).thenAnswer((_) async => cloneInfo);
+    when(() => getCharacterImplants(characterId)).thenAnswer((_) async => implants);
   }
 
   /// Sets up the mock to return standings data.
   void setupStandings(int characterId) {
-    when(() => getStandings(characterId)).thenAnswer((_) async => standings);
+    when(() => getCharacterStandings(characterId)).thenAnswer((_) async => standings);
   }
 
   /// Sets up the mock to resolve names via universe/names endpoint.
   void setupNameResolution() {
-    when(() => resolveNames(any())).thenAnswer((invocation) async {
+    when(() => getUniverseNames(any())).thenAnswer((invocation) async {
       final ids = invocation.positionalArguments[0] as List<int>;
       return ids
           .where((id) => nameResolutions.containsKey(id))
-          .map((id) => NameResolution(
+          .map((id) => UniverseName(
                 id: id,
                 name: nameResolutions[id]!,
                 category: _getCategoryForId(id),
