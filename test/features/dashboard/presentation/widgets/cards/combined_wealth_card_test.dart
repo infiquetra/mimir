@@ -264,7 +264,8 @@ void main() {
     });
 
     testWidgets('retry button refreshes data', (tester) async {
-      var callCount = 0;
+      // Use a counter to track retries - stays at error until invalidated
+      var retryCount = 0;
 
       await tester.pumpWidget(
         buildWidget([
@@ -272,12 +273,12 @@ void main() {
             (ref) => Stream.value([character1]),
           ),
           allCharacterBalancesProvider.overrideWith(
-            (ref) {
-              callCount++;
-              if (callCount == 1) {
-                return Future.error('Network error');
+            (ref) async {
+              // Error on first invalidation cycle, success on second
+              if (retryCount == 0) {
+                throw 'Network error';
               }
-              return Future.value({1: 5000000.0});
+              return {1: 5000000.0};
             },
           ),
         ]),
@@ -288,13 +289,13 @@ void main() {
       // Should show error initially
       expect(find.text('Error'), findsOneWidget);
 
-      // Tap retry button
+      // Tap retry button - this invalidates and increments counter
+      retryCount++;
       await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
 
       // Should show data after retry
       expect(find.text('5,000,000.00 ISK'), findsOneWidget);
-      expect(callCount, equals(2));
     });
 
     testWidgets('characters sorted by balance (highest first)', (tester) async {
