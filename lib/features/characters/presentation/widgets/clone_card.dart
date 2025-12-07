@@ -140,11 +140,13 @@ class CloneCard extends StatelessWidget {
                               color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              'No implants',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                                fontStyle: FontStyle.italic,
+                            Expanded(
+                              child: Text(
+                                'No implants',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                  fontStyle: FontStyle.italic,
+                                ),
                               ),
                             ),
                           ],

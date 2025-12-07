@@ -173,26 +173,32 @@ class StandingsSubTab extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildSummaryItem(
-                  theme,
-                  'Positive',
-                  positive,
-                  EveColors.success,
-                  Icons.trending_up,
+                Expanded(
+                  child: _buildSummaryItem(
+                    theme,
+                    'Positive',
+                    positive,
+                    EveColors.success,
+                    Icons.trending_up,
+                  ),
                 ),
-                _buildSummaryItem(
-                  theme,
-                  'Neutral',
-                  neutral,
-                  Colors.grey,
-                  Icons.trending_flat,
+                Expanded(
+                  child: _buildSummaryItem(
+                    theme,
+                    'Neutral',
+                    neutral,
+                    Colors.grey,
+                    Icons.trending_flat,
+                  ),
                 ),
-                _buildSummaryItem(
-                  theme,
-                  'Negative',
-                  negative,
-                  EveColors.error,
-                  Icons.trending_down,
+                Expanded(
+                  child: _buildSummaryItem(
+                    theme,
+                    'Negative',
+                    negative,
+                    EveColors.error,
+                    Icons.trending_down,
+                  ),
                 ),
               ],
             ),
@@ -250,11 +256,14 @@ class StandingsSubTab extends ConsumerWidget {
                 color: EveColors.evePrimary,
               ),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: EveColors.evePrimary,
+              Flexible(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: EveColors.evePrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const Spacer(),
