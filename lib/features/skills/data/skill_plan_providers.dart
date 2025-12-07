@@ -140,11 +140,15 @@ class SkillPlanNotifier extends _$SkillPlanNotifier {
       );
 
       Log.i('SKILLS', 'SkillPlanNotifier.createPlan - created plan $planId');
-      state = const AsyncValue.data(null);
+      if (ref.mounted) {
+        state = const AsyncValue.data(null);
+      }
       return planId;
     } catch (e, stack) {
       Log.e('SKILLS', 'SkillPlanNotifier.createPlan - FAILED', e, stack);
-      state = AsyncValue.error(e, stack);
+      if (ref.mounted) {
+        state = AsyncValue.error(e, stack);
+      }
       rethrow;
     }
   }
@@ -167,10 +171,14 @@ class SkillPlanNotifier extends _$SkillPlanNotifier {
       );
 
       Log.i('SKILLS', 'SkillPlanNotifier.updatePlan - updated plan $planId');
-      state = const AsyncValue.data(null);
+      if (ref.mounted) {
+        state = const AsyncValue.data(null);
+      }
     } catch (e, stack) {
       Log.e('SKILLS', 'SkillPlanNotifier.updatePlan - FAILED', e, stack);
-      state = AsyncValue.error(e, stack);
+      if (ref.mounted) {
+        state = AsyncValue.error(e, stack);
+      }
       rethrow;
     }
   }
@@ -185,10 +193,14 @@ class SkillPlanNotifier extends _$SkillPlanNotifier {
       await database.deleteSkillPlan(planId);
 
       Log.i('SKILLS', 'SkillPlanNotifier.deletePlan - deleted plan $planId');
-      state = const AsyncValue.data(null);
+      if (ref.mounted) {
+        state = const AsyncValue.data(null);
+      }
     } catch (e, stack) {
       Log.e('SKILLS', 'SkillPlanNotifier.deletePlan - FAILED', e, stack);
-      state = AsyncValue.error(e, stack);
+      if (ref.mounted) {
+        state = AsyncValue.error(e, stack);
+      }
       rethrow;
     }
   }
@@ -217,10 +229,14 @@ class SkillPlanNotifier extends _$SkillPlanNotifier {
       );
 
       Log.i('SKILLS', 'SkillPlanNotifier.addSkillToPlan - added skill $skillId to plan $planId');
-      state = const AsyncValue.data(null);
+      if (ref.mounted) {
+        state = const AsyncValue.data(null);
+      }
     } catch (e, stack) {
       Log.e('SKILLS', 'SkillPlanNotifier.addSkillToPlan - FAILED', e, stack);
-      state = AsyncValue.error(e, stack);
+      if (ref.mounted) {
+        state = AsyncValue.error(e, stack);
+      }
       rethrow;
     }
   }
@@ -235,10 +251,14 @@ class SkillPlanNotifier extends _$SkillPlanNotifier {
       await database.removeSkillFromPlan(planId, skillId);
 
       Log.i('SKILLS', 'SkillPlanNotifier.removeSkillFromPlan - removed skill $skillId from plan $planId');
-      state = const AsyncValue.data(null);
+      if (ref.mounted) {
+        state = const AsyncValue.data(null);
+      }
     } catch (e, stack) {
       Log.e('SKILLS', 'SkillPlanNotifier.removeSkillFromPlan - FAILED', e, stack);
-      state = AsyncValue.error(e, stack);
+      if (ref.mounted) {
+        state = AsyncValue.error(e, stack);
+      }
       rethrow;
     }
   }
@@ -253,10 +273,14 @@ class SkillPlanNotifier extends _$SkillPlanNotifier {
       await database.updatePlanEntryOrder(planId, skillIds);
 
       Log.i('SKILLS', 'SkillPlanNotifier.reorderSkills - updated order for plan $planId');
-      state = const AsyncValue.data(null);
+      if (ref.mounted) {
+        state = const AsyncValue.data(null);
+      }
     } catch (e, stack) {
       Log.e('SKILLS', 'SkillPlanNotifier.reorderSkills - FAILED', e, stack);
-      state = AsyncValue.error(e, stack);
+      if (ref.mounted) {
+        state = AsyncValue.error(e, stack);
+      }
       rethrow;
     }
   }
