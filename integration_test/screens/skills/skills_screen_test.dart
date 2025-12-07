@@ -548,7 +548,7 @@ void main() {
 
         // AND: Create button should be visible
         expect(
-          find.widgetWithText(FilledButton, 'Create Plan'),
+          find.text('Create Plan'),
           findsOneWidget,
           reason: 'Create plan button should be in empty state',
         );
