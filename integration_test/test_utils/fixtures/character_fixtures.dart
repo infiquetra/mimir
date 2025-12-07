@@ -19,7 +19,7 @@ class CharacterFixtures {
     bool isActive = true,
   }) {
     return CharactersCompanion.insert(
-      characterId: 12345678,
+      characterId: const Value(12345678),
       name: 'Test Capsuleer',
       corporationId: 98000001,
       corporationName: 'Test Corporation',
@@ -50,7 +50,7 @@ class CharacterFixtures {
     bool isActive = false,
   }) {
     return CharactersCompanion.insert(
-      characterId: 23456789,
+      characterId: const Value(23456789),
       name: 'Second Test Character',
       corporationId: 98000002,
       corporationName: 'Second Test Corporation',
@@ -92,7 +92,7 @@ class CharacterFixtures {
     bool isActive = false,
   }) {
     return CharactersCompanion.insert(
-      characterId: characterId,
+      characterId: Value(characterId),
       name: name,
       corporationId: corporationId,
       corporationName: corporationName,
