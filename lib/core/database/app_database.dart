@@ -558,6 +558,21 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
+  /// Get wallet journal entries since a specific date.
+  ///
+  /// More efficient than fetching all entries and filtering in memory.
+  /// Uses SQL WHERE clause to filter at the database layer.
+  Future<List<WalletJournalEntry>> getWalletJournalSince(
+    int characterId,
+    DateTime since,
+  ) {
+    return (select(walletJournalEntries)
+          ..where((e) => e.characterId.equals(characterId))
+          ..where((e) => e.date.isBiggerThanValue(since))
+          ..orderBy([(e) => OrderingTerm.desc(e.date)]))
+        .get();
+  }
+
   /// Watch wallet journal for reactive updates.
   Stream<List<WalletJournalEntry>> watchWalletJournal(
     int characterId, {

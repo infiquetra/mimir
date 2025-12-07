@@ -293,10 +293,9 @@ class WalletRepository {
       Log.d('WALLET',
           'get30DaySummary - querying journal since ${thirtyDaysAgo.toIso8601String()}');
 
-      // Get all journal entries from the last 30 days.
-      final allEntries = await _database.getWalletJournal(characterId, limit: 10000);
+      // Get journal entries from the last 30 days (filtered at SQL level).
       final recentEntries =
-          allEntries.where((entry) => entry.date.isAfter(thirtyDaysAgo)).toList();
+          await _database.getWalletJournalSince(characterId, thirtyDaysAgo);
       Log.i('WALLET',
           'get30DaySummary - analyzing ${recentEntries.length} journal entries from last 30 days');
 
