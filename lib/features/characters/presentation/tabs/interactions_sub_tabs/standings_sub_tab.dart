@@ -156,11 +156,13 @@ class StandingsSubTab extends ConsumerWidget {
                   color: EveColors.evePrimary,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'Standings Summary',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: EveColors.evePrimary,
+                Expanded(
+                  child: Text(
+                    'Standings Summary',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: EveColors.evePrimary,
+                    ),
                   ),
                 ),
               ],

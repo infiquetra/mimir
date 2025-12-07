@@ -97,11 +97,13 @@ class AttributesSubTab extends ConsumerWidget {
                         color: EveColors.evePrimary,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'Character Attributes',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: EveColors.evePrimary,
+                      Expanded(
+                        child: Text(
+                          'Character Attributes',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: EveColors.evePrimary,
+                          ),
                         ),
                       ),
                     ],
@@ -187,11 +189,13 @@ class AttributesSubTab extends ConsumerWidget {
                         color: EveColors.evePrimary,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'Active Implants',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: EveColors.evePrimary,
+                      Expanded(
+                        child: Text(
+                          'Active Implants',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: EveColors.evePrimary,
+                          ),
                         ),
                       ),
                     ],
