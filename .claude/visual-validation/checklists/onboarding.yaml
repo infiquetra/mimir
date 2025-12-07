@@ -1,0 +1,156 @@
+# Visual Validation Checklist: Onboarding Screen
+#
+# This checklist guides the visual-validator agent to perform semantic
+# screenshot analysis of the Onboarding flow (3 steps).
+#
+# Usage: @visual-validator Validate the onboarding screen
+
+screen: Onboarding
+description: First-time user wizard (3 steps)
+navigation: Launch app for first time → Onboarding appears automatically
+
+# Visual checks to perform (validate on each step)
+checks:
+  - category: Layout (All Steps)
+    items:
+      - name: Step indicators visible
+        check: 3 circles/dots at top showing progress
+        expected: Circles for steps 1, 2, 3 with current step highlighted
+        failure: Missing indicators, wrong count, or all same color
+
+      - name: Current step highlighted
+        check: Active step has distinct color (primary)
+        expected: Filled circle or bold outline for current step
+        failure: No visual distinction between current and future steps
+
+      - name: Completed steps shown
+        check: Past steps have "completed" visual (checkmark or muted color)
+        expected: Steps before current show as done
+        failure: All steps look active, or past steps reset
+
+      - name: Step connector lines
+        check: Lines between step indicators show progress
+        expected: Lines colored for completed portions
+        failure: Missing lines, or all same color
+
+  - category: Navigation Buttons (All Steps)
+    items:
+      - name: Next/Finish button visible
+        check: Primary action button at bottom right
+        expected: "Next" on steps 1-2, "Finish" on step 3
+        failure: Missing button, wrong label, or disabled state
+
+      - name: Back button visible (steps 2-3)
+        check: Secondary button to go to previous step
+        expected: "Back" button on steps 2 and 3 only
+        failure: Back button on step 1, or missing on steps 2-3
+
+      - name: Skip button visible
+        check: Option to skip entire onboarding
+        expected: "Skip" button or link visible on all steps
+        failure: No skip option, or only on certain steps
+
+  - category: Step 1 - Welcome
+    items:
+      - name: Welcome message visible
+        check: Heading like "Welcome to Mimir"
+        expected: Large, prominent heading
+        failure: Missing heading, or generic text
+
+      - name: Description text readable
+        check: Explanation of app purpose
+        expected: 2-3 sentences about EVE companion features
+        failure: Missing description, or truncated text
+
+      - name: Add Character prompt
+        check: Call-to-action to add first character
+        expected: Button or instruction to authenticate with EVE
+        failure: No mention of adding character
+
+      - name: App icon/logo visible
+        check: Mimir branding or EVE-related imagery
+        expected: Visual element establishing app identity
+        failure: Generic placeholder or missing branding
+
+  - category: Step 2 - Feature Tour
+    items:
+      - name: Feature descriptions visible
+        check: Overview of main features (Dashboard, Wallet, Skills, etc.)
+        expected: List or grid of features with icons
+        failure: Wall of text, missing features, or blank
+
+      - name: Feature icons present
+        check: Each feature has representative icon
+        expected: Icons matching app's main screens
+        failure: Missing icons, or placeholder graphics
+
+      - name: Content not overwhelming
+        check: Information is scannable, not dense
+        expected: Bullet points or cards, easy to read
+        failure: Large paragraphs, tiny text
+
+  - category: Step 3 - Tray Intro & Preferences
+    items:
+      - name: Tray icon explanation
+        check: Describes menu bar/system tray functionality
+        expected: Text + visual showing tray icon usage
+        failure: No explanation of tray behavior
+
+      - name: Startup behavior options
+        check: Two radio buttons or similar for startup preference
+        expected: "Open Dashboard" and "Show tray icon only"
+        failure: Missing options, or not selectable
+
+      - name: One option selected
+        check: Default startup behavior is pre-selected
+        expected: Radio button filled for one option
+        failure: Both selected, or neither selected
+
+      - name: Option descriptions clear
+        check: Each choice has explanatory subtitle
+        expected: "Show the Dashboard window automatically" etc.
+        failure: Options without descriptions
+
+  - category: Visual Consistency
+    items:
+      - name: Consistent spacing
+        check: Padding and margins uniform across steps
+        expected: Balanced layout on all 3 steps
+        failure: Step 2 cramped, step 3 too much whitespace
+
+      - name: Typography hierarchy
+        check: Headings, body text, buttons have clear distinction
+        expected: Size/weight differences establish hierarchy
+        failure: All text same size, or headings smaller than body
+
+  - category: Accessibility
+    items:
+      - name: Sufficient contrast
+        check: Text readable against background
+        expected: Dark text on light, or light text on dark with good contrast
+        failure: Low contrast, hard to read
+
+      - name: Interactive elements visible
+        check: Buttons and clickable items have clear affordances
+        expected: Buttons look like buttons (shadows, borders, hover states)
+        failure: Flat design makes interactive elements invisible
+
+# Test data requirements
+test_data:
+  state: Fresh install (onboarding not completed)
+  characters: 0 (first launch)
+
+# Known issues to ignore
+known_issues:
+  - "Step transitions may have brief animation"
+  - "OAuth flow may open browser window (not tested here)"
+
+# Success criteria (all steps)
+success_criteria:
+  - 3 step indicators visible
+  - Current step highlighted
+  - Navigation buttons present (Next/Back/Skip)
+  - Step content renders without errors
+  - Startup preference options visible (step 3)
+  - Typography readable
+  - No layout overflow

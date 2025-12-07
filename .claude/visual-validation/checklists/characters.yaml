@@ -1,0 +1,123 @@
+# Visual Validation Checklist: Characters Screen
+#
+# This checklist guides the visual-validator agent to perform semantic
+# screenshot analysis of the Characters screen.
+#
+# Usage: @visual-validator Validate the characters screen
+
+screen: Characters
+description: Character overview with split panel layout (portrait + content grid)
+navigation: Launch app → Characters window (or system tray → Open Characters)
+
+# Visual checks to perform
+checks:
+  - category: Layout
+    items:
+      - name: Split panel 40/60 ratio
+        check: Left panel (portrait) ~40%, right panel (content) ~60%
+        expected: Visually balanced split with portrait on left
+        failure: Panels same width, or reversed positions
+
+      - name: Character header bar visible
+        check: Top bar with character switcher and add button
+        expected: Header spanning full width with controls
+        failure: No header, or collapsed/hidden
+
+      - name: No overflow errors
+        check: Both panels fit within viewport
+        expected: Clean split layout, no scrollbars on panels
+        failure: Overflow indicators, horizontal scrolling
+
+  - category: Portrait Panel
+    items:
+      - name: Character image loads
+        check: Portrait displays from EVE Image Server
+        expected: Character's face/avatar visible
+        failure: Broken image, placeholder, or blank space
+
+      - name: Name overlay visible
+        check: Character name displayed on or near portrait
+        expected: "Test Capsuleer" or actual character name
+        failure: Missing name, or shows character ID
+
+      - name: Corporation shown
+        check: Corporation name visible (e.g., "Test Corporation")
+        expected: Corp name, not corp ID
+        failure: Shows "Corporation #98000001" or missing
+
+      - name: Alliance shown (if applicable)
+        check: Alliance name visible, or gracefully omitted if null
+        expected: "Test Alliance" or no alliance section
+        failure: Shows "null", "Alliance #0", or error message
+
+      - name: Security status displayed
+        check: Security value shown (e.g., "5.0" or "-2.5")
+        expected: Numeric value with appropriate color (green/red)
+        failure: Missing, shows "NaN", or wrong color
+
+  - category: Content Grid
+    items:
+      - name: Cards display in grid
+        check: Multiple info cards arranged in columns
+        expected: 2-3 column grid of data cards
+        failure: Single column, cards overlapping, or blank area
+
+      - name: All cards render
+        check: No error widgets or blank cards
+        expected: Each card shows content or loading state
+        failure: ErrorWidget visible, or cards completely blank
+
+  - category: Character Switcher
+    items:
+      - name: Switcher is accessible
+        check: Dropdown or selector in header bar
+        expected: Clickable UI element to change active character
+        failure: No switcher visible, or disabled state
+
+      - name: Current character highlighted
+        check: Active character is visually distinct
+        expected: Bold text, checkmark, or color highlight
+        failure: No indication of which character is active
+
+  - category: Add Character Button
+    items:
+      - name: Add button present
+        check: Button or icon to add new character
+        expected: "+" icon or "Add Character" button in header
+        failure: No way to add character from this screen
+
+  - category: Empty State
+    items:
+      - name: No characters shows prompt
+        check: When no characters added, displays helpful message
+        expected: "No Characters Added" with person_add icon
+        failure: Blank screen, crash, or shows portrait anyway
+
+  - category: Multi-Character Display
+    items:
+      - name: Switching updates content
+        check: Changing active character updates portrait and cards
+        expected: All panels refresh with new character's data
+        failure: Portrait updates but cards don't, or vice versa
+
+# Test data requirements
+test_data:
+  characters: At least 1 character with:
+    - Corporation: Name resolved
+    - Alliance: Either name or null (handled gracefully)
+    - Security status: Positive or negative value
+    - Portrait: Valid image URL
+
+# Known issues to ignore
+known_issues:
+  - "Portrait images may have 1-2 second load delay"
+  - "Corporation/alliance logos may not load if CCP CDN is slow"
+
+# Success criteria
+success_criteria:
+  - 40/60 split panel layout
+  - Portrait image visible
+  - Character name (not ID)
+  - Corporation name (not ID)
+  - Content grid renders
+  - No layout overflow

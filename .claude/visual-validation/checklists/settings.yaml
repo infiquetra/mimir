@@ -1,0 +1,135 @@
+# Visual Validation Checklist: Settings Screen
+#
+# This checklist guides the visual-validator agent to perform semantic
+# screenshot analysis of the Settings screen.
+#
+# Usage: @visual-validator Validate the settings screen
+
+screen: Settings
+description: App configuration and preferences
+navigation: Launch app → Settings window (or system tray → Settings)
+
+# Visual checks to perform
+checks:
+  - category: Layout
+    items:
+      - name: Sections organized
+        check: Three sections visible: Startup, Data, About
+        expected: Section headers with cards below each
+        failure: Sections missing, collapsed, or out of order
+
+      - name: Scrollable list
+        check: Settings in a ListView, scrollable if needed
+        expected: Can scroll if content exceeds viewport
+        failure: Content cut off, no scrolling
+
+  - category: Startup Section
+    items:
+      - name: Section header visible
+        check: "Startup" heading with styling
+        expected: Bold or colored header distinguishing section
+        failure: Missing header, or blends with content
+
+      - name: Two radio options
+        check: "Open Dashboard" and "Show tray icon only"
+        expected: Both options as radio buttons
+        failure: Missing option, or not radio buttons (checkboxes?)
+
+      - name: Radio button selected
+        check: One option is selected (filled circle)
+        expected: Visual indication of active choice
+        failure: Both selected, or neither selected
+
+      - name: Subtitles shown
+        check: Each option has explanatory text below
+        expected: "Show the Dashboard window automatically" visible
+        failure: Subtitles missing or truncated
+
+      - name: Icon visible
+        check: Power settings icon next to "When Mimir launches"
+        expected: Icon matching startup theme
+        failure: Missing icon, or wrong icon
+
+  - category: Data Section
+    items:
+      - name: Section header visible
+        check: "Data" heading
+        expected: Same styling as other section headers
+        failure: Missing or inconsistent styling
+
+      - name: SDE update card present
+        check: Card showing SDE version and update button
+        expected: Informational card with action button
+        failure: Missing SDE card, or error message
+
+      - name: SDE version info shown
+        check: Current SDE version or date visible
+        expected: Text like "Version 2023-12" or "Updated Jan 15"
+        failure: Shows "Unknown version" or blank
+
+      - name: Update button visible
+        check: Button to check for/download SDE updates
+        expected: Clearly labeled "Update" or "Check for Updates"
+        failure: No button, or disabled state when updates available
+
+  - category: About Section
+    items:
+      - name: Section header visible
+        check: "About" heading
+        expected: Same styling as other sections
+        failure: Missing or inconsistent
+
+      - name: App name shown
+        check: "Mimir" text visible
+        expected: App name as heading or prominent text
+        failure: Missing app name, or generic "Application"
+
+      - name: Version number visible
+        check: App version like "1.0.0" or "0.9.5-beta"
+        expected: Semantic version number
+        failure: Missing version, shows "dev", or placeholder
+
+      - name: Info icon present
+        check: Info outline icon next to "Mimir"
+        expected: Icon matching about/info theme
+        failure: Missing icon, or wrong icon
+
+  - category: Visual Consistency
+    items:
+      - name: Cards have consistent style
+        check: All settings cards use same design
+        expected: Uniform padding, borders, backgrounds
+        failure: Inconsistent card styling
+
+      - name: Icons align
+        check: Section icons vertically aligned
+        expected: Icons at same horizontal position
+        failure: Icons misaligned or different sizes
+
+  - category: Interactivity
+    items:
+      - name: Radio buttons clickable
+        check: Can click radio buttons to change selection
+        expected: Visual feedback on hover/click
+        failure: Buttons appear disabled or non-interactive
+
+# Test data requirements
+test_data:
+  settings: Default settings or:
+    - Startup behavior: Either option selected
+    - SDE: Valid version info
+    - App version: Valid semantic version
+
+# Known issues to ignore
+known_issues:
+  - "SDE version may show 'Checking...' briefly during update check"
+  - "Settings may have slight delay loading from database"
+
+# Success criteria
+success_criteria:
+  - Three sections visible (Startup, Data, About)
+  - Two radio options with one selected
+  - SDE update card renders
+  - App name and version shown
+  - Consistent card styling
+  - All icons present

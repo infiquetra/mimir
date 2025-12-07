@@ -1,0 +1,133 @@
+# Visual Validation Checklist: Skills Screen
+#
+# This checklist guides the visual-validator agent to perform semantic
+# screenshot analysis of the Skills screen.
+#
+# Usage: @visual-validator Validate the skills screen
+
+screen: Skills
+description: Skill queue monitoring with training progress
+navigation: Launch app → Skills window (or system tray → Open Skills)
+
+# Visual checks to perform
+checks:
+  - category: Layout
+    items:
+      - name: Skill queue renders
+        check: List of skills in training order
+        expected: Vertical list, position 0 at top (currently training)
+        failure: Empty list when queue has skills, or random order
+
+      - name: No overflow errors
+        check: Queue fits within scrollable area
+        expected: Clean scrolling, no overflow indicators
+        failure: Yellow/black overflow bars
+
+  - category: Currently Training Skill (Position 0)
+    items:
+      - name: Highlighted or distinct
+        check: First skill has visual emphasis (bold, color, border)
+        expected: Clearly different from queued skills
+        failure: Looks identical to queued skills
+
+      - name: Skill icon visible
+        check: EveSkillIcon renders at correct size
+        expected: Skill icon (typically 64px or 128px)
+        failure: Broken image, wrong size, or placeholder
+
+      - name: Skill name readable
+        check: Shows "Mechanics V" not "Skill #3301"
+        expected: Skill name from SDE database
+        failure: Shows raw skill ID number
+
+      - name: Level shown (I-V)
+        check: Roman numeral level visible (I, II, III, IV, V)
+        expected: "V" or "IV" next to skill name
+        failure: Shows Arabic number (5, 4) or missing
+
+      - name: Progress bar visible
+        check: Visual indicator of training completion
+        expected: Colored bar or ring, partially filled
+        failure: No progress indicator, or frozen at 0%/100%
+
+      - name: Time remaining shown
+        check: Countdown like "6h 23m" or "1d 2h"
+        expected: Human-readable format, updates live
+        failure: Shows timestamps, "NaN", or stuck value
+
+  - category: Queued Skills (Positions 1+)
+    items:
+      - name: Multiple skills visible
+        check: Shows 2nd, 3rd, etc. skills if queued
+        expected: List of upcoming skills
+        failure: Only shows currently training, hides queue
+
+      - name: Queue order correct
+        check: Skills in queuePosition order (0, 1, 2, ...)
+        expected: Sorted by position, not by time or name
+        failure: Random order, or sorted alphabetically
+
+      - name: Skill names resolved
+        check: All skills show names, not IDs
+        expected: "Engineering IV", "Spaceship Command V"
+        failure: "Skill #3392", "Skill #3327"
+
+      - name: Start times visible
+        check: Shows when queued skills will begin
+        expected: "Starts in 6h" or similar
+        failure: Missing start time, or shows raw DateTime
+
+  - category: Empty Queue State
+    items:
+      - name: Empty state when no skills
+        check: When queue is empty, shows helpful message
+        expected: Icon + "No skills training" + suggestion
+        failure: Blank screen, crash, or spinning loader
+
+      - name: Icon present
+        check: Empty state has visual icon (e.g., construction)
+        expected: Themed icon matching app style
+        failure: No icon, or generic error icon
+
+  - category: Skill Details
+    items:
+      - name: SP values visible
+        check: Shows current SP, target SP, or progress
+        expected: Numbers like "226,275 / 256,000 SP"
+        failure: Missing SP, shows raw values without formatting
+
+      - name: Training speed shown
+        check: SP/hour or completion rate visible
+        expected: "1,234 SP/h" or similar metric
+        failure: Missing speed info
+
+  - category: Multi-Character Support
+    items:
+      - name: Character switcher accessible
+        check: Can change active character to see their queue
+        expected: Header or dropdown to switch characters
+        failure: Stuck on one character, no way to switch
+
+# Test data requirements
+test_data:
+  character: 1 character with:
+    - Active skill queue: 3 skills
+      - Position 0: Mechanics V (training)
+      - Position 1: Engineering IV (queued)
+      - Position 2: Spaceship Command V (queued)
+    - Skill IDs: 3301, 3392, 3327 (known SDE entries)
+
+# Known issues to ignore
+known_issues:
+  - "SDE skill names may show 'Loading...' briefly on first load"
+  - "Progress bar animation may be mid-update in screenshot"
+  - "Time remaining updates every second (may differ by 1s)"
+
+# Success criteria
+success_criteria:
+  - Skill names resolved (no IDs)
+  - Currently training highlighted
+  - Progress bar visible
+  - Time remaining shown
+  - Queue order correct
+  - Empty state if no skills

@@ -1,0 +1,161 @@
+# Visual Validation Checklist: Wallet Screen
+#
+# This checklist guides the visual-validator agent to perform semantic
+# screenshot analysis of the Wallet screen.
+#
+# Usage: @visual-validator Validate the wallet screen
+
+screen: Wallet
+description: Wallet management with balance cards and transaction tabs
+navigation: Launch app → Wallet window (or system tray → Open Wallet)
+
+# Visual checks to perform
+checks:
+  - category: Layout
+    items:
+      - name: Balance cards row at top
+        check: Horizontal row of 4 balance cards above tabs
+        expected: Cards in single row, evenly spaced
+        failure: Cards stacked vertically, overlapping, or missing
+
+      - name: TabBarView no overflow
+        check: Tab content fits within Expanded widget
+        expected: Clean tab switching, no overflow bars
+        failure: Yellow/black overflow indicators below tabs
+
+      - name: Proper spacing
+        check: Cards have consistent gaps, tabs align properly
+        expected: Clean visual hierarchy with balanced spacing
+        failure: Cards touching edges, tabs too close to cards
+
+  - category: Balance Cards
+    items:
+      - name: ISK card visible
+        check: First card shows ISK balance
+        expected: Large number with "ISK" label
+        failure: Missing ISK card, or shows "0.00"
+
+      - name: PLEX card visible
+        check: Second card shows PLEX count
+        expected: Number with "PLEX" label
+        failure: Missing PLEX card, or broken icon
+
+      - name: LP card visible
+        check: Third card shows total Loyalty Points
+        expected: Sum across all corps, "LP" label
+        failure: Missing LP card, or shows individual corps
+
+      - name: EverMarks card visible
+        check: Fourth card shows EverMarks (if applicable)
+        expected: Number with "EM" label, or gracefully omitted
+        failure: Blank card, or error message
+
+      - name: ISK formatted
+        check: Balance shows "1,500,000,000 ISK" or "1.5B ISK"
+        expected: Human-readable format
+        failure: Shows "1500000000.0" raw number
+
+  - category: Tab Bar
+    items:
+      - name: Three tabs present
+        check: Overview, Transactions, Market tabs visible
+        expected: All three tabs as separate clickable buttons
+        failure: Missing tab, or combined into dropdown
+
+      - name: Active tab highlighted
+        check: Current tab has visual indicator (underline/color)
+        expected: Clear distinction between active and inactive
+        failure: All tabs look the same
+
+  - category: Overview Tab
+    items:
+      - name: 30-day summary visible
+        check: Income and expense totals for last 30 days
+        expected: Green (income) and red (expense) numbers
+        failure: Blank panel, or shows "0.00 / 0.00" incorrectly
+
+      - name: Summary breakdown readable
+        check: Individual categories or chart displayed
+        expected: Visual breakdown of income sources
+        failure: Just total number, no detail
+
+  - category: Transactions Tab
+    items:
+      - name: Journal entries display
+        check: List of wallet transactions visible
+        expected: Dates, amounts (+/-), descriptions
+        failure: Empty list when data exists, or error message
+
+      - name: Dates are human-readable
+        check: Shows "2 hours ago" or "Jan 15" not timestamps
+        expected: Relative or formatted dates
+        failure: Shows Unix timestamp or ISO string
+
+      - name: Amounts color-coded
+        check: Income green (+), expenses red (-)
+        expected: Clear visual distinction by sign
+        failure: All same color, or wrong colors
+
+  - category: Market Tab
+    items:
+      - name: Market transactions display
+        check: Buy/sell transactions visible
+        expected: Item icons, names, prices, locations
+        failure: Empty list when data exists
+
+      - name: Item icons visible
+        check: EveTypeIcon widgets render for items
+        expected: Ship/item icons at correct size (32px or 64px)
+        failure: Broken images, wrong sizes (24px, 48px)
+
+      - name: Item names resolved
+        check: Shows "Rifter" not "Item #587"
+        expected: Item names from ESI
+        failure: Shows raw type IDs
+
+      - name: Location names resolved
+        check: Shows "Jita IV..." not "Location #60003760"
+        expected: Station names from ESI
+        failure: Shows raw location IDs
+
+      - name: BUY/SELL color-coded
+        check: Buys and sells have different colors
+        expected: Buy (green), Sell (red) or similar scheme
+        failure: All same color, or swapped colors
+
+  - category: Pagination
+    items:
+      - name: Pagination controls work
+        check: If >100 transactions, shows page controls
+        expected: Previous/Next buttons or page numbers
+        failure: All transactions loaded at once (performance issue)
+
+  - category: Empty State
+    items:
+      - name: No character shows prompt
+        check: When no character selected, displays helpful message
+        expected: "No Character Selected" with icon
+        failure: Blank screen or crash
+
+# Test data requirements
+test_data:
+  character: 1 character with:
+    - Wallet balance: 1.5B ISK
+    - PLEX: 50
+    - Loyalty points: 2+ corporations
+    - Journal: 3+ entries (income/expense)
+    - Transactions: 2+ market buys/sells
+
+# Known issues to ignore
+known_issues:
+  - "Market transaction icons may load slowly from ESI"
+  - "Tab animations may be mid-transition in screenshot"
+
+# Success criteria
+success_criteria:
+  - 4 balance cards in row
+  - TabBarView no overflow
+  - ISK formatted (no raw numbers)
+  - Item/location names resolved (no IDs)
+  - Transactions show correct +/- colors
+  - Empty states have helpful messages

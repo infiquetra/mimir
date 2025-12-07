@@ -1,0 +1,135 @@
+# Visual Validation Checklist: Dashboard Screen
+#
+# This checklist guides the visual-validator agent to perform semantic
+# screenshot analysis of the Dashboard screen.
+#
+# Usage: @visual-validator Validate the dashboard screen
+
+screen: Dashboard
+description: Multi-character overview dashboard with 7 aggregated data cards
+navigation: Launch app → Dashboard window (or system tray → Open Dashboard)
+
+# Visual checks to perform
+checks:
+  - category: Layout
+    items:
+      - name: Grid layout renders
+        check: Cards are arranged in a responsive grid (1-2 columns based on width)
+        expected: Masonry grid with proper spacing, no overlapping cards
+        failure: Cards overlap, inconsistent spacing, or single column at wide width
+
+      - name: No overflow errors
+        check: All content fits within viewport, no scrollbar clipping
+        expected: Clean layout with no "overflow by X pixels" visual indicators
+        failure: Yellow/black striped overflow indicators visible
+
+      - name: Responsive breakpoints correct
+        check: At <600px (1 col), 600-900px (2 col), >900px (2 col)
+        expected: Layout adapts smoothly at breakpoints
+        failure: Wrong column count, cards too narrow/wide
+
+  - category: CombinedWealthCard (Card 1)
+    items:
+      - name: ISK formatted with commas or abbreviation
+        check: Balance shows as "1,500,000,000 ISK" or "1.5B ISK"
+        expected: Human-readable format, not raw number or scientific notation
+        failure: Shows "1500000000.0" or "1.5e+9"
+
+      - name: Character avatars visible
+        check: Character portrait icons are displayed
+        expected: Circular avatar images for each character
+        failure: Broken images, placeholders, or missing avatars
+
+      - name: Total wealth aggregates across characters
+        check: Sum of all character balances is displayed
+        expected: Single total number representing combined wealth
+        failure: Only one character's balance shown, or zero when characters have ISK
+
+  - category: TrainingOverviewCard (Card 2)
+    items:
+      - name: Skill name readable (not ID)
+        check: Currently training skill shows name like "Mechanics V"
+        expected: Skill name from SDE, not "Skill #3301"
+        failure: Shows raw skill ID number
+
+      - name: Time remaining shown
+        check: Displays time like "6h 23m" or "1d 2h"
+        expected: Human-readable countdown
+        failure: Missing time, shows raw timestamps, or "NaN"
+
+      - name: Progress bar visible
+        check: Visual progress indicator (bar or ring)
+        expected: Colored bar showing skill completion percentage
+        failure: No progress indicator, or frozen at 0%/100%
+
+  - category: TrainingTimelineCard (Card 6)
+    items:
+      - name: Multiple skills visible
+        check: Queue shows 2-3 upcoming skills if available
+        expected: Timeline with skill names and levels (e.g., "Engineering IV")
+        failure: Only shows one skill, or empty when queue has items
+
+      - name: No text truncation
+        check: Long skill names don't cut off mid-word
+        expected: Text wraps or truncates with ellipsis
+        failure: Text cuts off abruptly without ellipsis
+
+  - category: QuickActionsCard (Card 3)
+    items:
+      - name: Buttons have icons and labels
+        check: Action buttons show both icon and text
+        expected: Clearly labeled buttons with visual icons
+        failure: Icons only (no text), or text only (no icons)
+
+  - category: FleetStatusCard (Card 4)
+    items:
+      - name: Shows content or "No Fleet"
+        check: Either displays fleet info or helpful empty state
+        expected: Content area populated (not blank)
+        failure: Blank card, or error message
+
+  - category: WalletTrendsCard (Card 5)
+    items:
+      - name: Chart renders
+        check: 30-day income/expense graph is visible
+        expected: Line or bar chart with data points
+        failure: Blank chart area, loading spinner stuck
+
+      - name: Legend visible
+        check: Income (green) and Expense (red) labels
+        expected: Color-coded legend matching chart lines
+        failure: No legend, or colors don't match
+
+  - category: CombatStatsCard (Card 7)
+    items:
+      - name: Kill/loss data or "No kills" message
+        check: Shows combat stats or appropriate empty state
+        expected: Numbers with labels, or "No combat data" message
+        failure: Blank card, or shows "0 / 0" incorrectly
+
+  - category: Empty State
+    items:
+      - name: No characters shows helpful message
+        check: When no characters added, displays "No Characters" with icon
+        expected: Icon (person_add) + message + helpful text
+        failure: Blank screen, crash, or shows cards anyway
+
+# Test data requirements
+test_data:
+  characters: At least 1 character with:
+    - Wallet balance: 1.5B ISK
+    - Active skill queue: Mechanics V training
+    - Wallet journal: 3+ entries (income/expense)
+
+# Known issues to ignore
+known_issues:
+  - "SDE skill names may show as 'Loading...' on first load (cache warming)"
+  - "Chart animations may be mid-transition in screenshot"
+
+# Success criteria
+success_criteria:
+  - All 7 cards render without errors
+  - ISK amounts formatted (no raw numbers)
+  - Skill names resolved (no IDs)
+  - No layout overflow indicators
+  - Responsive grid at different widths
