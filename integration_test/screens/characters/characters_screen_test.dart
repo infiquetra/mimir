@@ -153,7 +153,7 @@ void main() {
 
         // THEN: Empty state should be visible
         expect(
-          find.text('No Characters Added'),
+          find.text('No Characters'),
           findsOneWidget,
           reason: 'Should show empty state message',
         );
