@@ -31,9 +31,33 @@ class $SdeTypesTable extends SdeTypes with TableInfo<$SdeTypesTable, SdeType> {
   late final GeneratedColumn<String> description = GeneratedColumn<String>(
       'description', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _rankMeta = const VerificationMeta('rank');
   @override
-  List<GeneratedColumn> get $columns =>
-      [typeId, typeName, groupId, description];
+  late final GeneratedColumn<int> rank = GeneratedColumn<int>(
+      'rank', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _primaryAttributeMeta =
+      const VerificationMeta('primaryAttribute');
+  @override
+  late final GeneratedColumn<String> primaryAttribute = GeneratedColumn<String>(
+      'primary_attribute', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _secondaryAttributeMeta =
+      const VerificationMeta('secondaryAttribute');
+  @override
+  late final GeneratedColumn<String> secondaryAttribute =
+      GeneratedColumn<String>('secondary_attribute', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        typeId,
+        typeName,
+        groupId,
+        description,
+        rank,
+        primaryAttribute,
+        secondaryAttribute
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -66,6 +90,22 @@ class $SdeTypesTable extends SdeTypes with TableInfo<$SdeTypesTable, SdeType> {
           description.isAcceptableOrUnknown(
               data['description']!, _descriptionMeta));
     }
+    if (data.containsKey('rank')) {
+      context.handle(
+          _rankMeta, rank.isAcceptableOrUnknown(data['rank']!, _rankMeta));
+    }
+    if (data.containsKey('primary_attribute')) {
+      context.handle(
+          _primaryAttributeMeta,
+          primaryAttribute.isAcceptableOrUnknown(
+              data['primary_attribute']!, _primaryAttributeMeta));
+    }
+    if (data.containsKey('secondary_attribute')) {
+      context.handle(
+          _secondaryAttributeMeta,
+          secondaryAttribute.isAcceptableOrUnknown(
+              data['secondary_attribute']!, _secondaryAttributeMeta));
+    }
     return context;
   }
 
@@ -83,6 +123,12 @@ class $SdeTypesTable extends SdeTypes with TableInfo<$SdeTypesTable, SdeType> {
           .read(DriftSqlType.int, data['${effectivePrefix}group_id'])!,
       description: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}description']),
+      rank: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}rank']),
+      primaryAttribute: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}primary_attribute']),
+      secondaryAttribute: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}secondary_attribute']),
     );
   }
 
@@ -104,11 +150,28 @@ class SdeType extends DataClass implements Insertable<SdeType> {
 
   /// Type description (optional).
   final String? description;
+
+  /// Skill rank (training time multiplier) - only for skills.
+  /// Null for non-skill types.
+  final int? rank;
+
+  /// Primary attribute for skill training - only for skills.
+  /// One of: perception, willpower, intelligence, memory, charisma.
+  /// Null for non-skill types.
+  final String? primaryAttribute;
+
+  /// Secondary attribute for skill training - only for skills.
+  /// One of: perception, willpower, intelligence, memory, charisma.
+  /// Null for non-skill types.
+  final String? secondaryAttribute;
   const SdeType(
       {required this.typeId,
       required this.typeName,
       required this.groupId,
-      this.description});
+      this.description,
+      this.rank,
+      this.primaryAttribute,
+      this.secondaryAttribute});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -117,6 +180,15 @@ class SdeType extends DataClass implements Insertable<SdeType> {
     map['group_id'] = Variable<int>(groupId);
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
+    }
+    if (!nullToAbsent || rank != null) {
+      map['rank'] = Variable<int>(rank);
+    }
+    if (!nullToAbsent || primaryAttribute != null) {
+      map['primary_attribute'] = Variable<String>(primaryAttribute);
+    }
+    if (!nullToAbsent || secondaryAttribute != null) {
+      map['secondary_attribute'] = Variable<String>(secondaryAttribute);
     }
     return map;
   }
@@ -129,6 +201,13 @@ class SdeType extends DataClass implements Insertable<SdeType> {
       description: description == null && nullToAbsent
           ? const Value.absent()
           : Value(description),
+      rank: rank == null && nullToAbsent ? const Value.absent() : Value(rank),
+      primaryAttribute: primaryAttribute == null && nullToAbsent
+          ? const Value.absent()
+          : Value(primaryAttribute),
+      secondaryAttribute: secondaryAttribute == null && nullToAbsent
+          ? const Value.absent()
+          : Value(secondaryAttribute),
     );
   }
 
@@ -140,6 +219,10 @@ class SdeType extends DataClass implements Insertable<SdeType> {
       typeName: serializer.fromJson<String>(json['typeName']),
       groupId: serializer.fromJson<int>(json['groupId']),
       description: serializer.fromJson<String?>(json['description']),
+      rank: serializer.fromJson<int?>(json['rank']),
+      primaryAttribute: serializer.fromJson<String?>(json['primaryAttribute']),
+      secondaryAttribute:
+          serializer.fromJson<String?>(json['secondaryAttribute']),
     );
   }
   @override
@@ -150,6 +233,9 @@ class SdeType extends DataClass implements Insertable<SdeType> {
       'typeName': serializer.toJson<String>(typeName),
       'groupId': serializer.toJson<int>(groupId),
       'description': serializer.toJson<String?>(description),
+      'rank': serializer.toJson<int?>(rank),
+      'primaryAttribute': serializer.toJson<String?>(primaryAttribute),
+      'secondaryAttribute': serializer.toJson<String?>(secondaryAttribute),
     };
   }
 
@@ -157,12 +243,22 @@ class SdeType extends DataClass implements Insertable<SdeType> {
           {int? typeId,
           String? typeName,
           int? groupId,
-          Value<String?> description = const Value.absent()}) =>
+          Value<String?> description = const Value.absent(),
+          Value<int?> rank = const Value.absent(),
+          Value<String?> primaryAttribute = const Value.absent(),
+          Value<String?> secondaryAttribute = const Value.absent()}) =>
       SdeType(
         typeId: typeId ?? this.typeId,
         typeName: typeName ?? this.typeName,
         groupId: groupId ?? this.groupId,
         description: description.present ? description.value : this.description,
+        rank: rank.present ? rank.value : this.rank,
+        primaryAttribute: primaryAttribute.present
+            ? primaryAttribute.value
+            : this.primaryAttribute,
+        secondaryAttribute: secondaryAttribute.present
+            ? secondaryAttribute.value
+            : this.secondaryAttribute,
       );
   SdeType copyWithCompanion(SdeTypesCompanion data) {
     return SdeType(
@@ -171,6 +267,13 @@ class SdeType extends DataClass implements Insertable<SdeType> {
       groupId: data.groupId.present ? data.groupId.value : this.groupId,
       description:
           data.description.present ? data.description.value : this.description,
+      rank: data.rank.present ? data.rank.value : this.rank,
+      primaryAttribute: data.primaryAttribute.present
+          ? data.primaryAttribute.value
+          : this.primaryAttribute,
+      secondaryAttribute: data.secondaryAttribute.present
+          ? data.secondaryAttribute.value
+          : this.secondaryAttribute,
     );
   }
 
@@ -180,13 +283,17 @@ class SdeType extends DataClass implements Insertable<SdeType> {
           ..write('typeId: $typeId, ')
           ..write('typeName: $typeName, ')
           ..write('groupId: $groupId, ')
-          ..write('description: $description')
+          ..write('description: $description, ')
+          ..write('rank: $rank, ')
+          ..write('primaryAttribute: $primaryAttribute, ')
+          ..write('secondaryAttribute: $secondaryAttribute')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(typeId, typeName, groupId, description);
+  int get hashCode => Object.hash(typeId, typeName, groupId, description, rank,
+      primaryAttribute, secondaryAttribute);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -194,7 +301,10 @@ class SdeType extends DataClass implements Insertable<SdeType> {
           other.typeId == this.typeId &&
           other.typeName == this.typeName &&
           other.groupId == this.groupId &&
-          other.description == this.description);
+          other.description == this.description &&
+          other.rank == this.rank &&
+          other.primaryAttribute == this.primaryAttribute &&
+          other.secondaryAttribute == this.secondaryAttribute);
 }
 
 class SdeTypesCompanion extends UpdateCompanion<SdeType> {
@@ -202,17 +312,26 @@ class SdeTypesCompanion extends UpdateCompanion<SdeType> {
   final Value<String> typeName;
   final Value<int> groupId;
   final Value<String?> description;
+  final Value<int?> rank;
+  final Value<String?> primaryAttribute;
+  final Value<String?> secondaryAttribute;
   const SdeTypesCompanion({
     this.typeId = const Value.absent(),
     this.typeName = const Value.absent(),
     this.groupId = const Value.absent(),
     this.description = const Value.absent(),
+    this.rank = const Value.absent(),
+    this.primaryAttribute = const Value.absent(),
+    this.secondaryAttribute = const Value.absent(),
   });
   SdeTypesCompanion.insert({
     this.typeId = const Value.absent(),
     required String typeName,
     required int groupId,
     this.description = const Value.absent(),
+    this.rank = const Value.absent(),
+    this.primaryAttribute = const Value.absent(),
+    this.secondaryAttribute = const Value.absent(),
   })  : typeName = Value(typeName),
         groupId = Value(groupId);
   static Insertable<SdeType> custom({
@@ -220,12 +339,18 @@ class SdeTypesCompanion extends UpdateCompanion<SdeType> {
     Expression<String>? typeName,
     Expression<int>? groupId,
     Expression<String>? description,
+    Expression<int>? rank,
+    Expression<String>? primaryAttribute,
+    Expression<String>? secondaryAttribute,
   }) {
     return RawValuesInsertable({
       if (typeId != null) 'type_id': typeId,
       if (typeName != null) 'type_name': typeName,
       if (groupId != null) 'group_id': groupId,
       if (description != null) 'description': description,
+      if (rank != null) 'rank': rank,
+      if (primaryAttribute != null) 'primary_attribute': primaryAttribute,
+      if (secondaryAttribute != null) 'secondary_attribute': secondaryAttribute,
     });
   }
 
@@ -233,12 +358,18 @@ class SdeTypesCompanion extends UpdateCompanion<SdeType> {
       {Value<int>? typeId,
       Value<String>? typeName,
       Value<int>? groupId,
-      Value<String?>? description}) {
+      Value<String?>? description,
+      Value<int?>? rank,
+      Value<String?>? primaryAttribute,
+      Value<String?>? secondaryAttribute}) {
     return SdeTypesCompanion(
       typeId: typeId ?? this.typeId,
       typeName: typeName ?? this.typeName,
       groupId: groupId ?? this.groupId,
       description: description ?? this.description,
+      rank: rank ?? this.rank,
+      primaryAttribute: primaryAttribute ?? this.primaryAttribute,
+      secondaryAttribute: secondaryAttribute ?? this.secondaryAttribute,
     );
   }
 
@@ -257,6 +388,15 @@ class SdeTypesCompanion extends UpdateCompanion<SdeType> {
     if (description.present) {
       map['description'] = Variable<String>(description.value);
     }
+    if (rank.present) {
+      map['rank'] = Variable<int>(rank.value);
+    }
+    if (primaryAttribute.present) {
+      map['primary_attribute'] = Variable<String>(primaryAttribute.value);
+    }
+    if (secondaryAttribute.present) {
+      map['secondary_attribute'] = Variable<String>(secondaryAttribute.value);
+    }
     return map;
   }
 
@@ -266,7 +406,10 @@ class SdeTypesCompanion extends UpdateCompanion<SdeType> {
           ..write('typeId: $typeId, ')
           ..write('typeName: $typeName, ')
           ..write('groupId: $groupId, ')
-          ..write('description: $description')
+          ..write('description: $description, ')
+          ..write('rank: $rank, ')
+          ..write('primaryAttribute: $primaryAttribute, ')
+          ..write('secondaryAttribute: $secondaryAttribute')
           ..write(')'))
         .toString();
   }
@@ -879,6 +1022,257 @@ class SdeMetadataCompanion extends UpdateCompanion<SdeMetadataData> {
   }
 }
 
+class $SdeSkillRequirementsTable extends SdeSkillRequirements
+    with TableInfo<$SdeSkillRequirementsTable, SdeSkillRequirement> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SdeSkillRequirementsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _skillIdMeta =
+      const VerificationMeta('skillId');
+  @override
+  late final GeneratedColumn<int> skillId = GeneratedColumn<int>(
+      'skill_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _requiredSkillIdMeta =
+      const VerificationMeta('requiredSkillId');
+  @override
+  late final GeneratedColumn<int> requiredSkillId = GeneratedColumn<int>(
+      'required_skill_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _requiredLevelMeta =
+      const VerificationMeta('requiredLevel');
+  @override
+  late final GeneratedColumn<int> requiredLevel = GeneratedColumn<int>(
+      'required_level', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [skillId, requiredSkillId, requiredLevel];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sde_skill_requirements';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<SdeSkillRequirement> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('skill_id')) {
+      context.handle(_skillIdMeta,
+          skillId.isAcceptableOrUnknown(data['skill_id']!, _skillIdMeta));
+    } else if (isInserting) {
+      context.missing(_skillIdMeta);
+    }
+    if (data.containsKey('required_skill_id')) {
+      context.handle(
+          _requiredSkillIdMeta,
+          requiredSkillId.isAcceptableOrUnknown(
+              data['required_skill_id']!, _requiredSkillIdMeta));
+    } else if (isInserting) {
+      context.missing(_requiredSkillIdMeta);
+    }
+    if (data.containsKey('required_level')) {
+      context.handle(
+          _requiredLevelMeta,
+          requiredLevel.isAcceptableOrUnknown(
+              data['required_level']!, _requiredLevelMeta));
+    } else if (isInserting) {
+      context.missing(_requiredLevelMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {skillId, requiredSkillId};
+  @override
+  SdeSkillRequirement map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SdeSkillRequirement(
+      skillId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}skill_id'])!,
+      requiredSkillId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}required_skill_id'])!,
+      requiredLevel: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}required_level'])!,
+    );
+  }
+
+  @override
+  $SdeSkillRequirementsTable createAlias(String alias) {
+    return $SdeSkillRequirementsTable(attachedDatabase, alias);
+  }
+}
+
+class SdeSkillRequirement extends DataClass
+    implements Insertable<SdeSkillRequirement> {
+  /// The skill that has the requirement (e.g., "Medium Hybrid Turret").
+  final int skillId;
+
+  /// The required skill (e.g., "Gunnery").
+  final int requiredSkillId;
+
+  /// The required level (1-5).
+  final int requiredLevel;
+  const SdeSkillRequirement(
+      {required this.skillId,
+      required this.requiredSkillId,
+      required this.requiredLevel});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['skill_id'] = Variable<int>(skillId);
+    map['required_skill_id'] = Variable<int>(requiredSkillId);
+    map['required_level'] = Variable<int>(requiredLevel);
+    return map;
+  }
+
+  SdeSkillRequirementsCompanion toCompanion(bool nullToAbsent) {
+    return SdeSkillRequirementsCompanion(
+      skillId: Value(skillId),
+      requiredSkillId: Value(requiredSkillId),
+      requiredLevel: Value(requiredLevel),
+    );
+  }
+
+  factory SdeSkillRequirement.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SdeSkillRequirement(
+      skillId: serializer.fromJson<int>(json['skillId']),
+      requiredSkillId: serializer.fromJson<int>(json['requiredSkillId']),
+      requiredLevel: serializer.fromJson<int>(json['requiredLevel']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'skillId': serializer.toJson<int>(skillId),
+      'requiredSkillId': serializer.toJson<int>(requiredSkillId),
+      'requiredLevel': serializer.toJson<int>(requiredLevel),
+    };
+  }
+
+  SdeSkillRequirement copyWith(
+          {int? skillId, int? requiredSkillId, int? requiredLevel}) =>
+      SdeSkillRequirement(
+        skillId: skillId ?? this.skillId,
+        requiredSkillId: requiredSkillId ?? this.requiredSkillId,
+        requiredLevel: requiredLevel ?? this.requiredLevel,
+      );
+  SdeSkillRequirement copyWithCompanion(SdeSkillRequirementsCompanion data) {
+    return SdeSkillRequirement(
+      skillId: data.skillId.present ? data.skillId.value : this.skillId,
+      requiredSkillId: data.requiredSkillId.present
+          ? data.requiredSkillId.value
+          : this.requiredSkillId,
+      requiredLevel: data.requiredLevel.present
+          ? data.requiredLevel.value
+          : this.requiredLevel,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeSkillRequirement(')
+          ..write('skillId: $skillId, ')
+          ..write('requiredSkillId: $requiredSkillId, ')
+          ..write('requiredLevel: $requiredLevel')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(skillId, requiredSkillId, requiredLevel);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SdeSkillRequirement &&
+          other.skillId == this.skillId &&
+          other.requiredSkillId == this.requiredSkillId &&
+          other.requiredLevel == this.requiredLevel);
+}
+
+class SdeSkillRequirementsCompanion
+    extends UpdateCompanion<SdeSkillRequirement> {
+  final Value<int> skillId;
+  final Value<int> requiredSkillId;
+  final Value<int> requiredLevel;
+  final Value<int> rowid;
+  const SdeSkillRequirementsCompanion({
+    this.skillId = const Value.absent(),
+    this.requiredSkillId = const Value.absent(),
+    this.requiredLevel = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SdeSkillRequirementsCompanion.insert({
+    required int skillId,
+    required int requiredSkillId,
+    required int requiredLevel,
+    this.rowid = const Value.absent(),
+  })  : skillId = Value(skillId),
+        requiredSkillId = Value(requiredSkillId),
+        requiredLevel = Value(requiredLevel);
+  static Insertable<SdeSkillRequirement> custom({
+    Expression<int>? skillId,
+    Expression<int>? requiredSkillId,
+    Expression<int>? requiredLevel,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (skillId != null) 'skill_id': skillId,
+      if (requiredSkillId != null) 'required_skill_id': requiredSkillId,
+      if (requiredLevel != null) 'required_level': requiredLevel,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SdeSkillRequirementsCompanion copyWith(
+      {Value<int>? skillId,
+      Value<int>? requiredSkillId,
+      Value<int>? requiredLevel,
+      Value<int>? rowid}) {
+    return SdeSkillRequirementsCompanion(
+      skillId: skillId ?? this.skillId,
+      requiredSkillId: requiredSkillId ?? this.requiredSkillId,
+      requiredLevel: requiredLevel ?? this.requiredLevel,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (skillId.present) {
+      map['skill_id'] = Variable<int>(skillId.value);
+    }
+    if (requiredSkillId.present) {
+      map['required_skill_id'] = Variable<int>(requiredSkillId.value);
+    }
+    if (requiredLevel.present) {
+      map['required_level'] = Variable<int>(requiredLevel.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeSkillRequirementsCompanion(')
+          ..write('skillId: $skillId, ')
+          ..write('requiredSkillId: $requiredSkillId, ')
+          ..write('requiredLevel: $requiredLevel, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$SdeDatabase extends GeneratedDatabase {
   _$SdeDatabase(QueryExecutor e) : super(e);
   $SdeDatabaseManager get managers => $SdeDatabaseManager(this);
@@ -886,12 +1280,14 @@ abstract class _$SdeDatabase extends GeneratedDatabase {
   late final $SdeGroupsTable sdeGroups = $SdeGroupsTable(this);
   late final $SdeCategoriesTable sdeCategories = $SdeCategoriesTable(this);
   late final $SdeMetadataTable sdeMetadata = $SdeMetadataTable(this);
+  late final $SdeSkillRequirementsTable sdeSkillRequirements =
+      $SdeSkillRequirementsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [sdeTypes, sdeGroups, sdeCategories, sdeMetadata];
+      [sdeTypes, sdeGroups, sdeCategories, sdeMetadata, sdeSkillRequirements];
 }
 
 typedef $$SdeTypesTableCreateCompanionBuilder = SdeTypesCompanion Function({
@@ -899,12 +1295,18 @@ typedef $$SdeTypesTableCreateCompanionBuilder = SdeTypesCompanion Function({
   required String typeName,
   required int groupId,
   Value<String?> description,
+  Value<int?> rank,
+  Value<String?> primaryAttribute,
+  Value<String?> secondaryAttribute,
 });
 typedef $$SdeTypesTableUpdateCompanionBuilder = SdeTypesCompanion Function({
   Value<int> typeId,
   Value<String> typeName,
   Value<int> groupId,
   Value<String?> description,
+  Value<int?> rank,
+  Value<String?> primaryAttribute,
+  Value<String?> secondaryAttribute,
 });
 
 class $$SdeTypesTableFilterComposer
@@ -927,6 +1329,17 @@ class $$SdeTypesTableFilterComposer
 
   ColumnFilters<String> get description => $composableBuilder(
       column: $table.description, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get rank => $composableBuilder(
+      column: $table.rank, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get primaryAttribute => $composableBuilder(
+      column: $table.primaryAttribute,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get secondaryAttribute => $composableBuilder(
+      column: $table.secondaryAttribute,
+      builder: (column) => ColumnFilters(column));
 }
 
 class $$SdeTypesTableOrderingComposer
@@ -949,6 +1362,17 @@ class $$SdeTypesTableOrderingComposer
 
   ColumnOrderings<String> get description => $composableBuilder(
       column: $table.description, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get rank => $composableBuilder(
+      column: $table.rank, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get primaryAttribute => $composableBuilder(
+      column: $table.primaryAttribute,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get secondaryAttribute => $composableBuilder(
+      column: $table.secondaryAttribute,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$SdeTypesTableAnnotationComposer
@@ -971,6 +1395,15 @@ class $$SdeTypesTableAnnotationComposer
 
   GeneratedColumn<String> get description => $composableBuilder(
       column: $table.description, builder: (column) => column);
+
+  GeneratedColumn<int> get rank =>
+      $composableBuilder(column: $table.rank, builder: (column) => column);
+
+  GeneratedColumn<String> get primaryAttribute => $composableBuilder(
+      column: $table.primaryAttribute, builder: (column) => column);
+
+  GeneratedColumn<String> get secondaryAttribute => $composableBuilder(
+      column: $table.secondaryAttribute, builder: (column) => column);
 }
 
 class $$SdeTypesTableTableManager extends RootTableManager<
@@ -1000,24 +1433,36 @@ class $$SdeTypesTableTableManager extends RootTableManager<
             Value<String> typeName = const Value.absent(),
             Value<int> groupId = const Value.absent(),
             Value<String?> description = const Value.absent(),
+            Value<int?> rank = const Value.absent(),
+            Value<String?> primaryAttribute = const Value.absent(),
+            Value<String?> secondaryAttribute = const Value.absent(),
           }) =>
               SdeTypesCompanion(
             typeId: typeId,
             typeName: typeName,
             groupId: groupId,
             description: description,
+            rank: rank,
+            primaryAttribute: primaryAttribute,
+            secondaryAttribute: secondaryAttribute,
           ),
           createCompanionCallback: ({
             Value<int> typeId = const Value.absent(),
             required String typeName,
             required int groupId,
             Value<String?> description = const Value.absent(),
+            Value<int?> rank = const Value.absent(),
+            Value<String?> primaryAttribute = const Value.absent(),
+            Value<String?> secondaryAttribute = const Value.absent(),
           }) =>
               SdeTypesCompanion.insert(
             typeId: typeId,
             typeName: typeName,
             groupId: groupId,
             description: description,
+            rank: rank,
+            primaryAttribute: primaryAttribute,
+            secondaryAttribute: secondaryAttribute,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -1418,6 +1863,158 @@ typedef $$SdeMetadataTableProcessedTableManager = ProcessedTableManager<
     ),
     SdeMetadataData,
     PrefetchHooks Function()>;
+typedef $$SdeSkillRequirementsTableCreateCompanionBuilder
+    = SdeSkillRequirementsCompanion Function({
+  required int skillId,
+  required int requiredSkillId,
+  required int requiredLevel,
+  Value<int> rowid,
+});
+typedef $$SdeSkillRequirementsTableUpdateCompanionBuilder
+    = SdeSkillRequirementsCompanion Function({
+  Value<int> skillId,
+  Value<int> requiredSkillId,
+  Value<int> requiredLevel,
+  Value<int> rowid,
+});
+
+class $$SdeSkillRequirementsTableFilterComposer
+    extends Composer<_$SdeDatabase, $SdeSkillRequirementsTable> {
+  $$SdeSkillRequirementsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get skillId => $composableBuilder(
+      column: $table.skillId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get requiredSkillId => $composableBuilder(
+      column: $table.requiredSkillId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get requiredLevel => $composableBuilder(
+      column: $table.requiredLevel, builder: (column) => ColumnFilters(column));
+}
+
+class $$SdeSkillRequirementsTableOrderingComposer
+    extends Composer<_$SdeDatabase, $SdeSkillRequirementsTable> {
+  $$SdeSkillRequirementsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get skillId => $composableBuilder(
+      column: $table.skillId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get requiredSkillId => $composableBuilder(
+      column: $table.requiredSkillId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get requiredLevel => $composableBuilder(
+      column: $table.requiredLevel,
+      builder: (column) => ColumnOrderings(column));
+}
+
+class $$SdeSkillRequirementsTableAnnotationComposer
+    extends Composer<_$SdeDatabase, $SdeSkillRequirementsTable> {
+  $$SdeSkillRequirementsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get skillId =>
+      $composableBuilder(column: $table.skillId, builder: (column) => column);
+
+  GeneratedColumn<int> get requiredSkillId => $composableBuilder(
+      column: $table.requiredSkillId, builder: (column) => column);
+
+  GeneratedColumn<int> get requiredLevel => $composableBuilder(
+      column: $table.requiredLevel, builder: (column) => column);
+}
+
+class $$SdeSkillRequirementsTableTableManager extends RootTableManager<
+    _$SdeDatabase,
+    $SdeSkillRequirementsTable,
+    SdeSkillRequirement,
+    $$SdeSkillRequirementsTableFilterComposer,
+    $$SdeSkillRequirementsTableOrderingComposer,
+    $$SdeSkillRequirementsTableAnnotationComposer,
+    $$SdeSkillRequirementsTableCreateCompanionBuilder,
+    $$SdeSkillRequirementsTableUpdateCompanionBuilder,
+    (
+      SdeSkillRequirement,
+      BaseReferences<_$SdeDatabase, $SdeSkillRequirementsTable,
+          SdeSkillRequirement>
+    ),
+    SdeSkillRequirement,
+    PrefetchHooks Function()> {
+  $$SdeSkillRequirementsTableTableManager(
+      _$SdeDatabase db, $SdeSkillRequirementsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SdeSkillRequirementsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SdeSkillRequirementsTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SdeSkillRequirementsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> skillId = const Value.absent(),
+            Value<int> requiredSkillId = const Value.absent(),
+            Value<int> requiredLevel = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SdeSkillRequirementsCompanion(
+            skillId: skillId,
+            requiredSkillId: requiredSkillId,
+            requiredLevel: requiredLevel,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required int skillId,
+            required int requiredSkillId,
+            required int requiredLevel,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SdeSkillRequirementsCompanion.insert(
+            skillId: skillId,
+            requiredSkillId: requiredSkillId,
+            requiredLevel: requiredLevel,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$SdeSkillRequirementsTableProcessedTableManager
+    = ProcessedTableManager<
+        _$SdeDatabase,
+        $SdeSkillRequirementsTable,
+        SdeSkillRequirement,
+        $$SdeSkillRequirementsTableFilterComposer,
+        $$SdeSkillRequirementsTableOrderingComposer,
+        $$SdeSkillRequirementsTableAnnotationComposer,
+        $$SdeSkillRequirementsTableCreateCompanionBuilder,
+        $$SdeSkillRequirementsTableUpdateCompanionBuilder,
+        (
+          SdeSkillRequirement,
+          BaseReferences<_$SdeDatabase, $SdeSkillRequirementsTable,
+              SdeSkillRequirement>
+        ),
+        SdeSkillRequirement,
+        PrefetchHooks Function()>;
 
 class $SdeDatabaseManager {
   final _$SdeDatabase _db;
@@ -1430,4 +2027,6 @@ class $SdeDatabaseManager {
       $$SdeCategoriesTableTableManager(_db, _db.sdeCategories);
   $$SdeMetadataTableTableManager get sdeMetadata =>
       $$SdeMetadataTableTableManager(_db, _db.sdeMetadata);
+  $$SdeSkillRequirementsTableTableManager get sdeSkillRequirements =>
+      $$SdeSkillRequirementsTableTableManager(_db, _db.sdeSkillRequirements);
 }

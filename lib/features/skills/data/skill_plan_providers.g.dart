@@ -53,7 +53,7 @@ final class SkillPlanNotifierProvider
   }
 }
 
-String _$skillPlanNotifierHash() => r'e928f3fa84be7fe9626ba193f9084e88b84d16ea';
+String _$skillPlanNotifierHash() => r'b6b63b2a1d67513b360d6861b4f147c83f5fbbbc';
 
 /// Notifier for skill plan mutations (create, update, delete).
 ///
