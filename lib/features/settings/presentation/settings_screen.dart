@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/settings/app_settings.dart';
 import '../../../core/settings/settings_providers.dart';
+import '../../../core/theme/eve_colors.dart';
+import '../../../core/theme/eve_spacing.dart';
+import '../../../core/theme/eve_typography.dart';
+import '../../../core/widgets/eve_card.dart';
 import 'widgets/sde_update_card.dart';
 
 /// Settings screen for app configuration.
@@ -23,33 +27,34 @@ class SettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(EveSpacing.lg),
         children: [
           // Startup Section
           _buildSectionHeader(context, 'Startup'),
           settingsAsync.when(
             data: (settings) => _buildStartupCard(context, ref, settings),
-            loading: () => const Card(
-              child: Padding(
-                padding: EdgeInsets.all(16),
+            loading: () => EveCard(
+              child: SizedBox(
+                height: 60,
                 child: Center(child: CircularProgressIndicator()),
               ),
             ),
-            error: (_, __) => const Card(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Text('Failed to load settings'),
+            error: (_, __) => EveCard(
+              glowColor: EveColors.error,
+              child: Text(
+                'Failed to load settings',
+                style: EveTypography.bodyMedium(color: EveColors.error),
               ),
             ),
           ),
 
-          const SizedBox(height: 24),
+          SizedBox(height: EveSpacing.lg),
 
           // SDE Update Section
           _buildSectionHeader(context, 'Data'),
           const SdeUpdateCard(),
 
-          const SizedBox(height: 24),
+          SizedBox(height: EveSpacing.lg),
 
           // About Section
           _buildSectionHeader(context, 'About'),
@@ -61,13 +66,14 @@ class SettingsScreen extends ConsumerWidget {
 
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: EveSpacing.sm),
       child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
+        title.toUpperCase(),
+        style: EveTypography.labelMedium(
+          color: EveColors.photonBlue,
+        ).copyWith(
+          letterSpacing: 1.0,
+        ),
       ),
     );
   }
@@ -77,29 +83,39 @@ class SettingsScreen extends ConsumerWidget {
     WidgetRef ref,
     AppSettings settings,
   ) {
-    return Card(
+    return EveCard(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(EveSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.power_settings_new),
-                const SizedBox(width: 8),
+                Icon(
+                  Icons.power_settings_new,
+                  color: EveColors.photonBlue,
+                  size: EveSpacing.iconSm,
+                ),
+                SizedBox(width: EveSpacing.md),
                 Text(
                   'When Mimir launches',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: EveTypography.titleMedium(
+                    color: EveColors.textPrimary,
+                  ).copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: EveSpacing.lg),
             RadioListTile<StartupBehavior>(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Open Dashboard'),
-              subtitle: const Text('Show the Dashboard window automatically'),
+              title: Text(
+                'Open Dashboard',
+                style: EveTypography.bodyMedium(color: EveColors.textPrimary),
+              ),
+              subtitle: Text(
+                'Show the Dashboard window automatically',
+                style: EveTypography.bodySmall(color: EveColors.textSecondary),
+              ),
               value: StartupBehavior.openDashboard,
               groupValue: settings.startupBehavior,
               onChanged: (value) {
@@ -112,8 +128,14 @@ class SettingsScreen extends ConsumerWidget {
             ),
             RadioListTile<StartupBehavior>(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Show tray icon only'),
-              subtitle: const Text('Launch silently in the menu bar'),
+              title: Text(
+                'Show tray icon only',
+                style: EveTypography.bodyMedium(color: EveColors.textPrimary),
+              ),
+              subtitle: Text(
+                'Launch silently in the menu bar',
+                style: EveTypography.bodySmall(color: EveColors.textSecondary),
+              ),
               value: StartupBehavior.trayOnly,
               groupValue: settings.startupBehavior,
               onChanged: (value) {
@@ -131,49 +153,43 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Widget _buildAboutCard(BuildContext context) {
-    return Card(
+    return EveCard(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(EveSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.info_outline),
-                const SizedBox(width: 8),
+                Icon(
+                  Icons.info_outline,
+                  color: EveColors.photonBlue,
+                  size: EveSpacing.iconSm,
+                ),
+                SizedBox(width: EveSpacing.md),
                 Text(
                   'Mimir',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: EveTypography.titleMedium(
+                    color: EveColors.textPrimary,
+                  ).copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: EveSpacing.md),
             Text(
               'EVE Online companion app for tracking your characters, '
               'skills, and wallet.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color:
-                        Theme.of(context).colorScheme.onSurface.withAlpha(179),
-                  ),
+              style: EveTypography.bodyMedium(color: EveColors.textSecondary),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: EveSpacing.md),
             Text(
               'Version 0.1.0',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color:
-                        Theme.of(context).colorScheme.onSurface.withAlpha(153),
-                  ),
+              style: EveTypography.bodySmall(color: EveColors.textSecondary),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: EveSpacing.sm),
             Text(
               'EVE Online and the EVE logo are registered trademarks of CCP hf.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color:
-                        Theme.of(context).colorScheme.onSurface.withAlpha(102),
-                    fontSize: 10,
-                  ),
+              style: EveTypography.captionSmall(color: EveColors.textTertiary),
             ),
           ],
         ),
