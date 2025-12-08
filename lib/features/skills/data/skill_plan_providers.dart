@@ -4,8 +4,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/logging/logger.dart';
+import '../../../core/network/esi_client.dart';
 import '../../characters/data/character_providers.dart';
-import 'skill_providers.dart';
+import 'skill_repository.dart';
 
 part 'skill_plan_providers.g.dart';
 
@@ -93,13 +94,53 @@ final skillPlanProgressProvider = FutureProvider.family<SkillPlanProgress, int>(
   final percentComplete = (trainedCount / entries.length * 100);
   Log.i('SKILLS', 'skillPlanProgressProvider - $trainedCount/${entries.length} skills complete (${percentComplete.toStringAsFixed(1)}%)');
 
+  // Calculate training time and SP requirements
+  final calculator = ref.read(skillTrainingCalculatorProvider);
+  final esiClient = ref.read(esiClientProvider);
+
+  int totalSp = 0;
+  int totalTimeSeconds = 0;
+
+  try {
+    // Get character attributes for accurate training time calculations
+    final characterAttributes = await esiClient.getCharacterAttributes(activeCharacter.characterId);
+    Log.d('SKILLS', 'skillPlanProgressProvider - got character attributes: int=${characterAttributes.intelligence}, per=${characterAttributes.perception}');
+
+    // Calculate for each untrained/partially trained skill
+    for (final entry in entries) {
+      final trainedLevel = trainedSkillsMap[entry.skillId] ?? 0;
+
+      // Only calculate time for skills not yet at target level
+      if (trainedLevel < entry.targetLevel) {
+        final spRequired = await calculator.calculateSpRequiredFromSde(
+          skillId: entry.skillId,
+          fromLevel: trainedLevel,
+          toLevel: entry.targetLevel,
+        );
+        totalSp += spRequired;
+
+        final trainingTime = await calculator.calculateTrainingTimeFromSde(
+          skillId: entry.skillId,
+          spRequired: spRequired,
+          characterAttributes: characterAttributes,
+        );
+        totalTimeSeconds += trainingTime.inSeconds;
+      }
+    }
+
+    Log.i('SKILLS', 'skillPlanProgressProvider - total SP: $totalSp, total time: ${totalTimeSeconds}s (${(totalTimeSeconds / 3600).toStringAsFixed(1)}h)');
+  } catch (e, stack) {
+    Log.e('SKILLS', 'skillPlanProgressProvider - failed to calculate training time', e, stack);
+    // Continue with zeros on error
+  }
+
   return SkillPlanProgress(
     planId: planId,
     totalSkills: entries.length,
     trainedSkills: trainedCount,
     percentComplete: percentComplete,
-    totalSpRequired: 0, // TODO: Calculate from skill requirements
-    estimatedTimeSeconds: 0, // TODO: Calculate from training time
+    totalSpRequired: totalSp,
+    estimatedTimeSeconds: totalTimeSeconds,
   );
 });
 
