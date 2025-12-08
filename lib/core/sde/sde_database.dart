@@ -26,6 +26,20 @@ class SdeTypes extends Table {
   /// Type description (optional).
   TextColumn get description => text().nullable()();
 
+  /// Skill rank (training time multiplier) - only for skills.
+  /// Null for non-skill types.
+  IntColumn get rank => integer().nullable()();
+
+  /// Primary attribute for skill training - only for skills.
+  /// One of: perception, willpower, intelligence, memory, charisma.
+  /// Null for non-skill types.
+  TextColumn get primaryAttribute => text().nullable()();
+
+  /// Secondary attribute for skill training - only for skills.
+  /// One of: perception, willpower, intelligence, memory, charisma.
+  /// Null for non-skill types.
+  TextColumn get secondaryAttribute => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {typeId};
 }
@@ -81,6 +95,27 @@ class SdeMetadata extends Table {
   Set<Column> get primaryKey => {key};
 }
 
+/// Skill prerequisites from the Static Data Export.
+///
+/// Stores prerequisite requirements for skills. A skill can have
+/// up to 3 prerequisites, each requiring a specific skill level.
+///
+/// Example: "Medium Hybrid Turret" requires "Gunnery III" and
+/// "Small Hybrid Turret III".
+class SdeSkillRequirements extends Table {
+  /// The skill that has the requirement (e.g., "Medium Hybrid Turret").
+  IntColumn get skillId => integer()();
+
+  /// The required skill (e.g., "Gunnery").
+  IntColumn get requiredSkillId => integer()();
+
+  /// The required level (1-5).
+  IntColumn get requiredLevel => integer()();
+
+  @override
+  Set<Column> get primaryKey => {skillId, requiredSkillId};
+}
+
 /// Static Data Export database using Drift.
 ///
 /// Stores EVE Online reference data for offline lookups:
@@ -95,6 +130,7 @@ class SdeMetadata extends Table {
   SdeGroups,
   SdeCategories,
   SdeMetadata,
+  SdeSkillRequirements,
 ])
 class SdeDatabase extends _$SdeDatabase {
   SdeDatabase() : super(_openConnection());
@@ -103,7 +139,7 @@ class SdeDatabase extends _$SdeDatabase {
   SdeDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -115,6 +151,16 @@ class SdeDatabase extends _$SdeDatabase {
         if (from < 2) {
           // Version 2: Add SdeMetadata table for version tracking
           await m.createTable(sdeMetadata);
+        }
+        if (from < 3) {
+          // Version 3: Add skill attributes and prerequisites
+          // Add new columns to SdeTypes
+          await m.addColumn(sdeTypes, sdeTypes.rank);
+          await m.addColumn(sdeTypes, sdeTypes.primaryAttribute);
+          await m.addColumn(sdeTypes, sdeTypes.secondaryAttribute);
+
+          // Create SdeSkillRequirements table
+          await m.createTable(sdeSkillRequirements);
         }
       },
     );
@@ -238,6 +284,7 @@ class SdeDatabase extends _$SdeDatabase {
       await delete(sdeTypes).go();
       await delete(sdeGroups).go();
       await delete(sdeCategories).go();
+      await delete(sdeSkillRequirements).go();
     });
   }
 
@@ -271,6 +318,29 @@ class SdeDatabase extends _$SdeDatabase {
   /// Clear all metadata.
   Future<void> clearMetadata() async {
     await delete(sdeMetadata).go();
+  }
+
+  // Skill requirement operations
+
+  /// Get prerequisites for a skill.
+  Future<List<SdeSkillRequirement>> getSkillPrerequisites(int skillId) {
+    return (select(sdeSkillRequirements)
+          ..where((r) => r.skillId.equals(skillId))
+          ..orderBy([(r) => OrderingTerm.asc(r.requiredLevel)]))
+        .get();
+  }
+
+  /// Insert or update skill requirements.
+  Future<void> upsertSkillRequirements(
+      List<SdeSkillRequirementsCompanion> requirements) async {
+    await batch((b) {
+      b.insertAllOnConflictUpdate(sdeSkillRequirements, requirements);
+    });
+  }
+
+  /// Clear all skill requirements (for refresh).
+  Future<void> clearSkillRequirements() async {
+    await delete(sdeSkillRequirements).go();
   }
 }
 
