@@ -7,6 +7,7 @@ import '../../../core/logging/logger.dart';
 import '../../../core/network/esi_client.dart';
 import '../../../core/sde/sde_providers.dart';
 import '../domain/skill_prerequisite_service.dart';
+import '../domain/skill_training_calculator.dart';
 
 /// Repository for managing skill queue data.
 ///
@@ -199,5 +200,12 @@ final skillPrerequisiteServiceProvider = Provider<SkillPrerequisiteService>((ref
   return SkillPrerequisiteService(
     sdeService: ref.watch(sdeServiceProvider),
     skillRepository: ref.watch(skillRepositoryProvider),
+  );
+});
+
+/// Provider for the skill training calculator.
+final skillTrainingCalculatorProvider = Provider<SkillTrainingCalculator>((ref) {
+  return SkillTrainingCalculator(
+    sdeService: ref.watch(sdeServiceProvider),
   );
 });

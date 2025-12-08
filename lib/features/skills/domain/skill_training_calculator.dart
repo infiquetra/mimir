@@ -1,4 +1,6 @@
 import '../../../core/logging/logger.dart';
+import '../../../core/network/esi_client.dart';
+import '../../../core/sde/sde_service.dart';
 
 /// Calculator for skill training time estimates.
 ///
@@ -9,6 +11,11 @@ import '../../../core/logging/logger.dart';
 ///
 /// Each skill level requires: 250 × rank × 2^(level - 1) SP
 class SkillTrainingCalculator {
+  final SdeService _sdeService;
+
+  SkillTrainingCalculator({
+    required SdeService sdeService,
+  }) : _sdeService = sdeService;
   /// Calculate SP required to train a skill from one level to another.
   ///
   /// Formula: 250 × rank × 2^(level - 1) for each level
@@ -116,6 +123,124 @@ class SkillTrainingCalculator {
       primaryAttribute: primaryAttribute,
       secondaryAttribute: secondaryAttribute,
     );
+  }
+
+  /// Calculate SP required to train a skill using SDE data.
+  ///
+  /// Fetches skill rank from SDE and calculates SP required.
+  Future<int> calculateSpRequiredFromSde({
+    required int skillId,
+    required int fromLevel,
+    required int toLevel,
+  }) async {
+    Log.d('SKILLS', 'calculateSpRequiredFromSde - skillId: $skillId, $fromLevel→$toLevel');
+
+    final skillRank = await _sdeService.getSkillRank(skillId);
+    if (skillRank == null) {
+      Log.w('SKILLS', 'calculateSpRequiredFromSde - skill $skillId has no rank in SDE, using rank 1');
+      return calculateSpRequired(
+        skillRank: 1,
+        fromLevel: fromLevel,
+        toLevel: toLevel,
+      );
+    }
+
+    return calculateSpRequired(
+      skillRank: skillRank,
+      fromLevel: fromLevel,
+      toLevel: toLevel,
+    );
+  }
+
+  /// Calculate training time using character attributes from ESI.
+  ///
+  /// Uses the skill's primary/secondary attributes from SDE
+  /// and the character's attribute values from ESI.
+  Future<Duration> calculateTrainingTimeFromSde({
+    required int skillId,
+    required int spRequired,
+    required CharacterAttributes characterAttributes,
+  }) async {
+    Log.d('SKILLS', 'calculateTrainingTimeFromSde - skillId: $skillId, SP: $spRequired');
+
+    if (spRequired <= 0) {
+      return Duration.zero;
+    }
+
+    final attributes = await _sdeService.getSkillAttributes(skillId);
+    if (attributes == null || attributes.primary == null || attributes.secondary == null) {
+      Log.w('SKILLS', 'calculateTrainingTimeFromSde - skill $skillId has no attributes in SDE');
+      // Fallback to default 20/20
+      return calculateTrainingTime(
+        spRequired: spRequired,
+        primaryAttribute: 20,
+        secondaryAttribute: 20,
+      );
+    }
+
+    // Get actual attribute values from character
+    final primaryValue = _getAttributeValue(
+      attributes.primary!,
+      characterAttributes,
+    );
+    final secondaryValue = _getAttributeValue(
+      attributes.secondary!,
+      characterAttributes,
+    );
+
+    Log.d('SKILLS',
+        'calculateTrainingTimeFromSde - using attributes: primary=${attributes.primary}($primaryValue), secondary=${attributes.secondary}($secondaryValue)');
+
+    return calculateTrainingTime(
+      spRequired: spRequired,
+      primaryAttribute: primaryValue,
+      secondaryAttribute: secondaryValue,
+    );
+  }
+
+  /// Calculate complete skill training time using SDE and character attributes.
+  ///
+  /// This is the main method for calculating accurate training times.
+  Future<Duration> calculateSkillTrainingTimeFromSde({
+    required int skillId,
+    required int fromLevel,
+    required int toLevel,
+    required CharacterAttributes characterAttributes,
+  }) async {
+    Log.d('SKILLS', 'calculateSkillTrainingTimeFromSde - skillId: $skillId, $fromLevel→$toLevel');
+
+    final spRequired = await calculateSpRequiredFromSde(
+      skillId: skillId,
+      fromLevel: fromLevel,
+      toLevel: toLevel,
+    );
+
+    return calculateTrainingTimeFromSde(
+      skillId: skillId,
+      spRequired: spRequired,
+      characterAttributes: characterAttributes,
+    );
+  }
+
+  /// Get the numeric value for a character's attribute.
+  ///
+  /// Maps attribute names from SDE (e.g., "perception") to character attribute values.
+  int _getAttributeValue(String attributeName, CharacterAttributes attributes) {
+    switch (attributeName.toLowerCase()) {
+      case 'charisma':
+        return attributes.charisma;
+      case 'intelligence':
+        return attributes.intelligence;
+      case 'memory':
+        return attributes.memory;
+      case 'perception':
+        return attributes.perception;
+      case 'willpower':
+        return attributes.willpower;
+      default:
+        Log.w('SKILLS', '_getAttributeValue - unknown attribute: $attributeName, defaulting to 20');
+        return 20;
+    }
   }
 }
 
