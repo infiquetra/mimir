@@ -5,7 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/app_database.dart' show isSubWindow;
 import '../../../../core/logging/logger.dart';
 import '../../../../core/theme/eve_colors.dart';
+import '../../../../core/theme/eve_spacing.dart';
+import '../../../../core/theme/eve_typography.dart';
+import '../../../../core/widgets/character_avatar.dart';
 import '../../../../core/widgets/corporation_logo.dart';
+import '../../../../core/widgets/eve_card.dart';
 import '../../../../core/widgets/online_indicator.dart';
 import '../../data/character_providers.dart';
 import '../../data/character_status_providers.dart';
@@ -78,14 +82,14 @@ class OverviewTab extends ConsumerWidget {
     int characterId,
   ) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(EveSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildVitalsCard(context, ref, characterId),
-          const SizedBox(height: 16),
+          SizedBox(height: EveSpacing.lg),
           _buildActiveCloneCard(context, ref, characterId),
-          const SizedBox(height: 16),
+          SizedBox(height: EveSpacing.lg),
           _buildStandingsCard(context, ref, characterId),
         ],
       ),
@@ -97,186 +101,125 @@ class OverviewTab extends ConsumerWidget {
     WidgetRef ref,
     int characterId,
   ) {
-    final theme = Theme.of(context);
     final characterAsync = ref.watch(activeCharacterProvider);
     final character = characterAsync.value;
     final onlineStatus = ref.watch(characterOnlineStatusProvider(characterId));
     final attributes = ref.watch(characterAttributesProvider(characterId));
 
-    return Card(
-      elevation: 0,
-      color: EveColors.darkSurface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: EveColors.evePrimary.withAlpha(51),
-          width: 1,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Portrait
-            if (character != null)
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: EveColors.evePrimary.withAlpha(128),
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: EveColors.evePrimary.withAlpha(51),
-                      blurRadius: 12,
+    return EveCard(
+      glowColor: EveColors.photonBlue,
+      glowIntensity: 0.3,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Compact portrait (80px hero size)
+          if (character != null)
+            CharacterAvatar(
+              portraitUrl: character.portraitUrl,
+              size: CharacterAvatarSize.hero,
+            ),
+
+          SizedBox(width: EveSpacing.lg),
+
+          // Vitals
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Name and online status
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        character?.name ?? 'Unknown',
+                        style: EveTypography.titleLarge(
+                          color: EveColors.photonBlue,
+                        ),
+                      ),
+                    ),
+                    onlineStatus.when(
+                      data: (status) => OnlineIndicator(
+                        isOnline: status.online,
+                        size: 10,
+                      ),
+                      loading: () => SizedBox(width: 10, height: 10),
+                      error: (_, __) => const SizedBox.shrink(),
                     ),
                   ],
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: _buildPortraitImage(context, character.portraitUrl),
-                ),
-              ),
 
-            const SizedBox(width: 16),
+                SizedBox(height: EveSpacing.sm),
 
-            // Vitals
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Name and online status
+                // Corporation
+                if (character != null)
                   Row(
                     children: [
+                      CorporationLogo.corporation(
+                        corporationId: character.corporationId,
+                        size: EveSpacing.iconSm,
+                        borderRadius: 2,
+                      ),
+                      SizedBox(width: EveSpacing.sm),
                       Expanded(
                         child: Text(
-                          character?.name ?? 'Unknown',
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: EveColors.evePrimary,
+                          character.corporationName,
+                          style: EveTypography.bodySmall(
+                            color: EveColors.textSecondary,
                           ),
                         ),
-                      ),
-                      onlineStatus.when(
-                        data: (status) => OnlineIndicator(
-                          isOnline: status.online,
-                          size: 12,
-                        ),
-                        loading: () => const SizedBox(width: 12, height: 12),
-                        error: (_, __) => const SizedBox.shrink(),
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 8),
-
-                  // Corporation
-                  if (character != null)
-                    Row(
-                      children: [
-                        CorporationLogo.corporation(
-                          corporationId: character.corporationId,
-                          size: 24,
-                          borderRadius: 2,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            character.corporationName,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
+                // Alliance (if exists)
+                if (character?.allianceId != null) ...[
+                  SizedBox(height: EveSpacing.xs),
+                  Row(
+                    children: [
+                      CorporationLogo.alliance(
+                        allianceId: character!.allianceId!,
+                        size: EveSpacing.iconSm,
+                        borderRadius: 2,
+                      ),
+                      SizedBox(width: EveSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          character.allianceName ?? 'Unknown Alliance',
+                          style: EveTypography.bodySmall(
+                            color: EveColors.textSecondary,
                           ),
-                        ),
-                      ],
-                    ),
-
-                  // Alliance (if exists)
-                  if (character?.allianceId != null) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        CorporationLogo.alliance(
-                          allianceId: character!.allianceId!,
-                          size: 24,
-                          borderRadius: 2,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            character.allianceName ?? 'Unknown Alliance',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-
-                  const SizedBox(height: 12),
-                  const Divider(height: 1),
-                  const SizedBox(height: 12),
-
-                  // Attributes
-                  attributes.when(
-                    data: (attrs) => Wrap(
-                      spacing: 16,
-                      runSpacing: 8,
-                      children: [
-                        _buildAttributeChip(
-                          context,
-                          'INT',
-                          attrs.intelligence.toString(),
-                          Icons.psychology_outlined,
-                        ),
-                        _buildAttributeChip(
-                          context,
-                          'MEM',
-                          attrs.memory.toString(),
-                          Icons.storage_outlined,
-                        ),
-                        _buildAttributeChip(
-                          context,
-                          'PER',
-                          attrs.perception.toString(),
-                          Icons.visibility_outlined,
-                        ),
-                        _buildAttributeChip(
-                          context,
-                          'WIL',
-                          attrs.willpower.toString(),
-                          Icons.favorite_border,
-                        ),
-                        _buildAttributeChip(
-                          context,
-                          'CHA',
-                          attrs.charisma.toString(),
-                          Icons.chat_bubble_outline,
-                        ),
-                      ],
-                    ),
-                    loading: () => const SizedBox(
-                      height: 32,
-                      child: Center(
-                        child: SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       ),
-                    ),
-                    error: (_, __) => const SizedBox.shrink(),
+                    ],
                   ),
                 ],
-              ),
+
+                SizedBox(height: EveSpacing.md),
+
+                // Attributes (inline, compact)
+                attributes.when(
+                  data: (attrs) => Text(
+                    'INT ${attrs.intelligence} • MEM ${attrs.memory} • PER ${attrs.perception} • WIL ${attrs.willpower} • CHA ${attrs.charisma}',
+                    style: EveTypography.labelSmall(
+                      color: EveColors.textTertiary,
+                    ),
+                  ),
+                  loading: () => SizedBox(
+                    height: 16,
+                    child: Center(
+                      child: SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  ),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
