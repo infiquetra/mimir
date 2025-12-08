@@ -131,2477 +131,7890 @@
     {
       "typeId": 3300,
       "typeName": "Gunnery",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower"
     },
     {
       "typeId": 3301,
       "typeName": "Small Hybrid Turret",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3302,
       "typeName": "Small Projectile Turret",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3303,
       "typeName": "Small Energy Turret",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3304,
       "typeName": "Medium Hybrid Turret",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 3
+        },
+        {
+          "skillId": 3301,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3305,
       "typeName": "Medium Projectile Turret",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 3
+        },
+        {
+          "skillId": 3302,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3306,
       "typeName": "Medium Energy Turret",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 3
+        },
+        {
+          "skillId": 3303,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3307,
       "typeName": "Large Hybrid Turret",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 5
+        },
+        {
+          "skillId": 3304,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3308,
       "typeName": "Large Projectile Turret",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 5
+        },
+        {
+          "skillId": 3305,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3309,
       "typeName": "Large Energy Turret",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 5
+        },
+        {
+          "skillId": 3306,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3310,
       "typeName": "Rapid Firing",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3311,
       "typeName": "Sharpshooter",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3312,
       "typeName": "Motion Prediction",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3315,
       "typeName": "Surgical Strike",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 4,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 3316,
       "typeName": "Controlled Bursts",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3317,
       "typeName": "Trajectory Analysis",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 11082,
       "typeName": "Small Railgun Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3311,
+          "level": 3
+        },
+        {
+          "skillId": 3301,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11083,
       "typeName": "Small Beam Laser Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3311,
+          "level": 3
+        },
+        {
+          "skillId": 3303,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11084,
       "typeName": "Small Autocannon Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3312,
+          "level": 3
+        },
+        {
+          "skillId": 3302,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12201,
       "typeName": "Small Artillery Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3311,
+          "level": 3
+        },
+        {
+          "skillId": 3302,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12202,
       "typeName": "Medium Artillery Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3311,
+          "level": 4
+        },
+        {
+          "skillId": 3305,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12203,
       "typeName": "Large Artillery Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3311,
+          "level": 5
+        },
+        {
+          "skillId": 3308,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12204,
       "typeName": "Medium Beam Laser Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3311,
+          "level": 4
+        },
+        {
+          "skillId": 3306,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12205,
       "typeName": "Large Beam Laser Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3311,
+          "level": 5
+        },
+        {
+          "skillId": 3309,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12206,
       "typeName": "Medium Railgun Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3311,
+          "level": 4
+        },
+        {
+          "skillId": 3304,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12207,
       "typeName": "Large Railgun Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3311,
+          "level": 5
+        },
+        {
+          "skillId": 3307,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12208,
       "typeName": "Medium Autocannon Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3312,
+          "level": 4
+        },
+        {
+          "skillId": 3305,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12209,
       "typeName": "Large Autocannon Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3312,
+          "level": 5
+        },
+        {
+          "skillId": 3308,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12210,
       "typeName": "Small Blaster Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3312,
+          "level": 3
+        },
+        {
+          "skillId": 3301,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12211,
       "typeName": "Medium Blaster Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3312,
+          "level": 4
+        },
+        {
+          "skillId": 3304,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12212,
       "typeName": "Large Blaster Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3312,
+          "level": 5
+        },
+        {
+          "skillId": 3307,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12213,
       "typeName": "Small Pulse Laser Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3312,
+          "level": 3
+        },
+        {
+          "skillId": 3303,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12214,
       "typeName": "Medium Pulse Laser Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3312,
+          "level": 4
+        },
+        {
+          "skillId": 3306,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12215,
       "typeName": "Large Pulse Laser Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3312,
+          "level": 5
+        },
+        {
+          "skillId": 3309,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 20327,
       "typeName": "Capital Energy Turret",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 7,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 5
+        },
+        {
+          "skillId": 3309,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 21666,
       "typeName": "Capital Hybrid Turret",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 7,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 5
+        },
+        {
+          "skillId": 3307,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 21667,
       "typeName": "Capital Projectile Turret",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 7,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 5
+        },
+        {
+          "skillId": 3308,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 22043,
       "typeName": "Tactical Weapon Reconfiguration",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 11207,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 24563,
       "typeName": "Doomsday Operation",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 14,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3421,
+          "level": 5
+        },
+        {
+          "skillId": 11207,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 41403,
       "typeName": "Capital Autocannon Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 10,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3312,
+          "level": 5
+        },
+        {
+          "skillId": 21667,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 41404,
       "typeName": "Capital Artillery Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 10,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3311,
+          "level": 5
+        },
+        {
+          "skillId": 21667,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 41405,
       "typeName": "Capital Blaster Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 10,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3312,
+          "level": 5
+        },
+        {
+          "skillId": 21666,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 41406,
       "typeName": "Capital Railgun Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 10,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3311,
+          "level": 5
+        },
+        {
+          "skillId": 21666,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 41407,
       "typeName": "Capital Pulse Laser Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 10,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3312,
+          "level": 5
+        },
+        {
+          "skillId": 20327,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 41408,
       "typeName": "Capital Beam Laser Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 10,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3311,
+          "level": 5
+        },
+        {
+          "skillId": 20327,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 41537,
       "typeName": "Doomsday Rapid Firing",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 14,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 24563,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 47870,
       "typeName": "Small Precursor Weapon",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 47871,
       "typeName": "Medium Precursor Weapon",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 3
+        },
+        {
+          "skillId": 47870,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 47872,
       "typeName": "Large Precursor Weapon",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 5
+        },
+        {
+          "skillId": 47871,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 47873,
       "typeName": "Small Disintegrator Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3312,
+          "level": 3
+        },
+        {
+          "skillId": 47870,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 47874,
       "typeName": "Medium Disintegrator Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3312,
+          "level": 4
+        },
+        {
+          "skillId": 47871,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 47875,
       "typeName": "Large Disintegrator Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3312,
+          "level": 5
+        },
+        {
+          "skillId": 47872,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 52998,
       "typeName": "Capital Precursor Weapon",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 7,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 5
+        },
+        {
+          "skillId": 47872,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 54826,
       "typeName": "Large Vorton Projector",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 55033,
+          "level": 5
+        },
+        {
+          "skillId": 55035,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 54827,
       "typeName": "Small Vorton Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 54841,
+          "level": 3
+        },
+        {
+          "skillId": 55034,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 54828,
       "typeName": "Medium Vorton Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 54841,
+          "level": 4
+        },
+        {
+          "skillId": 55035,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 54829,
       "typeName": "Large Vorton Specialization",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 54841,
+          "level": 5
+        },
+        {
+          "skillId": 54826,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 54840,
       "typeName": "Vorton Power Amplification",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 4,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 55033,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 54841,
       "typeName": "Vorton Arc Guidance",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 55033,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 55033,
       "typeName": "Vorton Projector Operation",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower"
     },
     {
       "typeId": 55034,
       "typeName": "Small Vorton Projector",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 55033,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 55035,
       "typeName": "Medium Vorton Projector",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 55033,
+          "level": 3
+        },
+        {
+          "skillId": 55034,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 55511,
       "typeName": "Vorton Arc Extension",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 55033,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 77739,
       "typeName": "Disruptive Lance Operation",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 14,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 11433,
+          "level": 4
+        },
+        {
+          "skillId": 3421,
+          "level": 4
+        },
+        {
+          "skillId": 11207,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 88377,
       "typeName": "Advanced Doomsday Operation",
-      "groupId": 255
+      "groupId": 255,
+      "rank": 14,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 24563,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 3319,
       "typeName": "Missile Launcher Operation",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower"
     },
     {
       "typeId": 3320,
       "typeName": "Rockets",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3321,
       "typeName": "Light Missiles",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3322,
       "typeName": "Auto-Targeting Missiles",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3323,
       "typeName": "Defender Missiles",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower"
     },
     {
       "typeId": 3324,
       "typeName": "Heavy Missiles",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 3
+        },
+        {
+          "skillId": 3321,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3325,
       "typeName": "Torpedoes",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 4,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 4
+        },
+        {
+          "skillId": 3324,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3326,
       "typeName": "Cruise Missiles",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 5
+        },
+        {
+          "skillId": 3324,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 12441,
       "typeName": "Missile Bombardment",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 12442,
       "typeName": "Missile Projection",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 4,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 20209,
       "typeName": "Rocket Specialization",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 1
+        },
+        {
+          "skillId": 3320,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 20210,
       "typeName": "Light Missile Specialization",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 1
+        },
+        {
+          "skillId": 3321,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 20211,
       "typeName": "Heavy Missile Specialization",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 1
+        },
+        {
+          "skillId": 3324,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 20212,
       "typeName": "Cruise Missile Specialization",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 1
+        },
+        {
+          "skillId": 3326,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 20213,
       "typeName": "Torpedo Specialization",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 1
+        },
+        {
+          "skillId": 3325,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 20312,
       "typeName": "Guided Missile Precision",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 20314,
       "typeName": "Target Navigation Prediction",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 20315,
       "typeName": "Warhead Upgrades",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 21071,
       "typeName": "Rapid Launch",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 21668,
       "typeName": "XL Torpedoes",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 7,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 5
+        },
+        {
+          "skillId": 3325,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 25718,
       "typeName": "Heavy Assault Missile Specialization",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 1
+        },
+        {
+          "skillId": 25719,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 25719,
       "typeName": "Heavy Assault Missiles",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 3
+        },
+        {
+          "skillId": 3321,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 28073,
       "typeName": "Bomb Deployment",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 4,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 12441,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 32435,
       "typeName": "XL Cruise Missiles",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 7,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 5
+        },
+        {
+          "skillId": 3326,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 41409,
       "typeName": "XL Torpedo Specialization",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 10,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 1
+        },
+        {
+          "skillId": 21668,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 41410,
       "typeName": "XL Cruise Missile Specialization",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 10,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 1
+        },
+        {
+          "skillId": 32435,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 86260,
       "typeName": "Breacher Pod Launcher Operation",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 3,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "charisma",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 3
+        },
+        {
+          "skillId": 24242,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 86261,
       "typeName": "Breacher Pod Clone Efficacity",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 5,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "charisma",
+      "prerequisites": [
+        {
+          "skillId": 86260,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 86262,
       "typeName": "Breacher Pod Clone Longevity",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 7,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "charisma",
+      "prerequisites": [
+        {
+          "skillId": 86260,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 86263,
       "typeName": "Breacher Pod Projection",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 5,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "charisma",
+      "prerequisites": [
+        {
+          "skillId": 86260,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 86264,
       "typeName": "Breacher Pod Rapid Firing",
-      "groupId": 256
+      "groupId": 256,
+      "rank": 5,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "charisma",
+      "prerequisites": [
+        {
+          "skillId": 86260,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3184,
       "typeName": "ORE Hauler",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 4,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3327,
       "typeName": "Spaceship Command",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower"
     },
     {
       "typeId": 3328,
       "typeName": "Gallente Frigate",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3329,
       "typeName": "Minmatar Frigate",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3330,
       "typeName": "Caldari Frigate",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3331,
       "typeName": "Amarr Frigate",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3332,
       "typeName": "Gallente Cruiser",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 2
+        },
+        {
+          "skillId": 33093,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3333,
       "typeName": "Minmatar Cruiser",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 2
+        },
+        {
+          "skillId": 33094,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3334,
       "typeName": "Caldari Cruiser",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 2
+        },
+        {
+          "skillId": 33092,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3335,
       "typeName": "Amarr Cruiser",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 2
+        },
+        {
+          "skillId": 33091,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3336,
       "typeName": "Gallente Battleship",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 4
+        },
+        {
+          "skillId": 33097,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3337,
       "typeName": "Minmatar Battleship",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 4
+        },
+        {
+          "skillId": 33098,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3338,
       "typeName": "Caldari Battleship",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 4
+        },
+        {
+          "skillId": 33096,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3339,
       "typeName": "Amarr Battleship",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 4
+        },
+        {
+          "skillId": 33095,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3340,
       "typeName": "Gallente Hauler",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 4,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3341,
       "typeName": "Minmatar Hauler",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 4,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3342,
       "typeName": "Caldari Hauler",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 4,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3343,
       "typeName": "Amarr Hauler",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 4,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3344,
       "typeName": "Gallente Titan",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 16,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20533,
+          "level": 5
+        },
+        {
+          "skillId": 3336,
+          "level": 3
+        },
+        {
+          "skillId": 3348,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 3345,
       "typeName": "Minmatar Titan",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 16,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20533,
+          "level": 5
+        },
+        {
+          "skillId": 3337,
+          "level": 3
+        },
+        {
+          "skillId": 3348,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 3346,
       "typeName": "Caldari Titan",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 16,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20533,
+          "level": 5
+        },
+        {
+          "skillId": 3338,
+          "level": 3
+        },
+        {
+          "skillId": 3348,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 3347,
       "typeName": "Amarr Titan",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 16,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20533,
+          "level": 5
+        },
+        {
+          "skillId": 3339,
+          "level": 3
+        },
+        {
+          "skillId": 3348,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12092,
       "typeName": "Interceptors",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 4,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        },
+        {
+          "skillId": 3453,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12093,
       "typeName": "Covert Ops",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 4,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        },
+        {
+          "skillId": 3432,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12095,
       "typeName": "Assault Frigates",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 4,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        },
+        {
+          "skillId": 3413,
+          "level": 5
+        },
+        {
+          "skillId": 3392,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12096,
       "typeName": "Logistics Cruisers",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 6,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        },
+        {
+          "skillId": 3431,
+          "level": 5
+        },
+        {
+          "skillId": 3428,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12098,
       "typeName": "Interdictors",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 5,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 4
+        },
+        {
+          "skillId": 11446,
+          "level": 1
+        },
+        {
+          "skillId": 3435,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 16591,
       "typeName": "Heavy Assault Cruisers",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 6,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3424,
+          "level": 5
+        },
+        {
+          "skillId": 3318,
+          "level": 5
+        },
+        {
+          "skillId": 3327,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 17940,
       "typeName": "Mining Barge",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 4,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3410,
+          "level": 3
+        },
+        {
+          "skillId": 3380,
+          "level": 5
+        },
+        {
+          "skillId": 32918,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 19719,
       "typeName": "Transport Ships",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 6,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        },
+        {
+          "skillId": 3380,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 20342,
       "typeName": "Advanced Spaceship Command",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 20524,
       "typeName": "Amarr Freighter",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 10,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20342,
+          "level": 5
+        },
+        {
+          "skillId": 3343,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 20525,
       "typeName": "Amarr Dreadnought",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 12,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20533,
+          "level": 3
+        },
+        {
+          "skillId": 3339,
+          "level": 3
+        },
+        {
+          "skillId": 22043,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 20526,
       "typeName": "Caldari Freighter",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 10,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20342,
+          "level": 5
+        },
+        {
+          "skillId": 3342,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 20527,
       "typeName": "Gallente Freighter",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 10,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20342,
+          "level": 5
+        },
+        {
+          "skillId": 3340,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 20528,
       "typeName": "Minmatar Freighter",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 10,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20342,
+          "level": 5
+        },
+        {
+          "skillId": 3341,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 20530,
       "typeName": "Caldari Dreadnought",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 12,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20533,
+          "level": 3
+        },
+        {
+          "skillId": 3338,
+          "level": 3
+        },
+        {
+          "skillId": 22043,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 20531,
       "typeName": "Gallente Dreadnought",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 12,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20533,
+          "level": 3
+        },
+        {
+          "skillId": 3336,
+          "level": 3
+        },
+        {
+          "skillId": 22043,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 20532,
       "typeName": "Minmatar Dreadnought",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 12,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20533,
+          "level": 3
+        },
+        {
+          "skillId": 3337,
+          "level": 3
+        },
+        {
+          "skillId": 22043,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 20533,
       "typeName": "Capital Ships",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 14,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20342,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 22551,
       "typeName": "Exhumers",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 5,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 4
+        },
+        {
+          "skillId": 3380,
+          "level": 5
+        },
+        {
+          "skillId": 3410,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 22761,
       "typeName": "Recon Ships",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 6,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 11579,
+          "level": 4
+        },
+        {
+          "skillId": 3431,
+          "level": 5
+        },
+        {
+          "skillId": 3327,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 23950,
       "typeName": "Command Ships",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 8,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 5
+        },
+        {
+          "skillId": 3354,
+          "level": 4
+        },
+        {
+          "skillId": 11574,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 24311,
       "typeName": "Amarr Carrier",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 14,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20533,
+          "level": 4
+        },
+        {
+          "skillId": 3339,
+          "level": 3
+        },
+        {
+          "skillId": 3442,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 24312,
       "typeName": "Caldari Carrier",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 14,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20533,
+          "level": 4
+        },
+        {
+          "skillId": 3338,
+          "level": 3
+        },
+        {
+          "skillId": 3442,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 24313,
       "typeName": "Gallente Carrier",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 14,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20533,
+          "level": 4
+        },
+        {
+          "skillId": 3336,
+          "level": 3
+        },
+        {
+          "skillId": 3442,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 24314,
       "typeName": "Minmatar Carrier",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 14,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20533,
+          "level": 4
+        },
+        {
+          "skillId": 3337,
+          "level": 3
+        },
+        {
+          "skillId": 3442,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 28374,
       "typeName": "Capital Industrial Ships",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 12,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20342,
+          "level": 5
+        },
+        {
+          "skillId": 29637,
+          "level": 3
+        },
+        {
+          "skillId": 20533,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 28609,
       "typeName": "Heavy Interdiction Cruisers",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 6,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3435,
+          "level": 5
+        },
+        {
+          "skillId": 11446,
+          "level": 4
+        },
+        {
+          "skillId": 3327,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 28615,
       "typeName": "Electronic Attack Ships",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 4,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        },
+        {
+          "skillId": 3428,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 28656,
       "typeName": "Black Ops",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 10,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 11579,
+          "level": 4
+        },
+        {
+          "skillId": 21611,
+          "level": 4
+        },
+        {
+          "skillId": 3327,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 28667,
       "typeName": "Marauders",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 10,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3424,
+          "level": 5
+        },
+        {
+          "skillId": 11207,
+          "level": 5
+        },
+        {
+          "skillId": 3327,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 29029,
       "typeName": "Jump Freighters",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 14,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3380,
+          "level": 5
+        },
+        {
+          "skillId": 20342,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 29637,
       "typeName": "Industrial Command Ships",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 5
+        },
+        {
+          "skillId": 3184,
+          "level": 3
+        },
+        {
+          "skillId": 22552,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 30650,
       "typeName": "Amarr Strategic Cruiser",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3335,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 30651,
       "typeName": "Caldari Strategic Cruiser",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3334,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 30652,
       "typeName": "Gallente Strategic Cruiser",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3332,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 30653,
       "typeName": "Minmatar Strategic Cruiser",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3333,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 32918,
       "typeName": "Mining Frigate",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 33091,
       "typeName": "Amarr Destroyer",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3331,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 33092,
       "typeName": "Caldari Destroyer",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3330,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 33093,
       "typeName": "Gallente Destroyer",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3328,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 33094,
       "typeName": "Minmatar Destroyer",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3329,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 33095,
       "typeName": "Amarr Battlecruiser",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 6,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        },
+        {
+          "skillId": 3335,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 33096,
       "typeName": "Caldari Battlecruiser",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 6,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        },
+        {
+          "skillId": 3334,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 33097,
       "typeName": "Gallente Battlecruiser",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 6,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        },
+        {
+          "skillId": 3332,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 33098,
       "typeName": "Minmatar Battlecruiser",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 6,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        },
+        {
+          "skillId": 3333,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 33856,
       "typeName": "Expedition Frigates",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 4,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        },
+        {
+          "skillId": 3432,
+          "level": 5
+        },
+        {
+          "skillId": 3380,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 34327,
       "typeName": "ORE Freighter",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 9,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20342,
+          "level": 5
+        },
+        {
+          "skillId": 3184,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 34390,
       "typeName": "Amarr Tactical Destroyer",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 33091,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 34533,
       "typeName": "Minmatar Tactical Destroyer",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 33094,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 35680,
       "typeName": "Caldari Tactical Destroyer",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 33092,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 35685,
       "typeName": "Gallente Tactical Destroyer",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 3,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 33093,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 37615,
       "typeName": "Command Destroyers",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 6,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 5
+        },
+        {
+          "skillId": 3354,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 40328,
       "typeName": "Logistics Frigates",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 4,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        },
+        {
+          "skillId": 3431,
+          "level": 5
+        },
+        {
+          "skillId": 3428,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 47445,
       "typeName": "Flag Cruisers",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 8,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 5
+        },
+        {
+          "skillId": 24764,
+          "level": 1
+        },
+        {
+          "skillId": 3430,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 47867,
       "typeName": "Precursor Frigate",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 47868,
       "typeName": "Precursor Cruiser",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 4
+        },
+        {
+          "skillId": 49742,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 47869,
       "typeName": "Precursor Battleship",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 5
+        },
+        {
+          "skillId": 49743,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 49742,
       "typeName": "Precursor Destroyer",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 47867,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 49743,
       "typeName": "Precursor Battlecruiser",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 6,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 4
+        },
+        {
+          "skillId": 47868,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 52997,
       "typeName": "Precursor Dreadnought",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 12,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20533,
+          "level": 3
+        },
+        {
+          "skillId": 47869,
+          "level": 3
+        },
+        {
+          "skillId": 22043,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 54794,
       "typeName": "EDENCOM Battleship",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 8,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 5
+        },
+        {
+          "skillId": 55032,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 55031,
       "typeName": "EDENCOM Frigate",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 55032,
       "typeName": "EDENCOM Cruiser",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 5,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 2
+        },
+        {
+          "skillId": 55031,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 77738,
       "typeName": "Lancer Dreadnoughts",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 16,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20533,
+          "level": 4
+        },
+        {
+          "skillId": 22043,
+          "level": 4
+        },
+        {
+          "skillId": 11433,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 81032,
       "typeName": "Upwell Hauler",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 4,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3327,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 81044,
       "typeName": "Upwell Freighter",
-      "groupId": 257
+      "groupId": 257,
+      "rank": 10,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 20342,
+          "level": 5
+        },
+        {
+          "skillId": 81032,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3348,
       "typeName": "Leadership",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 1,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower"
     },
     {
       "typeId": 3349,
       "typeName": "Skirmish Command",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 2,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3348,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3350,
       "typeName": "Shield Command",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 2,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3348,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3351,
       "typeName": "Shield Command Specialist",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 5,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3348,
+          "level": 1
+        },
+        {
+          "skillId": 3350,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 3352,
       "typeName": "Information Command Specialist",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 5,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3348,
+          "level": 1
+        },
+        {
+          "skillId": 20495,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 3354,
       "typeName": "Command Burst Specialist",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 6,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3348,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11569,
       "typeName": "Armored Command Specialist",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 5,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3348,
+          "level": 1
+        },
+        {
+          "skillId": 20494,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11572,
       "typeName": "Skirmish Command Specialist",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 5,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3348,
+          "level": 1
+        },
+        {
+          "skillId": 3349,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11574,
       "typeName": "Wing Command",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 8,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3348,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 20494,
       "typeName": "Armored Command",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 2,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3348,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 20495,
       "typeName": "Information Command",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 2,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3348,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 22536,
       "typeName": "Mining Foreman",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 2,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3348,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 22552,
       "typeName": "Mining Director",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 5,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3348,
+          "level": 1
+        },
+        {
+          "skillId": 22536,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 24764,
       "typeName": "Fleet Command",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 12,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 11574,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 43728,
       "typeName": "Spatial Phenomena Generation",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 10,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 24764,
+          "level": 1
+        },
+        {
+          "skillId": 3354,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 57317,
       "typeName": "Fleet Formations",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 5,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3348,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 57318,
       "typeName": "Fleet Coordination",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 8,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3348,
+          "level": 5
+        },
+        {
+          "skillId": 57317,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 62453,
       "typeName": "Fleet Compression Logistics",
-      "groupId": 258
+      "groupId": 258,
+      "rank": 4,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 22552,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3363,
       "typeName": "Corporation Management",
-      "groupId": 266
+      "groupId": 266,
+      "rank": 1,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "charisma"
     },
     {
       "typeId": 3368,
       "typeName": "Diplomatic Relations",
-      "groupId": 266
+      "groupId": 266,
+      "rank": 2,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "charisma",
+      "prerequisites": [
+        {
+          "skillId": 3363,
+          "level": 2
+        },
+        {
+          "skillId": 3355,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3731,
       "typeName": "Megacorp Management",
-      "groupId": 266
+      "groupId": 266,
+      "rank": 3,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "charisma",
+      "prerequisites": [
+        {
+          "skillId": 3363,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 3732,
       "typeName": "Empire Control",
-      "groupId": 266
+      "groupId": 266,
+      "rank": 5,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "charisma",
+      "prerequisites": [
+        {
+          "skillId": 3731,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12241,
       "typeName": "Sovereignty",
-      "groupId": 266
+      "groupId": 266,
+      "rank": 8,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "charisma",
+      "prerequisites": [
+        {
+          "skillId": 3732,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 3380,
       "typeName": "Industry",
-      "groupId": 268
+      "groupId": 268,
+      "rank": 1,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence"
     },
     {
       "typeId": 3387,
       "typeName": "Mass Production",
-      "groupId": 268
+      "groupId": 268,
+      "rank": 2,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3380,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3388,
       "typeName": "Advanced Industry",
-      "groupId": 268
+      "groupId": 268,
+      "rank": 3,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3380,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3395,
       "typeName": "Advanced Small Ship Construction",
-      "groupId": 268
+      "groupId": 268,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3392,
+          "level": 1
+        },
+        {
+          "skillId": 3380,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3396,
       "typeName": "Advanced Industrial Ship Construction",
-      "groupId": 268
+      "groupId": 268,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3392,
+          "level": 2
+        },
+        {
+          "skillId": 3380,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3397,
       "typeName": "Advanced Medium Ship Construction",
-      "groupId": 268
+      "groupId": 268,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3392,
+          "level": 3
+        },
+        {
+          "skillId": 3395,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 3398,
       "typeName": "Advanced Large Ship Construction",
-      "groupId": 268
+      "groupId": 268,
+      "rank": 8,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3397,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 3400,
       "typeName": "Outpost Construction",
-      "groupId": 268
+      "groupId": 268,
+      "rank": 16,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3392,
+          "level": 5
+        },
+        {
+          "skillId": 3380,
+          "level": 5
+        },
+        {
+          "skillId": 11584,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 22242,
       "typeName": "Capital Ship Construction",
-      "groupId": 268
+      "groupId": 268,
+      "rank": 14,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3392,
+          "level": 5
+        },
+        {
+          "skillId": 3380,
+          "level": 5
+        },
+        {
+          "skillId": 3388,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 24268,
       "typeName": "Supply Chain Management",
-      "groupId": 268
+      "groupId": 268,
+      "rank": 3,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3387,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 24625,
       "typeName": "Advanced Mass Production",
-      "groupId": 268
+      "groupId": 268,
+      "rank": 8,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3387,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 26224,
       "typeName": "Drug Manufacturing",
-      "groupId": 268
+      "groupId": 268,
+      "rank": 2,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence"
     },
     {
       "typeId": 77725,
       "typeName": "Advanced Capital Ship Construction",
-      "groupId": 268
+      "groupId": 268,
+      "rank": 16,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 22242,
+          "level": 4
+        },
+        {
+          "skillId": 3398,
+          "level": 4
+        },
+        {
+          "skillId": 3392,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 26252,
       "typeName": "Jury Rigging",
-      "groupId": 269
+      "groupId": 269,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3392,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 26253,
       "typeName": "Armor Rigging",
-      "groupId": 269
+      "groupId": 269,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 26252,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 26254,
       "typeName": "Astronautics Rigging",
-      "groupId": 269
+      "groupId": 269,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 26252,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 26255,
       "typeName": "Drones Rigging",
-      "groupId": 269
+      "groupId": 269,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 26252,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 26256,
       "typeName": "Electronic Superiority Rigging",
-      "groupId": 269
+      "groupId": 269,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 26252,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 26257,
       "typeName": "Projectile Weapon Rigging",
-      "groupId": 269
+      "groupId": 269,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 26252,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 26258,
       "typeName": "Energy Weapon Rigging",
-      "groupId": 269
+      "groupId": 269,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 26252,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 26259,
       "typeName": "Hybrid Weapon Rigging",
-      "groupId": 269
+      "groupId": 269,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 26252,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 26260,
       "typeName": "Launcher Rigging",
-      "groupId": 269
+      "groupId": 269,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 26252,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 26261,
       "typeName": "Shield Rigging",
-      "groupId": 269
+      "groupId": 269,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 26252,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3402,
       "typeName": "Science",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory"
     },
     {
       "typeId": 3403,
       "typeName": "Research",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3406,
       "typeName": "Laboratory Operation",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3408,
       "typeName": "Sleeper Encryption Methods",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 4,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3409,
+          "level": 4
+        },
+        {
+          "skillId": 3403,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 3409,
       "typeName": "Metallurgy",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 11433,
       "typeName": "High Energy Physics",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3413,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11441,
       "typeName": "Plasma Physics",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3413,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11442,
       "typeName": "Nanite Engineering",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3426,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11443,
       "typeName": "Hydromagnetic Physics",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3413,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11444,
       "typeName": "Amarr Starship Engineering",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3392,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11445,
       "typeName": "Minmatar Starship Engineering",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3392,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11446,
       "typeName": "Graviton Physics",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3413,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11447,
       "typeName": "Laser Physics",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3413,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11448,
       "typeName": "Electromagnetic Physics",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3426,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11449,
       "typeName": "Rocket Science",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3392,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11450,
       "typeName": "Gallente Starship Engineering",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3392,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11451,
       "typeName": "Nuclear Physics",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3413,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11452,
       "typeName": "Mechanical Engineering",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3392,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11453,
       "typeName": "Electronic Engineering",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3426,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11454,
       "typeName": "Caldari Starship Engineering",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3392,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11455,
       "typeName": "Quantum Physics",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3413,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11487,
       "typeName": "Astronautic Engineering",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3392,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 11529,
       "typeName": "Molecular Engineering",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3392,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12179,
       "typeName": "Research Project Management",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 8,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "charisma",
+      "prerequisites": [
+        {
+          "skillId": 3406,
+          "level": 5
+        },
+        {
+          "skillId": 3403,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 20433,
       "typeName": "Talocan Technology",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 13278,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 21789,
       "typeName": "Sleeper Technology",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 13278,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 21790,
       "typeName": "Caldari Encryption Methods",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 21718,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 21791,
       "typeName": "Minmatar Encryption Methods",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 21718,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 23087,
       "typeName": "Amarr Encryption Methods",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 21718,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 23121,
       "typeName": "Gallente Encryption Methods",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 21718,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 23123,
       "typeName": "Takmahl Technology",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 13278,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 23124,
       "typeName": "Yan Jung Technology",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 13278,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 24270,
       "typeName": "Scientific Networking",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3406,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 24624,
       "typeName": "Advanced Laboratory Operation",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 8,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3406,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 30324,
       "typeName": "Defensive Subsystem Technology",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3403,
+          "level": 5
+        },
+        {
+          "skillId": 11442,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 30325,
       "typeName": "Core Subsystem Technology",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3403,
+          "level": 5
+        },
+        {
+          "skillId": 11433,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 30327,
       "typeName": "Offensive Subsystem Technology",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3403,
+          "level": 5
+        },
+        {
+          "skillId": 11433,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 30788,
       "typeName": "Propulsion Subsystem Technology",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3403,
+          "level": 5
+        },
+        {
+          "skillId": 11446,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 52307,
       "typeName": "Triglavian Quantum Engineering",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3392,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 52308,
       "typeName": "Triglavian Encryption Methods",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 4,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3409,
+          "level": 4
+        },
+        {
+          "skillId": 3403,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 55025,
       "typeName": "Upwell Encryption Methods",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 21718,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 81050,
       "typeName": "Upwell Starship Engineering",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3392,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 81896,
       "typeName": "Mutagenic Stabilization",
-      "groupId": 270
+      "groupId": 270,
+      "rank": 2,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3405,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 3427,
       "typeName": "Electronic Warfare",
-      "groupId": 272
+      "groupId": 272,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3433,
       "typeName": "Sensor Linking",
-      "groupId": 272
+      "groupId": 272,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3434,
       "typeName": "Weapon Disruption",
-      "groupId": 272
+      "groupId": 272,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3435,
       "typeName": "Propulsion Jamming",
-      "groupId": 272
+      "groupId": 272,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 3
+        },
+        {
+          "skillId": 3449,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 4411,
       "typeName": "Signature Masking",
-      "groupId": 272
+      "groupId": 272,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 11579,
       "typeName": "Cloaking",
-      "groupId": 272
+      "groupId": 272,
+      "rank": 6,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 19759,
       "typeName": "Long Distance Jamming",
-      "groupId": 272
+      "groupId": 272,
+      "rank": 4,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 4
+        },
+        {
+          "skillId": 3427,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 19760,
       "typeName": "Frequency Modulation",
-      "groupId": 272
+      "groupId": 272,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 3
+        },
+        {
+          "skillId": 3427,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 19761,
       "typeName": "Signal Dispersion",
-      "groupId": 272
+      "groupId": 272,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 4
+        },
+        {
+          "skillId": 3427,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 19766,
       "typeName": "Signal Suppression",
-      "groupId": 272
+      "groupId": 272,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 4
+        },
+        {
+          "skillId": 3433,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 19767,
       "typeName": "Weapon Destabilization",
-      "groupId": 272
+      "groupId": 272,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 4
+        },
+        {
+          "skillId": 3434,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 19921,
       "typeName": "Target Painting",
-      "groupId": 272
+      "groupId": 272,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 19922,
       "typeName": "Signature Focusing",
-      "groupId": 272
+      "groupId": 272,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 4
+        },
+        {
+          "skillId": 19921,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 27906,
       "typeName": "Tactical Logistics Reconfiguration",
-      "groupId": 272
+      "groupId": 272,
+      "rank": 8,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 12096,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 27911,
       "typeName": "Burst Projector Operation",
-      "groupId": 272
+      "groupId": 272,
+      "rank": 8,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3427,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 3436,
       "typeName": "Drones",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 1,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception"
     },
     {
       "typeId": 3437,
       "typeName": "Drone Avionics",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 1,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3438,
       "typeName": "Mining Drone Operation",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 2,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 1
+        },
+        {
+          "skillId": 3386,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3439,
       "typeName": "Repair Drone Operation",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 3,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 5
+        },
+        {
+          "skillId": 23618,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3440,
       "typeName": "Salvage Drone Operation",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 4,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 4
+        },
+        {
+          "skillId": 25863,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3441,
       "typeName": "Heavy Drone Operation",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 5,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 3442,
       "typeName": "Drone Interfacing",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 5,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12305,
       "typeName": "Drone Navigation",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 1,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 12484,
       "typeName": "Amarr Drone Specialization",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 5,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12485,
       "typeName": "Minmatar Drone Specialization",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 5,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12486,
       "typeName": "Gallente Drone Specialization",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 5,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12487,
       "typeName": "Caldari Drone Specialization",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 5,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 22541,
       "typeName": "Mining Drone Specialization",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 5,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3438,
+          "level": 5
+        },
+        {
+          "skillId": 3386,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 23069,
       "typeName": "Fighters",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 12,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3442,
+          "level": 5
+        },
+        {
+          "skillId": 3348,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 23566,
       "typeName": "Advanced Drone Avionics",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 5,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 5
+        },
+        {
+          "skillId": 3427,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 23594,
       "typeName": "Sentry Drone Interfacing",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 5,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3442,
+          "level": 4
+        },
+        {
+          "skillId": 23606,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 23606,
       "typeName": "Drone Sharpshooting",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 1,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 23618,
       "typeName": "Drone Durability",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 5,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 24241,
       "typeName": "Light Drone Operation",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 1,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 24613,
       "typeName": "Fighter Hangar Management",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 8,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 23069,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 32339,
       "typeName": "Heavy Fighters",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 12,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 23069,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 33699,
       "typeName": "Medium Drone Operation",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 2,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 40572,
       "typeName": "Light Fighters",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 12,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 23069,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 40573,
       "typeName": "Support Fighters",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 12,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 23069,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 43702,
       "typeName": "Ice Harvesting Drone Operation",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 2,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 1
+        },
+        {
+          "skillId": 16281,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 43703,
       "typeName": "Ice Harvesting Drone Specialization",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 5,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 43702,
+          "level": 5
+        },
+        {
+          "skillId": 16281,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 57164,
       "typeName": "Salvage Drone Specialization",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 5,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3440,
+          "level": 5
+        },
+        {
+          "skillId": 25863,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 60515,
       "typeName": "Mutated Drone Specialization",
-      "groupId": 273
+      "groupId": 273,
+      "rank": 6,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3436,
+          "level": 5
+        },
+        {
+          "skillId": 12486,
+          "level": 1
+        },
+        {
+          "skillId": 12484,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3443,
       "typeName": "Trade",
-      "groupId": 274
+      "groupId": 274,
+      "rank": 1,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "charisma"
     },
     {
       "typeId": 3444,
       "typeName": "Retail",
-      "groupId": 274
+      "groupId": 274,
+      "rank": 2,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "charisma",
+      "prerequisites": [
+        {
+          "skillId": 3443,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3446,
       "typeName": "Broker Relations",
-      "groupId": 274
+      "groupId": 274,
+      "rank": 2,
+      "primaryAttribute": "willpower",
+      "secondaryAttribute": "charisma",
+      "prerequisites": [
+        {
+          "skillId": 3443,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3447,
       "typeName": "Visibility",
-      "groupId": 274
+      "groupId": 274,
+      "rank": 3,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 16594,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 16594,
       "typeName": "Procurement",
-      "groupId": 274
+      "groupId": 274,
+      "rank": 3,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 16598,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 16595,
       "typeName": "Daytrading",
-      "groupId": 274
+      "groupId": 274,
+      "rank": 1,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3443,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 16596,
       "typeName": "Wholesale",
-      "groupId": 274
+      "groupId": 274,
+      "rank": 4,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3444,
+          "level": 5
+        },
+        {
+          "skillId": 16598,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 16597,
       "typeName": "Advanced Broker Relations",
-      "groupId": 274
+      "groupId": 274,
+      "rank": 3,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 16622,
+          "level": 4
+        },
+        {
+          "skillId": 3446,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 16598,
       "typeName": "Marketing",
-      "groupId": 274
+      "groupId": 274,
+      "rank": 3,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3443,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 16622,
       "typeName": "Accounting",
-      "groupId": 274
+      "groupId": 274,
+      "rank": 3,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3443,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 18580,
       "typeName": "Tycoon",
-      "groupId": 274
+      "groupId": 274,
+      "rank": 6,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 16596,
+          "level": 5
+        },
+        {
+          "skillId": 16598,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 25233,
       "typeName": "Corporation Contracting",
-      "groupId": 274
+      "groupId": 274,
+      "rank": 3,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 25235,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 25235,
       "typeName": "Contracting",
-      "groupId": 274
+      "groupId": 274,
+      "rank": 1,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3355,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 33467,
       "typeName": "Customs Code Expertise",
-      "groupId": 274
+      "groupId": 274,
+      "rank": 2,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3443,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 73912,
       "typeName": "Advanced Contracting",
-      "groupId": 274
+      "groupId": 274,
+      "rank": 10,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 25235,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 3449,
       "typeName": "Navigation",
-      "groupId": 275
+      "groupId": 275,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "perception"
     },
     {
       "typeId": 3450,
       "typeName": "Afterburner",
-      "groupId": 275
+      "groupId": 275,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3449,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3451,
       "typeName": "Fuel Conservation",
-      "groupId": 275
+      "groupId": 275,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3449,
+          "level": 2
+        },
+        {
+          "skillId": 3450,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3452,
       "typeName": "Acceleration Control",
-      "groupId": 275
+      "groupId": 275,
+      "rank": 4,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3449,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3453,
       "typeName": "Evasive Maneuvering",
-      "groupId": 275
+      "groupId": 275,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3449,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3454,
       "typeName": "High Speed Maneuvering",
-      "groupId": 275
+      "groupId": 275,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3449,
+          "level": 3
+        },
+        {
+          "skillId": 3450,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3455,
       "typeName": "Warp Drive Operation",
-      "groupId": 275
+      "groupId": 275,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3449,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3456,
       "typeName": "Jump Drive Operation",
-      "groupId": 275
+      "groupId": 275,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3449,
+          "level": 5
+        },
+        {
+          "skillId": 3455,
+          "level": 5
+        },
+        {
+          "skillId": 3402,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 4385,
       "typeName": "Micro Jump Drive Operation",
-      "groupId": 275
+      "groupId": 275,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3449,
+          "level": 4
+        },
+        {
+          "skillId": 3455,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 21603,
       "typeName": "Cynosural Field Theory",
-      "groupId": 275
+      "groupId": 275,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 21610,
       "typeName": "Jump Fuel Conservation",
-      "groupId": 275
+      "groupId": 275,
+      "rank": 8,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3456,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 21611,
       "typeName": "Jump Drive Calibration",
-      "groupId": 275
+      "groupId": 275,
+      "rank": 9,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3456,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 24562,
       "typeName": "Jump Portal Generation",
-      "groupId": 275
+      "groupId": 275,
+      "rank": 14,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 3412,
+          "level": 5
+        },
+        {
+          "skillId": 3456,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 83094,
       "typeName": "Capital Jump Portal Generation",
-      "groupId": 275
+      "groupId": 275,
+      "rank": 14,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 24562,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 83464,
       "typeName": "Capital Micro Jump Drive Operation",
-      "groupId": 275
+      "groupId": 275,
+      "rank": 14,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 3449,
+          "level": 5
+        },
+        {
+          "skillId": 4385,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 3355,
       "typeName": "Social",
-      "groupId": 278
+      "groupId": 278,
+      "rank": 1,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "intelligence"
     },
     {
       "typeId": 3356,
       "typeName": "Negotiation",
-      "groupId": 278
+      "groupId": 278,
+      "rank": 2,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3355,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3357,
       "typeName": "Diplomacy",
-      "groupId": 278
+      "groupId": 278,
+      "rank": 1,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3355,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3358,
       "typeName": "Fast Talk",
-      "groupId": 278
+      "groupId": 278,
+      "rank": 4,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3355,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 3359,
       "typeName": "Connections",
-      "groupId": 278
+      "groupId": 278,
+      "rank": 3,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3355,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3361,
       "typeName": "Criminal Connections",
-      "groupId": 278
+      "groupId": 278,
+      "rank": 3,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3355,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3893,
       "typeName": "Mining Connections",
-      "groupId": 278
+      "groupId": 278,
+      "rank": 2,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3380,
+          "level": 3
+        },
+        {
+          "skillId": 3355,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3894,
       "typeName": "Distribution Connections",
-      "groupId": 278
+      "groupId": 278,
+      "rank": 2,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3443,
+          "level": 3
+        },
+        {
+          "skillId": 3355,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3895,
       "typeName": "Security Connections",
-      "groupId": 278
+      "groupId": 278,
+      "rank": 2,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3355,
+          "level": 3
+        },
+        {
+          "skillId": 3348,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3416,
       "typeName": "Shield Operation",
-      "groupId": 1209
+      "groupId": 1209,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3419,
       "typeName": "Shield Management",
-      "groupId": 1209
+      "groupId": 1209,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3420,
       "typeName": "Tactical Shield Manipulation",
-      "groupId": 1209
+      "groupId": 1209,
+      "rank": 4,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3422,
       "typeName": "Shield Emission Systems",
-      "groupId": 1209
+      "groupId": 1209,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 3
+        },
+        {
+          "skillId": 3402,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3425,
       "typeName": "Shield Upgrades",
-      "groupId": 1209
+      "groupId": 1209,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 2
+        },
+        {
+          "skillId": 3402,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 11566,
       "typeName": "Thermal Shield Compensation",
-      "groupId": 1209
+      "groupId": 1209,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3416,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 12365,
       "typeName": "EM Shield Compensation",
-      "groupId": 1209
+      "groupId": 1209,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3416,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 12366,
       "typeName": "Kinetic Shield Compensation",
-      "groupId": 1209
+      "groupId": 1209,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3416,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 12367,
       "typeName": "Explosive Shield Compensation",
-      "groupId": 1209
+      "groupId": 1209,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3416,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 21059,
       "typeName": "Shield Compensation",
-      "groupId": 1209
+      "groupId": 1209,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3416,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 21802,
       "typeName": "Capital Shield Operation",
-      "groupId": 1209
+      "groupId": 1209,
+      "rank": 8,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3419,
+          "level": 5
+        },
+        {
+          "skillId": 3416,
+          "level": 5
+        },
+        {
+          "skillId": 3413,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 24571,
       "typeName": "Capital Shield Emission Systems",
-      "groupId": 1209
+      "groupId": 1209,
+      "rank": 10,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 5
+        },
+        {
+          "skillId": 3422,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 44067,
       "typeName": "Invulnerability Core Operation",
-      "groupId": 1209
+      "groupId": 1209,
+      "rank": 8,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3420,
+          "level": 5
+        },
+        {
+          "skillId": 24571,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3392,
       "typeName": "Mechanics",
-      "groupId": 1210
+      "groupId": 1210,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory"
     },
     {
       "typeId": 3393,
       "typeName": "Repair Systems",
-      "groupId": 1210
+      "groupId": 1210,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3392,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3394,
       "typeName": "Hull Upgrades",
-      "groupId": 1210
+      "groupId": 1210,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3392,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 16069,
       "typeName": "Remote Armor Repair Systems",
-      "groupId": 1210
+      "groupId": 1210,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3392,
+          "level": 3
+        },
+        {
+          "skillId": 3393,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 21803,
       "typeName": "Capital Repair Systems",
-      "groupId": 1210
+      "groupId": 1210,
+      "rank": 8,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3392,
+          "level": 5
+        },
+        {
+          "skillId": 3394,
+          "level": 5
+        },
+        {
+          "skillId": 3393,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 22806,
       "typeName": "EM Armor Compensation",
-      "groupId": 1210
+      "groupId": 1210,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3394,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 22807,
       "typeName": "Explosive Armor Compensation",
-      "groupId": 1210
+      "groupId": 1210,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3394,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 22808,
       "typeName": "Kinetic Armor Compensation",
-      "groupId": 1210
+      "groupId": 1210,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3394,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 22809,
       "typeName": "Thermal Armor Compensation",
-      "groupId": 1210
+      "groupId": 1210,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3394,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 24568,
       "typeName": "Capital Remote Armor Repair Systems",
-      "groupId": 1210
+      "groupId": 1210,
+      "rank": 10,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 16069,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 27902,
       "typeName": "Remote Hull Repair Systems",
-      "groupId": 1210
+      "groupId": 1210,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3392,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 27936,
       "typeName": "Capital Remote Hull Repair Systems",
-      "groupId": 1210
+      "groupId": 1210,
+      "rank": 10,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 27902,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 33078,
       "typeName": "Armor Layering",
-      "groupId": 1210
+      "groupId": 1210,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3392,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3428,
       "typeName": "Long Range Targeting",
-      "groupId": 1213
+      "groupId": 1213,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3429,
       "typeName": "Target Management",
-      "groupId": 1213
+      "groupId": 1213,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3430,
       "typeName": "Advanced Target Management",
-      "groupId": 1213
+      "groupId": 1213,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3429,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 3431,
       "typeName": "Signature Analysis",
-      "groupId": 1213
+      "groupId": 1213,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 32999,
       "typeName": "Magnetometric Sensor Compensation",
-      "groupId": 1213
+      "groupId": 1213,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 33000,
       "typeName": "Gravimetric Sensor Compensation",
-      "groupId": 1213
+      "groupId": 1213,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 33001,
       "typeName": "Ladar Sensor Compensation",
-      "groupId": 1213
+      "groupId": 1213,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 33002,
       "typeName": "Radar Sensor Compensation",
-      "groupId": 1213
+      "groupId": 1213,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 3318,
       "typeName": "Weapon Upgrades",
-      "groupId": 1216
+      "groupId": 1216,
+      "rank": 2,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3413,
       "typeName": "Power Grid Management",
-      "groupId": 1216
+      "groupId": 1216,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory"
     },
     {
       "typeId": 3417,
       "typeName": "Capacitor Systems Operation",
-      "groupId": 1216
+      "groupId": 1216,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3418,
       "typeName": "Capacitor Management",
-      "groupId": 1216
+      "groupId": 1216,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3421,
       "typeName": "Energy Pulse Weapons",
-      "groupId": 1216
+      "groupId": 1216,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 2
+        },
+        {
+          "skillId": 3402,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3423,
       "typeName": "Capacitor Emission Systems",
-      "groupId": 1216
+      "groupId": 1216,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 3
+        },
+        {
+          "skillId": 3402,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 3424,
       "typeName": "Energy Grid Upgrades",
-      "groupId": 1216
+      "groupId": 1216,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 2
+        },
+        {
+          "skillId": 3402,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3426,
       "typeName": "CPU Management",
-      "groupId": 1216
+      "groupId": 1216,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory"
     },
     {
       "typeId": 3432,
       "typeName": "Electronics Upgrades",
-      "groupId": 1216
+      "groupId": 1216,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 2
+        },
+        {
+          "skillId": 3413,
+          "level": 2
+        }
+      ]
     },
     {
       "typeId": 11207,
       "typeName": "Advanced Weapon Upgrades",
-      "groupId": 1216
+      "groupId": 1216,
+      "rank": 6,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3318,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 24572,
       "typeName": "Capital Capacitor Emission Systems",
-      "groupId": 1216
+      "groupId": 1216,
+      "rank": 10,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 5
+        },
+        {
+          "skillId": 3423,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 28164,
       "typeName": "Thermodynamics",
-      "groupId": 1216
+      "groupId": 1216,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 4
+        },
+        {
+          "skillId": 3418,
+          "level": 3
+        },
+        {
+          "skillId": 3402,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 28879,
       "typeName": "Nanite Operation",
-      "groupId": 1216
+      "groupId": 1216,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3392,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 28880,
       "typeName": "Nanite Interfacing",
-      "groupId": 1216
+      "groupId": 1216,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 28879,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 32797,
       "typeName": "Resistance Phasing",
-      "groupId": 1216
+      "groupId": 1216,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3394,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 3412,
       "typeName": "Astrometrics",
-      "groupId": 1217
+      "groupId": 1217,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3551,
       "typeName": "Survey",
-      "groupId": 1217
+      "groupId": 1217,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 13278,
       "typeName": "Archaeology",
-      "groupId": 1217
+      "groupId": 1217,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 3
+        },
+        {
+          "skillId": 3551,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 21718,
       "typeName": "Hacking",
-      "groupId": 1217
+      "groupId": 1217,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 3
+        },
+        {
+          "skillId": 3432,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 25739,
       "typeName": "Astrometric Rangefinding",
-      "groupId": 1217
+      "groupId": 1217,
+      "rank": 8,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 25810,
       "typeName": "Astrometric Pinpointing",
-      "groupId": 1217
+      "groupId": 1217,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3412,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 25811,
       "typeName": "Astrometric Acquisition",
-      "groupId": 1217
+      "groupId": 1217,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3412,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3385,
       "typeName": "Reprocessing",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 1,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3380,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3386,
       "typeName": "Mining",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 1,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence"
     },
     {
       "typeId": 3389,
       "typeName": "Reprocessing Efficiency",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 3,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3385,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 3410,
       "typeName": "Astrogeology",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 4
+        },
+        {
+          "skillId": 3386,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 11395,
       "typeName": "Deep Core Mining",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 6,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3386,
+          "level": 5
+        },
+        {
+          "skillId": 3410,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 12189,
       "typeName": "Mercoxit Ore Processing",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 5,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3389,
+          "level": 5
+        },
+        {
+          "skillId": 3409,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 12196,
       "typeName": "Scrapmetal Processing",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 5,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3389,
+          "level": 5
+        },
+        {
+          "skillId": 3409,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 16281,
       "typeName": "Ice Harvesting",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 1,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3386,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 18025,
       "typeName": "Ice Processing",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 5,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3389,
+          "level": 5
+        },
+        {
+          "skillId": 11443,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 22578,
       "typeName": "Mining Upgrades",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 4,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3386,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 25544,
       "typeName": "Gas Cloud Harvesting",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 1,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3386,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 25863,
       "typeName": "Salvaging",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3392,
+          "level": 3
+        },
+        {
+          "skillId": 3551,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 28585,
       "typeName": "Capital Industrial Reconfiguration",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 8,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 24625,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 45746,
       "typeName": "Reactions",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 1,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence"
     },
     {
       "typeId": 45748,
       "typeName": "Mass Reactions",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 2,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 45746,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 45749,
       "typeName": "Advanced Mass Reactions",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 8,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 45748,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 45750,
       "typeName": "Remote Reactions",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 3,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 45746,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 46152,
       "typeName": "Ubiquitous Moon Ore Processing",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 4,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3389,
+          "level": 5
+        },
+        {
+          "skillId": 3409,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 46153,
       "typeName": "Common Moon Ore Processing",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 5,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3389,
+          "level": 5
+        },
+        {
+          "skillId": 3409,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 46154,
       "typeName": "Uncommon Moon Ore Processing",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 6,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3389,
+          "level": 5
+        },
+        {
+          "skillId": 3409,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 46155,
       "typeName": "Rare Moon Ore Processing",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 7,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3389,
+          "level": 5
+        },
+        {
+          "skillId": 3409,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 46156,
       "typeName": "Exceptional Moon Ore Processing",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 8,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3389,
+          "level": 5
+        },
+        {
+          "skillId": 3409,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 58956,
       "typeName": "Industrial Reconfiguration",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 4,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 24625,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 60377,
       "typeName": "Simple Ore Processing",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 3,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3385,
+          "level": 4
+        },
+        {
+          "skillId": 3402,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 60378,
       "typeName": "Coherent Ore Processing",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 6,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3385,
+          "level": 5
+        },
+        {
+          "skillId": 3402,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 60379,
       "typeName": "Variegated Ore Processing",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 9,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3389,
+          "level": 4
+        },
+        {
+          "skillId": 3409,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 60380,
       "typeName": "Complex Ore Processing",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 11,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3389,
+          "level": 5
+        },
+        {
+          "skillId": 3409,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 60381,
       "typeName": "Abyssal Ore Processing",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 12,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 3389,
+          "level": 5
+        },
+        {
+          "skillId": 3409,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 62450,
       "typeName": "Shipboard Compression Technology",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 3,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 58956,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 62451,
       "typeName": "Capital Shipboard Compression Technology",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 3,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 28585,
+          "level": 1
+        },
+        {
+          "skillId": 62450,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 62452,
       "typeName": "Gas Decompression Efficiency",
-      "groupId": 1218
+      "groupId": 1218,
+      "rank": 2,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "intelligence",
+      "prerequisites": [
+        {
+          "skillId": 62450,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3405,
       "typeName": "Biology",
-      "groupId": 1220
+      "groupId": 1220,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 3411,
       "typeName": "Cybernetics",
-      "groupId": 1220
+      "groupId": 1220,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 24242,
       "typeName": "Infomorph Psychology",
-      "groupId": 1220
+      "groupId": 1220,
+      "rank": 1,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower"
     },
     {
       "typeId": 24606,
       "typeName": "Cloning Facility Operation",
-      "groupId": 1220
+      "groupId": 1220,
+      "rank": 10,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 5
+        },
+        {
+          "skillId": 20533,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 25530,
       "typeName": "Neurotoxin Recovery",
-      "groupId": 1220
+      "groupId": 1220,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 25538,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 25538,
       "typeName": "Neurotoxin Control",
-      "groupId": 1220
+      "groupId": 1220,
+      "rank": 2,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 4
+        },
+        {
+          "skillId": 3405,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 33399,
       "typeName": "Infomorph Synchronizing",
-      "groupId": 1220
+      "groupId": 1220,
+      "rank": 2,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 24242,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 33407,
       "typeName": "Advanced Infomorph Psychology",
-      "groupId": 1220
+      "groupId": 1220,
+      "rank": 5,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 24242,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 73910,
       "typeName": "Elite Infomorph Psychology",
-      "groupId": 1220
+      "groupId": 1220,
+      "rank": 12,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 33407,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 30532,
       "typeName": "Amarr Defensive Systems",
-      "groupId": 1240
+      "groupId": 1240,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3392,
+          "level": 5
+        },
+        {
+          "skillId": 3416,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 30537,
       "typeName": "Amarr Offensive Systems",
-      "groupId": 1240
+      "groupId": 1240,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 5
+        },
+        {
+          "skillId": 3436,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 30538,
       "typeName": "Amarr Propulsion Systems",
-      "groupId": 1240
+      "groupId": 1240,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3449,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 30539,
       "typeName": "Amarr Core Systems",
-      "groupId": 1240
+      "groupId": 1240,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 30540,
       "typeName": "Gallente Defensive Systems",
-      "groupId": 1240
+      "groupId": 1240,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3392,
+          "level": 5
+        },
+        {
+          "skillId": 3416,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 30544,
       "typeName": "Caldari Defensive Systems",
-      "groupId": 1240
+      "groupId": 1240,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3416,
+          "level": 5
+        },
+        {
+          "skillId": 3392,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 30545,
       "typeName": "Minmatar Defensive Systems",
-      "groupId": 1240
+      "groupId": 1240,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3392,
+          "level": 5
+        },
+        {
+          "skillId": 3416,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 30546,
       "typeName": "Gallente Core Systems",
-      "groupId": 1240
+      "groupId": 1240,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 30547,
       "typeName": "Minmatar Core Systems",
-      "groupId": 1240
+      "groupId": 1240,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 30548,
       "typeName": "Caldari Core Systems",
-      "groupId": 1240
+      "groupId": 1240,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 30549,
       "typeName": "Caldari Offensive Systems",
-      "groupId": 1240
+      "groupId": 1240,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 5
+        },
+        {
+          "skillId": 3300,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 30550,
       "typeName": "Gallente Offensive Systems",
-      "groupId": 1240
+      "groupId": 1240,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 5
+        },
+        {
+          "skillId": 3436,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 30551,
       "typeName": "Minmatar Offensive Systems",
-      "groupId": 1240
+      "groupId": 1240,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3300,
+          "level": 5
+        },
+        {
+          "skillId": 3319,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 30552,
       "typeName": "Caldari Propulsion Systems",
-      "groupId": 1240
+      "groupId": 1240,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3449,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 30553,
       "typeName": "Gallente Propulsion Systems",
-      "groupId": 1240
+      "groupId": 1240,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3449,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 30554,
       "typeName": "Minmatar Propulsion Systems",
-      "groupId": 1240
+      "groupId": 1240,
+      "rank": 1,
+      "primaryAttribute": "perception",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3449,
+          "level": 5
+        }
+      ]
     },
     {
       "typeId": 2403,
       "typeName": "Advanced Planetology",
-      "groupId": 1241
+      "groupId": 1241,
+      "rank": 5,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 2406,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 2406,
       "typeName": "Planetology",
-      "groupId": 1241
+      "groupId": 1241,
+      "rank": 3,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 13279,
+          "level": 3
+        },
+        {
+          "skillId": 3402,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 2495,
       "typeName": "Interplanetary Consolidation",
-      "groupId": 1241
+      "groupId": 1241,
+      "rank": 4,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "intelligence"
     },
     {
       "typeId": 2505,
       "typeName": "Command Center Upgrades",
-      "groupId": 1241
+      "groupId": 1241,
+      "rank": 4,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "intelligence"
     },
     {
       "typeId": 13279,
       "typeName": "Remote Sensing",
-      "groupId": 1241
+      "groupId": 1241,
+      "rank": 1,
+      "primaryAttribute": "intelligence",
+      "secondaryAttribute": "memory",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 3373,
       "typeName": "Starbase Defense Management",
-      "groupId": 1545
+      "groupId": 1545,
+      "rank": 7,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "charisma",
+      "prerequisites": [
+        {
+          "skillId": 11584,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 11584,
       "typeName": "Anchoring",
-      "groupId": 1545
+      "groupId": 1545,
+      "rank": 3,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "charisma"
     },
     {
       "typeId": 37796,
       "typeName": "Structure Missile Systems",
-      "groupId": 1545
+      "groupId": 1545,
+      "rank": 2,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3319,
+          "level": 1
+        },
+        {
+          "skillId": 11584,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 37797,
       "typeName": "Structure Doomsday Operation",
-      "groupId": 1545
+      "groupId": 1545,
+      "rank": 2,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3402,
+          "level": 1
+        },
+        {
+          "skillId": 11584,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 37798,
       "typeName": "Structure Electronic Systems",
-      "groupId": 1545
+      "groupId": 1545,
+      "rank": 2,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3426,
+          "level": 1
+        },
+        {
+          "skillId": 11584,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 37799,
       "typeName": "Structure Engineering Systems",
-      "groupId": 1545
+      "groupId": 1545,
+      "rank": 2,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "willpower",
+      "prerequisites": [
+        {
+          "skillId": 3413,
+          "level": 1
+        },
+        {
+          "skillId": 11584,
+          "level": 1
+        }
+      ]
     },
     {
       "typeId": 85233,
       "typeName": "Mercenary Den Management",
-      "groupId": 1545
+      "groupId": 1545,
+      "rank": 8,
+      "primaryAttribute": "memory",
+      "secondaryAttribute": "charisma",
+      "prerequisites": [
+        {
+          "skillId": 11584,
+          "level": 3
+        },
+        {
+          "skillId": 3361,
+          "level": 3
+        }
+      ]
     },
     {
       "typeId": 81364,
       "typeName": "Mass Sequencing",
-      "groupId": 4734
+      "groupId": 4734,
+      "rank": 6,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 81375,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 81365,
       "typeName": "Industrial Sequencing",
-      "groupId": 4734
+      "groupId": 4734,
+      "rank": 9,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 81364,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 81366,
       "typeName": "Parallel Sequencing",
-      "groupId": 4734
+      "groupId": 4734,
+      "rank": 2,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "perception"
     },
     {
       "typeId": 81367,
       "typeName": "Multi-thread Sequencing",
-      "groupId": 4734
+      "groupId": 4734,
+      "rank": 6,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 81366,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 81368,
       "typeName": "Hub Promotion",
-      "groupId": 4734
+      "groupId": 4734,
+      "rank": 1,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "perception"
     },
     {
       "typeId": 81369,
       "typeName": "Hub Algorithm Optimization",
-      "groupId": 4734
+      "groupId": 4734,
+      "rank": 5,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 81368,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 81370,
       "typeName": "Studio Management",
-      "groupId": 4734
+      "groupId": 4734,
+      "rank": 2,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "perception"
     },
     {
       "typeId": 81371,
       "typeName": "Advanced Studio Management",
-      "groupId": 4734
+      "groupId": 4734,
+      "rank": 5,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 81370,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 81372,
       "typeName": "Induction Efficiency",
-      "groupId": 4734
+      "groupId": 4734,
+      "rank": 3,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 81377,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 81373,
       "typeName": "Advanced Induction Efficiency",
-      "groupId": 4734
+      "groupId": 4734,
+      "rank": 5,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 81372,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 81374,
       "typeName": "Peak Induction Acceleration",
-      "groupId": 4734
+      "groupId": 4734,
+      "rank": 8,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 81373,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 81375,
       "typeName": "Batch Sequencing",
-      "groupId": 4734
+      "groupId": 4734,
+      "rank": 3,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "perception"
     },
     {
       "typeId": 81377,
       "typeName": "Basic Induction",
-      "groupId": 4734
+      "groupId": 4734,
+      "rank": 1,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "perception"
     },
     {
       "typeId": 84217,
       "typeName": "Paragon Relations",
-      "groupId": 4734
+      "groupId": 4734,
+      "rank": 3,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "perception"
     },
     {
       "typeId": 84218,
       "typeName": "Paragon Partnership",
-      "groupId": 4734
+      "groupId": 4734,
+      "rank": 4,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 84217,
+          "level": 4
+        }
+      ]
     },
     {
       "typeId": 84220,
       "typeName": "Executive Paragon Partnership",
-      "groupId": 4734
+      "groupId": 4734,
+      "rank": 5,
+      "primaryAttribute": "charisma",
+      "secondaryAttribute": "perception",
+      "prerequisites": [
+        {
+          "skillId": 84218,
+          "level": 4
+        }
+      ]
     }
   ]
 }
