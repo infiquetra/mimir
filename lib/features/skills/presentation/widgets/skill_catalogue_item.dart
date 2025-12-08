@@ -59,7 +59,7 @@ class SkillCatalogueItem extends ConsumerWidget {
           children: [
             // Skill icon
             EveSkillIcon(
-              skillId: skill.typeId,
+              typeId: skill.typeId,
               size: 32,
             ),
 

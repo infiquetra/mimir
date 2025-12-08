@@ -189,7 +189,7 @@ class SettingsScreen extends ConsumerWidget {
             SizedBox(height: EveSpacing.sm),
             Text(
               'EVE Online and the EVE logo are registered trademarks of CCP hf.',
-              style: EveTypography.captionSmall(color: EveColors.textTertiary),
+              style: EveTypography.labelSmall(color: EveColors.textTertiary),
             ),
           ],
         ),
