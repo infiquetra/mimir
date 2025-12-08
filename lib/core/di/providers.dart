@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 import '../database/app_database.dart';
+import '../sde/sde_database.dart';
+import '../sde/sde_service.dart';
 
 /// Provider for the application database.
 ///
@@ -11,6 +13,23 @@ final databaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
   ref.onDispose(() => db.close());
   return db;
+});
+
+/// Provider for the SDE database.
+///
+/// This is a singleton for EVE static data lookups.
+final sdeDatabaseProvider = Provider<SdeDatabase>((ref) {
+  final db = SdeDatabase();
+  ref.onDispose(() => db.close());
+  return db;
+});
+
+/// Provider for the SDE service.
+///
+/// Handles loading and caching EVE static data (skills, items, etc).
+final sdeServiceProvider = Provider<SdeService>((ref) {
+  final database = ref.watch(sdeDatabaseProvider);
+  return SdeService(database: database);
 });
 
 /// Provider for tracking the current theme mode.
