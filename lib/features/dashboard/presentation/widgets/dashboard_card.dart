@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../../../core/theme/eve_colors.dart';
+import '../../../../core/theme/eve_spacing.dart';
+import '../../../../core/theme/eve_typography.dart';
 import '../../../../core/widgets/eve_card.dart';
 
 /// Specialized dashboard card widget extending EveCard with common
@@ -76,7 +78,7 @@ class DashboardCard extends StatelessWidget {
 
           // Content area (loading, error, or actual content)
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(EveSpacing.lg),
             child: _buildContent(context),
           ),
         ],
@@ -87,26 +89,26 @@ class DashboardCard extends StatelessWidget {
   /// Builds the card header with title, icon, and optional expand button.
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(EveSpacing.lg),
       child: Row(
         children: [
           Icon(
             icon,
-            color: glowColor ?? EveColors.evePrimary,
-            size: 20,
+            color: glowColor ?? EveColors.photonBlue,
+            size: EveSpacing.iconSm,
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: EveSpacing.md),
           Expanded(
             child: Text(
               title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: EveTypography.titleMedium(
+                color: EveColors.textPrimary,
+              ),
             ),
           ),
           if (onExpand != null)
             IconButton(
-              icon: const Icon(Icons.arrow_forward, size: 20),
+              icon: Icon(Icons.arrow_forward, size: EveSpacing.iconSm),
               onPressed: onExpand,
               tooltip: 'View details',
               visualDensity: VisualDensity.compact,
@@ -135,35 +137,35 @@ class DashboardCard extends StatelessWidget {
   /// Builds the loading state with shimmer effect.
   Widget _buildLoadingState() {
     return Shimmer.fromColors(
-      baseColor: EveColors.darkSurfaceVariant,
-      highlightColor: EveColors.darkSurfaceElevated,
+      baseColor: EveColors.surfaceElevated,
+      highlightColor: EveColors.surfaceBright,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: double.infinity,
-            height: 24,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: 200,
             height: 20,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(EveSpacing.sm),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: EveSpacing.md),
           Container(
-            width: 150,
-            height: 20,
+            width: 180,
+            height: 16,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(EveSpacing.sm),
+            ),
+          ),
+          SizedBox(height: EveSpacing.md),
+          Container(
+            width: 140,
+            height: 16,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(EveSpacing.sm),
             ),
           ),
         ],
@@ -179,39 +181,38 @@ class DashboardCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Icon(
+            Icon(
               Icons.error_outline,
               color: EveColors.error,
-              size: 20,
+              size: EveSpacing.iconSm,
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: EveSpacing.md),
             Expanded(
               child: Text(
                 'Error',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: EveColors.error,
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: EveTypography.titleSmall(
+                  color: EveColors.error,
+                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: EveSpacing.md),
         Text(
           errorMessage!,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withAlpha(204),
-              ),
+          style: EveTypography.bodySmall(
+            color: EveColors.textSecondary,
+          ),
         ),
         if (onRetry != null) ...[
-          const SizedBox(height: 16),
+          SizedBox(height: EveSpacing.lg),
           OutlinedButton.icon(
             onPressed: onRetry,
-            icon: const Icon(Icons.refresh, size: 18),
+            icon: Icon(Icons.refresh, size: EveSpacing.iconXs),
             label: const Text('Retry'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: EveColors.evePrimary,
-              side: const BorderSide(color: EveColors.evePrimary),
+              foregroundColor: EveColors.photonBlue,
+              side: const BorderSide(color: EveColors.photonBlue),
             ),
           ),
         ],

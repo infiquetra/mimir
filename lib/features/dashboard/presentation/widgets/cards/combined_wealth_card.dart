@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/database/app_database.dart';
 import '../../../../../core/theme/eve_colors.dart';
+import '../../../../../core/theme/eve_spacing.dart';
+import '../../../../../core/theme/eve_typography.dart';
 import '../../../../../core/utils/formatters.dart';
 import '../../../../../core/widgets/character_avatar.dart';
 import '../../../../characters/data/character_providers.dart';
@@ -97,15 +99,14 @@ class CombinedWealthCard extends ConsumerWidget {
         Center(
           child: Text(
             formatIsk(totalWealth),
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: EveColors.evePrimary,
-                ),
+            style: EveTypography.headline(
+              color: EveColors.photonBlue,
+            ),
           ),
         ),
 
         if (charactersWithBalances.isNotEmpty) ...[
-          const SizedBox(height: 24),
+          SizedBox(height: EveSpacing.lg),
 
           // Per-character breakdown
           ...charactersWithBalances.map((character) {
@@ -113,7 +114,7 @@ class CombinedWealthCard extends ConsumerWidget {
             final percentage = totalWealth > 0 ? (balance / totalWealth) : 0.0;
 
             return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: EdgeInsets.only(bottom: EveSpacing.md),
               child: _CharacterWealthRow(
                 character: character,
                 balance: balance,
@@ -148,44 +149,44 @@ class _CharacterWealthRow extends StatelessWidget {
           portraitUrl: character.portraitUrl,
           size: CharacterAvatarSize.small,
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: EveSpacing.md),
 
         // Character name
         Expanded(
           flex: 2,
           child: Text(
             character.name,
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: EveTypography.bodySmall(color: EveColors.textPrimary),
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: EveSpacing.md),
 
         // Visual progress bar
         Expanded(
           flex: 3,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(EveSpacing.sm),
             child: LinearProgressIndicator(
               value: percentage,
-              minHeight: 8,
-              backgroundColor: EveColors.darkSurfaceVariant,
+              minHeight: 6,
+              backgroundColor: EveColors.surfaceElevated,
               valueColor: const AlwaysStoppedAnimation<Color>(
-                EveColors.evePrimary,
+                EveColors.photonBlue,
               ),
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: EveSpacing.md),
 
         // Amount and percentage
         SizedBox(
-          width: 120,
+          width: 110,
           child: Text(
             '${formatIskCompact(balance)} (${(percentage * 100).toStringAsFixed(0)}%)',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
+            style: EveTypography.dataSmall(
+              color: EveColors.textSecondary,
+            ),
             textAlign: TextAlign.right,
           ),
         ),
