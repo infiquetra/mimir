@@ -1,25 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// EVE Online Photon UI typography system.
 ///
-/// Uses a combination of Google Fonts to recreate the EVE aesthetic:
+/// Uses a combination of bundled fonts to recreate the EVE aesthetic:
 /// - Orbitron: Display/headings (geometric, futuristic like Shentox)
 /// - K2D: Body text (clean, readable geometric sans)
 /// - JetBrains Mono: Data/numbers (monospace for alignment)
+///
+/// Fonts are bundled in assets/fonts/ to avoid runtime fetching issues
+/// in multi-window environments.
 abstract class EveTypography {
   // ==========================================================================
   // Font Families
   // ==========================================================================
 
   /// Display font for major headings (Orbitron - similar to EVE's Shentox).
-  static String get displayFont => GoogleFonts.orbitron().fontFamily!;
+  static const String displayFont = 'Orbitron';
 
   /// Body font for general text (K2D - clean geometric sans).
-  static String get bodyFont => GoogleFonts.k2d().fontFamily!;
+  static const String bodyFont = 'K2D';
 
   /// Monospace font for data and numbers (JetBrains Mono).
-  static String get monoFont => GoogleFonts.jetBrainsMono().fontFamily!;
+  static const String monoFont = 'JetBrainsMono';
 
   // ==========================================================================
   // Font Weights
@@ -36,7 +38,8 @@ abstract class EveTypography {
   // ==========================================================================
 
   /// Display text (24px) - Screen titles.
-  static TextStyle display({Color? color}) => GoogleFonts.orbitron(
+  static TextStyle display({Color? color}) => TextStyle(
+        fontFamily: displayFont,
         fontSize: 24,
         fontWeight: bold,
         color: color,
@@ -44,7 +47,8 @@ abstract class EveTypography {
       );
 
   /// Display medium (20px) - Sub-headings.
-  static TextStyle displayMedium({Color? color}) => GoogleFonts.orbitron(
+  static TextStyle displayMedium({Color? color}) => TextStyle(
+        fontFamily: displayFont,
         fontSize: 20,
         fontWeight: semiBold,
         color: color,
@@ -56,7 +60,8 @@ abstract class EveTypography {
   // ==========================================================================
 
   /// Headline text (18px) - Section headers.
-  static TextStyle headline({Color? color}) => GoogleFonts.orbitron(
+  static TextStyle headline({Color? color}) => TextStyle(
+        fontFamily: displayFont,
         fontSize: 18,
         fontWeight: semiBold,
         color: color,
@@ -64,7 +69,8 @@ abstract class EveTypography {
       );
 
   /// Headline small (16px) - Minor headings.
-  static TextStyle headlineSmall({Color? color}) => GoogleFonts.orbitron(
+  static TextStyle headlineSmall({Color? color}) => TextStyle(
+        fontFamily: displayFont,
         fontSize: 16,
         fontWeight: medium,
         color: color,
@@ -76,21 +82,24 @@ abstract class EveTypography {
   // ==========================================================================
 
   /// Title large (14px bold) - Card titles, important labels.
-  static TextStyle titleLarge({Color? color}) => GoogleFonts.k2d(
+  static TextStyle titleLarge({Color? color}) => TextStyle(
+        fontFamily: bodyFont,
         fontSize: 14,
         fontWeight: semiBold,
         color: color,
       );
 
   /// Title medium (14px regular) - Standard titles.
-  static TextStyle titleMedium({Color? color}) => GoogleFonts.k2d(
+  static TextStyle titleMedium({Color? color}) => TextStyle(
+        fontFamily: bodyFont,
         fontSize: 14,
         fontWeight: medium,
         color: color,
       );
 
   /// Title small (13px) - Compact titles.
-  static TextStyle titleSmall({Color? color}) => GoogleFonts.k2d(
+  static TextStyle titleSmall({Color? color}) => TextStyle(
+        fontFamily: bodyFont,
         fontSize: 13,
         fontWeight: medium,
         color: color,
@@ -101,21 +110,24 @@ abstract class EveTypography {
   // ==========================================================================
 
   /// Body large (13px) - Primary content.
-  static TextStyle bodyLarge({Color? color}) => GoogleFonts.k2d(
+  static TextStyle bodyLarge({Color? color}) => TextStyle(
+        fontFamily: bodyFont,
         fontSize: 13,
         fontWeight: regular,
         color: color,
       );
 
   /// Body medium (12px) - Standard body text.
-  static TextStyle bodyMedium({Color? color}) => GoogleFonts.k2d(
+  static TextStyle bodyMedium({Color? color}) => TextStyle(
+        fontFamily: bodyFont,
         fontSize: 12,
         fontWeight: regular,
         color: color,
       );
 
   /// Body small (11px) - Compact body text.
-  static TextStyle bodySmall({Color? color}) => GoogleFonts.k2d(
+  static TextStyle bodySmall({Color? color}) => TextStyle(
+        fontFamily: bodyFont,
         fontSize: 11,
         fontWeight: regular,
         color: color,
@@ -126,21 +138,24 @@ abstract class EveTypography {
   // ==========================================================================
 
   /// Label large (11px) - Standard labels.
-  static TextStyle labelLarge({Color? color}) => GoogleFonts.k2d(
+  static TextStyle labelLarge({Color? color}) => TextStyle(
+        fontFamily: bodyFont,
         fontSize: 11,
         fontWeight: medium,
         color: color,
       );
 
   /// Label medium (10px) - Compact labels.
-  static TextStyle labelMedium({Color? color}) => GoogleFonts.k2d(
+  static TextStyle labelMedium({Color? color}) => TextStyle(
+        fontFamily: bodyFont,
         fontSize: 10,
         fontWeight: medium,
         color: color,
       );
 
   /// Label small (9px) - Timestamps, micro labels.
-  static TextStyle labelSmall({Color? color}) => GoogleFonts.k2d(
+  static TextStyle labelSmall({Color? color}) => TextStyle(
+        fontFamily: bodyFont,
         fontSize: 9,
         fontWeight: regular,
         color: color,
@@ -151,27 +166,30 @@ abstract class EveTypography {
   // ==========================================================================
 
   /// Data large (14px) - Featured numbers (ISK balances, etc).
-  static TextStyle dataLarge({Color? color}) => GoogleFonts.jetBrainsMono(
+  static TextStyle dataLarge({Color? color}) => TextStyle(
+        fontFamily: monoFont,
         fontSize: 14,
         fontWeight: bold,
         color: color,
-        fontFeatures: [const FontFeature.tabularFigures()],
+        fontFeatures: const [FontFeature.tabularFigures()],
       );
 
   /// Data medium (12px) - Standard data display.
-  static TextStyle dataMedium({Color? color}) => GoogleFonts.jetBrainsMono(
+  static TextStyle dataMedium({Color? color}) => TextStyle(
+        fontFamily: monoFont,
         fontSize: 12,
         fontWeight: medium,
         color: color,
-        fontFeatures: [const FontFeature.tabularFigures()],
+        fontFeatures: const [FontFeature.tabularFigures()],
       );
 
   /// Data small (11px) - Compact data tables.
-  static TextStyle dataSmall({Color? color}) => GoogleFonts.jetBrainsMono(
+  static TextStyle dataSmall({Color? color}) => TextStyle(
+        fontFamily: monoFont,
         fontSize: 11,
         fontWeight: regular,
         color: color,
-        fontFeatures: [const FontFeature.tabularFigures()],
+        fontFeatures: const [FontFeature.tabularFigures()],
       );
 
   // ==========================================================================

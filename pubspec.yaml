@@ -86,3 +86,61 @@ flutter:
     - assets/sde/
     - assets/icons/eve/
     - assets/icons/tray/
+    - assets/fonts/
+
+  fonts:
+    # Orbitron - Display and headings
+    - family: Orbitron
+      fonts:
+        - asset: assets/fonts/Orbitron[wght].ttf
+
+    # K2D - Body text
+    - family: K2D
+      fonts:
+        - asset: assets/fonts/K2D-Thin.ttf
+          weight: 100
+        - asset: assets/fonts/K2D-ThinItalic.ttf
+          weight: 100
+          style: italic
+        - asset: assets/fonts/K2D-ExtraLight.ttf
+          weight: 200
+        - asset: assets/fonts/K2D-ExtraLightItalic.ttf
+          weight: 200
+          style: italic
+        - asset: assets/fonts/K2D-Light.ttf
+          weight: 300
+        - asset: assets/fonts/K2D-LightItalic.ttf
+          weight: 300
+          style: italic
+        - asset: assets/fonts/K2D-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/K2D-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/K2D-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/K2D-MediumItalic.ttf
+          weight: 500
+          style: italic
+        - asset: assets/fonts/K2D-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/K2D-SemiBoldItalic.ttf
+          weight: 600
+          style: italic
+        - asset: assets/fonts/K2D-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/K2D-BoldItalic.ttf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/K2D-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/K2D-ExtraBoldItalic.ttf
+          weight: 800
+          style: italic
+
+    # JetBrains Mono - Code and data
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono[wght].ttf
+        - asset: assets/fonts/JetBrainsMono-Italic[wght].ttf
+          style: italic

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'app.dart';
@@ -20,6 +21,10 @@ import 'core/window/sub_window_app.dart';
 /// Multi-window detection is done via the `multi_window` argument.
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Configure google_fonts to work in multi-window environment
+  // Sub-windows can't access path_provider, so disable font caching
+  GoogleFonts.config.allowRuntimeFetching = false;
 
   // Check if this is a sub-window launch
   // desktop_multi_window passes: ['multi_window', 'windowId', 'arguments']
