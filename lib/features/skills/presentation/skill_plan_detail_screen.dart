@@ -10,6 +10,7 @@ import '../../../core/widgets/eve_skill_icon.dart';
 import '../data/skill_plan_providers.dart';
 import '../data/skill_repository.dart';
 import '../../characters/data/character_providers.dart';
+import 'widgets/skill_browser_dialog.dart';
 
 /// Detail screen for viewing and managing a skill plan.
 ///
@@ -97,10 +98,7 @@ class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Log.d('SKILLS.PLAN_DETAIL', 'Add skills button tapped');
-          // TODO: Show skill browser dialog (Phase 3.2)
-        },
+        onPressed: () => _showSkillBrowserDialog(context),
         backgroundColor: EveColors.photonBlue,
         icon: const Icon(Icons.add, color: Colors.white),
         label: Text(
@@ -280,6 +278,75 @@ class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _showSkillBrowserDialog(BuildContext context) async {
+    Log.d('SKILLS.PLAN_DETAIL', '_showSkillBrowserDialog - START');
+
+    final selectedSkills = await Navigator.of(context).push<Map<int, int>>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => SkillBrowserDialog(planId: widget.planId),
+      ),
+    );
+
+    if (selectedSkills == null || selectedSkills.isEmpty) {
+      Log.d('SKILLS.PLAN_DETAIL', '_showSkillBrowserDialog - no skills selected');
+      return;
+    }
+
+    Log.i(
+      'SKILLS.PLAN_DETAIL',
+      '_showSkillBrowserDialog - adding ${selectedSkills.length} skills to plan',
+    );
+
+    // Add each skill to the plan
+    int successCount = 0;
+    final notifier = ref.read(skillPlanProvider.notifier);
+
+    for (final entry in selectedSkills.entries) {
+      try {
+        await notifier.addSkillToPlan(
+          planId: widget.planId,
+          skillId: entry.key,
+          targetLevel: entry.value,
+        );
+        successCount++;
+      } catch (e, stack) {
+        Log.e(
+          'SKILLS.PLAN_DETAIL',
+          '_showSkillBrowserDialog - failed to add skill ${entry.key}',
+          e,
+          stack,
+        );
+      }
+    }
+
+    if (!mounted) return;
+
+    if (successCount > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Added $successCount skill${successCount == 1 ? '' : 's'} to plan',
+          ),
+          backgroundColor: EveColors.success,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
+    if (successCount < selectedSkills.length) {
+      final failedCount = selectedSkills.length - successCount;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to add $failedCount skill${failedCount == 1 ? '' : 's'}',
+          ),
+          backgroundColor: EveColors.error,
+        ),
+      );
     }
   }
 
