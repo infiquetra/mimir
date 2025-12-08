@@ -5,6 +5,8 @@ import '../../../core/database/app_database.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/network/esi_client.dart';
+import '../../../core/sde/sde_providers.dart';
+import '../domain/skill_prerequisite_service.dart';
 
 /// Repository for managing skill queue data.
 ///
@@ -189,5 +191,13 @@ final skillRepositoryProvider = Provider<SkillRepository>((ref) {
   return SkillRepository(
     database: ref.watch(databaseProvider),
     esiClient: ref.watch(esiClientProvider),
+  );
+});
+
+/// Provider for the skill prerequisite service.
+final skillPrerequisiteServiceProvider = Provider<SkillPrerequisiteService>((ref) {
+  return SkillPrerequisiteService(
+    sdeService: ref.watch(sdeServiceProvider),
+    skillRepository: ref.watch(skillRepositoryProvider),
   );
 });
