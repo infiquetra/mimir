@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/logging/logger.dart';
+import '../../../../core/sde/sde_database.dart';
 import '../../../../core/theme/eve_colors.dart';
 import '../../../../core/theme/eve_typography.dart';
 import '../../data/skill_catalogue_providers.dart';
+import 'add_to_plan_dialog.dart';
 import 'skill_catalogue_item.dart';
 import 'skill_group_row.dart';
 
@@ -45,6 +47,37 @@ class _SkillCataloguePanelState extends ConsumerState<SkillCataloguePanel> {
         _expandedGroups.add(groupId);
       }
     });
+  }
+
+  Future<void> _showAddToPlanDialog(
+    BuildContext context,
+    SdeType skill,
+    int trainedLevel,
+  ) async {
+    Log.d(
+      'SKILLS.CATALOGUE',
+      '_showAddToPlanDialog - skill: ${skill.typeName}, trained: $trainedLevel',
+    );
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AddToPlanDialog(
+        skill: skill,
+        trainedLevel: trainedLevel,
+      ),
+    );
+
+    if (result == true && mounted) {
+      Log.i('SKILLS.CATALOGUE', '_showAddToPlanDialog - skill added successfully');
+      // Show success feedback
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${skill.typeName} added to plan'),
+          backgroundColor: EveColors.success,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
@@ -181,13 +214,11 @@ class _SkillCataloguePanelState extends ConsumerState<SkillCataloguePanel> {
               skill: skillWithLevel.skill,
               trainedLevel: skillWithLevel.trainedLevel,
               isTraining: skillWithLevel.isTraining,
-              onTap: () {
-                Log.d(
-                  'SKILLS.CATALOGUE',
-                  'Skill tapped: ${skillWithLevel.skill.typeName}',
-                );
-                // TODO: Show "Add to Plan" dialog (Phase 2.3)
-              },
+              onTap: () => _showAddToPlanDialog(
+                context,
+                skillWithLevel.skill,
+                skillWithLevel.trainedLevel,
+              ),
             );
           }).toList(),
         );
@@ -261,13 +292,11 @@ class _SkillCataloguePanelState extends ConsumerState<SkillCataloguePanel> {
               skill: skillWithLevel.skill,
               trainedLevel: skillWithLevel.trainedLevel,
               isTraining: skillWithLevel.isTraining,
-              onTap: () {
-                Log.d(
-                  'SKILLS.CATALOGUE',
-                  'Skill tapped: ${skillWithLevel.skill.typeName}',
-                );
-                // TODO: Show "Add to Plan" dialog (Phase 2.3)
-              },
+              onTap: () => _showAddToPlanDialog(
+                context,
+                skillWithLevel.skill,
+                skillWithLevel.trainedLevel,
+              ),
             );
           },
         );
