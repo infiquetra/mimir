@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/di/providers.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/sde/sde_database.dart';
+import '../../../core/sde/sde_providers.dart';
 import '../../characters/data/character_providers.dart';
 import 'skill_repository.dart';
 
