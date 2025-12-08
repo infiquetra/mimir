@@ -1,140 +1,204 @@
 import 'package:flutter/material.dart';
 import 'eve_colors.dart';
+import 'eve_spacing.dart';
+import 'eve_typography.dart';
 
-/// Application theme configuration using Material Design 3.
+/// Application theme configuration using Material Design 3 and Photon Dark.
 abstract class AppTheme {
   /// Creates the dark theme for the application.
   static ThemeData darkTheme() {
     final colorScheme = ColorScheme.dark(
-      primary: EveColors.evePrimary,
+      primary: EveColors.photonBlue,
       onPrimary: Colors.white,
-      secondary: EveColors.eveSecondary,
+      secondary: EveColors.photonCyan,
       onSecondary: Colors.black,
-      tertiary: EveColors.eveTertiary,
+      tertiary: EveColors.photonHighlight,
       onTertiary: Colors.white,
-      surface: EveColors.darkSurface,
-      onSurface: Colors.white,
+      surface: EveColors.surfaceDefault,
+      onSurface: EveColors.textPrimary,
       error: EveColors.error,
       onError: Colors.white,
+      outline: EveColors.borderSubtle,
+      outlineVariant: EveColors.borderActive,
     );
+
+    // Create custom text theme
+    final textTheme = EveTypography.createTextTheme(colorScheme: colorScheme);
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
+      textTheme: textTheme,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: EveColors.darkBackground,
+      scaffoldBackgroundColor: EveColors.backgroundBase,
 
       // AppBar theme
       appBarTheme: AppBarTheme(
-        backgroundColor: EveColors.darkSurface,
-        foregroundColor: Colors.white,
+        backgroundColor: EveColors.surfaceDefault,
+        foregroundColor: EveColors.textPrimary,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
+        titleTextStyle: EveTypography.displayMedium(
+          color: EveColors.textPrimary,
         ),
       ),
 
-      // Card theme
+      // Card theme (sharper radius, tighter spacing)
       cardTheme: CardThemeData(
-        color: EveColors.darkSurface,
+        color: EveColors.surfaceDefault,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(EveSpacing.cardRadius),
         ),
       ),
 
       // Bottom navigation theme
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: EveColors.darkSurface,
-        selectedItemColor: EveColors.evePrimary,
-        unselectedItemColor: Colors.white54,
+        backgroundColor: EveColors.surfaceDefault,
+        selectedItemColor: EveColors.photonBlue,
+        unselectedItemColor: EveColors.textSecondary,
+        selectedLabelStyle: EveTypography.labelSmall(),
+        unselectedLabelStyle: EveTypography.labelSmall(),
       ),
 
       // Navigation rail theme (for desktop)
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: EveColors.darkSurface,
-        selectedIconTheme: const IconThemeData(color: EveColors.evePrimary),
-        unselectedIconTheme: const IconThemeData(color: Colors.white54),
-        indicatorColor: EveColors.evePrimary.withAlpha(51),
+        backgroundColor: EveColors.surfaceDefault,
+        selectedIconTheme: IconThemeData(
+          color: EveColors.photonBlue,
+          size: EveSpacing.iconMd,
+        ),
+        unselectedIconTheme: IconThemeData(
+          color: EveColors.textSecondary,
+          size: EveSpacing.iconMd,
+        ),
+        indicatorColor: EveColors.photonBlue.withAlpha(51),
+        labelType: NavigationRailLabelType.all,
+        selectedLabelTextStyle: EveTypography.labelMedium(
+          color: EveColors.photonBlue,
+        ),
+        unselectedLabelTextStyle: EveTypography.labelMedium(
+          color: EveColors.textSecondary,
+        ),
       ),
 
       // Input decoration theme
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: EveColors.darkSurfaceVariant,
+        fillColor: EveColors.surfaceBright,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: EveSpacing.lg,
+          vertical: EveSpacing.md,
+        ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(EveSpacing.inputRadius),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: EveColors.evePrimary, width: 2),
+          borderRadius: BorderRadius.circular(EveSpacing.inputRadius),
+          borderSide: const BorderSide(color: EveColors.photonBlue, width: 2),
         ),
+        labelStyle: EveTypography.bodyMedium(color: EveColors.textSecondary),
+        hintStyle: EveTypography.bodyMedium(color: EveColors.textTertiary),
       ),
 
       // Elevated button theme
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: EveColors.evePrimary,
+          backgroundColor: EveColors.photonBlue,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+          padding: EdgeInsets.symmetric(
+            horizontal: EveSpacing.buttonPaddingH,
+            vertical: EveSpacing.buttonPaddingV,
           ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(EveSpacing.buttonRadius),
+          ),
+          textStyle: EveTypography.labelLarge(color: Colors.white),
         ),
       ),
 
       // Text button theme
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: EveColors.evePrimary,
+          foregroundColor: EveColors.photonBlue,
+          textStyle: EveTypography.labelLarge(color: EveColors.photonBlue),
         ),
       ),
 
       // Divider theme
-      dividerTheme: const DividerThemeData(
-        color: Colors.white12,
+      dividerTheme: DividerThemeData(
+        color: EveColors.divider,
         thickness: 1,
+        space: EveSpacing.md,
       ),
 
       // List tile theme
-      listTileTheme: const ListTileThemeData(
-        iconColor: Colors.white70,
+      listTileTheme: ListTileThemeData(
+        iconColor: EveColors.textSecondary,
+        textColor: EveColors.textPrimary,
+        titleTextStyle: EveTypography.bodyMedium(color: EveColors.textPrimary),
+        subtitleTextStyle: EveTypography.bodySmall(
+          color: EveColors.textSecondary,
+        ),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: EveSpacing.lg,
+          vertical: EveSpacing.sm,
+        ),
       ),
 
       // Chip theme
       chipTheme: ChipThemeData(
-        backgroundColor: EveColors.darkSurfaceVariant,
-        labelStyle: const TextStyle(color: Colors.white),
+        backgroundColor: EveColors.surfaceBright,
+        labelStyle: EveTypography.labelMedium(color: EveColors.textPrimary),
+        padding: EdgeInsets.symmetric(
+          horizontal: EveSpacing.chipPaddingH,
+          vertical: EveSpacing.chipPaddingV,
+        ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(EveSpacing.chipRadius),
         ),
       ),
 
       // Progress indicator theme
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: EveColors.evePrimary,
+        color: EveColors.photonBlue,
+        circularTrackColor: EveColors.borderSubtle,
       ),
 
       // Snackbar theme
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: EveColors.darkSurfaceElevated,
-        contentTextStyle: const TextStyle(color: Colors.white),
+        backgroundColor: EveColors.surfaceElevated,
+        contentTextStyle: EveTypography.bodyMedium(
+          color: EveColors.textPrimary,
+        ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(EveSpacing.buttonRadius),
         ),
         behavior: SnackBarBehavior.floating,
       ),
 
       // Dialog theme
       dialogTheme: DialogThemeData(
-        backgroundColor: EveColors.darkSurfaceElevated,
+        backgroundColor: EveColors.surfaceElevated,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(EveSpacing.dialogRadius),
         ),
+        titleTextStyle: EveTypography.headline(color: EveColors.textPrimary),
+        contentTextStyle: EveTypography.bodyMedium(
+          color: EveColors.textSecondary,
+        ),
+      ),
+
+      // Tooltip theme
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: EveColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(EveSpacing.sm),
+          border: Border.all(color: EveColors.borderSubtle),
+        ),
+        textStyle: EveTypography.labelSmall(color: EveColors.textPrimary),
+        padding: EdgeInsets.all(EveSpacing.md),
       ),
     );
   }
