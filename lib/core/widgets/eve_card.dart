@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 
 import '../theme/eve_colors.dart';
+import '../theme/eve_spacing.dart';
 
-/// EVE Online styled card with optional glow effects.
+/// EVE Online Photon UI styled card with pronounced glow effects.
 ///
 /// Provides a consistent card style with:
-/// - Optional glowing border (Neocom-inspired)
-/// - Hover glow effect on desktop
-/// - Gradient header option
+/// - Optional dual-blur glowing border (Photon-inspired)
+/// - Hover glow enhancement on desktop
+/// - Tighter padding and sharper corners
+/// - Optional gradient header accent
 ///
 /// ```dart
 /// EveCard(
-///   glowColor: EveColors.evePrimary,
-///   glowIntensity: 0.3,
+///   glowColor: EveColors.photonBlue,
+///   glowIntensity: EveSpacing.glowIntensity,
 ///   child: content,
 /// )
 /// ```
@@ -21,7 +23,7 @@ class EveCard extends StatefulWidget {
     super.key,
     required this.child,
     this.glowColor,
-    this.glowIntensity = 0.3,
+    this.glowIntensity = EveSpacing.glowIntensity,
     this.enableHoverGlow = true,
     this.padding,
     this.onTap,
@@ -34,13 +36,13 @@ class EveCard extends StatefulWidget {
   /// Color of the glow effect. Null disables the glow.
   final Color? glowColor;
 
-  /// Intensity of the glow (0.0 to 1.0).
+  /// Intensity of the glow (0.0 to 1.0). Defaults to 0.4.
   final double glowIntensity;
 
   /// Whether to brighten glow on hover (desktop).
   final bool enableHoverGlow;
 
-  /// Padding inside the card. Defaults to 16.
+  /// Padding inside the card. Defaults to 12px (EveSpacing.cardPadding).
   final EdgeInsets? padding;
 
   /// Optional tap callback.
@@ -58,26 +60,33 @@ class _EveCardState extends State<EveCard> {
 
   @override
   Widget build(BuildContext context) {
-    final effectivePadding = widget.padding ?? const EdgeInsets.all(16);
+    // Use tighter default padding (12px instead of 16px)
+    final effectivePadding =
+        widget.padding ?? const EdgeInsets.all(EveSpacing.cardPadding);
 
     // Calculate glow intensity based on hover state
+    // Hover multiplies by 1.5 (40% → 60%)
     final currentIntensity = _isHovered && widget.enableHoverGlow
-        ? (widget.glowIntensity * 1.5).clamp(0.0, 1.0)
+        ? (widget.glowIntensity * EveSpacing.glowHoverMultiplier).clamp(0.0, 1.0)
         : widget.glowIntensity;
 
-    // Build box shadows for glow effect
+    // Build box shadows for pronounced dual-blur glow effect
+    // Primary: 16px blur, Secondary: 32px blur
     List<BoxShadow> shadows = [];
     if (widget.glowColor != null) {
       shadows = [
+        // Primary glow (16px blur)
         BoxShadow(
-          color: widget.glowColor!.withAlpha((currentIntensity * 102).round()),
-          blurRadius: 12,
-          spreadRadius: 0,
+          color: widget.glowColor!.withAlpha((currentIntensity * 255).round()),
+          blurRadius: EveSpacing.glowBlurPrimary,
+          spreadRadius: EveSpacing.glowSpread,
         ),
+        // Outer glow (32px blur, half intensity)
         BoxShadow(
-          color: widget.glowColor!.withAlpha((currentIntensity * 51).round()),
-          blurRadius: 24,
-          spreadRadius: 2,
+          color:
+              widget.glowColor!.withAlpha((currentIntensity * 128).round()),
+          blurRadius: EveSpacing.glowBlurOuter,
+          spreadRadius: EveSpacing.glowSpread,
         ),
       ];
     }
@@ -86,22 +95,22 @@ class _EveCardState extends State<EveCard> {
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
       decoration: BoxDecoration(
-        color: EveColors.darkSurface,
-        borderRadius: BorderRadius.circular(12),
+        color: EveColors.surfaceDefault,
+        borderRadius: BorderRadius.circular(EveSpacing.cardRadius),
         boxShadow: shadows,
         border: widget.glowColor != null
             ? Border.all(
-                color:
-                    widget.glowColor!.withAlpha((currentIntensity * 128).round()),
+                color: widget.glowColor!
+                    .withAlpha((currentIntensity * 128).round()),
                 width: 1,
               )
             : Border.all(
-                color: Colors.white.withAlpha(13), // 5% white border
+                color: EveColors.borderSubtle,
                 width: 1,
               ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(11),
+        borderRadius: BorderRadius.circular(EveSpacing.cardRadius - 1),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -147,11 +156,14 @@ class _EveCardState extends State<EveCard> {
 
 /// Predefined card styles for common use cases.
 abstract class EveCardStyles {
-  /// Primary highlighted card (wallet balance, important info).
-  static const Color primary = EveColors.evePrimary;
+  /// Primary highlighted card (wallet balance, important info) - Photon Blue.
+  static const Color primary = EveColors.photonBlue;
 
-  /// Secondary accent card.
-  static const Color secondary = EveColors.eveSecondary;
+  /// Secondary accent card - Photon Cyan.
+  static const Color secondary = EveColors.photonCyan;
+
+  /// Highlight/selection card - Photon Highlight.
+  static const Color highlight = EveColors.photonHighlight;
 
   /// Success state card (completed skills, positive balance).
   static const Color success = EveColors.success;

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 
-/// A streamlined tab bar with minimal styling, matching EVE Online's UI.
+import '../theme/eve_colors.dart';
+import '../theme/eve_spacing.dart';
+import '../theme/eve_typography.dart';
+
+/// A streamlined tab bar with minimal styling, matching EVE Online Photon UI.
 ///
 /// Features:
 /// - Text-only labels (no icons)
-/// - Compact padding
+/// - Compact 32px height (was 40px)
 /// - Thin underline indicator
 /// - Clean, professional appearance
 ///
@@ -24,7 +28,7 @@ class StreamlinedTabBar extends StatelessWidget implements PreferredSizeWidget {
   /// The tab labels.
   final List<String> tabs;
 
-  /// The height of the tab bar.
+  /// The height of the tab bar. Defaults to 32px (EveSpacing.tabBarHeight).
   final double height;
 
   /// Optional text style override.
@@ -34,7 +38,7 @@ class StreamlinedTabBar extends StatelessWidget implements PreferredSizeWidget {
     super.key,
     required this.controller,
     required this.tabs,
-    this.height = 40.0,
+    this.height = EveSpacing.tabBarHeight,
     this.textStyle,
   });
 
@@ -43,15 +47,12 @@ class StreamlinedTabBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Container(
       height: height,
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+            color: EveColors.borderSubtle.withAlpha(77), // 30% opacity
             width: 1,
           ),
         ),
@@ -64,25 +65,23 @@ class StreamlinedTabBar extends StatelessWidget implements PreferredSizeWidget {
                   child: Text(label),
                 ))
             .toList(),
-        // Minimal padding
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        labelPadding: const EdgeInsets.symmetric(horizontal: 16),
-        // Text styling
+        // Compact padding (8px screen edge, 12px between tabs)
+        padding: EdgeInsets.symmetric(horizontal: EveSpacing.md),
+        labelPadding: EdgeInsets.symmetric(horizontal: EveSpacing.lg),
+        // Text styling with EVE typography
         labelStyle: textStyle ??
-            theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.5,
-            ),
-        unselectedLabelStyle: textStyle ?? theme.textTheme.bodyMedium,
-        labelColor: colorScheme.primary,
-        unselectedLabelColor: colorScheme.onSurfaceVariant,
-        // Thin underline indicator
+            EveTypography.labelLarge(color: EveColors.photonBlue),
+        unselectedLabelStyle:
+            textStyle ?? EveTypography.labelLarge(color: EveColors.textSecondary),
+        labelColor: EveColors.photonBlue,
+        unselectedLabelColor: EveColors.textSecondary,
+        // Thin 2px underline indicator
         indicator: UnderlineTabIndicator(
-          borderSide: BorderSide(
-            color: colorScheme.primary,
+          borderSide: const BorderSide(
+            color: EveColors.photonBlue,
             width: 2.0,
           ),
-          insets: const EdgeInsets.symmetric(horizontal: 16),
+          insets: EdgeInsets.symmetric(horizontal: EveSpacing.lg),
         ),
         // Remove default divider (we have our own border)
         dividerColor: Colors.transparent,

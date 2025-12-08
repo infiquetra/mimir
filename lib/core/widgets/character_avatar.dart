@@ -2,17 +2,22 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../database/app_database.dart' show isSubWindow;
+import '../theme/eve_colors.dart';
+import '../theme/eve_spacing.dart';
 
-/// Size presets for character avatars.
+/// Size presets for character avatars (Photon Dark sizing).
 enum CharacterAvatarSize {
-  /// Small avatar (32px) - used for secondary/non-active characters.
-  small(32),
+  /// Small avatar (24px) - compact lists, inline mentions.
+  small(EveSpacing.avatarSm),
 
-  /// Medium avatar (40px) - used for compact displays.
-  medium(40),
+  /// Medium avatar (32px) - standard display.
+  medium(EveSpacing.avatarMd),
 
-  /// Large avatar (48px) - used for active character display.
-  large(48);
+  /// Large avatar (48px) - featured display.
+  large(EveSpacing.avatarLg),
+
+  /// Hero avatar (80px) - character sheet, major display (was 120px).
+  hero(EveSpacing.avatarHero);
 
   const CharacterAvatarSize(this.pixels);
 
@@ -132,23 +137,32 @@ class StyledCharacterAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
+    // Use pronounced glow effect for active avatars
     Widget avatar = AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: isActive ? theme.colorScheme.primary : Colors.transparent,
+          color:
+              isActive ? EveColors.photonBlue : EveColors.borderSubtle,
           width: 2,
         ),
         boxShadow: isActive
             ? [
+                // Primary glow (16px blur)
                 BoxShadow(
-                  color: theme.colorScheme.primary.withAlpha(102),
-                  blurRadius: 8,
-                  spreadRadius: 1,
+                  color: EveColors.photonBlue
+                      .withAlpha((EveSpacing.glowIntensity * 255).round()),
+                  blurRadius: EveSpacing.glowBlurPrimary,
+                  spreadRadius: EveSpacing.glowSpread,
+                ),
+                // Outer glow (32px blur, half intensity)
+                BoxShadow(
+                  color: EveColors.photonBlue
+                      .withAlpha((EveSpacing.glowIntensity * 128).round()),
+                  blurRadius: EveSpacing.glowBlurOuter,
+                  spreadRadius: EveSpacing.glowSpread,
                 ),
               ]
             : null,
