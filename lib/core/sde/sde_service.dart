@@ -370,9 +370,39 @@ class SdeService {
                 description: t['description'] != null
                     ? Value(t['description'] as String)
                     : const Value.absent(),
+                rank: t['rank'] != null
+                    ? Value(t['rank'] as int)
+                    : const Value.absent(),
+                primaryAttribute: t['primaryAttribute'] != null
+                    ? Value(t['primaryAttribute'] as String)
+                    : const Value.absent(),
+                secondaryAttribute: t['secondaryAttribute'] != null
+                    ? Value(t['secondaryAttribute'] as String)
+                    : const Value.absent(),
               ))
           .toList();
       await database.upsertTypes(types);
+
+      // Import skill prerequisites
+      final requirements = <SdeSkillRequirementsCompanion>[];
+      for (final t in data['types'] as List) {
+        final skillId = t['typeId'] as int;
+        final prerequisites = t['prerequisites'] as List?;
+        if (prerequisites != null) {
+          for (final prereq in prerequisites) {
+            requirements.add(
+              SdeSkillRequirementsCompanion.insert(
+                skillId: skillId,
+                requiredSkillId: prereq['skillId'] as int,
+                requiredLevel: prereq['level'] as int,
+              ),
+            );
+          }
+        }
+      }
+      if (requirements.isNotEmpty) {
+        await database.upsertSkillRequirements(requirements);
+      }
     }
   }
 
@@ -480,6 +510,73 @@ class SdeService {
 
   /// Get the number of cached skill names.
   int get cachedSkillCount => _skillNameCache.length;
+
+  // ============================================================================
+  // Skill Attributes and Prerequisites
+  // ============================================================================
+
+  /// Get prerequisites for a skill.
+  ///
+  /// Returns a list of required skills with their levels.
+  /// Empty list if skill has no prerequisites.
+  Future<List<SdeSkillRequirement>> getSkillPrerequisites(int skillId) {
+    return database.getSkillPrerequisites(skillId);
+  }
+
+  /// Get skill rank (training time multiplier) for a skill.
+  ///
+  /// Returns null if skill not found or rank not defined.
+  /// Rank determines how many skill points are needed per level.
+  Future<int?> getSkillRank(int skillId) async {
+    final skill = await database.getType(skillId);
+    return skill?.rank;
+  }
+
+  /// Get skill training attributes.
+  ///
+  /// Returns a map with 'primary' and 'secondary' attribute names.
+  /// Returns null if skill not found or attributes not defined.
+  ///
+  /// Attributes are: perception, willpower, intelligence, memory, charisma.
+  Future<({String? primary, String? secondary})?> getSkillAttributes(
+      int skillId) async {
+    final skill = await database.getType(skillId);
+    if (skill == null) return null;
+    return (primary: skill.primaryAttribute, secondary: skill.secondaryAttribute);
+  }
+
+  /// Get all skill data at once (for efficiency).
+  ///
+  /// Returns complete skill information including name, rank, attributes,
+  /// and prerequisites. Returns null if skill not found.
+  Future<
+      ({
+        String name,
+        int rank,
+        String primary,
+        String secondary,
+        List<SdeSkillRequirement> prerequisites
+      })?> getSkillData(int skillId) async {
+    final skill = await database.getType(skillId);
+    if (skill == null) return null;
+
+    final rank = skill.rank;
+    final primary = skill.primaryAttribute;
+    final secondary = skill.secondaryAttribute;
+
+    // All skill fields should be present for skills
+    if (rank == null || primary == null || secondary == null) return null;
+
+    final prerequisites = await database.getSkillPrerequisites(skillId);
+
+    return (
+      name: skill.typeName,
+      rank: rank,
+      primary: primary,
+      secondary: secondary,
+      prerequisites: prerequisites,
+    );
+  }
 
   // ============================================================================
   // Ship Type Lookups
