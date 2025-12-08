@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/logging/logger.dart';
+import '../../../../core/widgets/data_row.dart';
 import '../../../characters/data/character_providers.dart';
 import '../../data/skill_providers.dart';
 import '../../data/skill_repository.dart';
@@ -145,16 +146,28 @@ class TrainingQueuePanel extends ConsumerWidget {
     Log.d('SKILLS', 'TrainingQueuePanel._buildSkillList - ${queue.length} skills');
     return RefreshIndicator(
       onRefresh: () => _refreshSkillQueue(ref, characterId),
-      child: ListView.builder(
-        padding: const EdgeInsets.only(top: 8, bottom: 16),
-        itemCount: queue.length,
-        itemBuilder: (context, index) {
-          final entry = queue[index];
-          return SkillQueueItemWidget(
-            entry: entry,
-            isCurrentlyTraining: entry.queuePosition == 0,
-          );
-        },
+      child: Column(
+        children: [
+          // Table header
+          const DataHeaderRow(
+            columns: ['#', 'Skill', 'Level', 'Time'],
+            flexValues: [1, 5, 1, 2],
+          ),
+
+          // Skill queue list
+          Expanded(
+            child: ListView.builder(
+              itemCount: queue.length,
+              itemBuilder: (context, index) {
+                final entry = queue[index];
+                return SkillQueueItemWidget(
+                  entry: entry,
+                  isCurrentlyTraining: entry.queuePosition == 0,
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
