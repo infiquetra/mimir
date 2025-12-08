@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/logging/logger.dart';
 import '../../../characters/data/character_providers.dart';
 import '../../data/skill_plan_providers.dart';
+import '../skill_plan_detail_screen.dart';
 import 'skill_plan_card.dart';
 import 'skill_plan_editor.dart';
 
@@ -67,8 +68,12 @@ class SkillPlansPanel extends ConsumerWidget {
             return SkillPlanCard(
               plan: plan,
               onTap: () {
-                // TODO: Navigate to plan details/skill selection screen
-                Log.d('SKILLS', 'SkillPlansPanel - tapped plan ${plan.id}');
+                Log.d('SKILLS', 'SkillPlansPanel - navigating to plan ${plan.id}');
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => SkillPlanDetailScreen(planId: plan.id),
+                  ),
+                );
               },
               onEdit: () => _handleEditPlan(context, plan),
               onDelete: () => _handleDeletePlan(context, ref, plan),
