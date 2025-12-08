@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/widgets/data_row.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../data/wallet_providers.dart';
 import 'transaction_filters.dart';
@@ -82,6 +83,12 @@ class _TransactionsPanelState extends ConsumerState<TransactionsPanel> {
 
               return Column(
                 children: [
+                  // Table header
+                  const DataHeaderRow(
+                    columns: ['Date', 'Type', 'Amount', 'Balance'],
+                    flexValues: [2, 3, 2, 2],
+                  ),
+
                   // Transaction list
                   Expanded(
                     child: ListView.builder(

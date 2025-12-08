@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/theme/eve_colors.dart';
+import '../../../../core/theme/eve_spacing.dart';
+import '../../../../core/theme/eve_typography.dart';
 import '../../../../core/utils/formatters.dart';
 
-/// List item widget for displaying a wallet journal transaction.
+/// Compact transaction row for wallet journal (28px height).
 ///
-/// Shows date, type, amount, balance, and description in a table-like format.
+/// Displays date, type, amount, and balance in a single table-like row.
 class TransactionListItem extends StatelessWidget {
   /// The wallet journal entry to display.
   final WalletJournalEntry entry;
@@ -19,145 +22,95 @@ class TransactionListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPositive = entry.amount >= 0;
-    final amountColor = isPositive
-        ? const Color(0xFF4CAF50) // Green for income
-        : const Color(0xFFF44336); // Red for expenses
+    final amountColor = isPositive ? EveColors.iskPositive : EveColors.iskNegative;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      height: EveSpacing.rowHeight,
+      padding: EdgeInsets.symmetric(
+        horizontal: EveSpacing.lg,
+        vertical: EveSpacing.sm,
+      ),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: Colors.white.withAlpha(13),
-            width: 1,
+            color: EveColors.divider,
+            width: 0.5,
           ),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          // Row 1: Date and Amount
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Date
-              Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _formatDate(entry.date),
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withAlpha(204),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _formatTime(entry.date),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.white.withAlpha(128),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Type
-              Expanded(
-                flex: 2,
-                child: Text(
-                  _formatRefType(entry.refType),
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white.withAlpha(179),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-
-              // Amount
-              Expanded(
-                flex: 2,
-                child: Text(
-                  '${isPositive ? '+' : ''}${formatIsk(entry.amount)}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: amountColor,
-                  ),
-                  textAlign: TextAlign.right,
-                ),
-              ),
-            ],
+          // Date column (flex 2)
+          Expanded(
+            flex: 2,
+            child: Text(
+              _formatCompactDate(entry.date),
+              style: EveTypography.bodySmall(color: EveColors.textSecondary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
+          SizedBox(width: EveSpacing.md),
 
-          const SizedBox(height: 6),
+          // Type column (flex 3)
+          Expanded(
+            flex: 3,
+            child: Text(
+              _formatRefType(entry.refType),
+              style: EveTypography.bodySmall(color: EveColors.textPrimary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          SizedBox(width: EveSpacing.md),
 
-          // Row 2: Balance and Description
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Balance
-              Expanded(
-                flex: 2,
-                child: Row(
-                  children: [
-                    Text(
-                      'Balance: ',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.white.withAlpha(128),
-                      ),
-                    ),
-                    Text(
-                      formatIsk(entry.balance),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white.withAlpha(179),
-                      ),
-                    ),
-                  ],
-                ),
+          // Amount column (flex 2)
+          Expanded(
+            flex: 2,
+            child: Text(
+              '${isPositive ? '+' : ''}${_formatCompactIsk(entry.amount)}',
+              style: EveTypography.dataSmall(color: amountColor).copyWith(
+                fontWeight: FontWeight.w600,
               ),
+              textAlign: TextAlign.right,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          SizedBox(width: EveSpacing.md),
 
-              // Description
-              Expanded(
-                flex: 4,
-                child: entry.description != null && entry.description!.isNotEmpty
-                    ? Text(
-                        entry.description!,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.white.withAlpha(153),
-                          fontStyle: FontStyle.italic,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            ],
+          // Balance column (flex 2)
+          Expanded(
+            flex: 2,
+            child: Text(
+              _formatCompactIsk(entry.balance),
+              style: EveTypography.dataSmall(color: EveColors.textSecondary),
+              textAlign: TextAlign.right,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Formats date as "Jan 15, 2025".
-  String _formatDate(DateTime date) {
-    return DateFormat('MMM d, y').format(date);
+  /// Formats date as "Dec 08" (compact).
+  String _formatCompactDate(DateTime date) {
+    return DateFormat('MMM dd').format(date);
   }
 
-  /// Formats time as "14:30".
-  String _formatTime(DateTime date) {
-    return DateFormat('HH:mm').format(date);
+  /// Formats ISK with compact notation (1.5B, 50M, etc).
+  String _formatCompactIsk(double amount) {
+    final abs = amount.abs();
+    if (abs >= 1000000000) {
+      return '${(amount / 1000000000).toStringAsFixed(1)}B';
+    } else if (abs >= 1000000) {
+      return '${(amount / 1000000).toStringAsFixed(1)}M';
+    } else if (abs >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(1)}K';
+    }
+    return amount.toStringAsFixed(0);
   }
 
   /// Formats ref_type as human-readable (e.g., "market_transaction" → "Market Transaction").
