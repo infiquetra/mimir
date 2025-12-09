@@ -75,8 +75,8 @@ class SkillListPanel extends ConsumerWidget {
             padding: const EdgeInsets.all(8),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
+              mainAxisSpacing: 2,
+              crossAxisSpacing: 2,
               childAspectRatio: 4.5, // Compact rows (width:height ≈ 4.5:1 for 40px height)
             ),
             itemCount: skills.length,

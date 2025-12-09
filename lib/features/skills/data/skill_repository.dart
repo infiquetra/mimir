@@ -185,6 +185,24 @@ class SkillRepository {
       rethrow;
     }
   }
+
+  /// Checks if a skill has been injected (purchased) by the character.
+  ///
+  /// Returns true if the skill exists in the character's skill database.
+  /// ESI only returns injected skills, so presence in DB = injected.
+  /// Returns false if the skill is not in the database (not purchased).
+  Future<bool> isSkillInjected(int characterId, int skillId) async {
+    Log.d('SKILLS', 'isSkillInjected($characterId, $skillId) - START');
+    try {
+      final skill = await _database.getCharacterSkill(characterId, skillId);
+      final isInjected = skill != null;
+      Log.d('SKILLS', 'isSkillInjected - skillId $skillId: $isInjected');
+      return isInjected;
+    } catch (e, stack) {
+      Log.e('SKILLS', 'isSkillInjected($characterId, $skillId) - FAILED', e, stack);
+      rethrow;
+    }
+  }
 }
 
 /// Provider for the skill repository.

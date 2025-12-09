@@ -36,11 +36,6 @@ class SkillListItem extends StatelessWidget {
     Log.d('SKILLS.UI', 'SkillListItem - rendering ${skill.skill.typeName}');
     final theme = Theme.of(context);
 
-    // Red translucent background for untrainable skills
-    final backgroundColor = canTrain
-        ? Colors.transparent
-        : EveColors.error.withOpacity(0.08);
-
     // Dimmed text for untrainable skills
     final textColor = canTrain
         ? theme.colorScheme.onSurface
@@ -59,7 +54,7 @@ class SkillListItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(4),
-          color: backgroundColor,
+          color: Colors.transparent,
         ),
         child: Row(
           children: [
@@ -111,6 +106,23 @@ class SkillListItem extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+            ],
+
+            // Unpurchased skill indicator (red book icon)
+            if (!skill.isInjected) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: EveColors.error.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Icon(
+                  Icons.book,
+                  size: 16,
+                  color: EveColors.error,
                 ),
               ),
             ],
