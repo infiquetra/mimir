@@ -17,11 +17,11 @@ import 'queue_sidebar_item.dart';
 /// - Empty state when no queue
 /// - No character state
 ///
-/// Fixed width of 280px to match EVE Online's design.
+/// Fixed width of 560px to match EVE Online's design.
 class TrainingQueueSidebar extends ConsumerWidget {
   const TrainingQueueSidebar({super.key});
 
-  static const double width = 280.0;
+  static const double width = 560.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
