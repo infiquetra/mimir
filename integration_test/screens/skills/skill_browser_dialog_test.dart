@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide isNotNull;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -28,16 +29,20 @@ void main() {
         // GIVEN: A skill plan exists
         await tester.pumpWidget(
           TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(characterId: characterId),
+            initialCharacter: CharacterFixtures.customCharacter(
+              characterId: characterId,
+              name: 'Test Character',
+              corporationId: 98000001,
+              corporationName: 'Test Corp',
+            ),
             setupDatabase: (db) async {
               // Create skill plan
               await db.into(db.skillPlans).insert(
                     SkillPlansCompanion.insert(
-                      id: const Value(planId),
                       characterId: characterId,
                       name: 'Test Plan',
                       createdAt: DateTime.now(),
-                      lastUpdated: DateTime.now(),
+                      updatedAt: DateTime.now(),
                     ),
                   );
             },
@@ -83,16 +88,20 @@ void main() {
         // GIVEN: A skill plan exists
         await tester.pumpWidget(
           TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(characterId: characterId),
+            initialCharacter: CharacterFixtures.customCharacter(
+              characterId: characterId,
+              name: 'Test Character',
+              corporationId: 98000001,
+              corporationName: 'Test Corp',
+            ),
             setupDatabase: (db) async {
               // Create skill plan
               await db.into(db.skillPlans).insert(
                     SkillPlansCompanion.insert(
-                      id: const Value(planId),
                       characterId: characterId,
                       name: 'Test Plan',
                       createdAt: DateTime.now(),
-                      lastUpdated: DateTime.now(),
+                      updatedAt: DateTime.now(),
                     ),
                   );
             },
@@ -132,16 +141,20 @@ void main() {
         // GIVEN: A skill plan exists
         await tester.pumpWidget(
           TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(characterId: characterId),
+            initialCharacter: CharacterFixtures.customCharacter(
+              characterId: characterId,
+              name: 'Test Character',
+              corporationId: 98000001,
+              corporationName: 'Test Corp',
+            ),
             setupDatabase: (db) async {
               // Create skill plan
               await db.into(db.skillPlans).insert(
                     SkillPlansCompanion.insert(
-                      id: const Value(planId),
                       characterId: characterId,
                       name: 'Test Plan',
                       createdAt: DateTime.now(),
-                      lastUpdated: DateTime.now(),
+                      updatedAt: DateTime.now(),
                     ),
                   );
             },
@@ -189,16 +202,20 @@ void main() {
         // GIVEN: A skill plan exists
         await tester.pumpWidget(
           TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(characterId: characterId),
+            initialCharacter: CharacterFixtures.customCharacter(
+              characterId: characterId,
+              name: 'Test Character',
+              corporationId: 98000001,
+              corporationName: 'Test Corp',
+            ),
             setupDatabase: (db) async {
               // Create skill plan
               await db.into(db.skillPlans).insert(
                     SkillPlansCompanion.insert(
-                      id: const Value(planId),
                       characterId: characterId,
                       name: 'Test Plan',
                       createdAt: DateTime.now(),
-                      lastUpdated: DateTime.now(),
+                      updatedAt: DateTime.now(),
                     ),
                   );
             },
