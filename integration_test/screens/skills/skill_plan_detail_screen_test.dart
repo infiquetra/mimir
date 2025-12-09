@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide isNotNull;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -30,17 +31,21 @@ void main() {
         // GIVEN: A skill plan with a name
         await tester.pumpWidget(
           TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(characterId: characterId),
+            initialCharacter: CharacterFixtures.customCharacter(
+              characterId: characterId,
+              name: 'Test Character',
+              corporationId: 98000001,
+              corporationName: 'Test Corp',
+            ),
             setupDatabase: (db) async {
               // Create skill plan
               await db.into(db.skillPlans).insert(
                     SkillPlansCompanion.insert(
-                      id: const Value(planId),
                       characterId: characterId,
                       name: 'PvP Frigate Plan',
                       description: const Value('Skills for frigate PvP'),
                       createdAt: DateTime.now(),
-                      lastUpdated: DateTime.now(),
+                      updatedAt: DateTime.now(),
                     ),
                   );
 
@@ -89,16 +94,20 @@ void main() {
         // GIVEN: A skill plan with 3 skills (1 trained, 2 untrained)
         await tester.pumpWidget(
           TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(characterId: characterId),
+            initialCharacter: CharacterFixtures.customCharacter(
+              characterId: characterId,
+              name: 'Test Character',
+              corporationId: 98000001,
+              corporationName: 'Test Corp',
+            ),
             setupDatabase: (db) async {
               // Create skill plan
               await db.into(db.skillPlans).insert(
                     SkillPlansCompanion.insert(
-                      id: const Value(planId),
                       characterId: characterId,
                       name: 'Test Plan',
                       createdAt: DateTime.now(),
-                      lastUpdated: DateTime.now(),
+                      updatedAt: DateTime.now(),
                     ),
                   );
 
@@ -188,16 +197,20 @@ void main() {
         // GIVEN: A skill plan with multiple skills
         await tester.pumpWidget(
           TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(characterId: characterId),
+            initialCharacter: CharacterFixtures.customCharacter(
+              characterId: characterId,
+              name: 'Test Character',
+              corporationId: 98000001,
+              corporationName: 'Test Corp',
+            ),
             setupDatabase: (db) async {
               // Create skill plan
               await db.into(db.skillPlans).insert(
                     SkillPlansCompanion.insert(
-                      id: const Value(planId),
                       characterId: characterId,
                       name: 'Test Plan',
                       createdAt: DateTime.now(),
-                      lastUpdated: DateTime.now(),
+                      updatedAt: DateTime.now(),
                     ),
                   );
 
@@ -255,16 +268,20 @@ void main() {
         // GIVEN: A skill plan with one skill
         await tester.pumpWidget(
           TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(characterId: characterId),
+            initialCharacter: CharacterFixtures.customCharacter(
+              characterId: characterId,
+              name: 'Test Character',
+              corporationId: 98000001,
+              corporationName: 'Test Corp',
+            ),
             setupDatabase: (db) async {
               // Create skill plan
               await db.into(db.skillPlans).insert(
                     SkillPlansCompanion.insert(
-                      id: const Value(planId),
                       characterId: characterId,
                       name: 'Test Plan',
                       createdAt: DateTime.now(),
-                      lastUpdated: DateTime.now(),
+                      updatedAt: DateTime.now(),
                     ),
                   );
 
