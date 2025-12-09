@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/logging/logger.dart';
+import '../../../../core/sde/sde_providers.dart';
 import '../../../../core/theme/eve_colors.dart';
 import '../../data/skill_providers.dart';
 

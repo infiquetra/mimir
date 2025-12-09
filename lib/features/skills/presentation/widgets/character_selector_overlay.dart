@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/di/providers.dart';
 import '../../../../core/logging/logger.dart';
 import '../../../../core/theme/eve_colors.dart';
 import '../../../../core/widgets/character_avatar.dart';
@@ -167,8 +168,13 @@ class CharacterSelectorOverlay extends ConsumerWidget {
   }) {
     final theme = Theme.of(context);
 
-    // Format total SP
-    final totalSp = character.totalSp ?? 0;
+    // Watch total SP provider for this character
+    final totalSpAsync = ref.watch(characterTotalSpProvider(character.characterId));
+    final totalSp = totalSpAsync.when(
+      data: (sp) => sp,
+      loading: () => 0,
+      error: (_, __) => 0,
+    );
     final spFormatted = NumberFormat('#,###').format(totalSp);
 
     return InkWell(

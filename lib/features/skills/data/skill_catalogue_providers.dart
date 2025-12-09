@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../core/logging/logger.dart';
 import '../../../core/sde/sde_database.dart';
@@ -336,6 +337,9 @@ final filteredSkillsByGroupProvider =
 
       Log.d('SKILLS.CATALOGUE', 'filteredSkillsByGroup - havePrereqs: ${result.length} skills');
       return result;
+
+    default:
+      return allSkills; // Fallback for any new filter modes
   }
 });
 

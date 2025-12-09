@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../core/logging/logger.dart';
 import '../../../../core/theme/eve_colors.dart';
@@ -34,11 +33,31 @@ class CharacterSelectorButton extends ConsumerWidget {
           return _buildPlaceholderButton(context);
         }
 
-        // Format total SP (e.g., 190,000,000 → "190M SP")
-        final totalSp = character.totalSp ?? 0;
-        final spFormatted = _formatSp(totalSp);
+        // Watch total SP provider for this character
+        final totalSpAsync = ref.watch(characterTotalSpProvider(character.characterId));
 
-        return InkWell(
+        return totalSpAsync.when(
+          data: (totalSp) => _buildCharacterButton(context, character, totalSp),
+          loading: () => _buildPlaceholderButton(context),
+          error: (_, __) => _buildCharacterButton(context, character, 0),
+        );
+      },
+      loading: () {
+        Log.d('SKILLS.UI', 'CharacterSelectorButton - loading');
+        return _buildPlaceholderButton(context);
+      },
+      error: (_, __) {
+        Log.e('SKILLS.UI', 'CharacterSelectorButton - error loading character');
+        return _buildPlaceholderButton(context);
+      },
+    );
+  }
+
+  Widget _buildCharacterButton(BuildContext context, dynamic character, int totalSp) {
+    final theme = Theme.of(context);
+    final spFormatted = _formatSp(totalSp);
+
+    return InkWell(
           onTap: () {
             Log.d('SKILLS.UI', 'CharacterSelectorButton - tapped, opening overlay');
             _showCharacterSelectorOverlay(context);
@@ -101,21 +120,10 @@ class CharacterSelectorButton extends ConsumerWidget {
             ),
           ),
         );
-      },
-      loading: () {
-        Log.d('SKILLS.UI', 'CharacterSelectorButton - loading');
-        return _buildPlaceholderButton(context);
-      },
-      error: (_, __) {
-        Log.e('SKILLS.UI', 'CharacterSelectorButton - error loading character');
-        return _buildPlaceholderButton(context);
-      },
-    );
   }
 
   Widget _buildPlaceholderButton(BuildContext context) {
     final theme = Theme.of(context);
-
     return InkWell(
       onTap: () {
         Log.d('SKILLS.UI', 'CharacterSelectorButton (placeholder) - tapped');

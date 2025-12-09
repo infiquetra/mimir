@@ -6,6 +6,7 @@ import '../../../../core/logging/logger.dart';
 import '../../../../core/theme/eve_colors.dart';
 import '../../../characters/data/character_providers.dart';
 import '../../data/skill_catalogue_providers.dart';
+import '../../data/skill_providers.dart';
 
 /// Footer widget for the training queue sidebar showing key statistics.
 ///
@@ -22,11 +23,15 @@ class QueueFooter extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     Log.d('SKILLS.UI', 'QueueFooter - building');
     final theme = Theme.of(context);
-    final activeCharacter = ref.watch(activeCharacterProvider).value;
     final queueStats = ref.watch(queueStatsProvider);
+    final unallocatedSpAsync = ref.watch(unallocatedSpProvider);
 
     // Format unallocated SP with commas
-    final unallocatedSp = activeCharacter?.unallocatedSp ?? 0;
+    final unallocatedSp = unallocatedSpAsync.when(
+      data: (sp) => sp ?? 0,
+      loading: () => 0,
+      error: (_, __) => 0,
+    );
     final formattedUnallocatedSp = NumberFormat('#,###').format(unallocatedSp);
 
     // Format total SP in queue
