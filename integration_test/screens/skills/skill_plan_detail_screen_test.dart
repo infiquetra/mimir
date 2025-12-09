@@ -57,7 +57,6 @@ void main() {
                     skillId: 3301, // Mechanics
                     targetLevel: 5,
                     sortOrder: 0,
-                    addedAt: DateTime.now(),
                   ),
                 ]);
               });
@@ -119,21 +118,18 @@ void main() {
                     skillId: 3301, // Mechanics
                     targetLevel: 5,
                     sortOrder: 0,
-                    addedAt: DateTime.now(),
                   ),
                   SkillPlanEntriesCompanion.insert(
                     planId: planId,
                     skillId: 3302, // Engineering
                     targetLevel: 4,
                     sortOrder: 1,
-                    addedAt: DateTime.now(),
                   ),
                   SkillPlanEntriesCompanion.insert(
                     planId: planId,
                     skillId: 3303, // Shield Management
                     targetLevel: 3,
                     sortOrder: 2,
-                    addedAt: DateTime.now(),
                   ),
                 ]);
               });
@@ -222,14 +218,12 @@ void main() {
                     skillId: 3301, // Mechanics
                     targetLevel: 5,
                     sortOrder: 0,
-                    addedAt: DateTime.now(),
                   ),
                   SkillPlanEntriesCompanion.insert(
                     planId: planId,
                     skillId: 3302, // Engineering
                     targetLevel: 4,
                     sortOrder: 1,
-                    addedAt: DateTime.now(),
                   ),
                 ]);
               });
@@ -292,7 +286,6 @@ void main() {
                       skillId: 3301, // Mechanics
                       targetLevel: 5,
                       sortOrder: 0,
-                      addedAt: DateTime.now(),
                     ),
                   );
             },
@@ -338,16 +331,20 @@ void main() {
         // GIVEN: An empty skill plan
         await tester.pumpWidget(
           TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(characterId: characterId),
+            initialCharacter: CharacterFixtures.customCharacter(
+              characterId: characterId,
+              name: 'Test Character',
+              corporationId: 98000001,
+              corporationName: 'Test Corp',
+            ),
             setupDatabase: (db) async {
               // Create skill plan with no entries
               await db.into(db.skillPlans).insert(
                     SkillPlansCompanion.insert(
-                      id: const Value(planId),
                       characterId: characterId,
                       name: 'Empty Plan',
                       createdAt: DateTime.now(),
-                      lastUpdated: DateTime.now(),
+                      updatedAt: DateTime.now(),
                     ),
                   );
             },
