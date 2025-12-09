@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../features/characters/data/character_providers.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
@@ -15,7 +16,7 @@ import '../../features/wallet/presentation/wallet_screen.dart';
 import '../auth/auth_providers.dart';
 import '../sde/sde_providers.dart';
 import '../theme/app_theme.dart';
-import '../widgets/character_header_bar.dart';
+import '../widgets/character_nav_rail.dart';
 import 'cross_window_events.dart';
 import 'standalone_characters_screen.dart';
 import 'standalone_dashboard_screen.dart';
@@ -65,6 +66,26 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
 
     // Start file-based event watching (replaces IPC handler)
     _initEventWatcher();
+
+    // Resize window after creation (desktop_multi_window hardcodes 800x600 in native code)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _resizeWindow();
+    });
+  }
+
+  /// Resizes the window to the default size for this window type.
+  ///
+  /// This is necessary because desktop_multi_window hardcodes 800x600
+  /// in its native Swift code (FlutterWindow.swift and FlutterMultiWindowPlugin.swift).
+  Future<void> _resizeWindow() async {
+    try {
+      final targetSize = _windowType.defaultSize;
+      await windowManager.setSize(Size(targetSize.width, targetSize.height));
+      debugPrint(
+          'SubWindow: Resized ${_windowType.title} to ${targetSize.width}x${targetSize.height}');
+    } catch (e) {
+      debugPrint('SubWindow: Failed to resize window: $e');
+    }
   }
 
   /// Initializes the file watcher for cross-window events.
@@ -282,9 +303,7 @@ class _ErrorScreen extends StatelessWidget {
 
 /// Scaffold wrapper for all sub-window screens.
 ///
-/// Conditionally shows the character header bar based on window type.
-/// Dashboard, Skills, and Wallet windows show the header with refresh button.
-/// Characters and Settings windows do not show the header.
+/// Provides macOS title bar, character navigation rail, and wraps screen content.
 class _SubWindowScaffold extends StatelessWidget {
   const _SubWindowScaffold({
     required this.windowType,
@@ -300,9 +319,6 @@ class _SubWindowScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMacOS = !kIsWeb && Platform.isMacOS;
-    final showHeader = windowType == WindowType.dashboard ||
-        windowType == WindowType.skills ||
-        windowType == WindowType.wallet;
 
     return Scaffold(
       body: Column(
@@ -322,12 +338,30 @@ class _SubWindowScaffold extends StatelessWidget {
                 ),
               ),
             ),
-          // Character header bar (only for Dashboard, Skills, Wallet).
-          if (showHeader) CharacterHeaderBar(windowType: windowType),
-          // Screen content.
-          Expanded(child: child),
+          // Content with character nav rail on left.
+          Expanded(
+            child: Row(
+              children: [
+                // Character navigation rail (Discord-style, left side).
+                CharacterNavRail(
+                  onRefresh: _getRefreshCallback(windowType),
+                ),
+                // Screen content (takes remaining space).
+                Expanded(child: child),
+              ],
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  /// Returns the refresh callback for this window type.
+  ///
+  /// Returns null for windows that don't support refresh (Characters, Settings).
+  VoidCallback? _getRefreshCallback(WindowType type) {
+    // TODO: Implement refresh logic for each window type
+    // For now, return null to hide the refresh button
+    return null;
   }
 }
