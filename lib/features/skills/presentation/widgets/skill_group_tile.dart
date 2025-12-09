@@ -3,18 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/logging/logger.dart';
 import '../../../../core/theme/eve_colors.dart';
-import '../../../../core/widgets/eve_skill_icon.dart';
 import '../../data/skill_catalogue_providers.dart';
+import '../../data/skill_group_icons.dart';
 
-/// A compact tile representing a skill group in the 3-column grid.
+/// A compact row representing a skill group in the 3-column grid.
 ///
-/// Displays:
-/// - Representative skill icon (first skill in group)
-/// - Group name
-/// - Progress bar showing trained skills
-/// - Count badge (X/Y trained)
+/// Displays (EVE Online style):
+/// - Small icon (24px) on left
+/// - Group name text OVER progress bar (teal background)
+/// - Skill count badge on right (X/Y or just count)
 ///
-/// Can be selected to show skills in that group in the lower panel.
+/// Very compact (~36px height), no card borders.
+/// Progress bar shows % of skills trained in group.
 class SkillGroupTile extends ConsumerWidget {
   const SkillGroupTile({
     super.key,
@@ -30,114 +30,85 @@ class SkillGroupTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final representativeSkillAsync =
-        ref.watch(groupRepresentativeSkillProvider(group.group.groupId));
-
     final trainedPercent =
         group.totalCount > 0 ? group.trainedCount / group.totalCount : 0.0;
+
+    final icon = SkillGroupIcons.getIcon(group.group.groupName);
 
     return InkWell(
       onTap: () {
         Log.d('SKILLS.UI', 'SkillGroupTile - selected group ${group.group.groupId}');
         onTap?.call();
       },
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(4),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
-          border: Border.all(
-            color: isSelected
-                ? EveColors.photonBlue
-                : theme.colorScheme.outline.withOpacity(0.3),
-            width: isSelected ? 2 : 1,
-          ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(4),
           color: isSelected
-              ? EveColors.photonBlue.withOpacity(0.1)
-              : EveColors.surfaceDefault,
+              ? EveColors.surfaceElevated.withOpacity(0.5)
+              : Colors.transparent,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
           children: [
-            // Header row: Icon + Name
-            Row(
-              children: [
-                // Representative skill icon
-                representativeSkillAsync.when(
-                  data: (typeId) => EveSkillIcon(
-                    typeId: typeId ?? group.group.groupId, // Fallback to groupId
-                    size: 32,
-                  ),
-                  loading: () => Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Icon(
-                      Icons.folder_outlined,
-                      size: 20,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  error: (_, __) => Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Icon(
-                      Icons.error_outline,
-                      size: 20,
-                      color: theme.colorScheme.onErrorContainer,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Group name
-                Expanded(
-                  child: Text(
-                    group.group.groupName,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                      color: isSelected
-                          ? EveColors.photonBlue
-                          : theme.colorScheme.onSurface,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                // Count badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    '${group.trainedCount}/${group.totalCount}',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ],
+            // Icon (24px)
+            Icon(
+              icon,
+              size: 24,
+              color: isSelected
+                  ? EveColors.photonBlue
+                  : theme.colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(height: 8),
-            // Progress bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: trainedPercent,
-                minHeight: 4,
-                backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  isSelected ? EveColors.photonBlue : theme.colorScheme.primary,
-                ),
+            const SizedBox(width: 8),
+
+            // Group name with progress bar behind it
+            Expanded(
+              child: Stack(
+                children: [
+                  // Progress bar (bottom layer)
+                  Positioned.fill(
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: trainedPercent,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? EveColors.photonBlue.withOpacity(0.3)
+                              : EveColors.teal.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Group name text (top layer)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    child: Text(
+                      group.group.groupName,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                        color: isSelected
+                            ? EveColors.photonBlue
+                            : theme.colorScheme.onSurface,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            // Count badge
+            Text(
+              '${group.trainedCount}',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],

@@ -27,13 +27,10 @@ class SkillGroupGrid extends ConsumerWidget {
     final selectedGroupId = ref.watch(selectedSkillGroupProvider);
 
     return Container(
-      height: 240, // Fixed height for ~3 rows of groups
+      height: 180, // Fixed height for ~4-5 rows of compact groups (36px each)
       decoration: BoxDecoration(
-        color: EveColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.2),
-        ),
+        color: EveColors.surfaceDefault,
+        borderRadius: BorderRadius.circular(4),
       ),
       child: groupsAsync.when(
         data: (groups) {
@@ -71,10 +68,10 @@ class SkillGroupGrid extends ConsumerWidget {
 
           return GridView.count(
             crossAxisCount: 3,
-            padding: const EdgeInsets.all(12),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 2.5, // Wide tiles (width:height = 2.5:1)
+            padding: const EdgeInsets.all(8),
+            mainAxisSpacing: 6,
+            crossAxisSpacing: 6,
+            childAspectRatio: 3.0, // Compact rows (width:height ≈ 3:1 for 36px height)
             children: groups.map((group) {
               final isSelected = selectedGroupId == group.group.groupId;
 
