@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:window_manager/window_manager.dart';
 
 import '../../features/characters/data/character_providers.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
@@ -20,6 +19,7 @@ import '../widgets/character_nav_rail.dart';
 import 'cross_window_events.dart';
 import 'standalone_characters_screen.dart';
 import 'standalone_dashboard_screen.dart';
+import 'window_resize_service.dart';
 import 'window_types.dart';
 
 /// Entry point for sub-windows (non-main windows).
@@ -77,13 +77,13 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
   ///
   /// This is necessary because desktop_multi_window hardcodes 800x600
   /// in its native Swift code (FlutterWindow.swift and FlutterMultiWindowPlugin.swift).
+  ///
+  /// Uses a custom native method channel since window_manager doesn't work
+  /// in sub-windows (it operates on the main window context).
   Future<void> _resizeWindow() async {
     try {
-      // Initialize window manager for sub-windows
-      await windowManager.ensureInitialized();
-
       final targetSize = _windowType.defaultSize;
-      await windowManager.setSize(Size(targetSize.width, targetSize.height));
+      await WindowResizeService.setSize(targetSize.width, targetSize.height);
       debugPrint(
           'SubWindow: Resized ${_windowType.title} to ${targetSize.width}x${targetSize.height}');
     } catch (e) {

@@ -55,7 +55,7 @@ void main(List<String> args) async {
     }
 
     // Note: Sub-windows run in separate Flutter engines created by desktop_multi_window.
-    // The windowManager plugin is initialized per-window in SubWindowApp._resizeWindow()
+    // Window resizing is handled via custom WindowResizePlugin (see SubWindowApp._resizeWindow())
 
     runApp(
       ProviderScope(
