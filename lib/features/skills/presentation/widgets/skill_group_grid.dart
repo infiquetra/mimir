@@ -27,7 +27,6 @@ class SkillGroupGrid extends ConsumerWidget {
     final selectedGroupId = ref.watch(selectedSkillGroupProvider);
 
     return Container(
-      height: 180, // Fixed height for ~4-5 rows of compact groups (36px each)
       decoration: BoxDecoration(
         color: EveColors.surfaceDefault,
         borderRadius: BorderRadius.circular(4),
@@ -38,53 +37,78 @@ class SkillGroupGrid extends ConsumerWidget {
 
           if (groups.isEmpty) {
             Log.w('SKILLS.UI', 'SkillGroupGrid - no groups found');
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.folder_off_outlined,
-                    size: 48,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Skill Groups',
-                    style: theme.textTheme.titleMedium?.copyWith(
+            return SizedBox(
+              height: 200,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.folder_off_outlined,
+                      size: 48,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Failed to load skill groups from SDE',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No Skill Groups',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    Text(
+                      'Failed to load skill groups from SDE',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           }
 
-          return GridView.count(
-            crossAxisCount: 3,
-            padding: const EdgeInsets.all(8),
-            mainAxisSpacing: 6,
-            crossAxisSpacing: 6,
-            childAspectRatio: 3.0, // Compact rows (width:height ≈ 3:1 for 36px height)
-            children: groups.map((group) {
-              final isSelected = selectedGroupId == group.group.groupId;
+          // Calculate dynamic height based on number of groups
+          final rowCount = (groups.length / 3).ceil();
+          final gridHeight = rowCount * 28.0;
 
-              return SkillGroupTile(
-                group: group,
-                isSelected: isSelected,
-                onTap: () {
-                  Log.d('SKILLS.UI', 'SkillGroupGrid - group ${group.group.groupId} tapped');
-                  ref.read(selectedSkillGroupProvider.notifier).state =
-                      group.group.groupId;
-                },
+          Log.d('SKILLS.UI', 'SkillGroupGrid - $rowCount rows, ${gridHeight}px height');
+
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              // Calculate aspect ratio to achieve exactly 28px row height
+              // cellWidth = available width / 3 columns
+              // aspectRatio = cellWidth / desiredHeight
+              final cellWidth = constraints.maxWidth / 3;
+              final aspectRatio = cellWidth / 28.0;
+
+              Log.d('SKILLS.UI', 'SkillGroupGrid - cellWidth: $cellWidth, aspectRatio: $aspectRatio');
+
+              return SizedBox(
+                height: gridHeight,
+                child: GridView.count(
+                  crossAxisCount: 3,
+                  padding: EdgeInsets.zero,
+                  mainAxisSpacing: 0,
+                  crossAxisSpacing: 0,
+                  childAspectRatio: aspectRatio,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: groups.map((group) {
+                    final isSelected = selectedGroupId == group.group.groupId;
+
+                    return SkillGroupTile(
+                      group: group,
+                      isSelected: isSelected,
+                      onTap: () {
+                        Log.d('SKILLS.UI', 'SkillGroupGrid - group ${group.group.groupId} tapped');
+                        ref.read(selectedSkillGroupProvider.notifier).state =
+                            group.group.groupId;
+                      },
+                    );
+                  }).toList(),
+                ),
               );
-            }).toList(),
+            },
           );
         },
         loading: () {
