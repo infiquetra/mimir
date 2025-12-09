@@ -62,7 +62,7 @@ class QueueSidebarItem extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Skill name + level
+          // Skill name + time remaining + training icon (all inline)
           skillNameAsync.when(
             data: (skillName) {
               final levelRoman = _toRomanNumeral(entry.finishedLevel);
@@ -81,6 +81,22 @@ class QueueSidebarItem extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  // Time remaining inline
+                  if (timeRemaining != null && !timeRemaining.isNegative)
+                    Text(
+                      _formatDuration(timeRemaining),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    )
+                  else
+                    Text(
+                      'Paused',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      ),
+                    ),
                   if (isCurrentlyTraining) ...[
                     const SizedBox(width: 4),
                     Icon(
@@ -110,17 +126,8 @@ class QueueSidebarItem extends ConsumerWidget {
 
           const SizedBox(height: 6),
 
-          // Time remaining
-          if (timeRemaining != null && !timeRemaining.isNegative) ...[
-            Text(
-              _formatDuration(timeRemaining),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 4),
-
-            // Progress bar
+          // Progress bar
+          if (timeRemaining != null && !timeRemaining.isNegative)
             ClipRRect(
               borderRadius: BorderRadius.circular(2),
               child: LinearProgressIndicator(
@@ -134,14 +141,6 @@ class QueueSidebarItem extends ConsumerWidget {
                 ),
               ),
             ),
-          ] else ...[
-            Text(
-              'Paused',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
-              ),
-            ),
-          ],
         ],
       ),
     );

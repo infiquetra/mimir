@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/widgets/space_background.dart';
 import '../../characters/data/character_providers.dart';
-import 'widgets/character_nav_rail.dart';
 import 'widgets/skill_group_grid.dart';
 import 'widgets/skill_list_panel.dart';
 import 'widgets/skill_plans_panel.dart';
@@ -51,8 +50,8 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen>
   @override
   void initState() {
     super.initState();
-    Log.d('SKILLS', 'SkillsScreen.initState() - creating TabController (2 tabs)');
-    _tabController = TabController(length: 2, vsync: this);
+    Log.d('SKILLS', 'SkillsScreen.initState() - creating TabController (2 tabs), starting on Skill Catalogue');
+    _tabController = TabController(length: 2, vsync: this, initialIndex: 1);
     _tabController.addListener(() {
       Log.d('SKILLS', 'TabController - switched to tab ${_tabController.index}');
     });
@@ -101,9 +100,6 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen>
 
     return Row(
       children: [
-        // Left nav: Character selector rail (60px)
-        const CharacterNavRail(),
-
         // Center panel: Top bar + Tab content
         Expanded(
           child: Column(

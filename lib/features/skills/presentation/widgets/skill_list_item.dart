@@ -110,9 +110,27 @@ class SkillListItem extends StatelessWidget {
               ),
             ],
 
-            // Unpurchased skill indicator (red book icon)
-            if (!skill.isInjected) ...[
-              const SizedBox(width: 8),
+            const SizedBox(width: 8),
+
+            // Icon logic: book (red) if not injected → no plus
+            //            checkmark (blue) if maxed
+            //            plus (blue) otherwise
+            if (skill.trainedLevel >= 5)
+              // Max level indicator - checkmark only, no text
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: EveColors.photonBlue.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Icon(
+                  Icons.check_circle,
+                  size: 16,
+                  color: EveColors.photonBlue,
+                ),
+              )
+            else if (!skill.isInjected)
+              // Unpurchased skill indicator (red book icon) - no plus icon
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
@@ -124,13 +142,9 @@ class SkillListItem extends StatelessWidget {
                   size: 16,
                   color: EveColors.error,
                 ),
-              ),
-            ],
-
-            const SizedBox(width: 8),
-
-            // Add to plan button OR Max indicator
-            if (skill.trainedLevel < 5)
+              )
+            else
+              // Add to plan button (skill is injected and not maxed)
               IconButton(
                 onPressed: canTrain
                     ? () {
@@ -156,33 +170,6 @@ class SkillListItem extends StatelessWidget {
                 iconSize: 20,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
-              )
-            else
-              // Max level indicator
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      size: 12,
-                      color: theme.colorScheme.primary,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      'Max',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
-                ),
               ),
           ],
         ),

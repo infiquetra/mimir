@@ -19,11 +19,13 @@ class SkillWithLevel {
     required this.skill,
     required this.trainedLevel,
     required this.isTraining,
+    required this.isInjected,
   });
 
   final SdeType skill;
   final int trainedLevel; // 0-5
   final bool isTraining;
+  final bool isInjected; // Whether the skill has been purchased/injected (ESI returned it)
 }
 
 /// A skill group with progress information.
@@ -78,12 +80,13 @@ final skillsByGroupProvider =
   Log.d('SKILLS.CATALOGUE', 'skillsByGroup - found ${skills.length} skills in group $groupId');
 
   if (activeCharacter == null) {
-    // No character selected - all skills at level 0, not training
+    // No character selected - all skills at level 0, not training, not injected
     return skills
         .map((skill) => SkillWithLevel(
               skill: skill,
               trainedLevel: 0,
               isTraining: false,
+              isInjected: false,
             ))
         .toList();
   }
@@ -99,11 +102,13 @@ final skillsByGroupProvider =
   for (final skill in skills) {
     final trainedLevel = await repository.getTrainedLevel(characterId, skill.typeId);
     final isTraining = trainingSkillIds.contains(skill.typeId);
+    final isInjected = await repository.isSkillInjected(characterId, skill.typeId);
 
     result.add(SkillWithLevel(
       skill: skill,
       trainedLevel: trainedLevel,
       isTraining: isTraining,
+      isInjected: isInjected,
     ));
   }
 
@@ -195,6 +200,7 @@ final searchSkillsProvider =
               skill: skill,
               trainedLevel: 0,
               isTraining: false,
+              isInjected: false,
             ))
         .toList();
   }
@@ -208,11 +214,13 @@ final searchSkillsProvider =
   for (final skill in matchingSkills) {
     final trainedLevel = await repository.getTrainedLevel(characterId, skill.typeId);
     final isTraining = trainingSkillIds.contains(skill.typeId);
+    final isInjected = await repository.isSkillInjected(characterId, skill.typeId);
 
     result.add(SkillWithLevel(
       skill: skill,
       trainedLevel: trainedLevel,
       isTraining: isTraining,
+      isInjected: isInjected,
     ));
   }
 
@@ -391,17 +399,17 @@ final queueStatsProvider = Provider<QueueStats>((ref) {
         );
       }
 
-      // Calculate total training time (sum of remaining times)
+      // Calculate total training time (time until last skill finishes)
+      // Note: Finish dates are cumulative, so we use the last finish date
       final now = DateTime.now();
-      var totalTime = Duration.zero;
+      DateTime? lastFinishDate;
       var totalSp = 0;
 
       for (final entry in queue) {
-        if (entry.finishDate != null) {
-          final remaining = entry.finishDate!.difference(now);
-          if (remaining.isNegative) continue; // Skip completed entries
-
-          totalTime += remaining;
+        // Find the latest finish date
+        if (entry.finishDate != null &&
+            (lastFinishDate == null || entry.finishDate!.isAfter(lastFinishDate))) {
+          lastFinishDate = entry.finishDate;
         }
 
         // Calculate SP for this level
@@ -411,7 +419,11 @@ final queueStatsProvider = Provider<QueueStats>((ref) {
         }
       }
 
-      Log.d('SKILLS.CATALOGUE', 'queueStats - time: ${totalTime.inHours}h, SP: $totalSp, size: ${queue.length}');
+      final totalTime = lastFinishDate != null
+          ? lastFinishDate.difference(now)
+          : Duration.zero;
+
+      Log.d('SKILLS.CATALOGUE', 'queueStats - time: ${totalTime.inHours}h (until ${lastFinishDate?.toIso8601String()}), SP: $totalSp, size: ${queue.length}');
 
       return QueueStats(
         totalTrainingTime: totalTime,
