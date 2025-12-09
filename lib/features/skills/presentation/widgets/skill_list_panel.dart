@@ -6,7 +6,6 @@ import '../../../../core/theme/eve_colors.dart';
 import '../../../characters/data/character_providers.dart';
 import '../../data/skill_catalogue_providers.dart';
 import '../../data/skill_repository.dart';
-import '../../domain/skill_prerequisite_service.dart';
 import 'skill_list_item.dart';
 
 /// A 2-column panel displaying skills from the selected skill group.

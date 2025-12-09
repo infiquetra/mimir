@@ -91,7 +91,7 @@ class SkillListItem extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: EveColors.teal.withOpacity(0.2),
+                  color: EveColors.photonCyan.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(3),
                 ),
                 child: Row(
@@ -100,13 +100,13 @@ class SkillListItem extends StatelessWidget {
                     Icon(
                       Icons.trending_up,
                       size: 12,
-                      color: EveColors.teal,
+                      color: EveColors.photonCyan,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       'Training',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: EveColors.teal,
+                        color: EveColors.photonCyan,
                         fontSize: 10,
                       ),
                     ),

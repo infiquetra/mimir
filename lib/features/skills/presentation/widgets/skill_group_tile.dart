@@ -75,7 +75,7 @@ class SkillGroupTile extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: isSelected
                               ? EveColors.photonBlue.withOpacity(0.3)
-                              : EveColors.teal.withOpacity(0.2),
+                              : EveColors.photonCyan.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
