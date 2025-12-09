@@ -69,19 +69,16 @@ class SkillListPanel extends ConsumerWidget {
         // Build skill items with prerequisite checking
         return Container(
           decoration: BoxDecoration(
-            color: EveColors.surfaceElevated,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: theme.colorScheme.outline.withOpacity(0.2),
-            ),
+            color: EveColors.surfaceDefault,
+            borderRadius: BorderRadius.circular(4),
           ),
           child: GridView.builder(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 3.5, // Wide items (width:height = 3.5:1)
+              mainAxisSpacing: 6,
+              crossAxisSpacing: 6,
+              childAspectRatio: 4.5, // Compact rows (width:height ≈ 4.5:1 for 40px height)
             ),
             itemCount: skills.length,
             itemBuilder: (context, index) {
