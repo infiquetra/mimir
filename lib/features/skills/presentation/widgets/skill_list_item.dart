@@ -50,8 +50,8 @@ class SkillListItem extends StatelessWidget {
           : null,
       borderRadius: BorderRadius.circular(4),
       child: Container(
-        height: 40,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(4),
           color: Colors.transparent,

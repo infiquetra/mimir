@@ -71,16 +71,25 @@ class SkillListPanel extends ConsumerWidget {
             color: EveColors.surfaceDefault,
             borderRadius: BorderRadius.circular(4),
           ),
-          child: GridView.builder(
-            padding: const EdgeInsets.all(8),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 2,
-              crossAxisSpacing: 2,
-              childAspectRatio: 4.5, // Compact rows (width:height ≈ 4.5:1 for 40px height)
-            ),
-            itemCount: skills.length,
-            itemBuilder: (context, index) {
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Calculate aspect ratio for exactly 36px row height
+              // cellWidth = (available width - padding - spacing) / columns
+              final cellWidth = (constraints.maxWidth - 4 - 4 - 2) / 2;
+              final aspectRatio = cellWidth / 36.0;
+
+              Log.d('SKILLS.UI', 'SkillListPanel - cellWidth: $cellWidth, aspectRatio: $aspectRatio');
+
+              return GridView.builder(
+                padding: const EdgeInsets.all(4),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 2,
+                  crossAxisSpacing: 2,
+                  childAspectRatio: aspectRatio,
+                ),
+                itemCount: skills.length,
+                itemBuilder: (context, index) {
               final skill = skills[index];
 
               // For filter modes that already check prerequisites, we know canTrain is true
@@ -119,8 +128,10 @@ class SkillListPanel extends ConsumerWidget {
                 },
               );
             },
-          ),
-        );
+          );
+        },
+      ),
+    );
       },
       loading: () {
         Log.d('SKILLS.UI', 'SkillListPanel - loading');
