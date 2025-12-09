@@ -4,36 +4,38 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/widgets/space_background.dart';
 import '../../characters/data/character_providers.dart';
+import 'widgets/character_nav_rail.dart';
 import 'widgets/skill_group_grid.dart';
 import 'widgets/skill_list_panel.dart';
 import 'widgets/skill_plans_panel.dart';
 import 'widgets/skills_top_bar.dart';
 import 'widgets/training_queue_sidebar.dart';
 
-/// EVE Online-style skills screen with horizontal split layout.
+/// EVE Online-style skills screen with vertical character navigation.
 ///
 /// Features:
-/// - Character selector with avatar and SP count (top-left)
+/// - Left nav rail with character avatars (60px wide, Discord-style)
 /// - Tabbed interface (Skill Plans | Skill Catalogue)
 /// - Filter dropdown and search (top-right)
-/// - Skill group grid (3 columns) with progress bars
-/// - Skill list (2 columns) with add-to-plan buttons
-/// - Training queue sidebar (fixed 280px on right)
+/// - Skill group grid (3 columns) with progress bars behind names
+/// - Skill list (2 columns) with level squares
+/// - Training queue sidebar (fixed 560px on right)
 ///
 /// Layout:
 /// ```
-/// ┌─────────────────────────────────────────────┬──────────────────┐
-/// │ [👤] Character | Plans | Catalogue | [Filter] [Search] | Queue (280px) │
-/// ├─────────────────────────────────────────────┤                  │
-/// │ Tab Content:                                 │ [Queue Items]    │
-/// │  - Skill Plans (existing)                   │ ...              │
-/// │  - Skill Catalogue:                         │                  │
-/// │    ┌─────────────────────────────────┐      │ [Queue Footer]   │
-/// │    │ Skill Groups Grid (3 cols)     │      │ - Unalloc SP     │
-/// │    ├─────────────────────────────────┤      │ - Training Time  │
-/// │    │ Skills List (2 cols, filtered) │      │ - SP in Queue    │
-/// │    └─────────────────────────────────┘      │                  │
-/// └─────────────────────────────────────────────┴──────────────────┘
+/// ┌──┬──────────────────────────────────────────┬────────────────────────┐
+/// │🟢│ Plans | Catalogue | [Filter] [Search]    │ Queue (560px)          │
+/// │──├──────────────────────────────────────────┤                        │
+/// │👤│ Tab Content:                              │ [Queue Items]          │
+/// │──│  - Skill Plans (existing)                │ ...                    │
+/// │👤│  - Skill Catalogue:                       │                        │
+/// │──│    ┌──────────────────────────────┐      │ [Queue Footer]         │
+/// │+│    │ Skill Groups Grid (3 cols)   │      │ - Unalloc SP           │
+/// │  │    ├──────────────────────────────┤      │ - Training Time        │
+/// │  │    │ Skills List (2 cols)         │      │ - SP in Queue          │
+/// │  │    └──────────────────────────────┘      │                        │
+/// └──┴──────────────────────────────────────────┴────────────────────────┘
+///  60px                                             560px
 /// ```
 class SkillsScreen extends ConsumerStatefulWidget {
   const SkillsScreen({super.key});
@@ -99,11 +101,14 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen>
 
     return Row(
       children: [
-        // Left panel: Top bar + Tab content
+        // Left nav: Character selector rail (60px)
+        const CharacterNavRail(),
+
+        // Center panel: Top bar + Tab content
         Expanded(
           child: Column(
             children: [
-              // Top bar with character selector, tabs, filter, search
+              // Top bar with tabs, filter, search
               SkillsTopBar(tabController: _tabController),
 
               // Tab content
@@ -123,7 +128,7 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen>
           ),
         ),
 
-        // Right sidebar: Training Queue (fixed 280px)
+        // Right sidebar: Training Queue (fixed 560px)
         const TrainingQueueSidebar(),
       ],
     );

@@ -4,13 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/logging/logger.dart';
 import '../../../../core/theme/eve_colors.dart';
 import '../../data/skill_catalogue_providers.dart';
-import 'character_selector_button.dart';
 
 /// Top bar for the skills screen combining multiple controls.
 ///
 /// Displays:
-/// - Character selector button (left)
-/// - Tab bar for Skill Plans / Skill Catalogue (center-left)
+/// - Tab bar for Skill Plans / Skill Catalogue (left)
 /// - Filter dropdown (right)
 /// - Search field (far right)
 ///
@@ -42,18 +40,6 @@ class SkillsTopBar extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          // Character selector button
-          const CharacterSelectorButton(),
-          const SizedBox(width: 16),
-
-          // Vertical divider
-          Container(
-            width: 1,
-            height: 40,
-            color: theme.colorScheme.outline.withOpacity(0.3),
-          ),
-          const SizedBox(width: 16),
-
           // Tab bar
           TabBar(
             controller: tabController,
