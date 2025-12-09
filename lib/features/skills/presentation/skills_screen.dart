@@ -3,21 +3,38 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/logging/logger.dart';
 import '../../../core/widgets/space_background.dart';
-import '../../../core/widgets/streamlined_tab_bar.dart';
 import '../../characters/data/character_providers.dart';
-import 'widgets/skill_catalogue_panel.dart';
-import 'widgets/skill_header_card.dart';
+import 'widgets/skill_group_grid.dart';
+import 'widgets/skill_list_panel.dart';
 import 'widgets/skill_plans_panel.dart';
-import 'widgets/training_queue_panel.dart';
+import 'widgets/skills_top_bar.dart';
+import 'widgets/training_queue_sidebar.dart';
 
-/// Enhanced skills screen with EVE Online-style interface.
+/// EVE Online-style skills screen with horizontal split layout.
 ///
 /// Features:
-/// - Skill header card showing total SP and unallocated SP
-/// - Tabbed interface:
-///   1. Training Queue - Current skill queue with progress
-///   2. Skill Catalogue - All skills organized by groups
-///   3. Skill Plans - Custom skill plans with progress tracking
+/// - Character selector with avatar and SP count (top-left)
+/// - Tabbed interface (Skill Plans | Skill Catalogue)
+/// - Filter dropdown and search (top-right)
+/// - Skill group grid (3 columns) with progress bars
+/// - Skill list (2 columns) with add-to-plan buttons
+/// - Training queue sidebar (fixed 280px on right)
+///
+/// Layout:
+/// ```
+/// ┌─────────────────────────────────────────────┬──────────────────┐
+/// │ [👤] Character | Plans | Catalogue | [Filter] [Search] | Queue (280px) │
+/// ├─────────────────────────────────────────────┤                  │
+/// │ Tab Content:                                 │ [Queue Items]    │
+/// │  - Skill Plans (existing)                   │ ...              │
+/// │  - Skill Catalogue:                         │                  │
+/// │    ┌─────────────────────────────────┐      │ [Queue Footer]   │
+/// │    │ Skill Groups Grid (3 cols)     │      │ - Unalloc SP     │
+/// │    ├─────────────────────────────────┤      │ - Training Time  │
+/// │    │ Skills List (2 cols, filtered) │      │ - SP in Queue    │
+/// │    └─────────────────────────────────┘      │                  │
+/// └─────────────────────────────────────────────┴──────────────────┘
+/// ```
 class SkillsScreen extends ConsumerStatefulWidget {
   const SkillsScreen({super.key});
 
@@ -32,8 +49,8 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen>
   @override
   void initState() {
     super.initState();
-    Log.d('SKILLS', 'SkillsScreen.initState() - creating TabController');
-    _tabController = TabController(length: 3, vsync: this);
+    Log.d('SKILLS', 'SkillsScreen.initState() - creating TabController (2 tabs)');
+    _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       Log.d('SKILLS', 'TabController - switched to tab ${_tabController.index}');
     });
@@ -76,31 +93,61 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen>
     );
   }
 
-  /// Builds the main skills content with tabs.
+  /// Builds the main skills content with horizontal split layout.
   Widget _buildSkillsContent(BuildContext context) {
-    return Column(
+    Log.d('SKILLS', 'SkillsScreen._buildSkillsContent() - building EVE-style layout');
+
+    return Row(
       children: [
-        // Skill Header Card (Total SP + Unallocated SP)
-        const SkillHeaderCard(),
-
-        // Tab Bar
-        StreamlinedTabBar(
-          controller: _tabController,
-          tabs: const ['Training Queue', 'Skill Catalogue', 'Skill Plans'],
-        ),
-
-        // Tab Views - takes remaining space
+        // Left panel: Top bar + Tab content
         Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: const [
-              TrainingQueuePanel(),
-              SkillCataloguePanel(),
-              SkillPlansPanel(),
+          child: Column(
+            children: [
+              // Top bar with character selector, tabs, filter, search
+              SkillsTopBar(tabController: _tabController),
+
+              // Tab content
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // Tab 0: Skill Plans (existing panel)
+                    const SkillPlansPanel(),
+
+                    // Tab 1: Skill Catalogue (new EVE-style layout)
+                    _buildSkillCatalogueTab(context),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
+
+        // Right sidebar: Training Queue (fixed 280px)
+        const TrainingQueueSidebar(),
       ],
+    );
+  }
+
+  /// Builds the Skill Catalogue tab with group grid and skill list.
+  Widget _buildSkillCatalogueTab(BuildContext context) {
+    Log.d('SKILLS', 'SkillsScreen._buildSkillCatalogueTab() - building catalogue');
+
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          // Skill Groups Grid (3 columns, ~240px height)
+          const SkillGroupGrid(),
+
+          const SizedBox(height: 12),
+
+          // Skills List Panel (2 columns, takes remaining space)
+          const Expanded(
+            child: SkillListPanel(),
+          ),
+        ],
+      ),
     );
   }
 
