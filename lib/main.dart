@@ -54,8 +54,8 @@ void main(List<String> args) async {
       Log.e('WINDOW', 'SubWindow[$windowId]: ERROR parsing args: $e');
     }
 
-    // Note: Sub-windows don't have access to window_manager plugin
-    // They run in separate Flutter engines created by desktop_multi_window
+    // Note: Sub-windows run in separate Flutter engines created by desktop_multi_window.
+    // The windowManager plugin is initialized per-window in SubWindowApp._resizeWindow()
 
     runApp(
       ProviderScope(

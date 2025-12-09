@@ -79,6 +79,9 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
   /// in its native Swift code (FlutterWindow.swift and FlutterMultiWindowPlugin.swift).
   Future<void> _resizeWindow() async {
     try {
+      // Initialize window manager for sub-windows
+      await windowManager.ensureInitialized();
+
       final targetSize = _windowType.defaultSize;
       await windowManager.setSize(Size(targetSize.width, targetSize.height));
       debugPrint(
