@@ -1,12 +1,13 @@
 /// Currency formatting utilities for ISK (Icelandic Króna)
 
 /// Format ISK amounts with appropriate notation:
-/// - Standard format with commas for amounts < 1M: 999999.99 → '999,999.99 ISK'
-/// - Millions (M) for amounts >= 1M and < 1B: 1500000 → '1.50M ISK'
-/// - Billions (B) for amounts >= 1B: 2300000000 → '2.30B ISK'
+/// - Standard format with commas for amounts < 1M: 999,999.99 → '999,999.99 ISK'
+/// - Millions (M) for amounts >= 1M and < 1B: 1,500,000 → '1.50M ISK'
+/// - Billions (B) for amounts >= 1B and < 1T: 2,300,000,000 → '2.30B ISK'
+/// - Trillions (T) for amounts >= 1T: 1,000,000,000,000 → '1.00T ISK'
 ///
 /// Values that would format to 1000.00+ in a given unit roll over to the next unit:
-/// 999999999.99 → '1.00B ISK' (not '1000.00M ISK').
+/// 999,999,999.99 → '1.00B ISK' (not '1000.00M ISK').
 ///
 /// Non-finite values (NaN, Infinity, -Infinity) return 'Invalid ISK'.
 String formatIsk(double amount) {
@@ -17,14 +18,25 @@ String formatIsk(double amount) {
 
   const million = 1000000.0;
   const billion = 1000000000.0;
+  const trillion = 1000000000000.0;
   
   final isNegative = amount < 0;
   final absAmount = amount.abs();
   final sign = isNegative ? '-' : '';
 
-  if (absAmount >= billion) {
+  if (absAmount >= trillion) {
+    // Trillions: 1.00T ISK
+    final value = absAmount / trillion;
+    return '${sign}${value.toStringAsFixed(2)}T ISK';
+  } else if (absAmount >= billion) {
     // Billions: 2.30B ISK
+    // Check if rounding would push this to 1000B+, which should roll over to trillions
     final value = absAmount / billion;
+    if (value >= 999.995) {
+      // Round to trillions instead to avoid 1000.00B ISK
+      final trillionValue = absAmount / trillion;
+      return '${sign}${trillionValue.toStringAsFixed(2)}T ISK';
+    }
     return '${sign}${value.toStringAsFixed(2)}B ISK';
   } else if (absAmount >= million) {
     // Millions: 1.50M ISK

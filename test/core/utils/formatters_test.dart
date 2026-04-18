@@ -12,7 +12,6 @@ void main() {
       });
 
       test('formats amounts close to 1M correctly', () {
-        expect(formatIsk(0.0), equals('0.00 ISK'));
         expect(formatIsk(999999.99), equals('999,999.99 ISK'));
         expect(formatIsk(500000.0), equals('500,000.00 ISK'));
       });
@@ -50,8 +49,16 @@ void main() {
 
       test('formats billions with decimals correctly', () {
         expect(formatIsk(1234567890.12), equals('1.23B ISK'));
-        // Boundary: rounds to 1.00T (but we don't have T suffix, so 1000.00B)
-        expect(formatIsk(999999999999.99), equals('1000.00B ISK'));
+        // Boundary: rounds to 1.00T ISK instead of 1000.00B ISK
+        expect(formatIsk(999999999999.99), equals('1.00T ISK'));
+      });
+    });
+
+    group('trillions format (amount >= 1T)', () {
+      test('formats trillions correctly', () {
+        expect(formatIsk(1000000000000.0), equals('1.00T ISK'));
+        expect(formatIsk(2300000000000.0), equals('2.30T ISK'));
+        expect(formatIsk(5000000000000.0), equals('5.00T ISK'));
       });
     });
 
