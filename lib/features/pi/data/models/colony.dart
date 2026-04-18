@@ -1,72 +1,61 @@
-import 'package:mimir/core/network/esi_client.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-/// Represents a planetary colony (planet) with summary status.
-class Colony {
-  final int characterId;
-  final int planetId;
-  final String planetType;
-  final String solarSystemName;
-  final int solarSystemId;
-  final DateTime lastUpdated;
-  final int upgradeLevel;
-  final int numPins;
-  final List<Pin> pins;
+part 'colony.freezed.dart';
+part 'colony.g.dart';
 
-  const Colony({
-    required this.characterId,
-    required this.planetId,
-    required this.planetType,
-    required this.solarSystemName,
-    required this.solarSystemId,
-    required this.lastUpdated,
-    required this.upgradeLevel,
-    required this.numPins,
-    this.pins = const [],
-  });
+enum ColonyStatus { unknown, running, notRunning, expiring }
 
-  /// The colony's aggregate status based on its pins.
+@freezed
+abstract class Colony with _$Colony {
+  const Colony._();
+
+  const factory Colony({
+    required int characterId,
+    required int planetId,
+    required String planetType,
+    required String solarSystemName,
+    required int solarSystemId,
+    required DateTime lastUpdated,
+    required int upgradeLevel,
+    required int numPins,
+    @Default([]) List<Pin> pins,
+  }) = _Colony;
+
+  factory Colony.fromJson(Map<String, dynamic> json) => _$ColonyFromJson(json);
+
   ColonyStatus get status {
-    if (pins.isEmpty) return ColonyStatus.unknown;
+    final extractors = pins.whereType<Extractor>();
+    if (extractors.isEmpty) return ColonyStatus.unknown;
 
-    // If any extractor is idle or expired
-    bool hasInactiveExtractor =
-        pins.any((p) => p is Extractor && (p.isIdle || p.isExpired));
+    bool anyExpiring = false;
+    bool anyRunning = false;
+    bool anyIdle = false;
 
-    if (hasInactiveExtractor) return ColonyStatus.notRunning;
+    final now = DateTime.now();
 
-    // If any extractor is running but about to expire (less than 1 hour)
-    bool hasExpiringSoon = pins.any((p) =>
-        p is Extractor && p.expiresIn != null && p.expiresIn!.inHours < 1);
+    for (final e in extractors) {
+      if (e.lastCycleStart == null) {
+        anyIdle = true;
+        continue;
+      }
 
-    if (hasExpiringSoon) return ColonyStatus.expiring;
-
-    return ColonyStatus.running;
-  }
-
-  /// The earliest expiry time of any extractor in the colony.
-  DateTime? get earliestExpiry {
-    final extractors = pins.whereType<Extractor>().toList();
-    if (extractors.isEmpty) return null;
-
-    DateTime? min;
-    for (var e in extractors) {
-      if (e.expiryTime == null) continue;
-      if (min == null || e.expiryTime!.isBefore(min)) {
-        min = e.expiryTime;
+      if (e.expiryTime != null) {
+        if (e.expiryTime!.isBefore(now)) {
+          anyIdle = true;
+        } else if (e.expiryTime!.difference(now).inHours < 1) {
+          anyExpiring = true;
+        } else {
+          anyRunning = true;
+        }
+      } else {
+        anyIdle = true;
       }
     }
-    return min;
-  }
 
-  /// Estimated total output per hour (simplified).
-  double get estimatedOutputPerHour {
-    double total = 0;
-    for (var p in pins) {
-      if (p is Extractor) {
-        total += p.outputPerHour;
-      }
-    }
-    return total;
+    if (anyExpiring) return ColonyStatus.expiring;
+    if (anyRunning) return ColonyStatus.running;
+    if (anyIdle) return ColonyStatus.notRunning;
+    return ColonyStatus.unknown;
   }
 
   @override
@@ -77,101 +66,40 @@ class Colony {
   }
 }
 
-/// Status of a PI colony.
-enum ColonyStatus {
-  running, // All extractors active
-  expiring, // Expiring soon (< 1 hour)
-  notRunning, // One or more extractors stopped/expired
-  unknown, // No data
-}
+@freezed
+abstract class Pin with _$Pin {
+  const factory Pin.extractor({
+    required int pinId,
+    required int typeId,
+    String? typeName,
+    required double latitude,
+    required double longitude,
+    required int productTypeId,
+    DateTime? lastCycleStart,
+    Duration? lastCycleDuration,
+    DateTime? expiryTime,
+    int? qtyPerCycle,
+  }) = Extractor;
 
-/// Base class for structures on a planet.
-abstract class Pin {
-  final int pinId;
-  final int typeId;
-  final String typeName;
-  final double latitude;
-  final double longitude;
+  const factory Pin.factory({
+    required int pinId,
+    required int typeId,
+    String? typeName,
+    required double latitude,
+    required double longitude,
+    required int schematicId,
+    String? schematicName,
+  }) = Factory;
 
-  const Pin({
-    required this.pinId,
-    required this.typeId,
-    required this.typeName,
-    required this.latitude,
-    required this.longitude,
-  });
-}
+  const factory Pin.storage({
+    required int pinId,
+    required int typeId,
+    String? typeName,
+    required double latitude,
+    required double longitude,
+    required int capacity,
+    required double fillPercentage,
+  }) = Storage;
 
-/// Extractor structure (Command Center, Extractor Control Unit).
-class Extractor extends Pin {
-  final int? productTypeId;
-  final String? productTypeName;
-  final DateTime? lastCycleStart;
-  final Duration? lastCycleDuration;
-  final DateTime? expiryTime;
-  final int? qtyPerCycle;
-
-  const Extractor({
-    required super.pinId,
-    required super.typeId,
-    required super.typeName,
-    required super.latitude,
-    required super.longitude,
-    this.productTypeId,
-    this.productTypeName,
-    this.lastCycleStart,
-    this.lastCycleDuration,
-    this.expiryTime,
-    this.qtyPerCycle,
-  });
-
-  bool get isIdle => lastCycleStart == null;
-  bool get isExpired =>
-      expiryTime != null && expiryTime!.isBefore(DateTime.now());
-
-  Duration? get expiresIn {
-    if (expiryTime == null) return null;
-    final diff = expiryTime!.difference(DateTime.now());
-    return diff.isNegative ? Duration.zero : diff;
-  }
-
-  double get outputPerHour {
-    if (qtyPerCycle == null || lastCycleDuration == null) return 0;
-    if (isExpired || isIdle) return 0;
-
-    final cyclesPerHour = 3600 / lastCycleDuration!.inSeconds;
-    return qtyPerCycle! * cyclesPerHour;
-  }
-}
-
-/// Factory structure.
-class Factory extends Pin {
-  final int schematicId;
-  final String schematicName;
-
-  const Factory({
-    required super.pinId,
-    required super.typeId,
-    required super.typeName,
-    required super.latitude,
-    required super.longitude,
-    required this.schematicId,
-    required this.schematicName,
-  });
-}
-
-/// Storage structure (Storage Facility, Launchpad).
-class Storage extends Pin {
-  final int capacity;
-  final double fillPercentage;
-
-  const Storage({
-    required super.pinId,
-    required super.typeId,
-    required super.typeName,
-    required super.latitude,
-    required super.longitude,
-    required this.capacity,
-    required this.fillPercentage,
-  });
+  factory Pin.fromJson(Map<String, dynamic> json) => _$PinFromJson(json);
 }

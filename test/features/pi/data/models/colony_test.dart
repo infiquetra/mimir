@@ -35,6 +35,7 @@ void main() {
         typeName: 'Extractor Control Unit',
         latitude: 10.5,
         longitude: 20.3,
+        productTypeId: 1234,
         lastCycleStart: DateTime.now().subtract(const Duration(hours: 2)),
         lastCycleDuration: const Duration(hours: 4),
         expiryTime: DateTime.now().add(const Duration(hours: 2)),
@@ -65,6 +66,7 @@ void main() {
         typeName: 'Extractor Control Unit',
         latitude: 10.5,
         longitude: 20.3,
+        productTypeId: 1234,
         // No lastCycleStart means idle
         lastCycleStart: null,
         lastCycleDuration: null,
@@ -96,6 +98,7 @@ void main() {
         typeName: 'Extractor Control Unit',
         latitude: 10.5,
         longitude: 20.3,
+        productTypeId: 1234,
         lastCycleStart: DateTime.now().subtract(const Duration(hours: 3)),
         lastCycleDuration: const Duration(hours: 4),
         expiryTime: DateTime.now().add(const Duration(minutes: 30)),
