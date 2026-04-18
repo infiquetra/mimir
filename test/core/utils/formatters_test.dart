@@ -5,7 +5,6 @@ void main() {
   group('formatIsk', () {
     group('standard format (amounts < 1M)', () {
       test('formats small amounts correctly', () {
-        expect(formatIsk(0.0), equals('0.00 ISK'));
         expect(formatIsk(100.0), equals('100.00 ISK'));
         expect(formatIsk(1234.56), equals('1,234.56 ISK'));
         expect(formatIsk(12345.67), equals('12,345.67 ISK'));
@@ -13,11 +12,12 @@ void main() {
       });
 
       test('formats amounts close to 1M correctly', () {
+        expect(formatIsk(0.0), equals('0.00 ISK'));
         expect(formatIsk(999999.99), equals('999,999.99 ISK'));
         expect(formatIsk(500000.0), equals('500,000.00 ISK'));
       });
 
-      test('handles decimal precision correctly', () {
+      test('formats amounts with decimal precision correctly', () {
         expect(formatIsk(1000.1), equals('1,000.10 ISK'));
         expect(formatIsk(1000.123), equals('1,000.12 ISK'));
         expect(formatIsk(1000.999), equals('1,001.00 ISK'));
@@ -35,7 +35,8 @@ void main() {
 
       test('formats millions with decimals correctly', () {
         expect(formatIsk(1234567.89), equals('1.23M ISK'));
-        expect(formatIsk(999999999.99), equals('1000.00M ISK'));
+        // Boundary: rounds to 1.00B ISK instead of 1000.00M ISK
+        expect(formatIsk(999999999.99), equals('1.00B ISK'));
       });
     });
 
@@ -49,6 +50,7 @@ void main() {
 
       test('formats billions with decimals correctly', () {
         expect(formatIsk(1234567890.12), equals('1.23B ISK'));
+        // Boundary: rounds to 1.00T (but we don't have T suffix, so 1000.00B)
         expect(formatIsk(999999999999.99), equals('1000.00B ISK'));
       });
     });
@@ -64,8 +66,17 @@ void main() {
         expect(formatIsk(-2300000000.0), equals('-2.30B ISK'));
       });
 
-      test('handles very large amounts', () {
-        expect(formatIsk(1000000000000.0), equals('1000.00B ISK'));
+      test('handles non-finite values', () {
+        expect(formatIsk(double.nan), equals('Invalid ISK'));
+        expect(formatIsk(double.infinity), equals('Invalid ISK'));
+        expect(formatIsk(double.negativeInfinity), equals('Invalid ISK'));
+      });
+
+      test('handles boundary rounding correctly', () {
+        // 999999.995 rounds to 1000000.00 → 1.00M ISK
+        expect(formatIsk(999999.995), equals('1.00M ISK'));
+        // 999999999.995 rounds to 1000000000.00 → 1.00B ISK
+        expect(formatIsk(999999999.995), equals('1.00B ISK'));
       });
     });
   });
