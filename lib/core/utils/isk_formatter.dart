@@ -1,5 +1,11 @@
 import 'package:intl/intl.dart';
 
+/// File-level formatter instance to avoid per-call allocation overhead.
+/// Locale is intentionally fixed to 'en_US' for consistent EVE-style numeric display
+/// across all regions (commas for thousands, period for decimal).
+/// The ' ISK' suffix is appended manually to maintain explicit control over formatting.
+final _iskFormatter = NumberFormat('#,##0.00', 'en_US');
+
 /// Formats ISK (in-game currency) values for display.
 ///
 /// Accepts a [num] value representing ISK amount and returns a formatted
@@ -7,7 +13,7 @@ import 'package:intl/intl.dart';
 ///
 /// Handles edge cases:
 /// - Non-finite values (NaN, Infinity) return "Invalid ISK amount"
-/// - Negative zero is normalized to positive zero
+/// - Negative zero and values rounding to zero are normalized to positive "0.00 ISK"
 /// - Rounding is handled by NumberFormat for consistency
 ///
 /// Examples:
@@ -23,15 +29,13 @@ String formatIsk(num amount) {
     return 'Invalid ISK amount';
   }
 
-  // Use NumberFormat for consistent currency-style formatting
-  // This handles rounding, thousands separators, and decimal places
-  final formatter = NumberFormat('#,##0.00', 'en_US');
-  var formatted = formatter.format(amount);
-
-  // Handle negative zero case: NumberFormat preserves -0.00, but we want 0.00
-  if (formatted == '-0.00') {
-    formatted = '0.00';
+  // Normalize negative zero and near-zero values before formatting.
+  // Values with magnitude < 0.005 round to zero and should display as positive.
+  // This is more robust than checking the formatted string output.
+  if (amount.abs() < 0.005) {
+    amount = 0;
   }
 
+  final formatted = _iskFormatter.format(amount);
   return '$formatted ISK';
 }
