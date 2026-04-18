@@ -44,16 +44,33 @@ String formatIskCompact(double amount) {
 /// - Duration(days: 2, hours: 4, minutes: 32) → "2d 4h 32m"
 /// - Duration(hours: 4, minutes: 15) → "4h 15m"
 /// - Duration(minutes: 32) → "32m"
+/// - Duration(seconds: 30) → "< 1m"
 /// - Duration.zero → "0m"
+/// - Negative duration → "0m"
 String formatDuration(Duration duration) {
+  // Handle negative durations
+  if (duration.isNegative) {
+    return '0m';
+  }
+
+  // Handle zero duration
+  if (duration == Duration.zero) {
+    return '0m';
+  }
+
   final days = duration.inDays;
   final hours = duration.inHours % 24;
   final minutes = duration.inMinutes % 60;
 
+  // Handle sub-minute durations
+  if (days == 0 && hours == 0 && minutes == 0) {
+    return '< 1m';
+  }
+
   final parts = <String>[];
   if (days > 0) parts.add('${days}d');
   if (hours > 0) parts.add('${hours}h');
-  if (minutes > 0 || parts.isEmpty) parts.add('${minutes}m');
+  if (minutes > 0) parts.add('${minutes}m');
 
   return parts.join(' ');
 }
