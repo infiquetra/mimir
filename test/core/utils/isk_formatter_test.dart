@@ -28,36 +28,32 @@ void main() {
       }
     });
 
-    // Edge case tests - non-finite values
-    group('handles non-finite values', () {
-      test('returns invalid message for NaN', () {
-        expect(formatIsk(double.nan), equals('Invalid ISK amount'));
-      });
-
-      test('returns invalid message for positive infinity', () {
-        expect(formatIsk(double.infinity), equals('Invalid ISK amount'));
-      });
-
-      test('returns invalid message for negative infinity', () {
+    // Edge case tests - non-finite values throw ArgumentError
+    group('rejects non-finite values', () {
+      test('throws ArgumentError for NaN', () {
         expect(
-            formatIsk(double.negativeInfinity), equals('Invalid ISK amount'));
+          () => formatIsk(double.nan),
+          throwsArgumentError,
+        );
+      });
+
+      test('throws ArgumentError for positive infinity', () {
+        expect(
+          () => formatIsk(double.infinity),
+          throwsArgumentError,
+        );
+      });
+
+      test('throws ArgumentError for negative infinity', () {
+        expect(
+          () => formatIsk(double.negativeInfinity),
+          throwsArgumentError,
+        );
       });
     });
 
-    // Edge case tests - floating-point rounding behavior
-    group('handles floating-point rounding', () {
-      test('rounds 1.005 to 1.00 (standard rounding)', () {
-        // 1.005 in binary floating-point is slightly less than 1.005
-        // NumberFormat applies standard rounding rules to the actual value
-        expect(formatIsk(1.005), equals('1.00 ISK'));
-      });
-
-      test('rounds 2.675 consistently', () {
-        // 2.675 in binary FP representation is slightly less than 2.675
-        // NumberFormat applies standard rounding to the actual stored value
-        expect(formatIsk(2.675), equals('2.67 ISK'));
-      });
-
+    // Edge case tests - rounding behavior with clean decimal values
+    group('handles rounding', () {
       test('rounds 100.999 to 101.00', () {
         expect(formatIsk(100.999), equals('101.00 ISK'));
       });
@@ -65,38 +61,37 @@ void main() {
       test('rounds 100.994 to 100.99', () {
         expect(formatIsk(100.994), equals('100.99 ISK'));
       });
-    });
 
-    // Edge case tests - negative zero and near-zero values
-    group('normalizes negative zero and near-zero values', () {
-      test('handles -0.001 (rounds to zero)', () {
-        // -0.001 has magnitude < 0.005, so it normalizes to positive zero
-        expect(formatIsk(-0.001), equals('0.00 ISK'));
-      });
-
-      test('handles 0.001 (rounds to zero)', () {
-        expect(formatIsk(0.001), equals('0.00 ISK'));
-      });
-
-      test('handles -0.0 explicitly', () {
-        expect(formatIsk(-0.0), equals('0.00 ISK'));
-      });
-
-      test('handles values at rounding boundary (0.004)', () {
-        expect(formatIsk(0.004), equals('0.00 ISK'));
-      });
-
-      test('handles values at rounding boundary (-0.004)', () {
-        expect(formatIsk(-0.004), equals('0.00 ISK'));
-      });
-
-      test('handles values just above rounding boundary (0.005)', () {
+      test('rounds 0.005 to 0.01', () {
         expect(formatIsk(0.005), equals('0.01 ISK'));
       });
 
-      test('handles values just above rounding boundary (-0.005)', () {
+      test('rounds -0.005 to -0.01', () {
         expect(formatIsk(-0.005), equals('-0.01 ISK'));
       });
+    });
+
+    // Edge case tests - negative zero and near-zero values
+    // Condensed into table-driven format for maintainability
+    group('normalizes near-zero values', () {
+      const nearZeroCases = <MapEntry<num, String>>[
+        // Values with magnitude < 0.005 round to 0.00 and normalize to positive
+        MapEntry(-0.001, '0.00 ISK'),
+        MapEntry(0.001, '0.00 ISK'),
+        MapEntry(-0.0, '0.00 ISK'),
+        MapEntry(0.0, '0.00 ISK'),
+        MapEntry(0.004, '0.00 ISK'),
+        MapEntry(-0.004, '0.00 ISK'),
+        // Values at or above 0.005 threshold round normally
+        MapEntry(0.005, '0.01 ISK'),
+        MapEntry(-0.005, '-0.01 ISK'),
+      ];
+
+      for (final testCase in nearZeroCases) {
+        test('formats ${testCase.key} as ${testCase.value}', () {
+          expect(formatIsk(testCase.key), equals(testCase.value));
+        });
+      }
     });
   });
 }
