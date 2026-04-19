@@ -54,11 +54,13 @@ void main() {
       // Just below 1 KB boundary
       expect(formatBytes(1023), '1023 B');
       // Just below 1 MB boundary
-      expect(formatBytes(1048575), '1024 KB'); // 1024^2 - 1
+      expect(formatBytes(1048575), '1023.99 KB'); // 1048575 / 1024 ≈ 1023.999
       // Just below 1 GB boundary
-      expect(formatBytes(1073741823), '1024 MB'); // 1024^3 - 1
+      expect(formatBytes(1073741823),
+          '1023.99 MB'); // 1073741823 / 1024^2 ≈ 1023.999
       // Just below 1 TB boundary
-      expect(formatBytes(1099511627775), '1024 GB'); // 1024^4 - 1
+      expect(formatBytes(1099511627775),
+          '1023.99 GB'); // 1099511627775 / 1024^3 ≈ 1023.999
     });
 
     // Edge case: Negative values
