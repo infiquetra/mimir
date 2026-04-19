@@ -40,7 +40,9 @@ String formatBytes(int bytes) {
   }
 
   // Format with up to 2 decimal places
-  String formatted = value.toStringAsFixed(2);
+  // Floor to 2 decimal places to avoid premature rounding up
+  double floored = (value * 100).floor() / 100;
+  String formatted = floored.toStringAsFixed(2);
 
   // Trim trailing zeros and potential trailing dot
   if (formatted.contains('.')) {
