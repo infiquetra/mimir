@@ -1,29 +1,29 @@
 /// Formats a byte size into a human-readable string.
 ///
-/// Converts bytes into the appropriate unit (B, KB, MB, GB, TB) based on the magnitude.
+/// Converts bytes into the appropriate unit (B, KiB, MiB, GiB, TiB) based on the magnitude.
 /// Uses binary (1024) for unit conversions. Handles negative values and zero.
 ///
 /// Rules:
 /// - Bytes (B): whole numbers only, no decimal places
-/// - KB and above: up to 2 decimal places, trailing zeros trimmed
+/// - KiB and above: up to 2 decimal places, trailing zeros trimmed
 /// - After rounding to 2 decimal places, if the value is 1024 or higher and a larger
-///   unit exists, it is promoted to the next unit (e.g., 1023.999 KB → 1 MB, not "1024 KB")
-/// - Values beyond TB stay in TB (e.g., 1024^5 bytes = 1024 TB)
+///   unit exists, it is promoted to the next unit (e.g., 1023.999 KiB → 1 MiB, not "1024 KiB")
+/// - Values beyond TiB stay in TiB (e.g., 1024^5 bytes = 1024 TiB)
 /// - Negative values preserve their sign
 ///
 /// Examples:
 /// ```dart
 /// formatBytes(0)           // '0 B'
 /// formatBytes(512)         // '512 B'
-/// formatBytes(1024)        // '1 KB'
-/// formatBytes(1536)        // '1.5 KB'
-/// formatBytes(-1536)       // '-1.5 KB'
-/// formatBytes(1048576)     // '1 MB'
-/// formatBytes(1073741824)  // '1 GB'
-/// formatBytes(1048575)     // '1 MB' (rounds to 1024 KB, promoted to MB)
+/// formatBytes(1024)        // '1 KiB'
+/// formatBytes(1536)        // '1.5 KiB'
+/// formatBytes(-1536)       // '-1.5 KiB'
+/// formatBytes(1048576)     // '1 MiB'
+/// formatBytes(1073741824)  // '1 GiB'
+/// formatBytes(1048575)     // '1 MiB' (rounds to 1024 KiB, promoted to MiB)
 /// ```
 String formatBytes(int bytes) {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
   const int base = 1024;
 
   // Handle zero case
@@ -83,10 +83,14 @@ String _formatScaled(int value100) {
     return '$intPart';
   }
 
+  // Format decPart as 2-digit string to preserve leading zeros (e.g., "01", "05")
+  // Then trim trailing zeros
+  String decStr = decPart.toString().padLeft(2, '0');
+  
   // Trim trailing zeros
-  while (decPart % 10 == 0) {
-    decPart ~/= 10;
+  while (decStr.endsWith('0')) {
+    decStr = decStr.substring(0, decStr.length - 1);
   }
 
-  return '$intPart.$decPart';
+  return '$intPart.$decStr';
 }

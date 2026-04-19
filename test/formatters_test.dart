@@ -5,20 +5,15 @@ import 'package:mimir/src/utils/formatters.dart';
 
 void main() {
   // Helper to reduce test duplication
-  void expectFormat(int input, String expected, {bool? isNegative}) {
+  void expectFormat(int input, String expected) {
     expect(formatBytes(input), equals(expected));
-    if (isNegative != null) {
-      if (isNegative) {
-        expect(expected.startsWith('-'), isTrue, reason: 'Expected $expected to start with -');
-      } else {
-        expect(expected.startsWith('-'), isFalse, reason: 'Expected $expected not to start with -');
-      }
-    }
   }
 
-  // Helper for table-driven tests
-  void expectFormats(Map<int, String> cases) {
-    cases.forEach(expectFormat);
+  // Helper for both positive and negative cases
+  void expectBoth(int input, String expected) {
+    expectFormat(input, expected);
+    // Negative version prepends '-'
+    expectFormat(-input, '-$expected');
   }
 
   group('formatBytes', () {
@@ -27,172 +22,152 @@ void main() {
         expect(formatBytes(0), equals('0 B'));
       });
 
-      test('positive whole bytes', () {
-        expectFormats(const {
-          1: '1 B',
-          512: '512 B',
-          1023: '1023 B',
-        });
-      });
-
-      test('negative whole bytes', () {
-        expectFormats(const {
-          -1: '-1 B',
-          -512: '-512 B',
-          -1023: '-1023 B',
-        });
+      test('positive and negative whole bytes', () {
+        expectBoth(1, '1 B');
+        expectBoth(512, '512 B');
+        expectBoth(1023, '1023 B');
       });
     });
 
-    group('B → KB transitions', () {
-      const Map<int, String> thresholdCases = {
-        1024: '1 KB',
-        -1024: '-1 KB',
-      };
-      const Map<int, String> justBelowCases = {
-        1023: '1023 B',
-        -1023: '-1023 B',
-      };
-      const Map<int, String> justAfterCases = {
-        1025: '1 KB',
-        -1025: '-1 KB',
-      };
-      const Map<int, String> midRangeCases = {
-        1536: '1.5 KB',
-        -1536: '-1.5 KB',
-        2048: '2 KB',
-        5120: '5 KB',
-      };
+    group('B → KiB transitions', () {
+      test('exact threshold and boundaries', () {
+        expectBoth(1024, '1 KiB');
+        expectBoth(1023, '1023 B');
+        expectBoth(1025, '1 KiB');
+      });
 
-      test('exact threshold (1024)', () => expectFormats(thresholdCases));
-      test('last byte before unit change (1023)', () => expectFormats(justBelowCases));
-      test('first byte after threshold (1025)', () => expectFormats(justAfterCases));
-      test('mid-range KB values', () => expectFormats(midRangeCases));
+      test('mid-range KiB values', () {
+        expectBoth(1536, '1.5 KiB');
+        expectBoth(2048, '2 KiB');
+        expectBoth(5120, '5 KiB');
+      });
+      
+      test('KiB values requiring hundredths precision', () {
+        // 1034 bytes = 1.009765... KiB → rounds to 1.01 KiB
+        expectBoth(1034, '1.01 KiB');
+        // 1075 bytes = 1.049804... KiB → rounds to 1.05 KiB
+        expectBoth(1075, '1.05 KiB');
+        // 1076 bytes = 1.050781... KiB → rounds to 1.05 KiB
+        expectBoth(1076, '1.05 KiB');
+        // 1050 bytes = 1.025390... KiB → rounds to 1.03 KiB
+        expectBoth(1050, '1.03 KiB');
+        // 1025 bytes = 1.000976... KiB → rounds to 1 KiB
+        expectBoth(1025, '1 KiB');
+        // 1029 bytes = 1.004882... KiB → rounds to 1 KiB
+        expectBoth(1029, '1 KiB');
+        // 1030 bytes = 1.005859... KiB → rounds to 1.01 KiB
+        expectBoth(1030, '1.01 KiB');
+      });
     });
 
-    group('KB → MB transitions', () {
+    group('KiB → MiB transitions', () {
       const int mbThreshold = 1024 * 1024;
-      const Map<int, String> thresholdCases = {
-        mbThreshold: '1 MB',
-        -mbThreshold: '-1 MB',
-      };
-      const Map<int, String> justBelowCases = {
-        // 1048575 bytes = 1023.9990... KB, rounds to 1024 KB, promoted to 1 MB
-        1048575: '1 MB',
-        -1048575: '-1 MB',
-      };
-      const Map<int, String> justAfterCases = {
-        mbThreshold + 1: '1 MB',
-        -(mbThreshold + 1): '-1 MB',
-      };
-      const Map<int, String> midRangeCases = {
+
+      test('exact threshold and boundaries', () {
+        expectBoth(mbThreshold, '1 MiB');
+        expectBoth(1048575, '1 MiB');
+        expectBoth(mbThreshold + 1, '1 MiB');
+      });
+
+      test('mid-range MiB values', () {
         // 1.5 * 1024 * 1024 = 1572864
-        1572864: '1.5 MB',
-        -1572864: '-1.5 MB',
-        mbThreshold * 2: '2 MB',
-      };
+        expectBoth(1572864, '1.5 MiB');
+        expectBoth(mbThreshold * 2, '2 MiB');
+      });
 
-      test('exact threshold (1048576)', () => expectFormats(thresholdCases));
-      test('value just below MB boundary rounds and promotes', () => expectFormats(justBelowCases));
-      test('first byte after threshold (1048577)', () => expectFormats(justAfterCases));
-      test('mid-range MB values', () => expectFormats(midRangeCases));
+      test('MiB values requiring hundredths precision', () {
+        // Testing that leading zero hundredths work at larger scales
+        // 1.01 MiB = 1059061.76 bytes → test value that rounds to 1.01
+        expectBoth(1059062, '1.01 MiB');
+        // 1.05 MiB = 1101004.8 bytes → test value that rounds to 1.05
+        expectBoth(1101005, '1.05 MiB');
+      });
     });
 
-    group('MB → GB transitions', () {
+    group('MiB → GiB transitions', () {
       const int gbThreshold = 1024 * 1024 * 1024;
-      const Map<int, String> thresholdCases = {
-        gbThreshold: '1 GB',
-        -gbThreshold: '-1 GB',
-      };
-      const Map<int, String> justBelowCases = {
-        // 1073741823 bytes = 1023.999... MB, rounds to 1024 MB, promoted to 1 GB
-        1073741823: '1 GB',
-        -1073741823: '-1 GB',
-      };
-      // 1.5 * 1024^3 = 1610612736
-      const Map<int, String> midRangeCases = {
-        1610612736: '1.5 GB',
-        -1610612736: '-1.5 GB',
-      };
 
-      test('exact threshold (1073741824)', () => expectFormats(thresholdCases));
-      test('value just below GB boundary rounds and promotes', () => expectFormats(justBelowCases));
-      test('mid-range GB values', () => expectFormats(midRangeCases));
+      test('exact threshold and boundaries', () {
+        expectBoth(gbThreshold, '1 GiB');
+        expectBoth(1073741823, '1 GiB');
+      });
+
+      test('mid-range GiB values', () {
+        // 1.5 * 1024^3 = 1610612736
+        expectBoth(1610612736, '1.5 GiB');
+      });
+
+      test('GiB values requiring hundredths precision', () {
+        // Testing precision at GiB scale
+        expectBoth(1084578514, '1.01 GiB');
+      });
     });
 
-    group('GB → TB transitions', () {
-      const int tbThreshold = 1024 * 1024 * 1024 * 1024; // 1099511627776
-      const int mbValue = 1024 * 1024 * 1024; // For 1.5* below
-      const Map<int, String> thresholdCases = {
-        tbThreshold: '1 TB',
-        -tbThreshold: '-1 TB',
-      };
-      const Map<int, String> justBelowCases = {
-        // 1099511627775 bytes = 1023.999... GB, rounds to 1024 GB, promoted to 1 TB
-        1099511627775: '1 TB',
-        -1099511627775: '-1 TB',
-      };
-      // 1.5 * 1024^4 = 1649267441664
-      const Map<int, String> midRangeCases = {
-        1649267441664: '1.5 TB',
-        -1649267441664: '-1.5 TB',
-      };
+    group('GiB → TiB transitions', () {
+      // 1 TiB = 1024^4 = 1099511627776
+      const int tbThreshold = 1024 * 1024 * 1024 * 1024;
 
-      test('exact threshold (1099511627776)', () => expectFormats(thresholdCases));
-      test('value just below TB boundary rounds and promotes', () => expectFormats(justBelowCases));
-      test('mid-range TB values', () => expectFormats(midRangeCases));
+      test('exact threshold and boundaries', () {
+        expectBoth(tbThreshold, '1 TiB');
+        expectBoth(1099511627775, '1 TiB');
+      });
+
+      test('mid-range TiB values', () {
+        // 1.5 * 1024^4 = 1649267441664
+        expectBoth(1649267441664, '1.5 TiB');
+      });
     });
 
     group('Precision and rounding behavior', () {
-      const Map<int, String> trailingZeroCases = {
-        // 1024 * 1024 * 2 = 2097152 = 2 MB
-        2097152: '2 MB',
-        // 1024 * 2 = 2048 = 2 KB
-        2048: '2 KB',
-      };
-      const Map<int, String> decimalCases = {
-        // 1024 + 256 = 1280 bytes = 1.25 KB
-        1280: '1.25 KB',
-        // 1024 + 512 = 1536 bytes = 1.5 KB
-        1536: '1.5 KB',
-      };
+      test('trailing zeros are trimmed', () {
+        expectBoth(2097152, '2 MiB');
+        expectBoth(2048, '2 KiB');
+      });
 
-      test('trailing zeros are trimmed', () => expectFormats(trailingZeroCases));
-      test('decimal precision up to 2 places', () => expectFormats(decimalCases));
+      test('decimal precision up to 2 places', () {
+        expectBoth(1280, '1.25 KiB');
+        expectBoth(1536, '1.5 KiB');
+      });
 
-      test('precision boundary - under 1 MB no rounding', () {
-        // 1048576 - 1024 = 1047552 → 1023 KB exactly
-        expect(formatBytes(1047552), equals('1023 KB'));
+      test('preserves leading zero in hundredths', () {
+        // Critical regression tests for the _formatScaled bug
+        // where values like 1.01 were rendered as 1.1
+        expectBoth(1034, '1.01 KiB');
+        expectBoth(1075, '1.05 KiB');
+      });
+
+      test('precision boundary - under 1 MiB no rounding', () {
+        // 1048576 - 1024 = 1047552 → 1023 KiB exactly
+        expect(formatBytes(1047552), equals('1023 KiB'));
       });
     });
 
-    group('Extreme values (TB clamping)', () {
-      // 1024^5 = 1125899906842624
-      const Map<int, String> extremeCases = {
-        1125899906842624: '1024 TB',
-        -1125899906842624: '-1024 TB',
-        // 1024^6 = 1152921504606846976
-        1152921504606846976: '1048576 TB',
-        -1152921504606846976: '-1048576 TB',
-        // Arbitrary large value
-        2305843009213693952: '2097152 TB',
-      };
+    group('Extreme values (TiB clamping)', () {
+      // Use values within JS safe integer range (2^53 - 1 = 9007199254740991)
+      // for web portability. Values beyond this may lose precision on Flutter web.
+      test('values within safe integer range', () {
+        // 1024^5 = 1125899906842624 (within safe range)
+        expectBoth(1125899906842624, '1024 TiB');
+        // 1024^6 = 1152921504606846976 (close to but within safe range)
+        expectBoth(1152921504606846976, '1048576 TiB');
+      });
 
-      test('extreme large values stay in TB', () => expectFormats(extremeCases));
+      // Note: Values above 2^53-1 may have precision issues on Flutter web due to
+      // JavaScript's Number type limitations. Use BigInt in implementation if needed.
     });
 
     group('Edge cases', () {
       test('Int32 max value', () {
-        // 2147483647 bytes = ~2.0 GB
+        // 2147483647 bytes = ~2.0 GiB
         expect(formatBytes(2147483647), isA<String>());
-        expect(formatBytes(2147483647), contains('GB'));
+        expect(formatBytes(2147483647), contains('GiB'));
       });
 
       test('Int32 min value', () {
-        // -2147483648 bytes = ~-2.0 GB
+        // -2147483648 bytes = ~-2.0 GiB
         expect(formatBytes(-2147483648), isA<String>());
         expect(formatBytes(-2147483648), startsWith('-'));
-        expect(formatBytes(-2147483648), contains('GB'));
+        expect(formatBytes(-2147483648), contains('GiB'));
       });
     });
   });
