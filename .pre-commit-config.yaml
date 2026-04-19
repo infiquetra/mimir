@@ -7,28 +7,17 @@ repos:
         language: system
         types: [dart]
         pass_filenames: false
-      
+
       - id: dart-format
         name: dart format
         entry: dart format
         language: system
         types: [dart]
         pass_filenames: false
-      
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
       - id: trailing-whitespace
-        name: Trim Trailing Whitespace
-        entry: trailing-whitespace-fixer
-        language: python
-        types: [text]
-      
       - id: end-of-file-fixer
-        name: Fix End of Files
-        entry: end-of-file-fixer
-        language: python
-        types: [text]
-      
       - id: check-yaml
-        name: Check Yaml
-        entry: check-yaml
-        language: python
-        types: [yaml]

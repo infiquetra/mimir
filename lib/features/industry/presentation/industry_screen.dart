@@ -1,6 +1,6 @@
 // lib/features/industry/presentation/industry_screen.dart
 import 'package:flutter/material.dart';
-import 'package:mimir/core/window/window_types.dart';
+import 'package:mimir/features/industry/presentation/bom_calculator_screen.dart';
 
 /// Main screen for the Industry window
 class IndustryScreen extends StatefulWidget {

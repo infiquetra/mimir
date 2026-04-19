@@ -42,13 +42,13 @@ void main() {
 
     // Boundary tests for rounding edge cases
     test('should handle boundary rounding correctly', () {
-      // Value just below 1 KiB that rounds up to 1024.00 should promote to 1.00 KiB
-      expect(formatBytes(1048575), '1.00 MiB'); 
-      
       // Value just below 1 MiB that rounds up to 1024.00 should promote to 1.00 MiB
-      expect(formatBytes(1073740799), '1.00 GiB');
-      
+      expect(formatBytes(1048575), '1.00 MiB');
+
       // Value just below 1 GiB that rounds up to 1024.00 should promote to 1.00 GiB
+      expect(formatBytes(1073740799), '1.00 GiB');
+
+      // Value just below 1 TiB that rounds up to 1024.00 should promote to 1.00 TiB
       expect(formatBytes(1099510590463), '1.00 TiB');
     });
 
