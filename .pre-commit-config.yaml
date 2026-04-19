@@ -1,6 +1,10 @@
 repos:
   - repo: local
     hooks:
+      # This project uses a mixed toolchain intentionally:
+      # - dart format is used for consistent code formatting
+      # - flutter test is used for running tests in this Flutter package
+      # - dart analyze is used for static analysis (faster than flutter analyze)
       - id: dart-analyze
         name: dart analyze
         entry: dart analyze

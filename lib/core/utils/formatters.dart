@@ -4,8 +4,8 @@ library formatters;
 /// Formats a [Duration] into a compact human-readable string.
 ///
 /// The formatter:
-/// * Uses the two largest non-zero units (e.g., days + hours, or hours + minutes)
-/// * Omits trailing zero units
+/// * Uses the first two non-zero units from largest to smallest
+/// * May skip zero-valued intermediate units
 /// * Shows "<1s" for sub-second durations
 /// * Prepends "-" for negative durations
 ///
@@ -16,7 +16,10 @@ library formatters;
 /// * `formatDuration(Duration(seconds: 12))` → `"12s"`
 /// * `formatDuration(Duration.zero)` → `"0s"`
 /// * `formatDuration(Duration(milliseconds: 500))` → `"<1s"`
+/// * `formatDuration(Duration(milliseconds: -500))` → `"-<1s"`
 /// * `formatDuration(Duration(minutes: -5))` → `"-5m"`
+/// * `formatDuration(Duration(hours: 1, seconds: 15))` → `"1h 15s"`
+/// * `formatDuration(Duration(days: 3, minutes: 30))` → `"3d 30m"`
 String formatDuration(Duration duration) {
   if (duration == Duration.zero) {
     return '0s';
@@ -27,7 +30,7 @@ String formatDuration(Duration duration) {
 
   // Handle sub-second durations
   if (absDuration < const Duration(seconds: 1)) {
-    return isNegative ? '<1s' : '<1s';
+    return isNegative ? '-<1s' : '<1s';
   }
 
   // Extract components
@@ -43,27 +46,15 @@ String formatDuration(Duration duration) {
   }
 
   // Determine the two largest non-zero units to display
-  if (days > 0) {
-    buffer.write('${days}d');
-    if (hours > 0) {
-      buffer.write(' ${hours}h');
-    } else if (minutes > 0) {
-      buffer.write(' ${minutes}m');
-    } else if (seconds > 0) {
-      buffer.write(' ${seconds}s');
-    }
-  } else if (hours > 0) {
-    buffer.write('${hours}h');
-    if (minutes > 0) {
-      buffer.write(' ${minutes}m');
-    } else if (seconds > 0) {
-      buffer.write(' ${seconds}s');
-    }
-  } else if (minutes > 0) {
-    buffer.write('${minutes}m');
-    if (seconds > 0) {
-      buffer.write(' ${seconds}s');
-    }
+  final units = [
+    if (days > 0) '${days}d',
+    if (hours > 0) '${hours}h',
+    if (minutes > 0) '${minutes}m',
+    if (seconds > 0) '${seconds}s',
+  ];
+
+  if (units.isNotEmpty) {
+    buffer.write(units.take(2).join(' '));
   } else {
     // Only seconds left
     buffer.write('${seconds}s');

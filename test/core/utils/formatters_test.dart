@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mimir/core/utils/formatters.dart';
+import 'package:mimir/core/utils.dart';
 
 void main() {
   group('formatDuration', () {
@@ -56,6 +56,17 @@ void main() {
           formatDuration(Duration(days: 1, hours: 0, minutes: 15)), '1d 15m');
     });
 
+    test('formats with truncation of units (only two largest)', () {
+      expect(
+          formatDuration(Duration(days: 1, hours: 2, minutes: 3, seconds: 4)),
+          '1d 2h');
+      expect(
+          formatDuration(Duration(hours: 1, minutes: 2, seconds: 3)), '1h 2m');
+      expect(
+          formatDuration(Duration(minutes: 1, seconds: 2, milliseconds: 900)),
+          '1m 2s');
+    });
+
     test('formats sub-second durations', () {
       expect(formatDuration(Duration(milliseconds: 500)), '<1s');
       expect(formatDuration(Duration(milliseconds: 100)), '<1s');
@@ -66,7 +77,7 @@ void main() {
       expect(formatDuration(Duration(seconds: -5)), '-5s');
       expect(formatDuration(Duration(minutes: -2, seconds: -30)), '-2m 30s');
       expect(formatDuration(Duration(hours: -1, minutes: -15)), '-1h 15m');
-      expect(formatDuration(Duration(milliseconds: -500)), '<1s');
+      expect(formatDuration(Duration(milliseconds: -500)), '-<1s');
     });
 
     test('handles exact unit boundaries', () {
