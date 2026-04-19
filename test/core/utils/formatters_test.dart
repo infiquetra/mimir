@@ -108,5 +108,16 @@ void main() {
       expect(formatDuration(Duration(milliseconds: 999)), '<1s');
       expect(formatDuration(Duration(milliseconds: 1000)), '1s');
     });
+
+    test('handles fractional seconds (flooring behavior)', () {
+      // These tests verify that fractional seconds are floored (truncated)
+      expect(formatDuration(Duration(milliseconds: 1001)), '1s');
+      expect(formatDuration(Duration(milliseconds: 1999)), '1s');
+      expect(formatDuration(Duration(seconds: 59, milliseconds: 999)), '59s');
+      expect(formatDuration(Duration(minutes: 1, milliseconds: 999)), '1m');
+      expect(formatDuration(Duration(milliseconds: -1001)), '-1s');
+      expect(
+          formatDuration(Duration(seconds: -59, milliseconds: -999)), '-59s');
+    });
   });
 }

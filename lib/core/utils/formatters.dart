@@ -8,6 +8,7 @@ library formatters;
 /// * May skip zero-valued intermediate units
 /// * Shows "<1s" for sub-second durations
 /// * Prepends "-" for negative durations
+/// * Values are truncated toward zero below the displayed unit (floored)
 ///
 /// Examples:
 /// * `formatDuration(Duration(hours: 2, minutes: 15))` → `"2h 15m"`
@@ -53,12 +54,7 @@ String formatDuration(Duration duration) {
     if (seconds > 0) '${seconds}s',
   ];
 
-  if (units.isNotEmpty) {
-    buffer.write(units.take(2).join(' '));
-  } else {
-    // Only seconds left
-    buffer.write('${seconds}s');
-  }
+  buffer.write(units.take(2).join(' '));
 
   return buffer.toString();
 }
