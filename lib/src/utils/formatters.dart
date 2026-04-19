@@ -49,17 +49,22 @@ String formatBytes(int bytes) {
     return isNegative ? '-$result' : result;
   }
 
-  // Calculate value in current unit with integer math
-  // value * 100 = (absBytes * 100) ~/ divisor
-  // Plus extra digit for rounding
-  int scaledValue100 = (absBytes * 1000 ~/ divisor + 5) ~/ 10; // 1024.00 becomes 102400
+  // Calculate value in current unit with integer math using BigInt to avoid overflow
+  // We need: scaledValue100 = round(absBytes * 100 / divisor) to 2 decimal places
+  // Using BigInt for intermediate calculation to handle very large values
+  BigInt bigAbsBytes = BigInt.from(absBytes);
+  BigInt bigDivisor = BigInt.from(divisor);
+  BigInt scaled100Big = (bigAbsBytes * BigInt.from(1000)) ~/ bigDivisor;
+  int scaledValue100 = ((scaled100Big + BigInt.from(5)) ~/ BigInt.from(10)).toInt();
 
   // After rounding, if we're at 1024 or higher, promote
   if (scaledValue100 >= 102400 && unitIndex < units.length - 1) {
     unitIndex++;
     divisor *= base;
-    // Recalculate for the new unit
-    scaledValue100 = (absBytes * 1000 ~/ divisor + 5) ~/ 10;
+    // Recalculate for the new unit using BigInt
+    bigDivisor = BigInt.from(divisor);
+    scaled100Big = (bigAbsBytes * BigInt.from(1000)) ~/ bigDivisor;
+    scaledValue100 = ((scaled100Big + BigInt.from(5)) ~/ BigInt.from(10)).toInt();
   }
 
   // Format with up to 2 decimal places and trim trailing zeros
