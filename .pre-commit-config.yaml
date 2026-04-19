@@ -14,7 +14,7 @@ repos:
       
       - id: dart-format
         name: dart format
-        entry: dart format
+        entry: dart format --output=none --set-exit-if-changed
         language: system
         types: [dart]
       

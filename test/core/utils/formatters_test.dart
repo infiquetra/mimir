@@ -56,6 +56,16 @@ void main() {
           formatDuration(Duration(days: 1, hours: 0, minutes: 15)), '1d 15m');
     });
 
+    test('formats mixed units - days and seconds (skipping intermediate units)',
+        () {
+      expect(
+          formatDuration(Duration(days: 1, hours: 0, minutes: 0, seconds: 5)),
+          '1d 5s');
+      expect(
+          formatDuration(Duration(days: 3, hours: 0, minutes: 0, seconds: 30)),
+          '3d 30s');
+    });
+
     test('formats with truncation of units (only two largest)', () {
       expect(
           formatDuration(Duration(days: 1, hours: 2, minutes: 3, seconds: 4)),
