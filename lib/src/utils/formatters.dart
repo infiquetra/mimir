@@ -6,20 +6,21 @@
 /// Rules:
 /// - Bytes (B): whole numbers only, no decimal places
 /// - KB and above: up to 2 decimal places, trailing zeros trimmed
-/// - Values at or above 1024 of a unit are promoted to the next unit
-///   (e.g., 1024 KB becomes 1 MB, not "1024 KB")
+/// - After rounding to 2 decimal places, if the value is 1024 or higher and a larger
+///   unit exists, it is promoted to the next unit (e.g., 1023.999 KB → 1 MB, not "1024 KB")
 /// - Values beyond TB stay in TB (e.g., 1024^5 bytes = 1024 TB)
 /// - Negative values preserve their sign
 ///
 /// Examples:
 /// ```dart
-/// formatBytes(0)        // '0 B'
-/// formatBytes(512)      // '512 B'
-/// formatBytes(1024)     // '1 KB'
-/// formatBytes(1536)       // '1.5 KB'
-/// formatBytes(-1536)      // '-1.5 KB'
-/// formatBytes(1048576)    // '1 MB'
-/// formatBytes(1073741824) // '1 GB'
+/// formatBytes(0)           // '0 B'
+/// formatBytes(512)         // '512 B'
+/// formatBytes(1024)        // '1 KB'
+/// formatBytes(1536)        // '1.5 KB'
+/// formatBytes(-1536)       // '-1.5 KB'
+/// formatBytes(1048576)     // '1 MB'
+/// formatBytes(1073741824)  // '1 GB'
+/// formatBytes(1048575)     // '1 MB' (rounds to 1024 KB, promoted to MB)
 /// ```
 String formatBytes(int bytes) {
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -34,32 +35,53 @@ String formatBytes(int bytes) {
   final bool isNegative = bytes < 0;
   final int absBytes = bytes.abs();
 
-  // Calculate the appropriate unit index
+  // Determine the appropriate unit using integer arithmetic
   int unitIndex = 0;
-  double value = absBytes.toDouble();
-
-  while (value >= base && unitIndex < units.length - 1) {
-    value /= base;
+  int divisor = 1;
+  while ((absBytes ~/ base) >= divisor && unitIndex < units.length - 1) {
+    divisor *= base;
     unitIndex++;
   }
 
   // For bytes, use whole numbers only
   if (unitIndex == 0) {
-    final result = '${value.toInt()} ${units[unitIndex]}';
+    final result = '${absBytes} ${units[unitIndex]}';
     return isNegative ? '-$result' : result;
   }
 
-  // For KB and above, use up to 2 decimal places, trimming trailing zeros
-  // Check if rounding would push us to the next unit
-  if (value >= base && unitIndex < units.length - 1) {
-    value /= base;
+  // Calculate value in current unit with integer math
+  // value * 100 = (absBytes * 100) ~/ divisor
+  // Plus extra digit for rounding
+  int scaledValue100 = (absBytes * 1000 ~/ divisor + 5) ~/ 10; // 1024.00 becomes 102400
+
+  // After rounding, if we're at 1024 or higher, promote
+  if (scaledValue100 >= 102400 && unitIndex < units.length - 1) {
     unitIndex++;
+    divisor *= base;
+    // Recalculate for the new unit
+    scaledValue100 = (absBytes * 1000 ~/ divisor + 5) ~/ 10;
   }
 
   // Format with up to 2 decimal places and trim trailing zeros
-  String formattedValue = value.toStringAsFixed(2);
-  formattedValue = formattedValue.replaceAll(RegExp(r'\.?0+$'), '');
-
-  final result = '$formattedValue ${units[unitIndex]}';
+  final String formatted = _formatScaled(scaledValue100);
+  final result = '$formatted ${units[unitIndex]}';
   return isNegative ? '-$result' : result;
+}
+
+/// Formats a value that's been pre-scaled by 100.
+/// value100 = value * 100. Returns trimmed string like "1023.99" or "2".
+String _formatScaled(int value100) {
+  int intPart = value100 ~/ 100;
+  int decPart = value100 % 100;
+
+  if (decPart == 0) {
+    return '$intPart';
+  }
+
+  // Trim trailing zeros
+  while (decPart % 10 == 0) {
+    decPart ~/= 10;
+  }
+
+  return '$intPart.$decPart';
 }

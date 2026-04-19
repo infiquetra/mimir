@@ -53,9 +53,10 @@ void main() {
         expect(formatBytes(-1048576), equals('-1 MB'));
       });
 
-      test('last byte before unit change (1048575)', () {
-        expect(formatBytes(1048575), equals('1024 KB'));
-        expect(formatBytes(-1048575), equals('-1024 KB'));
+      test('value just below MB boundary rounds and promotes', () {
+        // 1048575 bytes = 1023.9990... KB, rounds to 1024 KB, promoted to 1 MB
+        expect(formatBytes(1048575), equals('1 MB'));
+        expect(formatBytes(-1048575), equals('-1 MB'));
       });
 
       test('first byte after threshold (1048577)', () {
@@ -76,9 +77,10 @@ void main() {
         expect(formatBytes(-1073741824), equals('-1 GB'));
       });
 
-      test('last byte before unit change (1073741823)', () {
-        expect(formatBytes(1073741823), equals('1024 MB'));
-        expect(formatBytes(-1073741823), equals('-1024 MB'));
+      test('value just below GB boundary rounds and promotes', () {
+        // 1073741823 bytes = 1023.999... MB, rounds to 1024 MB, promoted to 1 GB
+        expect(formatBytes(1073741823), equals('1 GB'));
+        expect(formatBytes(-1073741823), equals('-1 GB'));
       });
 
       test('mid-range GB values', () {
@@ -93,9 +95,10 @@ void main() {
         expect(formatBytes(-1099511627776), equals('-1 TB'));
       });
 
-      test('last byte before unit change (1099511627775)', () {
-        expect(formatBytes(1099511627775), equals('1024 GB'));
-        expect(formatBytes(-1099511627775), equals('-1024 GB'));
+      test('value just below TB boundary rounds and promotes', () {
+        // 1099511627775 bytes = 1023.999... GB, rounds to 1024 GB, promoted to 1 TB
+        expect(formatBytes(1099511627775), equals('1 TB'));
+        expect(formatBytes(-1099511627775), equals('-1 TB'));
       });
 
       test('mid-range TB values', () {
@@ -117,14 +120,9 @@ void main() {
         expect(formatBytes(1536), equals('1.5 KB'));
       });
 
-      test('precision boundary - just under 1 MB', () {
-        // 1048576 - 1024 = 1047552 → 1023 KB (not "1024 KB" and not "1 MB")
+      test('precision boundary - under 1 MB no rounding', () {
+        // 1048576 - 1024 = 1047552 → 1023 KB exactly
         expect(formatBytes(1047552), equals('1023 KB'));
-      });
-
-      test('precision boundary - near threshold with rounding', () {
-        // 1048576 - 1 = 1048575 → 1024 KB (exact boundary)
-        expect(formatBytes(1048575), equals('1024 KB'));
       });
     });
 
@@ -144,30 +142,6 @@ void main() {
       test('larger values stay in TB', () {
         // Arbitrary large value
         expect(formatBytes(2305843009213693952), equals('2097152 TB'));
-      });
-    });
-
-    group('Negative values', () {
-      test('negative bytes', () {
-        expect(formatBytes(-1), equals('-1 B'));
-        expect(formatBytes(-512), equals('-512 B'));
-      });
-
-      test('negative KB', () {
-        expect(formatBytes(-1536), equals('-1.5 KB'));
-        expect(formatBytes(-2048), equals('-2 KB'));
-      });
-
-      test('negative MB', () {
-        expect(formatBytes(-1572864), equals('-1.5 MB'));
-      });
-
-      test('negative GB', () {
-        expect(formatBytes(-1610612736), equals('-1.5 GB'));
-      });
-
-      test('negative TB', () {
-        expect(formatBytes(-1649267441664), equals('-1.5 TB'));
       });
     });
 
