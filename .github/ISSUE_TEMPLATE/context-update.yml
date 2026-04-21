@@ -1,0 +1,279 @@
+name: Context Update
+description: Blueprint repository documentation maintenance (hours to 1 day)
+title: "[CONTEXT] "
+labels: ["context-update", "documentation", "hermes-not-actionable"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Context Update Issue
+        A Context Update maintains the infiquetra-blueprint repository's accuracy and completeness.
+        This is essential for AI effectiveness - Claude Code relies on up-to-date context.
+
+        **Important**: Every Capability should create a Context Update to document what was built.
+
+  - type: checkboxes
+    id: update_type
+    attributes:
+      label: What's Being Updated?
+      description: Select all that apply
+      options:
+        - label: Requirements document
+        - label: Technical specification
+        - label: Architecture Decision Record (ADR)
+        - label: API contract (OpenAPI spec)
+        - label: Data model
+        - label: Best practice / pattern
+        - label: AI prompt library
+        - label: Architecture diagram
+        - label: Integration guide
+    validations:
+      required: true
+
+  - type: textarea
+    id: why_update
+    attributes:
+      label: Why This Update?
+      description: What triggered this update?
+      placeholder: |
+        - Related Capability: #123 (Implement auth service)
+        - Gap discovered during: Development
+        - Issue: Specification didn't include webhook callback pattern
+        - Impact: Future developers will face same confusion
+    validations:
+      required: true
+
+  - type: textarea
+    id: files_to_update
+    attributes:
+      label: Files to Update
+      description: List all Blueprint repository files that need changes
+      placeholder: |
+        - `specifications/services/auth-service.md`
+        - `specifications/api/auth-api.yaml`
+        - `patterns/webhook-callbacks.md`
+        - `architecture/diagrams/auth-flow.py` (regenerate diagram)
+    validations:
+      required: true
+
+  - type: textarea
+    id: changes_description
+    attributes:
+      label: Changes Description
+      description: What specifically are you adding/changing?
+      placeholder: |
+        **Adding**:
+        - Webhook callback section to auth spec
+        - Example webhook payload
+        - Retry logic requirements
+        - Security requirements for webhook auth
+
+        **Updating**:
+        - API contract to include webhook registration endpoint
+        - Architecture diagram to show webhook flow
+
+        **Removing**:
+        - None
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      description: What must be complete for this update?
+      placeholder: |
+        - [ ] Specification updated with webhook section
+        - [ ] OpenAPI spec includes new endpoint
+        - [ ] Example payloads provided
+        - [ ] Architecture diagram regenerated
+        - [ ] Changes reviewed by tech lead
+        - [ ] Linked to originating capability
+        - [ ] No broken links in documentation
+    validations:
+      required: true
+
+  - type: dropdown
+    id: context_gap
+    attributes:
+      label: Critical Context Gap?
+      description: Is this filling a gap that blocks work?
+      options:
+        - "Yes - this is blocking current/future work"
+        - "No - this is improving existing documentation"
+    validations:
+      required: true
+
+  - type: textarea
+    id: ai_prompt
+    attributes:
+      label: AI Prompt to Save (if applicable)
+      description: If this is documenting a successful Claude Code interaction, paste the prompt
+      placeholder: |
+        **Prompt that worked well**:
+        ```
+        Using the context from:
+        - /specifications/services/auth-service.md
+        - /patterns/webhook-callbacks.md
+
+        Generate an endpoint for registering webhooks that:
+        1. Validates webhook URL is HTTPS
+        2. Performs test callback to verify endpoint
+        3. Stores webhook configuration in database
+        4. Returns registration confirmation
+
+        Include comprehensive error handling and tests.
+        ```
+
+        **Results**:
+        - Generated working code in 45 seconds
+        - 92% test coverage achieved
+        - Only minor adjustments needed (validation logic)
+        - Would reuse this pattern for other webhook endpoints
+
+  - type: textarea
+    id: related_issues
+    attributes:
+      label: Related Issues
+      description: Link to capabilities or issues that triggered this update
+      placeholder: |
+        - Capability that revealed this gap: #123
+        - Capabilities that will benefit from this: #145, #167
+        - Related Context Updates: #89
+
+  - type: dropdown
+    id: documentation_type
+    attributes:
+      label: Documentation Type
+      description: What kind of documentation is this?
+      options:
+        - Requirements (what and why)
+        - Specification (how - technical details)
+        - Decision (why we chose this approach - ADR)
+        - Pattern (reusable approach)
+        - Anti-pattern (what NOT to do)
+        - AI Prompt (successful Claude interaction)
+        - Integration Guide (how to integrate)
+        - Architecture (system design)
+    validations:
+      required: true
+
+  - type: input
+    id: parent_objective
+    attributes:
+      label: Parent Objective (optional)
+      description: If this documentation supports a specific Objective/Milestone
+      placeholder: "objective:mvp-launch"
+
+  - type: input
+    id: parent_initiative
+    attributes:
+      label: Parent Initiative (optional)
+      description: Strategic initiative this documentation supports
+      placeholder: "initiative:platform-launch"
+
+  - type: textarea
+    id: review_checklist
+    attributes:
+      label: Documentation Quality Checklist
+      description: Self-review before submitting
+      value: |
+        - [ ] Clear and concise writing
+        - [ ] No jargon without explanation
+        - [ ] Code examples included where helpful
+        - [ ] Links to related documents included
+        - [ ] Diagrams included or updated if needed
+        - [ ] Sufficient for AI (Claude) to understand
+        - [ ] Reviewed for accuracy
+        - [ ] Spell-checked and grammar-checked
+
+  - type: textarea
+    id: automated_tests
+    attributes:
+      label: Automated Tests (for documentation validation)
+      description: What automated checks validate this documentation? (if applicable)
+      placeholder: |
+        - [ ] Link validation (no broken links)
+        - [ ] Markdown linting passes
+        - [ ] Code examples compile/run successfully
+        - [ ] Mermaid diagrams render correctly
+        - [ ] OpenAPI specs validate
+        - Note: Most context updates don't require automated tests
+
+  - type: textarea
+    id: manual_tests
+    attributes:
+      label: Manual/E2E Tests (for documentation review)
+      description: How will this documentation be manually verified?
+      placeholder: |
+        - [ ] Technical accuracy review by subject matter expert
+        - [ ] Clarity review - can new team member understand it?
+        - [ ] Cross-reference verification with related docs
+        - [ ] Example code tested in actual environment
+        - [ ] Diagrams accurately reflect current architecture
+        - [ ] AI prompt tested (if documenting prompt library)
+
+  - type: textarea
+    id: ai_instructions
+    attributes:
+      label: AI Generation Instructions
+      description: Guidance for AI-assisted documentation creation (optional)
+      placeholder: |
+        **Claude Code guidance:**
+        - Reference existing documentation patterns in infiquetra-blueprint
+        - Generate mermaid diagrams for architecture/flow visualization
+        - Cross-reference related specifications and ADRs
+        - Maintain consistent terminology across documents
+        - Test code examples in actual environment before documenting
+
+        **AI Tooling Resources:**
+        - Plugins: https://github.com/infiquetra/infiquetra-claude-plugins
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### Documentation Best Practices
+
+        **Good Documentation for AI**:
+        - Specific examples and code snippets
+        - Clear success criteria
+        - Anti-patterns documented
+        - Links to related context
+        - Diagrams where helpful
+
+        **What Makes Bad Documentation**:
+        - Vague descriptions
+        - No examples
+        - Outdated information
+        - Broken links
+        - Missing context
+
+        ### Where to Document
+
+        | Content Type | Location |
+        |--------------|----------|
+        | Business Requirements | `blueprint/requirements/` |
+        | Technical Specifications | `blueprint/specifications/` |
+        | Architecture Decisions | `blueprint/architecture/decisions/` |
+        | Reusable Patterns | `blueprint/patterns/` |
+        | API Contracts | `blueprint/specifications/api/` |
+        | Data Models | `blueprint/specifications/models/` |
+        | AI Prompts | `blueprint/ai-prompts/` |
+        | Integration Guides | `blueprint/integration/` |
+
+        ### Next Steps
+
+        1. Issue created in Blueprint repository until team identifies it for milestone
+        2. Moved to **Ready** when team prioritizes during milestone planning
+        3. Pull to **In Development** when you have capacity
+           - Make changes in infiquetra-blueprint repository
+           - Create PR linking to this issue
+           - Get review from tech lead
+        4. **Deployment Ready** -> Merge and close issue
+        5. Context immediately available for future work
+
+        **Note**: Context Updates can be paired with Capabilities - document as you build!
+        **Note**: Context Updates typically skip E2E Testing (documentation doesn't deploy)
+
+        See the [Kanban Workflow Guide](https://github.com/infiquetra/infiquetra-sdlc/blob/main/docs/process/kanban-workflow.md) for complete process.
