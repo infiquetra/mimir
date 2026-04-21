@@ -1,0 +1,243 @@
+name: Exploration
+description: Research, POC, or architectural investigation (1-3 days)
+title: "[EXPLORATION] "
+labels: ["exploration", "research", "hermes-not-actionable"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Exploration Issue
+        An Exploration is research, proof-of-concept, or architectural investigation that informs decisions.
+        It produces knowledge and recommendations, not production code.
+        **Timebox**: 1-3 days maximum
+
+  - type: textarea
+    id: research_question
+    attributes:
+      label: Research Question
+      description: What do we need to learn?
+      placeholder: "Which authentication SDK should we use: Auth0 vs. Clerk vs. Supabase Auth?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why do we need to know this?
+      placeholder: |
+        - Related Capability: #234 (Implement authentication)
+        - Decision to Inform: Which SDK to integrate
+        - Business Driver: Need to choose vendor by end of week
+        - Current State: No authentication implemented
+        - Requirement: OAuth2 compliance, multi-tenant support
+    validations:
+      required: true
+
+  - type: textarea
+    id: success_criteria
+    attributes:
+      label: Success Criteria
+      description: What will make this exploration successful?
+      placeholder: |
+        - [ ] All options evaluated against criteria
+        - [ ] Options documented with pros/cons
+        - [ ] Clear recommendation made with rationale
+        - [ ] Cost comparison completed
+        - [ ] Prototype validates feasibility (if needed)
+        - [ ] Decision documented in ADR
+    validations:
+      required: true
+
+  - type: dropdown
+    id: timebox
+    attributes:
+      label: Timebox
+      description: Maximum time to spend on this exploration
+      options:
+        - "1 day"
+        - "2 days"
+        - "3 days"
+    validations:
+      required: true
+
+  - type: textarea
+    id: evaluation_criteria
+    attributes:
+      label: Evaluation Criteria
+      description: What criteria will you use to evaluate options?
+      placeholder: |
+        1. **Technical Fit**
+           - SDK quality and developer experience
+           - API simplicity
+           - Documentation quality
+
+        2. **Compliance**
+           - OAuth2/OIDC certified
+           - SOC2 compliant
+           - Audit trail available
+
+        3. **Cost**
+           - Per-user cost
+           - Monthly minimum
+           - Volume discounts
+
+        4. **Integration Effort**
+           - Estimated time to integrate
+           - Code examples available
+           - Support quality
+
+        5. **Performance**
+           - Auth latency
+           - Uptime SLA
+
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: Deliverables
+      description: What will you produce from this exploration?
+      placeholder: |
+        - [ ] Comparison document in infiquetra-blueprint/explorations/
+        - [ ] Recommendation for path forward
+        - [ ] Prototype code (if applicable) - throw-away quality
+        - [ ] Cost analysis
+        - [ ] ADR (Architecture Decision Record) if decision made
+        - [ ] Update related Capability with findings
+    validations:
+      required: true
+
+  - type: textarea
+    id: questions_to_answer
+    attributes:
+      label: Key Questions to Answer
+      description: Specific questions to investigate
+      placeholder: |
+        1. Which SDK has the best developer experience?
+        2. Can all options achieve <500ms auth latency?
+        3. What is the total cost per 10,000 users?
+        4. Which has the fastest integration path?
+        5. Are there any deal-breaker limitations?
+    validations:
+      required: true
+
+  - type: textarea
+    id: approach
+    attributes:
+      label: Investigation Approach
+      description: How will you conduct this exploration?
+      placeholder: |
+        **Day 1**: Research and Documentation Review
+        - Review all vendor docs
+        - Review case studies and customer reviews
+        - Compare feature matrices
+        - Initial cost analysis
+
+        **Day 2**: Hands-On Evaluation
+        - Create trial accounts for all options
+        - Build simple prototype with each SDK
+        - Test auth flow
+        - Measure performance
+
+        **Day 3**: Analysis and Decision
+        - Complete comparison matrix
+        - Draft recommendation
+        - Write ADR
+        - Present to team for feedback
+
+  - type: input
+    id: parent_objective
+    attributes:
+      label: Parent Objective (optional)
+      description: If this exploration informs a larger Objective/Milestone
+      placeholder: "objective:mvp-launch"
+
+  - type: input
+    id: parent_initiative
+    attributes:
+      label: Parent Initiative (optional)
+      description: Strategic initiative this exploration supports
+      placeholder: "initiative:platform-launch"
+
+  - type: textarea
+    id: automated_tests
+    attributes:
+      label: Automated Tests (for POC validation)
+      description: What tests validate the POC or prototype? (if applicable)
+      placeholder: |
+        - [ ] Basic functional tests for prototype code
+        - [ ] Performance benchmarks for comparison
+        - [ ] Integration tests for feasibility validation
+        - Note: Prototype code is throwaway quality
+
+  - type: textarea
+    id: manual_tests
+    attributes:
+      label: Manual/E2E Tests (for POC evaluation)
+      description: How will you manually evaluate the options? (if applicable)
+      placeholder: |
+        - [ ] Manual testing of each SDK/option
+        - [ ] User experience evaluation
+        - [ ] Performance testing under different conditions
+        - [ ] Edge case exploration
+
+  - type: textarea
+    id: ai_instructions
+    attributes:
+      label: AI Generation Instructions
+      description: Guidance for AI-assisted research (optional)
+      placeholder: |
+        **Claude Code guidance:**
+        - Research similar patterns in infiquetra-blueprint
+        - Generate comparison matrices and evaluation frameworks
+        - Create prototype code for evaluation (throwaway quality)
+        - Document findings in structured format
+
+        **AI Tooling Resources:**
+        - Plugins: https://github.com/infiquetra/infiquetra-claude-plugins
+
+  - type: textarea
+    id: related_work
+    attributes:
+      label: Related Issues
+      description: Links to related capabilities or context
+      placeholder: |
+        - Will inform: Capability #234 (Implement authentication)
+        - Context: https://github.com/infiquetra/infiquetra-blueprint/blob/main/requirements/authentication.md
+        - Previous exploration: #189 (Authentication methods evaluation)
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### Next Steps
+
+        1. Team identifies exploration need during milestone planning
+        2. Move to **Ready** when prioritized
+        3. Pull to **In Development** when ready to start research
+        4. **Timebox is strict** - don't exceed the limit
+        5. Document findings in `infiquetra-blueprint/explorations/`
+        6. Create follow-up Capability or Enhancement based on recommendation
+        7. Close this Exploration once findings are documented
+
+        **Note**: Explorations typically skip E2E Testing column (research doesn't deploy)
+
+        ### Possible Outcomes
+
+        **Option 1: Clear Recommendation**
+        - Document findings in Blueprint
+        - Create ADR if architectural decision
+        - Create Capability or Enhancement to implement
+        - Close Exploration
+
+        **Option 2: Need More Research**
+        - Document what was learned
+        - Create follow-up Exploration with refined questions
+        - Close this Exploration
+
+        **Option 3: Not Feasible**
+        - Document why approach won't work
+        - Propose alternative approaches
+        - Close Exploration
+        - Inform stakeholders
+
+        See the [Kanban Workflow Guide](https://github.com/infiquetra/infiquetra-sdlc/blob/main/docs/process/kanban-workflow.md) for complete process.
