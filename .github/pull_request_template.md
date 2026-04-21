@@ -1,26 +1,34 @@
-## Description
-Brief description of the changes in this PR.
+## Linked card
 
-## Related Issue
-Fixes #(issue number)
+Closes #{issue_number}
 
-## Type of Change
-- [ ] Bug fix (non-breaking change that fixes an issue)
-- [ ] New feature (non-breaking change that adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to change)
-- [ ] Documentation update
-- [ ] Refactoring (no functional changes)
+## What changed
 
-## Checklist
-- [ ] My code follows the project's style guidelines
-- [ ] I have performed a self-review of my code
-- [ ] I have added tests that prove my fix/feature works
-- [ ] New and existing tests pass locally
-- [ ] I have updated documentation as needed
-- [ ] My changes generate no new warnings
+- {bullet summary of each meaningful change}
 
-## Screenshots (if applicable)
-Add screenshots to show UI changes.
+## How verified
 
-## Testing Notes
-How was this tested? Any specific scenarios to verify?
+Exact commands run (from the card's `verification` field) and their
+output digest:
+
+```
+{verification commands + output summary}
+```
+
+## Acceptance criteria coverage
+
+- AC 1: [how it was verified in this PR]
+- AC 2: [how it was verified in this PR]
+(for each AC from the linked card)
+
+## Non-goals acknowledged
+
+Each non-goal from the linked card, confirmed not violated:
+
+- [non-goal 1]: not violated
+- [non-goal 2]: not violated
+
+## Notes
+
+{agent-originated notes — deviations from plan, unexpected findings,
+follow-on work suggestions}
