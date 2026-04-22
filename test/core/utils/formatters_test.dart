@@ -30,14 +30,14 @@ void main() {
     test('rounds scaled values to at most two decimals', () {
       // 1150 / 1024 = 1.123... -> 1.12 KB
       expect(formatBytes(1150), '1.12 KB'); 
-      // 1126 / 1024 = 1.0996... -> 1.09 KB (floored)
-      expect(formatBytes(1126), '1.09 KB');
+      // 1126 / 1024 = 1.0996... -> 1.1 KB
+      expect(formatBytes(1126), '1.1 KB');
     });
 
     test('does not round up at unit boundaries', () {
       // 1 byte below 1 MB: 1048575 bytes
-      // 1048575 / 1024 = 1023.999... KB -> '1023.99 KB'
-      expect(formatBytes(1048575), '1023.99 KB');
+      // 1048575 / 1024 = 1023.999... KB -> rounds to '1024.00' -> promoted to '1 MB'
+      expect(formatBytes(1048575), '1 MB');
     });
 
     test('keeps tb suffix for values above one terabyte', () {
