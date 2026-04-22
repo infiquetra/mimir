@@ -1,32 +1,48 @@
-/// Truncates the middle of a string with an ellipsis when input exceeds [maxLength].
+/// Utility functions for string manipulation.
 ///
-/// Maintains front-heavy visibility (more characters from start than end) with 
-/// split calculated as (visibleLength + 1) ~/ 2 for front and visibleLength ~/ 2 for back.
-/// When [maxLength] is less than [ellipsis] length, returns truncated ellipsis.
+/// Contains helper functions for transforming and formatting strings
+/// in various ways.
+
+/// Truncates a string by removing characters from the middle and replacing
+/// them with an ellipsis.
+///
+/// If [input].length <= [maxLength], returns [input] unchanged.
+/// Otherwise, computes [visibleLength] = [maxLength] - [ellipsis].length.
+/// If truncation is required and [visibleLength] <= 0, returns 
+/// [ellipsis.substring](0, [maxLength]).
+/// If truncation is required and [visibleLength] > 0, splits the visible 
+/// characters between the front and back of [input] with a front-heavy policy:
+/// [frontLength] = ([visibleLength] + 1) ~/ 2, [backLength] = [visibleLength] ~/ 2.
+///
+/// Examples:
+/// - `truncateMiddle('hello', 10)` → `'hello'`
+/// - `truncateMiddle('abcdefghijklmn', 8)` → `'abcd…lmn'`
+/// - `truncateMiddle('', 5)` → `''`
+/// - `truncateMiddle('abcdef', 3)` → `'a…f'`
+///
+/// Parameters:
+/// - [input]: The string to truncate
+/// - [maxLength]: Maximum length of the result including ellipsis
+/// - [ellipsis]: The string to use as ellipsis (default: '…')
 String truncateMiddle(String input, int maxLength, {String ellipsis = '…'}) {
-  // Validate inputs
-  if (maxLength < 0) {
-    throw ArgumentError.value(maxLength, 'maxLength', 'Must be non-negative');
-  }
-  
-  // If input is short enough, return unchanged
+  // If input is already short enough, return unchanged
   if (input.length <= maxLength) {
     return input;
   }
 
-  // Calculate visible length (excluding ellipsis)
+  // Calculate how many visible characters we can show
   final visibleLength = maxLength - ellipsis.length;
 
-  // If maxLength is too small for even the ellipsis, return truncated ellipsis
+  // If we can't even fit the ellipsis, return a truncated ellipsis
   if (visibleLength <= 0) {
-    return ellipsis.substring(0, maxLength < ellipsis.length ? maxLength : ellipsis.length);
+    return ellipsis.substring(0, maxLength);
   }
 
-  // Split visible characters between front and back with front-heavy policy
+  // Split the visible characters with front-heavy policy for odd lengths
   final frontLength = (visibleLength + 1) ~/ 2;
   final backLength = visibleLength ~/ 2;
 
-  // Build result string
+  // Build the result
   final front = input.substring(0, frontLength);
   final back = backLength > 0 ? input.substring(input.length - backLength) : '';
 
