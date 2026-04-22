@@ -2,13 +2,16 @@
 
 /// Formats a byte count into a human-readable string using binary units.
 ///
-/// Uses 1024-based units (B, KB, MB, GB, TB). Values above 1 TB are scaled
-/// within TB (e.g., '1.5 TB').
+/// Scales through B, KB, MB, GB, and TB. To maintain readability for very
+/// large values, counts exceeding 1024 TB do not transition to a new unit;
+/// they continue to use the 'TB' suffix while scaling numerically (e.g., '1024 TB').
 ///
 /// Examples:
 /// - `formatBytes(0)` → `'0 B'`
+/// - `formatBytes(512)` → `'512 B'`
 /// - `formatBytes(1024)` → `'1 KB'`
 /// - `formatBytes(1536)` → `'1.5 KB'`
+/// - `formatBytes(1048576)` → `'1 MB'`
 /// - `formatBytes(-2048)` → `'-2 KB'`
 String formatBytes(int bytes) {
   if (bytes == 0) return '0 B';
@@ -29,12 +32,12 @@ String formatBytes(int bytes) {
     unitIndex++;
   }
 
-  String formattedNumber = value.toStringAsFixed(2);
-  if (formattedNumber.endsWith('.00')) {
-    formattedNumber = formattedNumber.substring(0, formattedNumber.length - 3);
-  } else if (formattedNumber.endsWith('0')) {
-    formattedNumber = formattedNumber.substring(0, formattedNumber.length - 1);
+  String formatted = value.toStringAsFixed(2);
+  if (formatted.endsWith('.00')) {
+    formatted = formatted.substring(0, formatted.length - 3);
+  } else if (formatted.endsWith('0')) {
+    formatted = formatted.substring(0, formatted.length - 1);
   }
 
-  return '$sign$formattedNumber ${units[unitIndex]}';
+  return '$sign$formatted ${units[unitIndex]}';
 }
