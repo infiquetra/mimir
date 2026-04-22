@@ -15,7 +15,9 @@
 /// - `formatBytes(1048576)` → `'1 MB'`
 /// - `formatBytes(-2048)` → `'-2 KB'`
 String formatBytes(int bytes) {
-  if (bytes == 0) return '0 B';
+  if (bytes == 0) {
+    return '0 B';
+  }
 
   final absBytes = bytes.abs();
   final sign = bytes < 0 ? '-' : '';
