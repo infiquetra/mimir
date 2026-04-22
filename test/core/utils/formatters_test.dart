@@ -41,5 +41,12 @@ void main() {
       // 1024^5 = 1125899906842624 → should be 1024 TB
       expect(formatBytes(1125899906842624), '1024 TB');
     });
+
+    test('values just below a unit boundary round correctly', () {
+      // 1048575 is one byte below 1 MB; should not round up to 1024 KB
+      expect(formatBytes(1048575), '1 MB');
+      // 1073741823 is one byte below 1 GB
+      expect(formatBytes(1073741823), '1 GB');
+    });
   });
 }
