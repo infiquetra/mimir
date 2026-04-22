@@ -2,9 +2,10 @@
 
 /// Formats a byte count into a human-readable string using binary units.
 ///
-/// Scales through B, KB, MB, GB, and TB. To maintain readability for very
-/// large values, counts exceeding 1024 TB do not transition to a new unit;
-/// they continue to use the 'TB' suffix while scaling numerically (e.g., '1024 TB').
+/// Uses binary (1024-based) units: B, KB, MB, GB, TB.
+/// Values above 1 TB continue to use the TB suffix while scaling numerically.
+/// Decimal places are trimmed: exact units render as "1 KB", "1 MB";
+/// fractional values keep up to 2 decimals with trailing zeros removed.
 ///
 /// Examples:
 /// - `formatBytes(0)` → `'0 B'`
@@ -33,6 +34,7 @@ String formatBytes(int bytes) {
   }
 
   String formatted = value.toStringAsFixed(2);
+  // Trim trailing .00 → .0 → nothing
   if (formatted.endsWith('.00')) {
     formatted = formatted.substring(0, formatted.length - 3);
   } else if (formatted.endsWith('0')) {
