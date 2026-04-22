@@ -23,19 +23,18 @@ String formatBytes(int bytes) {
   int unitIndex = 0;
   double value = absBytes.toDouble();
 
-  // Scale the value appropriately
+  // Scale the value and handle special formatting for the near-threshold case to avoid rounding errors
+  // For example, 1048575 bytes should be 1023.99 KB, not 1024 KB
   while (value >= 1024 && unitIndex < units.length - 1) {
     value /= 1024;
     unitIndex++;
   }
 
-  // Handle special formatting for the near-threshold case to avoid rounding errors
-  // For example, 1048575 bytes should be 1023.99 KB, not 1024 KB
   String formatted;
   if (unitIndex == 0) {
     formatted = value.toInt().toString();
   } else {
-    // For KB and above, we floor instead of round to prevent crossing thresholds
+    // Floor instead of round to prevent crossing thresholds
     // Convert to fixed-point arithmetic to avoid floating-point errors
     final scaledValueInt = (value * 100).toInt();
     final flooredValue = scaledValueInt ~/ 100; // Integer division
