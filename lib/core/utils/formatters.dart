@@ -16,45 +16,7 @@ library formatters;
 /// - `formatBytes(1048576)` → `'1 MB'`
 /// - `formatBytes(-2048)` → `'-2 KB'`
 String formatBytes(int bytes) {
-  if (bytes == 0) return '0 B';
-
-  final absBytes = bytes.abs();
-  final sign = bytes < 0 ? '-' : '';
-
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  int unitIndex = 0;
-  double value = absBytes.toDouble();
-
-  // Scale the value and handle special formatting for the near-threshold case to avoid rounding errors
-  // For example, 1048575 bytes should be 1023.99 KB, not 1024 KB
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024;
-    unitIndex++;
-  }
-
-  String formatted;
-  if (unitIndex == 0) {
-    formatted = value.toInt().toString();
-  } else {
-    // Floor instead of round to prevent crossing thresholds
-    // Convert to fixed-point arithmetic to avoid floating-point errors
-    final scaledValueInt = (value * 100).toInt();
-    final flooredValue = scaledValueInt ~/ 100; // Integer division
-    final decimalPart = scaledValueInt % 100;
-
-    if (decimalPart == 0) {
-      formatted = flooredValue.toString();
-    } else {
-      // Format with up to 2 decimals, removing trailing zeros
-      String decimalStr = decimalPart.toString().padLeft(2, '0');
-      if (decimalStr.endsWith('0')) {
-        decimalStr = decimalStr.substring(0, decimalStr.length - 1);
-      }
-      formatted = '$flooredValue.$decimalStr';
-    }
-  }
-
-  return '$sign$formatted ${units[unitIndex]}';
+  return humanizeBytes(bytes);
 }
 
 /// Renders byte counts as human-readable strings using binary units.
@@ -74,7 +36,7 @@ String humanizeBytes(int bytes) {
   if (bytes == 0) return '0 B';
 
   final isNegative = bytes < 0;
-  final absBytes = bytes.abs(); // Handle negative with standard abs()
+  final absBytes = bytes.abs();
   final sign = isNegative ? '-' : '';
   
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -93,14 +55,21 @@ String humanizeBytes(int bytes) {
     // For bytes, show as integer
     formattedValue = value.toInt().toString();
   } else {
-    // For other units, show with up to 2 decimal places
-    formattedValue = value.toStringAsFixed(2);
-    
-    // Remove trailing zeros and decimal point if not needed
-    if (formattedValue.endsWith('.00')) {
-      formattedValue = formattedValue.substring(0, formattedValue.length - 3);
-    } else if (formattedValue.endsWith('0') && formattedValue.contains('.')) {
-      formattedValue = formattedValue.substring(0, formattedValue.length - 1);
+    // For other units, floor to prevent crossing thresholds and show with up to 2 decimal places
+    // Convert to fixed-point arithmetic to avoid floating-point errors
+    final scaledValueInt = (value * 100).floor(); // Floor instead of round
+    final flooredValue = scaledValueInt ~/ 100; // Integer division
+    final decimalPart = scaledValueInt % 100;
+
+    if (decimalPart == 0) {
+      formattedValue = flooredValue.toString();
+    } else {
+      // Format with up to 2 decimals, removing trailing zeros
+      String decimalStr = decimalPart.toString().padLeft(2, '0');
+      if (decimalStr.endsWith('0')) {
+        decimalStr = decimalStr.substring(0, decimalStr.length - 1);
+      }
+      formattedValue = '$flooredValue.$decimalStr';
     }
   }
 
