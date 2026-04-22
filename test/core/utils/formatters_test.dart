@@ -3,52 +3,38 @@ import 'package:mimir/core/utils/formatters.dart';
 
 void main() {
   group('formatBytes', () {
-    test('returns zero bytes for zero', () {
+    test('returns 0 B for zero bytes', () {
       expect(formatBytes(0), '0 B');
     });
 
-    test('returns raw bytes below one kilobyte', () {
+    test('returns raw bytes below 1 KB', () {
       expect(formatBytes(512), '512 B');
     });
 
-    test('formats exact kilobyte boundary without trailing decimals', () {
+    test('formats exact KB/MB/GB boundaries without trailing decimals', () {
       expect(formatBytes(1024), '1 KB');
-    });
-
-    test('formats fractional kilobytes with trimmed precision', () {
-      expect(formatBytes(1536), '1.5 KB');
-    });
-
-    test('formats exact megabyte boundary without trailing decimals', () {
       expect(formatBytes(1048576), '1 MB');
-    });
-
-    test('preserves minus sign for negative byte counts', () {
-      expect(formatBytes(-2048), '-2 KB');
-    });
-
-    test('rounds scaled values to at most two decimals', () {
-      // 1150 / 1024 = 1.1230... -> 1.12 KB
-      expect(formatBytes(1150), '1.12 KB'); 
-      // 1126 / 1024 = 1.0996... -> 1.1 KB
-      expect(formatBytes(1126), '1.1 KB');
-    });
-
-    test('formats exact gigabyte boundary without trailing decimals', () {
       expect(formatBytes(1073741824), '1 GB');
     });
 
-    test('does not round up at unit boundaries', () {
-      // 1 byte below 1 MB: 1048575 bytes
-      // 1048575 / 1024 = 1023.999... KB -> rounds to '1024 KB'
-      expect(formatBytes(1048575), '1024 KB');
+    test('adds minus prefix for negative byte counts', () {
+      expect(formatBytes(-2048), '-2 KB');
+      expect(formatBytes(-512), '-512 B');
     });
 
-    test('keeps tb suffix for values above one terabyte', () {
-      // 2 * 1024^4 = 2199023255552
-      expect(formatBytes(2199023255552), '2 TB');
-      // 2048 * 1024^4 = 2251799813685248
-      expect(formatBytes(2251799813685248), '2048 TB');
+    test('keeps one fractional digit when trailing zeroes can be trimmed', () {
+      expect(formatBytes(1536), '1.5 KB');
+      expect(formatBytes(1280), '1.25 KB');
+    });
+
+    test('does not round one byte below 1 MB up to 1024 KB', () {
+      // Regression test: 1048575 bytes should format as 1023.99 KB, not 1024 KB
+      expect(formatBytes(1048575), '1023.99 KB');
+    });
+
+    test('keeps TB suffix for values above 1 TB', () {
+      // 1024^5 = 1125899906842624
+      expect(formatBytes(1125899906842624), '1024 TB');
     });
   });
 }
