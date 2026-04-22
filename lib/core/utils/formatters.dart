@@ -3,7 +3,7 @@
 /// Formats a byte count into a human-readable string using binary units.
 ///
 /// Uses binary (1024-based) units: B, KB, MB, GB, TB.
-/// Values above 1 TB continue to use the TB suffix while scaling numerically.
+/// Values above TB continue to use the TB suffix while scaling numerically.
 /// Decimal places are trimmed: exact units render as "1 KB", "1 MB";
 /// fractional values keep up to 2 decimals with trailing zeros removed.
 ///
