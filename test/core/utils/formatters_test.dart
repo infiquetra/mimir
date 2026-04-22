@@ -34,6 +34,10 @@ void main() {
       expect(formatBytes(1126), '1.1 KB');
     });
 
+    test('formats exact gigabyte boundary without trailing decimals', () {
+      expect(formatBytes(1073741824), '1 GB');
+    });
+
     test('does not round up at unit boundaries', () {
       // 1 byte below 1 MB: 1048575 bytes
       // 1048575 / 1024 = 1023.999... KB -> rounds to '1024.00' -> promoted to '1 MB'
