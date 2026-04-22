@@ -1,5 +1,8 @@
 /// Utility functions for formatting values.
 
+/// Formats a number of bytes into a human-readable string with units (B, KB, MB, GB, TB).
+///
+/// Uses 1024 as the unit base. Truncates to 2 decimal places and removes trailing zeros.
 String formatBytes(int bytes) {
   if (bytes == 0) return '0 B';
 
@@ -19,8 +22,10 @@ String formatBytes(int bytes) {
   if (unitIndex == 0) {
     formatted = value.toInt().toString();
   } else {
-    // format to 2 decimal places
-    formatted = value.toStringAsFixed(2);
+    // Handle rounding by floored truncation to 2 decimal places
+    // This prevents 1023.999... from rounding up to 1024.00 and causing unit rollover issues.
+    double truncatedValue = (value * 100).floorToDouble() / 100.0;
+    formatted = truncatedValue.toStringAsFixed(2);
     // remove trailing .0 or .00 or just the last 0
     if (formatted.endsWith('.00')) {
       formatted = formatted.substring(0, formatted.length - 3);

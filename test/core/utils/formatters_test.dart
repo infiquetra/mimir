@@ -28,11 +28,16 @@ void main() {
     });
 
     test('rounds scaled values to at most two decimals', () {
-      // 1024 * 1.1234 = 1150.3616...
-      // toStringAsFixed(2) -> 1.12
+      // 1150 / 1024 = 1.123... -> 1.12 KB
       expect(formatBytes(1150), '1.12 KB'); 
-      // 1024 * 1.1 = 1126.4
-      expect(formatBytes(1126), '1.1 KB');
+      // 1126 / 1024 = 1.0996... -> 1.09 KB (floored)
+      expect(formatBytes(1126), '1.09 KB');
+    });
+
+    test('does not round up at unit boundaries', () {
+      // 1 byte below 1 MB: 1048575 bytes
+      // 1048575 / 1024 = 1023.999... KB -> '1023.99 KB'
+      expect(formatBytes(1048575), '1023.99 KB');
     });
 
     test('keeps tb suffix for values above one terabyte', () {
