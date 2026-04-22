@@ -33,7 +33,6 @@ String formatBytes(int bytes) {
   // For example, 1048575 bytes should be 1023.99 KB, not 1024 KB
   String formatted;
   if (unitIndex == 0) {
-    // For bytes, use integer formatting
     formatted = value.toInt().toString();
   } else {
     // For KB and above, we floor instead of round to prevent crossing thresholds
@@ -43,12 +42,10 @@ String formatBytes(int bytes) {
     final decimalPart = scaledValueInt % 100;
 
     if (decimalPart == 0) {
-      // No decimal needed
       formatted = flooredValue.toString();
     } else {
       // Format with up to 2 decimals, removing trailing zeros
       String decimalStr = decimalPart.toString().padLeft(2, '0');
-      // Remove trailing zeros
       if (decimalStr.endsWith('0')) {
         decimalStr = decimalStr.substring(0, decimalStr.length - 1);
       }
