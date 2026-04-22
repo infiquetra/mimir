@@ -50,5 +50,14 @@ void main() {
       // Ensure values with single decimal digit are formatted correctly
       expect(humanizeBytes(1536), '1.5 KB');
     });
+
+    test('should handle boundary minus one cases correctly', () {
+      // Test the specific edge case where 1048575 bytes (1 MB - 1 B) could round incorrectly
+      // This should not display as '1024 KB' but should properly scale to MB
+      expect(humanizeBytes(1048575), '1 MB');
+      
+      // Similar edge cases for other boundaries
+      expect(humanizeBytes(1073741823), '1 GB'); // 1 GB - 1 B
+    });
   });
 }
