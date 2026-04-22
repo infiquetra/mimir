@@ -33,8 +33,13 @@ String formatBytes(int bytes) {
     unitIndex++;
   }
 
+  // After scaling, check if rounding would push us to the next unit
+  if (value >= 1023.995 && unitIndex < units.length - 1) {
+    value = 1.0;
+    unitIndex++;
+  }
+
   String formatted = value.toStringAsFixed(2);
-  // Trim trailing .00 → .0 → nothing
   if (formatted.endsWith('.00')) {
     formatted = formatted.substring(0, formatted.length - 3);
   } else if (formatted.endsWith('0')) {

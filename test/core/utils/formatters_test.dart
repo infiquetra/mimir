@@ -9,6 +9,7 @@ void main() {
 
     test('bytes below 1 KB display as raw bytes', () {
       expect(formatBytes(512), '512 B');
+      expect(formatBytes(1023), '1023 B');
     });
 
     test('exact 1 KB boundary renders as 1 KB', () {
@@ -17,6 +18,14 @@ void main() {
 
     test('exact 1 MB boundary renders as 1 MB', () {
       expect(formatBytes(1048576), '1 MB');
+    });
+
+    test('exact 1 GB boundary renders as 1 GB', () {
+      expect(formatBytes(1073741824), '1 GB');
+    });
+
+    test('exact 1 TB boundary renders as 1 TB', () {
+      expect(formatBytes(1099511627776), '1 TB');
     });
 
     test('negative values preserve sign and scale correctly', () {
