@@ -1,5 +1,5 @@
 /// Utility functions for formatting values.
-
+///
 /// Formats a byte count into a human-readable string using binary units.
 ///
 /// Scales through B, KB, MB, GB, and TB. To maintain readability for very
