@@ -1,8 +1,7 @@
 /// Utility functions for formatting values.
-
+ 
 /// Formats a number of bytes into a human-readable string with units (B, KB, MB, GB, TB).
-///
-/// Uses 1024 as the unit base. Truncates to 2 decimal places and removes trailing zeros.
+/// Use 1024 as the unit base. Truncates to 2 decimal places and removes trailing zeros.
 String formatBytes(int bytes) {
   if (bytes == 0) return '0 B';
 
