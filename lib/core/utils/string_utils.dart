@@ -1,13 +1,8 @@
-/// Truncates the middle of a string with an ellipsis, keeping start and end visible.
+/// Truncates the middle of a string with an ellipsis when input exceeds [maxLength].
 ///
-/// Uses a front-heavy split policy for odd-length visible segments.
-/// If [maxLength] is too small for the ellipsis, returns a truncated ellipsis.
-/// 
-/// Examples:
-/// - truncateMiddle('hello', 10) → 'hello'
-/// - truncateMiddle('abcdefghijklmn', 8) → 'abcd…lmn'
-/// - truncateMiddle('', 5) → ''
-/// - truncateMiddle('abcdef', 3) → 'a…f'
+/// Maintains front-heavy visibility (more characters from start than end) with 
+/// split calculated as (visibleLength + 1) ~/ 2 for front and visibleLength ~/ 2 for back.
+/// When [maxLength] is less than [ellipsis] length, returns truncated ellipsis.
 String truncateMiddle(String input, int maxLength, {String ellipsis = '…'}) {
   // Validate inputs
   if (maxLength < 0) {

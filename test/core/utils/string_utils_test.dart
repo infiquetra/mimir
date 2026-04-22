@@ -38,6 +38,8 @@ void main() {
     expect(truncateMiddle('hello', 0), equals(''));
     // When maxLength is shorter than ellipsis, should truncate ellipsis
     expect(truncateMiddle('hello', 2, ellipsis: '...'), equals('..'));
+    // When maxLength is even shorter, should truncate further
+    expect(truncateMiddle('hello', 1, ellipsis: '...'), equals('.'));
   });
   
   test('should reject negative maxLength', () {
