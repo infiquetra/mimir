@@ -3,57 +3,38 @@
 /// Formats a byte count into a human-readable string using binary units.
 ///
 /// Uses 1024-based units (B, KB, MB, GB, TB). Values above 1 TB are scaled
-/// within TB (e.g., '1.5 TB'). Decimal places are trimmed:
-/// - Whole numbers: no decimal (e.g., '2 KB')
-/// - One decimal place when needed (e.g., '1.5 MB')
-/// - Up to two decimal places (e.g., '1.25 KB')
+/// within TB (e.g., '1.5 TB').
 ///
 /// Examples:
 /// - `formatBytes(0)` → `'0 B'`
 /// - `formatBytes(1024)` → `'1 KB'`
 /// - `formatBytes(1536)` → `'1.5 KB'`
-/// - `formatBytes(-1536)` → `'-1.5 KB'`
-/// - `formatBytes(1099511627776)` → `'1 TB'`
-/// - `formatBytes(1649267441664)` → `'1.5 TB'`
+/// - `formatBytes(-2048)` → `'-2 KB'`
 String formatBytes(int bytes) {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const threshold = 1024;
+  if (bytes == 0) return '0 B';
 
-  // Handle zero specially to avoid negative zero issues
-  if (bytes == 0) {
-    return '0 B';
+  final absBytes = bytes.abs();
+  final sign = bytes < 0 ? '-' : '';
+
+  if (absBytes < 1024) {
+    return '$sign$absBytes B';
   }
 
-  // Work with absolute value for unit calculation
-  final absBytes = bytes.abs();
-  final isNegative = bytes < 0;
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  int unitIndex = 0;
+  double value = absBytes.toDouble();
 
-  // Determine the appropriate unit
-  var unitIndex = 0;
-  var value = absBytes.toDouble();
-
-  // Find the right unit by repeatedly dividing by threshold
-  // Stop at TB (last unit) even for values above 1 TB
-  while (value >= threshold && unitIndex < units.length - 1) {
-    value /= threshold;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
     unitIndex++;
   }
 
-  // Format with up to 2 decimal places
-  String formatted = value.toStringAsFixed(2);
-
-  // Trim trailing zeros and potential trailing dot
-  if (formatted.contains('.')) {
-    formatted = formatted.replaceAll(RegExp(r'0+$'), '');
-    if (formatted.endsWith('.')) {
-      formatted = formatted.substring(0, formatted.length - 1);
-    }
+  String formattedNumber = value.toStringAsFixed(2);
+  if (formattedNumber.endsWith('.00')) {
+    formattedNumber = formattedNumber.substring(0, formattedNumber.length - 3);
+  } else if (formattedNumber.endsWith('0')) {
+    formattedNumber = formattedNumber.substring(0, formattedNumber.length - 1);
   }
 
-  // Apply negative sign if needed
-  if (isNegative) {
-    formatted = '-$formatted';
-  }
-
-  return '$formatted ${units[unitIndex]}';
+  return '$sign$formattedNumber ${units[unitIndex]}';
 }
