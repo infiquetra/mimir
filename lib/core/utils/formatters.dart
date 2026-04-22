@@ -1,4 +1,61 @@
+library formatters;
+
 /// Utility functions for formatting values.
+
+/// Formats a byte count into a human-readable string using binary units.
+///
+/// Scales through B, KB, MB, GB, and TB. To maintain readability for very
+/// large values, counts exceeding 1024 TB do not transition to a new unit;
+/// they continue to use the 'TB' suffix while scaling numerically (e.g., '1024 TB').
+///
+/// Examples:
+/// - `formatBytes(0)` → `'0 B'`
+/// - `formatBytes(512)` → `'512 B'`
+/// - `formatBytes(1024)` → `'1 KB'`
+/// - `formatBytes(1536)` → `'1.5 KB'`
+/// - `formatBytes(1048576)` → `'1 MB'`
+/// - `formatBytes(-2048)` → `'-2 KB'`
+String formatBytes(int bytes) {
+  if (bytes == 0) return '0 B';
+
+  final absBytes = bytes.abs();
+  final sign = bytes < 0 ? '-' : '';
+
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  int unitIndex = 0;
+  double value = absBytes.toDouble();
+
+  // Scale the value and handle special formatting for the near-threshold case to avoid rounding errors
+  // For example, 1048575 bytes should be 1023.99 KB, not 1024 KB
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex++;
+  }
+
+  String formatted;
+  if (unitIndex == 0) {
+    formatted = value.toInt().toString();
+  } else {
+    // Floor instead of round to prevent crossing thresholds
+    // Convert to fixed-point arithmetic to avoid floating-point errors
+    final scaledValueInt = (value * 100).toInt();
+    final flooredValue = scaledValueInt ~/ 100; // Integer division
+    final decimalPart = scaledValueInt % 100;
+
+    if (decimalPart == 0) {
+      formatted = flooredValue.toString();
+    } else {
+      // Format with up to 2 decimals, removing trailing zeros
+      String decimalStr = decimalPart.toString().padLeft(2, '0');
+      if (decimalStr.endsWith('0')) {
+        decimalStr = decimalStr.substring(0, decimalStr.length - 1);
+      }
+      formatted = '$flooredValue.$decimalStr';
+    }
+  }
+
+  return '$sign$formatted ${units[unitIndex]}';
+}
 
 /// Renders byte counts as human-readable strings using binary units.
 ///
@@ -17,7 +74,7 @@ String humanizeBytes(int bytes) {
   if (bytes == 0) return '0 B';
 
   final isNegative = bytes < 0;
-  final absBytes = isNegative ? -bytes : bytes; // Handle negative without using abs()
+  final absBytes = bytes.abs(); // Handle negative with standard abs()
   final sign = isNegative ? '-' : '';
   
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -28,13 +85,6 @@ String humanizeBytes(int bytes) {
   while (value >= 1024 && unitIndex < units.length - 1) {
     value /= 1024;
     unitIndex++;
-  }
-
-  // Handle edge case where rounding causes value to reach 1024 threshold after formatting
-  // which incorrectly displays as (1024 X) when it should promote to the next unit
-  if (unitIndex < units.length - 1 && value.toStringAsFixed(2) == '1024.00') {
-    value = 1.0;
-    unitIndex++; // Promote to the next unit
   }
 
   // Format with up to two decimal places, then trim trailing zeros
