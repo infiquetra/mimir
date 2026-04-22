@@ -34,6 +34,7 @@ void main() {
 
     test('fractional values round to up to 2 decimals', () {
       expect(formatBytes(1536), '1.5 KB');
+      expect(formatBytes(1280), '1.25 KB');
     });
 
     test('above TB keeps TB suffix and scales numerically', () {
