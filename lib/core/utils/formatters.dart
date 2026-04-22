@@ -5,6 +5,8 @@
 /// Scales through B, KB, MB, GB, and TB. To maintain readability for very
 /// large values, counts exceeding 1024 TB do not transition to a new unit;
 /// they continue to use the 'TB' suffix while scaling numerically (e.g., '1024 TB').
+/// For values above 1 TB, the function stops dividing once it reaches TB and 
+/// expresses larger magnitudes numerically (e.g. 1 PB = 1024 TB, not 1 TB).
 ///
 /// Examples:
 /// - `formatBytes(0)` → `'0 B'`
