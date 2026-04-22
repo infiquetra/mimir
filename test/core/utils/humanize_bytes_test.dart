@@ -49,6 +49,10 @@ void main() {
       
       // Ensure values with single decimal digit are formatted correctly
       expect(humanizeBytes(1536), '1.5 KB');
+      
+      // Test case for two decimal places retention
+      expect(humanizeBytes(1331), '1.29 KB'); // 1.3017578125 KB, should be floored to 1.29 KB
+      expect(humanizeBytes(1690), '1.65 KB'); // 1.650390625 KB, should be floored to 1.65 KB
     });
   });
 }

@@ -1,5 +1,3 @@
-library formatters;
-
 /// Utility functions for formatting values.
 
 /// Formats a byte count into a human-readable string using binary units.
@@ -16,23 +14,6 @@ library formatters;
 /// - `formatBytes(1048576)` → `'1 MB'`
 /// - `formatBytes(-2048)` → `'-2 KB'`
 String formatBytes(int bytes) {
-  return humanizeBytes(bytes);
-}
-
-/// Renders byte counts as human-readable strings using binary units.
-///
-/// Uses B, KB, MB, GB, and TB with 1024-based scaling. Trims trailing
-/// zeros for clean display. Preserves negative signs when applicable.
-///
-/// Examples:
-/// - `humanizeBytes(0)` → `'0 B'`
-/// - `humanizeBytes(512)` → `'512 B'`
-/// - `humanizeBytes(1024)` → `'1 KB'`
-/// - `humanizeBytes(1536)` → `'1.5 KB'`
-/// - `humanizeBytes(1048576)` → `'1 MB'`
-/// - `humanizeBytes(-2048)` → `'-2 KB'`
-/// - `humanizeBytes(1024^5)` → `'1024 TB'`
-String humanizeBytes(int bytes) {
   if (bytes == 0) return '0 B';
 
   final isNegative = bytes < 0;
@@ -74,4 +55,21 @@ String humanizeBytes(int bytes) {
   }
 
   return '$sign$formattedValue ${units[unitIndex]}';
+}
+
+/// Renders byte counts as human-readable strings using binary units.
+///
+/// Uses B, KB, MB, GB, and TB with 1024-based scaling. Trims trailing
+/// zeros for clean display. Preserves negative signs when applicable.
+///
+/// Examples:
+/// - `humanizeBytes(0)` → `'0 B'`
+/// - `humanizeBytes(512)` → `'512 B'`
+/// - `humanizeBytes(1024)` → `'1 KB'`
+/// - `humanizeBytes(1536)` → `'1.5 KB'`
+/// - `humanizeBytes(1048576)` → `'1 MB'`
+/// - `humanizeBytes(-2048)` → `'-2 KB'`
+/// - `humanizeBytes(1024^5)` → `'1024 TB'`
+String humanizeBytes(int bytes) {
+  return formatBytes(bytes);
 }
