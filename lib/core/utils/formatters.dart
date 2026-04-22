@@ -16,41 +16,60 @@
 String formatBytes(int bytes) {
   if (bytes == 0) return '0 B';
 
+  final isNegative = bytes < 0;
   final absBytes = bytes.abs();
-  final sign = bytes < 0 ? '-' : '';
-
+  final sign = isNegative ? '-' : '';
+  
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  int unitIndex = 0;
-  double value = absBytes.toDouble();
+  var value = absBytes.toDouble();
+  var unitIndex = 0;
 
-  // Scale the value and handle special formatting for the near-threshold case to avoid rounding errors
-  // For example, 1048575 bytes should be 1023.99 KB, not 1024 KB
+  // Scale the value while it's >= 1024 and we haven't reached TB yet
   while (value >= 1024 && unitIndex < units.length - 1) {
     value /= 1024;
     unitIndex++;
   }
 
-  String formatted;
+  // Format with up to two decimal places, then trim trailing zeros
+  String formattedValue;
   if (unitIndex == 0) {
-    formatted = value.toInt().toString();
+    // For bytes, show as integer
+    formattedValue = value.toInt().toString();
   } else {
-    // Floor instead of round to prevent crossing thresholds
+    // For other units, floor to prevent crossing thresholds and show with up to 2 decimal places
     // Convert to fixed-point arithmetic to avoid floating-point errors
-    final scaledValueInt = (value * 100).toInt();
+    final scaledValueInt = (value * 100).floor(); // Floor instead of round
     final flooredValue = scaledValueInt ~/ 100; // Integer division
     final decimalPart = scaledValueInt % 100;
 
     if (decimalPart == 0) {
-      formatted = flooredValue.toString();
+      formattedValue = flooredValue.toString();
     } else {
       // Format with up to 2 decimals, removing trailing zeros
       String decimalStr = decimalPart.toString().padLeft(2, '0');
       if (decimalStr.endsWith('0')) {
         decimalStr = decimalStr.substring(0, decimalStr.length - 1);
       }
-      formatted = '$flooredValue.$decimalStr';
+      formattedValue = '$flooredValue.$decimalStr';
     }
   }
 
-  return '$sign$formatted ${units[unitIndex]}';
+  return '$sign$formattedValue ${units[unitIndex]}';
+}
+
+/// Renders byte counts as human-readable strings using binary units.
+///
+/// Uses B, KB, MB, GB, and TB with 1024-based scaling. Trims trailing
+/// zeros for clean display. Preserves negative signs when applicable.
+///
+/// Examples:
+/// - `humanizeBytes(0)` → `'0 B'`
+/// - `humanizeBytes(512)` → `'512 B'`
+/// - `humanizeBytes(1024)` → `'1 KB'`
+/// - `humanizeBytes(1536)` → `'1.5 KB'`
+/// - `humanizeBytes(1048576)` → `'1 MB'`
+/// - `humanizeBytes(-2048)` → `'-2 KB'`
+/// - `humanizeBytes(1024^5)` → `'1024 TB'`
+String humanizeBytes(int bytes) {
+  return formatBytes(bytes);
 }
