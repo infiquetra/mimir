@@ -2,8 +2,9 @@
 
 /// Formats a byte count into a human-readable string using binary units.
 ///
-/// Uses 1024-based units (B, KB, MB, GB, TB). Values above 1 TB keep the
-/// 'TB' suffix while continuing to scale numerically (e.g., '1024 TB').
+/// Scales through B, KB, MB, GB, and TB. To maintain readability for very
+/// large values, counts exceeding 1024 TB do not transition to a new unit;
+/// they continue to use the 'TB' suffix while scaling numerically (e.g., '1024 TB').
 ///
 /// Examples:
 /// - `formatBytes(0)` → `'0 B'`
