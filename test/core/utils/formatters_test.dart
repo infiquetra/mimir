@@ -28,7 +28,7 @@ void main() {
     });
 
     test('rounds scaled values to at most two decimals', () {
-      // 1150 / 1024 = 1.123... -> 1.12 KB
+      // 1150 / 1024 = 1.1230... -> 1.12 KB
       expect(formatBytes(1150), '1.12 KB'); 
       // 1126 / 1024 = 1.0996... -> 1.1 KB
       expect(formatBytes(1126), '1.1 KB');
