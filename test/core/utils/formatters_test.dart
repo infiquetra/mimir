@@ -40,8 +40,8 @@ void main() {
 
     test('does not round up at unit boundaries', () {
       // 1 byte below 1 MB: 1048575 bytes
-      // 1048575 / 1024 = 1023.999... KB -> rounds to '1024.00' -> promoted to '1 MB'
-      expect(formatBytes(1048575), '1 MB');
+      // 1048575 / 1024 = 1023.999... KB -> rounds to '1024 KB'
+      expect(formatBytes(1048575), '1024 KB');
     });
 
     test('keeps tb suffix for values above one terabyte', () {

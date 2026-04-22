@@ -25,13 +25,6 @@ String formatBytes(int bytes) {
   } else {
     formatted = value.toStringAsFixed(2);
     
-    // Handle rounding rollover (e.g., 1023.999 -> 1024.00)
-    if (double.parse(formatted) == 1024.0 && unitIndex < units.length - 1) {
-      value = 1.0;
-      unitIndex++;
-      formatted = value.toStringAsFixed(2);
-    }
-
     // Trim trailing zeros and decimal point if not needed
     if (formatted.endsWith('.00')) {
       formatted = formatted.substring(0, formatted.length - 3);
