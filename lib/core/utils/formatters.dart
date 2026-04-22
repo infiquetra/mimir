@@ -24,7 +24,7 @@ String formatBytes(int bytes) {
   } else {
     formatted = value.toStringAsFixed(2);
     
-    if (double.tryParse(formatted) == 1024.0) {
+    if (double.parse(formatted) == 1024.0) {
       if (unitIndex < units.length - 1) {
         value = 1.0;
         unitIndex++;
