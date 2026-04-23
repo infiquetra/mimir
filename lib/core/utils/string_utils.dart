@@ -1,30 +1,29 @@
-import 'package:characters/characters.dart';
-
 /// Utility functions for string manipulation.
+library;
 
 /// Truncates [input] in the middle if it exceeds [maxLength].
 ///
-/// If the string length is less than or equal to [maxLength], the original string is returned.
-/// Otherwise, the middle part is replaced with [ellipsis] such that the
-/// resulting string length is at most [maxLength].
+/// If [input.length] is less than or equal to [maxLength], returns [input] unchanged.
+/// Otherwise, replaces the middle with [ellipsis] so the result length is at most
+/// [maxLength]. When [maxLength] minus the ellipsis length is odd, the extra
+/// character goes to the start.
 ///
-/// Implementation is grapheme-aware and will not split emojis or combined characters.
+/// If [maxLength] is shorter than the ellipsis length, returns as much of the
+/// ellipsis as fits.
 String truncateMiddle(String input, int maxLength, {String ellipsis = '\u2026'}) {
-  final inputChars = input.characters;
-  if (inputChars.length <= maxLength) return input;
+  if (input.length <= maxLength) return input;
   if (maxLength <= 0) return '';
 
-  final ellipsisChars = ellipsis.characters;
-  if (maxLength <= ellipsisChars.length) {
-    return ellipsisChars.take(maxLength).toString();
+  if (maxLength <= ellipsis.length) {
+    return ellipsis.substring(0, maxLength);
   }
 
-  final visibleChars = maxLength - ellipsisChars.length;
-  final startCount = (visibleChars + 1) ~/ 2;
-  final endCount = visibleChars ~/ 2;
+  final visibleLength = maxLength - ellipsis.length;
+  final startCount = (visibleLength + 1) ~/ 2;
+  final endCount = visibleLength ~/ 2;
 
-  final start = inputChars.take(startCount).toString();
-  final end = inputChars.takeLast(endCount).toString();
+  final start = input.substring(0, startCount);
+  final end = input.substring(input.length - endCount);
 
   return '$start$ellipsis$end';
 }
