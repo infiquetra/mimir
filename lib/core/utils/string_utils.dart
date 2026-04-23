@@ -14,9 +14,9 @@ library;
 ///
 /// Examples:
 /// - `truncateMiddle('hello', 10)` → `'hello'` (unchanged, fits within maxLength)
-/// - `truncateMiddle('abcdefghijklmn', 8)` → `'abc…lmn'` (3 + 1 ellipsis + 3 = 7 chars)
+/// - `truncateMiddle('abcdefghijklmn', 8)` → `'abcd…lmn'` (4 + 1 ellipsis + 3 = 8 chars)
 /// - `truncateMiddle('', 5)` → `''` (empty string handled)
-/// - `truncateMiddle('abcdef', 3)` → `'a…f'` (visibleBudget = 1, distributed: 1 start + 1 end)
+/// - `truncateMiddle('abcdef', 3)` → `'a…f'` (visibleBudget = 2, distributed: 1 start + 1 end)
 String truncateMiddle(String input, int maxLength, {String ellipsis = '…'}) {
   // Guard: unchanged path - if input fits within maxLength, return as-is
   if (input.length <= maxLength) {
