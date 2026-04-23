@@ -43,5 +43,11 @@ void main() {
     test('values above TB scale numerically with TB suffix', () {
       expect(humanizeBytes(1099511627776 * 2), '2 TB');
     });
+
+    test('values exceeding 1024 TB remain in TB unit', () {
+      // 1024 TB = 1024^5 bytes; formatter should cap at TB, not advance
+      expect(humanizeBytes(1099511627776 * 1024), '1024 TB');
+      expect(humanizeBytes(1099511627776 * 2048), '2048 TB');
+    });
   });
 }
