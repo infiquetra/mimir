@@ -63,7 +63,7 @@ void main() {
           isA<FormatException>().having(
             (e) => e.message,
             'message',
-            contains(''),
+            contains('Invalid semantic version'),
           ),
         ),
       );
