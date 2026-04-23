@@ -54,3 +54,56 @@ String formatBytes(int bytes) {
 
   return '$sign$formatted ${units[unitIndex]}';
 }
+
+/// Formats a byte count into a human-readable string using binary units.
+///
+/// Scales through B, KB, MB, GB, and TB using 1024-based thresholds.
+/// Values exceeding 1024 TB continue to use the 'TB' suffix with scaled numerics.
+///
+/// Examples:
+/// - `humanizeBytes(0)` → `'0 B'`
+/// - `humanizeBytes(512)` → `'512 B'`
+/// - `humanizeBytes(1024)` → `'1 KB'`
+/// - `humanizeBytes(1536)` → `'1.5 KB'`
+/// - `humanizeBytes(1048576)` → `'1 MB'`
+/// - `humanizeBytes(-2048)` → `'-2 KB'`
+String humanizeBytes(int bytes) {
+  if (bytes == 0) return '0 B';
+
+  final absBytes = bytes.abs();
+  final sign = bytes < 0 ? '-' : '';
+
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  int unitIndex = 0;
+  double value = absBytes.toDouble();
+
+  // Check for overflow immediately after conversion to double
+  // Very large ints can convert to double.infinity
+  if (!value.isFinite) {
+    return '${sign}999999999999 TB';
+  }
+
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex++;
+  }
+
+  String formatted;
+  if (unitIndex == 0) {
+    formatted = value.toInt().toString();
+  } else {
+    // Round to 2 decimal places
+    final rounded = (value * 100).round() / 100;
+    // Convert to string, remove trailing .0 or .00
+    String str = rounded.toStringAsFixed(2);
+    if (str.endsWith('.00')) {
+      str = str.substring(0, str.length - 3);
+    } else if (str.endsWith('0')) {
+      // Single trailing digit after decimal
+      str = str.substring(0, str.length - 1);
+    }
+    formatted = str;
+  }
+
+  return '$sign$formatted ${units[unitIndex]}';
+}
