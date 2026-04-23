@@ -19,7 +19,9 @@
 
   int parseComponent(String component, String originalVersion) {
     if (component.isEmpty) {
-      return 0;
+      throw FormatException(
+        'Empty version component in "$originalVersion"',
+      );
     }
     final parsed = int.tryParse(component);
     if (parsed == null) {
