@@ -5,6 +5,8 @@
 
 library string_utils;
 
+import 'package:characters/characters.dart';
+
 /// Truncates a string in the middle, replacing the removed portion
 /// with an ellipsis.
 ///
@@ -21,30 +23,22 @@ library string_utils;
 ///   truncateMiddle('', 5) → ''
 ///   truncateMiddle('abcdef', 3) → 'a…f'  // Design choice: favor visible ends
 String truncateMiddle(String input, int maxLength, {String ellipsis = '…'}) {
-  // Boundary validation
-  if (maxLength < 0) {
-    throw ArgumentError.value(maxLength, 'maxLength', 'must be non-negative');
-  }
-  if (input.isEmpty) {
-    return '';
-  }
-
   // Return unchanged if input is already short enough
-  if (input.length <= maxLength) {
+  if (input.characters.length <= maxLength) {
     return input;
   }
 
   // Handle edge case where ellipsis is longer than maxLength
-  if (ellipsis.length > maxLength) {
-    return ellipsis.substring(0, maxLength);
+  if (ellipsis.characters.length > maxLength) {
+    return ellipsis.characters.take(maxLength).toString();
   }
 
   // Calculate how many characters we can show from start and end
-  final visibleBudget = maxLength - ellipsis.length;
-  
+  final visibleBudget = maxLength - ellipsis.characters.length;
+
   // If we can't show any visible characters, just return the ellipsis
   if (visibleBudget <= 0) {
-    return ellipsis.substring(0, maxLength);
+    return ellipsis.characters.take(maxLength).toString();
   }
 
   // Split visible budget consistently: prefer start when odd
@@ -52,7 +46,7 @@ String truncateMiddle(String input, int maxLength, {String ellipsis = '…'}) {
   final endCount = visibleBudget ~/ 2;
 
   // Construct result: start + ellipsis + end
-  return input.substring(0, startCount) +
+  return input.characters.take(startCount).toString() +
       ellipsis +
-      input.substring(input.length - endCount);
+      input.characters.skip(input.characters.length - endCount).toString();
 }

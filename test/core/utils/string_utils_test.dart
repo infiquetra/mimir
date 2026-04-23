@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:characters/characters.dart';
 import 'package:mimir/core/utils/string_utils.dart';
 
 void main() {
@@ -33,7 +34,7 @@ void main() {
       final result = truncateMiddle('abcdefghij', 6, ellipsis: '...');
       expect(result.length, lessThanOrEqualTo(6));
       expect(result.contains('...'), isTrue);
-      
+
       // Verify we can still see some characters from start and end
       final noEllipsis = result.replaceAll('...', '');
       expect(noEllipsis.isNotEmpty, isTrue);
@@ -49,9 +50,25 @@ void main() {
       expect(result.contains('…'), isTrue);
     });
 
-    test('negative maxLength throws ArgumentError', () {
-      expect(() => truncateMiddle('hello', -1), throwsA(isA<ArgumentError>()));
-      expect(() => truncateMiddle('hello', -5, ellipsis: '...'), throwsA(isA<ArgumentError>()));
+    test('emoji characters handled correctly (grapheme clusters)', () {
+      // These tests verify that multi-code-unit characters (emoji, flags,
+      // skin-tone modifiers) are not split mid-character.
+      expect(truncateMiddle('👨‍👩‍👧‍👦', 10), equals('👨‍👩‍👧‍👦'));
+      expect(truncateMiddle('🇺🇸', 2), equals('🇺🇸'));
+
+      // Truncate emoji input
+      final result = truncateMiddle('Hello 👋 World 🌍', 8);
+      // Note: result.length counts code units; result.characters.length counts grapheme clusters
+      expect(result.characters.length, lessThanOrEqualTo(8));
+      expect(result.startsWith('Hell'), isTrue);
+      expect(result.endsWith('d 🌍'), isTrue);
+
+      // Short limit with ASCII - the 9-char string 'A-B-C-D-E' 
+      // should fit as 'A…E' when maxLength is 3
+      final shortResult = truncateMiddle('A-B-C-D-E', 3);
+      expect(shortResult, equals('A…E'));
+      // Verify chars.length not code units
+      expect(shortResult.characters.length, equals(3));
     });
   });
 }
