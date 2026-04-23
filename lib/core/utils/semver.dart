@@ -58,13 +58,16 @@ int compareSemVer(String a, String b) {
 List<int> _normalizeVersion(String version) {
   final trimmed = version.trim();
   if (trimmed.isEmpty) {
-    throw FormatException('Invalid semver string: empty or whitespace', version);
+    throw FormatException('Invalid semver string: "$version" is empty or whitespace', version);
   }
 
   final parts = trimmed.split('.');
-  // Validate all components (including extra trailing ones) because the spec says "malformed input" includes any non-numeric component.
-  for (final component in parts) {
-    // Must be non-empty and consist only of decimal digits (no sign, no leading zeros restriction).
+  final retained = parts.take(3).toList();
+
+  // Validate only the retained components (major, minor, patch).
+  // Extra trailing components are ignored as per spec.
+  for (final component in retained) {
+    // Must be non-empty and consist only of decimal digits.
     if (component.isEmpty || !RegExp(r'^\d+$').hasMatch(component)) {
       throw FormatException(
         'Invalid semver component "$component" in "$version"',
@@ -72,8 +75,6 @@ List<int> _normalizeVersion(String version) {
       );
     }
   }
-
-  final retained = parts.take(3).toList();
 
   final result = <int>[];
   for (int i = 0; i < 3; i++) {
