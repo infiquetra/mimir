@@ -41,7 +41,7 @@ void main() {
       expect(
         () => compareSemVer('', '1.2.3'),
         throwsA(isA<FormatException>()
-            .having((e) => e.message, 'message', contains('Empty string'))),
+            .having((e) => e.message, 'message', contains('Empty string input'))),
       );
     });
 

@@ -53,7 +53,7 @@ int compareSemVer(String a, String b) {
 /// or if the input string is empty.
 List<int> _parseSemVer(String version) {
   if (version.isEmpty) {
-    throw FormatException('Invalid semantic version: Empty string "$version"', version);
+    throw FormatException('Invalid semantic version: Empty string input "$version"', version);
   }
 
   final List<String> parts = version.split('.');
@@ -69,13 +69,13 @@ List<int> _parseSemVer(String version) {
   for (int i = 0; i < 3; i++) {
     final String component = components[i];
     if (component.isEmpty) {
-      throw FormatException('Invalid semantic version: Empty component "$component" in "$version"', version);
+      throw FormatException('Invalid semantic version: Empty component in "$version"', version);
     }
     
     try {
       result[i] = int.parse(component);
     } catch (e) {
-      throw FormatException('Invalid semantic version: Non-numeric component "$component" in "$version"', version);
+      throw FormatException('Invalid semantic version: Non-numeric component in "$version"', version);
     }
   }
 
