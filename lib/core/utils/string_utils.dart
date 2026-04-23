@@ -14,7 +14,7 @@
 /// characters (not the ellipsis). When the visible budget is odd, the extra
 /// character is given to the start. For example, with `maxLength = 2` and
 /// `ellipsis = '…'` (length 1), the visibleBudget is 2 - 1 = 1, so the
-/// result is the first character + ellipsis + the last character: 'a…f'.
+/// result is the first character + ellipsis: 'a…'.
 String truncateMiddle(String input, int maxLength, {String ellipsis = '…'}) {
   if (input.length <= maxLength) {
     return input;
