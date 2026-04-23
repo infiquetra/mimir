@@ -1,39 +1,27 @@
+import 'package:characters/characters.dart';
+
 /// Utility functions for string manipulation.
-library;
 
 /// Truncates a string in the middle if it exceeds [maxLength].
 ///
 /// If the string length is less than or equal to [maxLength], the original string is returned.
 /// Otherwise, the middle part is replaced with [ellipsis] such that the resulting
-/// string length is exactly [maxLength] (unless [maxLength] is less than [ellipsis]
-/// length, in which case a truncated [ellipsis] is returned).
+/// string length does not exceed [maxLength].
 ///
-/// When calculating how many characters to keep from the start and end:
-/// - The total budget for visible characters is `maxLength - ellipsis.length`.
-/// - If this budget is odd, the extra character is assigned to the start.
-String truncateMiddle(String input, int maxLength, {String ellipsis = '…'}) {
-  if (input.length <= maxLength) {
-    return input;
+/// This implementation is grapheme-aware and will not split emojis or combined characters.
+String truncateMiddle(String input, int maxLength, {String ellipsis = '\u2026'}) {
+  final inputChars = input.characters;
+  if (inputChars.length <= maxLength) return input;
+  if (maxLength <= 0) return '';
+
+  final ellipsisChars = ellipsis.characters;
+  if (maxLength <= ellipsisChars.length) {
+    return ellipsisChars.take(maxLength).toString();
   }
 
-  if (input.isEmpty) {
-    return '';
-  }
-
-  if (maxLength <= 0) {
-    return '';
-  }
-
-  if (maxLength <= ellipsis.length) {
-    return ellipsis.substring(0, maxLength);
-  }
-
-  final visibleCharacters = maxLength - ellipsis.length;
-  final startLength = (visibleCharacters + 1) ~/ 2;
-  final endLength = visibleCharacters ~/ 2;
-
-  final start = input.substring(0, startLength);
-  final end = endLength > 0 ? input.substring(input.length - endLength) : '';
+  final visibleChars = maxLength - ellipsisChars.length;
+  final start = inputChars.take((visibleChars + 1) ~/ 2).toString();
+  final end = inputChars.takeLast(visibleChars ~/ 2).toString();
 
   return '$start$ellipsis$end';
 }
