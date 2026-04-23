@@ -85,6 +85,10 @@ String humanizeBytes(int bytes) {
   String formatted;
   if (unitIndex == 0) {
     formatted = value.toInt().toString();
+  } else if (!value.isFinite) {
+    // Handle overflow case: return a capped TB value
+    formatted = '999999999999';
+    unitIndex = units.length - 1;
   } else {
     // Round to 2 decimal places
     final rounded = (value * 100).round() / 100;

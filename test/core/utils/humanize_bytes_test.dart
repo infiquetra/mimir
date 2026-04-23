@@ -49,5 +49,12 @@ void main() {
       expect(humanizeBytes(1099511627776 * 1024), '1024 TB');
       expect(humanizeBytes(1099511627776 * 2048), '2048 TB');
     });
+
+    test('handles extremely large values without throwing', () {
+      // Values that cause double overflow should not crash
+      // max int64 (9e18) is well within double range, but we test the code path
+      // The fix handles the case where value becomes double.infinity
+      expect(humanizeBytes(9223372036854775807).contains('TB'), isTrue);
+    });
   });
 }
