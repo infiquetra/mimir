@@ -78,20 +78,22 @@ void main() {
               'message',
               contains('1.2.a'),
             )));
-        expect(
-            () => compareSemVer('', '1.2.3'),
-            throwsA(isA<FormatException>().having(
-              (e) => e.message,
-              'message',
-              contains(''),
-            )));
-        expect(
-            () => compareSemVer('   ', '1.2.3'),
-            throwsA(isA<FormatException>().having(
-              (e) => e.message,
-              'message',
-              contains('   '),
-            )));
+    expect(
+        () => compareSemVer('', '1.2.3'),
+        throwsA(isA<FormatException>().having(
+          (e) => e.message,
+          'message',
+          contains(''),
+        )),
+      );
+    expect(
+        () => compareSemVer('   ', '1.2.3'),
+        throwsA(isA<FormatException>().having(
+          (e) => e.message,
+          'message',
+          contains('   '),
+        )),
+      );
         expect(
             () => compareSemVer('1.2.3', 'a.b.c'),
             throwsA(isA<FormatException>().having(
