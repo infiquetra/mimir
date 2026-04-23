@@ -25,6 +25,8 @@ void main() {
       expect(truncateMiddle('abcdef', 2), '…');
       expect(truncateMiddle('abcdef', 1), '…');
       expect(truncateMiddle('abcdef', 0), '');
+      // maxLength < ellipsis.length → truncate ellipsis to fit
+      expect(truncateMiddle('abcdef', 2, ellipsis: '....'), '..');
     });
 
     test('counts custom ellipsis length in the max length budget', () {
@@ -39,6 +41,8 @@ void main() {
       expect(truncateMiddle('abcdefgh', 5), 'ab…gh');
       // maxLength=6, ellipsis=1, visible=5, prefix=3, suffix=2
       expect(truncateMiddle('abcdefgh', 6), 'abc…gh');
+      // maxLength=3, ellipsis=1, visible=2, prefix=1, suffix=1 → 'a…f'
+      expect(truncateMiddle('abcdef', 3), 'a…f');
     });
   });
 }
