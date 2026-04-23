@@ -30,7 +30,7 @@ List<int> _parseVersion(String version, String originalInput) {
 
   if (trimmed.isEmpty) {
     throw FormatException(
-      'Invalid semantic version: "${originalInput.trim()}" — input cannot be empty or whitespace',
+      'Invalid semantic version: "$originalInput" — input cannot be empty or whitespace',
     );
   }
 
@@ -43,13 +43,13 @@ List<int> _parseVersion(String version, String originalInput) {
       final part = parts[i];
       if (part.isEmpty) {
         throw FormatException(
-          'Invalid semantic version: "${originalInput.trim()}" — empty component at position $i',
+          'Invalid semantic version: "$originalInput" — empty component at position $i',
         );
       }
       final value = int.tryParse(part);
       if (value == null) {
         throw FormatException(
-          'Invalid semantic version: "${originalInput.trim()}" — non-numeric component "$part"',
+          'Invalid semantic version: "$originalInput" — non-numeric component "$part"',
         );
       }
       result.add(value);
