@@ -48,5 +48,10 @@ void main() {
       expect(result.endsWith('f'), isTrue);
       expect(result.contains('…'), isTrue);
     });
+
+    test('negative maxLength throws ArgumentError', () {
+      expect(() => truncateMiddle('hello', -1), throwsA(isA<ArgumentError>()));
+      expect(() => truncateMiddle('hello', -5, ellipsis: '...'), throwsA(isA<ArgumentError>()));
+    });
   });
 }

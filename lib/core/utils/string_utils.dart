@@ -21,6 +21,14 @@ library string_utils;
 ///   truncateMiddle('', 5) → ''
 ///   truncateMiddle('abcdef', 3) → 'a…f'  // Design choice: favor visible ends
 String truncateMiddle(String input, int maxLength, {String ellipsis = '…'}) {
+  // Boundary validation
+  if (maxLength < 0) {
+    throw ArgumentError.value(maxLength, 'maxLength', 'must be non-negative');
+  }
+  if (input.isEmpty) {
+    return '';
+  }
+
   // Return unchanged if input is already short enough
   if (input.length <= maxLength) {
     return input;
