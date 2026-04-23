@@ -59,13 +59,15 @@ void main() {
       expect(
         () => compareSemVer('1.2.a', '1.2.3'),
         throwsA(isA<FormatException>()
-            .having((e) => e.message, 'message', contains('Non-numeric component'))),
+            .having((e) => e.message, 'message', contains('Non-numeric component'))
+            .having((e) => e.message, 'message', contains('1.2.a'))),
       );
       
       expect(
         () => compareSemVer('1.2.3', '1.2.a'),
         throwsA(isA<FormatException>()
-            .having((e) => e.message, 'message', contains('Non-numeric component'))),
+            .having((e) => e.message, 'message', contains('Non-numeric component'))
+            .having((e) => e.message, 'message', contains('1.2.a'))),
       );
     });
 
