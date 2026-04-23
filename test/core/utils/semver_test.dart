@@ -80,27 +80,28 @@ void main() {
             )));
     expect(
         () => compareSemVer('', '1.2.3'),
-        throwsA(isA<FormatException>().having(
+        throwsA(isA<<FormatExceptionFormatException>().having(
           (e) => e.message,
           'message',
-          contains(''),
+          contains('is empty or whitespace'),
         )),
       );
     expect(
         () => compareSemVer('   ', '1.2.3'),
-        throwsA(isA<FormatException>().having(
+        throwsA(isA<<FormatExceptionFormatException>().having(
           (e) => e.message,
           'message',
-          contains('   '),
+          contains('is empty or whitespace'),
         )),
       );
-        expect(
-            () => compareSemVer('1.2.3', 'a.b.c'),
-            throwsA(isA<FormatException>().having(
-              (e) => e.message,
-              'message',
-              contains('a.b.c'),
-            )));
+    expect(
+        () => compareSemVer('1.2.3', 'a.b.c'),
+        throwsA(isA<<FormatExceptionFormatException>().having(
+          (e) => e.message,
+          'message',
+          contains('a.b.c'),
+        )),
+      );
       });
     });
   });
