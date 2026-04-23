@@ -15,7 +15,7 @@
 ///
 /// Examples:
 /// - `truncateMiddle('hello', 10)` → `'hello'`
-/// - `truncateMiddle('abcdefghijklmn', 8)` → `'abc…lmn'`
+/// - `truncateMiddle('abcdefghijklmn', 8)` → `'abcd…lmn'`
 /// - `truncateMiddle('', 5)` → `''`
 /// - `truncateMiddle('abcdef', 3)` → `'a…f'`
 /// - `truncateMiddle('abcdef', 5)` → `'ab…ef'`
