@@ -9,12 +9,6 @@
 /// the extra character (if budget is odd) is given to the start.
 /// For example, `truncateMiddle('abcdef', 3)` with `ellipsis = '…'`
 /// has a budget of 3 - 1 = 2. This is split as 1 start and 1 end: 'a…f'.
-///
-/// The [visibleBudget] is the portion of [maxLength] allocated to visible
-/// characters (not the ellipsis). When the visible budget is odd, the extra
-/// character is given to the start. For example, with `maxLength = 2` and
-/// `ellipsis = '…'` (length 1), the visibleBudget is 2 - 1 = 1, so the
-/// result is the first character + ellipsis: 'a…'.
 String truncateMiddle(String input, int maxLength, {String ellipsis = '…'}) {
   if (input.length <= maxLength) {
     return input;
@@ -24,7 +18,7 @@ String truncateMiddle(String input, int maxLength, {String ellipsis = '…'}) {
     if (maxLength == 0) {
       return '';
     }
-    throw RangeError.range(maxLength, 1, null, 'maxLength');
+    throw RangeError.range(maxLength, 0, null, 'maxLength');
   }
 
   final int ellipsisLength = ellipsis.length;
