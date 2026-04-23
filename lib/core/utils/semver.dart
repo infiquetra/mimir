@@ -74,7 +74,13 @@ List<int> _parseSemVer(String version) {
     
     try {
       result[i] = int.parse(component);
+      if (result[i] < 0) {
+        throw FormatException('Invalid semantic version: Negative component in "$version"', version);
+      }
     } catch (e) {
+      if (e is FormatException && e.message.contains('Negative component')) {
+        rethrow;
+      }
       throw FormatException('Invalid semantic version: Non-numeric component in "$version"', version);
     }
   }

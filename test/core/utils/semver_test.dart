@@ -41,7 +41,8 @@ void main() {
       expect(
         () => compareSemVer('', '1.2.3'),
         throwsA(isA<FormatException>()
-            .having((e) => e.message, 'message', contains('Empty string input'))),
+            .having((e) => e.message, 'message', contains('Empty string input'))
+            .having((e) => e.message, 'message', contains('""'))),
       );
     });
 
@@ -49,7 +50,8 @@ void main() {
       expect(
         () => compareSemVer('1..3', '1.2.3'),
         throwsA(isA<FormatException>()
-            .having((e) => e.message, 'message', contains('Empty component'))),
+            .having((e) => e.message, 'message', contains('Empty component'))
+            .having((e) => e.message, 'message', contains('1..3'))),
       );
     });
 
@@ -64,6 +66,22 @@ void main() {
         () => compareSemVer('1.2.3', '1.2.a'),
         throwsA(isA<FormatException>()
             .having((e) => e.message, 'message', contains('Non-numeric component'))),
+      );
+    });
+
+    test('compareSemVer throws FormatException for negative components', () {
+      expect(
+        () => compareSemVer('-1.2.3', '1.2.3'),
+        throwsA(isA<FormatException>()
+            .having((e) => e.message, 'message', contains('Negative component'))
+            .having((e) => e.message, 'message', contains('-1.2.3'))),
+      );
+      
+      expect(
+        () => compareSemVer('1.-2.3', '1.2.3'),
+        throwsA(isA<FormatException>()
+            .having((e) => e.message, 'message', contains('Negative component'))
+            .having((e) => e.message, 'message', contains('1.-2.3'))),
       );
     });
   });
