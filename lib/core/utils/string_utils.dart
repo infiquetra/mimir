@@ -1,5 +1,4 @@
 /// Utility functions for string manipulation.
-///
 /// Provides helpers for common string operations that are not
 /// available in the Dart core library.
 
@@ -23,6 +22,11 @@ import 'package:characters/characters.dart';
 ///   truncateMiddle('', 5) → ''
 ///   truncateMiddle('abcdef', 3) → 'a…f'  // Design choice: favor visible ends
 String truncateMiddle(String input, int maxLength, {String ellipsis = '…'}) {
+  // Guard: negative maxLength is invalid, fail loudly
+  if (maxLength <= 0) {
+    throw ArgumentError.value(maxLength, 'maxLength', 'must be positive');
+  }
+
   // Return unchanged if input is already short enough
   if (input.characters.length <= maxLength) {
     return input;

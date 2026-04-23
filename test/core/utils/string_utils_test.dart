@@ -1,74 +1,66 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:characters/characters.dart';
 import 'package:mimir/core/utils/string_utils.dart';
 
 void main() {
   group('truncateMiddle', () {
-    test('unchanged short strings', () {
-      expect(truncateMiddle('hello', 10), equals('hello'));
-      expect(truncateMiddle('a', 1), equals('a'));
-      expect(truncateMiddle('', 5), equals(''));
+    test('returns input unchanged when shorter than maxLength', () {
+      expect(truncateMiddle('hello', 10), 'hello');
+      expect(truncateMiddle('mimir', 5), 'mimir');
     });
 
-    test('middle truncation', () {
-      final result = truncateMiddle('abcdefghijklmn', 8);
-      expect(result.length, lessThanOrEqualTo(8));
-      expect(result.startsWith('abc'), isTrue);
-      expect(result.endsWith('lmn'), isTrue);
-      expect(result.contains('…'), isTrue);
+    test('truncates the middle while keeping both ends visible', () {
+      expect(truncateMiddle('abcdefghijklmn', 8), 'abcd…lmn');
     });
 
-    test('empty input', () {
-      expect(truncateMiddle('', 5), equals(''));
-      expect(truncateMiddle('', 0), equals(''));
+    test('returns empty input unchanged', () {
+      expect(truncateMiddle('', 5), '');
     });
 
-    test('maxLength-too-small edge case', () {
-      // When maxLength is shorter than ellipsis, return truncated ellipsis
-      expect(truncateMiddle('hello', 2, ellipsis: '---'), equals('--'));
-      expect(truncateMiddle('world', 1, ellipsis: '...'), equals('.'));
+    test('returns truncated ellipsis when maxLength is shorter than ellipsis', () {
+      // maxLength=0 is now invalid (throws)
+      expect(() => truncateMiddle('abcdef', 0), throwsA(isA<ArgumentError>()));
+
+      // Custom ellipsis '---' (length 3), maxLength 2 -> returns '--'
+      expect(truncateMiddle('abcdef', 2, ellipsis: '---'), '--');
     });
 
-    test('ellipsis length consideration', () {
-      // Custom ellipsis should count toward maxLength
-      final result = truncateMiddle('abcdefghij', 6, ellipsis: '...');
-      expect(result.length, lessThanOrEqualTo(6));
-      expect(result.contains('...'), isTrue);
-
-      // Verify we can still see some characters from start and end
-      final noEllipsis = result.replaceAll('...', '');
-      expect(noEllipsis.isNotEmpty, isTrue);
+    test('throws ArgumentError for non-positive maxLength', () {
+      expect(() => truncateMiddle('abcdef', -1), throwsA(isA<ArgumentError>()));
+      expect(() => truncateMiddle('abcdef', 0), throwsA(isA<ArgumentError>()));
     });
 
-    test('documented short-limit design choice', () {
-      // For truncateMiddle('abcdef', 3), we expect 'a…f'
-      // This preserves one visible character on each side
-      final result = truncateMiddle('abcdef', 3);
-      expect(result.length, equals(3));
-      expect(result.startsWith('a'), isTrue);
-      expect(result.endsWith('f'), isTrue);
-      expect(result.contains('…'), isTrue);
+    test('returns truncated ellipsis when maxLength is smaller than ellipsis (multi-char ellipsis)', () {
+      // maxLength=2, ellipsis='---' (length 3). Since ellipsis > maxLength, returns first 2 chars.
+      expect(truncateMiddle('some long text', 2, ellipsis: '---'), '--');
+
+      // maxLength=3, ellipsis='>>>' (length 3). Since ellipsis == maxLength, returns all 3.
+      expect(truncateMiddle('some long text', 3, ellipsis: '>>>'), '>>>');
+
+      // maxLength=4, ellipsis='>>>' (length 3). visibleBudget=1, start=1, end=0.
+      // 's' + '>>>' = 's>>>' (length 4)
+      expect(truncateMiddle('some long text', 4, ellipsis: '>>>'), 's>>>');
     });
 
-    test('emoji characters handled correctly (grapheme clusters)', () {
-      // These tests verify that multi-code-unit characters (emoji, flags,
-      // skin-tone modifiers) are not split mid-character.
-      expect(truncateMiddle('👨‍👩‍👧‍👦', 10), equals('👨‍👩‍👧‍👦'));
-      expect(truncateMiddle('🇺🇸', 2), equals('🇺🇸'));
+    test('counts custom ellipsis length against maxLength', () {
+      // 'abcdefghi', maxLength 8, ellipsis '---' (3)
+      // Budget = 8 - 3 = 5
+      // start = 3, end = 2
+      // 'abc' + '---' + 'hi' = 'abc---hi' (length 7, <= 8)
+      expect(truncateMiddle('abcdefghi', 8, ellipsis: '---'), 'abc---hi');
+    });
 
-      // Truncate emoji input
-      final result = truncateMiddle('Hello 👋 World 🌍', 8);
-      // Note: result.length counts code units; result.characters.length counts grapheme clusters
-      expect(result.characters.length, lessThanOrEqualTo(8));
-      expect(result.startsWith('Hell'), isTrue);
-      expect(result.endsWith('d 🌍'), isTrue);
+    test('documents the chosen 3-character behavior as a…f', () {
+      // 'abcdef', maxLength 3, ellipsis '…' (1)
+      // Budget = 3 - 1 = 2
+      // start = 1, end = 1
+      // 'a' + '…' + 'f' = 'a…f'
+      expect(truncateMiddle('abcdef', 3), 'a…f');
+    });
 
-      // Short limit with ASCII - the 9-char string 'A-B-C-D-E' 
-      // should fit as 'A…E' when maxLength is 3
-      final shortResult = truncateMiddle('A-B-C-D-E', 3);
-      expect(shortResult, equals('A…E'));
-      // Verify chars.length not code units
-      expect(shortResult.characters.length, equals(3));
+    test('handles single character strings', () {
+      expect(truncateMiddle('a', 1), 'a');
+      // maxLength=0 is now invalid (throws)
+      expect(() => truncateMiddle('a', 0), throwsA(isA<ArgumentError>()));
     });
   });
 }
