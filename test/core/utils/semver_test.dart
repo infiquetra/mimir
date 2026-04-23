@@ -40,12 +40,15 @@ void main() {
     });
 
     test('malformed input throws FormatException (type assertion)', () {
-      expect(() => compareSemVer('1.2.a', '1.2.3'), throwsA(isA<FormatException>()));
+      expect(() => compareSemVer('1.2.a', '1.2.3'),
+          throwsA(isA<FormatException>()));
       expect(() => compareSemVer('', '1.2.3'), throwsA(isA<FormatException>()));
-      expect(() => compareSemVer(' ', '1.2.3'), throwsA(isA<FormatException>()));
+      expect(
+          () => compareSemVer(' ', '1.2.3'), throwsA(isA<FormatException>()));
     });
 
-    test('malformed input exception message contains offending input substring', () {
+    test('malformed input exception message contains offending input substring',
+        () {
       expect(
         () => compareSemVer('1.2.a', '1.2.3'),
         throwsA(
@@ -56,7 +59,7 @@ void main() {
           ),
         ),
       );
-      
+
       expect(
         () => compareSemVer('', '1.2.3'),
         throwsA(

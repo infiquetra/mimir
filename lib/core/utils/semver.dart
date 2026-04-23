@@ -52,16 +52,21 @@ _SemVer _parseSemVer(String version) {
 int _parseInt(String str, String originalVersion) {
   final trimmed = str.trim();
   if (trimmed.isEmpty) {
-    throw FormatException('Invalid semantic version component in: $originalVersion', originalVersion);
+    throw FormatException(
+        'Invalid semantic version component in: $originalVersion',
+        originalVersion);
   }
 
   final parsed = int.tryParse(trimmed);
   if (parsed == null) {
-    throw FormatException('Invalid semantic version component in: $originalVersion', originalVersion);
+    throw FormatException(
+        'Invalid semantic version component in: $originalVersion',
+        originalVersion);
   }
 
   if (parsed < 0) {
-    throw FormatException('Negative version component in: $originalVersion', originalVersion);
+    throw FormatException(
+        'Negative version component in: $originalVersion', originalVersion);
   }
 
   return parsed;
