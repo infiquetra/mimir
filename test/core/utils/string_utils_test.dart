@@ -44,5 +44,17 @@ void main() {
       expect(truncateMiddle('a', 1), 'a');
       expect(truncateMiddle('a', 0), '');
     });
+
+    test('throws RangeError for negative maxLength', () {
+      expect(() => truncateMiddle('hello', -1), throwsRangeError);
+    });
+
+    test('handles one-visible-character boundary (visibleBudget == 1)', () {
+      // 'abcdef', maxLength 2, ellipsis '…' (1)
+      // visibleBudget = 2 - 1 = 1
+      // start = 1, end = 0
+      // 'a' + '…' + '' = 'a…'
+      expect(truncateMiddle('abcdef', 2), 'a…');
+    });
   });
 }
