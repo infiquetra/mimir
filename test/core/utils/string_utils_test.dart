@@ -7,6 +7,9 @@ void main() {
       expect(truncateMiddle('hello', 10), 'hello');
       expect(truncateMiddle('abc', 5), 'abc');
       expect(truncateMiddle('', 5), '');
+      // Single-character input
+      expect(truncateMiddle('a', 1), 'a');
+      expect(truncateMiddle('a', 0), '');
     });
 
     test('truncates the middle and keeps both ends visible', () {

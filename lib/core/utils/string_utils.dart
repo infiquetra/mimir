@@ -18,7 +18,7 @@
 /// - `truncateMiddle('abcdefghijklmn', 8)` → `'abc…lmn'`
 /// - `truncateMiddle('', 5)` → `''`
 /// - `truncateMiddle('abcdef', 3)` → `'a…f'`
-/// - `truncateMiddle('abcdef', 4)` → `'ab…ef'`
+/// - `truncateMiddle('abcdef', 5)` → `'ab…ef'`
 String truncateMiddle(String input, int maxLength, {String ellipsis = '…'}) {
   // Guard: non-positive maxLength → empty string
   if (maxLength <= 0) return '';
