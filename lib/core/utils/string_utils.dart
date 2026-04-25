@@ -12,7 +12,7 @@ library string_utils;
 /// Example:
 /// ```dart
 /// truncateMiddle('hello', 10); // 'hello'
-/// truncateMiddle('abcdefghijklmn', 8); // 'abc…lmn'
+/// truncateMiddle('abcdefghijklmn', 8); // 'abcd…lmn'
 /// truncateMiddle('', 5); // ''
 /// truncateMiddle('abcdef', 3); // 'a…f'
 /// ```
@@ -24,10 +24,9 @@ String truncateMiddle(String input, int maxLength, {String ellipsis = '…'}) {
 
   // Calculate visible character budget (not counting ellipsis)
   final visibleLength = maxLength - ellipsis.length;
-  
-  // If insufficient visible characters to show both start and end meaningfully,
-  // return ellipsis truncated to maxLength
-  if (visibleLength < 2) {
+
+  // If no visible budget, return ellipsis alone (truncated to maxLength if needed)
+  if (visibleLength <= 0) {
     return ellipsis.substring(0, maxLength.clamp(0, ellipsis.length));
   }
 

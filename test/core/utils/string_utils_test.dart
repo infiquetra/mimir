@@ -22,9 +22,17 @@ void main() {
     });
 
     test('should handle maxLength too small edge case', () {
+      // When maxLength < ellipsis.length, return ellipsis truncated to maxLength
       expect(truncateMiddle('abcdef', 1), '…');
-      expect(truncateMiddle('abcdef', 2), '…');
-      expect(truncateMiddle('abcdef', 3), 'a…f');
+      // When visible budget is 0 or negative, return ellipsis-only (truncated if needed)
+      expect(truncateMiddle('abcdef', 1, ellipsis: '...'), '.');
+      // When maxLength == ellipsis.length, still ellipsis-only
+      expect(truncateMiddle('abcdef', 3, ellipsis: '...'), '...');
+    });
+
+    test('should split single-character budget between start and end', () {
+      // maxLength=2 with default 1-char ellipsis: budget=1, front=1, back=0
+      expect(truncateMiddle('abcdef', 2), 'a…');
     });
 
     test('should consider ellipsis length', () {
