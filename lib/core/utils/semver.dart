@@ -10,6 +10,7 @@ library;
 /// - Accepts versions of the form `MAJOR.MINOR.PATCH` (e.g. `1.2.3`).
 /// - Compares major → minor → patch NUMERICALLY (not lexicographically), so `1.10.0 > 1.2.0`.
 /// - A short version (e.g. `1.2`) is treated as `1.2.0` — missing components default to zero.
+/// - A single-component version (e.g. `1`) is treated as `1.0.0`.
 /// - A version with extra trailing components (e.g. `1.2.3.4`) is treated as `1.2.3`.
 ///
 /// Throws [FormatException] if either input is malformed:
@@ -24,6 +25,7 @@ library;
 /// compareSemVer('1.10.0', '1.2.0'); // → positive
 /// compareSemVer('2.0.0', '1.99.99'); // → positive
 /// compareSemVer('1.2', '1.2.0'); // → 0 (short form pads with zero)
+/// compareSemVer('1', '1.0.0'); // → 0 (single component pads with zeros)
 /// compareSemVer('1.2.3.4', '1.2.3'); // → 0 (extra components ignored)
 /// compareSemVer('1.2.a', '1.2.3'); // → throws FormatException
 /// ```
@@ -54,33 +56,36 @@ class _SemVerParts {
 /// Only the first three components (major, minor, patch) are consumed.
 /// Missing components default to 0. Extra components beyond patch are ignored.
 ///
-/// requires at least major.minor (two components). A single major (e.g. "1") is invalid.
+/// Accepts versions of the form:
+/// - "MAJOR" (e.g. "1") → treated as 1.0.0
+/// - "MAJOR.MINOR" (e.g. "1.2") → treated as 1.2.0
+/// - "MAJOR.MINOR.PATCH" (e.g. "1.2.3")
 ///
 /// Throws [FormatException] if the input is empty, whitespace-only, or contains
-/// non-numeric components in the first two positions.
+/// non-numeric components.
 _SemVerParts _parseSemVer(String input) {
   final trimmed = input.trim();
   if (trimmed.isEmpty) {
-    throw FormatException('Invalid semver: empty string', input);
+    throw FormatException('Invalid semver: empty string: "$input"', input);
   }
 
   final parts = trimmed.split('.');
-  if (parts.length < 2) {
-    throw FormatException(
-        'Invalid semver: at least major.minor required', input);
+  if (parts.isEmpty || parts.every((p) => p.trim().isEmpty)) {
+    throw FormatException('Invalid semver: empty string: "$input"', input);
   }
 
-  if (parts[0].trim().isEmpty || parts[1].trim().isEmpty) {
-    throw FormatException('Invalid semver: empty string', input);
-  }
+  // Parse components, treating missing ones as 0
+  final major = parts.isNotEmpty && parts[0].trim().isNotEmpty
+      ? _parseIntComponent(parts[0], 'major', input)
+      : 0;
 
-  // Parse the first two required components
-  final major = _parseIntComponent(parts[0], 'major', input);
-  final minor = _parseIntComponent(parts[1], 'minor', input);
+  final minor = parts.length > 1 && parts[1].trim().isNotEmpty
+      ? _parseIntComponent(parts[1], 'minor', input)
+      : 0;
 
-  // Third component (patch) is optional, defaults to 0
-  final patch =
-      parts.length > 2 ? _parseIntComponent(parts[2], 'patch', input) : 0;
+  final patch = parts.length > 2 && parts[2].trim().isNotEmpty
+      ? _parseIntComponent(parts[2], 'patch', input)
+      : 0;
 
   return _SemVerParts(major, minor, patch);
 }

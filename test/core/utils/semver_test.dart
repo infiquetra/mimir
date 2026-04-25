@@ -39,6 +39,10 @@ void main() {
       expect(compareSemVer('1.2', '1.2.0'), equals(0));
     });
 
+    test('single-component version: 1 equals 1.0.0', () {
+      expect(compareSemVer('1', '1.0.0'), equals(0));
+    });
+
     test('extra-component truncation: 1.2.3.4 equals 1.2.3', () {
       expect(compareSemVer('1.2.3.4', '1.2.3'), equals(0));
     });
@@ -70,6 +74,19 @@ void main() {
       );
     });
 
+    test('FormatException message for empty string includes the input', () {
+      expect(
+        () => compareSemVer('', '1.2.3'),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            contains(''),
+          ),
+        ),
+      );
+    });
+
     test('throws FormatException for whitespace-only string', () {
       expect(
         () => compareSemVer('   ', '1.2.3'),
@@ -77,10 +94,16 @@ void main() {
       );
     });
 
-    test('throws FormatException for missing minor component in input a', () {
+    test('FormatException message for whitespace-only includes the input', () {
       expect(
-        () => compareSemVer('1', '1.2.3'),
-        throwsA(isA<FormatException>()),
+        () => compareSemVer('   ', '1.2.3'),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            contains('   '),
+          ),
+        ),
       );
     });
   });
