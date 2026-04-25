@@ -8,29 +8,29 @@ void main() {
     });
 
     test('major difference returns correct sign', () {
-      expect(compareSemVer('2.0.0', '1.0.0'), greaterThan(0));
-      expect(compareSemVer('1.0.0', '2.0.0'), lessThan(0));
+      expect(compareSemVer('2.0.0', '1.0.0'), isPositive);
+      expect(compareSemVer('1.0.0', '2.0.0'), isNegative);
     });
 
     test('minor difference returns correct sign', () {
-      expect(compareSemVer('1.3.0', '1.2.0'), greaterThan(0));
-      expect(compareSemVer('1.2.0', '1.3.0'), lessThan(0));
+      expect(compareSemVer('1.3.0', '1.2.0'), isPositive);
+      expect(compareSemVer('1.2.0', '1.3.0'), isNegative);
     });
 
     test('patch difference returns correct sign', () {
-      expect(compareSemVer('1.2.4', '1.2.3'), greaterThan(0));
-      expect(compareSemVer('1.2.3', '1.2.4'), lessThan(0));
+      expect(compareSemVer('1.2.4', '1.2.3'), isPositive);
+      expect(compareSemVer('1.2.3', '1.2.4'), isNegative);
     });
 
     test('numeric ordering vs lexicographic', () {
-      expect(compareSemVer('1.10.0', '1.2.0'), greaterThan(0));
-      expect(compareSemVer('1.2.0', '1.10.0'), lessThan(0));
+      expect(compareSemVer('1.10.0', '1.2.0'), isPositive);
+      expect(compareSemVer('1.2.0', '1.10.0'), isNegative);
     });
 
     test('short-form padding defaults missing components to zero', () {
       expect(compareSemVer('1.2', '1.2.0'), equals(0));
       expect(compareSemVer('1', '1.0.0'), equals(0));
-      expect(compareSemVer('1.2', '1.1.9'), greaterThan(0));
+      expect(compareSemVer('1.2', '1.1.9'), isPositive);
     });
 
     test('extra trailing components are ignored', () {
