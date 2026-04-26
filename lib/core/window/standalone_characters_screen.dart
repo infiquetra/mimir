@@ -7,7 +7,6 @@ import '../../features/characters/presentation/widgets/character_content_grid.da
 import '../auth/auth_providers.dart';
 import '../config/eve_config.dart';
 import '../theme/eve_colors.dart';
-import '../widgets/character_header_bar.dart';
 import '../widgets/character_portrait_panel.dart';
 import '../widgets/eve_card.dart';
 import '../widgets/space_background.dart';
@@ -16,13 +15,13 @@ import 'window_types.dart';
 /// Standalone characters screen for sub-windows.
 ///
 /// Layout:
-/// - Character header bar (switcher, add button)
-/// - Row with split panels:
+/// - Split panels:
 ///   - Left panel (~40%): Character portrait with info overlay
 ///   - Right panel (~60%): Multi-column card grid
 ///
 /// This matches EVE Online's character sheet design with portrait panel
 /// and efficient card-based information display.
+/// Character selection is handled by the CharacterNavRail in the left navigation.
 class StandaloneCharactersScreen extends ConsumerStatefulWidget {
   const StandaloneCharactersScreen({super.key});
 
@@ -68,28 +67,13 @@ class _StandaloneCharactersScreenState
                     return _buildEmptyState(context);
                   }
 
-                  return Column(
-                    children: [
-                      // Character header bar with switcher and add button
-                      CharacterHeaderBar(
-                        windowType: WindowType.characters,
-                        onAddCharacter: () =>
-                            setState(() => _showAddCharacter = true),
-                        onRemoveCharacter: (characterId) =>
-                            _removeCharacter(context, characterId),
-                      ),
-
-                      // Split panel content
-                      Expanded(
-                        child: activeCharacter.value != null
-                            ? _buildSplitPanelContent(
-                                context,
-                                activeCharacter.value!,
-                              )
-                            : _buildNoCharacterState(context),
-                      ),
-                    ],
-                  );
+                  // Split panel content (header bar removed, will use nav rail)
+                  return activeCharacter.value != null
+                      ? _buildSplitPanelContent(
+                          context,
+                          activeCharacter.value!,
+                        )
+                      : _buildNoCharacterState(context);
                 },
                 loading: () => const Center(
                   child: CircularProgressIndicator(color: EveColors.evePrimary),

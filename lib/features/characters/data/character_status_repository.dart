@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:mimir/core/database/app_database.dart' as db;
 import 'package:mimir/core/logging/logger.dart';
 import 'package:mimir/core/network/esi_client.dart';
+import 'package:mimir/core/sde/sde_service.dart';
 
 /// Repository for aggregating and caching character status data.
 ///
@@ -13,6 +14,7 @@ import 'package:mimir/core/network/esi_client.dart';
 class CharacterStatusRepository {
   final db.AppDatabase _database;
   final EsiClient _esiClient;
+  final SdeService _sdeService;
 
   /// In-memory cache for universe names (fast reads).
   /// Uses database UniverseName type for consistency.
@@ -21,8 +23,10 @@ class CharacterStatusRepository {
   CharacterStatusRepository({
     required db.AppDatabase database,
     required EsiClient esiClient,
+    required SdeService sdeService,
   })  : _database = database,
-        _esiClient = esiClient;
+        _esiClient = esiClient,
+        _sdeService = sdeService;
 
   // ==========================================================================
   // Character Clones
@@ -210,7 +214,30 @@ class CharacterStatusRepository {
       );
     }).toList();
 
-    await _database.upsertUniverseNames(companions);
+    // Step 4.5: Fallback to SDE for any IDs that ESI failed to resolve.
+    final resolvedEsiIds = esiNames.map((e) => e.id).toSet();
+    final sdeFallbackIds = stillMissing.where((id) => !resolvedEsiIds.contains(id)).toList();
+    
+    if (sdeFallbackIds.isNotEmpty) {
+      Log.i('NAME.RESOLVE', '\${sdeFallbackIds.length} names not resolved by ESI, falling back to SDE');
+      await _sdeService.initialize();
+      final sdeNames = await _sdeService.getSkillNames(sdeFallbackIds);
+      
+      for (final entry in sdeNames.entries) {
+        if (entry.value != null) {
+          companions.add(db.UniverseNamesCompanion.insert(
+            id: Value(entry.key),
+            name: entry.value!,
+            category: 'inventory_type',
+            lastUpdated: now,
+          ));
+        }
+      }
+    }
+
+    if (companions.isNotEmpty) {
+      await _database.upsertUniverseNames(companions);
+    }
 
     // Fetch the newly inserted records from database to get proper db.UniverseName objects.
     final newDbNames = await _database.getUniverseNames(stillMissing);

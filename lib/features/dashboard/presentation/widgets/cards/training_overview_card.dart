@@ -221,11 +221,13 @@ class TrainingOverviewCard extends ConsumerWidget {
 
     return queuesAsync.when(
       data: (queuesMap) {
-        // Calculate total SP
+        // Calculate total SP and total skills
         int totalSp = 0;
+        int totalSkills = 0;
 
-        // For each character's queue, sum up the SP
+        // For each character's queue, sum up the SP and count
         for (final queue in queuesMap.values) {
+          totalSkills += queue.length;
           for (final entry in queue) {
             // Use levelEndSp as a proxy for total SP (not accurate, but illustrative)
             if (entry.levelEndSp != null) {
@@ -235,7 +237,7 @@ class TrainingOverviewCard extends ConsumerWidget {
         }
 
         // Only show statistics if we have data
-        if (totalSp == 0) {
+        if (totalSkills == 0) {
           return const SizedBox.shrink();
         }
 
@@ -267,7 +269,7 @@ class TrainingOverviewCard extends ConsumerWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '${completions.length} skills in training queue',
+                    '$totalSkills skills in training queue',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.white.withAlpha(204),
                         ),

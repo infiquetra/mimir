@@ -15,6 +15,9 @@ class CloneCard extends StatelessWidget {
   /// If null, shows "Unknown Location".
   final String? locationName;
 
+  /// Optional map of implant type ID to resolved implant name.
+  final Map<int, String>? implantNames;
+
   /// Whether to show implants.
   /// Default: true
   final bool showImplants;
@@ -27,6 +30,7 @@ class CloneCard extends StatelessWidget {
     super.key,
     required this.clone,
     this.locationName,
+    this.implantNames,
     this.showImplants = true,
     this.compact = false,
   });
@@ -155,6 +159,7 @@ class CloneCard extends StatelessWidget {
                     else
                       ImplantRow(
                         implants: _buildImplantMap(clone.implants),
+                        implantNames: implantNames,
                         iconSize: compact ? 28.0 : 32.0,
                         spacing: compact ? 3.0 : 4.0,
                       ),

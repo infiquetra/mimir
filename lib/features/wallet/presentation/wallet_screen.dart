@@ -56,6 +56,9 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
         child: activeCharacterAsync.when(
           data: (character) {
             if (character == null) {
+              if (activeCharacterAsync.isLoading) {
+                return _buildLoadingState(context);
+              }
               return _buildNoCharacterState(context);
             }
             return _buildWalletContent(context, character.characterId);

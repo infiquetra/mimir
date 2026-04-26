@@ -3302,9 +3302,28 @@ class $AppSettingsTableTable extends AppSettingsTable
       defaultConstraints: GeneratedColumn.constraintIsAlways(
           'CHECK ("onboarding_complete" IN (0, 1))'),
       defaultValue: const Constant(false));
+  static const VerificationMeta _esiErrorLimitRemainMeta =
+      const VerificationMeta('esiErrorLimitRemain');
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, startupBehavior, onboardingComplete];
+  late final GeneratedColumn<int> esiErrorLimitRemain = GeneratedColumn<int>(
+      'esi_error_limit_remain', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(100));
+  static const VerificationMeta _esiErrorLimitResetMeta =
+      const VerificationMeta('esiErrorLimitReset');
+  @override
+  late final GeneratedColumn<DateTime> esiErrorLimitReset =
+      GeneratedColumn<DateTime>('esi_error_limit_reset', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        startupBehavior,
+        onboardingComplete,
+        esiErrorLimitRemain,
+        esiErrorLimitReset
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -3331,6 +3350,18 @@ class $AppSettingsTableTable extends AppSettingsTable
           onboardingComplete.isAcceptableOrUnknown(
               data['onboarding_complete']!, _onboardingCompleteMeta));
     }
+    if (data.containsKey('esi_error_limit_remain')) {
+      context.handle(
+          _esiErrorLimitRemainMeta,
+          esiErrorLimitRemain.isAcceptableOrUnknown(
+              data['esi_error_limit_remain']!, _esiErrorLimitRemainMeta));
+    }
+    if (data.containsKey('esi_error_limit_reset')) {
+      context.handle(
+          _esiErrorLimitResetMeta,
+          esiErrorLimitReset.isAcceptableOrUnknown(
+              data['esi_error_limit_reset']!, _esiErrorLimitResetMeta));
+    }
     return context;
   }
 
@@ -3346,6 +3377,11 @@ class $AppSettingsTableTable extends AppSettingsTable
           DriftSqlType.string, data['${effectivePrefix}startup_behavior'])!,
       onboardingComplete: attachedDatabase.typeMapping.read(
           DriftSqlType.bool, data['${effectivePrefix}onboarding_complete'])!,
+      esiErrorLimitRemain: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}esi_error_limit_remain'])!,
+      esiErrorLimitReset: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}esi_error_limit_reset']),
     );
   }
 
@@ -3365,16 +3401,28 @@ class AppSettingsTableData extends DataClass
 
   /// Whether the user has completed onboarding.
   final bool onboardingComplete;
+
+  /// ESI Error limit remaining
+  final int esiErrorLimitRemain;
+
+  /// ESI Error limit reset timestamp
+  final DateTime? esiErrorLimitReset;
   const AppSettingsTableData(
       {required this.id,
       required this.startupBehavior,
-      required this.onboardingComplete});
+      required this.onboardingComplete,
+      required this.esiErrorLimitRemain,
+      this.esiErrorLimitReset});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['startup_behavior'] = Variable<String>(startupBehavior);
     map['onboarding_complete'] = Variable<bool>(onboardingComplete);
+    map['esi_error_limit_remain'] = Variable<int>(esiErrorLimitRemain);
+    if (!nullToAbsent || esiErrorLimitReset != null) {
+      map['esi_error_limit_reset'] = Variable<DateTime>(esiErrorLimitReset);
+    }
     return map;
   }
 
@@ -3383,6 +3431,10 @@ class AppSettingsTableData extends DataClass
       id: Value(id),
       startupBehavior: Value(startupBehavior),
       onboardingComplete: Value(onboardingComplete),
+      esiErrorLimitRemain: Value(esiErrorLimitRemain),
+      esiErrorLimitReset: esiErrorLimitReset == null && nullToAbsent
+          ? const Value.absent()
+          : Value(esiErrorLimitReset),
     );
   }
 
@@ -3393,6 +3445,10 @@ class AppSettingsTableData extends DataClass
       id: serializer.fromJson<int>(json['id']),
       startupBehavior: serializer.fromJson<String>(json['startupBehavior']),
       onboardingComplete: serializer.fromJson<bool>(json['onboardingComplete']),
+      esiErrorLimitRemain:
+          serializer.fromJson<int>(json['esiErrorLimitRemain']),
+      esiErrorLimitReset:
+          serializer.fromJson<DateTime?>(json['esiErrorLimitReset']),
     );
   }
   @override
@@ -3402,15 +3458,25 @@ class AppSettingsTableData extends DataClass
       'id': serializer.toJson<int>(id),
       'startupBehavior': serializer.toJson<String>(startupBehavior),
       'onboardingComplete': serializer.toJson<bool>(onboardingComplete),
+      'esiErrorLimitRemain': serializer.toJson<int>(esiErrorLimitRemain),
+      'esiErrorLimitReset': serializer.toJson<DateTime?>(esiErrorLimitReset),
     };
   }
 
   AppSettingsTableData copyWith(
-          {int? id, String? startupBehavior, bool? onboardingComplete}) =>
+          {int? id,
+          String? startupBehavior,
+          bool? onboardingComplete,
+          int? esiErrorLimitRemain,
+          Value<DateTime?> esiErrorLimitReset = const Value.absent()}) =>
       AppSettingsTableData(
         id: id ?? this.id,
         startupBehavior: startupBehavior ?? this.startupBehavior,
         onboardingComplete: onboardingComplete ?? this.onboardingComplete,
+        esiErrorLimitRemain: esiErrorLimitRemain ?? this.esiErrorLimitRemain,
+        esiErrorLimitReset: esiErrorLimitReset.present
+            ? esiErrorLimitReset.value
+            : this.esiErrorLimitReset,
       );
   AppSettingsTableData copyWithCompanion(AppSettingsTableCompanion data) {
     return AppSettingsTableData(
@@ -3421,6 +3487,12 @@ class AppSettingsTableData extends DataClass
       onboardingComplete: data.onboardingComplete.present
           ? data.onboardingComplete.value
           : this.onboardingComplete,
+      esiErrorLimitRemain: data.esiErrorLimitRemain.present
+          ? data.esiErrorLimitRemain.value
+          : this.esiErrorLimitRemain,
+      esiErrorLimitReset: data.esiErrorLimitReset.present
+          ? data.esiErrorLimitReset.value
+          : this.esiErrorLimitReset,
     );
   }
 
@@ -3429,56 +3501,77 @@ class AppSettingsTableData extends DataClass
     return (StringBuffer('AppSettingsTableData(')
           ..write('id: $id, ')
           ..write('startupBehavior: $startupBehavior, ')
-          ..write('onboardingComplete: $onboardingComplete')
+          ..write('onboardingComplete: $onboardingComplete, ')
+          ..write('esiErrorLimitRemain: $esiErrorLimitRemain, ')
+          ..write('esiErrorLimitReset: $esiErrorLimitReset')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, startupBehavior, onboardingComplete);
+  int get hashCode => Object.hash(id, startupBehavior, onboardingComplete,
+      esiErrorLimitRemain, esiErrorLimitReset);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is AppSettingsTableData &&
           other.id == this.id &&
           other.startupBehavior == this.startupBehavior &&
-          other.onboardingComplete == this.onboardingComplete);
+          other.onboardingComplete == this.onboardingComplete &&
+          other.esiErrorLimitRemain == this.esiErrorLimitRemain &&
+          other.esiErrorLimitReset == this.esiErrorLimitReset);
 }
 
 class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
   final Value<int> id;
   final Value<String> startupBehavior;
   final Value<bool> onboardingComplete;
+  final Value<int> esiErrorLimitRemain;
+  final Value<DateTime?> esiErrorLimitReset;
   const AppSettingsTableCompanion({
     this.id = const Value.absent(),
     this.startupBehavior = const Value.absent(),
     this.onboardingComplete = const Value.absent(),
+    this.esiErrorLimitRemain = const Value.absent(),
+    this.esiErrorLimitReset = const Value.absent(),
   });
   AppSettingsTableCompanion.insert({
     this.id = const Value.absent(),
     this.startupBehavior = const Value.absent(),
     this.onboardingComplete = const Value.absent(),
+    this.esiErrorLimitRemain = const Value.absent(),
+    this.esiErrorLimitReset = const Value.absent(),
   });
   static Insertable<AppSettingsTableData> custom({
     Expression<int>? id,
     Expression<String>? startupBehavior,
     Expression<bool>? onboardingComplete,
+    Expression<int>? esiErrorLimitRemain,
+    Expression<DateTime>? esiErrorLimitReset,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (startupBehavior != null) 'startup_behavior': startupBehavior,
       if (onboardingComplete != null) 'onboarding_complete': onboardingComplete,
+      if (esiErrorLimitRemain != null)
+        'esi_error_limit_remain': esiErrorLimitRemain,
+      if (esiErrorLimitReset != null)
+        'esi_error_limit_reset': esiErrorLimitReset,
     });
   }
 
   AppSettingsTableCompanion copyWith(
       {Value<int>? id,
       Value<String>? startupBehavior,
-      Value<bool>? onboardingComplete}) {
+      Value<bool>? onboardingComplete,
+      Value<int>? esiErrorLimitRemain,
+      Value<DateTime?>? esiErrorLimitReset}) {
     return AppSettingsTableCompanion(
       id: id ?? this.id,
       startupBehavior: startupBehavior ?? this.startupBehavior,
       onboardingComplete: onboardingComplete ?? this.onboardingComplete,
+      esiErrorLimitRemain: esiErrorLimitRemain ?? this.esiErrorLimitRemain,
+      esiErrorLimitReset: esiErrorLimitReset ?? this.esiErrorLimitReset,
     );
   }
 
@@ -3494,6 +3587,13 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
     if (onboardingComplete.present) {
       map['onboarding_complete'] = Variable<bool>(onboardingComplete.value);
     }
+    if (esiErrorLimitRemain.present) {
+      map['esi_error_limit_remain'] = Variable<int>(esiErrorLimitRemain.value);
+    }
+    if (esiErrorLimitReset.present) {
+      map['esi_error_limit_reset'] =
+          Variable<DateTime>(esiErrorLimitReset.value);
+    }
     return map;
   }
 
@@ -3502,7 +3602,9 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
     return (StringBuffer('AppSettingsTableCompanion(')
           ..write('id: $id, ')
           ..write('startupBehavior: $startupBehavior, ')
-          ..write('onboardingComplete: $onboardingComplete')
+          ..write('onboardingComplete: $onboardingComplete, ')
+          ..write('esiErrorLimitRemain: $esiErrorLimitRemain, ')
+          ..write('esiErrorLimitReset: $esiErrorLimitReset')
           ..write(')'))
         .toString();
   }
@@ -8769,12 +8871,16 @@ typedef $$AppSettingsTableTableCreateCompanionBuilder
   Value<int> id,
   Value<String> startupBehavior,
   Value<bool> onboardingComplete,
+  Value<int> esiErrorLimitRemain,
+  Value<DateTime?> esiErrorLimitReset,
 });
 typedef $$AppSettingsTableTableUpdateCompanionBuilder
     = AppSettingsTableCompanion Function({
   Value<int> id,
   Value<String> startupBehavior,
   Value<bool> onboardingComplete,
+  Value<int> esiErrorLimitRemain,
+  Value<DateTime?> esiErrorLimitReset,
 });
 
 class $$AppSettingsTableTableFilterComposer
@@ -8795,6 +8901,14 @@ class $$AppSettingsTableTableFilterComposer
 
   ColumnFilters<bool> get onboardingComplete => $composableBuilder(
       column: $table.onboardingComplete,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get esiErrorLimitRemain => $composableBuilder(
+      column: $table.esiErrorLimitRemain,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get esiErrorLimitReset => $composableBuilder(
+      column: $table.esiErrorLimitReset,
       builder: (column) => ColumnFilters(column));
 }
 
@@ -8817,6 +8931,14 @@ class $$AppSettingsTableTableOrderingComposer
   ColumnOrderings<bool> get onboardingComplete => $composableBuilder(
       column: $table.onboardingComplete,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get esiErrorLimitRemain => $composableBuilder(
+      column: $table.esiErrorLimitRemain,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get esiErrorLimitReset => $composableBuilder(
+      column: $table.esiErrorLimitReset,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$AppSettingsTableTableAnnotationComposer
@@ -8836,6 +8958,12 @@ class $$AppSettingsTableTableAnnotationComposer
 
   GeneratedColumn<bool> get onboardingComplete => $composableBuilder(
       column: $table.onboardingComplete, builder: (column) => column);
+
+  GeneratedColumn<int> get esiErrorLimitRemain => $composableBuilder(
+      column: $table.esiErrorLimitRemain, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get esiErrorLimitReset => $composableBuilder(
+      column: $table.esiErrorLimitReset, builder: (column) => column);
 }
 
 class $$AppSettingsTableTableTableManager extends RootTableManager<
@@ -8869,21 +8997,29 @@ class $$AppSettingsTableTableTableManager extends RootTableManager<
             Value<int> id = const Value.absent(),
             Value<String> startupBehavior = const Value.absent(),
             Value<bool> onboardingComplete = const Value.absent(),
+            Value<int> esiErrorLimitRemain = const Value.absent(),
+            Value<DateTime?> esiErrorLimitReset = const Value.absent(),
           }) =>
               AppSettingsTableCompanion(
             id: id,
             startupBehavior: startupBehavior,
             onboardingComplete: onboardingComplete,
+            esiErrorLimitRemain: esiErrorLimitRemain,
+            esiErrorLimitReset: esiErrorLimitReset,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<String> startupBehavior = const Value.absent(),
             Value<bool> onboardingComplete = const Value.absent(),
+            Value<int> esiErrorLimitRemain = const Value.absent(),
+            Value<DateTime?> esiErrorLimitReset = const Value.absent(),
           }) =>
               AppSettingsTableCompanion.insert(
             id: id,
             startupBehavior: startupBehavior,
             onboardingComplete: onboardingComplete,
+            esiErrorLimitRemain: esiErrorLimitRemain,
+            esiErrorLimitReset: esiErrorLimitReset,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

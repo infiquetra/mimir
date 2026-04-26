@@ -3,6 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/network/esi_client.dart';
+import '../../../core/sde/sde_providers.dart';
 import 'character_status_repository.dart';
 
 part 'character_status_providers.g.dart';
@@ -19,6 +20,7 @@ CharacterStatusRepository characterStatusRepository(
   return CharacterStatusRepository(
     database: ref.watch(databaseProvider),
     esiClient: ref.watch(esiClientProvider),
+    sdeService: ref.watch(sdeServiceProvider),
   );
 }
 
@@ -248,4 +250,34 @@ class OnlineStatus {
     this.shipTypeId,
     this.shipTypeName,
   });
+}
+
+// ==========================================================================
+// Character Clone Implant Names Provider
+// ==========================================================================
+
+/// Provides resolved implant names for character clones.
+///
+/// Returns a map of implant ID → implant name for all jump clone implants.
+@riverpod
+Future<Map<int, String>> characterCloneImplantNames(
+  Ref ref,
+  int characterId,
+) async {
+  Log.d('PROVIDERS', 'characterCloneImplantNames($characterId) - START');
+  final repository = ref.watch(characterStatusRepositoryProvider);
+  final clones = await ref.watch(characterClonesProvider(characterId).future);
+
+  final implantIds = <int>{};
+
+  for (final clone in clones.jumpClones) {
+    implantIds.addAll(clone.implants);
+  }
+
+  if (implantIds.isEmpty) {
+    return {};
+  }
+
+  final names = await repository.resolveNames(implantIds.toList());
+  return {for (var n in names) n.id: n.name};
 }

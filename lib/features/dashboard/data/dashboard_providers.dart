@@ -79,21 +79,14 @@ final nextSkillsCompletingProvider =
     final queue = queues[character.characterId];
     if (queue == null || queue.isEmpty) continue;
 
-    // Find the first skill with a finish date (currently training or next to train)
-    // Skills are already sorted by queuePosition, so first one is the active/next skill
-    SkillQueueEntry? nextSkill;
+    // Add all skills with a finish date (they are actively training or in queue)
     for (final skill in queue) {
       if (skill.finishDate != null) {
-        nextSkill = skill;
-        break;
+        completions.add(NextSkillCompletion(
+          character: character,
+          skillEntry: skill,
+        ));
       }
-    }
-
-    if (nextSkill != null) {
-      completions.add(NextSkillCompletion(
-        character: character,
-        skillEntry: nextSkill,
-      ));
     }
   }
 
@@ -184,7 +177,7 @@ final walletTrendsProvider = FutureProvider<WalletTrendsData>((ref) async {
   final balances = await database.customSelect(
     '''
     SELECT
-      strftime('%Y-%m-%d', recorded_at) as date,
+      strftime('%Y-%m-%d', recorded_at, 'unixepoch') as date,
       SUM(balance) as total_balance
     FROM wallet_balances
     WHERE recorded_at >= ?
@@ -199,7 +192,7 @@ final walletTrendsProvider = FutureProvider<WalletTrendsData>((ref) async {
   final chartPoints = balances
       .where((row) => row.read<String?>('date') != null)
       .map((row) {
-    final dateStr = row.read<String>('date');
+    final dateStr = row.read<String?>('date')!;
     final balance = row.read<double>('total_balance');
     return WalletTrendsPoint(
       date: DateTime.parse(dateStr),

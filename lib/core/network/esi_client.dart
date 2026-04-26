@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,8 @@ import '../auth/auth_providers.dart';
 import '../auth/oauth_service.dart';
 import '../auth/token_manager.dart';
 import '../config/eve_config.dart';
+import '../database/app_database.dart';
+import '../di/providers.dart';
 import '../logging/logger.dart';
 
 /// ESI API client for making requests to the EVE Online API.
@@ -19,6 +22,7 @@ class EsiClient {
   final Dio _dio;
   final TokenManager _tokenManager;
   final OAuthService _oauthService;
+  final AppDatabase _database;
 
   /// Tracks remaining error limit (ESI returns 429 if this hits 0).
   int _errorLimitRemain = 100;
@@ -26,14 +30,32 @@ class EsiClient {
   /// Timestamp when the error limit will reset.
   DateTime? _errorLimitReset;
 
+  StreamSubscription? _errorLimitSubscription;
+
   EsiClient({
     required TokenManager tokenManager,
     required OAuthService oauthService,
+    required AppDatabase database,
     Dio? dio,
   })  : _tokenManager = tokenManager,
         _oauthService = oauthService,
+        _database = database,
         _dio = dio ?? Dio() {
     _configureDio();
+    _startWatchingErrorLimit();
+  }
+
+  void _startWatchingErrorLimit() {
+    _errorLimitSubscription = _database.select(_database.appSettingsTable).watch().listen((settings) {
+      if (settings.isNotEmpty) {
+        _errorLimitRemain = settings.first.esiErrorLimitRemain;
+        _errorLimitReset = settings.first.esiErrorLimitReset;
+      }
+    });
+  }
+
+  void dispose() {
+    _errorLimitSubscription?.cancel();
   }
 
   void _configureDio() {
@@ -53,18 +75,31 @@ class EsiClient {
   }
 
   /// Updates error limit tracking from response headers.
-  void _updateErrorLimit(Response response) {
+  Future<void> _updateErrorLimit(Response response) async {
     final remainHeader = response.headers.value('X-ESI-Error-Limit-Remain');
     final resetHeader = response.headers.value('X-ESI-Error-Limit-Reset');
 
+    bool updated = false;
     if (remainHeader != null) {
-      _errorLimitRemain = int.tryParse(remainHeader) ?? _errorLimitRemain;
+      final parsed = int.tryParse(remainHeader);
+      if (parsed != null && parsed != _errorLimitRemain) {
+        _errorLimitRemain = parsed;
+        updated = true;
+      }
     }
     if (resetHeader != null) {
       final resetSeconds = int.tryParse(resetHeader);
       if (resetSeconds != null) {
-        _errorLimitReset = DateTime.now().add(Duration(seconds: resetSeconds));
+        final newReset = DateTime.now().add(Duration(seconds: resetSeconds));
+        if (_errorLimitReset == null || _errorLimitReset!.difference(newReset).inSeconds.abs() > 2) {
+          _errorLimitReset = newReset;
+          updated = true;
+        }
       }
+    }
+
+    if (updated) {
+      await _database.updateEsiErrorLimit(_errorLimitRemain, _errorLimitReset);
     }
   }
 
@@ -1268,8 +1303,11 @@ class EsiException implements Exception {
 
 /// Provider for the ESI client.
 final esiClientProvider = Provider<EsiClient>((ref) {
-  return EsiClient(
+  final client = EsiClient(
     tokenManager: ref.watch(tokenManagerProvider),
     oauthService: ref.watch(oauthServiceProvider),
+    database: ref.watch(databaseProvider),
   );
+  ref.onDispose(() => client.dispose());
+  return client;
 });

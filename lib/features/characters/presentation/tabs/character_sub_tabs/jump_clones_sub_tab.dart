@@ -222,6 +222,7 @@ class JumpClonesSubTab extends ConsumerWidget {
                       child: CloneCard(
                         clone: clone,
                         locationName: locationName,
+                        implantNames: implantNames.valueOrNull,
                         showImplants: true,
                         compact: false,
                       ),
@@ -241,6 +242,7 @@ class JumpClonesSubTab extends ConsumerWidget {
                       child: CloneCard(
                         clone: clone,
                         locationName: 'Location ${clone.locationId}',
+                        implantNames: implantNames.valueOrNull,
                         showImplants: true,
                         compact: false,
                       ),

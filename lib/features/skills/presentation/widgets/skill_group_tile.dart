@@ -42,8 +42,8 @@ class SkillGroupTile extends ConsumerWidget {
       },
       borderRadius: BorderRadius.circular(4),
       child: Container(
-        height: 36,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        height: 28,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(4),
           color: isSelected
@@ -52,15 +52,15 @@ class SkillGroupTile extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            // Icon (24px)
+            // Icon (20px, reduced for compact 28px rows)
             Icon(
               icon,
-              size: 24,
+              size: 20,
               color: isSelected
                   ? EveColors.photonBlue
                   : theme.colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
 
             // Group name with progress bar behind it
             Expanded(

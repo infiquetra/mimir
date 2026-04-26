@@ -55,7 +55,7 @@ final class CharacterStatusRepositoryProvider extends $FunctionalProvider<
 }
 
 String _$characterStatusRepositoryHash() =>
-    r'f5a24524efbb2258d8793f537dad904c9e605ae2';
+    r'a3b83d7ce9453e25e5e370737a2368a4f704b95f';
 
 /// Provides character clones (jump clones + home location).
 
@@ -601,4 +601,102 @@ final class CharacterOnlineStatusFamily extends $Family
 
   @override
   String toString() => r'characterOnlineStatusProvider';
+}
+
+/// Provides resolved implant names for character clones.
+///
+/// Returns a map of implant ID → implant name for all jump clone implants.
+
+@ProviderFor(characterCloneImplantNames)
+const characterCloneImplantNamesProvider = CharacterCloneImplantNamesFamily._();
+
+/// Provides resolved implant names for character clones.
+///
+/// Returns a map of implant ID → implant name for all jump clone implants.
+
+final class CharacterCloneImplantNamesProvider extends $FunctionalProvider<
+        AsyncValue<Map<int, String>>,
+        Map<int, String>,
+        FutureOr<Map<int, String>>>
+    with $FutureModifier<Map<int, String>>, $FutureProvider<Map<int, String>> {
+  /// Provides resolved implant names for character clones.
+  ///
+  /// Returns a map of implant ID → implant name for all jump clone implants.
+  const CharacterCloneImplantNamesProvider._(
+      {required CharacterCloneImplantNamesFamily super.from,
+      required int super.argument})
+      : super(
+          retry: null,
+          name: r'characterCloneImplantNamesProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$characterCloneImplantNamesHash();
+
+  @override
+  String toString() {
+    return r'characterCloneImplantNamesProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<Map<int, String>> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Map<int, String>> create(Ref ref) {
+    final argument = this.argument as int;
+    return characterCloneImplantNames(
+      ref,
+      argument,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is CharacterCloneImplantNamesProvider &&
+        other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$characterCloneImplantNamesHash() =>
+    r'1137d07e57a97fdee26a9bd60a9ac805ca03b59c';
+
+/// Provides resolved implant names for character clones.
+///
+/// Returns a map of implant ID → implant name for all jump clone implants.
+
+final class CharacterCloneImplantNamesFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<Map<int, String>>, int> {
+  const CharacterCloneImplantNamesFamily._()
+      : super(
+          retry: null,
+          name: r'characterCloneImplantNamesProvider',
+          dependencies: null,
+          $allTransitiveDependencies: null,
+          isAutoDispose: true,
+        );
+
+  /// Provides resolved implant names for character clones.
+  ///
+  /// Returns a map of implant ID → implant name for all jump clone implants.
+
+  CharacterCloneImplantNamesProvider call(
+    int characterId,
+  ) =>
+      CharacterCloneImplantNamesProvider._(argument: characterId, from: this);
+
+  @override
+  String toString() => r'characterCloneImplantNamesProvider';
 }

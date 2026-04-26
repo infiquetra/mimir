@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:mimir/core/widgets/character_header_bar.dart';
 import 'package:mimir/core/widgets/character_portrait_panel.dart';
 import 'package:mimir/core/window/standalone_characters_screen.dart';
 import 'package:mimir/features/characters/presentation/widgets/character_content_grid.dart';
@@ -13,10 +12,10 @@ import '../../test_utils/test_app.dart';
 /// Integration tests for the Characters screen.
 ///
 /// Tests the character overview screen with:
-/// - Character header bar (switcher, add button)
 /// - Split panel layout (40/60 split)
 /// - Character portrait panel
 /// - Character content grid (cards with character data)
+/// Character switching is handled by CharacterNavRail in left navigation
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -50,15 +49,9 @@ void main() {
           reason: 'Right panel: Content grid should render',
         );
 
-        // AND: Character header bar should be visible
-        expect(
-          find.byType(CharacterHeaderBar),
-          findsOneWidget,
-          reason: 'Header bar with switcher should render',
-        );
-
         // The split panel layout uses Expanded(flex: 40) and Expanded(flex: 60)
         // to create the 40/60 split between portrait and content.
+        // Character switching is handled by CharacterNavRail in left navigation.
       },
     );
 
@@ -90,15 +83,14 @@ void main() {
         );
 
         // WHEN: Character switcher is available
-        // Note: Actual character switching would require finding and
-        // tapping the switcher dropdown/button, which depends on the
-        // CharacterHeaderBar implementation.
+        // Note: Character switching is now handled by CharacterNavRail
+        // in the left navigation, which will be added in Phase 3.
 
-        // The presence of CharacterHeaderBar indicates the switcher is available
+        // For now, verify the screen renders with the active character
         expect(
-          find.byType(CharacterHeaderBar),
+          find.byType(CharacterPortraitPanel),
           findsOneWidget,
-          reason: 'Character switcher should be present',
+          reason: 'Character screen should render with active character',
         );
       },
     );
@@ -257,7 +249,7 @@ void main() {
     );
 
     testWidgets(
-      'TC-CHAR-007: Character header bar has add button',
+      'TC-CHAR-007: Screen renders with character data',
       (tester) async {
         // GIVEN: Characters screen with test character
         await tester.pumpWidget(
@@ -271,21 +263,21 @@ void main() {
         await tester.pumpAndSettle();
         await waitForLoadingToComplete(tester);
 
-        // THEN: Character header bar should be present
+        // THEN: Screen should render with character data
         expect(
-          find.byType(CharacterHeaderBar),
+          find.byType(StandaloneCharactersScreen),
           findsOneWidget,
-          reason: 'Header bar should render',
+          reason: 'Characters screen should render',
         );
 
-        // AND: Add button should be present (icon or text button)
-        // The exact button finder depends on CharacterHeaderBar implementation
-        // but the widget should provide a way to add characters
+        // AND: Character name should be visible
         expect(
-          find.byType(CharacterHeaderBar),
-          findsOneWidget,
-          reason: 'Add button should be available in header bar',
+          find.textContaining('Test Capsuleer'),
+          findsAtLeastNWidgets(1),
+          reason: 'Character name should be displayed',
         );
+
+        // Note: Add character button is now in CharacterNavRail (Phase 3)
       },
     );
 

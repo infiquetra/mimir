@@ -2,23 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/di/providers.dart';
-import '../../../../core/logging/logger.dart';
-import '../../../../core/theme/eve_colors.dart';
-import '../../../../core/widgets/character_avatar.dart';
-import '../../../characters/data/character_providers.dart';
+import '../../features/characters/data/character_providers.dart';
+import '../di/providers.dart';
+import '../logging/logger.dart';
+import '../theme/eve_colors.dart';
+import 'character_avatar.dart';
 
 /// Discord-style vertical character navigation rail.
 ///
 /// Displays:
 /// - Stacked character avatars (40px each)
 /// - Active character with blue glow
+/// - Refresh button (if onRefresh provided)
 /// - Add character button at bottom (+)
 /// - Fixed 60px width
 ///
 /// Click avatar to switch character instantly.
 class CharacterNavRail extends ConsumerWidget {
-  const CharacterNavRail({super.key});
+  const CharacterNavRail({
+    super.key,
+    this.onRefresh,
+  });
+
+  /// Optional refresh callback. If provided, shows a refresh button.
+  final VoidCallback? onRefresh;
 
   static const double width = 60.0;
   static const double avatarSize = 40.0;
@@ -26,7 +33,7 @@ class CharacterNavRail extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    Log.d('SKILLS.UI', 'CharacterNavRail - building');
+    Log.d('NAV', 'CharacterNavRail - building');
     final theme = Theme.of(context);
     final charactersAsync = ref.watch(allCharactersProvider);
     final activeCharacter = ref.watch(activeCharacterProvider).value;
@@ -72,6 +79,12 @@ class CharacterNavRail extends ConsumerWidget {
                 ),
               ),
 
+              // Refresh button (if callback provided)
+              if (onRefresh != null) ...[
+                _buildRefreshButton(context),
+                const SizedBox(height: spacing),
+              ],
+
               // Add character button
               _buildAddCharacterButton(context),
               const SizedBox(height: 8),
@@ -85,7 +98,7 @@ class CharacterNavRail extends ConsumerWidget {
           ),
         ),
         error: (error, _) {
-          Log.e('SKILLS.UI', 'CharacterNavRail - error loading characters', error);
+          Log.e('NAV', 'CharacterNavRail - error loading characters', error);
           return _buildErrorState(context);
         },
       ),
@@ -104,15 +117,15 @@ class CharacterNavRail extends ConsumerWidget {
       child: GestureDetector(
         onTap: () async {
           if (isActive) {
-            Log.d('SKILLS.UI', 'CharacterNavRail - already active character');
+            Log.d('NAV', 'CharacterNavRail - already active character');
             return;
           }
 
-          Log.i('SKILLS.UI', 'CharacterNavRail - switching to character ${character.characterId}');
+          Log.i('NAV', 'CharacterNavRail - switching to character ${character.characterId}');
           try {
             await ref.read(databaseProvider).setActiveCharacter(character.characterId);
           } catch (e, stack) {
-            Log.e('SKILLS.UI', 'CharacterNavRail - failed to switch character', e, stack);
+            Log.e('NAV', 'CharacterNavRail - failed to switch character', e, stack);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -156,13 +169,45 @@ class CharacterNavRail extends ConsumerWidget {
     );
   }
 
+  Widget _buildRefreshButton(BuildContext context) {
+    return Center(
+      child: Tooltip(
+        message: 'Refresh',
+        child: InkWell(
+          onTap: () {
+            Log.i('NAV', 'CharacterNavRail - refresh tapped');
+            onRefresh?.call();
+          },
+          borderRadius: BorderRadius.circular(avatarSize / 2),
+          child: Container(
+            width: avatarSize,
+            height: avatarSize,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: EveColors.surfaceElevated,
+              border: Border.all(
+                color: EveColors.photonCyan.withOpacity(0.5),
+                width: 2,
+              ),
+            ),
+            child: Icon(
+              Icons.refresh,
+              size: 24,
+              color: EveColors.photonCyan,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAddCharacterButton(BuildContext context) {
     return Center(
       child: Tooltip(
         message: 'Add Character',
         child: InkWell(
           onTap: () {
-            Log.i('SKILLS.UI', 'CharacterNavRail - add character tapped');
+            Log.i('NAV', 'CharacterNavRail - add character tapped');
             context.push('/add-character');
           },
           borderRadius: BorderRadius.circular(avatarSize / 2),

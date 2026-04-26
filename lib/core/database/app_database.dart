@@ -252,6 +252,13 @@ class AppSettingsTable extends Table {
   BoolColumn get onboardingComplete =>
       boolean().withDefault(const Constant(false))();
 
+  /// ESI Error limit remaining
+  IntColumn get esiErrorLimitRemain =>
+      integer().withDefault(const Constant(100))();
+
+  /// ESI Error limit reset timestamp
+  DateTimeColumn get esiErrorLimitReset => dateTime().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -451,13 +458,17 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (Migrator m) async {
         await m.createAll();
+        // Insert default settings row.
+        await into(appSettingsTable).insert(
+          AppSettingsTableCompanion.insert(),
+        );
       },
       onUpgrade: (Migrator m, int from, int to) async {
         // Migration from version 1 to 2: Add token storage columns.
@@ -508,6 +519,12 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(characterSkills);
           await m.createTable(skillPlans);
           await m.createTable(skillPlanEntries);
+        }
+
+        // Migration from version 9 to 10: Add ESI rate limit tracking.
+        if (from < 10) {
+          await m.addColumn(appSettingsTable, appSettingsTable.esiErrorLimitRemain);
+          await m.addColumn(appSettingsTable, appSettingsTable.esiErrorLimitReset);
         }
       },
     );
@@ -932,6 +949,8 @@ class AppDatabase extends _$AppDatabase {
           id: 1,
           startupBehavior: 'dashboard',
           onboardingComplete: false,
+          esiErrorLimitRemain: 100,
+          esiErrorLimitReset: null,
         );
   }
 
@@ -1139,6 +1158,30 @@ class AppDatabase extends _$AppDatabase {
           ..where((e) => e.planId.equals(planId))
           ..orderBy([(e) => OrderingTerm.asc(e.sortOrder)]))
         .watch();
+  }
+  /// Updates the ESI error limit remaining and reset timestamp.
+  Future<void> updateEsiErrorLimit(int remain, DateTime? reset) async {
+    await (update(appSettingsTable)..where((t) => t.id.equals(1))).write(
+      AppSettingsTableCompanion(
+        esiErrorLimitRemain: Value(remain),
+        esiErrorLimitReset: Value(reset),
+      ),
+    );
+  }
+
+  /// Gets the current ESI error limit tracking state.
+  Future<AppSettingsTableData> getEsiErrorLimit() async {
+    final settings = await (select(appSettingsTable)..where((t) => t.id.equals(1))).getSingleOrNull();
+    if (settings != null) return settings;
+    
+    // Fallback if not seeded yet
+    return const AppSettingsTableData(
+      id: 1,
+      startupBehavior: 'dashboard',
+      onboardingComplete: false,
+      esiErrorLimitRemain: 100,
+      esiErrorLimitReset: null,
+    );
   }
 }
 
