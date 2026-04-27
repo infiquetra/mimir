@@ -41,6 +41,24 @@ void main() {
       );
     });
 
+    test('throws FormatException for empty string input', () {
+      expect(
+        () => compareSemVer('', '1.2.3'),
+        throwsA(isA<FormatException>().having(
+          (e) => e.message,
+          'message',
+          contains('Malformed semantic version: '),
+        )),
+      );
+    });
+
+    test('throws FormatException for whitespace-only input', () {
+      expect(
+        () => compareSemVer('   ', '1.2.3'),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
     test('includes offending input in FormatException message', () {
       expect(
         () => compareSemVer('1.2.a', '1.2.3'),
