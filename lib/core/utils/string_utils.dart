@@ -1,4 +1,4 @@
-/// Utility functions for string manipulation.
+library;
 
 /// Truncates a string to [maxLength] by replacing the middle with [ellipsis],
 /// keeping the start and end portions visible.
