@@ -43,5 +43,9 @@ String truncateMiddle(
   final int startLength = (visibleLength / 2).ceil();
   final int endLength = visibleLength ~/ 2;
 
-  return '${input.substring(0, startLength)}$ellipsis${input.substring(input.length - endLength)}';
+  // Use runes (Unicode code points) instead of code units to avoid
+  // splitting surrogate pairs in multi-code-unit characters (e.g. emojis).
+  final runeList = input.runes.toList();
+  return '${String.fromCharCodes(runeList.sublist(0, startLength))}$ellipsis'
+      '${String.fromCharCodes(runeList.sublist(runeList.length - endLength))}';
 }
