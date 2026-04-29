@@ -46,10 +46,27 @@ void main() {
       expect(result.isProfitable, isFalse);
     });
 
-    test('rejects non-positive prices', () {
+    test('accepts zero buyPrice with zero margin', () {
+      final result = TradeCalculator.calculateMargin(
+        buyPrice: 0,
+        sellPrice: 1100000,
+        brokerFeePercent: 1.0,
+        salesTaxPercent: 2.0,
+      );
+
+      expect(result.buyPrice, 0);
+      expect(result.sellPrice, 1100000);
+      expect(result.buyTotal, 0);
+      expect(result.sellNet, closeTo(1067000, 0.001));
+      expect(result.profit, closeTo(1067000, 0.001));
+      expect(result.marginPercent, 0.0);
+      expect(result.isProfitable, isTrue);
+    });
+
+    test('rejects negative prices', () {
       expect(
         () => TradeCalculator.calculateMargin(
-          buyPrice: 0,
+          buyPrice: -1,
           sellPrice: 1100000,
         ),
         throwsArgumentError,
@@ -59,13 +76,6 @@ void main() {
         () => TradeCalculator.calculateMargin(
           buyPrice: 1000000,
           sellPrice: -1,
-        ),
-        throwsArgumentError,
-      );
-
-      expect(
-        () => TradeCalculator.breakEvenSellPrice(
-          buyPrice: 0,
         ),
         throwsArgumentError,
       );
@@ -112,6 +122,46 @@ void main() {
           buyPrice: 1000000,
           brokerFeePercent: 100.0,
           salesTaxPercent: 0.0,
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('rejects NaN and Infinity inputs', () {
+      // NaN buyPrice
+      expect(
+        () => TradeCalculator.calculateMargin(
+          buyPrice: double.nan,
+          sellPrice: 1100000,
+        ),
+        throwsArgumentError,
+      );
+
+      // Infinity buyPrice
+      expect(
+        () => TradeCalculator.calculateMargin(
+          buyPrice: double.infinity,
+          sellPrice: 1100000,
+        ),
+        throwsArgumentError,
+      );
+
+      // NaN brokerFee
+      expect(
+        () => TradeCalculator.calculateMargin(
+          buyPrice: 1000000,
+          sellPrice: 1100000,
+          brokerFeePercent: double.nan,
+        ),
+        throwsArgumentError,
+      );
+
+      // Infinity salesTax
+      expect(
+        () => TradeCalculator.calculateMargin(
+          buyPrice: 1000000,
+          sellPrice: 1100000,
+          salesTaxPercent: double.infinity,
         ),
         throwsArgumentError,
       );

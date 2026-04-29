@@ -47,7 +47,7 @@ class TradeCalculator {
     final buyTotal = buyPrice + brokerFeeBuy;
     final sellNet = sellPrice - brokerFeeSell - salesTax;
     final profit = sellNet - buyTotal;
-    final marginPercent = (profit / buyTotal) * 100;
+    final marginPercent = buyTotal == 0 ? 0.0 : (profit / buyTotal) * 100;
 
     return TradeMargin(
       buyPrice: buyPrice,
@@ -84,35 +84,35 @@ class TradeCalculator {
     required double brokerFeePercent,
     required double salesTaxPercent,
   }) {
-    if (buyPrice <= 0) {
+    if (!buyPrice.isFinite || buyPrice < 0) {
       throw ArgumentError.value(
         buyPrice,
         'buyPrice',
-        'must be positive',
+        'must be a finite non-negative value',
       );
     }
 
-    if (sellPrice != null && sellPrice <= 0) {
+    if (sellPrice != null && (!sellPrice.isFinite || sellPrice < 0)) {
       throw ArgumentError.value(
         sellPrice,
         'sellPrice',
-        'must be positive',
+        'must be a finite non-negative value',
       );
     }
 
-    if (brokerFeePercent < 0) {
+    if (!brokerFeePercent.isFinite || brokerFeePercent < 0) {
       throw ArgumentError.value(
         brokerFeePercent,
         'brokerFeePercent',
-        'must not be negative',
+        'must be a finite non-negative value',
       );
     }
 
-    if (salesTaxPercent < 0) {
+    if (!salesTaxPercent.isFinite || salesTaxPercent < 0) {
       throw ArgumentError.value(
         salesTaxPercent,
         'salesTaxPercent',
-        'must not be negative',
+        'must be a finite non-negative value',
       );
     }
 
