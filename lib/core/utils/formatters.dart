@@ -93,6 +93,29 @@ String formatSpCompact(int amount) {
   return '$sign$formatted SP';
 }
 
+/// Formats the duration remaining on a market order.
+///
+/// Examples:
+/// - Duration(days: 2, hours: 4) → "2d 4h remaining"
+/// - Duration(hours: 4, minutes: 15) → "4h 15m remaining"
+/// - Duration(minutes: 32) → "32m remaining"
+/// - Duration.zero → "Expired"
+String formatOrderDuration(Duration duration) {
+  if (duration == Duration.zero) {
+    return 'Expired';
+  }
+  final days = duration.inDays;
+  final hours = duration.inHours % 24;
+  final minutes = duration.inMinutes % 60;
+
+  final parts = <String>[];
+  if (days > 0) parts.add('${days}d');
+  if (hours > 0) parts.add('${hours}h');
+  if (minutes > 0 || parts.isEmpty) parts.add('${minutes}m');
+
+  return '${parts.join(' ')} remaining';
+}
+
 /// Formats a snake_case string into Title Case.
 ///
 /// Useful for displaying ESI reference types in a human-readable format.

@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/characters/data/character_providers.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
+import '../../features/orders/presentation/active_orders_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/skills/presentation/skills_screen.dart';
 import '../../features/wallet/presentation/wallet_screen.dart';
@@ -207,6 +208,9 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
       case WindowType.characters:
         // Standalone version with OAuth capability
         return const StandaloneCharactersScreen();
+      case WindowType.orders:
+        // Market orders screen
+        return const ActiveOrdersScreen();
       case WindowType.settings:
         // Settings screen without router dependencies
         return const SettingsScreen();

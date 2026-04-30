@@ -137,6 +137,16 @@ class TrayService extends TrayListener {
     ));
     Log.d('TRAY', 'Added menu item: $charactersLabel (key=characters)');
 
+    final ordersLabel = windowService.isWindowOpen(WindowType.orders)
+        ? '◆ Orders'
+        : 'Orders';
+    menuItems.add(MenuItem(
+      key: 'orders',
+      label: ordersLabel,
+      icon: 'assets/icons/tray/wallet.png', // TODO(mimir-447): Create orders tray icon.
+    ));
+    Log.d('TRAY', 'Added menu item: $ordersLabel (key=orders)');
+
     final settingsLabel = windowService.isWindowOpen(WindowType.settings)
         ? '◆ Settings'
         : 'Settings';
@@ -227,6 +237,11 @@ class TrayService extends TrayListener {
         case 'characters':
           Log.i('TRAY', 'Opening characters window');
           await windowService.openWindow(WindowType.characters);
+          await refreshMenu();
+          break;
+        case 'orders':
+          Log.i('TRAY', 'Opening orders window');
+          await windowService.openWindow(WindowType.orders);
           await refreshMenu();
           break;
         case 'settings':

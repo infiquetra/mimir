@@ -24,6 +24,9 @@ enum WindowType {
   /// Characters screen showing all configured characters.
   characters,
 
+  /// Market orders screen showing active buy and sell orders.
+  orders,
+
   /// Settings screen for app configuration.
   settings,
 
@@ -46,6 +49,8 @@ extension WindowTypeExtension on WindowType {
         return 'Wallet - Mimir';
       case WindowType.characters:
         return 'Characters - Mimir';
+      case WindowType.orders:
+        return 'Orders - Mimir';
       case WindowType.settings:
         return 'Settings - Mimir';
       case WindowType.onboarding:
@@ -68,6 +73,8 @@ extension WindowTypeExtension on WindowType {
         return 3;
       case WindowType.characters:
         return 4;
+      case WindowType.orders:
+        return 7;
       case WindowType.settings:
         return 5;
       case WindowType.onboarding:
@@ -88,6 +95,8 @@ extension WindowTypeExtension on WindowType {
         return WindowType.wallet;
       case 4:
         return WindowType.characters;
+      case 7:
+        return WindowType.orders;
       case 5:
         return WindowType.settings;
       case 6:
@@ -110,6 +119,8 @@ extension WindowTypeExtension on WindowType {
         return (width: 700, height: 600);
       case WindowType.characters:
         return (width: 1100, height: 700);
+      case WindowType.orders:
+        return (width: 900, height: 650);
       case WindowType.settings:
         return (width: 500, height: 450);
       case WindowType.onboarding:
@@ -121,6 +132,9 @@ extension WindowTypeExtension on WindowType {
   ///
   /// Icons are sourced from EVE University Wiki:
   /// https://wiki.eveuniversity.org/UniWiki:Icons
+  ///
+  /// Returns the app icon as a fallback for window types without
+  /// a dedicated PNG asset.
   String get iconAsset {
     switch (this) {
       case WindowType.main:
@@ -133,6 +147,10 @@ extension WindowTypeExtension on WindowType {
         return 'assets/icons/eve/wallet.png';
       case WindowType.characters:
         return 'assets/icons/eve/characters.png';
+      case WindowType.orders:
+        // No orders.png asset — fall back to app icon.
+        // TODO(mimir-447): Add orders.png icon asset.
+        return 'assets/icons/eve/app_icon.png';
       case WindowType.settings:
         return 'assets/icons/eve/settings.png';
       case WindowType.onboarding:
