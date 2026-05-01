@@ -1,7 +1,3 @@
-/// Data model for EVE Online character market orders.
-///
-/// Parsed from the ESI endpoint `/characters/{character_id}/orders/`.
-
 /// The category of order range.
 enum OrderRange {
   /// Station range (order limited to the station).
