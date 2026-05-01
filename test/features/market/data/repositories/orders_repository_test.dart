@@ -22,6 +22,7 @@ Map<String, dynamic> _validBuyOrderJson({
   int minVolume = 1,
   int duration = 90,
   String range = 'station',
+  String issued = '2026-04-15T12:00:00Z',
   double? escrow,
 }) {
   return {
@@ -34,7 +35,7 @@ Map<String, dynamic> _validBuyOrderJson({
     'volume_total': volumeTotal,
     'min_volume': minVolume,
     'is_buy_order': true,
-    'issued': '2026-04-15T12:00:00Z',
+    'issued': issued,
     'duration': duration,
     'range': range,
     'is_corporation': false,
@@ -54,6 +55,7 @@ Map<String, dynamic> _validSellOrderJson({
   int minVolume = 1,
   int duration = 14,
   String range = 'region',
+  String issued = '2026-04-25T08:00:00Z',
 }) {
   return {
     'order_id': orderId,
@@ -65,7 +67,7 @@ Map<String, dynamic> _validSellOrderJson({
     'volume_total': volumeTotal,
     'min_volume': minVolume,
     'is_buy_order': false,
-    'issued': '2026-04-25T08:00:00Z',
+    'issued': issued,
     'duration': duration,
     'range': range,
     'is_corporation': false,
@@ -687,12 +689,16 @@ void main() {
       // Summary strip should show counts.
       expect(find.text('1'), findsAtLeast(1)); // buyCount on the summary chip
 
-      // Order type names should appear.
+      // Buy order type name should appear (buy tab is first/active).
       expect(find.text('Tritanium'), findsOneWidget);
-      expect(find.text('Pyerite'), findsOneWidget);
-
-      // Side badges.
       expect(find.text('BUY'), findsOneWidget);
+
+      // Switch to Sell Orders tab (use .last — the tab is second in tree).
+      await tester.tap(find.text('Sell Orders').last);
+      await tester.pumpAndSettle();
+
+      // Now sell order content should be visible.
+      expect(find.text('Pyerite'), findsOneWidget);
       expect(find.text('SELL'), findsOneWidget);
     });
 
@@ -765,9 +771,13 @@ void main() {
 
       // Summary should derive from orders — the buy count of 1 should appear.
       // In the summary chip, the buy count is displayed as a value.
-      // We also see the Buy Orders tab label.
+      // We also see the Buy Orders tab label and buy order content on first tab.
       expect(find.text('Buy Orders'), findsWidgets);
-      // The Pyerite type name should appear.
+      expect(find.text('Tritanium'), findsOneWidget);
+
+      // Switch to Sell Orders tab (use .last — the tab is second in tree).
+      await tester.tap(find.text('Sell Orders').last);
+      await tester.pumpAndSettle();
       expect(find.text('Pyerite'), findsOneWidget);
     });
 
@@ -794,12 +804,12 @@ void main() {
       // The Semantics widget with progress label should be present.
       // Verify the semantics label is accessible.
       final semanticsHandle = find.bySemanticsLabel(
-        RegExp(r'Order fill 20%.*2000 of 10000 units remaining'),
+        RegExp(r'Order fill 80%.*2000 of 10000 units remaining'),
       );
       expect(semanticsHandle, findsOneWidget);
 
       // Also verify the visible text shows the filled percentage.
-      expect(find.text('20%'), findsOneWidget);
+      expect(find.text('80%'), findsOneWidget);
       expect(find.text('2000/10000'), findsOneWidget);
     });
   });

@@ -102,8 +102,8 @@ class OrdersRepository {
       // 5. Sort: buy orders first, sell orders second,
       //    each group by issued descending.
       orders.sort((a, b) {
-        final buyCompare = b.isBuyOrder.compareTo(a.isBuyOrder);
-        if (buyCompare != 0) return buyCompare;
+        if (a.isBuyOrder && !b.isBuyOrder) return -1;
+        if (!a.isBuyOrder && b.isBuyOrder) return 1;
         return b.issued.compareTo(a.issued);
       });
 
@@ -179,27 +179,6 @@ class OrderSummary {
       totalEscrow: totalEscrow,
     );
   }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is OrderSummary &&
-          const ListEquality<dynamic>()
-              .equals(activeBuyOrders, other.activeBuyOrders) &&
-          const ListEquality<dynamic>()
-              .equals(activeSellOrders, other.activeSellOrders) &&
-          totalBuyValue == other.totalBuyValue &&
-          totalSellValue == other.totalSellValue &&
-          totalEscrow == other.totalEscrow;
-
-  @override
-  int get hashCode => Object.hash(
-        Object.hashAll(activeBuyOrders),
-        Object.hashAll(activeSellOrders),
-        totalBuyValue,
-        totalSellValue,
-        totalEscrow,
-      );
 }
 
 /// Provider for the orders repository.
