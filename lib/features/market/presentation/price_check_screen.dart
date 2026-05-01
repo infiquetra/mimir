@@ -129,6 +129,7 @@ class _PriceCheckScreenState extends ConsumerState<PriceCheckScreen> {
       if (_showAllRegions) {
         final results =
             await repo.getPricesAcrossAllRegions(parsed, typeName: typeName);
+        _sortPricesBySellMin(results);
         setState(() => _prices = AsyncData(results));
       } else {
         final price =
@@ -147,6 +148,17 @@ class _PriceCheckScreenState extends ConsumerState<PriceCheckScreen> {
     } catch (e) {
       setState(() => _prices = AsyncError(e, StackTrace.current));
     }
+  }
+
+  void _sortPricesBySellMin(List<MarketRegionPrice> prices) {
+    prices.sort((a, b) {
+      final sa = a.price.sellMin;
+      final sb = b.price.sellMin;
+      if (sa != null && sb != null) return sa.compareTo(sb);
+      if (sa != null) return -1;
+      if (sb != null) return 1;
+      return a.regionName.compareTo(b.regionName);
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -237,18 +249,8 @@ class _PriceResultsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Sort a copy for display without mutating repository order.
-    final sorted = List<MarketRegionPrice>.from(prices)..sort((a, b) {
-      final sa = a.price.sellMin;
-      final sb = b.price.sellMin;
-      if (sa != null && sb != null) return sa.compareTo(sb);
-      if (sa != null) return -1;
-      if (sb != null) return 1;
-      return a.regionName.compareTo(b.regionName);
-    });
-
     return Column(
-      children: sorted
+      children: prices
           .map((rp) => _PriceResultTile(regionPrice: rp))
           .toList(),
     );
