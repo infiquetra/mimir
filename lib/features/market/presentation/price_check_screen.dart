@@ -130,11 +130,13 @@ class _PriceCheckScreenState extends ConsumerState<PriceCheckScreen> {
         final results =
             await repo.getPricesAcrossAllRegions(parsed, typeName: typeName);
         _sortPricesBySellMin(results);
+        if (!mounted) return;
         setState(() => _prices = AsyncData(results));
       } else {
         final price =
             await repo.getPrice(parsed, _selectedRegionId, typeName: typeName);
         final name = repo.marketRegions[_selectedRegionId]!;
+        if (!mounted) return;
         setState(() {
           _prices = AsyncData([
             MarketRegionPrice(
@@ -146,6 +148,7 @@ class _PriceCheckScreenState extends ConsumerState<PriceCheckScreen> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _prices = AsyncError(e, StackTrace.current));
     }
   }
