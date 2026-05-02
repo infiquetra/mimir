@@ -21,7 +21,7 @@ import 'queue_sidebar_item.dart';
 class TrainingQueueSidebar extends ConsumerWidget {
   const TrainingQueueSidebar({super.key});
 
-  static const double width = 560.0;
+  static const double width = 400.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

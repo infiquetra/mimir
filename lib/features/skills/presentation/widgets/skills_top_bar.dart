@@ -40,179 +40,143 @@ class SkillsTopBar extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          // Tab bar
-          TabBar(
-            controller: tabController,
-            isScrollable: true,
-            indicatorSize: TabBarIndicatorSize.label,
-            indicatorColor: EveColors.photonBlue,
-            labelColor: EveColors.photonBlue,
-            unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
-            labelStyle: theme.textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w600,
+          // Tab bar - limited width to prevent overflow
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 300),
+            child: TabBar(
+              controller: tabController,
+              isScrollable: true,
+              indicatorSize: TabBarIndicatorSize.label,
+              indicatorColor: EveColors.photonBlue,
+              labelColor: EveColors.photonBlue,
+              unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
+              labelStyle: theme.textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelStyle: theme.textTheme.labelLarge,
+              tabs: const [
+                Tab(text: 'Skill Plans'),
+                Tab(text: 'Catalogue'),
+              ],
             ),
-            unselectedLabelStyle: theme.textTheme.labelLarge,
-            tabs: const [
-              Tab(text: 'Skill Plans'),
-              Tab(text: 'Skill Catalogue'),
-            ],
           ),
 
           const Spacer(),
 
           // Filter dropdown
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: EveColors.surfaceElevated,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: theme.colorScheme.outline.withOpacity(0.3),
-              ),
-            ),
-            child: DropdownButton<SkillFilterMode>(
-              value: filterMode,
-              onChanged: (newMode) {
-                if (newMode != null) {
-                  Log.d('SKILLS.UI', 'SkillsTopBar - filter changed to $newMode');
-                  ref.read(skillFilterModeProvider.notifier).state = newMode;
-                }
-              },
-              underline: const SizedBox.shrink(),
-              icon: Icon(
-                Icons.arrow_drop_down,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              style: theme.textTheme.bodySmall,
-              dropdownColor: EveColors.surfaceElevated,
-              borderRadius: BorderRadius.circular(8),
-              items: [
-                DropdownMenuItem(
-                  value: SkillFilterMode.all,
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.list_alt,
-                        size: 16,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text('All Skills'),
-                    ],
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: SkillFilterMode.mySkills,
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.check_circle_outline,
-                        size: 16,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text('My Skills'),
-                    ],
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: SkillFilterMode.canTrain,
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.school_outlined,
-                        size: 16,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text('Can Train Now'),
-                    ],
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: SkillFilterMode.havePrereqs,
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.done_all,
-                        size: 16,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text('Have Prerequisites'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _buildFilterDropdown(context, ref, filterMode),
 
           const SizedBox(width: 12),
 
-          // Search field
-          SizedBox(
-            width: 250,
-            child: TextField(
-              controller: TextEditingController(text: searchQuery),
-              onChanged: (value) {
-                Log.d('SKILLS.UI', 'SkillsTopBar - search query: $value');
-                ref.read(skillSearchQueryProvider.notifier).state = value;
-              },
-              decoration: InputDecoration(
-                hintText: 'Search skills...',
-                hintStyle: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
-                ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  size: 18,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                suffixIcon: searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(
-                          Icons.clear,
-                          size: 18,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        onPressed: () {
-                          Log.d('SKILLS.UI', 'SkillsTopBar - clear search');
-                          ref.read(skillSearchQueryProvider.notifier).state = '';
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: EveColors.surfaceElevated,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: BorderSide(
-                    color: theme.colorScheme.outline.withOpacity(0.3),
-                  ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: BorderSide(
-                    color: theme.colorScheme.outline.withOpacity(0.3),
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: BorderSide(
-                    color: EveColors.photonBlue,
-                    width: 2,
-                  ),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                isDense: true,
-              ),
-              style: theme.textTheme.bodySmall,
+          // Search field - flexible width
+          Flexible(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 200),
+              child: _buildSearchField(context, ref, searchQuery),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFilterDropdown(BuildContext context, WidgetRef ref, SkillFilterMode filterMode) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: EveColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: theme.colorScheme.outline.withOpacity(0.3),
+        ),
+      ),
+      child: DropdownButton<SkillFilterMode>(
+        value: filterMode,
+        onChanged: (newMode) {
+          if (newMode != null) {
+            Log.d('SKILLS.UI', 'SkillsTopBar - filter changed to $newMode');
+            ref.read(skillFilterModeProvider.notifier).state = newMode;
+          }
+        },
+        underline: const SizedBox.shrink(),
+        icon: Icon(
+          Icons.arrow_drop_down,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        style: theme.textTheme.bodySmall,
+        dropdownColor: EveColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(8),
+        items: SkillFilterMode.values.map((mode) {
+          return DropdownMenuItem(
+            value: mode,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _getFilterIcon(mode),
+                  size: 16,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Text(_getFilterLabel(mode)),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  IconData _getFilterIcon(SkillFilterMode mode) {
+    return switch (mode) {
+      SkillFilterMode.all => Icons.list_alt,
+      SkillFilterMode.mySkills => Icons.check_circle_outline,
+      SkillFilterMode.canTrain => Icons.school_outlined,
+      SkillFilterMode.havePrereqs => Icons.done_all,
+    };
+  }
+
+  String _getFilterLabel(SkillFilterMode mode) {
+    return switch (mode) {
+      SkillFilterMode.all => 'All Skills',
+      SkillFilterMode.mySkills => 'My Skills',
+      SkillFilterMode.canTrain => 'Can Train',
+      SkillFilterMode.havePrereqs => 'Prereqs Met',
+    };
+  }
+
+  Widget _buildSearchField(BuildContext context, WidgetRef ref, String searchQuery) {
+    final theme = Theme.of(context);
+    return TextField(
+      onChanged: (value) {
+        Log.d('SKILLS.UI', 'SkillsTopBar - search query: $value');
+        ref.read(skillSearchQueryProvider.notifier).state = value;
+      },
+      decoration: InputDecoration(
+        hintText: 'Search...',
+        hintStyle: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+        ),
+        prefixIcon: const Icon(Icons.search, size: 18),
+        suffixIcon: searchQuery.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear, size: 18),
+                onPressed: () => ref.read(skillSearchQueryProvider.notifier).state = '',
+              )
+            : null,
+        filled: true,
+        fillColor: EveColors.surfaceElevated,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: BorderSide(
+            color: theme.colorScheme.outline.withOpacity(0.3),
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        isDense: true,
+      ),
+      style: theme.textTheme.bodySmall,
     );
   }
 }

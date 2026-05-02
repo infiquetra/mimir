@@ -105,11 +105,11 @@ extension WindowTypeExtension on WindowType {
       case WindowType.dashboard:
         return (width: 1100, height: 850);
       case WindowType.skills:
-        return (width: 1800, height: 1200);
+        return (width: 1200.0, height: 900.0);
       case WindowType.wallet:
-        return (width: 700, height: 600);
+        return (width: 800.0, height: 700.0);
       case WindowType.characters:
-        return (width: 1100, height: 700);
+        return (width: 1200.0, height: 800.0);
       case WindowType.settings:
         return (width: 500, height: 450);
       case WindowType.onboarding:

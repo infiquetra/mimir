@@ -108,6 +108,9 @@ class _TestAppState extends State<TestApp> {
   }
 
   Future<void> _initializeTestEnvironment() async {
+    // Disable drift multiple database warning in tests
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
     // Create in-memory database for isolation.
     _database = AppDatabase.forTesting(
       NativeDatabase.memory(),
@@ -140,6 +143,8 @@ class _TestAppState extends State<TestApp> {
 
   @override
   void dispose() {
+    // Close database to release file locks and prevent "multiple database" warnings
+    _database.close();
     super.dispose();
   }
 

@@ -44,12 +44,13 @@ void main() {
 
     // Define custom desktop devices based on window types
     const dashboardDevice = Device(name: 'dashboard', size: Size(1100, 850));
-    const skillsDevice = Device(name: 'skills', size: Size(1800, 1200));
-    const walletDevice = Device(name: 'wallet', size: Size(700, 600));
-    const charactersDevice = Device(name: 'characters', size: Size(1100, 700));
+    const skillsDevice = Device(name: 'skills', size: Size(1200, 900));
+    const walletDevice = Device(name: 'wallet', size: Size(800, 700));
+    const charactersDevice = Device(name: 'characters', size: Size(1200, 800));
     const settingsDevice = Device(name: 'settings', size: Size(500, 450));
     const piDevice = Device(name: 'pi', size: Size(1000, 800));
     const onboardingDevice = Device(name: 'onboarding', size: Size(800, 600));
+    const skillsCompactDevice = Device(name: 'skills_compact', size: Size(1000, 800));
 
     testGoldens('Dashboard renders correctly without overflows', (tester) async {
       await mockNetworkImagesFor(() async {
@@ -126,6 +127,35 @@ void main() {
 
         await tester.pump(const Duration(seconds: 2));
         await screenMatchesGolden(tester, 'skills_screen', customPump: (tester) async {
+          await tester.pump(const Duration(milliseconds: 500));
+        });
+
+        // Clean up
+        await tester.pumpWidget(Container());
+        await tester.pump(const Duration(milliseconds: 100));
+      });
+    });
+
+    testGoldens('Skills Screen renders correctly (Compact)', (tester) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidgetBuilder(
+          TestApp(
+            initialCharacter: CharacterFixtures.testCharacter(),
+            setupDatabase: (db) async {
+              await db.batch((batch) {
+                batch.insertAll(
+                  db.skillQueueEntries,
+                  SkillFixtures.activeQueue(characterId: characterId),
+                );
+              });
+            },
+            home: const SkillsScreen(),
+          ),
+          surfaceSize: skillsCompactDevice.size,
+        );
+
+        await tester.pump(const Duration(seconds: 2));
+        await screenMatchesGolden(tester, 'skills_screen_compact', customPump: (tester) async {
           await tester.pump(const Duration(milliseconds: 500));
         });
 

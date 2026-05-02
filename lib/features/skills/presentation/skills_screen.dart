@@ -134,19 +134,18 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen>
   Widget _buildSkillCatalogueTab(BuildContext context) {
     Log.d('SKILLS', 'SkillsScreen._buildSkillCatalogueTab() - building catalogue');
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(12),
       child: Column(
-        children: [
-          // Skill Groups Grid (3 columns, ~240px height)
-          const SkillGroupGrid(),
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          // Skill Groups Grid (3 columns, dynamic height)
+          SkillGroupGrid(),
 
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
 
-          // Skills List Panel (2 columns, takes remaining space)
-          const Expanded(
-            child: SkillListPanel(),
-          ),
+          // Skills List Panel (2 columns)
+          SkillListPanel(),
         ],
       ),
     );
