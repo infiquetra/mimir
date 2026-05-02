@@ -140,7 +140,6 @@ class _TestAppState extends State<TestApp> {
 
   @override
   void dispose() {
-    _database.close();
     super.dispose();
   }
 
