@@ -150,11 +150,30 @@ class EveSkillIcon extends StatelessWidget {
       decoration: BoxDecoration(
         color: EveColors.darkSurfaceVariant,
         borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: EveColors.evePrimary.withAlpha(51),
+          width: 1,
+        ),
       ),
-      child: Icon(
-        Icons.school_outlined,
-        size: size * 0.6,
-        color: EveColors.evePrimary.withAlpha(128),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Icon(
+            Icons.help_outline_rounded,
+            size: size * 0.5,
+            color: EveColors.evePrimary.withAlpha(76),
+          ),
+          // Subtly branded corner
+          Positioned(
+            bottom: 2,
+            right: 2,
+            child: Icon(
+              Icons.square_rounded,
+              size: size * 0.15,
+              color: EveColors.evePrimary.withAlpha(128),
+            ),
+          ),
+        ],
       ),
     );
   }

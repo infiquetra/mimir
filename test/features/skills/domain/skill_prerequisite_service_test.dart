@@ -25,7 +25,7 @@ void main() {
     reset(mockSdeService);
     reset(mockSkillRepository);
 
-    when(() => mockSdeService.getSkillName(any())).thenAnswer((_) async => null);
+    when(() => mockSdeService.getSkillName(any<int>())).thenAnswer((_) async => null);
   });
 
   group('canTrainSkill', () {

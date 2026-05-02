@@ -102,7 +102,10 @@ Future<void> _initializeMainWindow() async {
   );
 
   // Immediately hide the window before showing to prevent blip
-  await windowManager.waitUntilReadyToShow(windowOptions);
+  await windowManager.waitUntilReadyToShow(windowOptions, () async {
+    await windowManager.hide();
+    await windowManager.setSkipTaskbar(true);
+  });
 
   // Initialize system tray (menu bar icon) - this is the main UI entry point
   await TrayService.instance.initialize();

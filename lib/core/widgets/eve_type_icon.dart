@@ -81,10 +81,24 @@ class EveTypeIcon extends StatelessWidget {
         errorBuilder: (context, error, stackTrace) {
           Log.e('EveTypeIcon', 'Failed to load icon for type $typeId from $_imageUrl', error, stackTrace);
           return Center(
-            child: Icon(
-              Icons.help_outline,
-              size: size * 0.5,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(
+                  Icons.help_outline_rounded,
+                  size: size * 0.5,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(76),
+                ),
+                Positioned(
+                  bottom: 2,
+                  right: 2,
+                  child: Icon(
+                    Icons.square_rounded,
+                    size: size * 0.15,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(128),
+                  ),
+                ),
+              ],
             ),
           );
         },

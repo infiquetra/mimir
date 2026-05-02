@@ -90,9 +90,12 @@ class WindowService {
       // Get database path to pass to sub-window.
       // Sub-windows can't use path_provider, so we resolve the path here.
       final dbPath = await getDatabasePath();
+      final size = type.defaultSize;
       final args = jsonEncode({
         'windowType': type.windowId,
         'dbPath': dbPath,
+        'width': size.width,
+        'height': size.height,
       });
 
       final controller = await WindowController.create(
