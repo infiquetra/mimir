@@ -44,10 +44,11 @@ class PrerequisiteWarningDialog extends StatelessWidget {
       child: Container(
         width: 500,
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // Header
             Row(
               children: [
@@ -111,6 +112,7 @@ class PrerequisiteWarningDialog extends StatelessWidget {
             // Action buttons
             _buildButtons(context),
           ],
+        ),
         ),
       ),
     );

@@ -70,6 +70,7 @@ class JumpClonesSubTab extends ConsumerWidget {
     final theme = Theme.of(context);
     final clones = ref.watch(characterClonesProvider(characterId));
     final locationNames = ref.watch(characterCloneLocationNamesProvider(characterId));
+    final implantNames = ref.watch(characterCloneImplantNamesProvider(characterId));
 
     return clones.when(
       data: (cloneData) {
@@ -222,7 +223,7 @@ class JumpClonesSubTab extends ConsumerWidget {
                       child: CloneCard(
                         clone: clone,
                         locationName: locationName,
-                        implantNames: implantNames.valueOrNull,
+                        implantNames: implantNames.value,
                         showImplants: true,
                         compact: false,
                       ),
@@ -242,7 +243,7 @@ class JumpClonesSubTab extends ConsumerWidget {
                       child: CloneCard(
                         clone: clone,
                         locationName: 'Location ${clone.locationId}',
-                        implantNames: implantNames.valueOrNull,
+                        implantNames: implantNames.value,
                         showImplants: true,
                         compact: false,
                       ),

@@ -149,6 +149,12 @@ OAuth2 flow with PKCE for ESI API:
 
 ## Testing
 
+### Comprehensive UI & E2E Testing (New Standard)
+
+To ensure a high-quality "look and feel" and robust user interactions, we use native Flutter tools:
+- **Visual Regression (Golden) Tests:** Use `golden_toolkit` for screen and widget screenshots. Run `flutter test --update-goldens` to generate or update baseline screenshots. These tests catch unintended layout and UI changes.
+- **Advanced UI/E2E Tests:** Use `patrol` for simulating real user flows, deep UI interaction, and end-to-end scenarios (similar to Playwright on the web). Patrol tests are placed in `integration_test/patrol/`.
+
 ### Unit and Widget Tests
 
 ```bash

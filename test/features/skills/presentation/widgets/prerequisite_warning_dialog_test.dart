@@ -26,7 +26,7 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     // Verify skill name appears
     expect(find.text('Advanced Weapon Upgrades'), findsOneWidget);
@@ -66,7 +66,7 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     // Verify both prerequisites are listed
     expect(find.text('Weapon Upgrades'), findsOneWidget);
@@ -99,7 +99,7 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     // Verify trained level is shown
     expect(find.text('Need level 5 (have 3)'), findsOneWidget);
@@ -130,7 +130,7 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     // Verify untrained status
     expect(find.text('Need level 3 (untrained)'), findsOneWidget);
@@ -178,11 +178,11 @@ void main() {
 
     // Open dialog
     await tester.tap(find.text('Open'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     // Tap "Add with Prerequisites" button
     await tester.tap(find.text('Add with Prerequisites (Recommended)'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     // Verify result
     expect(result, PrerequisiteDialogResult.addWithPrerequisites);
@@ -227,11 +227,11 @@ void main() {
 
     // Open dialog
     await tester.tap(find.text('Open'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     // Tap "Add Anyway" button
     await tester.tap(find.text('Add Anyway'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     // Verify result
     expect(result, PrerequisiteDialogResult.addAnyway);
@@ -276,11 +276,11 @@ void main() {
 
     // Open dialog
     await tester.tap(find.text('Open'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     // Tap Cancel button
     await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     // Verify result
     expect(result, PrerequisiteDialogResult.cancel);

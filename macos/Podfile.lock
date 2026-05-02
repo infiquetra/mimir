@@ -1,6 +1,7 @@
 PODS:
   - app_links (6.4.1):
     - FlutterMacOS
+  - CocoaAsyncSocket (7.6.5)
   - connectivity_plus (0.0.1):
     - FlutterMacOS
   - desktop_multi_window (0.0.1):
@@ -9,6 +10,10 @@ PODS:
     - FlutterMacOS
   - FlutterMacOS (1.0.0)
   - path_provider_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
+  - patrol (0.0.1):
+    - CocoaAsyncSocket (~> 7.6)
     - Flutter
     - FlutterMacOS
   - screen_retriever_macos (0.0.1):
@@ -55,6 +60,7 @@ DEPENDENCIES:
   - flutter_secure_storage_macos (from `Flutter/ephemeral/.symlinks/plugins/flutter_secure_storage_macos/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
   - path_provider_foundation (from `Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin`)
+  - patrol (from `Flutter/ephemeral/.symlinks/plugins/patrol/darwin`)
   - screen_retriever_macos (from `Flutter/ephemeral/.symlinks/plugins/screen_retriever_macos/macos`)
   - sqflite_darwin (from `Flutter/ephemeral/.symlinks/plugins/sqflite_darwin/darwin`)
   - sqlite3_flutter_libs (from `Flutter/ephemeral/.symlinks/plugins/sqlite3_flutter_libs/darwin`)
@@ -64,6 +70,7 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - CocoaAsyncSocket
     - sqlite3
 
 EXTERNAL SOURCES:
@@ -79,6 +86,8 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral
   path_provider_foundation:
     :path: Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin
+  patrol:
+    :path: Flutter/ephemeral/.symlinks/plugins/patrol/darwin
   screen_retriever_macos:
     :path: Flutter/ephemeral/.symlinks/plugins/screen_retriever_macos/macos
   sqflite_darwin:
@@ -94,11 +103,13 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   app_links: 05a6ec2341985eb05e9f97dc63f5837c39895c3f
+  CocoaAsyncSocket: 065fd1e645c7abab64f7a6a2007a48038fdc6a99
   connectivity_plus: 4adf20a405e25b42b9c9f87feff8f4b6fde18a4e
   desktop_multi_window: 93667594ccc4b88d91a97972fd3b1b89667fa80a
   flutter_secure_storage_macos: 7f45e30f838cf2659862a4e4e3ee1c347c2b3b54
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
   path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880
+  patrol: cea8074f183a2a4232d0ebd10569ae05149ada42
   screen_retriever_macos: 452e51764a9e1cdb74b3c541238795849f21557f
   sqflite_darwin: 20b2a3a3b70e43edae938624ce550a3cbf66a3d0
   sqlite3: 8d708bc63e9f4ce48f0ad9d6269e478c5ced1d9b

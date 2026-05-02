@@ -80,6 +80,7 @@ dev_dependencies:
   mocktail: ^1.0.3
   golden_toolkit: ^0.15.0
   patrol: ^4.5.0
+  network_image_mock: ^2.1.1
 
 flutter:
   uses-material-design: true
@@ -94,7 +95,7 @@ flutter:
     # Orbitron - Display and headings
     - family: Orbitron
       fonts:
-        - asset: assets/fonts/Orbitron[wght].ttf
+        - asset: assets/fonts/Orbitron-wght.ttf
 
     # K2D - Body text
     - family: K2D
@@ -143,6 +144,6 @@ flutter:
     # JetBrains Mono - Code and data
     - family: JetBrainsMono
       fonts:
-        - asset: assets/fonts/JetBrainsMono[wght].ttf
-        - asset: assets/fonts/JetBrainsMono-Italic[wght].ttf
+        - asset: assets/fonts/JetBrainsMono-wght.ttf
+        - asset: assets/fonts/JetBrainsMono-Italic-wght.ttf
           style: italic

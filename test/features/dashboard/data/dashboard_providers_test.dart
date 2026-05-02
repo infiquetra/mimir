@@ -33,8 +33,8 @@ void main() {
   });
 
   tearDown(() async {
-    await database.close();
     container.dispose();
+    await database.close();
   });
 
   group('allCharacterBalancesProvider', () {

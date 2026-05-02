@@ -3,7 +3,7 @@ import 'package:patrol/patrol.dart';
 import 'package:mimir/main.dart' as app;
 
 void main() {
-  patrolTest(
+  patrolWidgetTest(
     'Smoke test - verify app launches and renders',
     ($) async {
       // Launch the app

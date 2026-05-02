@@ -215,8 +215,8 @@ void main() {
     });
 
     tearDown(() async {
-      await database.close();
       container.dispose();
+      await database.close();
     });
 
     test('should fetch from zkillboard when no cache exists', () async {
