@@ -1,0 +1,6 @@
+appId: com.infiquetra.mimir
+---
+- launchApp:
+    clearState: true
+- assertVisible: ".*" # A basic assert to ensure the app rendered something
+- tapOn: "Settings" # Example interaction
