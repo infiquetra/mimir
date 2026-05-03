@@ -51,11 +51,7 @@ class MarginCalculator {
       );
     }
     if (buyPrice <= 0) {
-      throw ArgumentError.value(
-        buyPrice,
-        'buyPrice',
-        'must be positive',
-      );
+      throw ArgumentError.value(buyPrice, 'buyPrice', 'must be positive');
     }
     if (brokerFeePercent.isNaN || brokerFeePercent.isInfinite) {
       throw ArgumentError.value(
@@ -125,15 +121,12 @@ class MarginCalculator {
       );
     }
     if (sellPrice < 0) {
-      throw ArgumentError.value(
-        sellPrice,
-        'sellPrice',
-        'must not be negative',
-      );
+      throw ArgumentError.value(sellPrice, 'sellPrice', 'must not be negative');
     }
 
     final buyTotal = buyPrice * (1 + brokerFeePercent / 100);
-    final sellNet = sellPrice * (1 - brokerFeePercent / 100 - salesTaxPercent / 100);
+    final sellNet =
+        sellPrice * (1 - brokerFeePercent / 100 - salesTaxPercent / 100);
     final profit = sellNet - buyTotal;
     final marginPercent = (profit / buyTotal) * 100;
     final brokerFee =
@@ -173,7 +166,8 @@ class MarginCalculator {
     );
 
     final buyTotal = buyPrice * (1 + brokerFeePercent / 100);
-    final sellFeeMultiplier = 1 - brokerFeePercent / 100 - salesTaxPercent / 100;
+    final sellFeeMultiplier =
+        1 - brokerFeePercent / 100 - salesTaxPercent / 100;
 
     return buyTotal / sellFeeMultiplier;
   }

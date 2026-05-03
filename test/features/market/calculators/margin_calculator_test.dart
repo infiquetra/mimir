@@ -46,8 +46,7 @@ void main() {
       // Zero-profit trade: sell at break-even
       final zeroProfit = MarginCalculator.calculateMargin(
         buyPrice: 1000000,
-        sellPrice:
-            MarginCalculator.breakEvenSellPrice(buyPrice: 1000000),
+        sellPrice: MarginCalculator.breakEvenSellPrice(buyPrice: 1000000),
       );
       expect(zeroProfit.isProfitable, isFalse);
       expect(zeroProfit.profit, closeTo(0, 0.01));
@@ -55,10 +54,7 @@ void main() {
 
     test('throws ArgumentError for non-positive buy price', () {
       expect(
-        () => MarginCalculator.calculateMargin(
-          buyPrice: 0,
-          sellPrice: 1000000,
-        ),
+        () => MarginCalculator.calculateMargin(buyPrice: 0, sellPrice: 1000000),
         throwsArgumentError,
       );
 
@@ -72,35 +68,34 @@ void main() {
     });
 
     test(
-        'throws ArgumentError when total sell-side fees are 100 percent or more',
-        () {
-      expect(
-        () => MarginCalculator.calculateMargin(
-          buyPrice: 1000000,
-          sellPrice: 1100000,
-          brokerFeePercent: 50,
-          salesTaxPercent: 50,
-        ),
-        throwsArgumentError,
-      );
+      'throws ArgumentError when total sell-side fees are 100 percent or more',
+      () {
+        expect(
+          () => MarginCalculator.calculateMargin(
+            buyPrice: 1000000,
+            sellPrice: 1100000,
+            brokerFeePercent: 50,
+            salesTaxPercent: 50,
+          ),
+          throwsArgumentError,
+        );
 
-      expect(
-        () => MarginCalculator.calculateMargin(
-          buyPrice: 1000000,
-          sellPrice: 1100000,
-          brokerFeePercent: 60,
-          salesTaxPercent: 50,
-        ),
-        throwsArgumentError,
-      );
-    });
+        expect(
+          () => MarginCalculator.calculateMargin(
+            buyPrice: 1000000,
+            sellPrice: 1100000,
+            brokerFeePercent: 60,
+            salesTaxPercent: 50,
+          ),
+          throwsArgumentError,
+        );
+      },
+    );
 
     test('throws ArgumentError for negative sell price', () {
       expect(
-        () => MarginCalculator.calculateMargin(
-          buyPrice: 1000000,
-          sellPrice: -1,
-        ),
+        () =>
+            MarginCalculator.calculateMargin(buyPrice: 1000000, sellPrice: -1),
         throwsArgumentError,
       );
     });
@@ -141,25 +136,26 @@ void main() {
     });
 
     test(
-        'throws ArgumentError when total sell-side fees are 100 percent or more',
-        () {
-      expect(
-        () => MarginCalculator.breakEvenSellPrice(
-          buyPrice: 1000000,
-          brokerFeePercent: 50,
-          salesTaxPercent: 50,
-        ),
-        throwsArgumentError,
-      );
+      'throws ArgumentError when total sell-side fees are 100 percent or more',
+      () {
+        expect(
+          () => MarginCalculator.breakEvenSellPrice(
+            buyPrice: 1000000,
+            brokerFeePercent: 50,
+            salesTaxPercent: 50,
+          ),
+          throwsArgumentError,
+        );
 
-      expect(
-        () => MarginCalculator.breakEvenSellPrice(
-          buyPrice: 1000000,
-          brokerFeePercent: 60,
-          salesTaxPercent: 50,
-        ),
-        throwsArgumentError,
-      );
-    });
+        expect(
+          () => MarginCalculator.breakEvenSellPrice(
+            buyPrice: 1000000,
+            brokerFeePercent: 60,
+            salesTaxPercent: 50,
+          ),
+          throwsArgumentError,
+        );
+      },
+    );
   });
 }
