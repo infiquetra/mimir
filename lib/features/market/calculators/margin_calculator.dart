@@ -8,6 +8,8 @@
 
 library;
 
+import 'package:mimir/core/logging/logger.dart';
+
 /// Immutable result of a margin calculation.
 class MarginResult {
   final double buyPrice;
@@ -59,6 +61,8 @@ class MarginCalculator {
     _validateFiniteNonNegative('brokerFeePercent', brokerFeePercent);
     _validateFiniteNonNegative('salesTaxPercent', salesTaxPercent);
 
+    Log.d('MARKET', 'calculateMargin called');
+
     final buyTotal = buyPrice * (1 + brokerFeePercent / 100);
     final sellNet =
         sellPrice * (1 - brokerFeePercent / 100 - salesTaxPercent / 100);
@@ -101,6 +105,8 @@ class MarginCalculator {
     final buyTotal = buyPrice * (1 + brokerFeePercent / 100);
     final breakEven =
         buyTotal / (1 - brokerFeePercent / 100 - salesTaxPercent / 100);
+
+    Log.d('MARKET', 'breakEvenSellPrice calculated');
 
     return breakEven;
   }
