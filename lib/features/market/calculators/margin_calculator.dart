@@ -1,9 +1,12 @@
+import '../../../core/logging/logger.dart';
+
 /// Static utility for trade margin calculations.
 ///
 /// All methods follow the EVE Online market specification for
 /// broker fees (applied to both buy and sell sides) and sales tax
 /// (applied to sell side only).
 class TradeCalculator {
+  static const _tag = 'TradeCalculator';
   TradeCalculator._(); // static utility — no instance needed
 
   /// Calculates the trade margin for a buy/sell pair.
@@ -20,6 +23,10 @@ class TradeCalculator {
     double brokerFeePercent = 1.0,
     double salesTaxPercent = 2.0,
   }) {
+    Log.d(
+      _tag,
+      'calculateMargin: buy=$buyPrice sell=$sellPrice broker=$brokerFeePercent% tax=$salesTaxPercent%',
+    );
     _validatePrice(buyPrice, 'buyPrice');
     _validatePrice(sellPrice, 'sellPrice');
     _validateFeePercent(brokerFeePercent, 'brokerFeePercent');
@@ -35,7 +42,7 @@ class TradeCalculator {
         buyPrice * brokerFeePercent / 100 + sellPrice * brokerFeePercent / 100;
     final salesTax = sellPrice * salesTaxPercent / 100;
 
-    return TradeMargin(
+    final result = TradeMargin(
       buyPrice: buyPrice,
       sellPrice: sellPrice,
       buyTotal: buyTotal,
@@ -45,6 +52,11 @@ class TradeCalculator {
       brokerFee: brokerFee,
       salesTax: salesTax,
     );
+    Log.d(
+      _tag,
+      'calculateMargin finished: profit=$profit margin=${marginPercent.toStringAsFixed(2)}%',
+    );
+    return result;
   }
 
   /// Returns the sell price at which profit is exactly zero for a
@@ -59,6 +71,10 @@ class TradeCalculator {
     double brokerFeePercent = 1.0,
     double salesTaxPercent = 2.0,
   }) {
+    Log.d(
+      _tag,
+      'breakEvenSellPrice: buy=$buyPrice broker=$brokerFeePercent% tax=$salesTaxPercent%',
+    );
     _validatePrice(buyPrice, 'buyPrice');
     _validateFeePercent(brokerFeePercent, 'brokerFeePercent');
     _validateFeePercent(salesTaxPercent, 'salesTaxPercent');
@@ -66,7 +82,9 @@ class TradeCalculator {
 
     final buyTotal = buyPrice * (1 + brokerFeePercent / 100);
     final denominator = 1 - brokerFeePercent / 100 - salesTaxPercent / 100;
-    return buyTotal / denominator;
+    final result = buyTotal / denominator;
+    Log.d(_tag, 'breakEvenSellPrice finished: $result');
+    return result;
   }
 
   // --- private validators ---
