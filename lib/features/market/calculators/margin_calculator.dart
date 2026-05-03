@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Value object holding a trade's margin calculation result.
 class TradeMargin {
   final double buyPrice;
@@ -31,6 +33,8 @@ class TradeCalculator {
   /// Validates a value is finite and non-negative.
   static void _validateNonNegativeFinite(String name, double value) {
     if (value.isNaN || value.isInfinite || value < 0) {
+      debugPrint(
+          '[MARGIN] Validation failed: $name=$value (must be finite, non-negative)');
       throw ArgumentError.value(
         value,
         name,
@@ -47,6 +51,8 @@ class TradeCalculator {
   }) {
     final multiplier = 1 - brokerFeePercent / 100 - salesTaxPercent / 100;
     if (multiplier <= 0) {
+      debugPrint(
+          '[MARGIN] Combined fees exceed 100%; brokerFeePercent=$brokerFeePercent, salesTaxPercent=$salesTaxPercent');
       throw ArgumentError(
         'Combined sell-side broker fee and sales tax must be less than '
         '100%; got brokerFeePercent=$brokerFeePercent, '
@@ -66,6 +72,8 @@ class TradeCalculator {
     double brokerFeePercent = 1.0,
     double salesTaxPercent = 2.0,
   }) {
+    debugPrint(
+        '[MARGIN] calculateMargin entry: buyPrice=$buyPrice, sellPrice=$sellPrice, brokerFeePercent=$brokerFeePercent, salesTaxPercent=$salesTaxPercent');
     _validateNonNegativeFinite('buyPrice', buyPrice);
     _validateNonNegativeFinite('sellPrice', sellPrice);
     _validateNonNegativeFinite('brokerFeePercent', brokerFeePercent);
@@ -79,13 +87,14 @@ class TradeCalculator {
     final buyTotal = buyPrice * (1 + brokerFeePercent / 100);
     final sellNet = sellPrice * sellMultiplier;
     final profit = sellNet - buyTotal;
-    final double marginPercent = buyTotal == 0
-        ? 0.0
-        : (profit / buyTotal) * 100;
+    final double marginPercent =
+        buyTotal == 0 ? 0.0 : (profit / buyTotal) * 100;
     final brokerFee =
         buyPrice * brokerFeePercent / 100 + sellPrice * brokerFeePercent / 100;
     final salesTax = sellPrice * salesTaxPercent / 100;
 
+    debugPrint(
+        '[MARGIN] calculateMargin result: profit=$profit, marginPercent=$marginPercent, isProfitable=${profit > 0}');
     return TradeMargin(
       buyPrice: buyPrice,
       sellPrice: sellPrice,
@@ -106,6 +115,8 @@ class TradeCalculator {
     double brokerFeePercent = 1.0,
     double salesTaxPercent = 2.0,
   }) {
+    debugPrint(
+        '[MARGIN] breakEvenSellPrice entry: buyPrice=$buyPrice, brokerFeePercent=$brokerFeePercent, salesTaxPercent=$salesTaxPercent');
     _validateNonNegativeFinite('buyPrice', buyPrice);
     _validateNonNegativeFinite('brokerFeePercent', brokerFeePercent);
     _validateNonNegativeFinite('salesTaxPercent', salesTaxPercent);
@@ -115,6 +126,8 @@ class TradeCalculator {
       salesTaxPercent: salesTaxPercent,
     );
 
-    return buyPrice * (1 + brokerFeePercent / 100) / sellMultiplier;
+    final result = buyPrice * (1 + brokerFeePercent / 100) / sellMultiplier;
+    debugPrint('[MARGIN] breakEvenSellPrice result: $result');
+    return result;
   }
 }
