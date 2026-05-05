@@ -54,17 +54,33 @@ void main() {
       expect(result.salesTax, closeTo(30.0, 1e-9));
     });
 
-    test('supports zero buy price without NaN margin', () {
+    test('throws for zero buy price', () {
+      expect(
+        () => TradeCalculator.calculateMargin(
+          buyPrice: 0,
+          sellPrice: 100,
+        ),
+        throwsA(isA<ArgumentError>().having(
+          (e) => e.toString(),
+          'toString',
+          contains('buyPrice'),
+        )),
+      );
+    });
+
+    test('large buyPrice (1,000,000) with default fees', () {
       final result = TradeCalculator.calculateMargin(
-        buyPrice: 0,
-        sellPrice: 100,
+        buyPrice: 1000000,
+        sellPrice: 1300000,
       );
 
-      expect(result.buyTotal, 0.0);
-      expect(result.profit, greaterThan(0));
-      expect(result.marginPercent, 0.0);
-      expect(result.marginPercent.isNaN, isFalse);
-      expect(result.marginPercent.isInfinite, isFalse);
+      expect(result.buyPrice, 1000000.0);
+      expect(result.sellPrice, 1300000.0);
+      expect(result.buyTotal, closeTo(1010000.0, 1e-9));
+      expect(result.sellNet, closeTo(1261000.0, 1e-9));
+      expect(result.profit, closeTo(251000.0, 1e-9));
+      expect(result.marginPercent, closeTo(24.8514851485148, 1e-9));
+      expect(result.isProfitable, isTrue);
     });
   });
 
@@ -93,12 +109,28 @@ void main() {
       expect(result, closeTo(553.763440860215, 1e-9));
     });
 
-    test('returns zero when buy price is zero', () {
+    test('throws for zero buy price', () {
+      expect(
+        () => TradeCalculator.breakEvenSellPrice(
+          buyPrice: 0,
+        ),
+        throwsA(isA<ArgumentError>().having(
+          (e) => e.toString(),
+          'toString',
+          contains('buyPrice'),
+        )),
+      );
+    });
+
+    test('large buyPrice (1,000,000) break even', () {
       final result = TradeCalculator.breakEvenSellPrice(
-        buyPrice: 0,
+        buyPrice: 1000000,
       );
 
-      expect(result, 0.0);
+      // buyTotal = 1000000 * 1.01 = 1010000
+      // feeMultiplier = 1 - 0.01 - 0.02 = 0.97
+      // breakEven = 1010000 / 0.97 ≈ 1041237.113402062
+      expect(result, closeTo(1041237.113402062, 1e-9));
     });
   });
 

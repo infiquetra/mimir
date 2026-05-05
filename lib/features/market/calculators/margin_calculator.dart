@@ -36,7 +36,7 @@ class TradeCalculator {
   /// - [brokerFeePercent] = 1.0 (Broker Relations V)
   /// - [salesTaxPercent] = 2.0 (Accounting V)
   ///
-  /// Throws [ArgumentError] if any price or fee is negative, or if the combined
+  /// Throws [ArgumentError] if any price is zero or negative, any fee is negative, or if the combined
   /// sell-side fee rates reach or exceed 100%.
   static TradeMargin calculateMargin({
     required double buyPrice,
@@ -55,7 +55,7 @@ class TradeCalculator {
     final sellNet =
         sellPrice * (1 - brokerFeePercent / 100 - salesTaxPercent / 100);
     final profit = sellNet - buyTotal;
-    final marginPercent = buyTotal == 0 ? 0.0 : (profit / buyTotal) * 100;
+    final marginPercent = (profit / buyTotal) * 100;
     final brokerFee =
         buyPrice * brokerFeePercent / 100 + sellPrice * brokerFeePercent / 100;
     final salesTax = sellPrice * salesTaxPercent / 100;
@@ -101,18 +101,18 @@ class TradeCalculator {
     required double brokerFeePercent,
     required double salesTaxPercent,
   }) {
-    if (buyPrice != null && buyPrice < 0) {
+    if (buyPrice != null && buyPrice <= 0) {
       throw ArgumentError.value(
         buyPrice,
         'buyPrice',
-        'buyPrice must be >= 0',
+        'buyPrice must be > 0',
       );
     }
-    if (sellPrice != null && sellPrice < 0) {
+    if (sellPrice != null && sellPrice <= 0) {
       throw ArgumentError.value(
         sellPrice,
         'sellPrice',
-        'sellPrice must be >= 0',
+        'sellPrice must be > 0',
       );
     }
     if (brokerFeePercent < 0) {
