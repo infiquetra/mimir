@@ -1,3 +1,5 @@
+import 'package:mimir/core/logging/logger.dart';
+
 /// Pure station-trading margin calculator.
 ///
 /// Provides the core arithmetic for evaluating market buy/sell profitability,
@@ -21,6 +23,7 @@ class TradeCalculator {
     double brokerFeePercent = 1.0,
     double salesTaxPercent = 2.0,
   }) {
+    Log.d('CALC', 'calculateMargin entry (buyPrice=$buyPrice, sellPrice=$sellPrice, brokerFee=$brokerFeePercent%, salesTax=$salesTaxPercent%)');
     _validatePrice(buyPrice, 'buyPrice');
     _validatePrice(sellPrice, 'sellPrice');
     _validateFeePercent(brokerFeePercent, 'brokerFeePercent');
@@ -36,6 +39,7 @@ class TradeCalculator {
         buyPrice * brokerFeePercent / 100 + sellPrice * brokerFeePercent / 100;
     final salesTax = sellPrice * salesTaxPercent / 100;
 
+    Log.d('CALC', 'calculateMargin success (profit=$profit, margin=$marginPercent%)');
     return TradeMargin(
       buyPrice: buyPrice,
       sellPrice: sellPrice,
@@ -58,6 +62,7 @@ class TradeCalculator {
     double brokerFeePercent = 1.0,
     double salesTaxPercent = 2.0,
   }) {
+    Log.d('CALC', 'breakEvenSellPrice entry (buyPrice=$buyPrice, brokerFee=$brokerFeePercent%, salesTax=$salesTaxPercent%)');
     _validatePrice(buyPrice, 'buyPrice');
     _validateFeePercent(brokerFeePercent, 'brokerFeePercent');
     _validateFeePercent(salesTaxPercent, 'salesTaxPercent');
@@ -65,9 +70,14 @@ class TradeCalculator {
 
     final buyTotal = buyPrice * (1 + brokerFeePercent / 100);
     final denominator = 1 - brokerFeePercent / 100 - salesTaxPercent / 100;
-    return buyTotal / denominator;
+    final result = buyTotal / denominator;
+    Log.d('CALC', 'breakEvenSellPrice success (result=$result)');
+    return result;
   }
 
+  /// Validates that [value] is finite and non-negative.
+  ///
+  /// Throws [ArgumentError] if [value] is NaN, infinite, or less than zero.
   static void _validatePrice(double value, String name) {
     if (!value.isFinite) {
       throw ArgumentError.value(
@@ -85,23 +95,16 @@ class TradeCalculator {
     }
   }
 
+  /// Validates that [value] is a finite, non-negative fee percentage.
+  ///
+  /// Throws [ArgumentError] if [value] is NaN, infinite, or less than zero.
   static void _validateFeePercent(double value, String name) {
-    if (!value.isFinite) {
-      throw ArgumentError.value(
-        value,
-        name,
-        'expected finite, got $value',
-      );
-    }
-    if (value < 0) {
-      throw ArgumentError.value(
-        value,
-        name,
-        'expected >= 0, got $value',
-      );
-    }
+    _validatePrice(value, name);
   }
 
+  /// Ensures the combined sell-side fees are below 100%.
+  ///
+  /// Throws [ArgumentError] if [brokerFeePercent + salesTaxPercent] >= 100.
   static void _validateTotalSellFee(
     double brokerFeePercent,
     double salesTaxPercent,

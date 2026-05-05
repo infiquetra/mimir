@@ -163,6 +163,13 @@ void main() {
       expect(result, closeTo(214.73684210526315, 1e-10));
     });
 
+    test('returns zero break-even sell price for zero buy price', () {
+      final result = TradeCalculator.breakEvenSellPrice(
+        buyPrice: 0.0,
+      );
+      expect(result, 0.0);
+    });
+
     test('throws ArgumentError when sell-side fees make denominator invalid',
         () {
       // broker + salesTax = 100
@@ -182,6 +189,44 @@ void main() {
           brokerFeePercent: 60.0,
           salesTaxPercent: 50.0,
         ),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('throws ArgumentError for negative or non-finite inputs', () {
+      // Negative buyPrice
+      expect(
+        () => TradeCalculator.breakEvenSellPrice(buyPrice: -1.0),
+        throwsA(isA<ArgumentError>()),
+      );
+
+      // Negative brokerFeePercent
+      expect(
+        () => TradeCalculator.breakEvenSellPrice(
+          buyPrice: 100.0,
+          brokerFeePercent: -0.5,
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+
+      // Negative salesTaxPercent
+      expect(
+        () => TradeCalculator.breakEvenSellPrice(
+          buyPrice: 100.0,
+          salesTaxPercent: -0.5,
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+
+      // NaN buyPrice
+      expect(
+        () => TradeCalculator.breakEvenSellPrice(buyPrice: double.nan),
+        throwsA(isA<ArgumentError>()),
+      );
+
+      // Infinite buyPrice
+      expect(
+        () => TradeCalculator.breakEvenSellPrice(buyPrice: double.infinity),
         throwsA(isA<ArgumentError>()),
       );
     });
