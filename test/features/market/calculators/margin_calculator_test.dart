@@ -3,7 +3,7 @@ import 'package:mimir/features/market/calculators/margin_calculator.dart';
 
 void main() {
   group('TradeCalculator.calculateMargin', () {
-    test('calculates default station trading margin from blueprint formula',
+    test('calculates margin correctly',
         () {
       final result = TradeCalculator.calculateMargin(
         buyPrice: 100.0,
