@@ -1,3 +1,5 @@
+import '../../../core/logging/logger.dart';
+
 // Station trading margin calculator for EVE Online market analysis.
 //
 // Provides static methods to compute buy/sell margins and break-even sell
@@ -114,6 +116,9 @@ class TradeCalculator {
     _validatePercent('salesTaxPercent', salesTaxPercent);
     _validateCombinedFees(brokerFeePercent, salesTaxPercent);
 
+    Log.d('MARKET',
+        'calculateMargin(buyPrice=$buyPrice, sellPrice=$sellPrice) - START');
+
     final buyTotal = buyPrice * (1 + brokerFeePercent / 100);
     final sellNet =
         sellPrice * (1 - brokerFeePercent / 100 - salesTaxPercent / 100);
@@ -124,6 +129,9 @@ class TradeCalculator {
     final brokerFee = buyPrice * brokerFeePercent / 100 +
         sellPrice * brokerFeePercent / 100;
     final salesTax = sellPrice * salesTaxPercent / 100;
+
+    Log.d('MARKET',
+        'calculateMargin -> marginPercent=${marginPercent.toStringAsFixed(2)}%, profit=$profit - SUCCESS');
 
     return TradeMargin(
       buyPrice: buyPrice,
@@ -155,10 +163,18 @@ class TradeCalculator {
     _validatePercent('salesTaxPercent', salesTaxPercent);
     _validateCombinedFees(brokerFeePercent, salesTaxPercent);
 
+    Log.d('MARKET',
+        'breakEvenSellPrice(buyPrice=$buyPrice) - START');
+
     final buyTotal = buyPrice * (1 + brokerFeePercent / 100);
     final netSellFactor =
         1 - brokerFeePercent / 100 - salesTaxPercent / 100;
 
-    return buyTotal / netSellFactor;
+    final result = buyTotal / netSellFactor;
+
+    Log.d('MARKET',
+        'breakEvenSellPrice -> $result - SUCCESS');
+
+    return result;
   }
 }
