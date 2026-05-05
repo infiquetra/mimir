@@ -1,3 +1,5 @@
+import 'package:mimir/core/logging/logger.dart';
+
 /// Immutable result of a margin calculation.
 ///
 /// Implements the Price Calculations section of the Market Module Specification:
@@ -44,32 +46,32 @@ class TradeCalculator {
     required double brokerFeePercent,
     required double salesTaxPercent,
   }) {
-    if (buyPrice <= 0) {
+    if (!buyPrice.isFinite || buyPrice <= 0) {
       throw ArgumentError.value(
         buyPrice,
         'buyPrice',
-        'must be greater than 0 for margin calculation',
+        'must be finite and greater than 0 for margin calculation',
       );
     }
-    if (sellPrice != null && sellPrice < 0) {
+    if (sellPrice != null && (!sellPrice.isFinite || sellPrice < 0)) {
       throw ArgumentError.value(
         sellPrice,
         'sellPrice',
-        'must be greater than or equal to 0 for margin calculation',
+        'must be finite and greater than or equal to 0 for margin calculation',
       );
     }
-    if (brokerFeePercent < 0) {
+    if (!brokerFeePercent.isFinite || brokerFeePercent < 0) {
       throw ArgumentError.value(
         brokerFeePercent,
         'brokerFeePercent',
-        'must be greater than or equal to 0',
+        'must be finite and greater than or equal to 0',
       );
     }
-    if (salesTaxPercent < 0) {
+    if (!salesTaxPercent.isFinite || salesTaxPercent < 0) {
       throw ArgumentError.value(
         salesTaxPercent,
         'salesTaxPercent',
-        'must be greater than or equal to 0',
+        'must be finite and greater than or equal to 0',
       );
     }
 
@@ -111,6 +113,9 @@ class TradeCalculator {
     double brokerFeePercent = 1.0,
     double salesTaxPercent = 2.0,
   }) {
+    Log.d('CALC.MARGIN', 'calculateMargin - buyPrice=$buyPrice sellPrice=$sellPrice '
+        'brokerFeePercent=$brokerFeePercent salesTaxPercent=$salesTaxPercent');
+
     _validateInputs(
       buyPrice: buyPrice,
       sellPrice: sellPrice,
@@ -127,7 +132,7 @@ class TradeCalculator {
         buyPrice * brokerFeePercent / 100 + sellPrice * brokerFeePercent / 100;
     final salesTax = sellPrice * salesTaxPercent / 100;
 
-    return TradeMargin(
+    final result = TradeMargin(
       buyPrice: buyPrice,
       sellPrice: sellPrice,
       buyTotal: buyTotal,
@@ -137,6 +142,11 @@ class TradeCalculator {
       brokerFee: brokerFee,
       salesTax: salesTax,
     );
+
+    Log.d('CALC.MARGIN', 'calculateMargin - profit=$profit marginPercent=$marginPercent '
+        'isProfitable=${result.isProfitable}');
+
+    return result;
   }
 
   /// Calculates the sell price needed to break even after fees.
@@ -153,6 +163,9 @@ class TradeCalculator {
     double brokerFeePercent = 1.0,
     double salesTaxPercent = 2.0,
   }) {
+    Log.d('CALC.MARGIN', 'breakEvenSellPrice - buyPrice=$buyPrice '
+        'brokerFeePercent=$brokerFeePercent salesTaxPercent=$salesTaxPercent');
+
     _validateInputs(
       buyPrice: buyPrice,
       brokerFeePercent: brokerFeePercent,
@@ -161,7 +174,10 @@ class TradeCalculator {
 
     final buyTotal = buyPrice * (1 + brokerFeePercent / 100);
     final feeMultiplier = _feeMultiplier(brokerFeePercent, salesTaxPercent);
+    final result = buyTotal / feeMultiplier;
 
-    return buyTotal / feeMultiplier;
+    Log.d('CALC.MARGIN', 'breakEvenSellPrice - result=$result');
+
+    return result;
   }
 }
