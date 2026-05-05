@@ -132,6 +132,16 @@ void main() {
       // breakEven = 1010000 / 0.97 ≈ 1041237.113402062
       expect(result, closeTo(1041237.113402062, 1e-9));
     });
+
+    test('break-even price produces approximately zero profit', () {
+      final breakEven = TradeCalculator.breakEvenSellPrice(buyPrice: 100);
+      final margin = TradeCalculator.calculateMargin(
+        buyPrice: 100,
+        sellPrice: breakEven,
+      );
+
+      expect(margin.profit, closeTo(0.0, 1e-6));
+    });
   });
 
   group('validation', () {
