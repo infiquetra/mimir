@@ -277,23 +277,25 @@ class CharacterStatusRepository {
 
     final result = <int, String>{};
 
-    for (final structureId in structureIds) {
+    final entries = await Future.wait(structureIds.map((structureId) async {
       try {
         final name = await _esiClient.getStructureName(structureId, characterId);
         if (name != null) {
-          result[structureId] = name;
           Log.d('NAME.RESOLVE', 'Structure $structureId → $name');
+          return MapEntry(structureId, name);
         } else {
           // Access denied (403) or structure not found
-          result[structureId] = 'Player Structure';
           Log.w('NAME.RESOLVE', 'Structure $structureId → Player Structure (access denied)');
+          return MapEntry(structureId, 'Player Structure');
         }
       } catch (e) {
         // Network error or other issue
-        result[structureId] = 'Player Structure';
         Log.e('NAME.RESOLVE', 'Failed to resolve structure $structureId', e, null);
+        return MapEntry(structureId, 'Player Structure');
       }
-    }
+    }));
+
+    result.addEntries(entries);
 
     Log.d('NAME.RESOLVE', 'Resolved ${result.length} structure names');
     return result;

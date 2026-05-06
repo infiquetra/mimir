@@ -13,46 +13,50 @@ class BalanceCardsRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final balance = ref.watch(walletBalanceProvider);
-    final plexCount = ref.watch(plexCountProvider);
-    final lpCorporations = ref.watch(loyaltyPointsByCorporationProvider);
+    final balanceAsync = ref.watch(walletBalanceProvider);
+    final plexAsync = ref.watch(plexCountProvider);
+    final lpAsync = ref.watch(loyaltyPointsByCorporationProvider);
 
-    // Handle loading state
-    if (balance.isLoading || plexCount.isLoading || lpCorporations.isLoading) {
-      return const SizedBox(
-        height: 36,
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    // Handle error state
-    if (balance.hasError || plexCount.hasError || lpCorporations.hasError) {
-      return SizedBox(
-        height: 36,
-        child: Center(
-          child: Text(
-            'Failed to load balances',
-            style: TextStyle(color: Colors.red.shade300),
-          ),
+    return balanceAsync.when(
+      data: (balance) => plexAsync.when(
+        data: (plex) => lpAsync.when(
+          data: (lps) {
+            final totalLP = lps.fold<double>(0.0, (sum, corp) => sum + corp.loyaltyPoints);
+            return BalanceChipRow(
+              balances: {
+                'ISK': balance ?? 0.0,
+                'PLEX': plex.toDouble(),
+                'LP': totalLP,
+              },
+            );
+          },
+          loading: _buildLoading,
+          error: (_, __) => _buildError(),
         ),
-      );
-    }
+        loading: _buildLoading,
+        error: (_, __) => _buildError(),
+      ),
+      loading: _buildLoading,
+      error: (_, __) => _buildError(),
+    );
+  }
 
-    // Calculate total LP across all corporations
-    double totalLP = 0.0;
-    if (lpCorporations.hasValue && lpCorporations.value != null) {
-      for (final corp in lpCorporations.value!) {
-        totalLP += corp.loyaltyPoints.toDouble();
-      }
-    }
+  Widget _buildLoading() {
+    return const SizedBox(
+      height: 36,
+      child: Center(child: CircularProgressIndicator()),
+    );
+  }
 
-    // Build balances map
-    final balances = {
-      'ISK': balance.value ?? 0.0,
-      'PLEX': plexCount.value?.toDouble() ?? 0.0,
-      'LP': totalLP,
-    };
-
-    return BalanceChipRow(balances: balances);
+  Widget _buildError() {
+    return SizedBox(
+      height: 36,
+      child: Center(
+        child: Text(
+          'Failed to load balances',
+          style: TextStyle(color: Colors.red.shade300),
+        ),
+      ),
+    );
   }
 }

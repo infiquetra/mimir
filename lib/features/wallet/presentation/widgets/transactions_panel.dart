@@ -29,7 +29,15 @@ class _TransactionsPanelState extends ConsumerState<TransactionsPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final journal = ref.watch(walletJournalProvider);
+    // Create filter object for the provider
+    final days = _selectedDateRange == 'all' ? null : int.parse(_selectedDateRange);
+    final filter = TransactionFilter(
+      refType: _selectedType,
+      days: days,
+    );
+
+    // Watch the filtered journal stream from the database
+    final journal = ref.watch(filteredWalletJournalProvider(filter));
 
     return Column(
       children: [
@@ -64,9 +72,7 @@ class _TransactionsPanelState extends ConsumerState<TransactionsPanel> {
         Expanded(
           child: journal.when(
             data: (entries) {
-              final filteredEntries = _applyFilters(entries);
-
-              if (filteredEntries.isEmpty) {
+              if (entries.isEmpty) {
                 return const EmptyState(
                   icon: Icons.receipt_long_outlined,
                   heading: 'No Transactions',
@@ -75,11 +81,11 @@ class _TransactionsPanelState extends ConsumerState<TransactionsPanel> {
               }
 
               // Pagination
-              final totalPages = (filteredEntries.length / _itemsPerPage).ceil();
+              final totalPages = (entries.length / _itemsPerPage).ceil();
               final startIndex = _currentPage * _itemsPerPage;
-              final endIndex = (startIndex + _itemsPerPage)
-                  .clamp(0, filteredEntries.length);
-              final pageEntries = filteredEntries.sublist(startIndex, endIndex);
+              final endIndex =
+                  (startIndex + _itemsPerPage).clamp(0, entries.length);
+              final pageEntries = entries.sublist(startIndex, endIndex);
 
               return Column(
                 children: [
@@ -102,8 +108,7 @@ class _TransactionsPanelState extends ConsumerState<TransactionsPanel> {
                   ),
 
                   // Pagination controls (if more than 1 page)
-                  if (totalPages > 1)
-                    _buildPaginationControls(totalPages),
+                  if (totalPages > 1) _buildPaginationControls(totalPages),
                 ],
               );
             },
@@ -115,7 +120,7 @@ class _TransactionsPanelState extends ConsumerState<TransactionsPanel> {
               heading: 'Failed to Load Transactions',
               description: error.toString(),
               action: ElevatedButton(
-                onPressed: () => ref.refresh(walletJournalProvider),
+                onPressed: () => ref.refresh(filteredWalletJournalProvider(filter)),
                 child: const Text('Retry'),
               ),
             ),
@@ -125,28 +130,8 @@ class _TransactionsPanelState extends ConsumerState<TransactionsPanel> {
     );
   }
 
-  /// Applies type and date range filters to journal entries.
-  List<WalletJournalEntry> _applyFilters(List<WalletJournalEntry> entries) {
-    var filtered = entries;
+  /// Pagination controls... (no changes needed)
 
-    // Apply type filter
-    if (_selectedType != null) {
-      filtered = filtered
-          .where((entry) => entry.refType == _selectedType)
-          .toList();
-    }
-
-    // Apply date range filter
-    if (_selectedDateRange != 'all') {
-      final days = int.parse(_selectedDateRange);
-      final cutoffDate = DateTime.now().subtract(Duration(days: days));
-      filtered = filtered
-          .where((entry) => entry.date.isAfter(cutoffDate))
-          .toList();
-    }
-
-    return filtered;
-  }
 
   /// Builds pagination controls with page numbers.
   Widget _buildPaginationControls(int totalPages) {

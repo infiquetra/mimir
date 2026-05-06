@@ -29,6 +29,12 @@ enum WindowType {
 
   /// Onboarding wizard for first-time users.
   onboarding,
+
+  /// Assets screen for browsing item inventory.
+  assets,
+
+  /// Planetary Industry screen for managing colonies.
+  planetary,
 }
 
 /// Extension methods for [WindowType].
@@ -50,6 +56,10 @@ extension WindowTypeExtension on WindowType {
         return 'Settings - Mimir';
       case WindowType.onboarding:
         return 'Welcome to Mimir';
+      case WindowType.assets:
+        return 'Assets - Mimir';
+      case WindowType.planetary:
+        return 'Planetary Industry - Mimir';
     }
   }
 
@@ -72,6 +82,10 @@ extension WindowTypeExtension on WindowType {
         return 5;
       case WindowType.onboarding:
         return 6;
+      case WindowType.assets:
+        return 7;
+      case WindowType.planetary:
+        return 8;
     }
   }
 
@@ -92,6 +106,10 @@ extension WindowTypeExtension on WindowType {
         return WindowType.settings;
       case 6:
         return WindowType.onboarding;
+      case 7:
+        return WindowType.assets;
+      case 8:
+        return WindowType.planetary;
       default:
         return WindowType.dashboard;
     }
@@ -114,6 +132,10 @@ extension WindowTypeExtension on WindowType {
         return (width: 500, height: 450);
       case WindowType.onboarding:
         return (width: 800, height: 600);
+      case WindowType.assets:
+        return (width: 1000, height: 800);
+      case WindowType.planetary:
+        return (width: 1200, height: 900);
     }
   }
 
@@ -137,6 +159,10 @@ extension WindowTypeExtension on WindowType {
         return 'assets/icons/eve/settings.png';
       case WindowType.onboarding:
         return 'assets/icons/eve/app_icon.png';
+      case WindowType.assets:
+        return 'assets/icons/eve/assets.png';
+      case WindowType.planetary:
+        return 'assets/icons/eve/planetary.png';
     }
   }
 }

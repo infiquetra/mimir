@@ -82,7 +82,7 @@ void main() {
   });
 
   group('skillsByGroupProvider', () {
-    test('returns skills with trained levels for active character', skip: 'Riverpod StreamProvider activeCharacterProvider sync issue',, () async {
+    test('returns skills with trained levels for active character', skip: 'Riverpod StreamProvider activeCharacterProvider sync issue', () async {
       const characterId = 12345;
       const groupId = 255;
 
@@ -152,7 +152,7 @@ void main() {
       expect(result[2].isTraining, false);
     });
 
-    test('marks skills in queue as training', skip: 'Riverpod StreamProvider activeCharacterProvider sync issue',, () async {
+    test('marks skills in queue as training', skip: 'Riverpod StreamProvider activeCharacterProvider sync issue', () async {
       const characterId = 12345;
       const groupId = 255;
 
@@ -225,7 +225,7 @@ void main() {
   });
 
   group('skillGroupsWithProgressProvider', () {
-    test('calculates trained count vs total count for each group', skip: 'Riverpod StreamProvider activeCharacterProvider sync issue',, () async {
+    test('calculates trained count vs total count for each group', skip: 'Riverpod StreamProvider activeCharacterProvider sync issue', () async {
       const characterId = 12345;
 
       // Insert active character

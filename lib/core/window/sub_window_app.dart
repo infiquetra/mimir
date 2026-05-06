@@ -9,6 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/characters/data/character_providers.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
+import '../../features/pi/presentation/pi_overview_screen.dart';
+import '../../features/assets/presentation/asset_browser_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/skills/presentation/skills_screen.dart';
 import '../../features/wallet/presentation/wallet_screen.dart';
@@ -216,6 +218,10 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
       case WindowType.onboarding:
         // Onboarding wizard for first-time users
         return const OnboardingScreen();
+      case WindowType.assets:
+        return const AssetBrowserScreen();
+      case WindowType.planetary:
+        return const PiOverviewScreen();
     }
   }
 }

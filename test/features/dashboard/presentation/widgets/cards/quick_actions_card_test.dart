@@ -131,6 +131,12 @@ void main() {
           allCharactersProvider.overrideWith(
             (ref) => const Stream.empty(),
           ),
+          allCharacterSkillQueuesProvider.overrideWith(
+            (ref) => Future.value({}),
+          ),
+          allCharacterBalancesProvider.overrideWith(
+            (ref) => Future.value({}),
+          ),
         ],
         child: const MaterialApp(
           home: Scaffold(

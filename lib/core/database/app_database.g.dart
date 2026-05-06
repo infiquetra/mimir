@@ -5879,6 +5879,2554 @@ class SkillPlanEntriesCompanion extends UpdateCompanion<SkillPlanEntry> {
   }
 }
 
+class $PlanetaryColoniesTable extends PlanetaryColonies
+    with TableInfo<$PlanetaryColoniesTable, PlanetaryColony> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PlanetaryColoniesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _planetIdMeta =
+      const VerificationMeta('planetId');
+  @override
+  late final GeneratedColumn<int> planetId = GeneratedColumn<int>(
+      'planet_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _characterIdMeta =
+      const VerificationMeta('characterId');
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+      'character_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES characters (character_id)'));
+  static const VerificationMeta _planetNameMeta =
+      const VerificationMeta('planetName');
+  @override
+  late final GeneratedColumn<String> planetName = GeneratedColumn<String>(
+      'planet_name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _planetTypeMeta =
+      const VerificationMeta('planetType');
+  @override
+  late final GeneratedColumn<String> planetType = GeneratedColumn<String>(
+      'planet_type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _upgradeLevelMeta =
+      const VerificationMeta('upgradeLevel');
+  @override
+  late final GeneratedColumn<int> upgradeLevel = GeneratedColumn<int>(
+      'upgrade_level', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _numPinsMeta =
+      const VerificationMeta('numPins');
+  @override
+  late final GeneratedColumn<int> numPins = GeneratedColumn<int>(
+      'num_pins', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _lastUpdateMeta =
+      const VerificationMeta('lastUpdate');
+  @override
+  late final GeneratedColumn<DateTime> lastUpdate = GeneratedColumn<DateTime>(
+      'last_update', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        planetId,
+        characterId,
+        planetName,
+        planetType,
+        upgradeLevel,
+        numPins,
+        lastUpdate
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'planetary_colonies';
+  @override
+  VerificationContext validateIntegrity(Insertable<PlanetaryColony> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('planet_id')) {
+      context.handle(_planetIdMeta,
+          planetId.isAcceptableOrUnknown(data['planet_id']!, _planetIdMeta));
+    } else if (isInserting) {
+      context.missing(_planetIdMeta);
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+          _characterIdMeta,
+          characterId.isAcceptableOrUnknown(
+              data['character_id']!, _characterIdMeta));
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('planet_name')) {
+      context.handle(
+          _planetNameMeta,
+          planetName.isAcceptableOrUnknown(
+              data['planet_name']!, _planetNameMeta));
+    } else if (isInserting) {
+      context.missing(_planetNameMeta);
+    }
+    if (data.containsKey('planet_type')) {
+      context.handle(
+          _planetTypeMeta,
+          planetType.isAcceptableOrUnknown(
+              data['planet_type']!, _planetTypeMeta));
+    } else if (isInserting) {
+      context.missing(_planetTypeMeta);
+    }
+    if (data.containsKey('upgrade_level')) {
+      context.handle(
+          _upgradeLevelMeta,
+          upgradeLevel.isAcceptableOrUnknown(
+              data['upgrade_level']!, _upgradeLevelMeta));
+    } else if (isInserting) {
+      context.missing(_upgradeLevelMeta);
+    }
+    if (data.containsKey('num_pins')) {
+      context.handle(_numPinsMeta,
+          numPins.isAcceptableOrUnknown(data['num_pins']!, _numPinsMeta));
+    } else if (isInserting) {
+      context.missing(_numPinsMeta);
+    }
+    if (data.containsKey('last_update')) {
+      context.handle(
+          _lastUpdateMeta,
+          lastUpdate.isAcceptableOrUnknown(
+              data['last_update']!, _lastUpdateMeta));
+    } else if (isInserting) {
+      context.missing(_lastUpdateMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {planetId, characterId};
+  @override
+  PlanetaryColony map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PlanetaryColony(
+      planetId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}planet_id'])!,
+      characterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}character_id'])!,
+      planetName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}planet_name'])!,
+      planetType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}planet_type'])!,
+      upgradeLevel: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}upgrade_level'])!,
+      numPins: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}num_pins'])!,
+      lastUpdate: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}last_update'])!,
+    );
+  }
+
+  @override
+  $PlanetaryColoniesTable createAlias(String alias) {
+    return $PlanetaryColoniesTable(attachedDatabase, alias);
+  }
+}
+
+class PlanetaryColony extends DataClass implements Insertable<PlanetaryColony> {
+  final int planetId;
+  final int characterId;
+  final String planetName;
+  final String planetType;
+  final int upgradeLevel;
+  final int numPins;
+  final DateTime lastUpdate;
+  const PlanetaryColony(
+      {required this.planetId,
+      required this.characterId,
+      required this.planetName,
+      required this.planetType,
+      required this.upgradeLevel,
+      required this.numPins,
+      required this.lastUpdate});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['planet_id'] = Variable<int>(planetId);
+    map['character_id'] = Variable<int>(characterId);
+    map['planet_name'] = Variable<String>(planetName);
+    map['planet_type'] = Variable<String>(planetType);
+    map['upgrade_level'] = Variable<int>(upgradeLevel);
+    map['num_pins'] = Variable<int>(numPins);
+    map['last_update'] = Variable<DateTime>(lastUpdate);
+    return map;
+  }
+
+  PlanetaryColoniesCompanion toCompanion(bool nullToAbsent) {
+    return PlanetaryColoniesCompanion(
+      planetId: Value(planetId),
+      characterId: Value(characterId),
+      planetName: Value(planetName),
+      planetType: Value(planetType),
+      upgradeLevel: Value(upgradeLevel),
+      numPins: Value(numPins),
+      lastUpdate: Value(lastUpdate),
+    );
+  }
+
+  factory PlanetaryColony.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PlanetaryColony(
+      planetId: serializer.fromJson<int>(json['planetId']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      planetName: serializer.fromJson<String>(json['planetName']),
+      planetType: serializer.fromJson<String>(json['planetType']),
+      upgradeLevel: serializer.fromJson<int>(json['upgradeLevel']),
+      numPins: serializer.fromJson<int>(json['numPins']),
+      lastUpdate: serializer.fromJson<DateTime>(json['lastUpdate']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'planetId': serializer.toJson<int>(planetId),
+      'characterId': serializer.toJson<int>(characterId),
+      'planetName': serializer.toJson<String>(planetName),
+      'planetType': serializer.toJson<String>(planetType),
+      'upgradeLevel': serializer.toJson<int>(upgradeLevel),
+      'numPins': serializer.toJson<int>(numPins),
+      'lastUpdate': serializer.toJson<DateTime>(lastUpdate),
+    };
+  }
+
+  PlanetaryColony copyWith(
+          {int? planetId,
+          int? characterId,
+          String? planetName,
+          String? planetType,
+          int? upgradeLevel,
+          int? numPins,
+          DateTime? lastUpdate}) =>
+      PlanetaryColony(
+        planetId: planetId ?? this.planetId,
+        characterId: characterId ?? this.characterId,
+        planetName: planetName ?? this.planetName,
+        planetType: planetType ?? this.planetType,
+        upgradeLevel: upgradeLevel ?? this.upgradeLevel,
+        numPins: numPins ?? this.numPins,
+        lastUpdate: lastUpdate ?? this.lastUpdate,
+      );
+  PlanetaryColony copyWithCompanion(PlanetaryColoniesCompanion data) {
+    return PlanetaryColony(
+      planetId: data.planetId.present ? data.planetId.value : this.planetId,
+      characterId:
+          data.characterId.present ? data.characterId.value : this.characterId,
+      planetName:
+          data.planetName.present ? data.planetName.value : this.planetName,
+      planetType:
+          data.planetType.present ? data.planetType.value : this.planetType,
+      upgradeLevel: data.upgradeLevel.present
+          ? data.upgradeLevel.value
+          : this.upgradeLevel,
+      numPins: data.numPins.present ? data.numPins.value : this.numPins,
+      lastUpdate:
+          data.lastUpdate.present ? data.lastUpdate.value : this.lastUpdate,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlanetaryColony(')
+          ..write('planetId: $planetId, ')
+          ..write('characterId: $characterId, ')
+          ..write('planetName: $planetName, ')
+          ..write('planetType: $planetType, ')
+          ..write('upgradeLevel: $upgradeLevel, ')
+          ..write('numPins: $numPins, ')
+          ..write('lastUpdate: $lastUpdate')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(planetId, characterId, planetName, planetType,
+      upgradeLevel, numPins, lastUpdate);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PlanetaryColony &&
+          other.planetId == this.planetId &&
+          other.characterId == this.characterId &&
+          other.planetName == this.planetName &&
+          other.planetType == this.planetType &&
+          other.upgradeLevel == this.upgradeLevel &&
+          other.numPins == this.numPins &&
+          other.lastUpdate == this.lastUpdate);
+}
+
+class PlanetaryColoniesCompanion extends UpdateCompanion<PlanetaryColony> {
+  final Value<int> planetId;
+  final Value<int> characterId;
+  final Value<String> planetName;
+  final Value<String> planetType;
+  final Value<int> upgradeLevel;
+  final Value<int> numPins;
+  final Value<DateTime> lastUpdate;
+  final Value<int> rowid;
+  const PlanetaryColoniesCompanion({
+    this.planetId = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.planetName = const Value.absent(),
+    this.planetType = const Value.absent(),
+    this.upgradeLevel = const Value.absent(),
+    this.numPins = const Value.absent(),
+    this.lastUpdate = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PlanetaryColoniesCompanion.insert({
+    required int planetId,
+    required int characterId,
+    required String planetName,
+    required String planetType,
+    required int upgradeLevel,
+    required int numPins,
+    required DateTime lastUpdate,
+    this.rowid = const Value.absent(),
+  })  : planetId = Value(planetId),
+        characterId = Value(characterId),
+        planetName = Value(planetName),
+        planetType = Value(planetType),
+        upgradeLevel = Value(upgradeLevel),
+        numPins = Value(numPins),
+        lastUpdate = Value(lastUpdate);
+  static Insertable<PlanetaryColony> custom({
+    Expression<int>? planetId,
+    Expression<int>? characterId,
+    Expression<String>? planetName,
+    Expression<String>? planetType,
+    Expression<int>? upgradeLevel,
+    Expression<int>? numPins,
+    Expression<DateTime>? lastUpdate,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (planetId != null) 'planet_id': planetId,
+      if (characterId != null) 'character_id': characterId,
+      if (planetName != null) 'planet_name': planetName,
+      if (planetType != null) 'planet_type': planetType,
+      if (upgradeLevel != null) 'upgrade_level': upgradeLevel,
+      if (numPins != null) 'num_pins': numPins,
+      if (lastUpdate != null) 'last_update': lastUpdate,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PlanetaryColoniesCompanion copyWith(
+      {Value<int>? planetId,
+      Value<int>? characterId,
+      Value<String>? planetName,
+      Value<String>? planetType,
+      Value<int>? upgradeLevel,
+      Value<int>? numPins,
+      Value<DateTime>? lastUpdate,
+      Value<int>? rowid}) {
+    return PlanetaryColoniesCompanion(
+      planetId: planetId ?? this.planetId,
+      characterId: characterId ?? this.characterId,
+      planetName: planetName ?? this.planetName,
+      planetType: planetType ?? this.planetType,
+      upgradeLevel: upgradeLevel ?? this.upgradeLevel,
+      numPins: numPins ?? this.numPins,
+      lastUpdate: lastUpdate ?? this.lastUpdate,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (planetId.present) {
+      map['planet_id'] = Variable<int>(planetId.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (planetName.present) {
+      map['planet_name'] = Variable<String>(planetName.value);
+    }
+    if (planetType.present) {
+      map['planet_type'] = Variable<String>(planetType.value);
+    }
+    if (upgradeLevel.present) {
+      map['upgrade_level'] = Variable<int>(upgradeLevel.value);
+    }
+    if (numPins.present) {
+      map['num_pins'] = Variable<int>(numPins.value);
+    }
+    if (lastUpdate.present) {
+      map['last_update'] = Variable<DateTime>(lastUpdate.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlanetaryColoniesCompanion(')
+          ..write('planetId: $planetId, ')
+          ..write('characterId: $characterId, ')
+          ..write('planetName: $planetName, ')
+          ..write('planetType: $planetType, ')
+          ..write('upgradeLevel: $upgradeLevel, ')
+          ..write('numPins: $numPins, ')
+          ..write('lastUpdate: $lastUpdate, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PlanetaryPinsTable extends PlanetaryPins
+    with TableInfo<$PlanetaryPinsTable, PlanetaryPin> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PlanetaryPinsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _pinIdMeta = const VerificationMeta('pinId');
+  @override
+  late final GeneratedColumn<int> pinId = GeneratedColumn<int>(
+      'pin_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _characterIdMeta =
+      const VerificationMeta('characterId');
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+      'character_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES characters (character_id)'));
+  static const VerificationMeta _planetIdMeta =
+      const VerificationMeta('planetId');
+  @override
+  late final GeneratedColumn<int> planetId = GeneratedColumn<int>(
+      'planet_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+      'type_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _typeNameMeta =
+      const VerificationMeta('typeName');
+  @override
+  late final GeneratedColumn<String> typeName = GeneratedColumn<String>(
+      'type_name', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _latitudeMeta =
+      const VerificationMeta('latitude');
+  @override
+  late final GeneratedColumn<double> latitude = GeneratedColumn<double>(
+      'latitude', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _longitudeMeta =
+      const VerificationMeta('longitude');
+  @override
+  late final GeneratedColumn<double> longitude = GeneratedColumn<double>(
+      'longitude', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _installTimeMeta =
+      const VerificationMeta('installTime');
+  @override
+  late final GeneratedColumn<DateTime> installTime = GeneratedColumn<DateTime>(
+      'install_time', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _expiryTimeMeta =
+      const VerificationMeta('expiryTime');
+  @override
+  late final GeneratedColumn<DateTime> expiryTime = GeneratedColumn<DateTime>(
+      'expiry_time', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _productTypeIdMeta =
+      const VerificationMeta('productTypeId');
+  @override
+  late final GeneratedColumn<int> productTypeId = GeneratedColumn<int>(
+      'product_type_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _quantityPerCycleMeta =
+      const VerificationMeta('quantityPerCycle');
+  @override
+  late final GeneratedColumn<int> quantityPerCycle = GeneratedColumn<int>(
+      'quantity_per_cycle', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _cycleTimeMeta =
+      const VerificationMeta('cycleTime');
+  @override
+  late final GeneratedColumn<int> cycleTime = GeneratedColumn<int>(
+      'cycle_time', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _schematicIdMeta =
+      const VerificationMeta('schematicId');
+  @override
+  late final GeneratedColumn<int> schematicId = GeneratedColumn<int>(
+      'schematic_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        pinId,
+        characterId,
+        planetId,
+        typeId,
+        typeName,
+        latitude,
+        longitude,
+        installTime,
+        expiryTime,
+        productTypeId,
+        quantityPerCycle,
+        cycleTime,
+        schematicId
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'planetary_pins';
+  @override
+  VerificationContext validateIntegrity(Insertable<PlanetaryPin> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('pin_id')) {
+      context.handle(
+          _pinIdMeta, pinId.isAcceptableOrUnknown(data['pin_id']!, _pinIdMeta));
+    } else if (isInserting) {
+      context.missing(_pinIdMeta);
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+          _characterIdMeta,
+          characterId.isAcceptableOrUnknown(
+              data['character_id']!, _characterIdMeta));
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('planet_id')) {
+      context.handle(_planetIdMeta,
+          planetId.isAcceptableOrUnknown(data['planet_id']!, _planetIdMeta));
+    } else if (isInserting) {
+      context.missing(_planetIdMeta);
+    }
+    if (data.containsKey('type_id')) {
+      context.handle(_typeIdMeta,
+          typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta));
+    } else if (isInserting) {
+      context.missing(_typeIdMeta);
+    }
+    if (data.containsKey('type_name')) {
+      context.handle(_typeNameMeta,
+          typeName.isAcceptableOrUnknown(data['type_name']!, _typeNameMeta));
+    }
+    if (data.containsKey('latitude')) {
+      context.handle(_latitudeMeta,
+          latitude.isAcceptableOrUnknown(data['latitude']!, _latitudeMeta));
+    } else if (isInserting) {
+      context.missing(_latitudeMeta);
+    }
+    if (data.containsKey('longitude')) {
+      context.handle(_longitudeMeta,
+          longitude.isAcceptableOrUnknown(data['longitude']!, _longitudeMeta));
+    } else if (isInserting) {
+      context.missing(_longitudeMeta);
+    }
+    if (data.containsKey('install_time')) {
+      context.handle(
+          _installTimeMeta,
+          installTime.isAcceptableOrUnknown(
+              data['install_time']!, _installTimeMeta));
+    } else if (isInserting) {
+      context.missing(_installTimeMeta);
+    }
+    if (data.containsKey('expiry_time')) {
+      context.handle(
+          _expiryTimeMeta,
+          expiryTime.isAcceptableOrUnknown(
+              data['expiry_time']!, _expiryTimeMeta));
+    }
+    if (data.containsKey('product_type_id')) {
+      context.handle(
+          _productTypeIdMeta,
+          productTypeId.isAcceptableOrUnknown(
+              data['product_type_id']!, _productTypeIdMeta));
+    }
+    if (data.containsKey('quantity_per_cycle')) {
+      context.handle(
+          _quantityPerCycleMeta,
+          quantityPerCycle.isAcceptableOrUnknown(
+              data['quantity_per_cycle']!, _quantityPerCycleMeta));
+    }
+    if (data.containsKey('cycle_time')) {
+      context.handle(_cycleTimeMeta,
+          cycleTime.isAcceptableOrUnknown(data['cycle_time']!, _cycleTimeMeta));
+    }
+    if (data.containsKey('schematic_id')) {
+      context.handle(
+          _schematicIdMeta,
+          schematicId.isAcceptableOrUnknown(
+              data['schematic_id']!, _schematicIdMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PlanetaryPin map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PlanetaryPin(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      pinId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}pin_id'])!,
+      characterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}character_id'])!,
+      planetId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}planet_id'])!,
+      typeId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}type_id'])!,
+      typeName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}type_name']),
+      latitude: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}latitude'])!,
+      longitude: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}longitude'])!,
+      installTime: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}install_time'])!,
+      expiryTime: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}expiry_time']),
+      productTypeId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}product_type_id']),
+      quantityPerCycle: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}quantity_per_cycle']),
+      cycleTime: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}cycle_time']),
+      schematicId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}schematic_id']),
+    );
+  }
+
+  @override
+  $PlanetaryPinsTable createAlias(String alias) {
+    return $PlanetaryPinsTable(attachedDatabase, alias);
+  }
+}
+
+class PlanetaryPin extends DataClass implements Insertable<PlanetaryPin> {
+  final int id;
+  final int pinId;
+  final int characterId;
+  final int planetId;
+  final int typeId;
+  final String? typeName;
+  final double latitude;
+  final double longitude;
+  final DateTime installTime;
+  final DateTime? expiryTime;
+  final int? productTypeId;
+  final int? quantityPerCycle;
+  final int? cycleTime;
+  final int? schematicId;
+  const PlanetaryPin(
+      {required this.id,
+      required this.pinId,
+      required this.characterId,
+      required this.planetId,
+      required this.typeId,
+      this.typeName,
+      required this.latitude,
+      required this.longitude,
+      required this.installTime,
+      this.expiryTime,
+      this.productTypeId,
+      this.quantityPerCycle,
+      this.cycleTime,
+      this.schematicId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['pin_id'] = Variable<int>(pinId);
+    map['character_id'] = Variable<int>(characterId);
+    map['planet_id'] = Variable<int>(planetId);
+    map['type_id'] = Variable<int>(typeId);
+    if (!nullToAbsent || typeName != null) {
+      map['type_name'] = Variable<String>(typeName);
+    }
+    map['latitude'] = Variable<double>(latitude);
+    map['longitude'] = Variable<double>(longitude);
+    map['install_time'] = Variable<DateTime>(installTime);
+    if (!nullToAbsent || expiryTime != null) {
+      map['expiry_time'] = Variable<DateTime>(expiryTime);
+    }
+    if (!nullToAbsent || productTypeId != null) {
+      map['product_type_id'] = Variable<int>(productTypeId);
+    }
+    if (!nullToAbsent || quantityPerCycle != null) {
+      map['quantity_per_cycle'] = Variable<int>(quantityPerCycle);
+    }
+    if (!nullToAbsent || cycleTime != null) {
+      map['cycle_time'] = Variable<int>(cycleTime);
+    }
+    if (!nullToAbsent || schematicId != null) {
+      map['schematic_id'] = Variable<int>(schematicId);
+    }
+    return map;
+  }
+
+  PlanetaryPinsCompanion toCompanion(bool nullToAbsent) {
+    return PlanetaryPinsCompanion(
+      id: Value(id),
+      pinId: Value(pinId),
+      characterId: Value(characterId),
+      planetId: Value(planetId),
+      typeId: Value(typeId),
+      typeName: typeName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(typeName),
+      latitude: Value(latitude),
+      longitude: Value(longitude),
+      installTime: Value(installTime),
+      expiryTime: expiryTime == null && nullToAbsent
+          ? const Value.absent()
+          : Value(expiryTime),
+      productTypeId: productTypeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(productTypeId),
+      quantityPerCycle: quantityPerCycle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(quantityPerCycle),
+      cycleTime: cycleTime == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cycleTime),
+      schematicId: schematicId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(schematicId),
+    );
+  }
+
+  factory PlanetaryPin.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PlanetaryPin(
+      id: serializer.fromJson<int>(json['id']),
+      pinId: serializer.fromJson<int>(json['pinId']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      planetId: serializer.fromJson<int>(json['planetId']),
+      typeId: serializer.fromJson<int>(json['typeId']),
+      typeName: serializer.fromJson<String?>(json['typeName']),
+      latitude: serializer.fromJson<double>(json['latitude']),
+      longitude: serializer.fromJson<double>(json['longitude']),
+      installTime: serializer.fromJson<DateTime>(json['installTime']),
+      expiryTime: serializer.fromJson<DateTime?>(json['expiryTime']),
+      productTypeId: serializer.fromJson<int?>(json['productTypeId']),
+      quantityPerCycle: serializer.fromJson<int?>(json['quantityPerCycle']),
+      cycleTime: serializer.fromJson<int?>(json['cycleTime']),
+      schematicId: serializer.fromJson<int?>(json['schematicId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'pinId': serializer.toJson<int>(pinId),
+      'characterId': serializer.toJson<int>(characterId),
+      'planetId': serializer.toJson<int>(planetId),
+      'typeId': serializer.toJson<int>(typeId),
+      'typeName': serializer.toJson<String?>(typeName),
+      'latitude': serializer.toJson<double>(latitude),
+      'longitude': serializer.toJson<double>(longitude),
+      'installTime': serializer.toJson<DateTime>(installTime),
+      'expiryTime': serializer.toJson<DateTime?>(expiryTime),
+      'productTypeId': serializer.toJson<int?>(productTypeId),
+      'quantityPerCycle': serializer.toJson<int?>(quantityPerCycle),
+      'cycleTime': serializer.toJson<int?>(cycleTime),
+      'schematicId': serializer.toJson<int?>(schematicId),
+    };
+  }
+
+  PlanetaryPin copyWith(
+          {int? id,
+          int? pinId,
+          int? characterId,
+          int? planetId,
+          int? typeId,
+          Value<String?> typeName = const Value.absent(),
+          double? latitude,
+          double? longitude,
+          DateTime? installTime,
+          Value<DateTime?> expiryTime = const Value.absent(),
+          Value<int?> productTypeId = const Value.absent(),
+          Value<int?> quantityPerCycle = const Value.absent(),
+          Value<int?> cycleTime = const Value.absent(),
+          Value<int?> schematicId = const Value.absent()}) =>
+      PlanetaryPin(
+        id: id ?? this.id,
+        pinId: pinId ?? this.pinId,
+        characterId: characterId ?? this.characterId,
+        planetId: planetId ?? this.planetId,
+        typeId: typeId ?? this.typeId,
+        typeName: typeName.present ? typeName.value : this.typeName,
+        latitude: latitude ?? this.latitude,
+        longitude: longitude ?? this.longitude,
+        installTime: installTime ?? this.installTime,
+        expiryTime: expiryTime.present ? expiryTime.value : this.expiryTime,
+        productTypeId:
+            productTypeId.present ? productTypeId.value : this.productTypeId,
+        quantityPerCycle: quantityPerCycle.present
+            ? quantityPerCycle.value
+            : this.quantityPerCycle,
+        cycleTime: cycleTime.present ? cycleTime.value : this.cycleTime,
+        schematicId: schematicId.present ? schematicId.value : this.schematicId,
+      );
+  PlanetaryPin copyWithCompanion(PlanetaryPinsCompanion data) {
+    return PlanetaryPin(
+      id: data.id.present ? data.id.value : this.id,
+      pinId: data.pinId.present ? data.pinId.value : this.pinId,
+      characterId:
+          data.characterId.present ? data.characterId.value : this.characterId,
+      planetId: data.planetId.present ? data.planetId.value : this.planetId,
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      typeName: data.typeName.present ? data.typeName.value : this.typeName,
+      latitude: data.latitude.present ? data.latitude.value : this.latitude,
+      longitude: data.longitude.present ? data.longitude.value : this.longitude,
+      installTime:
+          data.installTime.present ? data.installTime.value : this.installTime,
+      expiryTime:
+          data.expiryTime.present ? data.expiryTime.value : this.expiryTime,
+      productTypeId: data.productTypeId.present
+          ? data.productTypeId.value
+          : this.productTypeId,
+      quantityPerCycle: data.quantityPerCycle.present
+          ? data.quantityPerCycle.value
+          : this.quantityPerCycle,
+      cycleTime: data.cycleTime.present ? data.cycleTime.value : this.cycleTime,
+      schematicId:
+          data.schematicId.present ? data.schematicId.value : this.schematicId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlanetaryPin(')
+          ..write('id: $id, ')
+          ..write('pinId: $pinId, ')
+          ..write('characterId: $characterId, ')
+          ..write('planetId: $planetId, ')
+          ..write('typeId: $typeId, ')
+          ..write('typeName: $typeName, ')
+          ..write('latitude: $latitude, ')
+          ..write('longitude: $longitude, ')
+          ..write('installTime: $installTime, ')
+          ..write('expiryTime: $expiryTime, ')
+          ..write('productTypeId: $productTypeId, ')
+          ..write('quantityPerCycle: $quantityPerCycle, ')
+          ..write('cycleTime: $cycleTime, ')
+          ..write('schematicId: $schematicId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      pinId,
+      characterId,
+      planetId,
+      typeId,
+      typeName,
+      latitude,
+      longitude,
+      installTime,
+      expiryTime,
+      productTypeId,
+      quantityPerCycle,
+      cycleTime,
+      schematicId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PlanetaryPin &&
+          other.id == this.id &&
+          other.pinId == this.pinId &&
+          other.characterId == this.characterId &&
+          other.planetId == this.planetId &&
+          other.typeId == this.typeId &&
+          other.typeName == this.typeName &&
+          other.latitude == this.latitude &&
+          other.longitude == this.longitude &&
+          other.installTime == this.installTime &&
+          other.expiryTime == this.expiryTime &&
+          other.productTypeId == this.productTypeId &&
+          other.quantityPerCycle == this.quantityPerCycle &&
+          other.cycleTime == this.cycleTime &&
+          other.schematicId == this.schematicId);
+}
+
+class PlanetaryPinsCompanion extends UpdateCompanion<PlanetaryPin> {
+  final Value<int> id;
+  final Value<int> pinId;
+  final Value<int> characterId;
+  final Value<int> planetId;
+  final Value<int> typeId;
+  final Value<String?> typeName;
+  final Value<double> latitude;
+  final Value<double> longitude;
+  final Value<DateTime> installTime;
+  final Value<DateTime?> expiryTime;
+  final Value<int?> productTypeId;
+  final Value<int?> quantityPerCycle;
+  final Value<int?> cycleTime;
+  final Value<int?> schematicId;
+  const PlanetaryPinsCompanion({
+    this.id = const Value.absent(),
+    this.pinId = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.planetId = const Value.absent(),
+    this.typeId = const Value.absent(),
+    this.typeName = const Value.absent(),
+    this.latitude = const Value.absent(),
+    this.longitude = const Value.absent(),
+    this.installTime = const Value.absent(),
+    this.expiryTime = const Value.absent(),
+    this.productTypeId = const Value.absent(),
+    this.quantityPerCycle = const Value.absent(),
+    this.cycleTime = const Value.absent(),
+    this.schematicId = const Value.absent(),
+  });
+  PlanetaryPinsCompanion.insert({
+    this.id = const Value.absent(),
+    required int pinId,
+    required int characterId,
+    required int planetId,
+    required int typeId,
+    this.typeName = const Value.absent(),
+    required double latitude,
+    required double longitude,
+    required DateTime installTime,
+    this.expiryTime = const Value.absent(),
+    this.productTypeId = const Value.absent(),
+    this.quantityPerCycle = const Value.absent(),
+    this.cycleTime = const Value.absent(),
+    this.schematicId = const Value.absent(),
+  })  : pinId = Value(pinId),
+        characterId = Value(characterId),
+        planetId = Value(planetId),
+        typeId = Value(typeId),
+        latitude = Value(latitude),
+        longitude = Value(longitude),
+        installTime = Value(installTime);
+  static Insertable<PlanetaryPin> custom({
+    Expression<int>? id,
+    Expression<int>? pinId,
+    Expression<int>? characterId,
+    Expression<int>? planetId,
+    Expression<int>? typeId,
+    Expression<String>? typeName,
+    Expression<double>? latitude,
+    Expression<double>? longitude,
+    Expression<DateTime>? installTime,
+    Expression<DateTime>? expiryTime,
+    Expression<int>? productTypeId,
+    Expression<int>? quantityPerCycle,
+    Expression<int>? cycleTime,
+    Expression<int>? schematicId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (pinId != null) 'pin_id': pinId,
+      if (characterId != null) 'character_id': characterId,
+      if (planetId != null) 'planet_id': planetId,
+      if (typeId != null) 'type_id': typeId,
+      if (typeName != null) 'type_name': typeName,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+      if (installTime != null) 'install_time': installTime,
+      if (expiryTime != null) 'expiry_time': expiryTime,
+      if (productTypeId != null) 'product_type_id': productTypeId,
+      if (quantityPerCycle != null) 'quantity_per_cycle': quantityPerCycle,
+      if (cycleTime != null) 'cycle_time': cycleTime,
+      if (schematicId != null) 'schematic_id': schematicId,
+    });
+  }
+
+  PlanetaryPinsCompanion copyWith(
+      {Value<int>? id,
+      Value<int>? pinId,
+      Value<int>? characterId,
+      Value<int>? planetId,
+      Value<int>? typeId,
+      Value<String?>? typeName,
+      Value<double>? latitude,
+      Value<double>? longitude,
+      Value<DateTime>? installTime,
+      Value<DateTime?>? expiryTime,
+      Value<int?>? productTypeId,
+      Value<int?>? quantityPerCycle,
+      Value<int?>? cycleTime,
+      Value<int?>? schematicId}) {
+    return PlanetaryPinsCompanion(
+      id: id ?? this.id,
+      pinId: pinId ?? this.pinId,
+      characterId: characterId ?? this.characterId,
+      planetId: planetId ?? this.planetId,
+      typeId: typeId ?? this.typeId,
+      typeName: typeName ?? this.typeName,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      installTime: installTime ?? this.installTime,
+      expiryTime: expiryTime ?? this.expiryTime,
+      productTypeId: productTypeId ?? this.productTypeId,
+      quantityPerCycle: quantityPerCycle ?? this.quantityPerCycle,
+      cycleTime: cycleTime ?? this.cycleTime,
+      schematicId: schematicId ?? this.schematicId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (pinId.present) {
+      map['pin_id'] = Variable<int>(pinId.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (planetId.present) {
+      map['planet_id'] = Variable<int>(planetId.value);
+    }
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (typeName.present) {
+      map['type_name'] = Variable<String>(typeName.value);
+    }
+    if (latitude.present) {
+      map['latitude'] = Variable<double>(latitude.value);
+    }
+    if (longitude.present) {
+      map['longitude'] = Variable<double>(longitude.value);
+    }
+    if (installTime.present) {
+      map['install_time'] = Variable<DateTime>(installTime.value);
+    }
+    if (expiryTime.present) {
+      map['expiry_time'] = Variable<DateTime>(expiryTime.value);
+    }
+    if (productTypeId.present) {
+      map['product_type_id'] = Variable<int>(productTypeId.value);
+    }
+    if (quantityPerCycle.present) {
+      map['quantity_per_cycle'] = Variable<int>(quantityPerCycle.value);
+    }
+    if (cycleTime.present) {
+      map['cycle_time'] = Variable<int>(cycleTime.value);
+    }
+    if (schematicId.present) {
+      map['schematic_id'] = Variable<int>(schematicId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlanetaryPinsCompanion(')
+          ..write('id: $id, ')
+          ..write('pinId: $pinId, ')
+          ..write('characterId: $characterId, ')
+          ..write('planetId: $planetId, ')
+          ..write('typeId: $typeId, ')
+          ..write('typeName: $typeName, ')
+          ..write('latitude: $latitude, ')
+          ..write('longitude: $longitude, ')
+          ..write('installTime: $installTime, ')
+          ..write('expiryTime: $expiryTime, ')
+          ..write('productTypeId: $productTypeId, ')
+          ..write('quantityPerCycle: $quantityPerCycle, ')
+          ..write('cycleTime: $cycleTime, ')
+          ..write('schematicId: $schematicId')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $AssetsTable extends Assets with TableInfo<$AssetsTable, Asset> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AssetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _itemIdMeta = const VerificationMeta('itemId');
+  @override
+  late final GeneratedColumn<int> itemId = GeneratedColumn<int>(
+      'item_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _characterIdMeta =
+      const VerificationMeta('characterId');
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+      'character_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES characters (character_id)'));
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+      'type_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _locationIdMeta =
+      const VerificationMeta('locationId');
+  @override
+  late final GeneratedColumn<int> locationId = GeneratedColumn<int>(
+      'location_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _locationFlagMeta =
+      const VerificationMeta('locationFlag');
+  @override
+  late final GeneratedColumn<String> locationFlag = GeneratedColumn<String>(
+      'location_flag', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _quantityMeta =
+      const VerificationMeta('quantity');
+  @override
+  late final GeneratedColumn<int> quantity = GeneratedColumn<int>(
+      'quantity', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _isSingletonMeta =
+      const VerificationMeta('isSingleton');
+  @override
+  late final GeneratedColumn<bool> isSingleton = GeneratedColumn<bool>(
+      'is_singleton', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("is_singleton" IN (0, 1))'));
+  static const VerificationMeta _isBlueprintCopyMeta =
+      const VerificationMeta('isBlueprintCopy');
+  @override
+  late final GeneratedColumn<bool> isBlueprintCopy = GeneratedColumn<bool>(
+      'is_blueprint_copy', aliasedName, true,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("is_blueprint_copy" IN (0, 1))'));
+  static const VerificationMeta _typeNameMeta =
+      const VerificationMeta('typeName');
+  @override
+  late final GeneratedColumn<String> typeName = GeneratedColumn<String>(
+      'type_name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _customNameMeta =
+      const VerificationMeta('customName');
+  @override
+  late final GeneratedColumn<String> customName = GeneratedColumn<String>(
+      'custom_name', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _containedInIdMeta =
+      const VerificationMeta('containedInId');
+  @override
+  late final GeneratedColumn<int> containedInId = GeneratedColumn<int>(
+      'contained_in_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        itemId,
+        characterId,
+        typeId,
+        locationId,
+        locationFlag,
+        quantity,
+        isSingleton,
+        isBlueprintCopy,
+        typeName,
+        customName,
+        containedInId
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'assets';
+  @override
+  VerificationContext validateIntegrity(Insertable<Asset> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('item_id')) {
+      context.handle(_itemIdMeta,
+          itemId.isAcceptableOrUnknown(data['item_id']!, _itemIdMeta));
+    } else if (isInserting) {
+      context.missing(_itemIdMeta);
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+          _characterIdMeta,
+          characterId.isAcceptableOrUnknown(
+              data['character_id']!, _characterIdMeta));
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('type_id')) {
+      context.handle(_typeIdMeta,
+          typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta));
+    } else if (isInserting) {
+      context.missing(_typeIdMeta);
+    }
+    if (data.containsKey('location_id')) {
+      context.handle(
+          _locationIdMeta,
+          locationId.isAcceptableOrUnknown(
+              data['location_id']!, _locationIdMeta));
+    } else if (isInserting) {
+      context.missing(_locationIdMeta);
+    }
+    if (data.containsKey('location_flag')) {
+      context.handle(
+          _locationFlagMeta,
+          locationFlag.isAcceptableOrUnknown(
+              data['location_flag']!, _locationFlagMeta));
+    } else if (isInserting) {
+      context.missing(_locationFlagMeta);
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(_quantityMeta,
+          quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta));
+    } else if (isInserting) {
+      context.missing(_quantityMeta);
+    }
+    if (data.containsKey('is_singleton')) {
+      context.handle(
+          _isSingletonMeta,
+          isSingleton.isAcceptableOrUnknown(
+              data['is_singleton']!, _isSingletonMeta));
+    } else if (isInserting) {
+      context.missing(_isSingletonMeta);
+    }
+    if (data.containsKey('is_blueprint_copy')) {
+      context.handle(
+          _isBlueprintCopyMeta,
+          isBlueprintCopy.isAcceptableOrUnknown(
+              data['is_blueprint_copy']!, _isBlueprintCopyMeta));
+    }
+    if (data.containsKey('type_name')) {
+      context.handle(_typeNameMeta,
+          typeName.isAcceptableOrUnknown(data['type_name']!, _typeNameMeta));
+    } else if (isInserting) {
+      context.missing(_typeNameMeta);
+    }
+    if (data.containsKey('custom_name')) {
+      context.handle(
+          _customNameMeta,
+          customName.isAcceptableOrUnknown(
+              data['custom_name']!, _customNameMeta));
+    }
+    if (data.containsKey('contained_in_id')) {
+      context.handle(
+          _containedInIdMeta,
+          containedInId.isAcceptableOrUnknown(
+              data['contained_in_id']!, _containedInIdMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {itemId, characterId};
+  @override
+  Asset map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Asset(
+      itemId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}item_id'])!,
+      characterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}character_id'])!,
+      typeId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}type_id'])!,
+      locationId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}location_id'])!,
+      locationFlag: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}location_flag'])!,
+      quantity: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}quantity'])!,
+      isSingleton: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_singleton'])!,
+      isBlueprintCopy: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_blueprint_copy']),
+      typeName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}type_name'])!,
+      customName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}custom_name']),
+      containedInId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}contained_in_id']),
+    );
+  }
+
+  @override
+  $AssetsTable createAlias(String alias) {
+    return $AssetsTable(attachedDatabase, alias);
+  }
+}
+
+class Asset extends DataClass implements Insertable<Asset> {
+  final int itemId;
+  final int characterId;
+  final int typeId;
+  final int locationId;
+  final String locationFlag;
+  final int quantity;
+  final bool isSingleton;
+  final bool? isBlueprintCopy;
+  final String typeName;
+  final String? customName;
+  final int? containedInId;
+  const Asset(
+      {required this.itemId,
+      required this.characterId,
+      required this.typeId,
+      required this.locationId,
+      required this.locationFlag,
+      required this.quantity,
+      required this.isSingleton,
+      this.isBlueprintCopy,
+      required this.typeName,
+      this.customName,
+      this.containedInId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['item_id'] = Variable<int>(itemId);
+    map['character_id'] = Variable<int>(characterId);
+    map['type_id'] = Variable<int>(typeId);
+    map['location_id'] = Variable<int>(locationId);
+    map['location_flag'] = Variable<String>(locationFlag);
+    map['quantity'] = Variable<int>(quantity);
+    map['is_singleton'] = Variable<bool>(isSingleton);
+    if (!nullToAbsent || isBlueprintCopy != null) {
+      map['is_blueprint_copy'] = Variable<bool>(isBlueprintCopy);
+    }
+    map['type_name'] = Variable<String>(typeName);
+    if (!nullToAbsent || customName != null) {
+      map['custom_name'] = Variable<String>(customName);
+    }
+    if (!nullToAbsent || containedInId != null) {
+      map['contained_in_id'] = Variable<int>(containedInId);
+    }
+    return map;
+  }
+
+  AssetsCompanion toCompanion(bool nullToAbsent) {
+    return AssetsCompanion(
+      itemId: Value(itemId),
+      characterId: Value(characterId),
+      typeId: Value(typeId),
+      locationId: Value(locationId),
+      locationFlag: Value(locationFlag),
+      quantity: Value(quantity),
+      isSingleton: Value(isSingleton),
+      isBlueprintCopy: isBlueprintCopy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(isBlueprintCopy),
+      typeName: Value(typeName),
+      customName: customName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customName),
+      containedInId: containedInId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(containedInId),
+    );
+  }
+
+  factory Asset.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Asset(
+      itemId: serializer.fromJson<int>(json['itemId']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      typeId: serializer.fromJson<int>(json['typeId']),
+      locationId: serializer.fromJson<int>(json['locationId']),
+      locationFlag: serializer.fromJson<String>(json['locationFlag']),
+      quantity: serializer.fromJson<int>(json['quantity']),
+      isSingleton: serializer.fromJson<bool>(json['isSingleton']),
+      isBlueprintCopy: serializer.fromJson<bool?>(json['isBlueprintCopy']),
+      typeName: serializer.fromJson<String>(json['typeName']),
+      customName: serializer.fromJson<String?>(json['customName']),
+      containedInId: serializer.fromJson<int?>(json['containedInId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'itemId': serializer.toJson<int>(itemId),
+      'characterId': serializer.toJson<int>(characterId),
+      'typeId': serializer.toJson<int>(typeId),
+      'locationId': serializer.toJson<int>(locationId),
+      'locationFlag': serializer.toJson<String>(locationFlag),
+      'quantity': serializer.toJson<int>(quantity),
+      'isSingleton': serializer.toJson<bool>(isSingleton),
+      'isBlueprintCopy': serializer.toJson<bool?>(isBlueprintCopy),
+      'typeName': serializer.toJson<String>(typeName),
+      'customName': serializer.toJson<String?>(customName),
+      'containedInId': serializer.toJson<int?>(containedInId),
+    };
+  }
+
+  Asset copyWith(
+          {int? itemId,
+          int? characterId,
+          int? typeId,
+          int? locationId,
+          String? locationFlag,
+          int? quantity,
+          bool? isSingleton,
+          Value<bool?> isBlueprintCopy = const Value.absent(),
+          String? typeName,
+          Value<String?> customName = const Value.absent(),
+          Value<int?> containedInId = const Value.absent()}) =>
+      Asset(
+        itemId: itemId ?? this.itemId,
+        characterId: characterId ?? this.characterId,
+        typeId: typeId ?? this.typeId,
+        locationId: locationId ?? this.locationId,
+        locationFlag: locationFlag ?? this.locationFlag,
+        quantity: quantity ?? this.quantity,
+        isSingleton: isSingleton ?? this.isSingleton,
+        isBlueprintCopy: isBlueprintCopy.present
+            ? isBlueprintCopy.value
+            : this.isBlueprintCopy,
+        typeName: typeName ?? this.typeName,
+        customName: customName.present ? customName.value : this.customName,
+        containedInId:
+            containedInId.present ? containedInId.value : this.containedInId,
+      );
+  Asset copyWithCompanion(AssetsCompanion data) {
+    return Asset(
+      itemId: data.itemId.present ? data.itemId.value : this.itemId,
+      characterId:
+          data.characterId.present ? data.characterId.value : this.characterId,
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      locationId:
+          data.locationId.present ? data.locationId.value : this.locationId,
+      locationFlag: data.locationFlag.present
+          ? data.locationFlag.value
+          : this.locationFlag,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      isSingleton:
+          data.isSingleton.present ? data.isSingleton.value : this.isSingleton,
+      isBlueprintCopy: data.isBlueprintCopy.present
+          ? data.isBlueprintCopy.value
+          : this.isBlueprintCopy,
+      typeName: data.typeName.present ? data.typeName.value : this.typeName,
+      customName:
+          data.customName.present ? data.customName.value : this.customName,
+      containedInId: data.containedInId.present
+          ? data.containedInId.value
+          : this.containedInId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Asset(')
+          ..write('itemId: $itemId, ')
+          ..write('characterId: $characterId, ')
+          ..write('typeId: $typeId, ')
+          ..write('locationId: $locationId, ')
+          ..write('locationFlag: $locationFlag, ')
+          ..write('quantity: $quantity, ')
+          ..write('isSingleton: $isSingleton, ')
+          ..write('isBlueprintCopy: $isBlueprintCopy, ')
+          ..write('typeName: $typeName, ')
+          ..write('customName: $customName, ')
+          ..write('containedInId: $containedInId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      itemId,
+      characterId,
+      typeId,
+      locationId,
+      locationFlag,
+      quantity,
+      isSingleton,
+      isBlueprintCopy,
+      typeName,
+      customName,
+      containedInId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Asset &&
+          other.itemId == this.itemId &&
+          other.characterId == this.characterId &&
+          other.typeId == this.typeId &&
+          other.locationId == this.locationId &&
+          other.locationFlag == this.locationFlag &&
+          other.quantity == this.quantity &&
+          other.isSingleton == this.isSingleton &&
+          other.isBlueprintCopy == this.isBlueprintCopy &&
+          other.typeName == this.typeName &&
+          other.customName == this.customName &&
+          other.containedInId == this.containedInId);
+}
+
+class AssetsCompanion extends UpdateCompanion<Asset> {
+  final Value<int> itemId;
+  final Value<int> characterId;
+  final Value<int> typeId;
+  final Value<int> locationId;
+  final Value<String> locationFlag;
+  final Value<int> quantity;
+  final Value<bool> isSingleton;
+  final Value<bool?> isBlueprintCopy;
+  final Value<String> typeName;
+  final Value<String?> customName;
+  final Value<int?> containedInId;
+  final Value<int> rowid;
+  const AssetsCompanion({
+    this.itemId = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.typeId = const Value.absent(),
+    this.locationId = const Value.absent(),
+    this.locationFlag = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.isSingleton = const Value.absent(),
+    this.isBlueprintCopy = const Value.absent(),
+    this.typeName = const Value.absent(),
+    this.customName = const Value.absent(),
+    this.containedInId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AssetsCompanion.insert({
+    required int itemId,
+    required int characterId,
+    required int typeId,
+    required int locationId,
+    required String locationFlag,
+    required int quantity,
+    required bool isSingleton,
+    this.isBlueprintCopy = const Value.absent(),
+    required String typeName,
+    this.customName = const Value.absent(),
+    this.containedInId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : itemId = Value(itemId),
+        characterId = Value(characterId),
+        typeId = Value(typeId),
+        locationId = Value(locationId),
+        locationFlag = Value(locationFlag),
+        quantity = Value(quantity),
+        isSingleton = Value(isSingleton),
+        typeName = Value(typeName);
+  static Insertable<Asset> custom({
+    Expression<int>? itemId,
+    Expression<int>? characterId,
+    Expression<int>? typeId,
+    Expression<int>? locationId,
+    Expression<String>? locationFlag,
+    Expression<int>? quantity,
+    Expression<bool>? isSingleton,
+    Expression<bool>? isBlueprintCopy,
+    Expression<String>? typeName,
+    Expression<String>? customName,
+    Expression<int>? containedInId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (itemId != null) 'item_id': itemId,
+      if (characterId != null) 'character_id': characterId,
+      if (typeId != null) 'type_id': typeId,
+      if (locationId != null) 'location_id': locationId,
+      if (locationFlag != null) 'location_flag': locationFlag,
+      if (quantity != null) 'quantity': quantity,
+      if (isSingleton != null) 'is_singleton': isSingleton,
+      if (isBlueprintCopy != null) 'is_blueprint_copy': isBlueprintCopy,
+      if (typeName != null) 'type_name': typeName,
+      if (customName != null) 'custom_name': customName,
+      if (containedInId != null) 'contained_in_id': containedInId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AssetsCompanion copyWith(
+      {Value<int>? itemId,
+      Value<int>? characterId,
+      Value<int>? typeId,
+      Value<int>? locationId,
+      Value<String>? locationFlag,
+      Value<int>? quantity,
+      Value<bool>? isSingleton,
+      Value<bool?>? isBlueprintCopy,
+      Value<String>? typeName,
+      Value<String?>? customName,
+      Value<int?>? containedInId,
+      Value<int>? rowid}) {
+    return AssetsCompanion(
+      itemId: itemId ?? this.itemId,
+      characterId: characterId ?? this.characterId,
+      typeId: typeId ?? this.typeId,
+      locationId: locationId ?? this.locationId,
+      locationFlag: locationFlag ?? this.locationFlag,
+      quantity: quantity ?? this.quantity,
+      isSingleton: isSingleton ?? this.isSingleton,
+      isBlueprintCopy: isBlueprintCopy ?? this.isBlueprintCopy,
+      typeName: typeName ?? this.typeName,
+      customName: customName ?? this.customName,
+      containedInId: containedInId ?? this.containedInId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (itemId.present) {
+      map['item_id'] = Variable<int>(itemId.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (locationId.present) {
+      map['location_id'] = Variable<int>(locationId.value);
+    }
+    if (locationFlag.present) {
+      map['location_flag'] = Variable<String>(locationFlag.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<int>(quantity.value);
+    }
+    if (isSingleton.present) {
+      map['is_singleton'] = Variable<bool>(isSingleton.value);
+    }
+    if (isBlueprintCopy.present) {
+      map['is_blueprint_copy'] = Variable<bool>(isBlueprintCopy.value);
+    }
+    if (typeName.present) {
+      map['type_name'] = Variable<String>(typeName.value);
+    }
+    if (customName.present) {
+      map['custom_name'] = Variable<String>(customName.value);
+    }
+    if (containedInId.present) {
+      map['contained_in_id'] = Variable<int>(containedInId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetsCompanion(')
+          ..write('itemId: $itemId, ')
+          ..write('characterId: $characterId, ')
+          ..write('typeId: $typeId, ')
+          ..write('locationId: $locationId, ')
+          ..write('locationFlag: $locationFlag, ')
+          ..write('quantity: $quantity, ')
+          ..write('isSingleton: $isSingleton, ')
+          ..write('isBlueprintCopy: $isBlueprintCopy, ')
+          ..write('typeName: $typeName, ')
+          ..write('customName: $customName, ')
+          ..write('containedInId: $containedInId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $AssetLocationsTable extends AssetLocations
+    with TableInfo<$AssetLocationsTable, AssetLocation> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AssetLocationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _locationIdMeta =
+      const VerificationMeta('locationId');
+  @override
+  late final GeneratedColumn<int> locationId = GeneratedColumn<int>(
+      'location_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _locationTypeMeta =
+      const VerificationMeta('locationType');
+  @override
+  late final GeneratedColumn<String> locationType = GeneratedColumn<String>(
+      'location_type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _locationNameMeta =
+      const VerificationMeta('locationName');
+  @override
+  late final GeneratedColumn<String> locationName = GeneratedColumn<String>(
+      'location_name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _solarSystemIdMeta =
+      const VerificationMeta('solarSystemId');
+  @override
+  late final GeneratedColumn<int> solarSystemId = GeneratedColumn<int>(
+      'solar_system_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _solarSystemNameMeta =
+      const VerificationMeta('solarSystemName');
+  @override
+  late final GeneratedColumn<String> solarSystemName = GeneratedColumn<String>(
+      'solar_system_name', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _regionIdMeta =
+      const VerificationMeta('regionId');
+  @override
+  late final GeneratedColumn<int> regionId = GeneratedColumn<int>(
+      'region_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _regionNameMeta =
+      const VerificationMeta('regionName');
+  @override
+  late final GeneratedColumn<String> regionName = GeneratedColumn<String>(
+      'region_name', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _securityStatusMeta =
+      const VerificationMeta('securityStatus');
+  @override
+  late final GeneratedColumn<double> securityStatus = GeneratedColumn<double>(
+      'security_status', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _lastResolvedMeta =
+      const VerificationMeta('lastResolved');
+  @override
+  late final GeneratedColumn<DateTime> lastResolved = GeneratedColumn<DateTime>(
+      'last_resolved', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        locationId,
+        locationType,
+        locationName,
+        solarSystemId,
+        solarSystemName,
+        regionId,
+        regionName,
+        securityStatus,
+        lastResolved
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'asset_locations';
+  @override
+  VerificationContext validateIntegrity(Insertable<AssetLocation> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('location_id')) {
+      context.handle(
+          _locationIdMeta,
+          locationId.isAcceptableOrUnknown(
+              data['location_id']!, _locationIdMeta));
+    }
+    if (data.containsKey('location_type')) {
+      context.handle(
+          _locationTypeMeta,
+          locationType.isAcceptableOrUnknown(
+              data['location_type']!, _locationTypeMeta));
+    } else if (isInserting) {
+      context.missing(_locationTypeMeta);
+    }
+    if (data.containsKey('location_name')) {
+      context.handle(
+          _locationNameMeta,
+          locationName.isAcceptableOrUnknown(
+              data['location_name']!, _locationNameMeta));
+    } else if (isInserting) {
+      context.missing(_locationNameMeta);
+    }
+    if (data.containsKey('solar_system_id')) {
+      context.handle(
+          _solarSystemIdMeta,
+          solarSystemId.isAcceptableOrUnknown(
+              data['solar_system_id']!, _solarSystemIdMeta));
+    }
+    if (data.containsKey('solar_system_name')) {
+      context.handle(
+          _solarSystemNameMeta,
+          solarSystemName.isAcceptableOrUnknown(
+              data['solar_system_name']!, _solarSystemNameMeta));
+    }
+    if (data.containsKey('region_id')) {
+      context.handle(_regionIdMeta,
+          regionId.isAcceptableOrUnknown(data['region_id']!, _regionIdMeta));
+    }
+    if (data.containsKey('region_name')) {
+      context.handle(
+          _regionNameMeta,
+          regionName.isAcceptableOrUnknown(
+              data['region_name']!, _regionNameMeta));
+    }
+    if (data.containsKey('security_status')) {
+      context.handle(
+          _securityStatusMeta,
+          securityStatus.isAcceptableOrUnknown(
+              data['security_status']!, _securityStatusMeta));
+    }
+    if (data.containsKey('last_resolved')) {
+      context.handle(
+          _lastResolvedMeta,
+          lastResolved.isAcceptableOrUnknown(
+              data['last_resolved']!, _lastResolvedMeta));
+    } else if (isInserting) {
+      context.missing(_lastResolvedMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {locationId};
+  @override
+  AssetLocation map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AssetLocation(
+      locationId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}location_id'])!,
+      locationType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}location_type'])!,
+      locationName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}location_name'])!,
+      solarSystemId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}solar_system_id']),
+      solarSystemName: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}solar_system_name']),
+      regionId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}region_id']),
+      regionName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}region_name']),
+      securityStatus: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}security_status']),
+      lastResolved: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}last_resolved'])!,
+    );
+  }
+
+  @override
+  $AssetLocationsTable createAlias(String alias) {
+    return $AssetLocationsTable(attachedDatabase, alias);
+  }
+}
+
+class AssetLocation extends DataClass implements Insertable<AssetLocation> {
+  final int locationId;
+  final String locationType;
+  final String locationName;
+  final int? solarSystemId;
+  final String? solarSystemName;
+  final int? regionId;
+  final String? regionName;
+  final double? securityStatus;
+  final DateTime lastResolved;
+  const AssetLocation(
+      {required this.locationId,
+      required this.locationType,
+      required this.locationName,
+      this.solarSystemId,
+      this.solarSystemName,
+      this.regionId,
+      this.regionName,
+      this.securityStatus,
+      required this.lastResolved});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['location_id'] = Variable<int>(locationId);
+    map['location_type'] = Variable<String>(locationType);
+    map['location_name'] = Variable<String>(locationName);
+    if (!nullToAbsent || solarSystemId != null) {
+      map['solar_system_id'] = Variable<int>(solarSystemId);
+    }
+    if (!nullToAbsent || solarSystemName != null) {
+      map['solar_system_name'] = Variable<String>(solarSystemName);
+    }
+    if (!nullToAbsent || regionId != null) {
+      map['region_id'] = Variable<int>(regionId);
+    }
+    if (!nullToAbsent || regionName != null) {
+      map['region_name'] = Variable<String>(regionName);
+    }
+    if (!nullToAbsent || securityStatus != null) {
+      map['security_status'] = Variable<double>(securityStatus);
+    }
+    map['last_resolved'] = Variable<DateTime>(lastResolved);
+    return map;
+  }
+
+  AssetLocationsCompanion toCompanion(bool nullToAbsent) {
+    return AssetLocationsCompanion(
+      locationId: Value(locationId),
+      locationType: Value(locationType),
+      locationName: Value(locationName),
+      solarSystemId: solarSystemId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(solarSystemId),
+      solarSystemName: solarSystemName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(solarSystemName),
+      regionId: regionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(regionId),
+      regionName: regionName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(regionName),
+      securityStatus: securityStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(securityStatus),
+      lastResolved: Value(lastResolved),
+    );
+  }
+
+  factory AssetLocation.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AssetLocation(
+      locationId: serializer.fromJson<int>(json['locationId']),
+      locationType: serializer.fromJson<String>(json['locationType']),
+      locationName: serializer.fromJson<String>(json['locationName']),
+      solarSystemId: serializer.fromJson<int?>(json['solarSystemId']),
+      solarSystemName: serializer.fromJson<String?>(json['solarSystemName']),
+      regionId: serializer.fromJson<int?>(json['regionId']),
+      regionName: serializer.fromJson<String?>(json['regionName']),
+      securityStatus: serializer.fromJson<double?>(json['securityStatus']),
+      lastResolved: serializer.fromJson<DateTime>(json['lastResolved']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'locationId': serializer.toJson<int>(locationId),
+      'locationType': serializer.toJson<String>(locationType),
+      'locationName': serializer.toJson<String>(locationName),
+      'solarSystemId': serializer.toJson<int?>(solarSystemId),
+      'solarSystemName': serializer.toJson<String?>(solarSystemName),
+      'regionId': serializer.toJson<int?>(regionId),
+      'regionName': serializer.toJson<String?>(regionName),
+      'securityStatus': serializer.toJson<double?>(securityStatus),
+      'lastResolved': serializer.toJson<DateTime>(lastResolved),
+    };
+  }
+
+  AssetLocation copyWith(
+          {int? locationId,
+          String? locationType,
+          String? locationName,
+          Value<int?> solarSystemId = const Value.absent(),
+          Value<String?> solarSystemName = const Value.absent(),
+          Value<int?> regionId = const Value.absent(),
+          Value<String?> regionName = const Value.absent(),
+          Value<double?> securityStatus = const Value.absent(),
+          DateTime? lastResolved}) =>
+      AssetLocation(
+        locationId: locationId ?? this.locationId,
+        locationType: locationType ?? this.locationType,
+        locationName: locationName ?? this.locationName,
+        solarSystemId:
+            solarSystemId.present ? solarSystemId.value : this.solarSystemId,
+        solarSystemName: solarSystemName.present
+            ? solarSystemName.value
+            : this.solarSystemName,
+        regionId: regionId.present ? regionId.value : this.regionId,
+        regionName: regionName.present ? regionName.value : this.regionName,
+        securityStatus:
+            securityStatus.present ? securityStatus.value : this.securityStatus,
+        lastResolved: lastResolved ?? this.lastResolved,
+      );
+  AssetLocation copyWithCompanion(AssetLocationsCompanion data) {
+    return AssetLocation(
+      locationId:
+          data.locationId.present ? data.locationId.value : this.locationId,
+      locationType: data.locationType.present
+          ? data.locationType.value
+          : this.locationType,
+      locationName: data.locationName.present
+          ? data.locationName.value
+          : this.locationName,
+      solarSystemId: data.solarSystemId.present
+          ? data.solarSystemId.value
+          : this.solarSystemId,
+      solarSystemName: data.solarSystemName.present
+          ? data.solarSystemName.value
+          : this.solarSystemName,
+      regionId: data.regionId.present ? data.regionId.value : this.regionId,
+      regionName:
+          data.regionName.present ? data.regionName.value : this.regionName,
+      securityStatus: data.securityStatus.present
+          ? data.securityStatus.value
+          : this.securityStatus,
+      lastResolved: data.lastResolved.present
+          ? data.lastResolved.value
+          : this.lastResolved,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetLocation(')
+          ..write('locationId: $locationId, ')
+          ..write('locationType: $locationType, ')
+          ..write('locationName: $locationName, ')
+          ..write('solarSystemId: $solarSystemId, ')
+          ..write('solarSystemName: $solarSystemName, ')
+          ..write('regionId: $regionId, ')
+          ..write('regionName: $regionName, ')
+          ..write('securityStatus: $securityStatus, ')
+          ..write('lastResolved: $lastResolved')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      locationId,
+      locationType,
+      locationName,
+      solarSystemId,
+      solarSystemName,
+      regionId,
+      regionName,
+      securityStatus,
+      lastResolved);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AssetLocation &&
+          other.locationId == this.locationId &&
+          other.locationType == this.locationType &&
+          other.locationName == this.locationName &&
+          other.solarSystemId == this.solarSystemId &&
+          other.solarSystemName == this.solarSystemName &&
+          other.regionId == this.regionId &&
+          other.regionName == this.regionName &&
+          other.securityStatus == this.securityStatus &&
+          other.lastResolved == this.lastResolved);
+}
+
+class AssetLocationsCompanion extends UpdateCompanion<AssetLocation> {
+  final Value<int> locationId;
+  final Value<String> locationType;
+  final Value<String> locationName;
+  final Value<int?> solarSystemId;
+  final Value<String?> solarSystemName;
+  final Value<int?> regionId;
+  final Value<String?> regionName;
+  final Value<double?> securityStatus;
+  final Value<DateTime> lastResolved;
+  const AssetLocationsCompanion({
+    this.locationId = const Value.absent(),
+    this.locationType = const Value.absent(),
+    this.locationName = const Value.absent(),
+    this.solarSystemId = const Value.absent(),
+    this.solarSystemName = const Value.absent(),
+    this.regionId = const Value.absent(),
+    this.regionName = const Value.absent(),
+    this.securityStatus = const Value.absent(),
+    this.lastResolved = const Value.absent(),
+  });
+  AssetLocationsCompanion.insert({
+    this.locationId = const Value.absent(),
+    required String locationType,
+    required String locationName,
+    this.solarSystemId = const Value.absent(),
+    this.solarSystemName = const Value.absent(),
+    this.regionId = const Value.absent(),
+    this.regionName = const Value.absent(),
+    this.securityStatus = const Value.absent(),
+    required DateTime lastResolved,
+  })  : locationType = Value(locationType),
+        locationName = Value(locationName),
+        lastResolved = Value(lastResolved);
+  static Insertable<AssetLocation> custom({
+    Expression<int>? locationId,
+    Expression<String>? locationType,
+    Expression<String>? locationName,
+    Expression<int>? solarSystemId,
+    Expression<String>? solarSystemName,
+    Expression<int>? regionId,
+    Expression<String>? regionName,
+    Expression<double>? securityStatus,
+    Expression<DateTime>? lastResolved,
+  }) {
+    return RawValuesInsertable({
+      if (locationId != null) 'location_id': locationId,
+      if (locationType != null) 'location_type': locationType,
+      if (locationName != null) 'location_name': locationName,
+      if (solarSystemId != null) 'solar_system_id': solarSystemId,
+      if (solarSystemName != null) 'solar_system_name': solarSystemName,
+      if (regionId != null) 'region_id': regionId,
+      if (regionName != null) 'region_name': regionName,
+      if (securityStatus != null) 'security_status': securityStatus,
+      if (lastResolved != null) 'last_resolved': lastResolved,
+    });
+  }
+
+  AssetLocationsCompanion copyWith(
+      {Value<int>? locationId,
+      Value<String>? locationType,
+      Value<String>? locationName,
+      Value<int?>? solarSystemId,
+      Value<String?>? solarSystemName,
+      Value<int?>? regionId,
+      Value<String?>? regionName,
+      Value<double?>? securityStatus,
+      Value<DateTime>? lastResolved}) {
+    return AssetLocationsCompanion(
+      locationId: locationId ?? this.locationId,
+      locationType: locationType ?? this.locationType,
+      locationName: locationName ?? this.locationName,
+      solarSystemId: solarSystemId ?? this.solarSystemId,
+      solarSystemName: solarSystemName ?? this.solarSystemName,
+      regionId: regionId ?? this.regionId,
+      regionName: regionName ?? this.regionName,
+      securityStatus: securityStatus ?? this.securityStatus,
+      lastResolved: lastResolved ?? this.lastResolved,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (locationId.present) {
+      map['location_id'] = Variable<int>(locationId.value);
+    }
+    if (locationType.present) {
+      map['location_type'] = Variable<String>(locationType.value);
+    }
+    if (locationName.present) {
+      map['location_name'] = Variable<String>(locationName.value);
+    }
+    if (solarSystemId.present) {
+      map['solar_system_id'] = Variable<int>(solarSystemId.value);
+    }
+    if (solarSystemName.present) {
+      map['solar_system_name'] = Variable<String>(solarSystemName.value);
+    }
+    if (regionId.present) {
+      map['region_id'] = Variable<int>(regionId.value);
+    }
+    if (regionName.present) {
+      map['region_name'] = Variable<String>(regionName.value);
+    }
+    if (securityStatus.present) {
+      map['security_status'] = Variable<double>(securityStatus.value);
+    }
+    if (lastResolved.present) {
+      map['last_resolved'] = Variable<DateTime>(lastResolved.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetLocationsCompanion(')
+          ..write('locationId: $locationId, ')
+          ..write('locationType: $locationType, ')
+          ..write('locationName: $locationName, ')
+          ..write('solarSystemId: $solarSystemId, ')
+          ..write('solarSystemName: $solarSystemName, ')
+          ..write('regionId: $regionId, ')
+          ..write('regionName: $regionName, ')
+          ..write('securityStatus: $securityStatus, ')
+          ..write('lastResolved: $lastResolved')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $AssetSnapshotsTable extends AssetSnapshots
+    with TableInfo<$AssetSnapshotsTable, AssetSnapshot> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AssetSnapshotsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _characterIdMeta =
+      const VerificationMeta('characterId');
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+      'character_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES characters (character_id)'));
+  static const VerificationMeta _timestampMeta =
+      const VerificationMeta('timestamp');
+  @override
+  late final GeneratedColumn<DateTime> timestamp = GeneratedColumn<DateTime>(
+      'timestamp', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _totalValueMeta =
+      const VerificationMeta('totalValue');
+  @override
+  late final GeneratedColumn<double> totalValue = GeneratedColumn<double>(
+      'total_value', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _totalItemsMeta =
+      const VerificationMeta('totalItems');
+  @override
+  late final GeneratedColumn<int> totalItems = GeneratedColumn<int>(
+      'total_items', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _valueBreakdownMeta =
+      const VerificationMeta('valueBreakdown');
+  @override
+  late final GeneratedColumn<String> valueBreakdown = GeneratedColumn<String>(
+      'value_breakdown', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, characterId, timestamp, totalValue, totalItems, valueBreakdown];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'asset_snapshots';
+  @override
+  VerificationContext validateIntegrity(Insertable<AssetSnapshot> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+          _characterIdMeta,
+          characterId.isAcceptableOrUnknown(
+              data['character_id']!, _characterIdMeta));
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('timestamp')) {
+      context.handle(_timestampMeta,
+          timestamp.isAcceptableOrUnknown(data['timestamp']!, _timestampMeta));
+    } else if (isInserting) {
+      context.missing(_timestampMeta);
+    }
+    if (data.containsKey('total_value')) {
+      context.handle(
+          _totalValueMeta,
+          totalValue.isAcceptableOrUnknown(
+              data['total_value']!, _totalValueMeta));
+    } else if (isInserting) {
+      context.missing(_totalValueMeta);
+    }
+    if (data.containsKey('total_items')) {
+      context.handle(
+          _totalItemsMeta,
+          totalItems.isAcceptableOrUnknown(
+              data['total_items']!, _totalItemsMeta));
+    } else if (isInserting) {
+      context.missing(_totalItemsMeta);
+    }
+    if (data.containsKey('value_breakdown')) {
+      context.handle(
+          _valueBreakdownMeta,
+          valueBreakdown.isAcceptableOrUnknown(
+              data['value_breakdown']!, _valueBreakdownMeta));
+    } else if (isInserting) {
+      context.missing(_valueBreakdownMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AssetSnapshot map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AssetSnapshot(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      characterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}character_id'])!,
+      timestamp: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}timestamp'])!,
+      totalValue: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}total_value'])!,
+      totalItems: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}total_items'])!,
+      valueBreakdown: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}value_breakdown'])!,
+    );
+  }
+
+  @override
+  $AssetSnapshotsTable createAlias(String alias) {
+    return $AssetSnapshotsTable(attachedDatabase, alias);
+  }
+}
+
+class AssetSnapshot extends DataClass implements Insertable<AssetSnapshot> {
+  final int id;
+  final int characterId;
+  final DateTime timestamp;
+  final double totalValue;
+  final int totalItems;
+  final String valueBreakdown;
+  const AssetSnapshot(
+      {required this.id,
+      required this.characterId,
+      required this.timestamp,
+      required this.totalValue,
+      required this.totalItems,
+      required this.valueBreakdown});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['character_id'] = Variable<int>(characterId);
+    map['timestamp'] = Variable<DateTime>(timestamp);
+    map['total_value'] = Variable<double>(totalValue);
+    map['total_items'] = Variable<int>(totalItems);
+    map['value_breakdown'] = Variable<String>(valueBreakdown);
+    return map;
+  }
+
+  AssetSnapshotsCompanion toCompanion(bool nullToAbsent) {
+    return AssetSnapshotsCompanion(
+      id: Value(id),
+      characterId: Value(characterId),
+      timestamp: Value(timestamp),
+      totalValue: Value(totalValue),
+      totalItems: Value(totalItems),
+      valueBreakdown: Value(valueBreakdown),
+    );
+  }
+
+  factory AssetSnapshot.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AssetSnapshot(
+      id: serializer.fromJson<int>(json['id']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      timestamp: serializer.fromJson<DateTime>(json['timestamp']),
+      totalValue: serializer.fromJson<double>(json['totalValue']),
+      totalItems: serializer.fromJson<int>(json['totalItems']),
+      valueBreakdown: serializer.fromJson<String>(json['valueBreakdown']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'characterId': serializer.toJson<int>(characterId),
+      'timestamp': serializer.toJson<DateTime>(timestamp),
+      'totalValue': serializer.toJson<double>(totalValue),
+      'totalItems': serializer.toJson<int>(totalItems),
+      'valueBreakdown': serializer.toJson<String>(valueBreakdown),
+    };
+  }
+
+  AssetSnapshot copyWith(
+          {int? id,
+          int? characterId,
+          DateTime? timestamp,
+          double? totalValue,
+          int? totalItems,
+          String? valueBreakdown}) =>
+      AssetSnapshot(
+        id: id ?? this.id,
+        characterId: characterId ?? this.characterId,
+        timestamp: timestamp ?? this.timestamp,
+        totalValue: totalValue ?? this.totalValue,
+        totalItems: totalItems ?? this.totalItems,
+        valueBreakdown: valueBreakdown ?? this.valueBreakdown,
+      );
+  AssetSnapshot copyWithCompanion(AssetSnapshotsCompanion data) {
+    return AssetSnapshot(
+      id: data.id.present ? data.id.value : this.id,
+      characterId:
+          data.characterId.present ? data.characterId.value : this.characterId,
+      timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
+      totalValue:
+          data.totalValue.present ? data.totalValue.value : this.totalValue,
+      totalItems:
+          data.totalItems.present ? data.totalItems.value : this.totalItems,
+      valueBreakdown: data.valueBreakdown.present
+          ? data.valueBreakdown.value
+          : this.valueBreakdown,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetSnapshot(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('totalValue: $totalValue, ')
+          ..write('totalItems: $totalItems, ')
+          ..write('valueBreakdown: $valueBreakdown')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id, characterId, timestamp, totalValue, totalItems, valueBreakdown);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AssetSnapshot &&
+          other.id == this.id &&
+          other.characterId == this.characterId &&
+          other.timestamp == this.timestamp &&
+          other.totalValue == this.totalValue &&
+          other.totalItems == this.totalItems &&
+          other.valueBreakdown == this.valueBreakdown);
+}
+
+class AssetSnapshotsCompanion extends UpdateCompanion<AssetSnapshot> {
+  final Value<int> id;
+  final Value<int> characterId;
+  final Value<DateTime> timestamp;
+  final Value<double> totalValue;
+  final Value<int> totalItems;
+  final Value<String> valueBreakdown;
+  const AssetSnapshotsCompanion({
+    this.id = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.timestamp = const Value.absent(),
+    this.totalValue = const Value.absent(),
+    this.totalItems = const Value.absent(),
+    this.valueBreakdown = const Value.absent(),
+  });
+  AssetSnapshotsCompanion.insert({
+    this.id = const Value.absent(),
+    required int characterId,
+    required DateTime timestamp,
+    required double totalValue,
+    required int totalItems,
+    required String valueBreakdown,
+  })  : characterId = Value(characterId),
+        timestamp = Value(timestamp),
+        totalValue = Value(totalValue),
+        totalItems = Value(totalItems),
+        valueBreakdown = Value(valueBreakdown);
+  static Insertable<AssetSnapshot> custom({
+    Expression<int>? id,
+    Expression<int>? characterId,
+    Expression<DateTime>? timestamp,
+    Expression<double>? totalValue,
+    Expression<int>? totalItems,
+    Expression<String>? valueBreakdown,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (characterId != null) 'character_id': characterId,
+      if (timestamp != null) 'timestamp': timestamp,
+      if (totalValue != null) 'total_value': totalValue,
+      if (totalItems != null) 'total_items': totalItems,
+      if (valueBreakdown != null) 'value_breakdown': valueBreakdown,
+    });
+  }
+
+  AssetSnapshotsCompanion copyWith(
+      {Value<int>? id,
+      Value<int>? characterId,
+      Value<DateTime>? timestamp,
+      Value<double>? totalValue,
+      Value<int>? totalItems,
+      Value<String>? valueBreakdown}) {
+    return AssetSnapshotsCompanion(
+      id: id ?? this.id,
+      characterId: characterId ?? this.characterId,
+      timestamp: timestamp ?? this.timestamp,
+      totalValue: totalValue ?? this.totalValue,
+      totalItems: totalItems ?? this.totalItems,
+      valueBreakdown: valueBreakdown ?? this.valueBreakdown,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (timestamp.present) {
+      map['timestamp'] = Variable<DateTime>(timestamp.value);
+    }
+    if (totalValue.present) {
+      map['total_value'] = Variable<double>(totalValue.value);
+    }
+    if (totalItems.present) {
+      map['total_items'] = Variable<int>(totalItems.value);
+    }
+    if (valueBreakdown.present) {
+      map['value_breakdown'] = Variable<String>(valueBreakdown.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetSnapshotsCompanion(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('totalValue: $totalValue, ')
+          ..write('totalItems: $totalItems, ')
+          ..write('valueBreakdown: $valueBreakdown')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5903,6 +8451,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SkillPlansTable skillPlans = $SkillPlansTable(this);
   late final $SkillPlanEntriesTable skillPlanEntries =
       $SkillPlanEntriesTable(this);
+  late final $PlanetaryColoniesTable planetaryColonies =
+      $PlanetaryColoniesTable(this);
+  late final $PlanetaryPinsTable planetaryPins = $PlanetaryPinsTable(this);
+  late final $AssetsTable assets = $AssetsTable(this);
+  late final $AssetLocationsTable assetLocations = $AssetLocationsTable(this);
+  late final $AssetSnapshotsTable assetSnapshots = $AssetSnapshotsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5921,7 +8475,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         universeNames,
         characterSkills,
         skillPlans,
-        skillPlanEntries
+        skillPlanEntries,
+        planetaryColonies,
+        planetaryPins,
+        assets,
+        assetLocations,
+        assetSnapshots
       ];
 }
 
@@ -6130,6 +8689,72 @@ final class $$CharactersTableReferences
             .sqlEquals($_itemColumn<int>('character_id')!));
 
     final cache = $_typedResult.readTableOrNull(_skillPlansRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$PlanetaryColoniesTable, List<PlanetaryColony>>
+      _planetaryColoniesRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.planetaryColonies,
+              aliasName: $_aliasNameGenerator(
+                  db.characters.characterId, db.planetaryColonies.characterId));
+
+  $$PlanetaryColoniesTableProcessedTableManager get planetaryColoniesRefs {
+    final manager =
+        $$PlanetaryColoniesTableTableManager($_db, $_db.planetaryColonies)
+            .filter((f) => f.characterId.characterId
+                .sqlEquals($_itemColumn<int>('character_id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_planetaryColoniesRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$PlanetaryPinsTable, List<PlanetaryPin>>
+      _planetaryPinsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.planetaryPins,
+              aliasName: $_aliasNameGenerator(
+                  db.characters.characterId, db.planetaryPins.characterId));
+
+  $$PlanetaryPinsTableProcessedTableManager get planetaryPinsRefs {
+    final manager = $$PlanetaryPinsTableTableManager($_db, $_db.planetaryPins)
+        .filter((f) => f.characterId.characterId
+            .sqlEquals($_itemColumn<int>('character_id')!));
+
+    final cache = $_typedResult.readTableOrNull(_planetaryPinsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$AssetsTable, List<Asset>> _assetsRefsTable(
+          _$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(db.assets,
+          aliasName: $_aliasNameGenerator(
+              db.characters.characterId, db.assets.characterId));
+
+  $$AssetsTableProcessedTableManager get assetsRefs {
+    final manager = $$AssetsTableTableManager($_db, $_db.assets).filter((f) => f
+        .characterId.characterId
+        .sqlEquals($_itemColumn<int>('character_id')!));
+
+    final cache = $_typedResult.readTableOrNull(_assetsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$AssetSnapshotsTable, List<AssetSnapshot>>
+      _assetSnapshotsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.assetSnapshots,
+              aliasName: $_aliasNameGenerator(
+                  db.characters.characterId, db.assetSnapshots.characterId));
+
+  $$AssetSnapshotsTableProcessedTableManager get assetSnapshotsRefs {
+    final manager = $$AssetSnapshotsTableTableManager($_db, $_db.assetSnapshots)
+        .filter((f) => f.characterId.characterId
+            .sqlEquals($_itemColumn<int>('character_id')!));
+
+    final cache = $_typedResult.readTableOrNull(_assetSnapshotsRefsTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -6391,6 +9016,90 @@ class $$CharactersTableFilterComposer
             $$SkillPlansTableFilterComposer(
               $db: $db,
               $table: $db.skillPlans,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> planetaryColoniesRefs(
+      Expression<bool> Function($$PlanetaryColoniesTableFilterComposer f) f) {
+    final $$PlanetaryColoniesTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.planetaryColonies,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$PlanetaryColoniesTableFilterComposer(
+              $db: $db,
+              $table: $db.planetaryColonies,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> planetaryPinsRefs(
+      Expression<bool> Function($$PlanetaryPinsTableFilterComposer f) f) {
+    final $$PlanetaryPinsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.planetaryPins,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$PlanetaryPinsTableFilterComposer(
+              $db: $db,
+              $table: $db.planetaryPins,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> assetsRefs(
+      Expression<bool> Function($$AssetsTableFilterComposer f) f) {
+    final $$AssetsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.assets,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$AssetsTableFilterComposer(
+              $db: $db,
+              $table: $db.assets,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> assetSnapshotsRefs(
+      Expression<bool> Function($$AssetSnapshotsTableFilterComposer f) f) {
+    final $$AssetSnapshotsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.assetSnapshots,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$AssetSnapshotsTableFilterComposer(
+              $db: $db,
+              $table: $db.assetSnapshots,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -6722,6 +9431,91 @@ class $$CharactersTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> planetaryColoniesRefs<T extends Object>(
+      Expression<T> Function($$PlanetaryColoniesTableAnnotationComposer a) f) {
+    final $$PlanetaryColoniesTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.characterId,
+            referencedTable: $db.planetaryColonies,
+            getReferencedColumn: (t) => t.characterId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$PlanetaryColoniesTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.planetaryColonies,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
+
+  Expression<T> planetaryPinsRefs<T extends Object>(
+      Expression<T> Function($$PlanetaryPinsTableAnnotationComposer a) f) {
+    final $$PlanetaryPinsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.planetaryPins,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$PlanetaryPinsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.planetaryPins,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> assetsRefs<T extends Object>(
+      Expression<T> Function($$AssetsTableAnnotationComposer a) f) {
+    final $$AssetsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.assets,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$AssetsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.assets,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> assetSnapshotsRefs<T extends Object>(
+      Expression<T> Function($$AssetSnapshotsTableAnnotationComposer a) f) {
+    final $$AssetSnapshotsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.assetSnapshots,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$AssetSnapshotsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.assetSnapshots,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$CharactersTableTableManager extends RootTableManager<
@@ -6745,7 +9539,11 @@ class $$CharactersTableTableManager extends RootTableManager<
         bool combatStatsRefs,
         bool characterStatusesRefs,
         bool characterSkillsRefs,
-        bool skillPlansRefs})> {
+        bool skillPlansRefs,
+        bool planetaryColoniesRefs,
+        bool planetaryPinsRefs,
+        bool assetsRefs,
+        bool assetSnapshotsRefs})> {
   $$CharactersTableTableManager(_$AppDatabase db, $CharactersTable table)
       : super(TableManagerState(
           db: db,
@@ -6836,7 +9634,11 @@ class $$CharactersTableTableManager extends RootTableManager<
               combatStatsRefs = false,
               characterStatusesRefs = false,
               characterSkillsRefs = false,
-              skillPlansRefs = false}) {
+              skillPlansRefs = false,
+              planetaryColoniesRefs = false,
+              planetaryPinsRefs = false,
+              assetsRefs = false,
+              assetSnapshotsRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
@@ -6849,7 +9651,11 @@ class $$CharactersTableTableManager extends RootTableManager<
                 if (combatStatsRefs) db.combatStats,
                 if (characterStatusesRefs) db.characterStatuses,
                 if (characterSkillsRefs) db.characterSkills,
-                if (skillPlansRefs) db.skillPlans
+                if (skillPlansRefs) db.skillPlans,
+                if (planetaryColoniesRefs) db.planetaryColonies,
+                if (planetaryPinsRefs) db.planetaryPins,
+                if (assetsRefs) db.assets,
+                if (assetSnapshotsRefs) db.assetSnapshots
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
@@ -6983,6 +9789,58 @@ class $$CharactersTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems.where(
                                 (e) => e.characterId == item.characterId),
+                        typedResults: items),
+                  if (planetaryColoniesRefs)
+                    await $_getPrefetchedData<Character, $CharactersTable,
+                            PlanetaryColony>(
+                        currentTable: table,
+                        referencedTable: $$CharactersTableReferences
+                            ._planetaryColoniesRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$CharactersTableReferences(db, table, p0)
+                                .planetaryColoniesRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.characterId),
+                        typedResults: items),
+                  if (planetaryPinsRefs)
+                    await $_getPrefetchedData<Character, $CharactersTable,
+                            PlanetaryPin>(
+                        currentTable: table,
+                        referencedTable: $$CharactersTableReferences
+                            ._planetaryPinsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$CharactersTableReferences(db, table, p0)
+                                .planetaryPinsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.characterId),
+                        typedResults: items),
+                  if (assetsRefs)
+                    await $_getPrefetchedData<Character, $CharactersTable,
+                            Asset>(
+                        currentTable: table,
+                        referencedTable:
+                            $$CharactersTableReferences._assetsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$CharactersTableReferences(db, table, p0)
+                                .assetsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.characterId),
+                        typedResults: items),
+                  if (assetSnapshotsRefs)
+                    await $_getPrefetchedData<Character, $CharactersTable,
+                            AssetSnapshot>(
+                        currentTable: table,
+                        referencedTable: $$CharactersTableReferences
+                            ._assetSnapshotsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$CharactersTableReferences(db, table, p0)
+                                .assetSnapshotsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.characterId),
                         typedResults: items)
                 ];
               },
@@ -7012,7 +9870,11 @@ typedef $$CharactersTableProcessedTableManager = ProcessedTableManager<
         bool combatStatsRefs,
         bool characterStatusesRefs,
         bool characterSkillsRefs,
-        bool skillPlansRefs})>;
+        bool skillPlansRefs,
+        bool planetaryColoniesRefs,
+        bool planetaryPinsRefs,
+        bool assetsRefs,
+        bool assetSnapshotsRefs})>;
 typedef $$SkillQueueEntriesTableCreateCompanionBuilder
     = SkillQueueEntriesCompanion Function({
   Value<int> id,
@@ -10774,6 +13636,1616 @@ typedef $$SkillPlanEntriesTableProcessedTableManager = ProcessedTableManager<
     (SkillPlanEntry, $$SkillPlanEntriesTableReferences),
     SkillPlanEntry,
     PrefetchHooks Function({bool planId})>;
+typedef $$PlanetaryColoniesTableCreateCompanionBuilder
+    = PlanetaryColoniesCompanion Function({
+  required int planetId,
+  required int characterId,
+  required String planetName,
+  required String planetType,
+  required int upgradeLevel,
+  required int numPins,
+  required DateTime lastUpdate,
+  Value<int> rowid,
+});
+typedef $$PlanetaryColoniesTableUpdateCompanionBuilder
+    = PlanetaryColoniesCompanion Function({
+  Value<int> planetId,
+  Value<int> characterId,
+  Value<String> planetName,
+  Value<String> planetType,
+  Value<int> upgradeLevel,
+  Value<int> numPins,
+  Value<DateTime> lastUpdate,
+  Value<int> rowid,
+});
+
+final class $$PlanetaryColoniesTableReferences extends BaseReferences<
+    _$AppDatabase, $PlanetaryColoniesTable, PlanetaryColony> {
+  $$PlanetaryColoniesTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias($_aliasNameGenerator(
+          db.planetaryColonies.characterId, db.characters.characterId));
+
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
+    final manager = $$CharactersTableTableManager($_db, $_db.characters)
+        .filter((f) => f.characterId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$PlanetaryColoniesTableFilterComposer
+    extends Composer<_$AppDatabase, $PlanetaryColoniesTable> {
+  $$PlanetaryColoniesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get planetId => $composableBuilder(
+      column: $table.planetId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get planetName => $composableBuilder(
+      column: $table.planetName, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get planetType => $composableBuilder(
+      column: $table.planetType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get upgradeLevel => $composableBuilder(
+      column: $table.upgradeLevel, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get numPins => $composableBuilder(
+      column: $table.numPins, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastUpdate => $composableBuilder(
+      column: $table.lastUpdate, builder: (column) => ColumnFilters(column));
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableFilterComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$PlanetaryColoniesTableOrderingComposer
+    extends Composer<_$AppDatabase, $PlanetaryColoniesTable> {
+  $$PlanetaryColoniesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get planetId => $composableBuilder(
+      column: $table.planetId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get planetName => $composableBuilder(
+      column: $table.planetName, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get planetType => $composableBuilder(
+      column: $table.planetType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get upgradeLevel => $composableBuilder(
+      column: $table.upgradeLevel,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get numPins => $composableBuilder(
+      column: $table.numPins, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastUpdate => $composableBuilder(
+      column: $table.lastUpdate, builder: (column) => ColumnOrderings(column));
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableOrderingComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$PlanetaryColoniesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PlanetaryColoniesTable> {
+  $$PlanetaryColoniesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get planetId =>
+      $composableBuilder(column: $table.planetId, builder: (column) => column);
+
+  GeneratedColumn<String> get planetName => $composableBuilder(
+      column: $table.planetName, builder: (column) => column);
+
+  GeneratedColumn<String> get planetType => $composableBuilder(
+      column: $table.planetType, builder: (column) => column);
+
+  GeneratedColumn<int> get upgradeLevel => $composableBuilder(
+      column: $table.upgradeLevel, builder: (column) => column);
+
+  GeneratedColumn<int> get numPins =>
+      $composableBuilder(column: $table.numPins, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastUpdate => $composableBuilder(
+      column: $table.lastUpdate, builder: (column) => column);
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$PlanetaryColoniesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $PlanetaryColoniesTable,
+    PlanetaryColony,
+    $$PlanetaryColoniesTableFilterComposer,
+    $$PlanetaryColoniesTableOrderingComposer,
+    $$PlanetaryColoniesTableAnnotationComposer,
+    $$PlanetaryColoniesTableCreateCompanionBuilder,
+    $$PlanetaryColoniesTableUpdateCompanionBuilder,
+    (PlanetaryColony, $$PlanetaryColoniesTableReferences),
+    PlanetaryColony,
+    PrefetchHooks Function({bool characterId})> {
+  $$PlanetaryColoniesTableTableManager(
+      _$AppDatabase db, $PlanetaryColoniesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PlanetaryColoniesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PlanetaryColoniesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PlanetaryColoniesTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> planetId = const Value.absent(),
+            Value<int> characterId = const Value.absent(),
+            Value<String> planetName = const Value.absent(),
+            Value<String> planetType = const Value.absent(),
+            Value<int> upgradeLevel = const Value.absent(),
+            Value<int> numPins = const Value.absent(),
+            Value<DateTime> lastUpdate = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PlanetaryColoniesCompanion(
+            planetId: planetId,
+            characterId: characterId,
+            planetName: planetName,
+            planetType: planetType,
+            upgradeLevel: upgradeLevel,
+            numPins: numPins,
+            lastUpdate: lastUpdate,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required int planetId,
+            required int characterId,
+            required String planetName,
+            required String planetType,
+            required int upgradeLevel,
+            required int numPins,
+            required DateTime lastUpdate,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PlanetaryColoniesCompanion.insert(
+            planetId: planetId,
+            characterId: characterId,
+            planetName: planetName,
+            planetType: planetType,
+            upgradeLevel: upgradeLevel,
+            numPins: numPins,
+            lastUpdate: lastUpdate,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$PlanetaryColoniesTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({characterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (characterId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.characterId,
+                    referencedTable: $$PlanetaryColoniesTableReferences
+                        ._characterIdTable(db),
+                    referencedColumn: $$PlanetaryColoniesTableReferences
+                        ._characterIdTable(db)
+                        .characterId,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$PlanetaryColoniesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $PlanetaryColoniesTable,
+    PlanetaryColony,
+    $$PlanetaryColoniesTableFilterComposer,
+    $$PlanetaryColoniesTableOrderingComposer,
+    $$PlanetaryColoniesTableAnnotationComposer,
+    $$PlanetaryColoniesTableCreateCompanionBuilder,
+    $$PlanetaryColoniesTableUpdateCompanionBuilder,
+    (PlanetaryColony, $$PlanetaryColoniesTableReferences),
+    PlanetaryColony,
+    PrefetchHooks Function({bool characterId})>;
+typedef $$PlanetaryPinsTableCreateCompanionBuilder = PlanetaryPinsCompanion
+    Function({
+  Value<int> id,
+  required int pinId,
+  required int characterId,
+  required int planetId,
+  required int typeId,
+  Value<String?> typeName,
+  required double latitude,
+  required double longitude,
+  required DateTime installTime,
+  Value<DateTime?> expiryTime,
+  Value<int?> productTypeId,
+  Value<int?> quantityPerCycle,
+  Value<int?> cycleTime,
+  Value<int?> schematicId,
+});
+typedef $$PlanetaryPinsTableUpdateCompanionBuilder = PlanetaryPinsCompanion
+    Function({
+  Value<int> id,
+  Value<int> pinId,
+  Value<int> characterId,
+  Value<int> planetId,
+  Value<int> typeId,
+  Value<String?> typeName,
+  Value<double> latitude,
+  Value<double> longitude,
+  Value<DateTime> installTime,
+  Value<DateTime?> expiryTime,
+  Value<int?> productTypeId,
+  Value<int?> quantityPerCycle,
+  Value<int?> cycleTime,
+  Value<int?> schematicId,
+});
+
+final class $$PlanetaryPinsTableReferences
+    extends BaseReferences<_$AppDatabase, $PlanetaryPinsTable, PlanetaryPin> {
+  $$PlanetaryPinsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias($_aliasNameGenerator(
+          db.planetaryPins.characterId, db.characters.characterId));
+
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
+    final manager = $$CharactersTableTableManager($_db, $_db.characters)
+        .filter((f) => f.characterId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$PlanetaryPinsTableFilterComposer
+    extends Composer<_$AppDatabase, $PlanetaryPinsTable> {
+  $$PlanetaryPinsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get pinId => $composableBuilder(
+      column: $table.pinId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get planetId => $composableBuilder(
+      column: $table.planetId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get typeId => $composableBuilder(
+      column: $table.typeId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get typeName => $composableBuilder(
+      column: $table.typeName, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get latitude => $composableBuilder(
+      column: $table.latitude, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get longitude => $composableBuilder(
+      column: $table.longitude, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get installTime => $composableBuilder(
+      column: $table.installTime, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get expiryTime => $composableBuilder(
+      column: $table.expiryTime, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get productTypeId => $composableBuilder(
+      column: $table.productTypeId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get quantityPerCycle => $composableBuilder(
+      column: $table.quantityPerCycle,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get cycleTime => $composableBuilder(
+      column: $table.cycleTime, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get schematicId => $composableBuilder(
+      column: $table.schematicId, builder: (column) => ColumnFilters(column));
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableFilterComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$PlanetaryPinsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PlanetaryPinsTable> {
+  $$PlanetaryPinsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get pinId => $composableBuilder(
+      column: $table.pinId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get planetId => $composableBuilder(
+      column: $table.planetId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get typeId => $composableBuilder(
+      column: $table.typeId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get typeName => $composableBuilder(
+      column: $table.typeName, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get latitude => $composableBuilder(
+      column: $table.latitude, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get longitude => $composableBuilder(
+      column: $table.longitude, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get installTime => $composableBuilder(
+      column: $table.installTime, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get expiryTime => $composableBuilder(
+      column: $table.expiryTime, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get productTypeId => $composableBuilder(
+      column: $table.productTypeId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get quantityPerCycle => $composableBuilder(
+      column: $table.quantityPerCycle,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get cycleTime => $composableBuilder(
+      column: $table.cycleTime, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get schematicId => $composableBuilder(
+      column: $table.schematicId, builder: (column) => ColumnOrderings(column));
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableOrderingComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$PlanetaryPinsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PlanetaryPinsTable> {
+  $$PlanetaryPinsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get pinId =>
+      $composableBuilder(column: $table.pinId, builder: (column) => column);
+
+  GeneratedColumn<int> get planetId =>
+      $composableBuilder(column: $table.planetId, builder: (column) => column);
+
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<String> get typeName =>
+      $composableBuilder(column: $table.typeName, builder: (column) => column);
+
+  GeneratedColumn<double> get latitude =>
+      $composableBuilder(column: $table.latitude, builder: (column) => column);
+
+  GeneratedColumn<double> get longitude =>
+      $composableBuilder(column: $table.longitude, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get installTime => $composableBuilder(
+      column: $table.installTime, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get expiryTime => $composableBuilder(
+      column: $table.expiryTime, builder: (column) => column);
+
+  GeneratedColumn<int> get productTypeId => $composableBuilder(
+      column: $table.productTypeId, builder: (column) => column);
+
+  GeneratedColumn<int> get quantityPerCycle => $composableBuilder(
+      column: $table.quantityPerCycle, builder: (column) => column);
+
+  GeneratedColumn<int> get cycleTime =>
+      $composableBuilder(column: $table.cycleTime, builder: (column) => column);
+
+  GeneratedColumn<int> get schematicId => $composableBuilder(
+      column: $table.schematicId, builder: (column) => column);
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$PlanetaryPinsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $PlanetaryPinsTable,
+    PlanetaryPin,
+    $$PlanetaryPinsTableFilterComposer,
+    $$PlanetaryPinsTableOrderingComposer,
+    $$PlanetaryPinsTableAnnotationComposer,
+    $$PlanetaryPinsTableCreateCompanionBuilder,
+    $$PlanetaryPinsTableUpdateCompanionBuilder,
+    (PlanetaryPin, $$PlanetaryPinsTableReferences),
+    PlanetaryPin,
+    PrefetchHooks Function({bool characterId})> {
+  $$PlanetaryPinsTableTableManager(_$AppDatabase db, $PlanetaryPinsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PlanetaryPinsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PlanetaryPinsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PlanetaryPinsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> pinId = const Value.absent(),
+            Value<int> characterId = const Value.absent(),
+            Value<int> planetId = const Value.absent(),
+            Value<int> typeId = const Value.absent(),
+            Value<String?> typeName = const Value.absent(),
+            Value<double> latitude = const Value.absent(),
+            Value<double> longitude = const Value.absent(),
+            Value<DateTime> installTime = const Value.absent(),
+            Value<DateTime?> expiryTime = const Value.absent(),
+            Value<int?> productTypeId = const Value.absent(),
+            Value<int?> quantityPerCycle = const Value.absent(),
+            Value<int?> cycleTime = const Value.absent(),
+            Value<int?> schematicId = const Value.absent(),
+          }) =>
+              PlanetaryPinsCompanion(
+            id: id,
+            pinId: pinId,
+            characterId: characterId,
+            planetId: planetId,
+            typeId: typeId,
+            typeName: typeName,
+            latitude: latitude,
+            longitude: longitude,
+            installTime: installTime,
+            expiryTime: expiryTime,
+            productTypeId: productTypeId,
+            quantityPerCycle: quantityPerCycle,
+            cycleTime: cycleTime,
+            schematicId: schematicId,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required int pinId,
+            required int characterId,
+            required int planetId,
+            required int typeId,
+            Value<String?> typeName = const Value.absent(),
+            required double latitude,
+            required double longitude,
+            required DateTime installTime,
+            Value<DateTime?> expiryTime = const Value.absent(),
+            Value<int?> productTypeId = const Value.absent(),
+            Value<int?> quantityPerCycle = const Value.absent(),
+            Value<int?> cycleTime = const Value.absent(),
+            Value<int?> schematicId = const Value.absent(),
+          }) =>
+              PlanetaryPinsCompanion.insert(
+            id: id,
+            pinId: pinId,
+            characterId: characterId,
+            planetId: planetId,
+            typeId: typeId,
+            typeName: typeName,
+            latitude: latitude,
+            longitude: longitude,
+            installTime: installTime,
+            expiryTime: expiryTime,
+            productTypeId: productTypeId,
+            quantityPerCycle: quantityPerCycle,
+            cycleTime: cycleTime,
+            schematicId: schematicId,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$PlanetaryPinsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({characterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (characterId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.characterId,
+                    referencedTable:
+                        $$PlanetaryPinsTableReferences._characterIdTable(db),
+                    referencedColumn: $$PlanetaryPinsTableReferences
+                        ._characterIdTable(db)
+                        .characterId,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$PlanetaryPinsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $PlanetaryPinsTable,
+    PlanetaryPin,
+    $$PlanetaryPinsTableFilterComposer,
+    $$PlanetaryPinsTableOrderingComposer,
+    $$PlanetaryPinsTableAnnotationComposer,
+    $$PlanetaryPinsTableCreateCompanionBuilder,
+    $$PlanetaryPinsTableUpdateCompanionBuilder,
+    (PlanetaryPin, $$PlanetaryPinsTableReferences),
+    PlanetaryPin,
+    PrefetchHooks Function({bool characterId})>;
+typedef $$AssetsTableCreateCompanionBuilder = AssetsCompanion Function({
+  required int itemId,
+  required int characterId,
+  required int typeId,
+  required int locationId,
+  required String locationFlag,
+  required int quantity,
+  required bool isSingleton,
+  Value<bool?> isBlueprintCopy,
+  required String typeName,
+  Value<String?> customName,
+  Value<int?> containedInId,
+  Value<int> rowid,
+});
+typedef $$AssetsTableUpdateCompanionBuilder = AssetsCompanion Function({
+  Value<int> itemId,
+  Value<int> characterId,
+  Value<int> typeId,
+  Value<int> locationId,
+  Value<String> locationFlag,
+  Value<int> quantity,
+  Value<bool> isSingleton,
+  Value<bool?> isBlueprintCopy,
+  Value<String> typeName,
+  Value<String?> customName,
+  Value<int?> containedInId,
+  Value<int> rowid,
+});
+
+final class $$AssetsTableReferences
+    extends BaseReferences<_$AppDatabase, $AssetsTable, Asset> {
+  $$AssetsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias($_aliasNameGenerator(
+          db.assets.characterId, db.characters.characterId));
+
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
+    final manager = $$CharactersTableTableManager($_db, $_db.characters)
+        .filter((f) => f.characterId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$AssetsTableFilterComposer
+    extends Composer<_$AppDatabase, $AssetsTable> {
+  $$AssetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get itemId => $composableBuilder(
+      column: $table.itemId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get typeId => $composableBuilder(
+      column: $table.typeId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get locationFlag => $composableBuilder(
+      column: $table.locationFlag, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get quantity => $composableBuilder(
+      column: $table.quantity, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isSingleton => $composableBuilder(
+      column: $table.isSingleton, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isBlueprintCopy => $composableBuilder(
+      column: $table.isBlueprintCopy,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get typeName => $composableBuilder(
+      column: $table.typeName, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get customName => $composableBuilder(
+      column: $table.customName, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get containedInId => $composableBuilder(
+      column: $table.containedInId, builder: (column) => ColumnFilters(column));
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableFilterComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$AssetsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AssetsTable> {
+  $$AssetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get itemId => $composableBuilder(
+      column: $table.itemId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get typeId => $composableBuilder(
+      column: $table.typeId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get locationFlag => $composableBuilder(
+      column: $table.locationFlag,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get quantity => $composableBuilder(
+      column: $table.quantity, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isSingleton => $composableBuilder(
+      column: $table.isSingleton, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isBlueprintCopy => $composableBuilder(
+      column: $table.isBlueprintCopy,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get typeName => $composableBuilder(
+      column: $table.typeName, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get customName => $composableBuilder(
+      column: $table.customName, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get containedInId => $composableBuilder(
+      column: $table.containedInId,
+      builder: (column) => ColumnOrderings(column));
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableOrderingComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$AssetsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AssetsTable> {
+  $$AssetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get itemId =>
+      $composableBuilder(column: $table.itemId, builder: (column) => column);
+
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => column);
+
+  GeneratedColumn<String> get locationFlag => $composableBuilder(
+      column: $table.locationFlag, builder: (column) => column);
+
+  GeneratedColumn<int> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  GeneratedColumn<bool> get isSingleton => $composableBuilder(
+      column: $table.isSingleton, builder: (column) => column);
+
+  GeneratedColumn<bool> get isBlueprintCopy => $composableBuilder(
+      column: $table.isBlueprintCopy, builder: (column) => column);
+
+  GeneratedColumn<String> get typeName =>
+      $composableBuilder(column: $table.typeName, builder: (column) => column);
+
+  GeneratedColumn<String> get customName => $composableBuilder(
+      column: $table.customName, builder: (column) => column);
+
+  GeneratedColumn<int> get containedInId => $composableBuilder(
+      column: $table.containedInId, builder: (column) => column);
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$AssetsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $AssetsTable,
+    Asset,
+    $$AssetsTableFilterComposer,
+    $$AssetsTableOrderingComposer,
+    $$AssetsTableAnnotationComposer,
+    $$AssetsTableCreateCompanionBuilder,
+    $$AssetsTableUpdateCompanionBuilder,
+    (Asset, $$AssetsTableReferences),
+    Asset,
+    PrefetchHooks Function({bool characterId})> {
+  $$AssetsTableTableManager(_$AppDatabase db, $AssetsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AssetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AssetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AssetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> itemId = const Value.absent(),
+            Value<int> characterId = const Value.absent(),
+            Value<int> typeId = const Value.absent(),
+            Value<int> locationId = const Value.absent(),
+            Value<String> locationFlag = const Value.absent(),
+            Value<int> quantity = const Value.absent(),
+            Value<bool> isSingleton = const Value.absent(),
+            Value<bool?> isBlueprintCopy = const Value.absent(),
+            Value<String> typeName = const Value.absent(),
+            Value<String?> customName = const Value.absent(),
+            Value<int?> containedInId = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              AssetsCompanion(
+            itemId: itemId,
+            characterId: characterId,
+            typeId: typeId,
+            locationId: locationId,
+            locationFlag: locationFlag,
+            quantity: quantity,
+            isSingleton: isSingleton,
+            isBlueprintCopy: isBlueprintCopy,
+            typeName: typeName,
+            customName: customName,
+            containedInId: containedInId,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required int itemId,
+            required int characterId,
+            required int typeId,
+            required int locationId,
+            required String locationFlag,
+            required int quantity,
+            required bool isSingleton,
+            Value<bool?> isBlueprintCopy = const Value.absent(),
+            required String typeName,
+            Value<String?> customName = const Value.absent(),
+            Value<int?> containedInId = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              AssetsCompanion.insert(
+            itemId: itemId,
+            characterId: characterId,
+            typeId: typeId,
+            locationId: locationId,
+            locationFlag: locationFlag,
+            quantity: quantity,
+            isSingleton: isSingleton,
+            isBlueprintCopy: isBlueprintCopy,
+            typeName: typeName,
+            customName: customName,
+            containedInId: containedInId,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) =>
+                  (e.readTable(table), $$AssetsTableReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: ({characterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (characterId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.characterId,
+                    referencedTable:
+                        $$AssetsTableReferences._characterIdTable(db),
+                    referencedColumn: $$AssetsTableReferences
+                        ._characterIdTable(db)
+                        .characterId,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$AssetsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $AssetsTable,
+    Asset,
+    $$AssetsTableFilterComposer,
+    $$AssetsTableOrderingComposer,
+    $$AssetsTableAnnotationComposer,
+    $$AssetsTableCreateCompanionBuilder,
+    $$AssetsTableUpdateCompanionBuilder,
+    (Asset, $$AssetsTableReferences),
+    Asset,
+    PrefetchHooks Function({bool characterId})>;
+typedef $$AssetLocationsTableCreateCompanionBuilder = AssetLocationsCompanion
+    Function({
+  Value<int> locationId,
+  required String locationType,
+  required String locationName,
+  Value<int?> solarSystemId,
+  Value<String?> solarSystemName,
+  Value<int?> regionId,
+  Value<String?> regionName,
+  Value<double?> securityStatus,
+  required DateTime lastResolved,
+});
+typedef $$AssetLocationsTableUpdateCompanionBuilder = AssetLocationsCompanion
+    Function({
+  Value<int> locationId,
+  Value<String> locationType,
+  Value<String> locationName,
+  Value<int?> solarSystemId,
+  Value<String?> solarSystemName,
+  Value<int?> regionId,
+  Value<String?> regionName,
+  Value<double?> securityStatus,
+  Value<DateTime> lastResolved,
+});
+
+class $$AssetLocationsTableFilterComposer
+    extends Composer<_$AppDatabase, $AssetLocationsTable> {
+  $$AssetLocationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get locationType => $composableBuilder(
+      column: $table.locationType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get locationName => $composableBuilder(
+      column: $table.locationName, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get solarSystemId => $composableBuilder(
+      column: $table.solarSystemId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get solarSystemName => $composableBuilder(
+      column: $table.solarSystemName,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get regionId => $composableBuilder(
+      column: $table.regionId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get regionName => $composableBuilder(
+      column: $table.regionName, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get securityStatus => $composableBuilder(
+      column: $table.securityStatus,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastResolved => $composableBuilder(
+      column: $table.lastResolved, builder: (column) => ColumnFilters(column));
+}
+
+class $$AssetLocationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AssetLocationsTable> {
+  $$AssetLocationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get locationType => $composableBuilder(
+      column: $table.locationType,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get locationName => $composableBuilder(
+      column: $table.locationName,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get solarSystemId => $composableBuilder(
+      column: $table.solarSystemId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get solarSystemName => $composableBuilder(
+      column: $table.solarSystemName,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get regionId => $composableBuilder(
+      column: $table.regionId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get regionName => $composableBuilder(
+      column: $table.regionName, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get securityStatus => $composableBuilder(
+      column: $table.securityStatus,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastResolved => $composableBuilder(
+      column: $table.lastResolved,
+      builder: (column) => ColumnOrderings(column));
+}
+
+class $$AssetLocationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AssetLocationsTable> {
+  $$AssetLocationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => column);
+
+  GeneratedColumn<String> get locationType => $composableBuilder(
+      column: $table.locationType, builder: (column) => column);
+
+  GeneratedColumn<String> get locationName => $composableBuilder(
+      column: $table.locationName, builder: (column) => column);
+
+  GeneratedColumn<int> get solarSystemId => $composableBuilder(
+      column: $table.solarSystemId, builder: (column) => column);
+
+  GeneratedColumn<String> get solarSystemName => $composableBuilder(
+      column: $table.solarSystemName, builder: (column) => column);
+
+  GeneratedColumn<int> get regionId =>
+      $composableBuilder(column: $table.regionId, builder: (column) => column);
+
+  GeneratedColumn<String> get regionName => $composableBuilder(
+      column: $table.regionName, builder: (column) => column);
+
+  GeneratedColumn<double> get securityStatus => $composableBuilder(
+      column: $table.securityStatus, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastResolved => $composableBuilder(
+      column: $table.lastResolved, builder: (column) => column);
+}
+
+class $$AssetLocationsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $AssetLocationsTable,
+    AssetLocation,
+    $$AssetLocationsTableFilterComposer,
+    $$AssetLocationsTableOrderingComposer,
+    $$AssetLocationsTableAnnotationComposer,
+    $$AssetLocationsTableCreateCompanionBuilder,
+    $$AssetLocationsTableUpdateCompanionBuilder,
+    (
+      AssetLocation,
+      BaseReferences<_$AppDatabase, $AssetLocationsTable, AssetLocation>
+    ),
+    AssetLocation,
+    PrefetchHooks Function()> {
+  $$AssetLocationsTableTableManager(
+      _$AppDatabase db, $AssetLocationsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AssetLocationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AssetLocationsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AssetLocationsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> locationId = const Value.absent(),
+            Value<String> locationType = const Value.absent(),
+            Value<String> locationName = const Value.absent(),
+            Value<int?> solarSystemId = const Value.absent(),
+            Value<String?> solarSystemName = const Value.absent(),
+            Value<int?> regionId = const Value.absent(),
+            Value<String?> regionName = const Value.absent(),
+            Value<double?> securityStatus = const Value.absent(),
+            Value<DateTime> lastResolved = const Value.absent(),
+          }) =>
+              AssetLocationsCompanion(
+            locationId: locationId,
+            locationType: locationType,
+            locationName: locationName,
+            solarSystemId: solarSystemId,
+            solarSystemName: solarSystemName,
+            regionId: regionId,
+            regionName: regionName,
+            securityStatus: securityStatus,
+            lastResolved: lastResolved,
+          ),
+          createCompanionCallback: ({
+            Value<int> locationId = const Value.absent(),
+            required String locationType,
+            required String locationName,
+            Value<int?> solarSystemId = const Value.absent(),
+            Value<String?> solarSystemName = const Value.absent(),
+            Value<int?> regionId = const Value.absent(),
+            Value<String?> regionName = const Value.absent(),
+            Value<double?> securityStatus = const Value.absent(),
+            required DateTime lastResolved,
+          }) =>
+              AssetLocationsCompanion.insert(
+            locationId: locationId,
+            locationType: locationType,
+            locationName: locationName,
+            solarSystemId: solarSystemId,
+            solarSystemName: solarSystemName,
+            regionId: regionId,
+            regionName: regionName,
+            securityStatus: securityStatus,
+            lastResolved: lastResolved,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$AssetLocationsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $AssetLocationsTable,
+    AssetLocation,
+    $$AssetLocationsTableFilterComposer,
+    $$AssetLocationsTableOrderingComposer,
+    $$AssetLocationsTableAnnotationComposer,
+    $$AssetLocationsTableCreateCompanionBuilder,
+    $$AssetLocationsTableUpdateCompanionBuilder,
+    (
+      AssetLocation,
+      BaseReferences<_$AppDatabase, $AssetLocationsTable, AssetLocation>
+    ),
+    AssetLocation,
+    PrefetchHooks Function()>;
+typedef $$AssetSnapshotsTableCreateCompanionBuilder = AssetSnapshotsCompanion
+    Function({
+  Value<int> id,
+  required int characterId,
+  required DateTime timestamp,
+  required double totalValue,
+  required int totalItems,
+  required String valueBreakdown,
+});
+typedef $$AssetSnapshotsTableUpdateCompanionBuilder = AssetSnapshotsCompanion
+    Function({
+  Value<int> id,
+  Value<int> characterId,
+  Value<DateTime> timestamp,
+  Value<double> totalValue,
+  Value<int> totalItems,
+  Value<String> valueBreakdown,
+});
+
+final class $$AssetSnapshotsTableReferences
+    extends BaseReferences<_$AppDatabase, $AssetSnapshotsTable, AssetSnapshot> {
+  $$AssetSnapshotsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias($_aliasNameGenerator(
+          db.assetSnapshots.characterId, db.characters.characterId));
+
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
+    final manager = $$CharactersTableTableManager($_db, $_db.characters)
+        .filter((f) => f.characterId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$AssetSnapshotsTableFilterComposer
+    extends Composer<_$AppDatabase, $AssetSnapshotsTable> {
+  $$AssetSnapshotsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get timestamp => $composableBuilder(
+      column: $table.timestamp, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get totalValue => $composableBuilder(
+      column: $table.totalValue, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get totalItems => $composableBuilder(
+      column: $table.totalItems, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get valueBreakdown => $composableBuilder(
+      column: $table.valueBreakdown,
+      builder: (column) => ColumnFilters(column));
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableFilterComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$AssetSnapshotsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AssetSnapshotsTable> {
+  $$AssetSnapshotsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get timestamp => $composableBuilder(
+      column: $table.timestamp, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get totalValue => $composableBuilder(
+      column: $table.totalValue, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get totalItems => $composableBuilder(
+      column: $table.totalItems, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get valueBreakdown => $composableBuilder(
+      column: $table.valueBreakdown,
+      builder: (column) => ColumnOrderings(column));
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableOrderingComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$AssetSnapshotsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AssetSnapshotsTable> {
+  $$AssetSnapshotsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get timestamp =>
+      $composableBuilder(column: $table.timestamp, builder: (column) => column);
+
+  GeneratedColumn<double> get totalValue => $composableBuilder(
+      column: $table.totalValue, builder: (column) => column);
+
+  GeneratedColumn<int> get totalItems => $composableBuilder(
+      column: $table.totalItems, builder: (column) => column);
+
+  GeneratedColumn<String> get valueBreakdown => $composableBuilder(
+      column: $table.valueBreakdown, builder: (column) => column);
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$AssetSnapshotsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $AssetSnapshotsTable,
+    AssetSnapshot,
+    $$AssetSnapshotsTableFilterComposer,
+    $$AssetSnapshotsTableOrderingComposer,
+    $$AssetSnapshotsTableAnnotationComposer,
+    $$AssetSnapshotsTableCreateCompanionBuilder,
+    $$AssetSnapshotsTableUpdateCompanionBuilder,
+    (AssetSnapshot, $$AssetSnapshotsTableReferences),
+    AssetSnapshot,
+    PrefetchHooks Function({bool characterId})> {
+  $$AssetSnapshotsTableTableManager(
+      _$AppDatabase db, $AssetSnapshotsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AssetSnapshotsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AssetSnapshotsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AssetSnapshotsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> characterId = const Value.absent(),
+            Value<DateTime> timestamp = const Value.absent(),
+            Value<double> totalValue = const Value.absent(),
+            Value<int> totalItems = const Value.absent(),
+            Value<String> valueBreakdown = const Value.absent(),
+          }) =>
+              AssetSnapshotsCompanion(
+            id: id,
+            characterId: characterId,
+            timestamp: timestamp,
+            totalValue: totalValue,
+            totalItems: totalItems,
+            valueBreakdown: valueBreakdown,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required int characterId,
+            required DateTime timestamp,
+            required double totalValue,
+            required int totalItems,
+            required String valueBreakdown,
+          }) =>
+              AssetSnapshotsCompanion.insert(
+            id: id,
+            characterId: characterId,
+            timestamp: timestamp,
+            totalValue: totalValue,
+            totalItems: totalItems,
+            valueBreakdown: valueBreakdown,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$AssetSnapshotsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({characterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (characterId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.characterId,
+                    referencedTable:
+                        $$AssetSnapshotsTableReferences._characterIdTable(db),
+                    referencedColumn: $$AssetSnapshotsTableReferences
+                        ._characterIdTable(db)
+                        .characterId,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$AssetSnapshotsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $AssetSnapshotsTable,
+    AssetSnapshot,
+    $$AssetSnapshotsTableFilterComposer,
+    $$AssetSnapshotsTableOrderingComposer,
+    $$AssetSnapshotsTableAnnotationComposer,
+    $$AssetSnapshotsTableCreateCompanionBuilder,
+    $$AssetSnapshotsTableUpdateCompanionBuilder,
+    (AssetSnapshot, $$AssetSnapshotsTableReferences),
+    AssetSnapshot,
+    PrefetchHooks Function({bool characterId})>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -10806,4 +15278,14 @@ class $AppDatabaseManager {
       $$SkillPlansTableTableManager(_db, _db.skillPlans);
   $$SkillPlanEntriesTableTableManager get skillPlanEntries =>
       $$SkillPlanEntriesTableTableManager(_db, _db.skillPlanEntries);
+  $$PlanetaryColoniesTableTableManager get planetaryColonies =>
+      $$PlanetaryColoniesTableTableManager(_db, _db.planetaryColonies);
+  $$PlanetaryPinsTableTableManager get planetaryPins =>
+      $$PlanetaryPinsTableTableManager(_db, _db.planetaryPins);
+  $$AssetsTableTableManager get assets =>
+      $$AssetsTableTableManager(_db, _db.assets);
+  $$AssetLocationsTableTableManager get assetLocations =>
+      $$AssetLocationsTableTableManager(_db, _db.assetLocations);
+  $$AssetSnapshotsTableTableManager get assetSnapshots =>
+      $$AssetSnapshotsTableTableManager(_db, _db.assetSnapshots);
 }

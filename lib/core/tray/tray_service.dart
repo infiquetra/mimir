@@ -147,6 +147,26 @@ class TrayService extends TrayListener {
     ));
     Log.d('TRAY', 'Added menu item: $settingsLabel (key=settings)');
 
+    final assetsLabel = windowService.isWindowOpen(WindowType.assets)
+        ? '◆ Assets'
+        : 'Assets';
+    menuItems.add(MenuItem(
+      key: 'assets',
+      label: assetsLabel,
+      icon: 'assets/icons/tray/assets.png',
+    ));
+    Log.d('TRAY', 'Added menu item: $assetsLabel (key=assets)');
+
+    final planetaryLabel = windowService.isWindowOpen(WindowType.planetary)
+        ? '◆ Planetary Industry'
+        : 'Planetary Industry';
+    menuItems.add(MenuItem(
+      key: 'planetary',
+      label: planetaryLabel,
+      icon: 'assets/icons/tray/planetary.png',
+    ));
+    Log.d('TRAY', 'Added menu item: $planetaryLabel (key=planetary)');
+
     menuItems.add(MenuItem.separator());
     Log.d('TRAY', 'Added separator');
 
@@ -232,6 +252,16 @@ class TrayService extends TrayListener {
         case 'settings':
           Log.i('TRAY', 'Opening settings window');
           await windowService.openWindow(WindowType.settings);
+          await refreshMenu();
+          break;
+        case 'assets':
+          Log.i('TRAY', 'Opening assets window');
+          await windowService.openWindow(WindowType.assets);
+          await refreshMenu();
+          break;
+        case 'planetary':
+          Log.i('TRAY', 'Opening planetary window');
+          await windowService.openWindow(WindowType.planetary);
           await refreshMenu();
           break;
         case 'onboarding':

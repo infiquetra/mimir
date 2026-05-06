@@ -8,10 +8,13 @@ import '../../features/dashboard/data/dashboard_providers.dart';
 import '../../features/dashboard/presentation/widgets/cards/combat_stats_card.dart';
 import '../../features/dashboard/presentation/widgets/cards/combined_wealth_card.dart';
 import '../../features/dashboard/presentation/widgets/cards/fleet_status_card.dart';
+import '../../features/dashboard/presentation/widgets/cards/pi_summary_card.dart';
 import '../../features/dashboard/presentation/widgets/cards/quick_actions_card.dart';
 import '../../features/dashboard/presentation/widgets/cards/training_overview_card.dart';
 import '../../features/dashboard/presentation/widgets/cards/training_timeline_card.dart';
 import '../../features/dashboard/presentation/widgets/cards/wallet_trends_card.dart';
+import '../../features/pi/data/pi_providers.dart';
+import '../../features/pi/data/planetary_sync_service.dart';
 import '../../features/skills/data/skill_repository.dart';
 import '../../features/wallet/data/wallet_repository.dart';
 import '../theme/eve_colors.dart';
@@ -67,7 +70,7 @@ class _StandaloneDashboardScreenState
                       crossAxisCount: columnCount,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
-                      childCount: 7,
+                      childCount: 8,
                       itemBuilder: (context, index) => _buildCard(index),
                     ),
                   ),
@@ -98,6 +101,8 @@ class _StandaloneDashboardScreenState
         return const TrainingTimelineCard();
       case 6:
         return const CombatStatsCard();
+      case 7:
+        return const PiSummaryCard();
       default:
         return const SizedBox.shrink();
     }
@@ -195,6 +200,7 @@ class _StandaloneDashboardScreenState
     final characterRepo = ref.read(characterRepositoryProvider);
     final walletRepo = ref.read(walletRepositoryProvider);
     final skillRepo = ref.read(skillRepositoryProvider);
+    final piSyncService = ref.read(planetarySyncServiceProvider);
 
     for (final character in characters) {
       try {
@@ -203,6 +209,7 @@ class _StandaloneDashboardScreenState
           walletRepo.refreshWalletBalance(character.characterId),
           walletRepo.refreshWalletJournal(character.characterId),
           skillRepo.refreshSkillQueue(character.characterId),
+          piSyncService.syncColonies(character.characterId),
         ]);
       } catch (e) {
         // Continue refreshing other characters even if one fails

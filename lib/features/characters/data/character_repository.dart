@@ -100,10 +100,7 @@ class CharacterRepository {
 
       // Get existing character data to preserve token info.
       Log.d('CHAR', 'refreshCharacter - loading existing character data');
-      final existing = await _database
-          .getAllCharacters()
-          .then((chars) => chars.where((c) => c.characterId == characterId))
-          .then((matches) => matches.isNotEmpty ? matches.first : null);
+      final existing = await _database.getCharacter(characterId);
 
       if (existing == null) {
         Log.w('CHAR', 'refreshCharacter - character $characterId not found in database, skipping');

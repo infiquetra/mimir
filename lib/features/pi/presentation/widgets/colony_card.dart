@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/database/app_database.dart';
 import '../../../../core/logging/logger.dart';
 import '../../../../core/theme/eve_colors.dart';
+import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/eve_card.dart';
-import '../../data/models/colony.dart';
+import '../../data/pi_providers.dart';
 
-class ColonyCard extends StatelessWidget {
-  final Colony colony;
+class ColonyCard extends ConsumerWidget {
+  final PlanetaryColony colony;
   final VoidCallback? onTap;
 
   const ColonyCard({
@@ -16,13 +19,41 @@ class ColonyCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     Log.d('PI', 'ColonyCard.build() for ${colony.planetName}');
-    // In a real implementation, we'd calculate this from the extractor pins
-    // For this dashboard view, we'll use fallback values if pins aren't fully loaded
-    final hasExtractors = colony.pins.any((p) => p.extractorDetails != null);
-    final statusColor = hasExtractors ? EveColors.success : EveColors.warning;
-    final statusText = hasExtractors ? 'Extracting' : 'Idle';
+
+    final pinsAsync = ref.watch(planetPinsProvider(PlanetPinsArgs(
+      characterId: colony.characterId,
+      planetId: colony.planetId,
+    )));
+
+    return pinsAsync.when(
+      data: (pins) => _buildWithPins(context, pins),
+      loading: () => _buildLoading(context),
+      error: (err, stack) => _buildError(context, err),
+    );
+  }
+
+  Widget _buildWithPins(BuildContext context, List<PlanetaryPin> pins) {
+    final extractorPins = pins.where((p) => p.productTypeId != null).toList();
+    final hasActiveExtractors = extractorPins
+        .any((p) => p.expiryTime != null && p.expiryTime!.isAfter(DateTime.now()));
+
+    final statusColor =
+        hasActiveExtractors ? EveColors.success : EveColors.warning;
+    final statusText = hasActiveExtractors ? 'Extracting' : 'Idle';
+
+    DateTime? nextCompletion;
+    if (hasActiveExtractors) {
+      for (final pin in extractorPins) {
+        if (pin.expiryTime != null && pin.expiryTime!.isAfter(DateTime.now())) {
+          if (nextCompletion == null ||
+              pin.expiryTime!.isBefore(nextCompletion)) {
+            nextCompletion = pin.expiryTime;
+          }
+        }
+      }
+    }
 
     return EveCard(
       onTap: onTap,
@@ -73,17 +104,31 @@ class ColonyCard extends StatelessWidget {
           const SizedBox(height: 8),
           _InfoRow(
             label: 'Next Completion',
-            value: hasExtractors ? '2d 04h 30m' : 'N/A',
+            value: nextCompletion != null
+                ? formatDuration(nextCompletion.difference(DateTime.now()))
+                : 'N/A',
             icon: Icons.timer_outlined,
           ),
           const SizedBox(height: 8),
           _InfoRow(
-            label: 'Est. Output',
-            value: hasExtractors ? '4,500 units/hr' : '0 units/hr',
+            label: 'Extractors',
+            value: '${extractorPins.length}',
             icon: Icons.show_chart_outlined,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLoading(BuildContext context) {
+    return const EveCard(
+      child: Center(child: CircularProgressIndicator()),
+    );
+  }
+
+  Widget _buildError(BuildContext context, Object error) {
+    return EveCard(
+      child: Center(child: Text('Error: $error')),
     );
   }
 }
@@ -134,7 +179,10 @@ class _InfoRow extends StatelessWidget {
         Text(
           '$label: ',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
               ),
         ),
         Text(

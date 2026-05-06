@@ -428,6 +428,90 @@ class SkillPlanEntries extends Table {
   IntColumn get sortOrder => integer()();
 }
 
+/// Planetary colonies table.
+class PlanetaryColonies extends Table {
+  IntColumn get planetId => integer()();
+  IntColumn get characterId =>
+      integer().references(Characters, #characterId)();
+  TextColumn get planetName => text()();
+  TextColumn get planetType => text()();
+  IntColumn get upgradeLevel => integer()();
+  IntColumn get numPins => integer()();
+  DateTimeColumn get lastUpdate => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {planetId, characterId};
+}
+
+/// Planetary pins (structures) table.
+class PlanetaryPins extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get pinId => integer()();
+  IntColumn get characterId =>
+      integer().references(Characters, #characterId)();
+  IntColumn get planetId => integer()();
+  IntColumn get typeId => integer()();
+  TextColumn get typeName => text().nullable()();
+  RealColumn get latitude => real()();
+  RealColumn get longitude => real()();
+  DateTimeColumn get installTime => dateTime()();
+  DateTimeColumn get expiryTime => dateTime().nullable()();
+
+  // Extractor specific
+  IntColumn get productTypeId => integer().nullable()();
+  IntColumn get quantityPerCycle => integer().nullable()();
+  IntColumn get cycleTime => integer().nullable()();
+
+  // Factory specific
+  IntColumn get schematicId => integer().nullable()();
+}
+
+/// Main assets table.
+class Assets extends Table {
+  IntColumn get itemId => integer()();
+  IntColumn get characterId =>
+      integer().references(Characters, #characterId)();
+  IntColumn get typeId => integer()();
+  IntColumn get locationId => integer()();
+  TextColumn get locationFlag => text()();
+  IntColumn get quantity => integer()();
+  BoolColumn get isSingleton => boolean()();
+  BoolColumn get isBlueprintCopy => boolean().nullable()();
+  TextColumn get typeName => text()();
+  TextColumn get customName => text().nullable()();
+  IntColumn get containedInId => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {itemId, characterId};
+}
+
+/// Cached location information for assets.
+class AssetLocations extends Table {
+  IntColumn get locationId => integer()();
+  TextColumn get locationType => text()();
+  TextColumn get locationName => text()();
+  IntColumn get solarSystemId => integer().nullable()();
+  TextColumn get solarSystemName => text().nullable()();
+  IntColumn get regionId => integer().nullable()();
+  TextColumn get regionName => text().nullable()();
+  RealColumn get securityStatus => real().nullable()();
+  DateTimeColumn get lastResolved => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {locationId};
+}
+
+/// Historical snapshots for asset value tracking.
+class AssetSnapshots extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get characterId =>
+      integer().references(Characters, #characterId)();
+  DateTimeColumn get timestamp => dateTime()();
+  RealColumn get totalValue => real()();
+  IntColumn get totalItems => integer()();
+  TextColumn get valueBreakdown => text()(); // JSON for detailed breakdown
+}
+
 /// Application database using Drift.
 ///
 /// Handles all local persistence for Mimir including:
@@ -450,6 +534,11 @@ class SkillPlanEntries extends Table {
   CharacterSkills,
   SkillPlans,
   SkillPlanEntries,
+  PlanetaryColonies,
+  PlanetaryPins,
+  Assets,
+  AssetLocations,
+  AssetSnapshots,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -458,7 +547,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration {
@@ -523,8 +612,23 @@ class AppDatabase extends _$AppDatabase {
 
         // Migration from version 9 to 10: Add ESI rate limit tracking.
         if (from < 10) {
-          await m.addColumn(appSettingsTable, appSettingsTable.esiErrorLimitRemain);
-          await m.addColumn(appSettingsTable, appSettingsTable.esiErrorLimitReset);
+          await m.addColumn(
+              appSettingsTable, appSettingsTable.esiErrorLimitRemain);
+          await m.addColumn(
+              appSettingsTable, appSettingsTable.esiErrorLimitReset);
+        }
+
+        // Migration from version 10 to 11: Add planetary industry tables.
+        if (from < 11) {
+          await m.createTable(planetaryColonies);
+          await m.createTable(planetaryPins);
+        }
+
+        // Migration from version 11 to 12: Add asset management tables.
+        if (from < 12) {
+          await m.createTable(assets);
+          await m.createTable(assetLocations);
+          await m.createTable(assetSnapshots);
         }
       },
     );
@@ -534,6 +638,12 @@ class AppDatabase extends _$AppDatabase {
 
   /// Get all stored characters.
   Future<List<Character>> getAllCharacters() => select(characters).get();
+
+  /// Get a single character by ID.
+  Future<Character?> getCharacter(int characterId) {
+    return (select(characters)..where((c) => c.characterId.equals(characterId)))
+        .getSingleOrNull();
+  }
 
   /// Watch all characters for reactive updates.
   Stream<List<Character>> watchAllCharacters() => select(characters).watch();
@@ -579,15 +689,14 @@ class AppDatabase extends _$AppDatabase {
       await (delete(characterSkills)
             ..where((cs) => cs.characterId.equals(characterId)))
           .go();
-      // Delete skill plan entries for plans owned by this character
-      final plans = await (select(skillPlans)
-            ..where((p) => p.characterId.equals(characterId)))
-          .get();
-      for (final plan in plans) {
-        await (delete(skillPlanEntries)
-              ..where((e) => e.planId.equals(plan.id)))
-            .go();
-      }
+
+      // Delete skill plan entries for plans owned by this character using a subquery.
+      final planIdsQuery = selectOnly(skillPlans)
+        ..addColumns([skillPlans.id])
+        ..where(skillPlans.characterId.equals(characterId));
+      await (delete(skillPlanEntries)..where((e) => e.planId.isInQuery(planIdsQuery)))
+          .go();
+
       await (delete(skillPlans)
             ..where((p) => p.characterId.equals(characterId)))
           .go();
@@ -721,8 +830,11 @@ class AppDatabase extends _$AppDatabase {
   ///
   /// Sums all skill points across all trained skills.
   Future<int> getTotalSkillpoints(int characterId) async {
-    final skills = await getCharacterSkills(characterId);
-    return skills.fold<int>(0, (sum, skill) => sum + skill.skillpointsInSkill);
+    final query = selectOnly(characterSkills)
+      ..addColumns([characterSkills.skillpointsInSkill.sum()])
+      ..where(characterSkills.characterId.equals(characterId));
+    final result = await query.getSingle();
+    return result.read(characterSkills.skillpointsInSkill.sum()) ?? 0;
   }
 
   // Wallet operations
@@ -767,9 +879,21 @@ class AppDatabase extends _$AppDatabase {
   Stream<List<WalletJournalEntry>> watchWalletJournal(
     int characterId, {
     int limit = 50,
+    String? refType,
+    DateTime? since,
   }) {
-    return (select(walletJournalEntries)
-          ..where((e) => e.characterId.equals(characterId))
+    final query = select(walletJournalEntries)
+      ..where((e) => e.characterId.equals(characterId));
+
+    if (refType != null) {
+      query.where((e) => e.refType.equals(refType));
+    }
+
+    if (since != null) {
+      query.where((e) => e.date.isBiggerThanValue(since));
+    }
+
+    return (query
           ..orderBy([(e) => OrderingTerm.desc(e.date)])
           ..limit(limit))
         .watch();
@@ -1134,12 +1258,13 @@ class AppDatabase extends _$AppDatabase {
   ///
   /// Takes a list of skill IDs in the desired order and updates sort order.
   Future<void> updatePlanEntryOrder(int planId, List<int> skillIds) async {
-    await transaction(() async {
+    await batch((b) {
       for (var i = 0; i < skillIds.length; i++) {
-        await (update(skillPlanEntries)
-              ..where((e) => e.planId.equals(planId))
-              ..where((e) => e.skillId.equals(skillIds[i])))
-            .write(SkillPlanEntriesCompanion(sortOrder: Value(i)));
+        b.update(
+          skillPlanEntries,
+          SkillPlanEntriesCompanion(sortOrder: Value(i)),
+          where: (e) => e.planId.equals(planId) & e.skillId.equals(skillIds[i]),
+        );
       }
     });
   }

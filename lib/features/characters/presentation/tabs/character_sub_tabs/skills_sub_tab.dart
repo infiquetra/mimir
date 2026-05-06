@@ -103,34 +103,53 @@ class SkillsSubTab extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  if (currentTraining == null)
-                    Center(
+                  currentTraining.when(
+                    data: (training) {
+                      if (training == null) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.pause_circle_outline,
+                                  size: 48,
+                                  color: theme.colorScheme.onSurfaceVariant.withAlpha(128),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'No skill currently training',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant.withAlpha(128),
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                      return SkillQueueItemWidget(
+                        entry: training,
+                        isCurrentlyTraining: true,
+                      );
+                    },
+                    loading: () => const Center(
                       child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.pause_circle_outline,
-                              size: 48,
-                              color: theme.colorScheme.onSurfaceVariant.withAlpha(128),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'No skill currently training',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant.withAlpha(128),
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ],
+                        padding: EdgeInsets.all(16.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                    error: (error, stack) => Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          'Error loading training skill',
+                          style: TextStyle(color: theme.colorScheme.error),
                         ),
                       ),
-                    )
-                  else
-                    SkillQueueItemWidget(
-                      entry: currentTraining,
-                      isCurrentlyTraining: true,
                     ),
+                  ),
                 ],
               ),
             ),

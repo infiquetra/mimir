@@ -131,35 +131,74 @@ final walletTransactionsProvider =
   return repository.watchWalletTransactions(activeCharacter.characterId);
 });
 
+/// Provider that streams the wallet journal for the active character with filtering.
+final filteredWalletJournalProvider =
+    StreamProvider.family<List<WalletJournalEntry>, TransactionFilter>(
+        (ref, filter) {
+  final activeCharacter = ref.watch(activeCharacterProvider).value;
+  if (activeCharacter == null) {
+    Log.d('WALLET',
+        'filteredWalletJournalProvider - no active character, returning empty stream');
+    return Stream.value([]);
+  }
+
+  Log.d('WALLET',
+      'filteredWalletJournalProvider - setting up stream for character ${activeCharacter.characterId} with filter $filter');
+  final repository = ref.watch(walletRepositoryProvider);
+  return repository.watchWalletJournal(
+    activeCharacter.characterId,
+    limit: 100, // Increase limit for filtered view
+    refType: filter.refType,
+    since: filter.startDate,
+  );
+});
+
 /// Filter for wallet journal transactions.
 class TransactionFilter {
   final String? refType;
-  final DateTime? startDate;
-  final DateTime? endDate;
+  final int? days;
 
   const TransactionFilter({
     this.refType,
-    this.startDate,
-    this.endDate,
+    this.days,
   });
 
-  /// Creates a filter for a specific date range.
-  factory TransactionFilter.dateRange(int days) {
+  /// The start date based on the number of days.
+  DateTime? get startDate {
+    if (days == null) return null;
     final now = DateTime.now();
-    return TransactionFilter(
-      startDate: now.subtract(Duration(days: days)),
-      endDate: now,
-    );
+    // Use midnight to make the filter more stable
+    final today = DateTime(now.year, now.month, now.day);
+    return today.subtract(Duration(days: days!));
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TransactionFilter &&
+          runtimeType == other.runtimeType &&
+          refType == other.refType &&
+          days == other.days;
+
+  @override
+  int get hashCode => refType.hashCode ^ days.hashCode;
+
+  @override
+  String toString() => 'TransactionFilter(refType: $refType, days: $days)';
+
+  /// Creates a filter for a specific date range.
+  static TransactionFilter dateRange(int days) {
+    return TransactionFilter(days: days);
   }
 
   /// Last 7 days filter.
-  static TransactionFilter get last7Days => TransactionFilter.dateRange(7);
+  static TransactionFilter get last7Days => const TransactionFilter(days: 7);
 
   /// Last 30 days filter.
-  static TransactionFilter get last30Days => TransactionFilter.dateRange(30);
+  static TransactionFilter get last30Days => const TransactionFilter(days: 30);
 
   /// Last 90 days filter.
-  static TransactionFilter get last90Days => TransactionFilter.dateRange(90);
+  static TransactionFilter get last90Days => const TransactionFilter(days: 90);
 }
 
 /// Filter for market transactions.

@@ -11,34 +11,37 @@ import 'skill_repository.dart';
 ///
 /// Automatically updates when the active character changes or
 /// when the skill queue is refreshed.
-final skillQueueProvider = StreamProvider<List<SkillQueueEntry>>((ref) {
-  final activeCharacter = ref.watch(activeCharacterProvider).value;
+final skillQueueProvider = StreamProvider<List<SkillQueueEntry>>((ref) async* {
+  final activeCharacter = await ref.watch(activeCharacterProvider.future);
   if (activeCharacter == null) {
     Log.d('SKILLS', 'skillQueueProvider - no active character, returning empty stream');
-    return Stream.value([]);
+    yield [];
+    return;
   }
 
   Log.d('SKILLS', 'skillQueueProvider - setting up stream for character ${activeCharacter.characterId}');
   final repository = ref.watch(skillRepositoryProvider);
-  return repository.watchSkillQueue(activeCharacter.characterId);
+  yield* repository.watchSkillQueue(activeCharacter.characterId);
 });
 
 /// Provider for the currently training skill (position 0 in queue).
-final currentTrainingProvider = Provider<SkillQueueEntry?>((ref) {
-  final queue = ref.watch(skillQueueProvider).value ?? [];
-  if (queue.isEmpty) return null;
+final currentTrainingProvider = Provider<AsyncValue<SkillQueueEntry?>>((ref) {
+  return ref.watch(skillQueueProvider).whenData((queue) {
+    if (queue.isEmpty) return null;
 
-  // Find the skill at position 0 (currently training).
-  return queue.firstWhere(
-    (entry) => entry.queuePosition == 0,
-    orElse: () => queue.first,
-  );
+    // Find the skill at position 0 (currently training).
+    return queue.firstWhere(
+      (entry) => entry.queuePosition == 0,
+      orElse: () => queue.first,
+    );
+  });
 });
 
 /// Provider for the skill queue preview (first 3 skills for Dashboard).
-final skillQueuePreviewProvider = Provider<List<SkillQueueEntry>>((ref) {
-  final queue = ref.watch(skillQueueProvider).value ?? [];
-  return queue.take(3).toList();
+final skillQueuePreviewProvider = Provider<AsyncValue<List<SkillQueueEntry>>>((ref) {
+  return ref.watch(skillQueueProvider).whenData((queue) {
+    return queue.take(3).toList();
+  });
 });
 
 /// Provider for refreshing the skill queue from ESI.
@@ -50,9 +53,8 @@ final refreshSkillQueueProvider =
 });
 
 /// Provider that indicates if the skill queue is empty.
-final isSkillQueueEmptyProvider = Provider<bool>((ref) {
-  final queue = ref.watch(skillQueueProvider).value ?? [];
-  return queue.isEmpty;
+final isSkillQueueEmptyProvider = Provider<AsyncValue<bool>>((ref) {
+  return ref.watch(skillQueueProvider).whenData((queue) => queue.isEmpty);
 });
 
 /// Provider that indicates if skill queue is loading.
@@ -67,16 +69,17 @@ final isSkillQueueLoadingProvider = Provider<bool>((ref) {
 /// Provider that streams trained skills for the active character.
 ///
 /// Returns all skills the character has trained with their levels and SP.
-final characterSkillsProvider = StreamProvider<List<CharacterSkill>>((ref) {
-  final activeCharacter = ref.watch(activeCharacterProvider).value;
+final characterSkillsProvider = StreamProvider<List<CharacterSkill>>((ref) async* {
+  final activeCharacter = await ref.watch(activeCharacterProvider.future);
   if (activeCharacter == null) {
     Log.d('SKILLS', 'characterSkillsProvider - no active character, returning empty stream');
-    return Stream.value([]);
+    yield [];
+    return;
   }
 
   Log.d('SKILLS', 'characterSkillsProvider - setting up stream for character ${activeCharacter.characterId}');
   final repository = ref.watch(skillRepositoryProvider);
-  return repository.watchCharacterSkills(activeCharacter.characterId);
+  yield* repository.watchCharacterSkills(activeCharacter.characterId);
 });
 
 /// Provider for total skill points for the active character.
@@ -84,7 +87,7 @@ final characterSkillsProvider = StreamProvider<List<CharacterSkill>>((ref) {
 /// Sums all SP across all trained skills. Returns 0 if no character selected
 /// or if skills haven't been fetched yet.
 final totalSkillPointsProvider = FutureProvider<int>((ref) async {
-  final activeCharacter = ref.watch(activeCharacterProvider).value;
+  final activeCharacter = await ref.watch(activeCharacterProvider.future);
   if (activeCharacter == null) {
     Log.d('SKILLS', 'totalSkillPointsProvider - no active character, returning 0');
     return 0;
@@ -115,7 +118,7 @@ final totalSkillPointsProvider = FutureProvider<int>((ref) async {
 /// Fetches from ESI getSkills() endpoint. Returns null if not available.
 /// Note: This requires a fresh ESI fetch as unallocated SP changes.
 final unallocatedSpProvider = FutureProvider<int?>((ref) async {
-  final activeCharacter = ref.watch(activeCharacterProvider).value;
+  final activeCharacter = await ref.watch(activeCharacterProvider.future);
   if (activeCharacter == null) {
     Log.d('SKILLS', 'unallocatedSpProvider - no active character');
     return null;

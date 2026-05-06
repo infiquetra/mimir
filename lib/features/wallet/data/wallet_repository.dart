@@ -58,7 +58,7 @@ class WalletRepository {
           id: Value(item.id),
           characterId: characterId,
           amount: item.amount,
-          balance: item.balance,
+          balance: item.balance ?? 0.0,
           refType: item.refType,
           firstPartyId: Value(item.firstPartyId),
           secondPartyId: Value(item.secondPartyId),
@@ -96,9 +96,16 @@ class WalletRepository {
   Stream<List<WalletJournalEntry>> watchWalletJournal(
     int characterId, {
     int limit = 50,
+    String? refType,
+    DateTime? since,
   }) {
-    Log.d('WALLET', 'watchWalletJournal($characterId, limit=$limit) - subscribed to stream');
-    return _database.watchWalletJournal(characterId, limit: limit);
+    Log.d('WALLET', 'watchWalletJournal($characterId, limit=$limit, refType=$refType, since=$since) - subscribed to stream');
+    return _database.watchWalletJournal(
+      characterId,
+      limit: limit,
+      refType: refType,
+      since: since,
+    );
   }
 
   /// Gets the wallet journal from the local database.
@@ -198,7 +205,8 @@ class WalletRepository {
     try {
       // Fetch character assets from ESI.
       Log.d('WALLET', 'refreshPlexCount - fetching assets from ESI');
-      final assets = await _esiClient.getCharacterAssets(characterId);
+      final response = await _esiClient.getCharacterAssets(characterId);
+      final assets = response.data;
       Log.i('WALLET', 'refreshPlexCount - fetched ${assets.length} assets from ESI');
 
       // Filter for PLEX (type_id 44992) and convert to companions.

@@ -35,13 +35,15 @@ class MockEsiClient extends Mock implements EsiClient {
 
   static final emptySkillQueue = <SkillQueueItem>[];
 
+  static final _baseDate = DateTime(2024, 1, 1, 12, 0);
+
   static final activeSkillQueue = [
     SkillQueueItem(
       queuePosition: 0,
       skillId: 3301, // Mechanics
       finishedLevel: 5,
-      startDate: DateTime.now().subtract(const Duration(hours: 2)),
-      finishDate: DateTime.now().add(const Duration(hours: 6)),
+      startDate: _baseDate.subtract(const Duration(hours: 2)),
+      finishDate: _baseDate.add(const Duration(hours: 6)),
       trainingStartSp: 226275,
       levelEndSp: 256000,
       levelStartSp: 181020,
@@ -50,8 +52,8 @@ class MockEsiClient extends Mock implements EsiClient {
       queuePosition: 1,
       skillId: 3392, // Engineering
       finishedLevel: 4,
-      startDate: DateTime.now().add(const Duration(hours: 6)),
-      finishDate: DateTime.now().add(const Duration(days: 1, hours: 2)),
+      startDate: _baseDate.add(const Duration(hours: 6)),
+      finishDate: _baseDate.add(const Duration(days: 1, hours: 2)),
       trainingStartSp: 22627,
       levelEndSp: 45255,
       levelStartSp: 5657,
@@ -60,8 +62,8 @@ class MockEsiClient extends Mock implements EsiClient {
       queuePosition: 2,
       skillId: 3327, // Spaceship Command
       finishedLevel: 5,
-      startDate: DateTime.now().add(const Duration(days: 1, hours: 2)),
-      finishDate: DateTime.now().add(const Duration(days: 3, hours: 12)),
+      startDate: _baseDate.add(const Duration(days: 1, hours: 2)),
+      finishDate: _baseDate.add(const Duration(days: 3, hours: 12)),
       trainingStartSp: 0,
       levelEndSp: 256000,
       levelStartSp: 0,
@@ -263,7 +265,8 @@ class MockEsiClient extends Mock implements EsiClient {
 
   static final ship = CharacterShip(
     shipTypeId: 587, // Rifter
-    shipTypeName: null, // Looked up from SDE
+    shipName: 'Test Rifter',
+    shipTypeName: 'Rifter',
     shipItemId: 1234567890,
   );
 
@@ -326,6 +329,8 @@ class MockEsiClient extends Mock implements EsiClient {
 
   /// Sets up the mock to return trained skills data.
   void setupTrainedSkills(int characterId) {
+    when(() => getCharacterSkills(characterId))
+        .thenAnswer((_) async => characterSkills);
     when(() => getSkills(characterId))
         .thenAnswer((_) async => characterSkills);
   }
