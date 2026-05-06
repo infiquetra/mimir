@@ -6,6 +6,8 @@
 /// as a value object holding calculated results.
 library;
 
+import 'package:mimir/core/logging/logger.dart';
+
 /// Pure calculator for trade margin and break-even analysis.
 ///
 /// All methods are static. The class is not meant to be instantiated —
@@ -32,6 +34,9 @@ class TradeCalculator {
       salesTaxPercent: salesTaxPercent,
     );
 
+    Log.d('MARKET', 'calculateMargin — buy: $buyPrice, sell: $sellPrice, '
+        'broker: $brokerFeePercent%, tax: $salesTaxPercent%');
+
     final buyBrokerFee = buyPrice * brokerFeePercent / 100;
     final sellBrokerFee = sellPrice * brokerFeePercent / 100;
     final salesTax = sellPrice * salesTaxPercent / 100;
@@ -41,6 +46,9 @@ class TradeCalculator {
     final profit = sellNet - buyTotal;
     final marginPercent = buyTotal == 0 ? 0.0 : (profit / buyTotal) * 100;
     final brokerFee = buyBrokerFee + sellBrokerFee;
+
+    Log.d('MARKET', 'calculateMargin — profit: $profit, '
+        'margin: ${marginPercent.toStringAsFixed(2)}%');
 
     return TradeMargin(
       buyPrice: buyPrice,
@@ -68,6 +76,9 @@ class TradeCalculator {
       brokerFeePercent: brokerFeePercent,
       salesTaxPercent: salesTaxPercent,
     );
+
+    Log.d('MARKET', 'breakEvenSellPrice — buy: $buyPrice, '
+        'broker: $brokerFeePercent%, tax: $salesTaxPercent%');
 
     final buyTotal = buyPrice * (1 + brokerFeePercent / 100);
     final sellRetentionRate =
