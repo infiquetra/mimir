@@ -4,6 +4,7 @@
 /// profit/loss analysis, break-even sell price, and trade profitability checks.
 library;
 
+import 'package:mimir/core/logging/logger.dart';
 
 // ---------------------------------------------------------------------------
 // Input validation helpers
@@ -124,6 +125,7 @@ class TradeCalculator {
     double brokerFeePercent = 1.0,
     double salesTaxPercent = 2.0,
   }) {
+    Log.d('TradeCalculator', 'calculateMargin: buyPrice=$buyPrice, sellPrice=$sellPrice');
     _validateNonNegativeFinite(buyPrice, 'buyPrice');
     _validateNonNegativeFinite(sellPrice, 'sellPrice');
     _validateFeeRates(brokerFeePercent, salesTaxPercent);
@@ -162,6 +164,7 @@ class TradeCalculator {
     double brokerFeePercent = 1.0,
     double salesTaxPercent = 2.0,
   }) {
+    Log.d('TradeCalculator', 'breakEvenSellPrice: buyPrice=$buyPrice');
     _validateNonNegativeFinite(buyPrice, 'buyPrice');
     _validateFeeRates(brokerFeePercent, salesTaxPercent);
 
