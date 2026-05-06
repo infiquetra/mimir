@@ -83,8 +83,11 @@ class TradeCalculator {
     final buyTotal = buyPrice * (1 + brokerFeePercent / 100);
     final sellRetentionRate =
         1 - brokerFeePercent / 100 - salesTaxPercent / 100;
+    final result = buyTotal / sellRetentionRate;
 
-    return buyTotal / sellRetentionRate;
+    Log.d('MARKET', 'breakEvenSellPrice — result: $result');
+
+    return result;
   }
 
   /// Validates all numeric inputs before calculation.
