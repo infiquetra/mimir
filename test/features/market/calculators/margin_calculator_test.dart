@@ -166,6 +166,52 @@ void main() {
       expect(margin.salesTax, closeTo(0, 1e-10));
       expect(margin.isProfitable, isTrue);
     });
+
+    test('throws on NaN buy price', () {
+      expect(
+        () => TradeCalculator.calculateMargin(buyPrice: double.nan, sellPrice: 10),
+        throwsArgumentError,
+      );
+    });
+
+    test('throws on infinite buy price', () {
+      expect(
+        () => TradeCalculator.calculateMargin(
+          buyPrice: double.infinity,
+          sellPrice: 10,
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('throws on NaN sell price', () {
+      expect(
+        () => TradeCalculator.calculateMargin(buyPrice: 10, sellPrice: double.nan),
+        throwsArgumentError,
+      );
+    });
+
+    test('throws on NaN broker fee percent', () {
+      expect(
+        () => TradeCalculator.calculateMargin(
+          buyPrice: 10,
+          sellPrice: 20,
+          brokerFeePercent: double.nan,
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('throws on NaN sales tax percent', () {
+      expect(
+        () => TradeCalculator.calculateMargin(
+          buyPrice: 10,
+          sellPrice: 20,
+          salesTaxPercent: double.nan,
+        ),
+        throwsArgumentError,
+      );
+    });
   });
 
   group('breakEvenSellPrice', () {
@@ -260,6 +306,30 @@ void main() {
           buyPrice: 10,
           brokerFeePercent: 80,
           salesTaxPercent: 20,
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('throws on NaN buy price', () {
+      expect(
+        () => TradeCalculator.breakEvenSellPrice(buyPrice: double.nan),
+        throwsArgumentError,
+      );
+    });
+
+    test('throws on infinite buy price', () {
+      expect(
+        () => TradeCalculator.breakEvenSellPrice(buyPrice: double.infinity),
+        throwsArgumentError,
+      );
+    });
+
+    test('throws on NaN broker fee percent', () {
+      expect(
+        () => TradeCalculator.breakEvenSellPrice(
+          buyPrice: 10,
+          brokerFeePercent: double.nan,
         ),
         throwsArgumentError,
       );

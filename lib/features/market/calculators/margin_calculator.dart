@@ -123,32 +123,32 @@ class TradeCalculator {
     required double brokerFeePercent,
     required double salesTaxPercent,
   }) {
-    if (buyPrice <= 0) {
+    if (!buyPrice.isFinite || buyPrice <= 0) {
       throw ArgumentError.value(
         buyPrice,
         'buyPrice',
-        'expected a positive buy price, got $buyPrice',
+        'expected a positive finite buy price, got $buyPrice',
       );
     }
-    if (sellPrice != null && sellPrice <= 0) {
+    if (sellPrice != null && (!sellPrice.isFinite || sellPrice <= 0)) {
       throw ArgumentError.value(
         sellPrice,
         'sellPrice',
-        'expected a positive sell price, got $sellPrice',
+        'expected a positive finite sell price, got $sellPrice',
       );
     }
-    if (brokerFeePercent < 0) {
+    if (!brokerFeePercent.isFinite || brokerFeePercent < 0) {
       throw ArgumentError.value(
         brokerFeePercent,
         'brokerFeePercent',
-        'expected a non-negative broker fee percent, got $brokerFeePercent',
+        'expected a non-negative finite broker fee percent, got $brokerFeePercent',
       );
     }
-    if (salesTaxPercent < 0) {
+    if (!salesTaxPercent.isFinite || salesTaxPercent < 0) {
       throw ArgumentError.value(
         salesTaxPercent,
         'salesTaxPercent',
-        'expected a non-negative sales tax percent, got $salesTaxPercent',
+        'expected a non-negative finite sales tax percent, got $salesTaxPercent',
       );
     }
     final totalFeePercent = brokerFeePercent + salesTaxPercent;
