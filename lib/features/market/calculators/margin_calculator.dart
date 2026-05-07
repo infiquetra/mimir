@@ -5,7 +5,7 @@
 /// > Price Calculations section.
 library;
 
-import 'dart:developer' show log;
+import 'package:mimir/core/logging/logger.dart';
 
 /// Immutable result model for a trade margin calculation.
 ///
@@ -77,10 +77,10 @@ class TradeCalculator {
     _validatePercent(salesTaxPercent, 'salesTaxPercent');
     _validateDeductions(brokerFeePercent, salesTaxPercent);
 
-    log(
+    Log.d(
+      'MARKET',
       'calculateMargin() - START buy=$buyPrice sell=$sellPrice '
       'brokerFee=$brokerFeePercent% tax=$salesTaxPercent%',
-      name: 'MARKET',
     );
 
     final buyTotal = buyPrice * (1 + brokerFeePercent / 100);
@@ -103,9 +103,9 @@ class TradeCalculator {
       salesTax: salesTax,
     );
 
-    log(
+    Log.d(
+      'MARKET',
       'calculateMargin() - RESULT profit=$profit margin=$marginPercent%',
-      name: 'MARKET',
     );
 
     return result;
@@ -128,17 +128,17 @@ class TradeCalculator {
     _validatePercent(salesTaxPercent, 'salesTaxPercent');
     _validateDeductions(brokerFeePercent, salesTaxPercent);
 
-    log(
+    Log.d(
+      'MARKET',
       'breakEvenSellPrice() - START buy=$buyPrice '
       'brokerFee=$brokerFeePercent% tax=$salesTaxPercent%',
-      name: 'MARKET',
     );
 
     final buyTotal = buyPrice * (1 + brokerFeePercent / 100);
     final result =
         buyTotal / (1 - brokerFeePercent / 100 - salesTaxPercent / 100);
 
-    log('breakEvenSellPrice() - RESULT breakEven=$result', name: 'MARKET');
+    Log.d('MARKET', 'breakEvenSellPrice() - RESULT breakEven=$result');
 
     return result;
   }

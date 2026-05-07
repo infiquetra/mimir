@@ -140,14 +140,14 @@ void main() {
     });
 
     test('calculates break-even sell price with custom fees', () {
-      // buyTotal = 1000000 * 1.005 = 1005000; 1005000 / 0.98 ≈ 1025510.2041
+      // buyTotal = 1000000 * 1.005 = 1005000; 1005000 / 0.98 = 1025510.2040816326...
       final result = TradeCalculator.breakEvenSellPrice(
         buyPrice: 1000000.0,
         brokerFeePercent: 0.5,
         salesTaxPercent: 1.5,
       );
 
-      expect(result, closeTo(1025510.2041, 0.001));
+      expect(result, closeTo(1025510.2040816326, 0.000001));
     });
 
     test('throws ArgumentError when deductions make break-even impossible', () {
