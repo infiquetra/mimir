@@ -64,6 +64,9 @@ class TradeCalculator {
         buyPrice * brokerFeePercent / 100 + sellPrice * brokerFeePercent / 100;
     final salesTax = sellPrice * salesTaxPercent / 100;
 
+    Log.d('MKT',
+        'calculateMargin → profit: $profit, margin: ${marginPercent.toStringAsFixed(2)}%');
+
     return TradeMargin(
       buyPrice: buyPrice,
       sellPrice: sellPrice,
@@ -92,7 +95,12 @@ class TradeCalculator {
     _validateCombinedFees(brokerFeePercent, salesTaxPercent);
 
     final buyTotal = buyPrice * (1 + brokerFeePercent / 100);
-    return buyTotal / (1 - brokerFeePercent / 100 - salesTaxPercent / 100);
+    final result =
+        buyTotal / (1 - brokerFeePercent / 100 - salesTaxPercent / 100);
+
+    Log.d('MKT', 'breakEvenSellPrice → $result');
+
+    return result;
   }
 
   static void _validateFiniteNonNegative(double value, String name) {
