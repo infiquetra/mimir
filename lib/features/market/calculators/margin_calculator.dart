@@ -6,6 +6,8 @@
 /// margin percent, broker fees, and sales tax.
 library;
 
+import 'package:mimir/core/logging/logger.dart';
+
 /// Immutable result of a margin calculation.
 class TradeMargin {
   final double buyPrice;
@@ -46,6 +48,7 @@ class TradeCalculator {
     double brokerFeePercent = 1.0,
     double salesTaxPercent = 2.0,
   }) {
+    Log.d('MKT', 'calculateMargin() - START');
     _validateFiniteNonNegative(buyPrice, 'buyPrice');
     _validateFiniteNonNegative(sellPrice, 'sellPrice');
     _validateFiniteNonNegative(brokerFeePercent, 'brokerFeePercent');
@@ -82,6 +85,7 @@ class TradeCalculator {
     double brokerFeePercent = 1.0,
     double salesTaxPercent = 2.0,
   }) {
+    Log.d('MKT', 'breakEvenSellPrice() - START');
     _validateFiniteNonNegative(buyPrice, 'buyPrice');
     _validateFiniteNonNegative(brokerFeePercent, 'brokerFeePercent');
     _validateFiniteNonNegative(salesTaxPercent, 'salesTaxPercent');
