@@ -88,3 +88,4 @@ This application uses data from EVE Online under the [CCP Developer License](htt
 - [Blueprint & Specifications](https://github.com/infiquetra/mimir-blueprint)
 - [ESI API Documentation](https://docs.esi.evetech.net/)
 - [EVE Developers](https://developers.eveonline.com/)
+<!-- Phase 1 validation: Apollo team kanban architecture works (2026-05-08) -->
