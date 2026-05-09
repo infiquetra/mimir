@@ -1,5 +1,3 @@
-import 'package:mimir/features/market/presentation/market_overview_screen.dart';
-import 'package:mimir/features/industry/presentation/industry_overview_screen.dart';
 @Tags(['golden'])
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,6 +12,7 @@ import 'package:mimir/features/dashboard/data/dashboard_providers.dart';
 import 'package:mimir/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:mimir/features/pi/presentation/pi_overview_screen.dart';
 import 'package:mimir/features/industry/presentation/industry_overview_screen.dart';
+import 'package:mimir/features/market/presentation/market_overview_screen.dart';
 import 'package:mimir/features/settings/presentation/settings_screen.dart';
 import 'package:mimir/features/skills/presentation/skills_screen.dart';
 import 'package:mimir/features/wallet/presentation/wallet_screen.dart';

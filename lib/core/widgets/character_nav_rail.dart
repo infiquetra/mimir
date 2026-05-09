@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/characters/data/character_providers.dart';
+import '../../features/characters/presentation/add_character_screen.dart';
 import '../di/providers.dart';
 import '../logging/logger.dart';
 import '../theme/eve_colors.dart';
@@ -256,6 +257,18 @@ class CharacterNavRail extends ConsumerWidget {
   }
 
   Widget _buildErrorState(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Icon(
+        Icons.error_outline,
+        size: 32,
+        color: theme.colorScheme.error,
+      ),
+    );
+  }
+}
+) {
     final theme = Theme.of(context);
 
     return Center(

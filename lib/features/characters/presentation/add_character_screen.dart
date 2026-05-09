@@ -23,7 +23,11 @@ class AddCharacterScreen extends ConsumerWidget {
           icon: const Icon(Icons.close),
           onPressed: () {
             ref.read(authControllerProvider.notifier).cancelAuth();
-            context.pop();
+            try {
+              context.pop();
+            } catch (_) {
+              Navigator.of(context).pop();
+            }
           },
         ),
       ),
@@ -279,7 +283,11 @@ class AddCharacterScreen extends ConsumerWidget {
             OutlinedButton(
               onPressed: () {
                 ref.read(authControllerProvider.notifier).reset();
-                context.pop();
+                try {
+              context.pop();
+            } catch (_) {
+              Navigator.of(context).pop();
+            }
               },
               child: const Text('Cancel'),
             ),
