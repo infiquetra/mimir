@@ -658,7 +658,7 @@ class EsiPlanetaryPin {
       typeId: json['type_id'] as int,
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
-      installTime: DateTime.parse(json['install_time'] as String),
+      installTime: json['install_time'] != null ? DateTime.parse(json['install_time'] as String) : DateTime.now(),
       expiryTime: json['expiry_time'] != null ? DateTime.parse(json['expiry_time'] as String) : null,
       productTypeId: extractorDetails?['product_type_id'] as int?,
       quantityPerCycle: extractorDetails?['qty_per_cycle'] as int?,
