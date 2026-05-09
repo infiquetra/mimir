@@ -16,6 +16,10 @@ import 'core/window/window_types.dart';
 import 'features/characters/data/character_repository.dart';
 import 'features/skills/data/skill_repository.dart';
 import 'features/wallet/data/wallet_repository.dart';
+import 'features/assets/data/asset_sync_service.dart';
+import 'features/pi/data/planetary_sync_service.dart';
+import 'features/industry/data/industry_sync_service.dart';
+import 'features/market/data/market_sync_service.dart';
 
 /// Provider that handles app startup initialization.
 ///
@@ -64,6 +68,10 @@ final startupRefreshProvider = FutureProvider<void>((ref) async {
   final characterRepo = ref.read(characterRepositoryProvider);
   final skillRepo = ref.read(skillRepositoryProvider);
   final walletRepo = ref.read(walletRepositoryProvider);
+  final assetSync = ref.read(assetSyncServiceProvider);
+  final piSync = ref.read(planetarySyncServiceProvider);
+  final industrySync = ref.read(industrySyncServiceProvider);
+  final marketSync = ref.read(marketSyncServiceProvider);
 
   final characters = await characterRepo.getAllCharacters();
   if (characters.isEmpty) {
@@ -89,6 +97,12 @@ final startupRefreshProvider = FutureProvider<void>((ref) async {
       walletRepo.refreshWalletTransactions(active.characterId),
       walletRepo.refreshLoyaltyPoints(active.characterId),
       walletRepo.refreshPlexCount(active.characterId),
+      assetSync.syncAssets(active.characterId),
+      piSync.syncColonies(active.characterId),
+      industrySync.syncBlueprints(active.characterId),
+      industrySync.syncIndustryJobs(active.characterId),
+      marketSync.syncOrders(active.characterId),
+      marketSync.syncPrices(),
     ]);
     debugPrint('Startup refresh: All data refreshed for ${active.name}');
   } catch (e) {
