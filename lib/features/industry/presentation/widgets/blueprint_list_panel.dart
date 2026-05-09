@@ -158,6 +158,7 @@ class _BlueprintListItem extends ConsumerWidget {
                 child: EveTypeIcon(
                   typeId: blueprint.typeId,
                   size: 48,
+                  variant: blueprint.isOriginal ? 'bp' : 'bpc',
                 ),
               ),
               const SizedBox(width: 16),

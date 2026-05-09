@@ -22,6 +22,9 @@ class EveTypeIcon extends StatelessWidget {
   /// Background color for the icon container.
   final Color? backgroundColor;
 
+  /// The variant of the icon to fetch (e.g. 'icon', 'bp', 'bpc'). Defaults to 'icon'.
+  final String variant;
+
   /// Valid EVE image server sizes (powers of 2)
   static const List<int> _validSizes = [32, 64, 128, 256, 512, 1024];
 
@@ -31,6 +34,7 @@ class EveTypeIcon extends StatelessWidget {
     this.size = 64.0,
     this.borderRadius = 4.0,
     this.backgroundColor,
+    this.variant = 'icon',
   });
 
   /// Normalizes size to nearest valid EVE server size (rounds up)
@@ -44,7 +48,7 @@ class EveTypeIcon extends StatelessWidget {
 
   String get _imageUrl {
     final normalizedSize = _normalizeSize(size);
-    return '${EveConfig.imageServerUrl}/types/$typeId/icon?size=$normalizedSize';
+    return '${EveConfig.imageServerUrl}/types/$typeId/$variant?size=$normalizedSize';
   }
 
   @override
