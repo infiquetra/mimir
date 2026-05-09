@@ -96,12 +96,28 @@ abstract class EveConfig {
     'esi-characters.read_loyalty.v1', // Loyalty points
   ];
 
+  // ==========================================================================
+  // OAuth Scopes (Phase 5 - PI, Industry & Market)
+  // ==========================================================================
+
+  /// OAuth scopes required for Planetary Industry, Manufacturing, and Market features.
+  ///
+  /// WARNING: Adding these scopes requires users to re-authenticate.
+  /// Existing tokens will not have these permissions.
+  static const List<String> phase5ExpansionScopes = [
+    'esi-planets.manage_planets.v1', // Planetary Industry
+    'esi-characters.read_blueprints.v1', // Industry Blueprints
+    'esi-industry.read_character_jobs.v1', // Industry Jobs
+    'esi-markets.read_character_orders.v1', // Market Orders
+  ];
+
   /// All OAuth scopes as a space-separated string.
   static String get scopesString => [
         ...phase1Scopes,
         ...phase2FleetScopes,
         ...phase3CharacterScopes,
-        ...phase4WalletScopes
+        ...phase4WalletScopes,
+        ...phase5ExpansionScopes
       ].toSet().toList().join(' '); // Use Set to remove duplicates
 
   // ==========================================================================
