@@ -38,6 +38,9 @@ enum WindowType {
 
   /// Industry & Manufacturing screen for blueprints and jobs.
   industry,
+
+  /// Market Tools screen for active orders and price checking.
+  market,
 }
 
 /// Extension methods for [WindowType].
@@ -65,6 +68,8 @@ extension WindowTypeExtension on WindowType {
         return 'Planetary Industry - Mimir';
       case WindowType.industry:
         return 'Industry & Manufacturing - Mimir';
+      case WindowType.market:
+        return 'Market Tools - Mimir';
     }
   }
 
@@ -93,6 +98,8 @@ extension WindowTypeExtension on WindowType {
         return 8;
       case WindowType.industry:
         return 9;
+      case WindowType.market:
+        return 10;
     }
   }
 
@@ -119,6 +126,8 @@ extension WindowTypeExtension on WindowType {
         return WindowType.planetary;
       case 9:
         return WindowType.industry;
+      case 10:
+        return WindowType.market;
       default:
         return WindowType.dashboard;
     }
@@ -146,6 +155,8 @@ extension WindowTypeExtension on WindowType {
       case WindowType.planetary:
         return (width: 1200, height: 900);
       case WindowType.industry:
+        return (width: 1200, height: 900);
+      case WindowType.market:
         return (width: 1200, height: 900);
     }
   }
@@ -176,6 +187,8 @@ extension WindowTypeExtension on WindowType {
         return 'assets/icons/eve/planetary.png';
       case WindowType.industry:
         return 'assets/icons/eve/industry.png';
+      case WindowType.market:
+        return 'assets/icons/eve/market.png';
     }
   }
 }

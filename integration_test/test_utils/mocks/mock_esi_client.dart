@@ -2,6 +2,7 @@ import 'package:mimir/core/network/esi_client.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../fixtures/industry_fixtures.dart';
+import '../fixtures/market_fixtures.dart';
 
 /// Mock ESI client for integration testing.
 ///
@@ -11,6 +12,13 @@ import '../fixtures/industry_fixtures.dart';
 /// - Wallet balances and transactions
 /// - Location and item name resolution
 class MockEsiClient extends Mock implements EsiClient {
+  // =========================================================================
+  // Market Test Data
+  // =========================================================================
+
+  static final testMarketPrices = MarketFixtures.testMarketPrices();
+  static final testCharacterOrders = MarketFixtures.testCharacterOrders();
+
   // =========================================================================
   // Industry Test Data
   // =========================================================================
@@ -402,6 +410,20 @@ class MockEsiClient extends Mock implements EsiClient {
     return 'character';
   }
 
+  /// Sets up the mock to return market data.
+  void setupMarketData(int characterId) {
+    when(() => getMarketPrices())
+        .thenAnswer((_) async => EsiResponse(
+              data: testMarketPrices,
+              headers: const {},
+            ));
+    when(() => getCharacterOrders(characterId))
+        .thenAnswer((_) async => EsiResponse(
+              data: testCharacterOrders,
+              headers: const {},
+            ));
+  }
+
   /// Sets up the mock to return industry data.
   void setupIndustryData(int characterId) {
     when(() => getCharacterBlueprints(characterId, page: any(named: 'page')))
@@ -427,6 +449,7 @@ class MockEsiClient extends Mock implements EsiClient {
     setupFleetStatus(characterId); // Fleet status (online, location, ship)
     setupNameResolution();
     setupIndustryData(characterId);
+    setupMarketData(characterId);
   }
 
   /// Sets up the mock to throw an error for the next call.

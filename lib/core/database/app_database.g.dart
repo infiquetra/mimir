@@ -9973,6 +9973,1040 @@ class IndustryJobsCompanion extends UpdateCompanion<IndustryJob> {
   }
 }
 
+class $MarketOrdersTable extends MarketOrders
+    with TableInfo<$MarketOrdersTable, MarketOrder> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MarketOrdersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _orderIdMeta =
+      const VerificationMeta('orderId');
+  @override
+  late final GeneratedColumn<int> orderId = GeneratedColumn<int>(
+      'order_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _characterIdMeta =
+      const VerificationMeta('characterId');
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+      'character_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES characters (character_id)'));
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+      'type_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _regionIdMeta =
+      const VerificationMeta('regionId');
+  @override
+  late final GeneratedColumn<int> regionId = GeneratedColumn<int>(
+      'region_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _locationIdMeta =
+      const VerificationMeta('locationId');
+  @override
+  late final GeneratedColumn<int> locationId = GeneratedColumn<int>(
+      'location_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _priceMeta = const VerificationMeta('price');
+  @override
+  late final GeneratedColumn<double> price = GeneratedColumn<double>(
+      'price', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _volumeRemainMeta =
+      const VerificationMeta('volumeRemain');
+  @override
+  late final GeneratedColumn<int> volumeRemain = GeneratedColumn<int>(
+      'volume_remain', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _volumeTotalMeta =
+      const VerificationMeta('volumeTotal');
+  @override
+  late final GeneratedColumn<int> volumeTotal = GeneratedColumn<int>(
+      'volume_total', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _minVolumeMeta =
+      const VerificationMeta('minVolume');
+  @override
+  late final GeneratedColumn<int> minVolume = GeneratedColumn<int>(
+      'min_volume', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _isBuyOrderMeta =
+      const VerificationMeta('isBuyOrder');
+  @override
+  late final GeneratedColumn<bool> isBuyOrder = GeneratedColumn<bool>(
+      'is_buy_order', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("is_buy_order" IN (0, 1))'));
+  static const VerificationMeta _issuedMeta = const VerificationMeta('issued');
+  @override
+  late final GeneratedColumn<DateTime> issued = GeneratedColumn<DateTime>(
+      'issued', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _durationMeta =
+      const VerificationMeta('duration');
+  @override
+  late final GeneratedColumn<int> duration = GeneratedColumn<int>(
+      'duration', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _rangeMeta = const VerificationMeta('range');
+  @override
+  late final GeneratedColumn<String> range = GeneratedColumn<String>(
+      'range', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _isCorporationMeta =
+      const VerificationMeta('isCorporation');
+  @override
+  late final GeneratedColumn<bool> isCorporation = GeneratedColumn<bool>(
+      'is_corporation', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("is_corporation" IN (0, 1))'));
+  static const VerificationMeta _escrowMeta = const VerificationMeta('escrow');
+  @override
+  late final GeneratedColumn<double> escrow = GeneratedColumn<double>(
+      'escrow', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _stateMeta = const VerificationMeta('state');
+  @override
+  late final GeneratedColumn<String> state = GeneratedColumn<String>(
+      'state', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        orderId,
+        characterId,
+        typeId,
+        regionId,
+        locationId,
+        price,
+        volumeRemain,
+        volumeTotal,
+        minVolume,
+        isBuyOrder,
+        issued,
+        duration,
+        range,
+        isCorporation,
+        escrow,
+        state
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'market_orders';
+  @override
+  VerificationContext validateIntegrity(Insertable<MarketOrder> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('order_id')) {
+      context.handle(_orderIdMeta,
+          orderId.isAcceptableOrUnknown(data['order_id']!, _orderIdMeta));
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+          _characterIdMeta,
+          characterId.isAcceptableOrUnknown(
+              data['character_id']!, _characterIdMeta));
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('type_id')) {
+      context.handle(_typeIdMeta,
+          typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta));
+    } else if (isInserting) {
+      context.missing(_typeIdMeta);
+    }
+    if (data.containsKey('region_id')) {
+      context.handle(_regionIdMeta,
+          regionId.isAcceptableOrUnknown(data['region_id']!, _regionIdMeta));
+    } else if (isInserting) {
+      context.missing(_regionIdMeta);
+    }
+    if (data.containsKey('location_id')) {
+      context.handle(
+          _locationIdMeta,
+          locationId.isAcceptableOrUnknown(
+              data['location_id']!, _locationIdMeta));
+    } else if (isInserting) {
+      context.missing(_locationIdMeta);
+    }
+    if (data.containsKey('price')) {
+      context.handle(
+          _priceMeta, price.isAcceptableOrUnknown(data['price']!, _priceMeta));
+    } else if (isInserting) {
+      context.missing(_priceMeta);
+    }
+    if (data.containsKey('volume_remain')) {
+      context.handle(
+          _volumeRemainMeta,
+          volumeRemain.isAcceptableOrUnknown(
+              data['volume_remain']!, _volumeRemainMeta));
+    } else if (isInserting) {
+      context.missing(_volumeRemainMeta);
+    }
+    if (data.containsKey('volume_total')) {
+      context.handle(
+          _volumeTotalMeta,
+          volumeTotal.isAcceptableOrUnknown(
+              data['volume_total']!, _volumeTotalMeta));
+    } else if (isInserting) {
+      context.missing(_volumeTotalMeta);
+    }
+    if (data.containsKey('min_volume')) {
+      context.handle(_minVolumeMeta,
+          minVolume.isAcceptableOrUnknown(data['min_volume']!, _minVolumeMeta));
+    } else if (isInserting) {
+      context.missing(_minVolumeMeta);
+    }
+    if (data.containsKey('is_buy_order')) {
+      context.handle(
+          _isBuyOrderMeta,
+          isBuyOrder.isAcceptableOrUnknown(
+              data['is_buy_order']!, _isBuyOrderMeta));
+    } else if (isInserting) {
+      context.missing(_isBuyOrderMeta);
+    }
+    if (data.containsKey('issued')) {
+      context.handle(_issuedMeta,
+          issued.isAcceptableOrUnknown(data['issued']!, _issuedMeta));
+    } else if (isInserting) {
+      context.missing(_issuedMeta);
+    }
+    if (data.containsKey('duration')) {
+      context.handle(_durationMeta,
+          duration.isAcceptableOrUnknown(data['duration']!, _durationMeta));
+    } else if (isInserting) {
+      context.missing(_durationMeta);
+    }
+    if (data.containsKey('range')) {
+      context.handle(
+          _rangeMeta, range.isAcceptableOrUnknown(data['range']!, _rangeMeta));
+    } else if (isInserting) {
+      context.missing(_rangeMeta);
+    }
+    if (data.containsKey('is_corporation')) {
+      context.handle(
+          _isCorporationMeta,
+          isCorporation.isAcceptableOrUnknown(
+              data['is_corporation']!, _isCorporationMeta));
+    } else if (isInserting) {
+      context.missing(_isCorporationMeta);
+    }
+    if (data.containsKey('escrow')) {
+      context.handle(_escrowMeta,
+          escrow.isAcceptableOrUnknown(data['escrow']!, _escrowMeta));
+    } else if (isInserting) {
+      context.missing(_escrowMeta);
+    }
+    if (data.containsKey('state')) {
+      context.handle(
+          _stateMeta, state.isAcceptableOrUnknown(data['state']!, _stateMeta));
+    } else if (isInserting) {
+      context.missing(_stateMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {orderId};
+  @override
+  MarketOrder map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MarketOrder(
+      orderId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}order_id'])!,
+      characterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}character_id'])!,
+      typeId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}type_id'])!,
+      regionId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}region_id'])!,
+      locationId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}location_id'])!,
+      price: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}price'])!,
+      volumeRemain: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}volume_remain'])!,
+      volumeTotal: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}volume_total'])!,
+      minVolume: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}min_volume'])!,
+      isBuyOrder: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_buy_order'])!,
+      issued: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}issued'])!,
+      duration: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}duration'])!,
+      range: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}range'])!,
+      isCorporation: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_corporation'])!,
+      escrow: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}escrow'])!,
+      state: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}state'])!,
+    );
+  }
+
+  @override
+  $MarketOrdersTable createAlias(String alias) {
+    return $MarketOrdersTable(attachedDatabase, alias);
+  }
+}
+
+class MarketOrder extends DataClass implements Insertable<MarketOrder> {
+  final int orderId;
+  final int characterId;
+  final int typeId;
+  final int regionId;
+  final int locationId;
+  final double price;
+  final int volumeRemain;
+  final int volumeTotal;
+  final int minVolume;
+  final bool isBuyOrder;
+  final DateTime issued;
+  final int duration;
+  final String range;
+  final bool isCorporation;
+  final double escrow;
+  final String state;
+  const MarketOrder(
+      {required this.orderId,
+      required this.characterId,
+      required this.typeId,
+      required this.regionId,
+      required this.locationId,
+      required this.price,
+      required this.volumeRemain,
+      required this.volumeTotal,
+      required this.minVolume,
+      required this.isBuyOrder,
+      required this.issued,
+      required this.duration,
+      required this.range,
+      required this.isCorporation,
+      required this.escrow,
+      required this.state});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['order_id'] = Variable<int>(orderId);
+    map['character_id'] = Variable<int>(characterId);
+    map['type_id'] = Variable<int>(typeId);
+    map['region_id'] = Variable<int>(regionId);
+    map['location_id'] = Variable<int>(locationId);
+    map['price'] = Variable<double>(price);
+    map['volume_remain'] = Variable<int>(volumeRemain);
+    map['volume_total'] = Variable<int>(volumeTotal);
+    map['min_volume'] = Variable<int>(minVolume);
+    map['is_buy_order'] = Variable<bool>(isBuyOrder);
+    map['issued'] = Variable<DateTime>(issued);
+    map['duration'] = Variable<int>(duration);
+    map['range'] = Variable<String>(range);
+    map['is_corporation'] = Variable<bool>(isCorporation);
+    map['escrow'] = Variable<double>(escrow);
+    map['state'] = Variable<String>(state);
+    return map;
+  }
+
+  MarketOrdersCompanion toCompanion(bool nullToAbsent) {
+    return MarketOrdersCompanion(
+      orderId: Value(orderId),
+      characterId: Value(characterId),
+      typeId: Value(typeId),
+      regionId: Value(regionId),
+      locationId: Value(locationId),
+      price: Value(price),
+      volumeRemain: Value(volumeRemain),
+      volumeTotal: Value(volumeTotal),
+      minVolume: Value(minVolume),
+      isBuyOrder: Value(isBuyOrder),
+      issued: Value(issued),
+      duration: Value(duration),
+      range: Value(range),
+      isCorporation: Value(isCorporation),
+      escrow: Value(escrow),
+      state: Value(state),
+    );
+  }
+
+  factory MarketOrder.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MarketOrder(
+      orderId: serializer.fromJson<int>(json['orderId']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      typeId: serializer.fromJson<int>(json['typeId']),
+      regionId: serializer.fromJson<int>(json['regionId']),
+      locationId: serializer.fromJson<int>(json['locationId']),
+      price: serializer.fromJson<double>(json['price']),
+      volumeRemain: serializer.fromJson<int>(json['volumeRemain']),
+      volumeTotal: serializer.fromJson<int>(json['volumeTotal']),
+      minVolume: serializer.fromJson<int>(json['minVolume']),
+      isBuyOrder: serializer.fromJson<bool>(json['isBuyOrder']),
+      issued: serializer.fromJson<DateTime>(json['issued']),
+      duration: serializer.fromJson<int>(json['duration']),
+      range: serializer.fromJson<String>(json['range']),
+      isCorporation: serializer.fromJson<bool>(json['isCorporation']),
+      escrow: serializer.fromJson<double>(json['escrow']),
+      state: serializer.fromJson<String>(json['state']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'orderId': serializer.toJson<int>(orderId),
+      'characterId': serializer.toJson<int>(characterId),
+      'typeId': serializer.toJson<int>(typeId),
+      'regionId': serializer.toJson<int>(regionId),
+      'locationId': serializer.toJson<int>(locationId),
+      'price': serializer.toJson<double>(price),
+      'volumeRemain': serializer.toJson<int>(volumeRemain),
+      'volumeTotal': serializer.toJson<int>(volumeTotal),
+      'minVolume': serializer.toJson<int>(minVolume),
+      'isBuyOrder': serializer.toJson<bool>(isBuyOrder),
+      'issued': serializer.toJson<DateTime>(issued),
+      'duration': serializer.toJson<int>(duration),
+      'range': serializer.toJson<String>(range),
+      'isCorporation': serializer.toJson<bool>(isCorporation),
+      'escrow': serializer.toJson<double>(escrow),
+      'state': serializer.toJson<String>(state),
+    };
+  }
+
+  MarketOrder copyWith(
+          {int? orderId,
+          int? characterId,
+          int? typeId,
+          int? regionId,
+          int? locationId,
+          double? price,
+          int? volumeRemain,
+          int? volumeTotal,
+          int? minVolume,
+          bool? isBuyOrder,
+          DateTime? issued,
+          int? duration,
+          String? range,
+          bool? isCorporation,
+          double? escrow,
+          String? state}) =>
+      MarketOrder(
+        orderId: orderId ?? this.orderId,
+        characterId: characterId ?? this.characterId,
+        typeId: typeId ?? this.typeId,
+        regionId: regionId ?? this.regionId,
+        locationId: locationId ?? this.locationId,
+        price: price ?? this.price,
+        volumeRemain: volumeRemain ?? this.volumeRemain,
+        volumeTotal: volumeTotal ?? this.volumeTotal,
+        minVolume: minVolume ?? this.minVolume,
+        isBuyOrder: isBuyOrder ?? this.isBuyOrder,
+        issued: issued ?? this.issued,
+        duration: duration ?? this.duration,
+        range: range ?? this.range,
+        isCorporation: isCorporation ?? this.isCorporation,
+        escrow: escrow ?? this.escrow,
+        state: state ?? this.state,
+      );
+  MarketOrder copyWithCompanion(MarketOrdersCompanion data) {
+    return MarketOrder(
+      orderId: data.orderId.present ? data.orderId.value : this.orderId,
+      characterId:
+          data.characterId.present ? data.characterId.value : this.characterId,
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      regionId: data.regionId.present ? data.regionId.value : this.regionId,
+      locationId:
+          data.locationId.present ? data.locationId.value : this.locationId,
+      price: data.price.present ? data.price.value : this.price,
+      volumeRemain: data.volumeRemain.present
+          ? data.volumeRemain.value
+          : this.volumeRemain,
+      volumeTotal:
+          data.volumeTotal.present ? data.volumeTotal.value : this.volumeTotal,
+      minVolume: data.minVolume.present ? data.minVolume.value : this.minVolume,
+      isBuyOrder:
+          data.isBuyOrder.present ? data.isBuyOrder.value : this.isBuyOrder,
+      issued: data.issued.present ? data.issued.value : this.issued,
+      duration: data.duration.present ? data.duration.value : this.duration,
+      range: data.range.present ? data.range.value : this.range,
+      isCorporation: data.isCorporation.present
+          ? data.isCorporation.value
+          : this.isCorporation,
+      escrow: data.escrow.present ? data.escrow.value : this.escrow,
+      state: data.state.present ? data.state.value : this.state,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MarketOrder(')
+          ..write('orderId: $orderId, ')
+          ..write('characterId: $characterId, ')
+          ..write('typeId: $typeId, ')
+          ..write('regionId: $regionId, ')
+          ..write('locationId: $locationId, ')
+          ..write('price: $price, ')
+          ..write('volumeRemain: $volumeRemain, ')
+          ..write('volumeTotal: $volumeTotal, ')
+          ..write('minVolume: $minVolume, ')
+          ..write('isBuyOrder: $isBuyOrder, ')
+          ..write('issued: $issued, ')
+          ..write('duration: $duration, ')
+          ..write('range: $range, ')
+          ..write('isCorporation: $isCorporation, ')
+          ..write('escrow: $escrow, ')
+          ..write('state: $state')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      orderId,
+      characterId,
+      typeId,
+      regionId,
+      locationId,
+      price,
+      volumeRemain,
+      volumeTotal,
+      minVolume,
+      isBuyOrder,
+      issued,
+      duration,
+      range,
+      isCorporation,
+      escrow,
+      state);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MarketOrder &&
+          other.orderId == this.orderId &&
+          other.characterId == this.characterId &&
+          other.typeId == this.typeId &&
+          other.regionId == this.regionId &&
+          other.locationId == this.locationId &&
+          other.price == this.price &&
+          other.volumeRemain == this.volumeRemain &&
+          other.volumeTotal == this.volumeTotal &&
+          other.minVolume == this.minVolume &&
+          other.isBuyOrder == this.isBuyOrder &&
+          other.issued == this.issued &&
+          other.duration == this.duration &&
+          other.range == this.range &&
+          other.isCorporation == this.isCorporation &&
+          other.escrow == this.escrow &&
+          other.state == this.state);
+}
+
+class MarketOrdersCompanion extends UpdateCompanion<MarketOrder> {
+  final Value<int> orderId;
+  final Value<int> characterId;
+  final Value<int> typeId;
+  final Value<int> regionId;
+  final Value<int> locationId;
+  final Value<double> price;
+  final Value<int> volumeRemain;
+  final Value<int> volumeTotal;
+  final Value<int> minVolume;
+  final Value<bool> isBuyOrder;
+  final Value<DateTime> issued;
+  final Value<int> duration;
+  final Value<String> range;
+  final Value<bool> isCorporation;
+  final Value<double> escrow;
+  final Value<String> state;
+  const MarketOrdersCompanion({
+    this.orderId = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.typeId = const Value.absent(),
+    this.regionId = const Value.absent(),
+    this.locationId = const Value.absent(),
+    this.price = const Value.absent(),
+    this.volumeRemain = const Value.absent(),
+    this.volumeTotal = const Value.absent(),
+    this.minVolume = const Value.absent(),
+    this.isBuyOrder = const Value.absent(),
+    this.issued = const Value.absent(),
+    this.duration = const Value.absent(),
+    this.range = const Value.absent(),
+    this.isCorporation = const Value.absent(),
+    this.escrow = const Value.absent(),
+    this.state = const Value.absent(),
+  });
+  MarketOrdersCompanion.insert({
+    this.orderId = const Value.absent(),
+    required int characterId,
+    required int typeId,
+    required int regionId,
+    required int locationId,
+    required double price,
+    required int volumeRemain,
+    required int volumeTotal,
+    required int minVolume,
+    required bool isBuyOrder,
+    required DateTime issued,
+    required int duration,
+    required String range,
+    required bool isCorporation,
+    required double escrow,
+    required String state,
+  })  : characterId = Value(characterId),
+        typeId = Value(typeId),
+        regionId = Value(regionId),
+        locationId = Value(locationId),
+        price = Value(price),
+        volumeRemain = Value(volumeRemain),
+        volumeTotal = Value(volumeTotal),
+        minVolume = Value(minVolume),
+        isBuyOrder = Value(isBuyOrder),
+        issued = Value(issued),
+        duration = Value(duration),
+        range = Value(range),
+        isCorporation = Value(isCorporation),
+        escrow = Value(escrow),
+        state = Value(state);
+  static Insertable<MarketOrder> custom({
+    Expression<int>? orderId,
+    Expression<int>? characterId,
+    Expression<int>? typeId,
+    Expression<int>? regionId,
+    Expression<int>? locationId,
+    Expression<double>? price,
+    Expression<int>? volumeRemain,
+    Expression<int>? volumeTotal,
+    Expression<int>? minVolume,
+    Expression<bool>? isBuyOrder,
+    Expression<DateTime>? issued,
+    Expression<int>? duration,
+    Expression<String>? range,
+    Expression<bool>? isCorporation,
+    Expression<double>? escrow,
+    Expression<String>? state,
+  }) {
+    return RawValuesInsertable({
+      if (orderId != null) 'order_id': orderId,
+      if (characterId != null) 'character_id': characterId,
+      if (typeId != null) 'type_id': typeId,
+      if (regionId != null) 'region_id': regionId,
+      if (locationId != null) 'location_id': locationId,
+      if (price != null) 'price': price,
+      if (volumeRemain != null) 'volume_remain': volumeRemain,
+      if (volumeTotal != null) 'volume_total': volumeTotal,
+      if (minVolume != null) 'min_volume': minVolume,
+      if (isBuyOrder != null) 'is_buy_order': isBuyOrder,
+      if (issued != null) 'issued': issued,
+      if (duration != null) 'duration': duration,
+      if (range != null) 'range': range,
+      if (isCorporation != null) 'is_corporation': isCorporation,
+      if (escrow != null) 'escrow': escrow,
+      if (state != null) 'state': state,
+    });
+  }
+
+  MarketOrdersCompanion copyWith(
+      {Value<int>? orderId,
+      Value<int>? characterId,
+      Value<int>? typeId,
+      Value<int>? regionId,
+      Value<int>? locationId,
+      Value<double>? price,
+      Value<int>? volumeRemain,
+      Value<int>? volumeTotal,
+      Value<int>? minVolume,
+      Value<bool>? isBuyOrder,
+      Value<DateTime>? issued,
+      Value<int>? duration,
+      Value<String>? range,
+      Value<bool>? isCorporation,
+      Value<double>? escrow,
+      Value<String>? state}) {
+    return MarketOrdersCompanion(
+      orderId: orderId ?? this.orderId,
+      characterId: characterId ?? this.characterId,
+      typeId: typeId ?? this.typeId,
+      regionId: regionId ?? this.regionId,
+      locationId: locationId ?? this.locationId,
+      price: price ?? this.price,
+      volumeRemain: volumeRemain ?? this.volumeRemain,
+      volumeTotal: volumeTotal ?? this.volumeTotal,
+      minVolume: minVolume ?? this.minVolume,
+      isBuyOrder: isBuyOrder ?? this.isBuyOrder,
+      issued: issued ?? this.issued,
+      duration: duration ?? this.duration,
+      range: range ?? this.range,
+      isCorporation: isCorporation ?? this.isCorporation,
+      escrow: escrow ?? this.escrow,
+      state: state ?? this.state,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (orderId.present) {
+      map['order_id'] = Variable<int>(orderId.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (regionId.present) {
+      map['region_id'] = Variable<int>(regionId.value);
+    }
+    if (locationId.present) {
+      map['location_id'] = Variable<int>(locationId.value);
+    }
+    if (price.present) {
+      map['price'] = Variable<double>(price.value);
+    }
+    if (volumeRemain.present) {
+      map['volume_remain'] = Variable<int>(volumeRemain.value);
+    }
+    if (volumeTotal.present) {
+      map['volume_total'] = Variable<int>(volumeTotal.value);
+    }
+    if (minVolume.present) {
+      map['min_volume'] = Variable<int>(minVolume.value);
+    }
+    if (isBuyOrder.present) {
+      map['is_buy_order'] = Variable<bool>(isBuyOrder.value);
+    }
+    if (issued.present) {
+      map['issued'] = Variable<DateTime>(issued.value);
+    }
+    if (duration.present) {
+      map['duration'] = Variable<int>(duration.value);
+    }
+    if (range.present) {
+      map['range'] = Variable<String>(range.value);
+    }
+    if (isCorporation.present) {
+      map['is_corporation'] = Variable<bool>(isCorporation.value);
+    }
+    if (escrow.present) {
+      map['escrow'] = Variable<double>(escrow.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(state.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MarketOrdersCompanion(')
+          ..write('orderId: $orderId, ')
+          ..write('characterId: $characterId, ')
+          ..write('typeId: $typeId, ')
+          ..write('regionId: $regionId, ')
+          ..write('locationId: $locationId, ')
+          ..write('price: $price, ')
+          ..write('volumeRemain: $volumeRemain, ')
+          ..write('volumeTotal: $volumeTotal, ')
+          ..write('minVolume: $minVolume, ')
+          ..write('isBuyOrder: $isBuyOrder, ')
+          ..write('issued: $issued, ')
+          ..write('duration: $duration, ')
+          ..write('range: $range, ')
+          ..write('isCorporation: $isCorporation, ')
+          ..write('escrow: $escrow, ')
+          ..write('state: $state')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $MarketPricesTable extends MarketPrices
+    with TableInfo<$MarketPricesTable, MarketPrice> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MarketPricesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+      'type_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _adjustedPriceMeta =
+      const VerificationMeta('adjustedPrice');
+  @override
+  late final GeneratedColumn<double> adjustedPrice = GeneratedColumn<double>(
+      'adjusted_price', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _averagePriceMeta =
+      const VerificationMeta('averagePrice');
+  @override
+  late final GeneratedColumn<double> averagePrice = GeneratedColumn<double>(
+      'average_price', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _lastUpdatedMeta =
+      const VerificationMeta('lastUpdated');
+  @override
+  late final GeneratedColumn<DateTime> lastUpdated = GeneratedColumn<DateTime>(
+      'last_updated', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [typeId, adjustedPrice, averagePrice, lastUpdated];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'market_prices';
+  @override
+  VerificationContext validateIntegrity(Insertable<MarketPrice> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('type_id')) {
+      context.handle(_typeIdMeta,
+          typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta));
+    }
+    if (data.containsKey('adjusted_price')) {
+      context.handle(
+          _adjustedPriceMeta,
+          adjustedPrice.isAcceptableOrUnknown(
+              data['adjusted_price']!, _adjustedPriceMeta));
+    }
+    if (data.containsKey('average_price')) {
+      context.handle(
+          _averagePriceMeta,
+          averagePrice.isAcceptableOrUnknown(
+              data['average_price']!, _averagePriceMeta));
+    }
+    if (data.containsKey('last_updated')) {
+      context.handle(
+          _lastUpdatedMeta,
+          lastUpdated.isAcceptableOrUnknown(
+              data['last_updated']!, _lastUpdatedMeta));
+    } else if (isInserting) {
+      context.missing(_lastUpdatedMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {typeId};
+  @override
+  MarketPrice map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MarketPrice(
+      typeId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}type_id'])!,
+      adjustedPrice: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}adjusted_price']),
+      averagePrice: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}average_price']),
+      lastUpdated: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}last_updated'])!,
+    );
+  }
+
+  @override
+  $MarketPricesTable createAlias(String alias) {
+    return $MarketPricesTable(attachedDatabase, alias);
+  }
+}
+
+class MarketPrice extends DataClass implements Insertable<MarketPrice> {
+  final int typeId;
+  final double? adjustedPrice;
+  final double? averagePrice;
+  final DateTime lastUpdated;
+  const MarketPrice(
+      {required this.typeId,
+      this.adjustedPrice,
+      this.averagePrice,
+      required this.lastUpdated});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['type_id'] = Variable<int>(typeId);
+    if (!nullToAbsent || adjustedPrice != null) {
+      map['adjusted_price'] = Variable<double>(adjustedPrice);
+    }
+    if (!nullToAbsent || averagePrice != null) {
+      map['average_price'] = Variable<double>(averagePrice);
+    }
+    map['last_updated'] = Variable<DateTime>(lastUpdated);
+    return map;
+  }
+
+  MarketPricesCompanion toCompanion(bool nullToAbsent) {
+    return MarketPricesCompanion(
+      typeId: Value(typeId),
+      adjustedPrice: adjustedPrice == null && nullToAbsent
+          ? const Value.absent()
+          : Value(adjustedPrice),
+      averagePrice: averagePrice == null && nullToAbsent
+          ? const Value.absent()
+          : Value(averagePrice),
+      lastUpdated: Value(lastUpdated),
+    );
+  }
+
+  factory MarketPrice.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MarketPrice(
+      typeId: serializer.fromJson<int>(json['typeId']),
+      adjustedPrice: serializer.fromJson<double?>(json['adjustedPrice']),
+      averagePrice: serializer.fromJson<double?>(json['averagePrice']),
+      lastUpdated: serializer.fromJson<DateTime>(json['lastUpdated']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'typeId': serializer.toJson<int>(typeId),
+      'adjustedPrice': serializer.toJson<double?>(adjustedPrice),
+      'averagePrice': serializer.toJson<double?>(averagePrice),
+      'lastUpdated': serializer.toJson<DateTime>(lastUpdated),
+    };
+  }
+
+  MarketPrice copyWith(
+          {int? typeId,
+          Value<double?> adjustedPrice = const Value.absent(),
+          Value<double?> averagePrice = const Value.absent(),
+          DateTime? lastUpdated}) =>
+      MarketPrice(
+        typeId: typeId ?? this.typeId,
+        adjustedPrice:
+            adjustedPrice.present ? adjustedPrice.value : this.adjustedPrice,
+        averagePrice:
+            averagePrice.present ? averagePrice.value : this.averagePrice,
+        lastUpdated: lastUpdated ?? this.lastUpdated,
+      );
+  MarketPrice copyWithCompanion(MarketPricesCompanion data) {
+    return MarketPrice(
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      adjustedPrice: data.adjustedPrice.present
+          ? data.adjustedPrice.value
+          : this.adjustedPrice,
+      averagePrice: data.averagePrice.present
+          ? data.averagePrice.value
+          : this.averagePrice,
+      lastUpdated:
+          data.lastUpdated.present ? data.lastUpdated.value : this.lastUpdated,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MarketPrice(')
+          ..write('typeId: $typeId, ')
+          ..write('adjustedPrice: $adjustedPrice, ')
+          ..write('averagePrice: $averagePrice, ')
+          ..write('lastUpdated: $lastUpdated')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(typeId, adjustedPrice, averagePrice, lastUpdated);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MarketPrice &&
+          other.typeId == this.typeId &&
+          other.adjustedPrice == this.adjustedPrice &&
+          other.averagePrice == this.averagePrice &&
+          other.lastUpdated == this.lastUpdated);
+}
+
+class MarketPricesCompanion extends UpdateCompanion<MarketPrice> {
+  final Value<int> typeId;
+  final Value<double?> adjustedPrice;
+  final Value<double?> averagePrice;
+  final Value<DateTime> lastUpdated;
+  const MarketPricesCompanion({
+    this.typeId = const Value.absent(),
+    this.adjustedPrice = const Value.absent(),
+    this.averagePrice = const Value.absent(),
+    this.lastUpdated = const Value.absent(),
+  });
+  MarketPricesCompanion.insert({
+    this.typeId = const Value.absent(),
+    this.adjustedPrice = const Value.absent(),
+    this.averagePrice = const Value.absent(),
+    required DateTime lastUpdated,
+  }) : lastUpdated = Value(lastUpdated);
+  static Insertable<MarketPrice> custom({
+    Expression<int>? typeId,
+    Expression<double>? adjustedPrice,
+    Expression<double>? averagePrice,
+    Expression<DateTime>? lastUpdated,
+  }) {
+    return RawValuesInsertable({
+      if (typeId != null) 'type_id': typeId,
+      if (adjustedPrice != null) 'adjusted_price': adjustedPrice,
+      if (averagePrice != null) 'average_price': averagePrice,
+      if (lastUpdated != null) 'last_updated': lastUpdated,
+    });
+  }
+
+  MarketPricesCompanion copyWith(
+      {Value<int>? typeId,
+      Value<double?>? adjustedPrice,
+      Value<double?>? averagePrice,
+      Value<DateTime>? lastUpdated}) {
+    return MarketPricesCompanion(
+      typeId: typeId ?? this.typeId,
+      adjustedPrice: adjustedPrice ?? this.adjustedPrice,
+      averagePrice: averagePrice ?? this.averagePrice,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (adjustedPrice.present) {
+      map['adjusted_price'] = Variable<double>(adjustedPrice.value);
+    }
+    if (averagePrice.present) {
+      map['average_price'] = Variable<double>(averagePrice.value);
+    }
+    if (lastUpdated.present) {
+      map['last_updated'] = Variable<DateTime>(lastUpdated.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MarketPricesCompanion(')
+          ..write('typeId: $typeId, ')
+          ..write('adjustedPrice: $adjustedPrice, ')
+          ..write('averagePrice: $averagePrice, ')
+          ..write('lastUpdated: $lastUpdated')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -10005,6 +11039,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AssetSnapshotsTable assetSnapshots = $AssetSnapshotsTable(this);
   late final $BlueprintsTable blueprints = $BlueprintsTable(this);
   late final $IndustryJobsTable industryJobs = $IndustryJobsTable(this);
+  late final $MarketOrdersTable marketOrders = $MarketOrdersTable(this);
+  late final $MarketPricesTable marketPrices = $MarketPricesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -10030,7 +11066,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         assetLocations,
         assetSnapshots,
         blueprints,
-        industryJobs
+        industryJobs,
+        marketOrders,
+        marketPrices
       ];
 }
 
@@ -10337,6 +11375,22 @@ final class $$CharactersTableReferences
             .sqlEquals($_itemColumn<int>('character_id')!));
 
     final cache = $_typedResult.readTableOrNull(_industryJobsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$MarketOrdersTable, List<MarketOrder>>
+      _marketOrdersRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.marketOrders,
+              aliasName: $_aliasNameGenerator(
+                  db.characters.characterId, db.marketOrders.characterId));
+
+  $$MarketOrdersTableProcessedTableManager get marketOrdersRefs {
+    final manager = $$MarketOrdersTableTableManager($_db, $_db.marketOrders)
+        .filter((f) => f.characterId.characterId
+            .sqlEquals($_itemColumn<int>('character_id')!));
+
+    final cache = $_typedResult.readTableOrNull(_marketOrdersRefsTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -10724,6 +11778,27 @@ class $$CharactersTableFilterComposer
             $$IndustryJobsTableFilterComposer(
               $db: $db,
               $table: $db.industryJobs,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> marketOrdersRefs(
+      Expression<bool> Function($$MarketOrdersTableFilterComposer f) f) {
+    final $$MarketOrdersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.marketOrders,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$MarketOrdersTableFilterComposer(
+              $db: $db,
+              $table: $db.marketOrders,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -11182,6 +12257,27 @@ class $$CharactersTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> marketOrdersRefs<T extends Object>(
+      Expression<T> Function($$MarketOrdersTableAnnotationComposer a) f) {
+    final $$MarketOrdersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.marketOrders,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$MarketOrdersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.marketOrders,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$CharactersTableTableManager extends RootTableManager<
@@ -11211,7 +12307,8 @@ class $$CharactersTableTableManager extends RootTableManager<
         bool assetsRefs,
         bool assetSnapshotsRefs,
         bool blueprintsRefs,
-        bool industryJobsRefs})> {
+        bool industryJobsRefs,
+        bool marketOrdersRefs})> {
   $$CharactersTableTableManager(_$AppDatabase db, $CharactersTable table)
       : super(TableManagerState(
           db: db,
@@ -11308,7 +12405,8 @@ class $$CharactersTableTableManager extends RootTableManager<
               assetsRefs = false,
               assetSnapshotsRefs = false,
               blueprintsRefs = false,
-              industryJobsRefs = false}) {
+              industryJobsRefs = false,
+              marketOrdersRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
@@ -11327,7 +12425,8 @@ class $$CharactersTableTableManager extends RootTableManager<
                 if (assetsRefs) db.assets,
                 if (assetSnapshotsRefs) db.assetSnapshots,
                 if (blueprintsRefs) db.blueprints,
-                if (industryJobsRefs) db.industryJobs
+                if (industryJobsRefs) db.industryJobs,
+                if (marketOrdersRefs) db.marketOrders
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
@@ -11539,6 +12638,19 @@ class $$CharactersTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems.where(
                                 (e) => e.characterId == item.characterId),
+                        typedResults: items),
+                  if (marketOrdersRefs)
+                    await $_getPrefetchedData<Character, $CharactersTable,
+                            MarketOrder>(
+                        currentTable: table,
+                        referencedTable: $$CharactersTableReferences
+                            ._marketOrdersRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$CharactersTableReferences(db, table, p0)
+                                .marketOrdersRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.characterId),
                         typedResults: items)
                 ];
               },
@@ -11574,7 +12686,8 @@ typedef $$CharactersTableProcessedTableManager = ProcessedTableManager<
         bool assetsRefs,
         bool assetSnapshotsRefs,
         bool blueprintsRefs,
-        bool industryJobsRefs})>;
+        bool industryJobsRefs,
+        bool marketOrdersRefs})>;
 typedef $$SkillQueueEntriesTableCreateCompanionBuilder
     = SkillQueueEntriesCompanion Function({
   Value<int> id,
@@ -17828,6 +18941,597 @@ typedef $$IndustryJobsTableProcessedTableManager = ProcessedTableManager<
     (IndustryJob, $$IndustryJobsTableReferences),
     IndustryJob,
     PrefetchHooks Function({bool characterId})>;
+typedef $$MarketOrdersTableCreateCompanionBuilder = MarketOrdersCompanion
+    Function({
+  Value<int> orderId,
+  required int characterId,
+  required int typeId,
+  required int regionId,
+  required int locationId,
+  required double price,
+  required int volumeRemain,
+  required int volumeTotal,
+  required int minVolume,
+  required bool isBuyOrder,
+  required DateTime issued,
+  required int duration,
+  required String range,
+  required bool isCorporation,
+  required double escrow,
+  required String state,
+});
+typedef $$MarketOrdersTableUpdateCompanionBuilder = MarketOrdersCompanion
+    Function({
+  Value<int> orderId,
+  Value<int> characterId,
+  Value<int> typeId,
+  Value<int> regionId,
+  Value<int> locationId,
+  Value<double> price,
+  Value<int> volumeRemain,
+  Value<int> volumeTotal,
+  Value<int> minVolume,
+  Value<bool> isBuyOrder,
+  Value<DateTime> issued,
+  Value<int> duration,
+  Value<String> range,
+  Value<bool> isCorporation,
+  Value<double> escrow,
+  Value<String> state,
+});
+
+final class $$MarketOrdersTableReferences
+    extends BaseReferences<_$AppDatabase, $MarketOrdersTable, MarketOrder> {
+  $$MarketOrdersTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias($_aliasNameGenerator(
+          db.marketOrders.characterId, db.characters.characterId));
+
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
+    final manager = $$CharactersTableTableManager($_db, $_db.characters)
+        .filter((f) => f.characterId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$MarketOrdersTableFilterComposer
+    extends Composer<_$AppDatabase, $MarketOrdersTable> {
+  $$MarketOrdersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get orderId => $composableBuilder(
+      column: $table.orderId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get typeId => $composableBuilder(
+      column: $table.typeId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get regionId => $composableBuilder(
+      column: $table.regionId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get price => $composableBuilder(
+      column: $table.price, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get volumeRemain => $composableBuilder(
+      column: $table.volumeRemain, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get volumeTotal => $composableBuilder(
+      column: $table.volumeTotal, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get minVolume => $composableBuilder(
+      column: $table.minVolume, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isBuyOrder => $composableBuilder(
+      column: $table.isBuyOrder, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get issued => $composableBuilder(
+      column: $table.issued, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get duration => $composableBuilder(
+      column: $table.duration, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get range => $composableBuilder(
+      column: $table.range, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isCorporation => $composableBuilder(
+      column: $table.isCorporation, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get escrow => $composableBuilder(
+      column: $table.escrow, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get state => $composableBuilder(
+      column: $table.state, builder: (column) => ColumnFilters(column));
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableFilterComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$MarketOrdersTableOrderingComposer
+    extends Composer<_$AppDatabase, $MarketOrdersTable> {
+  $$MarketOrdersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get orderId => $composableBuilder(
+      column: $table.orderId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get typeId => $composableBuilder(
+      column: $table.typeId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get regionId => $composableBuilder(
+      column: $table.regionId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get price => $composableBuilder(
+      column: $table.price, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get volumeRemain => $composableBuilder(
+      column: $table.volumeRemain,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get volumeTotal => $composableBuilder(
+      column: $table.volumeTotal, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get minVolume => $composableBuilder(
+      column: $table.minVolume, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isBuyOrder => $composableBuilder(
+      column: $table.isBuyOrder, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get issued => $composableBuilder(
+      column: $table.issued, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get duration => $composableBuilder(
+      column: $table.duration, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get range => $composableBuilder(
+      column: $table.range, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isCorporation => $composableBuilder(
+      column: $table.isCorporation,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get escrow => $composableBuilder(
+      column: $table.escrow, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get state => $composableBuilder(
+      column: $table.state, builder: (column) => ColumnOrderings(column));
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableOrderingComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$MarketOrdersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MarketOrdersTable> {
+  $$MarketOrdersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get orderId =>
+      $composableBuilder(column: $table.orderId, builder: (column) => column);
+
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<int> get regionId =>
+      $composableBuilder(column: $table.regionId, builder: (column) => column);
+
+  GeneratedColumn<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => column);
+
+  GeneratedColumn<double> get price =>
+      $composableBuilder(column: $table.price, builder: (column) => column);
+
+  GeneratedColumn<int> get volumeRemain => $composableBuilder(
+      column: $table.volumeRemain, builder: (column) => column);
+
+  GeneratedColumn<int> get volumeTotal => $composableBuilder(
+      column: $table.volumeTotal, builder: (column) => column);
+
+  GeneratedColumn<int> get minVolume =>
+      $composableBuilder(column: $table.minVolume, builder: (column) => column);
+
+  GeneratedColumn<bool> get isBuyOrder => $composableBuilder(
+      column: $table.isBuyOrder, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get issued =>
+      $composableBuilder(column: $table.issued, builder: (column) => column);
+
+  GeneratedColumn<int> get duration =>
+      $composableBuilder(column: $table.duration, builder: (column) => column);
+
+  GeneratedColumn<String> get range =>
+      $composableBuilder(column: $table.range, builder: (column) => column);
+
+  GeneratedColumn<bool> get isCorporation => $composableBuilder(
+      column: $table.isCorporation, builder: (column) => column);
+
+  GeneratedColumn<double> get escrow =>
+      $composableBuilder(column: $table.escrow, builder: (column) => column);
+
+  GeneratedColumn<String> get state =>
+      $composableBuilder(column: $table.state, builder: (column) => column);
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$MarketOrdersTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $MarketOrdersTable,
+    MarketOrder,
+    $$MarketOrdersTableFilterComposer,
+    $$MarketOrdersTableOrderingComposer,
+    $$MarketOrdersTableAnnotationComposer,
+    $$MarketOrdersTableCreateCompanionBuilder,
+    $$MarketOrdersTableUpdateCompanionBuilder,
+    (MarketOrder, $$MarketOrdersTableReferences),
+    MarketOrder,
+    PrefetchHooks Function({bool characterId})> {
+  $$MarketOrdersTableTableManager(_$AppDatabase db, $MarketOrdersTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MarketOrdersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MarketOrdersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MarketOrdersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> orderId = const Value.absent(),
+            Value<int> characterId = const Value.absent(),
+            Value<int> typeId = const Value.absent(),
+            Value<int> regionId = const Value.absent(),
+            Value<int> locationId = const Value.absent(),
+            Value<double> price = const Value.absent(),
+            Value<int> volumeRemain = const Value.absent(),
+            Value<int> volumeTotal = const Value.absent(),
+            Value<int> minVolume = const Value.absent(),
+            Value<bool> isBuyOrder = const Value.absent(),
+            Value<DateTime> issued = const Value.absent(),
+            Value<int> duration = const Value.absent(),
+            Value<String> range = const Value.absent(),
+            Value<bool> isCorporation = const Value.absent(),
+            Value<double> escrow = const Value.absent(),
+            Value<String> state = const Value.absent(),
+          }) =>
+              MarketOrdersCompanion(
+            orderId: orderId,
+            characterId: characterId,
+            typeId: typeId,
+            regionId: regionId,
+            locationId: locationId,
+            price: price,
+            volumeRemain: volumeRemain,
+            volumeTotal: volumeTotal,
+            minVolume: minVolume,
+            isBuyOrder: isBuyOrder,
+            issued: issued,
+            duration: duration,
+            range: range,
+            isCorporation: isCorporation,
+            escrow: escrow,
+            state: state,
+          ),
+          createCompanionCallback: ({
+            Value<int> orderId = const Value.absent(),
+            required int characterId,
+            required int typeId,
+            required int regionId,
+            required int locationId,
+            required double price,
+            required int volumeRemain,
+            required int volumeTotal,
+            required int minVolume,
+            required bool isBuyOrder,
+            required DateTime issued,
+            required int duration,
+            required String range,
+            required bool isCorporation,
+            required double escrow,
+            required String state,
+          }) =>
+              MarketOrdersCompanion.insert(
+            orderId: orderId,
+            characterId: characterId,
+            typeId: typeId,
+            regionId: regionId,
+            locationId: locationId,
+            price: price,
+            volumeRemain: volumeRemain,
+            volumeTotal: volumeTotal,
+            minVolume: minVolume,
+            isBuyOrder: isBuyOrder,
+            issued: issued,
+            duration: duration,
+            range: range,
+            isCorporation: isCorporation,
+            escrow: escrow,
+            state: state,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$MarketOrdersTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({characterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (characterId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.characterId,
+                    referencedTable:
+                        $$MarketOrdersTableReferences._characterIdTable(db),
+                    referencedColumn: $$MarketOrdersTableReferences
+                        ._characterIdTable(db)
+                        .characterId,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$MarketOrdersTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $MarketOrdersTable,
+    MarketOrder,
+    $$MarketOrdersTableFilterComposer,
+    $$MarketOrdersTableOrderingComposer,
+    $$MarketOrdersTableAnnotationComposer,
+    $$MarketOrdersTableCreateCompanionBuilder,
+    $$MarketOrdersTableUpdateCompanionBuilder,
+    (MarketOrder, $$MarketOrdersTableReferences),
+    MarketOrder,
+    PrefetchHooks Function({bool characterId})>;
+typedef $$MarketPricesTableCreateCompanionBuilder = MarketPricesCompanion
+    Function({
+  Value<int> typeId,
+  Value<double?> adjustedPrice,
+  Value<double?> averagePrice,
+  required DateTime lastUpdated,
+});
+typedef $$MarketPricesTableUpdateCompanionBuilder = MarketPricesCompanion
+    Function({
+  Value<int> typeId,
+  Value<double?> adjustedPrice,
+  Value<double?> averagePrice,
+  Value<DateTime> lastUpdated,
+});
+
+class $$MarketPricesTableFilterComposer
+    extends Composer<_$AppDatabase, $MarketPricesTable> {
+  $$MarketPricesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get typeId => $composableBuilder(
+      column: $table.typeId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get adjustedPrice => $composableBuilder(
+      column: $table.adjustedPrice, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get averagePrice => $composableBuilder(
+      column: $table.averagePrice, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => ColumnFilters(column));
+}
+
+class $$MarketPricesTableOrderingComposer
+    extends Composer<_$AppDatabase, $MarketPricesTable> {
+  $$MarketPricesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get typeId => $composableBuilder(
+      column: $table.typeId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get adjustedPrice => $composableBuilder(
+      column: $table.adjustedPrice,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get averagePrice => $composableBuilder(
+      column: $table.averagePrice,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => ColumnOrderings(column));
+}
+
+class $$MarketPricesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MarketPricesTable> {
+  $$MarketPricesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<double> get adjustedPrice => $composableBuilder(
+      column: $table.adjustedPrice, builder: (column) => column);
+
+  GeneratedColumn<double> get averagePrice => $composableBuilder(
+      column: $table.averagePrice, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastUpdated => $composableBuilder(
+      column: $table.lastUpdated, builder: (column) => column);
+}
+
+class $$MarketPricesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $MarketPricesTable,
+    MarketPrice,
+    $$MarketPricesTableFilterComposer,
+    $$MarketPricesTableOrderingComposer,
+    $$MarketPricesTableAnnotationComposer,
+    $$MarketPricesTableCreateCompanionBuilder,
+    $$MarketPricesTableUpdateCompanionBuilder,
+    (
+      MarketPrice,
+      BaseReferences<_$AppDatabase, $MarketPricesTable, MarketPrice>
+    ),
+    MarketPrice,
+    PrefetchHooks Function()> {
+  $$MarketPricesTableTableManager(_$AppDatabase db, $MarketPricesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MarketPricesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MarketPricesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MarketPricesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> typeId = const Value.absent(),
+            Value<double?> adjustedPrice = const Value.absent(),
+            Value<double?> averagePrice = const Value.absent(),
+            Value<DateTime> lastUpdated = const Value.absent(),
+          }) =>
+              MarketPricesCompanion(
+            typeId: typeId,
+            adjustedPrice: adjustedPrice,
+            averagePrice: averagePrice,
+            lastUpdated: lastUpdated,
+          ),
+          createCompanionCallback: ({
+            Value<int> typeId = const Value.absent(),
+            Value<double?> adjustedPrice = const Value.absent(),
+            Value<double?> averagePrice = const Value.absent(),
+            required DateTime lastUpdated,
+          }) =>
+              MarketPricesCompanion.insert(
+            typeId: typeId,
+            adjustedPrice: adjustedPrice,
+            averagePrice: averagePrice,
+            lastUpdated: lastUpdated,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$MarketPricesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $MarketPricesTable,
+    MarketPrice,
+    $$MarketPricesTableFilterComposer,
+    $$MarketPricesTableOrderingComposer,
+    $$MarketPricesTableAnnotationComposer,
+    $$MarketPricesTableCreateCompanionBuilder,
+    $$MarketPricesTableUpdateCompanionBuilder,
+    (
+      MarketPrice,
+      BaseReferences<_$AppDatabase, $MarketPricesTable, MarketPrice>
+    ),
+    MarketPrice,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -17874,4 +19578,8 @@ class $AppDatabaseManager {
       $$BlueprintsTableTableManager(_db, _db.blueprints);
   $$IndustryJobsTableTableManager get industryJobs =>
       $$IndustryJobsTableTableManager(_db, _db.industryJobs);
+  $$MarketOrdersTableTableManager get marketOrders =>
+      $$MarketOrdersTableTableManager(_db, _db.marketOrders);
+  $$MarketPricesTableTableManager get marketPrices =>
+      $$MarketPricesTableTableManager(_db, _db.marketPrices);
 }

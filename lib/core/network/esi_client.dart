@@ -182,6 +182,19 @@ class EsiClient {
     return EsiResponse(data: data, headers: response.headers.map, statusCode: response.statusCode);
   }
 
+  // Market API
+  Future<EsiResponse<List<MarketPriceData>>> getMarketPrices() async {
+    final response = await publicGet<List<dynamic>>('/markets/prices/');
+    final data = (response.data ?? []).map((item) => MarketPriceData.fromJson(item as Map<String, dynamic>)).toList();
+    return EsiResponse(data: data, headers: response.headers.map, statusCode: response.statusCode);
+  }
+
+  Future<EsiResponse<List<CharacterOrderData>>> getCharacterOrders(int characterId) async {
+    final response = await authenticatedGet<List<dynamic>>('/characters/$characterId/orders/', characterId: characterId);
+    final data = (response.data ?? []).map((item) => CharacterOrderData.fromJson(item as Map<String, dynamic>)).toList();
+    return EsiResponse(data: data, headers: response.headers.map, statusCode: response.statusCode);
+  }
+
   // Assets API
   Future<EsiResponse<List<AssetItem>>> getCharacterAssets(int characterId, {int page = 1}) async {
     final response = await authenticatedGet<List<dynamic>>('/characters/$characterId/assets/', characterId: characterId, queryParameters: {'page': page});
@@ -916,6 +929,82 @@ class EsiException implements Exception {
   bool get isClientError => statusCode != null && statusCode! >= 400 && statusCode! < 500;
   @override
   String toString() => 'EsiException: $message (status: $statusCode)';
+}
+
+class MarketPriceData {
+  final int typeId;
+  final double? adjustedPrice;
+  final double? averagePrice;
+
+  MarketPriceData({
+    required this.typeId,
+    this.adjustedPrice,
+    this.averagePrice,
+  });
+
+  factory MarketPriceData.fromJson(Map<String, dynamic> json) {
+    return MarketPriceData(
+      typeId: json['type_id'] as int,
+      adjustedPrice: (json['adjusted_price'] as num?)?.toDouble(),
+      averagePrice: (json['average_price'] as num?)?.toDouble(),
+    );
+  }
+}
+
+class CharacterOrderData {
+  final int orderId;
+  final int typeId;
+  final int regionId;
+  final int locationId;
+  final double price;
+  final int volumeRemain;
+  final int volumeTotal;
+  final int minVolume;
+  final bool isBuyOrder;
+  final DateTime issued;
+  final int duration;
+  final String range;
+  final bool isCorporation;
+  final double escrow;
+  final String state;
+
+  CharacterOrderData({
+    required this.orderId,
+    required this.typeId,
+    required this.regionId,
+    required this.locationId,
+    required this.price,
+    required this.volumeRemain,
+    required this.volumeTotal,
+    required this.minVolume,
+    required this.isBuyOrder,
+    required this.issued,
+    required this.duration,
+    required this.range,
+    required this.isCorporation,
+    required this.escrow,
+    required this.state,
+  });
+
+  factory CharacterOrderData.fromJson(Map<String, dynamic> json) {
+    return CharacterOrderData(
+      orderId: json['order_id'] as int,
+      typeId: json['type_id'] as int,
+      regionId: json['region_id'] as int,
+      locationId: json['location_id'] as int,
+      price: (json['price'] as num).toDouble(),
+      volumeRemain: json['volume_remain'] as int,
+      volumeTotal: json['volume_total'] as int,
+      minVolume: json['min_volume'] as int,
+      isBuyOrder: json['is_buy_order'] as bool? ?? false,
+      issued: DateTime.parse(json['issued'] as String),
+      duration: json['duration'] as int,
+      range: json['range'] as String,
+      isCorporation: json['is_corporation'] as bool? ?? false,
+      escrow: (json['escrow'] as num?)?.toDouble() ?? 0.0,
+      state: json['state'] as String? ?? 'active',
+    );
+  }
 }
 
 class _EsiInterceptor extends Interceptor {

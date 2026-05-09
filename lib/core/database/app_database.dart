@@ -559,6 +559,40 @@ class IndustryJobs extends Table {
   Set<Column> get primaryKey => {jobId, characterId};
 }
 
+/// Active market orders.
+class MarketOrders extends Table {
+  IntColumn get orderId => integer()();
+  IntColumn get characterId => integer().references(Characters, #characterId)();
+  IntColumn get typeId => integer()();
+  IntColumn get regionId => integer()();
+  IntColumn get locationId => integer()();
+  RealColumn get price => real()();
+  IntColumn get volumeRemain => integer()();
+  IntColumn get volumeTotal => integer()();
+  IntColumn get minVolume => integer()();
+  BoolColumn get isBuyOrder => boolean()();
+  DateTimeColumn get issued => dateTime()();
+  IntColumn get duration => integer()();
+  TextColumn get range => text()();
+  BoolColumn get isCorporation => boolean()();
+  RealColumn get escrow => real()();
+  TextColumn get state => text()();
+
+  @override
+  Set<Column> get primaryKey => {orderId};
+}
+
+/// Cached market prices.
+class MarketPrices extends Table {
+  IntColumn get typeId => integer()();
+  RealColumn get adjustedPrice => real().nullable()();
+  RealColumn get averagePrice => real().nullable()();
+  DateTimeColumn get lastUpdated => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {typeId};
+}
+
 /// Application database using Drift.
 ///
 /// Handles all local persistence for Mimir including:
@@ -588,6 +622,8 @@ class IndustryJobs extends Table {
   AssetSnapshots,
   Blueprints,
   IndustryJobs,
+  MarketOrders,
+  MarketPrices,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -684,6 +720,12 @@ class AppDatabase extends _$AppDatabase {
         if (from < 13) {
           await m.createTable(blueprints);
           await m.createTable(industryJobs);
+        }
+
+        // Migration from version 13 to 14: Add market tables.
+        if (from < 14) {
+          await m.createTable(marketOrders);
+          await m.createTable(marketPrices);
         }
       },
     );

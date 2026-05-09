@@ -1,3 +1,4 @@
+import 'package:mimir/features/market/presentation/market_overview_screen.dart';
 import 'package:mimir/features/industry/presentation/industry_overview_screen.dart';
 @Tags(['golden'])
 import 'package:flutter/material.dart';
@@ -51,8 +52,9 @@ void main() {
     const walletDevice = Device(name: 'wallet', size: Size(800, 700));
     const charactersDevice = Device(name: 'characters', size: Size(1200, 800));
     const settingsDevice = Device(name: 'settings', size: Size(500, 450));
-    const piDevice = Device(name: 'pi', size: Size(1000, 800));
+    const piDevice = Device(name: 'pi', size: Size(1200, 900));
     const industryDevice = Device(name: 'industry', size: Size(1200, 900));
+    const marketDevice = Device(name: 'market', size: Size(1200, 900));
     const onboardingDevice = Device(name: 'onboarding', size: Size(800, 600));
     const skillsCompactDevice = Device(name: 'skills_compact', size: Size(1000, 800));
 
@@ -270,6 +272,25 @@ void main() {
 
         await tester.pump(const Duration(seconds: 2));
         await screenMatchesGolden(tester, 'industry_screen');
+
+        // Clean up
+        await tester.pumpWidget(Container());
+        await tester.pump(const Duration(milliseconds: 100));
+      });
+    });
+
+    testGoldens('Market Screen renders correctly', (tester) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidgetBuilder(
+          TestApp(
+            initialCharacter: CharacterFixtures.testCharacter(),
+            home: const MarketOverviewScreen(),
+          ),
+          surfaceSize: marketDevice.size,
+        );
+
+        await tester.pump(const Duration(seconds: 2));
+        await screenMatchesGolden(tester, 'market_screen');
 
         // Clean up
         await tester.pumpWidget(Container());
