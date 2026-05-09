@@ -1,3 +1,4 @@
+import 'package:mimir/features/industry/presentation/industry_overview_screen.dart';
 @Tags(['golden'])
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +12,7 @@ import 'package:mimir/features/dashboard/data/fleet_providers.dart';
 import 'package:mimir/features/dashboard/data/dashboard_providers.dart';
 import 'package:mimir/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:mimir/features/pi/presentation/pi_overview_screen.dart';
+import 'package:mimir/features/industry/presentation/industry_overview_screen.dart';
 import 'package:mimir/features/settings/presentation/settings_screen.dart';
 import 'package:mimir/features/skills/presentation/skills_screen.dart';
 import 'package:mimir/features/wallet/presentation/wallet_screen.dart';
@@ -50,6 +52,7 @@ void main() {
     const charactersDevice = Device(name: 'characters', size: Size(1200, 800));
     const settingsDevice = Device(name: 'settings', size: Size(500, 450));
     const piDevice = Device(name: 'pi', size: Size(1000, 800));
+    const industryDevice = Device(name: 'industry', size: Size(1200, 900));
     const onboardingDevice = Device(name: 'onboarding', size: Size(800, 600));
     const skillsCompactDevice = Device(name: 'skills_compact', size: Size(1000, 800));
 
@@ -248,6 +251,25 @@ void main() {
         await screenMatchesGolden(tester, 'pi_screen', customPump: (tester) async {
           await tester.pump(const Duration(milliseconds: 500));
         });
+
+        // Clean up
+        await tester.pumpWidget(Container());
+        await tester.pump(const Duration(milliseconds: 100));
+      });
+    });
+
+    testGoldens('Industry Screen renders correctly', (tester) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidgetBuilder(
+          TestApp(
+            initialCharacter: CharacterFixtures.testCharacter(),
+            home: const IndustryOverviewScreen(),
+          ),
+          surfaceSize: industryDevice.size,
+        );
+
+        await tester.pump(const Duration(seconds: 2));
+        await screenMatchesGolden(tester, 'industry_screen');
 
         // Clean up
         await tester.pumpWidget(Container());

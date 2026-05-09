@@ -169,6 +169,19 @@ class EsiClient {
     return plexAsset?.quantity ?? 0;
   }
 
+  // Industry API
+  Future<EsiResponse<List<BlueprintItem>>> getCharacterBlueprints(int characterId, {int page = 1}) async {
+    final response = await authenticatedGet<List<dynamic>>('/characters/$characterId/blueprints/', characterId: characterId, queryParameters: {'page': page});
+    final data = (response.data ?? []).map((item) => BlueprintItem.fromJson(item as Map<String, dynamic>)).toList();
+    return EsiResponse(data: data, headers: response.headers.map, statusCode: response.statusCode);
+  }
+
+  Future<EsiResponse<List<IndustryJobData>>> getCharacterIndustryJobs(int characterId, {bool includeCompleted = false}) async {
+    final response = await authenticatedGet<List<dynamic>>('/characters/$characterId/industry/jobs/', characterId: characterId, queryParameters: {'include_completed': includeCompleted});
+    final data = (response.data ?? []).map((item) => IndustryJobData.fromJson(item as Map<String, dynamic>)).toList();
+    return EsiResponse(data: data, headers: response.headers.map, statusCode: response.statusCode);
+  }
+
   // Assets API
   Future<EsiResponse<List<AssetItem>>> getCharacterAssets(int characterId, {int page = 1}) async {
     final response = await authenticatedGet<List<dynamic>>('/characters/$characterId/assets/', characterId: characterId, queryParameters: {'page': page});
@@ -777,6 +790,118 @@ class EsiResponse<T> {
   final Map<String, List<String>> headers;
   final int? statusCode;
   const EsiResponse({required this.data, required this.headers, this.statusCode});
+}
+
+class BlueprintItem {
+  final int itemId;
+  final int typeId;
+  final int locationId;
+  final String locationFlag;
+  final int quantity;
+  final int timeEfficiency;
+  final int materialEfficiency;
+  final int runs;
+  final int? runsRemaining;
+
+  BlueprintItem({
+    required this.itemId,
+    required this.typeId,
+    required this.locationId,
+    required this.locationFlag,
+    required this.quantity,
+    required this.timeEfficiency,
+    required this.materialEfficiency,
+    required this.runs,
+    this.runsRemaining,
+  });
+
+  factory BlueprintItem.fromJson(Map<String, dynamic> json) {
+    return BlueprintItem(
+      itemId: json['item_id'] as int,
+      typeId: json['type_id'] as int,
+      locationId: json['location_id'] as int,
+      locationFlag: json['location_flag'] as String,
+      quantity: json['quantity'] as int,
+      timeEfficiency: json['time_efficiency'] as int,
+      materialEfficiency: json['material_efficiency'] as int,
+      runs: json['runs'] as int,
+      runsRemaining: json['runs_remaining'] as int?,
+    );
+  }
+}
+
+class IndustryJobData {
+  final int jobId;
+  final int installerId;
+  final int facilityId;
+  final int locationId;
+  final int activityId;
+  final int blueprintId;
+  final int blueprintTypeId;
+  final int outputLocationId;
+  final int runs;
+  final double? cost;
+  final int? licensedProductionRuns;
+  final double? probability;
+  final int? productTypeId;
+  final String status;
+  final int duration;
+  final DateTime startDate;
+  final DateTime endDate;
+  final DateTime? pauseDate;
+  final DateTime? completedDate;
+  final int? completedCharacterId;
+  final int? successfulRuns;
+
+  IndustryJobData({
+    required this.jobId,
+    required this.installerId,
+    required this.facilityId,
+    required this.locationId,
+    required this.activityId,
+    required this.blueprintId,
+    required this.blueprintTypeId,
+    required this.outputLocationId,
+    required this.runs,
+    this.cost,
+    this.licensedProductionRuns,
+    this.probability,
+    this.productTypeId,
+    required this.status,
+    required this.duration,
+    required this.startDate,
+    required this.endDate,
+    this.pauseDate,
+    this.completedDate,
+    this.completedCharacterId,
+    this.successfulRuns,
+  });
+
+  factory IndustryJobData.fromJson(Map<String, dynamic> json) {
+    return IndustryJobData(
+      jobId: json['job_id'] as int,
+      installerId: json['installer_id'] as int,
+      facilityId: json['facility_id'] as int,
+      locationId: json['location_id'] as int,
+      activityId: json['activity_id'] as int,
+      blueprintId: json['blueprint_id'] as int,
+      blueprintTypeId: json['blueprint_type_id'] as int,
+      outputLocationId: json['output_location_id'] as int,
+      runs: json['runs'] as int,
+      cost: (json['cost'] as num?)?.toDouble(),
+      licensedProductionRuns: json['licensed_production_runs'] as int?,
+      probability: (json['probability'] as num?)?.toDouble(),
+      productTypeId: json['product_type_id'] as int?,
+      status: json['status'] as String,
+      duration: json['duration'] as int,
+      startDate: DateTime.parse(json['start_date'] as String),
+      endDate: DateTime.parse(json['end_date'] as String),
+      pauseDate: json['pause_date'] != null ? DateTime.parse(json['pause_date'] as String) : null,
+      completedDate: json['completed_date'] != null ? DateTime.parse(json['completed_date'] as String) : null,
+      completedCharacterId: json['completed_character_id'] as int?,
+      successfulRuns: json['successful_runs'] as int?,
+    );
+  }
 }
 
 class EsiException implements Exception {

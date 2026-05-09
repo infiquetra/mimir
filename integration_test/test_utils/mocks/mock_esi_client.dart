@@ -1,6 +1,8 @@
 import 'package:mimir/core/network/esi_client.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../fixtures/industry_fixtures.dart';
+
 /// Mock ESI client for integration testing.
 ///
 /// Provides pre-configured test data for common scenarios:
@@ -9,6 +11,13 @@ import 'package:mocktail/mocktail.dart';
 /// - Wallet balances and transactions
 /// - Location and item name resolution
 class MockEsiClient extends Mock implements EsiClient {
+  // =========================================================================
+  // Industry Test Data
+  // =========================================================================
+
+  static final testBlueprints = IndustryFixtures.testBlueprints();
+  static final testIndustryJobs = IndustryFixtures.testIndustryJobs();
+
   // =========================================================================
   // Test Character Data
   // =========================================================================
@@ -393,6 +402,20 @@ class MockEsiClient extends Mock implements EsiClient {
     return 'character';
   }
 
+  /// Sets up the mock to return industry data.
+  void setupIndustryData(int characterId) {
+    when(() => getCharacterBlueprints(characterId, page: any(named: 'page')))
+        .thenAnswer((_) async => EsiResponse(
+              data: testBlueprints,
+              headers: const {'x-pages': ['1']},
+            ));
+    when(() => getCharacterIndustryJobs(characterId, includeCompleted: any(named: 'includeCompleted')))
+        .thenAnswer((_) async => EsiResponse(
+              data: testIndustryJobs,
+              headers: const {},
+            ));
+  }
+
   /// Sets up the mock with all default test data for a character.
   void setupFullCharacterData(int characterId) {
     setupDefaultCharacter(characterId);
@@ -403,6 +426,7 @@ class MockEsiClient extends Mock implements EsiClient {
     setupStandings(characterId);
     setupFleetStatus(characterId); // Fleet status (online, location, ship)
     setupNameResolution();
+    setupIndustryData(characterId);
   }
 
   /// Sets up the mock to throw an error for the next call.

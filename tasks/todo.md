@@ -1,51 +1,42 @@
-# Project: Mimir Improvements
+# Project: Mimir Improvements - Industry & Manufacturing
 Date: 2026-05-06
-Checkpoint: 2026-05-06-10-00
 
 ## Overview
-Exploration of the repository suggested improvements based on the guidelines in `CLAUDE.md`. We will optimize database queries, fix AsyncValue handling in Riverpod, and address manual AsyncValue UI checks.
+We are expanding Mimir's functionality to support Industry & Manufacturing. This involves adding features for a blueprint browser and an industry manufacturing calculator. We will need to interact with ESI endpoints to fetch blueprints and industry jobs, store them in the local Drift database, and create a user interface to display and interact with this data.
 
-## Phase: Implementation
+## Phase 1: Database & ESI Infrastructure [SEQ]
 
-### Sequential Tasks [SEQ]
-- [ ] [SEQ] Fix in-memory filtering in `character_repository.dart` and `app_database.dart`.
-- [ ] [SEQ] Fix N+1 deletes in `app_database.dart` (`deleteCharacter`).
-- [ ] [SEQ] Fix N+1 updates in `app_database.dart` (`updatePlanEntryOrder` using `batch()`).
-- [ ] [SEQ] Refactor providers in `skill_providers.dart` to propagate `AsyncValue` correctly.
-- [ ] [SEQ] Refactor `balance_cards_row.dart` to use idiomatic `.when()` blocks.
+- [x] [SEQ] **Update Database Schema (`app_database.dart`)**
+  - Add `Blueprints` table (itemId, typeId, locationId, quantity, timeEfficiency, materialEfficiency, runs, isOriginal).
+  - Add `IndustryJobs` table (jobId, installerId, facilityId, locationId, activityId, blueprintId, blueprintTypeId, outputLocationId, runs, cost, licensedProductionRuns, probabilities, productTypeId, status, timeInSeconds, startDate, endDate, pauseDate, completedDate, completedCharacterId, successfulRuns).
+- [x] [SEQ] **Add ESI Endpoints (`esi_client.dart`)**
+  - Implement `/characters/{character_id}/blueprints/` (get blueprints).
+  - Implement `/characters/{character_id}/industry/jobs/` (get character industry jobs).
+- [x] [SEQ] **Create Models**
+  - Create data models for `Blueprint` and `IndustryJob` using Freezed/JsonSerializable.
 
-## Phase: Planetary Industry [NEW]
-- [x] [SEQ] Update database schema with `PlanetaryColonies` and `PlanetaryPins` tables.
-- [x] [SEQ] Add PI endpoints and models to `EsiClient`.
-- [x] [SEQ] Implement `PlanetaryRepository` and `PlanetarySyncService`.
-- [x] [SEQ] Create Riverpod providers for PI data.
-- [x] [SEQ] Update `PiOverviewScreen` and `ColonyCard` to use live data.
+## Phase 2: Repositories & Sync Services [SEQ]
 
-## Phase: Asset Management Phase 1 [NEW]
-- [x] [SEQ] Update database schema with `Assets`, `AssetLocations`, and `AssetSnapshots` tables.
-- [x] [SEQ] Add paginated asset endpoints and models to `EsiClient`.
-- [x] [SEQ] Implement `AssetRepository` and `AssetSyncService`.
-- [x] [SEQ] Create Riverpod providers for grouped assets.
-- [x] [SEQ] Implement `AssetBrowserScreen` with search and location grouping.
-- [x] [SEQ] Integrate Assets and PI windows into multi-window architecture and Tray menu.
+- [x] [SEQ] **Implement `IndustryRepository`**
+  - Create `lib/features/industry/data/industry_repository.dart` to handle database CRUD operations for blueprints and jobs.
+- [x] [SEQ] **Implement `IndustrySyncService`**
+  - Create `lib/features/industry/data/industry_sync_service.dart` to fetch data from ESI and update the local database.
+- [x] [SEQ] **Create Riverpod Providers**
+  - Add `industry_providers.dart` for streaming blueprints and industry jobs to the UI.
 
-## Phase: Testing
-- [x] Run Unit and Widget Tests (`flutter test`)
-- [x] Run Integration Tests (`flutter test integration_test/`)
-- [x] Run Visual Validation on Dashboard and Wallet screens (Golden updates)
+## Phase 3: User Interface [SEQ]
 
-## Phase: Review & Finalization
-- [x] Code review
-- [x] Update README.md with changes if necessary (none required)
-- [x] Update `tasks/todo.md` with summary of changes
+- [x] [SEQ] **Industry Dashboard / Screen**
+  - Create `IndustryOverviewScreen` with two primary tabs: Blueprints and Jobs.
+- [x] [SEQ] **Blueprints Browser**
+  - Implement `BlueprintListPanel` to view, filter, and sort blueprints.
+- [x] [SEQ] **Industry Jobs View**
+  - Implement `IndustryJobsPanel` showing active, paused, and completed jobs with progress bars.
+- [x] [SEQ] **Multi-Window Integration**
+  - Add "Industry & Manufacturing" to the main NavigationRail and the Tray menu.
 
-## Context to Persist
-- Focus on Drift optimizations (using `isIn` and `batch()`)
-- Focus on correct `AsyncValue` chaining and UI consumption
+## Phase 4: Testing & Review [SEQ]
 
-## Review
-- Fixed `MockEsiClient.getSkills` mock implementation causing null errors for `unallocatedSpProvider`.
-- Updated Golden tests (`flutter test --update-goldens`) due to minor layout changes.
-- Made Golden tests deterministic by using a fixed `DateTime` for `activeSkillQueue` in `MockEsiClient`.
-- Verified all unit and widget tests pass successfully.
-- Note: macOS integration tests are failing to launch locally due to native deployment target and log reader environment issues, but the application code changes have been validated by the widget test runner.
+- [x] [SEQ] Update MockEsiClient and test fixtures with dummy blueprints and jobs.
+- [x] [SEQ] Write unit tests for `IndustryRepository` and `IndustrySyncService`.
+- [x] [SEQ] Run `flutter test` and generate new goldens for the Industry screens.

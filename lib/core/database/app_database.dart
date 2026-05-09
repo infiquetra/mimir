@@ -512,6 +512,53 @@ class AssetSnapshots extends Table {
   TextColumn get valueBreakdown => text()(); // JSON for detailed breakdown
 }
 
+/// Character blueprints.
+class Blueprints extends Table {
+  IntColumn get itemId => integer()();
+  IntColumn get characterId =>
+      integer().references(Characters, #characterId)();
+  IntColumn get typeId => integer()();
+  IntColumn get locationId => integer()();
+  IntColumn get quantity => integer()();
+  IntColumn get timeEfficiency => integer()();
+  IntColumn get materialEfficiency => integer()();
+  IntColumn get runs => integer()();
+  BoolColumn get isOriginal => boolean()();
+
+  @override
+  Set<Column> get primaryKey => {itemId, characterId};
+}
+
+/// Industry manufacturing/invention jobs.
+class IndustryJobs extends Table {
+  IntColumn get jobId => integer()();
+  IntColumn get characterId =>
+      integer().references(Characters, #characterId)();
+  IntColumn get installerId => integer()();
+  IntColumn get facilityId => integer()();
+  IntColumn get locationId => integer()();
+  IntColumn get activityId => integer()();
+  IntColumn get blueprintId => integer()();
+  IntColumn get blueprintTypeId => integer()();
+  IntColumn get outputLocationId => integer()();
+  IntColumn get runs => integer()();
+  RealColumn get cost => real()();
+  IntColumn get licensedProductionRuns => integer().nullable()();
+  RealColumn get probability => real().nullable()();
+  IntColumn get productTypeId => integer().nullable()();
+  TextColumn get status => text()();
+  IntColumn get timeInSeconds => integer()();
+  DateTimeColumn get startDate => dateTime()();
+  DateTimeColumn get endDate => dateTime()();
+  DateTimeColumn get pauseDate => dateTime().nullable()();
+  DateTimeColumn get completedDate => dateTime().nullable()();
+  IntColumn get completedCharacterId => integer().nullable()();
+  IntColumn get successfulRuns => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {jobId, characterId};
+}
+
 /// Application database using Drift.
 ///
 /// Handles all local persistence for Mimir including:
@@ -539,6 +586,8 @@ class AssetSnapshots extends Table {
   Assets,
   AssetLocations,
   AssetSnapshots,
+  Blueprints,
+  IndustryJobs,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -547,7 +596,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration {
@@ -629,6 +678,12 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(assets);
           await m.createTable(assetLocations);
           await m.createTable(assetSnapshots);
+        }
+
+        // Migration from version 12 to 13: Add industry tables.
+        if (from < 13) {
+          await m.createTable(blueprints);
+          await m.createTable(industryJobs);
         }
       },
     );

@@ -1,3 +1,4 @@
+import '../../features/industry/presentation/industry_overview_screen.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
@@ -222,6 +223,8 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
         return const AssetBrowserScreen();
       case WindowType.planetary:
         return const PiOverviewScreen();
+      case WindowType.industry:
+        return const IndustryOverviewScreen();
     }
   }
 }

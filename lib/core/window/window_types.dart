@@ -35,6 +35,9 @@ enum WindowType {
 
   /// Planetary Industry screen for managing colonies.
   planetary,
+
+  /// Industry & Manufacturing screen for blueprints and jobs.
+  industry,
 }
 
 /// Extension methods for [WindowType].
@@ -60,6 +63,8 @@ extension WindowTypeExtension on WindowType {
         return 'Assets - Mimir';
       case WindowType.planetary:
         return 'Planetary Industry - Mimir';
+      case WindowType.industry:
+        return 'Industry & Manufacturing - Mimir';
     }
   }
 
@@ -86,6 +91,8 @@ extension WindowTypeExtension on WindowType {
         return 7;
       case WindowType.planetary:
         return 8;
+      case WindowType.industry:
+        return 9;
     }
   }
 
@@ -110,6 +117,8 @@ extension WindowTypeExtension on WindowType {
         return WindowType.assets;
       case 8:
         return WindowType.planetary;
+      case 9:
+        return WindowType.industry;
       default:
         return WindowType.dashboard;
     }
@@ -135,6 +144,8 @@ extension WindowTypeExtension on WindowType {
       case WindowType.assets:
         return (width: 1000, height: 800);
       case WindowType.planetary:
+        return (width: 1200, height: 900);
+      case WindowType.industry:
         return (width: 1200, height: 900);
     }
   }
@@ -163,6 +174,8 @@ extension WindowTypeExtension on WindowType {
         return 'assets/icons/eve/assets.png';
       case WindowType.planetary:
         return 'assets/icons/eve/planetary.png';
+      case WindowType.industry:
+        return 'assets/icons/eve/industry.png';
     }
   }
 }

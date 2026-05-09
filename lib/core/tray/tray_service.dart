@@ -167,6 +167,16 @@ class TrayService extends TrayListener {
     ));
     Log.d('TRAY', 'Added menu item: $planetaryLabel (key=planetary)');
 
+    final industryLabel = windowService.isWindowOpen(WindowType.industry)
+        ? '◆ Industry & Manufacturing'
+        : 'Industry & Manufacturing';
+    menuItems.add(MenuItem(
+      key: 'industry',
+      label: industryLabel,
+      icon: 'assets/icons/tray/industry.png',
+    ));
+    Log.d('TRAY', 'Added menu item: $industryLabel (key=industry)');
+
     menuItems.add(MenuItem.separator());
     Log.d('TRAY', 'Added separator');
 

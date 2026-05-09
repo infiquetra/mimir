@@ -8427,6 +8427,1552 @@ class AssetSnapshotsCompanion extends UpdateCompanion<AssetSnapshot> {
   }
 }
 
+class $BlueprintsTable extends Blueprints
+    with TableInfo<$BlueprintsTable, Blueprint> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BlueprintsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _itemIdMeta = const VerificationMeta('itemId');
+  @override
+  late final GeneratedColumn<int> itemId = GeneratedColumn<int>(
+      'item_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _characterIdMeta =
+      const VerificationMeta('characterId');
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+      'character_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES characters (character_id)'));
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+      'type_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _locationIdMeta =
+      const VerificationMeta('locationId');
+  @override
+  late final GeneratedColumn<int> locationId = GeneratedColumn<int>(
+      'location_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _quantityMeta =
+      const VerificationMeta('quantity');
+  @override
+  late final GeneratedColumn<int> quantity = GeneratedColumn<int>(
+      'quantity', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _timeEfficiencyMeta =
+      const VerificationMeta('timeEfficiency');
+  @override
+  late final GeneratedColumn<int> timeEfficiency = GeneratedColumn<int>(
+      'time_efficiency', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _materialEfficiencyMeta =
+      const VerificationMeta('materialEfficiency');
+  @override
+  late final GeneratedColumn<int> materialEfficiency = GeneratedColumn<int>(
+      'material_efficiency', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _runsMeta = const VerificationMeta('runs');
+  @override
+  late final GeneratedColumn<int> runs = GeneratedColumn<int>(
+      'runs', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _isOriginalMeta =
+      const VerificationMeta('isOriginal');
+  @override
+  late final GeneratedColumn<bool> isOriginal = GeneratedColumn<bool>(
+      'is_original', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("is_original" IN (0, 1))'));
+  @override
+  List<GeneratedColumn> get $columns => [
+        itemId,
+        characterId,
+        typeId,
+        locationId,
+        quantity,
+        timeEfficiency,
+        materialEfficiency,
+        runs,
+        isOriginal
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'blueprints';
+  @override
+  VerificationContext validateIntegrity(Insertable<Blueprint> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('item_id')) {
+      context.handle(_itemIdMeta,
+          itemId.isAcceptableOrUnknown(data['item_id']!, _itemIdMeta));
+    } else if (isInserting) {
+      context.missing(_itemIdMeta);
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+          _characterIdMeta,
+          characterId.isAcceptableOrUnknown(
+              data['character_id']!, _characterIdMeta));
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('type_id')) {
+      context.handle(_typeIdMeta,
+          typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta));
+    } else if (isInserting) {
+      context.missing(_typeIdMeta);
+    }
+    if (data.containsKey('location_id')) {
+      context.handle(
+          _locationIdMeta,
+          locationId.isAcceptableOrUnknown(
+              data['location_id']!, _locationIdMeta));
+    } else if (isInserting) {
+      context.missing(_locationIdMeta);
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(_quantityMeta,
+          quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta));
+    } else if (isInserting) {
+      context.missing(_quantityMeta);
+    }
+    if (data.containsKey('time_efficiency')) {
+      context.handle(
+          _timeEfficiencyMeta,
+          timeEfficiency.isAcceptableOrUnknown(
+              data['time_efficiency']!, _timeEfficiencyMeta));
+    } else if (isInserting) {
+      context.missing(_timeEfficiencyMeta);
+    }
+    if (data.containsKey('material_efficiency')) {
+      context.handle(
+          _materialEfficiencyMeta,
+          materialEfficiency.isAcceptableOrUnknown(
+              data['material_efficiency']!, _materialEfficiencyMeta));
+    } else if (isInserting) {
+      context.missing(_materialEfficiencyMeta);
+    }
+    if (data.containsKey('runs')) {
+      context.handle(
+          _runsMeta, runs.isAcceptableOrUnknown(data['runs']!, _runsMeta));
+    } else if (isInserting) {
+      context.missing(_runsMeta);
+    }
+    if (data.containsKey('is_original')) {
+      context.handle(
+          _isOriginalMeta,
+          isOriginal.isAcceptableOrUnknown(
+              data['is_original']!, _isOriginalMeta));
+    } else if (isInserting) {
+      context.missing(_isOriginalMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {itemId, characterId};
+  @override
+  Blueprint map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Blueprint(
+      itemId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}item_id'])!,
+      characterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}character_id'])!,
+      typeId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}type_id'])!,
+      locationId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}location_id'])!,
+      quantity: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}quantity'])!,
+      timeEfficiency: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}time_efficiency'])!,
+      materialEfficiency: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}material_efficiency'])!,
+      runs: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}runs'])!,
+      isOriginal: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_original'])!,
+    );
+  }
+
+  @override
+  $BlueprintsTable createAlias(String alias) {
+    return $BlueprintsTable(attachedDatabase, alias);
+  }
+}
+
+class Blueprint extends DataClass implements Insertable<Blueprint> {
+  final int itemId;
+  final int characterId;
+  final int typeId;
+  final int locationId;
+  final int quantity;
+  final int timeEfficiency;
+  final int materialEfficiency;
+  final int runs;
+  final bool isOriginal;
+  const Blueprint(
+      {required this.itemId,
+      required this.characterId,
+      required this.typeId,
+      required this.locationId,
+      required this.quantity,
+      required this.timeEfficiency,
+      required this.materialEfficiency,
+      required this.runs,
+      required this.isOriginal});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['item_id'] = Variable<int>(itemId);
+    map['character_id'] = Variable<int>(characterId);
+    map['type_id'] = Variable<int>(typeId);
+    map['location_id'] = Variable<int>(locationId);
+    map['quantity'] = Variable<int>(quantity);
+    map['time_efficiency'] = Variable<int>(timeEfficiency);
+    map['material_efficiency'] = Variable<int>(materialEfficiency);
+    map['runs'] = Variable<int>(runs);
+    map['is_original'] = Variable<bool>(isOriginal);
+    return map;
+  }
+
+  BlueprintsCompanion toCompanion(bool nullToAbsent) {
+    return BlueprintsCompanion(
+      itemId: Value(itemId),
+      characterId: Value(characterId),
+      typeId: Value(typeId),
+      locationId: Value(locationId),
+      quantity: Value(quantity),
+      timeEfficiency: Value(timeEfficiency),
+      materialEfficiency: Value(materialEfficiency),
+      runs: Value(runs),
+      isOriginal: Value(isOriginal),
+    );
+  }
+
+  factory Blueprint.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Blueprint(
+      itemId: serializer.fromJson<int>(json['itemId']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      typeId: serializer.fromJson<int>(json['typeId']),
+      locationId: serializer.fromJson<int>(json['locationId']),
+      quantity: serializer.fromJson<int>(json['quantity']),
+      timeEfficiency: serializer.fromJson<int>(json['timeEfficiency']),
+      materialEfficiency: serializer.fromJson<int>(json['materialEfficiency']),
+      runs: serializer.fromJson<int>(json['runs']),
+      isOriginal: serializer.fromJson<bool>(json['isOriginal']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'itemId': serializer.toJson<int>(itemId),
+      'characterId': serializer.toJson<int>(characterId),
+      'typeId': serializer.toJson<int>(typeId),
+      'locationId': serializer.toJson<int>(locationId),
+      'quantity': serializer.toJson<int>(quantity),
+      'timeEfficiency': serializer.toJson<int>(timeEfficiency),
+      'materialEfficiency': serializer.toJson<int>(materialEfficiency),
+      'runs': serializer.toJson<int>(runs),
+      'isOriginal': serializer.toJson<bool>(isOriginal),
+    };
+  }
+
+  Blueprint copyWith(
+          {int? itemId,
+          int? characterId,
+          int? typeId,
+          int? locationId,
+          int? quantity,
+          int? timeEfficiency,
+          int? materialEfficiency,
+          int? runs,
+          bool? isOriginal}) =>
+      Blueprint(
+        itemId: itemId ?? this.itemId,
+        characterId: characterId ?? this.characterId,
+        typeId: typeId ?? this.typeId,
+        locationId: locationId ?? this.locationId,
+        quantity: quantity ?? this.quantity,
+        timeEfficiency: timeEfficiency ?? this.timeEfficiency,
+        materialEfficiency: materialEfficiency ?? this.materialEfficiency,
+        runs: runs ?? this.runs,
+        isOriginal: isOriginal ?? this.isOriginal,
+      );
+  Blueprint copyWithCompanion(BlueprintsCompanion data) {
+    return Blueprint(
+      itemId: data.itemId.present ? data.itemId.value : this.itemId,
+      characterId:
+          data.characterId.present ? data.characterId.value : this.characterId,
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      locationId:
+          data.locationId.present ? data.locationId.value : this.locationId,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      timeEfficiency: data.timeEfficiency.present
+          ? data.timeEfficiency.value
+          : this.timeEfficiency,
+      materialEfficiency: data.materialEfficiency.present
+          ? data.materialEfficiency.value
+          : this.materialEfficiency,
+      runs: data.runs.present ? data.runs.value : this.runs,
+      isOriginal:
+          data.isOriginal.present ? data.isOriginal.value : this.isOriginal,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Blueprint(')
+          ..write('itemId: $itemId, ')
+          ..write('characterId: $characterId, ')
+          ..write('typeId: $typeId, ')
+          ..write('locationId: $locationId, ')
+          ..write('quantity: $quantity, ')
+          ..write('timeEfficiency: $timeEfficiency, ')
+          ..write('materialEfficiency: $materialEfficiency, ')
+          ..write('runs: $runs, ')
+          ..write('isOriginal: $isOriginal')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(itemId, characterId, typeId, locationId,
+      quantity, timeEfficiency, materialEfficiency, runs, isOriginal);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Blueprint &&
+          other.itemId == this.itemId &&
+          other.characterId == this.characterId &&
+          other.typeId == this.typeId &&
+          other.locationId == this.locationId &&
+          other.quantity == this.quantity &&
+          other.timeEfficiency == this.timeEfficiency &&
+          other.materialEfficiency == this.materialEfficiency &&
+          other.runs == this.runs &&
+          other.isOriginal == this.isOriginal);
+}
+
+class BlueprintsCompanion extends UpdateCompanion<Blueprint> {
+  final Value<int> itemId;
+  final Value<int> characterId;
+  final Value<int> typeId;
+  final Value<int> locationId;
+  final Value<int> quantity;
+  final Value<int> timeEfficiency;
+  final Value<int> materialEfficiency;
+  final Value<int> runs;
+  final Value<bool> isOriginal;
+  final Value<int> rowid;
+  const BlueprintsCompanion({
+    this.itemId = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.typeId = const Value.absent(),
+    this.locationId = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.timeEfficiency = const Value.absent(),
+    this.materialEfficiency = const Value.absent(),
+    this.runs = const Value.absent(),
+    this.isOriginal = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BlueprintsCompanion.insert({
+    required int itemId,
+    required int characterId,
+    required int typeId,
+    required int locationId,
+    required int quantity,
+    required int timeEfficiency,
+    required int materialEfficiency,
+    required int runs,
+    required bool isOriginal,
+    this.rowid = const Value.absent(),
+  })  : itemId = Value(itemId),
+        characterId = Value(characterId),
+        typeId = Value(typeId),
+        locationId = Value(locationId),
+        quantity = Value(quantity),
+        timeEfficiency = Value(timeEfficiency),
+        materialEfficiency = Value(materialEfficiency),
+        runs = Value(runs),
+        isOriginal = Value(isOriginal);
+  static Insertable<Blueprint> custom({
+    Expression<int>? itemId,
+    Expression<int>? characterId,
+    Expression<int>? typeId,
+    Expression<int>? locationId,
+    Expression<int>? quantity,
+    Expression<int>? timeEfficiency,
+    Expression<int>? materialEfficiency,
+    Expression<int>? runs,
+    Expression<bool>? isOriginal,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (itemId != null) 'item_id': itemId,
+      if (characterId != null) 'character_id': characterId,
+      if (typeId != null) 'type_id': typeId,
+      if (locationId != null) 'location_id': locationId,
+      if (quantity != null) 'quantity': quantity,
+      if (timeEfficiency != null) 'time_efficiency': timeEfficiency,
+      if (materialEfficiency != null) 'material_efficiency': materialEfficiency,
+      if (runs != null) 'runs': runs,
+      if (isOriginal != null) 'is_original': isOriginal,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BlueprintsCompanion copyWith(
+      {Value<int>? itemId,
+      Value<int>? characterId,
+      Value<int>? typeId,
+      Value<int>? locationId,
+      Value<int>? quantity,
+      Value<int>? timeEfficiency,
+      Value<int>? materialEfficiency,
+      Value<int>? runs,
+      Value<bool>? isOriginal,
+      Value<int>? rowid}) {
+    return BlueprintsCompanion(
+      itemId: itemId ?? this.itemId,
+      characterId: characterId ?? this.characterId,
+      typeId: typeId ?? this.typeId,
+      locationId: locationId ?? this.locationId,
+      quantity: quantity ?? this.quantity,
+      timeEfficiency: timeEfficiency ?? this.timeEfficiency,
+      materialEfficiency: materialEfficiency ?? this.materialEfficiency,
+      runs: runs ?? this.runs,
+      isOriginal: isOriginal ?? this.isOriginal,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (itemId.present) {
+      map['item_id'] = Variable<int>(itemId.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (locationId.present) {
+      map['location_id'] = Variable<int>(locationId.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<int>(quantity.value);
+    }
+    if (timeEfficiency.present) {
+      map['time_efficiency'] = Variable<int>(timeEfficiency.value);
+    }
+    if (materialEfficiency.present) {
+      map['material_efficiency'] = Variable<int>(materialEfficiency.value);
+    }
+    if (runs.present) {
+      map['runs'] = Variable<int>(runs.value);
+    }
+    if (isOriginal.present) {
+      map['is_original'] = Variable<bool>(isOriginal.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BlueprintsCompanion(')
+          ..write('itemId: $itemId, ')
+          ..write('characterId: $characterId, ')
+          ..write('typeId: $typeId, ')
+          ..write('locationId: $locationId, ')
+          ..write('quantity: $quantity, ')
+          ..write('timeEfficiency: $timeEfficiency, ')
+          ..write('materialEfficiency: $materialEfficiency, ')
+          ..write('runs: $runs, ')
+          ..write('isOriginal: $isOriginal, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $IndustryJobsTable extends IndustryJobs
+    with TableInfo<$IndustryJobsTable, IndustryJob> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $IndustryJobsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _jobIdMeta = const VerificationMeta('jobId');
+  @override
+  late final GeneratedColumn<int> jobId = GeneratedColumn<int>(
+      'job_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _characterIdMeta =
+      const VerificationMeta('characterId');
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+      'character_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES characters (character_id)'));
+  static const VerificationMeta _installerIdMeta =
+      const VerificationMeta('installerId');
+  @override
+  late final GeneratedColumn<int> installerId = GeneratedColumn<int>(
+      'installer_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _facilityIdMeta =
+      const VerificationMeta('facilityId');
+  @override
+  late final GeneratedColumn<int> facilityId = GeneratedColumn<int>(
+      'facility_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _locationIdMeta =
+      const VerificationMeta('locationId');
+  @override
+  late final GeneratedColumn<int> locationId = GeneratedColumn<int>(
+      'location_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _activityIdMeta =
+      const VerificationMeta('activityId');
+  @override
+  late final GeneratedColumn<int> activityId = GeneratedColumn<int>(
+      'activity_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _blueprintIdMeta =
+      const VerificationMeta('blueprintId');
+  @override
+  late final GeneratedColumn<int> blueprintId = GeneratedColumn<int>(
+      'blueprint_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _blueprintTypeIdMeta =
+      const VerificationMeta('blueprintTypeId');
+  @override
+  late final GeneratedColumn<int> blueprintTypeId = GeneratedColumn<int>(
+      'blueprint_type_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _outputLocationIdMeta =
+      const VerificationMeta('outputLocationId');
+  @override
+  late final GeneratedColumn<int> outputLocationId = GeneratedColumn<int>(
+      'output_location_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _runsMeta = const VerificationMeta('runs');
+  @override
+  late final GeneratedColumn<int> runs = GeneratedColumn<int>(
+      'runs', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _costMeta = const VerificationMeta('cost');
+  @override
+  late final GeneratedColumn<double> cost = GeneratedColumn<double>(
+      'cost', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _licensedProductionRunsMeta =
+      const VerificationMeta('licensedProductionRuns');
+  @override
+  late final GeneratedColumn<int> licensedProductionRuns = GeneratedColumn<int>(
+      'licensed_production_runs', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _probabilityMeta =
+      const VerificationMeta('probability');
+  @override
+  late final GeneratedColumn<double> probability = GeneratedColumn<double>(
+      'probability', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _productTypeIdMeta =
+      const VerificationMeta('productTypeId');
+  @override
+  late final GeneratedColumn<int> productTypeId = GeneratedColumn<int>(
+      'product_type_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+      'status', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _timeInSecondsMeta =
+      const VerificationMeta('timeInSeconds');
+  @override
+  late final GeneratedColumn<int> timeInSeconds = GeneratedColumn<int>(
+      'time_in_seconds', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _startDateMeta =
+      const VerificationMeta('startDate');
+  @override
+  late final GeneratedColumn<DateTime> startDate = GeneratedColumn<DateTime>(
+      'start_date', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _endDateMeta =
+      const VerificationMeta('endDate');
+  @override
+  late final GeneratedColumn<DateTime> endDate = GeneratedColumn<DateTime>(
+      'end_date', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _pauseDateMeta =
+      const VerificationMeta('pauseDate');
+  @override
+  late final GeneratedColumn<DateTime> pauseDate = GeneratedColumn<DateTime>(
+      'pause_date', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _completedDateMeta =
+      const VerificationMeta('completedDate');
+  @override
+  late final GeneratedColumn<DateTime> completedDate =
+      GeneratedColumn<DateTime>('completed_date', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _completedCharacterIdMeta =
+      const VerificationMeta('completedCharacterId');
+  @override
+  late final GeneratedColumn<int> completedCharacterId = GeneratedColumn<int>(
+      'completed_character_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _successfulRunsMeta =
+      const VerificationMeta('successfulRuns');
+  @override
+  late final GeneratedColumn<int> successfulRuns = GeneratedColumn<int>(
+      'successful_runs', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        jobId,
+        characterId,
+        installerId,
+        facilityId,
+        locationId,
+        activityId,
+        blueprintId,
+        blueprintTypeId,
+        outputLocationId,
+        runs,
+        cost,
+        licensedProductionRuns,
+        probability,
+        productTypeId,
+        status,
+        timeInSeconds,
+        startDate,
+        endDate,
+        pauseDate,
+        completedDate,
+        completedCharacterId,
+        successfulRuns
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'industry_jobs';
+  @override
+  VerificationContext validateIntegrity(Insertable<IndustryJob> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('job_id')) {
+      context.handle(
+          _jobIdMeta, jobId.isAcceptableOrUnknown(data['job_id']!, _jobIdMeta));
+    } else if (isInserting) {
+      context.missing(_jobIdMeta);
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+          _characterIdMeta,
+          characterId.isAcceptableOrUnknown(
+              data['character_id']!, _characterIdMeta));
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('installer_id')) {
+      context.handle(
+          _installerIdMeta,
+          installerId.isAcceptableOrUnknown(
+              data['installer_id']!, _installerIdMeta));
+    } else if (isInserting) {
+      context.missing(_installerIdMeta);
+    }
+    if (data.containsKey('facility_id')) {
+      context.handle(
+          _facilityIdMeta,
+          facilityId.isAcceptableOrUnknown(
+              data['facility_id']!, _facilityIdMeta));
+    } else if (isInserting) {
+      context.missing(_facilityIdMeta);
+    }
+    if (data.containsKey('location_id')) {
+      context.handle(
+          _locationIdMeta,
+          locationId.isAcceptableOrUnknown(
+              data['location_id']!, _locationIdMeta));
+    } else if (isInserting) {
+      context.missing(_locationIdMeta);
+    }
+    if (data.containsKey('activity_id')) {
+      context.handle(
+          _activityIdMeta,
+          activityId.isAcceptableOrUnknown(
+              data['activity_id']!, _activityIdMeta));
+    } else if (isInserting) {
+      context.missing(_activityIdMeta);
+    }
+    if (data.containsKey('blueprint_id')) {
+      context.handle(
+          _blueprintIdMeta,
+          blueprintId.isAcceptableOrUnknown(
+              data['blueprint_id']!, _blueprintIdMeta));
+    } else if (isInserting) {
+      context.missing(_blueprintIdMeta);
+    }
+    if (data.containsKey('blueprint_type_id')) {
+      context.handle(
+          _blueprintTypeIdMeta,
+          blueprintTypeId.isAcceptableOrUnknown(
+              data['blueprint_type_id']!, _blueprintTypeIdMeta));
+    } else if (isInserting) {
+      context.missing(_blueprintTypeIdMeta);
+    }
+    if (data.containsKey('output_location_id')) {
+      context.handle(
+          _outputLocationIdMeta,
+          outputLocationId.isAcceptableOrUnknown(
+              data['output_location_id']!, _outputLocationIdMeta));
+    } else if (isInserting) {
+      context.missing(_outputLocationIdMeta);
+    }
+    if (data.containsKey('runs')) {
+      context.handle(
+          _runsMeta, runs.isAcceptableOrUnknown(data['runs']!, _runsMeta));
+    } else if (isInserting) {
+      context.missing(_runsMeta);
+    }
+    if (data.containsKey('cost')) {
+      context.handle(
+          _costMeta, cost.isAcceptableOrUnknown(data['cost']!, _costMeta));
+    } else if (isInserting) {
+      context.missing(_costMeta);
+    }
+    if (data.containsKey('licensed_production_runs')) {
+      context.handle(
+          _licensedProductionRunsMeta,
+          licensedProductionRuns.isAcceptableOrUnknown(
+              data['licensed_production_runs']!, _licensedProductionRunsMeta));
+    }
+    if (data.containsKey('probability')) {
+      context.handle(
+          _probabilityMeta,
+          probability.isAcceptableOrUnknown(
+              data['probability']!, _probabilityMeta));
+    }
+    if (data.containsKey('product_type_id')) {
+      context.handle(
+          _productTypeIdMeta,
+          productTypeId.isAcceptableOrUnknown(
+              data['product_type_id']!, _productTypeIdMeta));
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta,
+          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('time_in_seconds')) {
+      context.handle(
+          _timeInSecondsMeta,
+          timeInSeconds.isAcceptableOrUnknown(
+              data['time_in_seconds']!, _timeInSecondsMeta));
+    } else if (isInserting) {
+      context.missing(_timeInSecondsMeta);
+    }
+    if (data.containsKey('start_date')) {
+      context.handle(_startDateMeta,
+          startDate.isAcceptableOrUnknown(data['start_date']!, _startDateMeta));
+    } else if (isInserting) {
+      context.missing(_startDateMeta);
+    }
+    if (data.containsKey('end_date')) {
+      context.handle(_endDateMeta,
+          endDate.isAcceptableOrUnknown(data['end_date']!, _endDateMeta));
+    } else if (isInserting) {
+      context.missing(_endDateMeta);
+    }
+    if (data.containsKey('pause_date')) {
+      context.handle(_pauseDateMeta,
+          pauseDate.isAcceptableOrUnknown(data['pause_date']!, _pauseDateMeta));
+    }
+    if (data.containsKey('completed_date')) {
+      context.handle(
+          _completedDateMeta,
+          completedDate.isAcceptableOrUnknown(
+              data['completed_date']!, _completedDateMeta));
+    }
+    if (data.containsKey('completed_character_id')) {
+      context.handle(
+          _completedCharacterIdMeta,
+          completedCharacterId.isAcceptableOrUnknown(
+              data['completed_character_id']!, _completedCharacterIdMeta));
+    }
+    if (data.containsKey('successful_runs')) {
+      context.handle(
+          _successfulRunsMeta,
+          successfulRuns.isAcceptableOrUnknown(
+              data['successful_runs']!, _successfulRunsMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {jobId, characterId};
+  @override
+  IndustryJob map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return IndustryJob(
+      jobId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}job_id'])!,
+      characterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}character_id'])!,
+      installerId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}installer_id'])!,
+      facilityId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}facility_id'])!,
+      locationId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}location_id'])!,
+      activityId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}activity_id'])!,
+      blueprintId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}blueprint_id'])!,
+      blueprintTypeId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}blueprint_type_id'])!,
+      outputLocationId: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}output_location_id'])!,
+      runs: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}runs'])!,
+      cost: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}cost'])!,
+      licensedProductionRuns: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}licensed_production_runs']),
+      probability: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}probability']),
+      productTypeId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}product_type_id']),
+      status: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      timeInSeconds: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}time_in_seconds'])!,
+      startDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}start_date'])!,
+      endDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}end_date'])!,
+      pauseDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}pause_date']),
+      completedDate: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}completed_date']),
+      completedCharacterId: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}completed_character_id']),
+      successfulRuns: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}successful_runs']),
+    );
+  }
+
+  @override
+  $IndustryJobsTable createAlias(String alias) {
+    return $IndustryJobsTable(attachedDatabase, alias);
+  }
+}
+
+class IndustryJob extends DataClass implements Insertable<IndustryJob> {
+  final int jobId;
+  final int characterId;
+  final int installerId;
+  final int facilityId;
+  final int locationId;
+  final int activityId;
+  final int blueprintId;
+  final int blueprintTypeId;
+  final int outputLocationId;
+  final int runs;
+  final double cost;
+  final int? licensedProductionRuns;
+  final double? probability;
+  final int? productTypeId;
+  final String status;
+  final int timeInSeconds;
+  final DateTime startDate;
+  final DateTime endDate;
+  final DateTime? pauseDate;
+  final DateTime? completedDate;
+  final int? completedCharacterId;
+  final int? successfulRuns;
+  const IndustryJob(
+      {required this.jobId,
+      required this.characterId,
+      required this.installerId,
+      required this.facilityId,
+      required this.locationId,
+      required this.activityId,
+      required this.blueprintId,
+      required this.blueprintTypeId,
+      required this.outputLocationId,
+      required this.runs,
+      required this.cost,
+      this.licensedProductionRuns,
+      this.probability,
+      this.productTypeId,
+      required this.status,
+      required this.timeInSeconds,
+      required this.startDate,
+      required this.endDate,
+      this.pauseDate,
+      this.completedDate,
+      this.completedCharacterId,
+      this.successfulRuns});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['job_id'] = Variable<int>(jobId);
+    map['character_id'] = Variable<int>(characterId);
+    map['installer_id'] = Variable<int>(installerId);
+    map['facility_id'] = Variable<int>(facilityId);
+    map['location_id'] = Variable<int>(locationId);
+    map['activity_id'] = Variable<int>(activityId);
+    map['blueprint_id'] = Variable<int>(blueprintId);
+    map['blueprint_type_id'] = Variable<int>(blueprintTypeId);
+    map['output_location_id'] = Variable<int>(outputLocationId);
+    map['runs'] = Variable<int>(runs);
+    map['cost'] = Variable<double>(cost);
+    if (!nullToAbsent || licensedProductionRuns != null) {
+      map['licensed_production_runs'] = Variable<int>(licensedProductionRuns);
+    }
+    if (!nullToAbsent || probability != null) {
+      map['probability'] = Variable<double>(probability);
+    }
+    if (!nullToAbsent || productTypeId != null) {
+      map['product_type_id'] = Variable<int>(productTypeId);
+    }
+    map['status'] = Variable<String>(status);
+    map['time_in_seconds'] = Variable<int>(timeInSeconds);
+    map['start_date'] = Variable<DateTime>(startDate);
+    map['end_date'] = Variable<DateTime>(endDate);
+    if (!nullToAbsent || pauseDate != null) {
+      map['pause_date'] = Variable<DateTime>(pauseDate);
+    }
+    if (!nullToAbsent || completedDate != null) {
+      map['completed_date'] = Variable<DateTime>(completedDate);
+    }
+    if (!nullToAbsent || completedCharacterId != null) {
+      map['completed_character_id'] = Variable<int>(completedCharacterId);
+    }
+    if (!nullToAbsent || successfulRuns != null) {
+      map['successful_runs'] = Variable<int>(successfulRuns);
+    }
+    return map;
+  }
+
+  IndustryJobsCompanion toCompanion(bool nullToAbsent) {
+    return IndustryJobsCompanion(
+      jobId: Value(jobId),
+      characterId: Value(characterId),
+      installerId: Value(installerId),
+      facilityId: Value(facilityId),
+      locationId: Value(locationId),
+      activityId: Value(activityId),
+      blueprintId: Value(blueprintId),
+      blueprintTypeId: Value(blueprintTypeId),
+      outputLocationId: Value(outputLocationId),
+      runs: Value(runs),
+      cost: Value(cost),
+      licensedProductionRuns: licensedProductionRuns == null && nullToAbsent
+          ? const Value.absent()
+          : Value(licensedProductionRuns),
+      probability: probability == null && nullToAbsent
+          ? const Value.absent()
+          : Value(probability),
+      productTypeId: productTypeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(productTypeId),
+      status: Value(status),
+      timeInSeconds: Value(timeInSeconds),
+      startDate: Value(startDate),
+      endDate: Value(endDate),
+      pauseDate: pauseDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pauseDate),
+      completedDate: completedDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(completedDate),
+      completedCharacterId: completedCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(completedCharacterId),
+      successfulRuns: successfulRuns == null && nullToAbsent
+          ? const Value.absent()
+          : Value(successfulRuns),
+    );
+  }
+
+  factory IndustryJob.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return IndustryJob(
+      jobId: serializer.fromJson<int>(json['jobId']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      installerId: serializer.fromJson<int>(json['installerId']),
+      facilityId: serializer.fromJson<int>(json['facilityId']),
+      locationId: serializer.fromJson<int>(json['locationId']),
+      activityId: serializer.fromJson<int>(json['activityId']),
+      blueprintId: serializer.fromJson<int>(json['blueprintId']),
+      blueprintTypeId: serializer.fromJson<int>(json['blueprintTypeId']),
+      outputLocationId: serializer.fromJson<int>(json['outputLocationId']),
+      runs: serializer.fromJson<int>(json['runs']),
+      cost: serializer.fromJson<double>(json['cost']),
+      licensedProductionRuns:
+          serializer.fromJson<int?>(json['licensedProductionRuns']),
+      probability: serializer.fromJson<double?>(json['probability']),
+      productTypeId: serializer.fromJson<int?>(json['productTypeId']),
+      status: serializer.fromJson<String>(json['status']),
+      timeInSeconds: serializer.fromJson<int>(json['timeInSeconds']),
+      startDate: serializer.fromJson<DateTime>(json['startDate']),
+      endDate: serializer.fromJson<DateTime>(json['endDate']),
+      pauseDate: serializer.fromJson<DateTime?>(json['pauseDate']),
+      completedDate: serializer.fromJson<DateTime?>(json['completedDate']),
+      completedCharacterId:
+          serializer.fromJson<int?>(json['completedCharacterId']),
+      successfulRuns: serializer.fromJson<int?>(json['successfulRuns']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'jobId': serializer.toJson<int>(jobId),
+      'characterId': serializer.toJson<int>(characterId),
+      'installerId': serializer.toJson<int>(installerId),
+      'facilityId': serializer.toJson<int>(facilityId),
+      'locationId': serializer.toJson<int>(locationId),
+      'activityId': serializer.toJson<int>(activityId),
+      'blueprintId': serializer.toJson<int>(blueprintId),
+      'blueprintTypeId': serializer.toJson<int>(blueprintTypeId),
+      'outputLocationId': serializer.toJson<int>(outputLocationId),
+      'runs': serializer.toJson<int>(runs),
+      'cost': serializer.toJson<double>(cost),
+      'licensedProductionRuns': serializer.toJson<int?>(licensedProductionRuns),
+      'probability': serializer.toJson<double?>(probability),
+      'productTypeId': serializer.toJson<int?>(productTypeId),
+      'status': serializer.toJson<String>(status),
+      'timeInSeconds': serializer.toJson<int>(timeInSeconds),
+      'startDate': serializer.toJson<DateTime>(startDate),
+      'endDate': serializer.toJson<DateTime>(endDate),
+      'pauseDate': serializer.toJson<DateTime?>(pauseDate),
+      'completedDate': serializer.toJson<DateTime?>(completedDate),
+      'completedCharacterId': serializer.toJson<int?>(completedCharacterId),
+      'successfulRuns': serializer.toJson<int?>(successfulRuns),
+    };
+  }
+
+  IndustryJob copyWith(
+          {int? jobId,
+          int? characterId,
+          int? installerId,
+          int? facilityId,
+          int? locationId,
+          int? activityId,
+          int? blueprintId,
+          int? blueprintTypeId,
+          int? outputLocationId,
+          int? runs,
+          double? cost,
+          Value<int?> licensedProductionRuns = const Value.absent(),
+          Value<double?> probability = const Value.absent(),
+          Value<int?> productTypeId = const Value.absent(),
+          String? status,
+          int? timeInSeconds,
+          DateTime? startDate,
+          DateTime? endDate,
+          Value<DateTime?> pauseDate = const Value.absent(),
+          Value<DateTime?> completedDate = const Value.absent(),
+          Value<int?> completedCharacterId = const Value.absent(),
+          Value<int?> successfulRuns = const Value.absent()}) =>
+      IndustryJob(
+        jobId: jobId ?? this.jobId,
+        characterId: characterId ?? this.characterId,
+        installerId: installerId ?? this.installerId,
+        facilityId: facilityId ?? this.facilityId,
+        locationId: locationId ?? this.locationId,
+        activityId: activityId ?? this.activityId,
+        blueprintId: blueprintId ?? this.blueprintId,
+        blueprintTypeId: blueprintTypeId ?? this.blueprintTypeId,
+        outputLocationId: outputLocationId ?? this.outputLocationId,
+        runs: runs ?? this.runs,
+        cost: cost ?? this.cost,
+        licensedProductionRuns: licensedProductionRuns.present
+            ? licensedProductionRuns.value
+            : this.licensedProductionRuns,
+        probability: probability.present ? probability.value : this.probability,
+        productTypeId:
+            productTypeId.present ? productTypeId.value : this.productTypeId,
+        status: status ?? this.status,
+        timeInSeconds: timeInSeconds ?? this.timeInSeconds,
+        startDate: startDate ?? this.startDate,
+        endDate: endDate ?? this.endDate,
+        pauseDate: pauseDate.present ? pauseDate.value : this.pauseDate,
+        completedDate:
+            completedDate.present ? completedDate.value : this.completedDate,
+        completedCharacterId: completedCharacterId.present
+            ? completedCharacterId.value
+            : this.completedCharacterId,
+        successfulRuns:
+            successfulRuns.present ? successfulRuns.value : this.successfulRuns,
+      );
+  IndustryJob copyWithCompanion(IndustryJobsCompanion data) {
+    return IndustryJob(
+      jobId: data.jobId.present ? data.jobId.value : this.jobId,
+      characterId:
+          data.characterId.present ? data.characterId.value : this.characterId,
+      installerId:
+          data.installerId.present ? data.installerId.value : this.installerId,
+      facilityId:
+          data.facilityId.present ? data.facilityId.value : this.facilityId,
+      locationId:
+          data.locationId.present ? data.locationId.value : this.locationId,
+      activityId:
+          data.activityId.present ? data.activityId.value : this.activityId,
+      blueprintId:
+          data.blueprintId.present ? data.blueprintId.value : this.blueprintId,
+      blueprintTypeId: data.blueprintTypeId.present
+          ? data.blueprintTypeId.value
+          : this.blueprintTypeId,
+      outputLocationId: data.outputLocationId.present
+          ? data.outputLocationId.value
+          : this.outputLocationId,
+      runs: data.runs.present ? data.runs.value : this.runs,
+      cost: data.cost.present ? data.cost.value : this.cost,
+      licensedProductionRuns: data.licensedProductionRuns.present
+          ? data.licensedProductionRuns.value
+          : this.licensedProductionRuns,
+      probability:
+          data.probability.present ? data.probability.value : this.probability,
+      productTypeId: data.productTypeId.present
+          ? data.productTypeId.value
+          : this.productTypeId,
+      status: data.status.present ? data.status.value : this.status,
+      timeInSeconds: data.timeInSeconds.present
+          ? data.timeInSeconds.value
+          : this.timeInSeconds,
+      startDate: data.startDate.present ? data.startDate.value : this.startDate,
+      endDate: data.endDate.present ? data.endDate.value : this.endDate,
+      pauseDate: data.pauseDate.present ? data.pauseDate.value : this.pauseDate,
+      completedDate: data.completedDate.present
+          ? data.completedDate.value
+          : this.completedDate,
+      completedCharacterId: data.completedCharacterId.present
+          ? data.completedCharacterId.value
+          : this.completedCharacterId,
+      successfulRuns: data.successfulRuns.present
+          ? data.successfulRuns.value
+          : this.successfulRuns,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('IndustryJob(')
+          ..write('jobId: $jobId, ')
+          ..write('characterId: $characterId, ')
+          ..write('installerId: $installerId, ')
+          ..write('facilityId: $facilityId, ')
+          ..write('locationId: $locationId, ')
+          ..write('activityId: $activityId, ')
+          ..write('blueprintId: $blueprintId, ')
+          ..write('blueprintTypeId: $blueprintTypeId, ')
+          ..write('outputLocationId: $outputLocationId, ')
+          ..write('runs: $runs, ')
+          ..write('cost: $cost, ')
+          ..write('licensedProductionRuns: $licensedProductionRuns, ')
+          ..write('probability: $probability, ')
+          ..write('productTypeId: $productTypeId, ')
+          ..write('status: $status, ')
+          ..write('timeInSeconds: $timeInSeconds, ')
+          ..write('startDate: $startDate, ')
+          ..write('endDate: $endDate, ')
+          ..write('pauseDate: $pauseDate, ')
+          ..write('completedDate: $completedDate, ')
+          ..write('completedCharacterId: $completedCharacterId, ')
+          ..write('successfulRuns: $successfulRuns')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+        jobId,
+        characterId,
+        installerId,
+        facilityId,
+        locationId,
+        activityId,
+        blueprintId,
+        blueprintTypeId,
+        outputLocationId,
+        runs,
+        cost,
+        licensedProductionRuns,
+        probability,
+        productTypeId,
+        status,
+        timeInSeconds,
+        startDate,
+        endDate,
+        pauseDate,
+        completedDate,
+        completedCharacterId,
+        successfulRuns
+      ]);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is IndustryJob &&
+          other.jobId == this.jobId &&
+          other.characterId == this.characterId &&
+          other.installerId == this.installerId &&
+          other.facilityId == this.facilityId &&
+          other.locationId == this.locationId &&
+          other.activityId == this.activityId &&
+          other.blueprintId == this.blueprintId &&
+          other.blueprintTypeId == this.blueprintTypeId &&
+          other.outputLocationId == this.outputLocationId &&
+          other.runs == this.runs &&
+          other.cost == this.cost &&
+          other.licensedProductionRuns == this.licensedProductionRuns &&
+          other.probability == this.probability &&
+          other.productTypeId == this.productTypeId &&
+          other.status == this.status &&
+          other.timeInSeconds == this.timeInSeconds &&
+          other.startDate == this.startDate &&
+          other.endDate == this.endDate &&
+          other.pauseDate == this.pauseDate &&
+          other.completedDate == this.completedDate &&
+          other.completedCharacterId == this.completedCharacterId &&
+          other.successfulRuns == this.successfulRuns);
+}
+
+class IndustryJobsCompanion extends UpdateCompanion<IndustryJob> {
+  final Value<int> jobId;
+  final Value<int> characterId;
+  final Value<int> installerId;
+  final Value<int> facilityId;
+  final Value<int> locationId;
+  final Value<int> activityId;
+  final Value<int> blueprintId;
+  final Value<int> blueprintTypeId;
+  final Value<int> outputLocationId;
+  final Value<int> runs;
+  final Value<double> cost;
+  final Value<int?> licensedProductionRuns;
+  final Value<double?> probability;
+  final Value<int?> productTypeId;
+  final Value<String> status;
+  final Value<int> timeInSeconds;
+  final Value<DateTime> startDate;
+  final Value<DateTime> endDate;
+  final Value<DateTime?> pauseDate;
+  final Value<DateTime?> completedDate;
+  final Value<int?> completedCharacterId;
+  final Value<int?> successfulRuns;
+  final Value<int> rowid;
+  const IndustryJobsCompanion({
+    this.jobId = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.installerId = const Value.absent(),
+    this.facilityId = const Value.absent(),
+    this.locationId = const Value.absent(),
+    this.activityId = const Value.absent(),
+    this.blueprintId = const Value.absent(),
+    this.blueprintTypeId = const Value.absent(),
+    this.outputLocationId = const Value.absent(),
+    this.runs = const Value.absent(),
+    this.cost = const Value.absent(),
+    this.licensedProductionRuns = const Value.absent(),
+    this.probability = const Value.absent(),
+    this.productTypeId = const Value.absent(),
+    this.status = const Value.absent(),
+    this.timeInSeconds = const Value.absent(),
+    this.startDate = const Value.absent(),
+    this.endDate = const Value.absent(),
+    this.pauseDate = const Value.absent(),
+    this.completedDate = const Value.absent(),
+    this.completedCharacterId = const Value.absent(),
+    this.successfulRuns = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  IndustryJobsCompanion.insert({
+    required int jobId,
+    required int characterId,
+    required int installerId,
+    required int facilityId,
+    required int locationId,
+    required int activityId,
+    required int blueprintId,
+    required int blueprintTypeId,
+    required int outputLocationId,
+    required int runs,
+    required double cost,
+    this.licensedProductionRuns = const Value.absent(),
+    this.probability = const Value.absent(),
+    this.productTypeId = const Value.absent(),
+    required String status,
+    required int timeInSeconds,
+    required DateTime startDate,
+    required DateTime endDate,
+    this.pauseDate = const Value.absent(),
+    this.completedDate = const Value.absent(),
+    this.completedCharacterId = const Value.absent(),
+    this.successfulRuns = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : jobId = Value(jobId),
+        characterId = Value(characterId),
+        installerId = Value(installerId),
+        facilityId = Value(facilityId),
+        locationId = Value(locationId),
+        activityId = Value(activityId),
+        blueprintId = Value(blueprintId),
+        blueprintTypeId = Value(blueprintTypeId),
+        outputLocationId = Value(outputLocationId),
+        runs = Value(runs),
+        cost = Value(cost),
+        status = Value(status),
+        timeInSeconds = Value(timeInSeconds),
+        startDate = Value(startDate),
+        endDate = Value(endDate);
+  static Insertable<IndustryJob> custom({
+    Expression<int>? jobId,
+    Expression<int>? characterId,
+    Expression<int>? installerId,
+    Expression<int>? facilityId,
+    Expression<int>? locationId,
+    Expression<int>? activityId,
+    Expression<int>? blueprintId,
+    Expression<int>? blueprintTypeId,
+    Expression<int>? outputLocationId,
+    Expression<int>? runs,
+    Expression<double>? cost,
+    Expression<int>? licensedProductionRuns,
+    Expression<double>? probability,
+    Expression<int>? productTypeId,
+    Expression<String>? status,
+    Expression<int>? timeInSeconds,
+    Expression<DateTime>? startDate,
+    Expression<DateTime>? endDate,
+    Expression<DateTime>? pauseDate,
+    Expression<DateTime>? completedDate,
+    Expression<int>? completedCharacterId,
+    Expression<int>? successfulRuns,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (jobId != null) 'job_id': jobId,
+      if (characterId != null) 'character_id': characterId,
+      if (installerId != null) 'installer_id': installerId,
+      if (facilityId != null) 'facility_id': facilityId,
+      if (locationId != null) 'location_id': locationId,
+      if (activityId != null) 'activity_id': activityId,
+      if (blueprintId != null) 'blueprint_id': blueprintId,
+      if (blueprintTypeId != null) 'blueprint_type_id': blueprintTypeId,
+      if (outputLocationId != null) 'output_location_id': outputLocationId,
+      if (runs != null) 'runs': runs,
+      if (cost != null) 'cost': cost,
+      if (licensedProductionRuns != null)
+        'licensed_production_runs': licensedProductionRuns,
+      if (probability != null) 'probability': probability,
+      if (productTypeId != null) 'product_type_id': productTypeId,
+      if (status != null) 'status': status,
+      if (timeInSeconds != null) 'time_in_seconds': timeInSeconds,
+      if (startDate != null) 'start_date': startDate,
+      if (endDate != null) 'end_date': endDate,
+      if (pauseDate != null) 'pause_date': pauseDate,
+      if (completedDate != null) 'completed_date': completedDate,
+      if (completedCharacterId != null)
+        'completed_character_id': completedCharacterId,
+      if (successfulRuns != null) 'successful_runs': successfulRuns,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  IndustryJobsCompanion copyWith(
+      {Value<int>? jobId,
+      Value<int>? characterId,
+      Value<int>? installerId,
+      Value<int>? facilityId,
+      Value<int>? locationId,
+      Value<int>? activityId,
+      Value<int>? blueprintId,
+      Value<int>? blueprintTypeId,
+      Value<int>? outputLocationId,
+      Value<int>? runs,
+      Value<double>? cost,
+      Value<int?>? licensedProductionRuns,
+      Value<double?>? probability,
+      Value<int?>? productTypeId,
+      Value<String>? status,
+      Value<int>? timeInSeconds,
+      Value<DateTime>? startDate,
+      Value<DateTime>? endDate,
+      Value<DateTime?>? pauseDate,
+      Value<DateTime?>? completedDate,
+      Value<int?>? completedCharacterId,
+      Value<int?>? successfulRuns,
+      Value<int>? rowid}) {
+    return IndustryJobsCompanion(
+      jobId: jobId ?? this.jobId,
+      characterId: characterId ?? this.characterId,
+      installerId: installerId ?? this.installerId,
+      facilityId: facilityId ?? this.facilityId,
+      locationId: locationId ?? this.locationId,
+      activityId: activityId ?? this.activityId,
+      blueprintId: blueprintId ?? this.blueprintId,
+      blueprintTypeId: blueprintTypeId ?? this.blueprintTypeId,
+      outputLocationId: outputLocationId ?? this.outputLocationId,
+      runs: runs ?? this.runs,
+      cost: cost ?? this.cost,
+      licensedProductionRuns:
+          licensedProductionRuns ?? this.licensedProductionRuns,
+      probability: probability ?? this.probability,
+      productTypeId: productTypeId ?? this.productTypeId,
+      status: status ?? this.status,
+      timeInSeconds: timeInSeconds ?? this.timeInSeconds,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      pauseDate: pauseDate ?? this.pauseDate,
+      completedDate: completedDate ?? this.completedDate,
+      completedCharacterId: completedCharacterId ?? this.completedCharacterId,
+      successfulRuns: successfulRuns ?? this.successfulRuns,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (jobId.present) {
+      map['job_id'] = Variable<int>(jobId.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (installerId.present) {
+      map['installer_id'] = Variable<int>(installerId.value);
+    }
+    if (facilityId.present) {
+      map['facility_id'] = Variable<int>(facilityId.value);
+    }
+    if (locationId.present) {
+      map['location_id'] = Variable<int>(locationId.value);
+    }
+    if (activityId.present) {
+      map['activity_id'] = Variable<int>(activityId.value);
+    }
+    if (blueprintId.present) {
+      map['blueprint_id'] = Variable<int>(blueprintId.value);
+    }
+    if (blueprintTypeId.present) {
+      map['blueprint_type_id'] = Variable<int>(blueprintTypeId.value);
+    }
+    if (outputLocationId.present) {
+      map['output_location_id'] = Variable<int>(outputLocationId.value);
+    }
+    if (runs.present) {
+      map['runs'] = Variable<int>(runs.value);
+    }
+    if (cost.present) {
+      map['cost'] = Variable<double>(cost.value);
+    }
+    if (licensedProductionRuns.present) {
+      map['licensed_production_runs'] =
+          Variable<int>(licensedProductionRuns.value);
+    }
+    if (probability.present) {
+      map['probability'] = Variable<double>(probability.value);
+    }
+    if (productTypeId.present) {
+      map['product_type_id'] = Variable<int>(productTypeId.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (timeInSeconds.present) {
+      map['time_in_seconds'] = Variable<int>(timeInSeconds.value);
+    }
+    if (startDate.present) {
+      map['start_date'] = Variable<DateTime>(startDate.value);
+    }
+    if (endDate.present) {
+      map['end_date'] = Variable<DateTime>(endDate.value);
+    }
+    if (pauseDate.present) {
+      map['pause_date'] = Variable<DateTime>(pauseDate.value);
+    }
+    if (completedDate.present) {
+      map['completed_date'] = Variable<DateTime>(completedDate.value);
+    }
+    if (completedCharacterId.present) {
+      map['completed_character_id'] = Variable<int>(completedCharacterId.value);
+    }
+    if (successfulRuns.present) {
+      map['successful_runs'] = Variable<int>(successfulRuns.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('IndustryJobsCompanion(')
+          ..write('jobId: $jobId, ')
+          ..write('characterId: $characterId, ')
+          ..write('installerId: $installerId, ')
+          ..write('facilityId: $facilityId, ')
+          ..write('locationId: $locationId, ')
+          ..write('activityId: $activityId, ')
+          ..write('blueprintId: $blueprintId, ')
+          ..write('blueprintTypeId: $blueprintTypeId, ')
+          ..write('outputLocationId: $outputLocationId, ')
+          ..write('runs: $runs, ')
+          ..write('cost: $cost, ')
+          ..write('licensedProductionRuns: $licensedProductionRuns, ')
+          ..write('probability: $probability, ')
+          ..write('productTypeId: $productTypeId, ')
+          ..write('status: $status, ')
+          ..write('timeInSeconds: $timeInSeconds, ')
+          ..write('startDate: $startDate, ')
+          ..write('endDate: $endDate, ')
+          ..write('pauseDate: $pauseDate, ')
+          ..write('completedDate: $completedDate, ')
+          ..write('completedCharacterId: $completedCharacterId, ')
+          ..write('successfulRuns: $successfulRuns, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -8457,6 +10003,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AssetsTable assets = $AssetsTable(this);
   late final $AssetLocationsTable assetLocations = $AssetLocationsTable(this);
   late final $AssetSnapshotsTable assetSnapshots = $AssetSnapshotsTable(this);
+  late final $BlueprintsTable blueprints = $BlueprintsTable(this);
+  late final $IndustryJobsTable industryJobs = $IndustryJobsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8480,7 +10028,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         planetaryPins,
         assets,
         assetLocations,
-        assetSnapshots
+        assetSnapshots,
+        blueprints,
+        industryJobs
       ];
 }
 
@@ -8755,6 +10305,38 @@ final class $$CharactersTableReferences
             .sqlEquals($_itemColumn<int>('character_id')!));
 
     final cache = $_typedResult.readTableOrNull(_assetSnapshotsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$BlueprintsTable, List<Blueprint>>
+      _blueprintsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.blueprints,
+              aliasName: $_aliasNameGenerator(
+                  db.characters.characterId, db.blueprints.characterId));
+
+  $$BlueprintsTableProcessedTableManager get blueprintsRefs {
+    final manager = $$BlueprintsTableTableManager($_db, $_db.blueprints).filter(
+        (f) => f.characterId.characterId
+            .sqlEquals($_itemColumn<int>('character_id')!));
+
+    final cache = $_typedResult.readTableOrNull(_blueprintsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$IndustryJobsTable, List<IndustryJob>>
+      _industryJobsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.industryJobs,
+              aliasName: $_aliasNameGenerator(
+                  db.characters.characterId, db.industryJobs.characterId));
+
+  $$IndustryJobsTableProcessedTableManager get industryJobsRefs {
+    final manager = $$IndustryJobsTableTableManager($_db, $_db.industryJobs)
+        .filter((f) => f.characterId.characterId
+            .sqlEquals($_itemColumn<int>('character_id')!));
+
+    final cache = $_typedResult.readTableOrNull(_industryJobsRefsTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -9100,6 +10682,48 @@ class $$CharactersTableFilterComposer
             $$AssetSnapshotsTableFilterComposer(
               $db: $db,
               $table: $db.assetSnapshots,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> blueprintsRefs(
+      Expression<bool> Function($$BlueprintsTableFilterComposer f) f) {
+    final $$BlueprintsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.blueprints,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$BlueprintsTableFilterComposer(
+              $db: $db,
+              $table: $db.blueprints,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> industryJobsRefs(
+      Expression<bool> Function($$IndustryJobsTableFilterComposer f) f) {
+    final $$IndustryJobsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.industryJobs,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$IndustryJobsTableFilterComposer(
+              $db: $db,
+              $table: $db.industryJobs,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -9516,6 +11140,48 @@ class $$CharactersTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> blueprintsRefs<T extends Object>(
+      Expression<T> Function($$BlueprintsTableAnnotationComposer a) f) {
+    final $$BlueprintsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.blueprints,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$BlueprintsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.blueprints,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> industryJobsRefs<T extends Object>(
+      Expression<T> Function($$IndustryJobsTableAnnotationComposer a) f) {
+    final $$IndustryJobsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.industryJobs,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$IndustryJobsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.industryJobs,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$CharactersTableTableManager extends RootTableManager<
@@ -9543,7 +11209,9 @@ class $$CharactersTableTableManager extends RootTableManager<
         bool planetaryColoniesRefs,
         bool planetaryPinsRefs,
         bool assetsRefs,
-        bool assetSnapshotsRefs})> {
+        bool assetSnapshotsRefs,
+        bool blueprintsRefs,
+        bool industryJobsRefs})> {
   $$CharactersTableTableManager(_$AppDatabase db, $CharactersTable table)
       : super(TableManagerState(
           db: db,
@@ -9638,7 +11306,9 @@ class $$CharactersTableTableManager extends RootTableManager<
               planetaryColoniesRefs = false,
               planetaryPinsRefs = false,
               assetsRefs = false,
-              assetSnapshotsRefs = false}) {
+              assetSnapshotsRefs = false,
+              blueprintsRefs = false,
+              industryJobsRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
@@ -9655,7 +11325,9 @@ class $$CharactersTableTableManager extends RootTableManager<
                 if (planetaryColoniesRefs) db.planetaryColonies,
                 if (planetaryPinsRefs) db.planetaryPins,
                 if (assetsRefs) db.assets,
-                if (assetSnapshotsRefs) db.assetSnapshots
+                if (assetSnapshotsRefs) db.assetSnapshots,
+                if (blueprintsRefs) db.blueprints,
+                if (industryJobsRefs) db.industryJobs
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
@@ -9841,6 +11513,32 @@ class $$CharactersTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems.where(
                                 (e) => e.characterId == item.characterId),
+                        typedResults: items),
+                  if (blueprintsRefs)
+                    await $_getPrefetchedData<Character, $CharactersTable,
+                            Blueprint>(
+                        currentTable: table,
+                        referencedTable: $$CharactersTableReferences
+                            ._blueprintsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$CharactersTableReferences(db, table, p0)
+                                .blueprintsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.characterId),
+                        typedResults: items),
+                  if (industryJobsRefs)
+                    await $_getPrefetchedData<Character, $CharactersTable,
+                            IndustryJob>(
+                        currentTable: table,
+                        referencedTable: $$CharactersTableReferences
+                            ._industryJobsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$CharactersTableReferences(db, table, p0)
+                                .industryJobsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.characterId),
                         typedResults: items)
                 ];
               },
@@ -9874,7 +11572,9 @@ typedef $$CharactersTableProcessedTableManager = ProcessedTableManager<
         bool planetaryColoniesRefs,
         bool planetaryPinsRefs,
         bool assetsRefs,
-        bool assetSnapshotsRefs})>;
+        bool assetSnapshotsRefs,
+        bool blueprintsRefs,
+        bool industryJobsRefs})>;
 typedef $$SkillQueueEntriesTableCreateCompanionBuilder
     = SkillQueueEntriesCompanion Function({
   Value<int> id,
@@ -15246,6 +16946,888 @@ typedef $$AssetSnapshotsTableProcessedTableManager = ProcessedTableManager<
     (AssetSnapshot, $$AssetSnapshotsTableReferences),
     AssetSnapshot,
     PrefetchHooks Function({bool characterId})>;
+typedef $$BlueprintsTableCreateCompanionBuilder = BlueprintsCompanion Function({
+  required int itemId,
+  required int characterId,
+  required int typeId,
+  required int locationId,
+  required int quantity,
+  required int timeEfficiency,
+  required int materialEfficiency,
+  required int runs,
+  required bool isOriginal,
+  Value<int> rowid,
+});
+typedef $$BlueprintsTableUpdateCompanionBuilder = BlueprintsCompanion Function({
+  Value<int> itemId,
+  Value<int> characterId,
+  Value<int> typeId,
+  Value<int> locationId,
+  Value<int> quantity,
+  Value<int> timeEfficiency,
+  Value<int> materialEfficiency,
+  Value<int> runs,
+  Value<bool> isOriginal,
+  Value<int> rowid,
+});
+
+final class $$BlueprintsTableReferences
+    extends BaseReferences<_$AppDatabase, $BlueprintsTable, Blueprint> {
+  $$BlueprintsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias($_aliasNameGenerator(
+          db.blueprints.characterId, db.characters.characterId));
+
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
+    final manager = $$CharactersTableTableManager($_db, $_db.characters)
+        .filter((f) => f.characterId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$BlueprintsTableFilterComposer
+    extends Composer<_$AppDatabase, $BlueprintsTable> {
+  $$BlueprintsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get itemId => $composableBuilder(
+      column: $table.itemId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get typeId => $composableBuilder(
+      column: $table.typeId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get quantity => $composableBuilder(
+      column: $table.quantity, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get timeEfficiency => $composableBuilder(
+      column: $table.timeEfficiency,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get materialEfficiency => $composableBuilder(
+      column: $table.materialEfficiency,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get runs => $composableBuilder(
+      column: $table.runs, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isOriginal => $composableBuilder(
+      column: $table.isOriginal, builder: (column) => ColumnFilters(column));
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableFilterComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$BlueprintsTableOrderingComposer
+    extends Composer<_$AppDatabase, $BlueprintsTable> {
+  $$BlueprintsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get itemId => $composableBuilder(
+      column: $table.itemId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get typeId => $composableBuilder(
+      column: $table.typeId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get quantity => $composableBuilder(
+      column: $table.quantity, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get timeEfficiency => $composableBuilder(
+      column: $table.timeEfficiency,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get materialEfficiency => $composableBuilder(
+      column: $table.materialEfficiency,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get runs => $composableBuilder(
+      column: $table.runs, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isOriginal => $composableBuilder(
+      column: $table.isOriginal, builder: (column) => ColumnOrderings(column));
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableOrderingComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$BlueprintsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $BlueprintsTable> {
+  $$BlueprintsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get itemId =>
+      $composableBuilder(column: $table.itemId, builder: (column) => column);
+
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => column);
+
+  GeneratedColumn<int> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  GeneratedColumn<int> get timeEfficiency => $composableBuilder(
+      column: $table.timeEfficiency, builder: (column) => column);
+
+  GeneratedColumn<int> get materialEfficiency => $composableBuilder(
+      column: $table.materialEfficiency, builder: (column) => column);
+
+  GeneratedColumn<int> get runs =>
+      $composableBuilder(column: $table.runs, builder: (column) => column);
+
+  GeneratedColumn<bool> get isOriginal => $composableBuilder(
+      column: $table.isOriginal, builder: (column) => column);
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$BlueprintsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $BlueprintsTable,
+    Blueprint,
+    $$BlueprintsTableFilterComposer,
+    $$BlueprintsTableOrderingComposer,
+    $$BlueprintsTableAnnotationComposer,
+    $$BlueprintsTableCreateCompanionBuilder,
+    $$BlueprintsTableUpdateCompanionBuilder,
+    (Blueprint, $$BlueprintsTableReferences),
+    Blueprint,
+    PrefetchHooks Function({bool characterId})> {
+  $$BlueprintsTableTableManager(_$AppDatabase db, $BlueprintsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BlueprintsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BlueprintsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BlueprintsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> itemId = const Value.absent(),
+            Value<int> characterId = const Value.absent(),
+            Value<int> typeId = const Value.absent(),
+            Value<int> locationId = const Value.absent(),
+            Value<int> quantity = const Value.absent(),
+            Value<int> timeEfficiency = const Value.absent(),
+            Value<int> materialEfficiency = const Value.absent(),
+            Value<int> runs = const Value.absent(),
+            Value<bool> isOriginal = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              BlueprintsCompanion(
+            itemId: itemId,
+            characterId: characterId,
+            typeId: typeId,
+            locationId: locationId,
+            quantity: quantity,
+            timeEfficiency: timeEfficiency,
+            materialEfficiency: materialEfficiency,
+            runs: runs,
+            isOriginal: isOriginal,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required int itemId,
+            required int characterId,
+            required int typeId,
+            required int locationId,
+            required int quantity,
+            required int timeEfficiency,
+            required int materialEfficiency,
+            required int runs,
+            required bool isOriginal,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              BlueprintsCompanion.insert(
+            itemId: itemId,
+            characterId: characterId,
+            typeId: typeId,
+            locationId: locationId,
+            quantity: quantity,
+            timeEfficiency: timeEfficiency,
+            materialEfficiency: materialEfficiency,
+            runs: runs,
+            isOriginal: isOriginal,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$BlueprintsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({characterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (characterId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.characterId,
+                    referencedTable:
+                        $$BlueprintsTableReferences._characterIdTable(db),
+                    referencedColumn: $$BlueprintsTableReferences
+                        ._characterIdTable(db)
+                        .characterId,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$BlueprintsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $BlueprintsTable,
+    Blueprint,
+    $$BlueprintsTableFilterComposer,
+    $$BlueprintsTableOrderingComposer,
+    $$BlueprintsTableAnnotationComposer,
+    $$BlueprintsTableCreateCompanionBuilder,
+    $$BlueprintsTableUpdateCompanionBuilder,
+    (Blueprint, $$BlueprintsTableReferences),
+    Blueprint,
+    PrefetchHooks Function({bool characterId})>;
+typedef $$IndustryJobsTableCreateCompanionBuilder = IndustryJobsCompanion
+    Function({
+  required int jobId,
+  required int characterId,
+  required int installerId,
+  required int facilityId,
+  required int locationId,
+  required int activityId,
+  required int blueprintId,
+  required int blueprintTypeId,
+  required int outputLocationId,
+  required int runs,
+  required double cost,
+  Value<int?> licensedProductionRuns,
+  Value<double?> probability,
+  Value<int?> productTypeId,
+  required String status,
+  required int timeInSeconds,
+  required DateTime startDate,
+  required DateTime endDate,
+  Value<DateTime?> pauseDate,
+  Value<DateTime?> completedDate,
+  Value<int?> completedCharacterId,
+  Value<int?> successfulRuns,
+  Value<int> rowid,
+});
+typedef $$IndustryJobsTableUpdateCompanionBuilder = IndustryJobsCompanion
+    Function({
+  Value<int> jobId,
+  Value<int> characterId,
+  Value<int> installerId,
+  Value<int> facilityId,
+  Value<int> locationId,
+  Value<int> activityId,
+  Value<int> blueprintId,
+  Value<int> blueprintTypeId,
+  Value<int> outputLocationId,
+  Value<int> runs,
+  Value<double> cost,
+  Value<int?> licensedProductionRuns,
+  Value<double?> probability,
+  Value<int?> productTypeId,
+  Value<String> status,
+  Value<int> timeInSeconds,
+  Value<DateTime> startDate,
+  Value<DateTime> endDate,
+  Value<DateTime?> pauseDate,
+  Value<DateTime?> completedDate,
+  Value<int?> completedCharacterId,
+  Value<int?> successfulRuns,
+  Value<int> rowid,
+});
+
+final class $$IndustryJobsTableReferences
+    extends BaseReferences<_$AppDatabase, $IndustryJobsTable, IndustryJob> {
+  $$IndustryJobsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias($_aliasNameGenerator(
+          db.industryJobs.characterId, db.characters.characterId));
+
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
+    final manager = $$CharactersTableTableManager($_db, $_db.characters)
+        .filter((f) => f.characterId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$IndustryJobsTableFilterComposer
+    extends Composer<_$AppDatabase, $IndustryJobsTable> {
+  $$IndustryJobsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get jobId => $composableBuilder(
+      column: $table.jobId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get installerId => $composableBuilder(
+      column: $table.installerId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get facilityId => $composableBuilder(
+      column: $table.facilityId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get activityId => $composableBuilder(
+      column: $table.activityId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get blueprintId => $composableBuilder(
+      column: $table.blueprintId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get blueprintTypeId => $composableBuilder(
+      column: $table.blueprintTypeId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get outputLocationId => $composableBuilder(
+      column: $table.outputLocationId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get runs => $composableBuilder(
+      column: $table.runs, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get cost => $composableBuilder(
+      column: $table.cost, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get licensedProductionRuns => $composableBuilder(
+      column: $table.licensedProductionRuns,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get probability => $composableBuilder(
+      column: $table.probability, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get productTypeId => $composableBuilder(
+      column: $table.productTypeId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get timeInSeconds => $composableBuilder(
+      column: $table.timeInSeconds, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get startDate => $composableBuilder(
+      column: $table.startDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get endDate => $composableBuilder(
+      column: $table.endDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get pauseDate => $composableBuilder(
+      column: $table.pauseDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get completedDate => $composableBuilder(
+      column: $table.completedDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get completedCharacterId => $composableBuilder(
+      column: $table.completedCharacterId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get successfulRuns => $composableBuilder(
+      column: $table.successfulRuns,
+      builder: (column) => ColumnFilters(column));
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableFilterComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$IndustryJobsTableOrderingComposer
+    extends Composer<_$AppDatabase, $IndustryJobsTable> {
+  $$IndustryJobsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get jobId => $composableBuilder(
+      column: $table.jobId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get installerId => $composableBuilder(
+      column: $table.installerId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get facilityId => $composableBuilder(
+      column: $table.facilityId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get activityId => $composableBuilder(
+      column: $table.activityId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get blueprintId => $composableBuilder(
+      column: $table.blueprintId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get blueprintTypeId => $composableBuilder(
+      column: $table.blueprintTypeId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get outputLocationId => $composableBuilder(
+      column: $table.outputLocationId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get runs => $composableBuilder(
+      column: $table.runs, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get cost => $composableBuilder(
+      column: $table.cost, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get licensedProductionRuns => $composableBuilder(
+      column: $table.licensedProductionRuns,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get probability => $composableBuilder(
+      column: $table.probability, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get productTypeId => $composableBuilder(
+      column: $table.productTypeId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get timeInSeconds => $composableBuilder(
+      column: $table.timeInSeconds,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get startDate => $composableBuilder(
+      column: $table.startDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get endDate => $composableBuilder(
+      column: $table.endDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get pauseDate => $composableBuilder(
+      column: $table.pauseDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get completedDate => $composableBuilder(
+      column: $table.completedDate,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get completedCharacterId => $composableBuilder(
+      column: $table.completedCharacterId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get successfulRuns => $composableBuilder(
+      column: $table.successfulRuns,
+      builder: (column) => ColumnOrderings(column));
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableOrderingComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$IndustryJobsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $IndustryJobsTable> {
+  $$IndustryJobsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get jobId =>
+      $composableBuilder(column: $table.jobId, builder: (column) => column);
+
+  GeneratedColumn<int> get installerId => $composableBuilder(
+      column: $table.installerId, builder: (column) => column);
+
+  GeneratedColumn<int> get facilityId => $composableBuilder(
+      column: $table.facilityId, builder: (column) => column);
+
+  GeneratedColumn<int> get locationId => $composableBuilder(
+      column: $table.locationId, builder: (column) => column);
+
+  GeneratedColumn<int> get activityId => $composableBuilder(
+      column: $table.activityId, builder: (column) => column);
+
+  GeneratedColumn<int> get blueprintId => $composableBuilder(
+      column: $table.blueprintId, builder: (column) => column);
+
+  GeneratedColumn<int> get blueprintTypeId => $composableBuilder(
+      column: $table.blueprintTypeId, builder: (column) => column);
+
+  GeneratedColumn<int> get outputLocationId => $composableBuilder(
+      column: $table.outputLocationId, builder: (column) => column);
+
+  GeneratedColumn<int> get runs =>
+      $composableBuilder(column: $table.runs, builder: (column) => column);
+
+  GeneratedColumn<double> get cost =>
+      $composableBuilder(column: $table.cost, builder: (column) => column);
+
+  GeneratedColumn<int> get licensedProductionRuns => $composableBuilder(
+      column: $table.licensedProductionRuns, builder: (column) => column);
+
+  GeneratedColumn<double> get probability => $composableBuilder(
+      column: $table.probability, builder: (column) => column);
+
+  GeneratedColumn<int> get productTypeId => $composableBuilder(
+      column: $table.productTypeId, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get timeInSeconds => $composableBuilder(
+      column: $table.timeInSeconds, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startDate =>
+      $composableBuilder(column: $table.startDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get endDate =>
+      $composableBuilder(column: $table.endDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get pauseDate =>
+      $composableBuilder(column: $table.pauseDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get completedDate => $composableBuilder(
+      column: $table.completedDate, builder: (column) => column);
+
+  GeneratedColumn<int> get completedCharacterId => $composableBuilder(
+      column: $table.completedCharacterId, builder: (column) => column);
+
+  GeneratedColumn<int> get successfulRuns => $composableBuilder(
+      column: $table.successfulRuns, builder: (column) => column);
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.characterId,
+        referencedTable: $db.characters,
+        getReferencedColumn: (t) => t.characterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CharactersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.characters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$IndustryJobsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $IndustryJobsTable,
+    IndustryJob,
+    $$IndustryJobsTableFilterComposer,
+    $$IndustryJobsTableOrderingComposer,
+    $$IndustryJobsTableAnnotationComposer,
+    $$IndustryJobsTableCreateCompanionBuilder,
+    $$IndustryJobsTableUpdateCompanionBuilder,
+    (IndustryJob, $$IndustryJobsTableReferences),
+    IndustryJob,
+    PrefetchHooks Function({bool characterId})> {
+  $$IndustryJobsTableTableManager(_$AppDatabase db, $IndustryJobsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$IndustryJobsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$IndustryJobsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$IndustryJobsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> jobId = const Value.absent(),
+            Value<int> characterId = const Value.absent(),
+            Value<int> installerId = const Value.absent(),
+            Value<int> facilityId = const Value.absent(),
+            Value<int> locationId = const Value.absent(),
+            Value<int> activityId = const Value.absent(),
+            Value<int> blueprintId = const Value.absent(),
+            Value<int> blueprintTypeId = const Value.absent(),
+            Value<int> outputLocationId = const Value.absent(),
+            Value<int> runs = const Value.absent(),
+            Value<double> cost = const Value.absent(),
+            Value<int?> licensedProductionRuns = const Value.absent(),
+            Value<double?> probability = const Value.absent(),
+            Value<int?> productTypeId = const Value.absent(),
+            Value<String> status = const Value.absent(),
+            Value<int> timeInSeconds = const Value.absent(),
+            Value<DateTime> startDate = const Value.absent(),
+            Value<DateTime> endDate = const Value.absent(),
+            Value<DateTime?> pauseDate = const Value.absent(),
+            Value<DateTime?> completedDate = const Value.absent(),
+            Value<int?> completedCharacterId = const Value.absent(),
+            Value<int?> successfulRuns = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              IndustryJobsCompanion(
+            jobId: jobId,
+            characterId: characterId,
+            installerId: installerId,
+            facilityId: facilityId,
+            locationId: locationId,
+            activityId: activityId,
+            blueprintId: blueprintId,
+            blueprintTypeId: blueprintTypeId,
+            outputLocationId: outputLocationId,
+            runs: runs,
+            cost: cost,
+            licensedProductionRuns: licensedProductionRuns,
+            probability: probability,
+            productTypeId: productTypeId,
+            status: status,
+            timeInSeconds: timeInSeconds,
+            startDate: startDate,
+            endDate: endDate,
+            pauseDate: pauseDate,
+            completedDate: completedDate,
+            completedCharacterId: completedCharacterId,
+            successfulRuns: successfulRuns,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required int jobId,
+            required int characterId,
+            required int installerId,
+            required int facilityId,
+            required int locationId,
+            required int activityId,
+            required int blueprintId,
+            required int blueprintTypeId,
+            required int outputLocationId,
+            required int runs,
+            required double cost,
+            Value<int?> licensedProductionRuns = const Value.absent(),
+            Value<double?> probability = const Value.absent(),
+            Value<int?> productTypeId = const Value.absent(),
+            required String status,
+            required int timeInSeconds,
+            required DateTime startDate,
+            required DateTime endDate,
+            Value<DateTime?> pauseDate = const Value.absent(),
+            Value<DateTime?> completedDate = const Value.absent(),
+            Value<int?> completedCharacterId = const Value.absent(),
+            Value<int?> successfulRuns = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              IndustryJobsCompanion.insert(
+            jobId: jobId,
+            characterId: characterId,
+            installerId: installerId,
+            facilityId: facilityId,
+            locationId: locationId,
+            activityId: activityId,
+            blueprintId: blueprintId,
+            blueprintTypeId: blueprintTypeId,
+            outputLocationId: outputLocationId,
+            runs: runs,
+            cost: cost,
+            licensedProductionRuns: licensedProductionRuns,
+            probability: probability,
+            productTypeId: productTypeId,
+            status: status,
+            timeInSeconds: timeInSeconds,
+            startDate: startDate,
+            endDate: endDate,
+            pauseDate: pauseDate,
+            completedDate: completedDate,
+            completedCharacterId: completedCharacterId,
+            successfulRuns: successfulRuns,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$IndustryJobsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({characterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (characterId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.characterId,
+                    referencedTable:
+                        $$IndustryJobsTableReferences._characterIdTable(db),
+                    referencedColumn: $$IndustryJobsTableReferences
+                        ._characterIdTable(db)
+                        .characterId,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$IndustryJobsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $IndustryJobsTable,
+    IndustryJob,
+    $$IndustryJobsTableFilterComposer,
+    $$IndustryJobsTableOrderingComposer,
+    $$IndustryJobsTableAnnotationComposer,
+    $$IndustryJobsTableCreateCompanionBuilder,
+    $$IndustryJobsTableUpdateCompanionBuilder,
+    (IndustryJob, $$IndustryJobsTableReferences),
+    IndustryJob,
+    PrefetchHooks Function({bool characterId})>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -15288,4 +17870,8 @@ class $AppDatabaseManager {
       $$AssetLocationsTableTableManager(_db, _db.assetLocations);
   $$AssetSnapshotsTableTableManager get assetSnapshots =>
       $$AssetSnapshotsTableTableManager(_db, _db.assetSnapshots);
+  $$BlueprintsTableTableManager get blueprints =>
+      $$BlueprintsTableTableManager(_db, _db.blueprints);
+  $$IndustryJobsTableTableManager get industryJobs =>
+      $$IndustryJobsTableTableManager(_db, _db.industryJobs);
 }
