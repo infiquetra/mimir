@@ -21,6 +21,8 @@ Mimir aims to replace the need for multiple disconnected EVE tools (EVEMon, Pyfa
 
 **Currently in early development (Phase 1)**
 
+<!-- Pattern test A++/trivial: run 1 (2026-05-08) -->
+
 See the [mimir-blueprint](https://github.com/infiquetra/mimir-blueprint) repository for detailed specifications and roadmap.
 
 ## Getting Started
