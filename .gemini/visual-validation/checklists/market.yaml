@@ -1,0 +1,25 @@
+# Market UI Visual Validation Checklist
+
+name: Market Tools Check
+description: Semantic layout and content validation for the Market Overview Screen.
+
+elements:
+  TabBar:
+    - Must be visible at the bottom of the AppBar.
+    - Must not overflow horizontally.
+    - Must clearly indicate the active tab selection (Active Orders vs Price Checker).
+
+  ActiveOrdersPanel:
+    - Must color-code "Buy" orders clearly (e.g., green/blue text or icons).
+    - Must color-code "Sell" orders clearly (e.g., red/orange text or icons).
+    - Must render ISK values with proper comma formatting.
+
+  PriceCheckerPanel:
+    - Must contain a visible TextField for searching items.
+    - Result cards must correctly resolve the EVE item name instead of displaying raw IDs.
+    - Margins and profit values must be clearly legible and distinct from base prices.
+
+empty_states:
+  NoCharacter:
+    - Must display an appropriate fallback icon when no character is selected.
+    - Must provide a clear text instruction to "select a character".
