@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../../features/fitting/domain/models.dart';
 import 'sde_database.dart';
 
 /// Service for managing Static Data Export (SDE) data.
@@ -34,6 +35,7 @@ class SdeService {
   /// Alternative: Direct SDE endpoint for skill types.
   /// Using a simpler approach with bundled JSON for reliability.
   static const String _bundledSkillsAsset = 'assets/sde/skills.json';
+  static const String _bundledDogmaAsset = 'assets/sde/dogma.json';
 
   /// Initialize the SDE service.
   ///
@@ -43,11 +45,16 @@ class SdeService {
     if (_initialized) return;
 
     // Check if database already has data
-    final hasData = await database.hasSkillData();
+    final hasSkillData = await database.hasSkillData();
+    final hasDogmaData = await database.hasDogmaData();
 
-    if (!hasData) {
+    if (!hasSkillData) {
       // Load from bundled assets
       await _loadBundledSkills();
+    }
+    
+    if (!hasDogmaData) {
+      await _loadBundledDogma();
     }
 
     // Populate in-memory cache
@@ -61,11 +68,23 @@ class SdeService {
     try {
       final jsonString = await rootBundle.loadString(_bundledSkillsAsset);
       final data = json.decode(jsonString) as Map<String, dynamic>;
-      await _importSkillsData(data);
+      await _importSdeData(data);
     } catch (e) {
       // Asset not found - use fallback hardcoded data for common skills
       debugPrint('SDE: Bundled skills not found, using fallback data');
       await _loadFallbackSkills();
+    }
+  }
+
+  /// Load dogma from bundled JSON asset.
+  Future<void> _loadBundledDogma() async {
+    try {
+      final jsonString = await rootBundle.loadString(_bundledDogmaAsset);
+      final data = json.decode(jsonString) as Map<String, dynamic>;
+      await _importSdeData(data);
+      debugPrint('SDE: Bundled dogma imported successfully');
+    } catch (e) {
+      debugPrint('SDE: Bundled dogma not found or failed to load: $e');
     }
   }
 
@@ -331,8 +350,8 @@ class SdeService {
     await database.upsertTypes(skills);
   }
 
-  /// Import skills data from parsed JSON.
-  Future<void> _importSkillsData(Map<String, dynamic> data) async {
+  /// Import SDE data from parsed JSON.
+  Future<void> _importSdeData(Map<String, dynamic> data) async {
     // Expected format:
     // {
     //   "categories": [{"categoryId": 16, "categoryName": "Skill"}],
@@ -383,25 +402,65 @@ class SdeService {
           .toList();
       await database.upsertTypes(types);
 
-      // Import skill prerequisites
+      // Import skill prerequisites, dogma attributes, and dogma effects
       final requirements = <SdeSkillRequirementsCompanion>[];
+      final dogmaAttributes = <SdeTypeAttributesCompanion>[];
+      final dogmaEffects = <SdeTypeEffectsCompanion>[];
+      
       for (final t in data['types'] as List) {
-        final skillId = t['typeId'] as int;
+        final typeId = t['typeId'] as int;
+        
+        // Prerequisites
         final prerequisites = t['prerequisites'] as List?;
         if (prerequisites != null) {
           for (final prereq in prerequisites) {
             requirements.add(
               SdeSkillRequirementsCompanion.insert(
-                skillId: skillId,
+                skillId: typeId,
                 requiredSkillId: prereq['skillId'] as int,
                 requiredLevel: prereq['level'] as int,
               ),
             );
           }
         }
+        
+        // Dogma Attributes
+        final attributes = t['dogmaAttributes'] as List?;
+        if (attributes != null) {
+          for (final attr in attributes) {
+            dogmaAttributes.add(
+              SdeTypeAttributesCompanion.insert(
+                typeId: typeId,
+                attributeId: attr['attributeId'] as int,
+                value: (attr['value'] as num).toDouble(),
+              ),
+            );
+          }
+        }
+        
+        // Dogma Effects
+        final effects = t['dogmaEffects'] as List?;
+        if (effects != null) {
+          for (final effect in effects) {
+            dogmaEffects.add(
+              SdeTypeEffectsCompanion.insert(
+                typeId: typeId,
+                effectId: effect['effectId'] as int,
+                isDefault: Value(effect['isDefault'] as bool),
+              ),
+            );
+          }
+        }
       }
+      
       if (requirements.isNotEmpty) {
         await database.upsertSkillRequirements(requirements);
+      }
+      if (dogmaAttributes.isNotEmpty) {
+        await database.upsertTypeAttributes(dogmaAttributes);
+      }
+      if (dogmaEffects.isNotEmpty) {
+        await database.upsertTypeEffects(dogmaEffects);
       }
     }
   }
@@ -496,7 +555,7 @@ class SdeService {
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
         await database.clearAll();
-        await _importSkillsData(data);
+        await _importSdeData(data);
         await _populateCache();
       }
     } catch (e) {
@@ -597,6 +656,89 @@ class SdeService {
   /// guaranteed lookups that may hit the database.
   String? getShipTypeNameSync(int typeId) {
     return _skillNameCache[typeId];
+  }
+
+  /// Get complete ShipType with attributes and requirements.
+  Future<ShipType?> getShipType(int typeId) async {
+    final type = await database.getType(typeId);
+    if (type == null) return null;
+    
+    final group = await database.getGroup(type.groupId);
+    final attributes = await database.getTypeAttributes(typeId);
+    final prereqs = await database.getSkillPrerequisites(typeId);
+    
+    final skillRequirements = <SkillRequirement>[];
+    for (final req in prereqs) {
+      final name = await getSkillName(req.requiredSkillId) ?? 'Unknown Skill';
+      skillRequirements.add(SkillRequirement(
+        skillTypeId: req.requiredSkillId,
+        skillName: name,
+        requiredLevel: req.requiredLevel,
+      ));
+    }
+    
+    return ShipType(
+      typeId: type.typeId,
+      name: type.typeName,
+      description: type.description ?? '',
+      groupId: type.groupId,
+      groupName: group?.groupName ?? 'Unknown Group',
+      highSlots: attributes[14]?.toInt() ?? 0,
+      medSlots: attributes[13]?.toInt() ?? 0,
+      lowSlots: attributes[12]?.toInt() ?? 0,
+      rigSlots: attributes[1137]?.toInt() ?? 0,
+      turretSlots: attributes[102]?.toInt() ?? 0,
+      launcherSlots: attributes[101]?.toInt() ?? 0,
+      baseAttributes: attributes,
+      skillRequirements: skillRequirements,
+    );
+  }
+
+  // ============================================================================
+  // Module Type Lookups
+  // ============================================================================
+
+  /// Get complete ModuleType with attributes and requirements.
+  Future<ModuleType?> getModuleType(int typeId) async {
+    final type = await database.getType(typeId);
+    if (type == null) return null;
+    
+    final group = await database.getGroup(type.groupId);
+    final attributes = await database.getTypeAttributes(typeId);
+    final prereqs = await database.getSkillPrerequisites(typeId);
+    
+    final skillRequirements = <SkillRequirement>[];
+    for (final req in prereqs) {
+      final name = await getSkillName(req.requiredSkillId) ?? 'Unknown Skill';
+      skillRequirements.add(SkillRequirement(
+        skillTypeId: req.requiredSkillId,
+        skillName: name,
+        requiredLevel: req.requiredLevel,
+      ));
+    }
+    
+    final effectIds = await database.getTypeEffects(typeId);
+    SlotType slotType = SlotType.high;
+    if (effectIds.contains(12)) slotType = SlotType.high;
+    else if (effectIds.contains(13)) slotType = SlotType.med;
+    else if (effectIds.contains(11)) slotType = SlotType.low;
+    else if (effectIds.contains(2663)) slotType = SlotType.rig;
+    else if (effectIds.contains(3772)) slotType = SlotType.subsystem;
+    
+    return ModuleType(
+      typeId: type.typeId,
+      name: type.typeName,
+      groupId: type.groupId,
+      groupName: group?.groupName ?? 'Unknown Group',
+      slotType: slotType,
+      metaLevel: attributes[633]?.toInt() ?? 0,
+      techLevel: attributes[422]?.toInt() ?? 1,
+      cpu: attributes[50] ?? 0.0,
+      powergrid: attributes[30] ?? 0.0,
+      calibration: attributes[1153]?.toInt() ?? 0,
+      baseAttributes: attributes,
+      skillRequirements: skillRequirements,
+    );
   }
 
   // ============================================================================

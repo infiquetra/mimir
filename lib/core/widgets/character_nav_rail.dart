@@ -209,7 +209,14 @@ class CharacterNavRail extends ConsumerWidget {
         child: InkWell(
           onTap: () {
             Log.i('NAV', 'CharacterNavRail - add character tapped');
-            context.push('/add-character');
+            try {
+              context.push('/add-character');
+            } catch (_) {
+              // Fallback for standalone windows without GoRouter
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AddCharacterScreen()),
+              );
+            }
           },
           borderRadius: BorderRadius.circular(avatarSize / 2),
           child: Container(
@@ -257,18 +264,6 @@ class CharacterNavRail extends ConsumerWidget {
   }
 
   Widget _buildErrorState(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Center(
-      child: Icon(
-        Icons.error_outline,
-        size: 32,
-        color: theme.colorScheme.error,
-      ),
-    );
-  }
-}
-) {
     final theme = Theme.of(context);
 
     return Center(

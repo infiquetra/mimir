@@ -37,7 +37,8 @@ class _MarketOverviewScreenState extends ConsumerState<MarketOverviewScreen> wit
 
   @override
   Widget build(BuildContext context) {
-    final activeCharacter = ref.watch(activeCharacterProvider).value;
+    final activeCharacterAsync = ref.watch(activeCharacterProvider);
+    final activeCharacter = activeCharacterAsync.value;
 
     return Scaffold(
       appBar: AppBar(
@@ -57,11 +58,13 @@ class _MarketOverviewScreenState extends ConsumerState<MarketOverviewScreen> wit
       body: TabBarView(
         controller: _tabController,
         children: [
-          activeCharacter == null
-              ? _buildNoCharacterState()
-              : RefreshIndicator(
-                  onRefresh: _refresh,
-                  child: const Padding(
+          activeCharacterAsync.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : activeCharacter == null
+                  ? _buildNoCharacterState()
+                  : RefreshIndicator(
+                      onRefresh: _refresh,
+                      child: const Padding(
                     padding: EdgeInsets.all(16.0),
                     child: ActiveOrdersPanel(),
                   ),

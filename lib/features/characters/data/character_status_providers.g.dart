@@ -15,21 +15,25 @@ const characterStatusRepositoryProvider = CharacterStatusRepositoryProvider._();
 
 /// Provider for the character status repository.
 
-final class CharacterStatusRepositoryProvider extends $FunctionalProvider<
-    CharacterStatusRepository,
-    CharacterStatusRepository,
-    CharacterStatusRepository> with $Provider<CharacterStatusRepository> {
+final class CharacterStatusRepositoryProvider
+    extends
+        $FunctionalProvider<
+          CharacterStatusRepository,
+          CharacterStatusRepository,
+          CharacterStatusRepository
+        >
+    with $Provider<CharacterStatusRepository> {
   /// Provider for the character status repository.
   const CharacterStatusRepositoryProvider._()
-      : super(
-          from: null,
-          argument: null,
-          retry: null,
-          name: r'characterStatusRepositoryProvider',
-          isAutoDispose: true,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'characterStatusRepositoryProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
   @override
   String debugGetCreateSourceHash() => _$characterStatusRepositoryHash();
@@ -37,8 +41,8 @@ final class CharacterStatusRepositoryProvider extends $FunctionalProvider<
   @$internal
   @override
   $ProviderElement<CharacterStatusRepository> $createElement(
-          $ProviderPointer pointer) =>
-      $ProviderElement(pointer);
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
 
   @override
   CharacterStatusRepository create(Ref ref) {
@@ -64,19 +68,25 @@ const characterClonesProvider = CharacterClonesFamily._();
 
 /// Provides character clones (jump clones + home location).
 
-final class CharacterClonesProvider extends $FunctionalProvider<
-        AsyncValue<CharacterClones>, CharacterClones, FutureOr<CharacterClones>>
+final class CharacterClonesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<CharacterClones>,
+          CharacterClones,
+          FutureOr<CharacterClones>
+        >
     with $FutureModifier<CharacterClones>, $FutureProvider<CharacterClones> {
   /// Provides character clones (jump clones + home location).
-  const CharacterClonesProvider._(
-      {required CharacterClonesFamily super.from, required int super.argument})
-      : super(
-          retry: null,
-          name: r'characterClonesProvider',
-          isAutoDispose: true,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+  const CharacterClonesProvider._({
+    required CharacterClonesFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'characterClonesProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$characterClonesHash();
@@ -91,16 +101,13 @@ final class CharacterClonesProvider extends $FunctionalProvider<
   @$internal
   @override
   $FutureProviderElement<CharacterClones> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<CharacterClones> create(Ref ref) {
     final argument = this.argument as int;
-    return characterClones(
-      ref,
-      argument,
-    );
+    return characterClones(ref, argument);
   }
 
   @override
@@ -121,19 +128,17 @@ String _$characterClonesHash() => r'5611bc77b15e6e4f773eb1909783fdfb615f5634';
 final class CharacterClonesFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<CharacterClones>, int> {
   const CharacterClonesFamily._()
-      : super(
-          retry: null,
-          name: r'characterClonesProvider',
-          dependencies: null,
-          $allTransitiveDependencies: null,
-          isAutoDispose: true,
-        );
+    : super(
+        retry: null,
+        name: r'characterClonesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
 
   /// Provides character clones (jump clones + home location).
 
-  CharacterClonesProvider call(
-    int characterId,
-  ) =>
+  CharacterClonesProvider call(int characterId) =>
       CharacterClonesProvider._(argument: characterId, from: this);
 
   @override
@@ -151,24 +156,27 @@ const characterImplantsProvider = CharacterImplantsFamily._();
 ///
 /// Returns a map of implant type ID to name.
 
-final class CharacterImplantsProvider extends $FunctionalProvider<
-        AsyncValue<Map<int, String>>,
-        Map<int, String>,
-        FutureOr<Map<int, String>>>
+final class CharacterImplantsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<int, String>>,
+          Map<int, String>,
+          FutureOr<Map<int, String>>
+        >
     with $FutureModifier<Map<int, String>>, $FutureProvider<Map<int, String>> {
   /// Provides character implants with resolved type names.
   ///
   /// Returns a map of implant type ID to name.
-  const CharacterImplantsProvider._(
-      {required CharacterImplantsFamily super.from,
-      required int super.argument})
-      : super(
-          retry: null,
-          name: r'characterImplantsProvider',
-          isAutoDispose: true,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+  const CharacterImplantsProvider._({
+    required CharacterImplantsFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'characterImplantsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$characterImplantsHash();
@@ -183,16 +191,13 @@ final class CharacterImplantsProvider extends $FunctionalProvider<
   @$internal
   @override
   $FutureProviderElement<Map<int, String>> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<Map<int, String>> create(Ref ref) {
     final argument = this.argument as int;
-    return characterImplants(
-      ref,
-      argument,
-    );
+    return characterImplants(ref, argument);
   }
 
   @override
@@ -215,21 +220,19 @@ String _$characterImplantsHash() => r'54d914121a3544103e9b1fe776da0aacefdbf966';
 final class CharacterImplantsFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<Map<int, String>>, int> {
   const CharacterImplantsFamily._()
-      : super(
-          retry: null,
-          name: r'characterImplantsProvider',
-          dependencies: null,
-          $allTransitiveDependencies: null,
-          isAutoDispose: true,
-        );
+    : super(
+        retry: null,
+        name: r'characterImplantsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
 
   /// Provides character implants with resolved type names.
   ///
   /// Returns a map of implant type ID to name.
 
-  CharacterImplantsProvider call(
-    int characterId,
-  ) =>
+  CharacterImplantsProvider call(int characterId) =>
       CharacterImplantsProvider._(argument: characterId, from: this);
 
   @override
@@ -243,24 +246,27 @@ const characterStandingsProvider = CharacterStandingsFamily._();
 
 /// Provides character standings with resolved entity names.
 
-final class CharacterStandingsProvider extends $FunctionalProvider<
-        AsyncValue<List<StandingWithName>>,
-        List<StandingWithName>,
-        FutureOr<List<StandingWithName>>>
+final class CharacterStandingsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<StandingWithName>>,
+          List<StandingWithName>,
+          FutureOr<List<StandingWithName>>
+        >
     with
         $FutureModifier<List<StandingWithName>>,
         $FutureProvider<List<StandingWithName>> {
   /// Provides character standings with resolved entity names.
-  const CharacterStandingsProvider._(
-      {required CharacterStandingsFamily super.from,
-      required int super.argument})
-      : super(
-          retry: null,
-          name: r'characterStandingsProvider',
-          isAutoDispose: true,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+  const CharacterStandingsProvider._({
+    required CharacterStandingsFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'characterStandingsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$characterStandingsHash();
@@ -275,16 +281,13 @@ final class CharacterStandingsProvider extends $FunctionalProvider<
   @$internal
   @override
   $FutureProviderElement<List<StandingWithName>> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<List<StandingWithName>> create(Ref ref) {
     final argument = this.argument as int;
-    return characterStandings(
-      ref,
-      argument,
-    );
+    return characterStandings(ref, argument);
   }
 
   @override
@@ -306,19 +309,17 @@ String _$characterStandingsHash() =>
 final class CharacterStandingsFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<StandingWithName>>, int> {
   const CharacterStandingsFamily._()
-      : super(
-          retry: null,
-          name: r'characterStandingsProvider',
-          dependencies: null,
-          $allTransitiveDependencies: null,
-          isAutoDispose: true,
-        );
+    : super(
+        retry: null,
+        name: r'characterStandingsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
 
   /// Provides character standings with resolved entity names.
 
-  CharacterStandingsProvider call(
-    int characterId,
-  ) =>
+  CharacterStandingsProvider call(int characterId) =>
       CharacterStandingsProvider._(argument: characterId, from: this);
 
   @override
@@ -332,24 +333,27 @@ const characterAttributesProvider = CharacterAttributesFamily._();
 
 /// Provides character attributes (already implemented in ESI client).
 
-final class CharacterAttributesProvider extends $FunctionalProvider<
-        AsyncValue<CharacterAttributes>,
-        CharacterAttributes,
-        FutureOr<CharacterAttributes>>
+final class CharacterAttributesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<CharacterAttributes>,
+          CharacterAttributes,
+          FutureOr<CharacterAttributes>
+        >
     with
         $FutureModifier<CharacterAttributes>,
         $FutureProvider<CharacterAttributes> {
   /// Provides character attributes (already implemented in ESI client).
-  const CharacterAttributesProvider._(
-      {required CharacterAttributesFamily super.from,
-      required int super.argument})
-      : super(
-          retry: null,
-          name: r'characterAttributesProvider',
-          isAutoDispose: true,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+  const CharacterAttributesProvider._({
+    required CharacterAttributesFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'characterAttributesProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$characterAttributesHash();
@@ -364,16 +368,13 @@ final class CharacterAttributesProvider extends $FunctionalProvider<
   @$internal
   @override
   $FutureProviderElement<CharacterAttributes> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<CharacterAttributes> create(Ref ref) {
     final argument = this.argument as int;
-    return characterAttributes(
-      ref,
-      argument,
-    );
+    return characterAttributes(ref, argument);
   }
 
   @override
@@ -395,19 +396,17 @@ String _$characterAttributesHash() =>
 final class CharacterAttributesFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<CharacterAttributes>, int> {
   const CharacterAttributesFamily._()
-      : super(
-          retry: null,
-          name: r'characterAttributesProvider',
-          dependencies: null,
-          $allTransitiveDependencies: null,
-          isAutoDispose: true,
-        );
+    : super(
+        retry: null,
+        name: r'characterAttributesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
 
   /// Provides character attributes (already implemented in ESI client).
 
-  CharacterAttributesProvider call(
-    int characterId,
-  ) =>
+  CharacterAttributesProvider call(int characterId) =>
       CharacterAttributesProvider._(argument: characterId, from: this);
 
   @override
@@ -428,25 +427,28 @@ const characterCloneLocationNamesProvider =
 /// Returns a map of location ID → location name for all clone locations
 /// (home location + all jump clone locations).
 
-final class CharacterCloneLocationNamesProvider extends $FunctionalProvider<
-        AsyncValue<Map<int, String>>,
-        Map<int, String>,
-        FutureOr<Map<int, String>>>
+final class CharacterCloneLocationNamesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<int, String>>,
+          Map<int, String>,
+          FutureOr<Map<int, String>>
+        >
     with $FutureModifier<Map<int, String>>, $FutureProvider<Map<int, String>> {
   /// Provides resolved location names for character clones.
   ///
   /// Returns a map of location ID → location name for all clone locations
   /// (home location + all jump clone locations).
-  const CharacterCloneLocationNamesProvider._(
-      {required CharacterCloneLocationNamesFamily super.from,
-      required int super.argument})
-      : super(
-          retry: null,
-          name: r'characterCloneLocationNamesProvider',
-          isAutoDispose: true,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+  const CharacterCloneLocationNamesProvider._({
+    required CharacterCloneLocationNamesFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'characterCloneLocationNamesProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$characterCloneLocationNamesHash();
@@ -461,16 +463,13 @@ final class CharacterCloneLocationNamesProvider extends $FunctionalProvider<
   @$internal
   @override
   $FutureProviderElement<Map<int, String>> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<Map<int, String>> create(Ref ref) {
     final argument = this.argument as int;
-    return characterCloneLocationNames(
-      ref,
-      argument,
-    );
+    return characterCloneLocationNames(ref, argument);
   }
 
   @override
@@ -496,22 +495,20 @@ String _$characterCloneLocationNamesHash() =>
 final class CharacterCloneLocationNamesFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<Map<int, String>>, int> {
   const CharacterCloneLocationNamesFamily._()
-      : super(
-          retry: null,
-          name: r'characterCloneLocationNamesProvider',
-          dependencies: null,
-          $allTransitiveDependencies: null,
-          isAutoDispose: true,
-        );
+    : super(
+        retry: null,
+        name: r'characterCloneLocationNamesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
 
   /// Provides resolved location names for character clones.
   ///
   /// Returns a map of location ID → location name for all clone locations
   /// (home location + all jump clone locations).
 
-  CharacterCloneLocationNamesProvider call(
-    int characterId,
-  ) =>
+  CharacterCloneLocationNamesProvider call(int characterId) =>
       CharacterCloneLocationNamesProvider._(argument: characterId, from: this);
 
   @override
@@ -525,20 +522,25 @@ const characterOnlineStatusProvider = CharacterOnlineStatusFamily._();
 
 /// Provides aggregated online status including location and ship.
 
-final class CharacterOnlineStatusProvider extends $FunctionalProvider<
-        AsyncValue<OnlineStatus>, OnlineStatus, FutureOr<OnlineStatus>>
+final class CharacterOnlineStatusProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<OnlineStatus>,
+          OnlineStatus,
+          FutureOr<OnlineStatus>
+        >
     with $FutureModifier<OnlineStatus>, $FutureProvider<OnlineStatus> {
   /// Provides aggregated online status including location and ship.
-  const CharacterOnlineStatusProvider._(
-      {required CharacterOnlineStatusFamily super.from,
-      required int super.argument})
-      : super(
-          retry: null,
-          name: r'characterOnlineStatusProvider',
-          isAutoDispose: true,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+  const CharacterOnlineStatusProvider._({
+    required CharacterOnlineStatusFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'characterOnlineStatusProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$characterOnlineStatusHash();
@@ -553,16 +555,13 @@ final class CharacterOnlineStatusProvider extends $FunctionalProvider<
   @$internal
   @override
   $FutureProviderElement<OnlineStatus> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<OnlineStatus> create(Ref ref) {
     final argument = this.argument as int;
-    return characterOnlineStatus(
-      ref,
-      argument,
-    );
+    return characterOnlineStatus(ref, argument);
   }
 
   @override
@@ -584,19 +583,17 @@ String _$characterOnlineStatusHash() =>
 final class CharacterOnlineStatusFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<OnlineStatus>, int> {
   const CharacterOnlineStatusFamily._()
-      : super(
-          retry: null,
-          name: r'characterOnlineStatusProvider',
-          dependencies: null,
-          $allTransitiveDependencies: null,
-          isAutoDispose: true,
-        );
+    : super(
+        retry: null,
+        name: r'characterOnlineStatusProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
 
   /// Provides aggregated online status including location and ship.
 
-  CharacterOnlineStatusProvider call(
-    int characterId,
-  ) =>
+  CharacterOnlineStatusProvider call(int characterId) =>
       CharacterOnlineStatusProvider._(argument: characterId, from: this);
 
   @override
@@ -614,24 +611,27 @@ const characterCloneImplantNamesProvider = CharacterCloneImplantNamesFamily._();
 ///
 /// Returns a map of implant ID → implant name for all jump clone implants.
 
-final class CharacterCloneImplantNamesProvider extends $FunctionalProvider<
-        AsyncValue<Map<int, String>>,
-        Map<int, String>,
-        FutureOr<Map<int, String>>>
+final class CharacterCloneImplantNamesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<int, String>>,
+          Map<int, String>,
+          FutureOr<Map<int, String>>
+        >
     with $FutureModifier<Map<int, String>>, $FutureProvider<Map<int, String>> {
   /// Provides resolved implant names for character clones.
   ///
   /// Returns a map of implant ID → implant name for all jump clone implants.
-  const CharacterCloneImplantNamesProvider._(
-      {required CharacterCloneImplantNamesFamily super.from,
-      required int super.argument})
-      : super(
-          retry: null,
-          name: r'characterCloneImplantNamesProvider',
-          isAutoDispose: true,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+  const CharacterCloneImplantNamesProvider._({
+    required CharacterCloneImplantNamesFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'characterCloneImplantNamesProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$characterCloneImplantNamesHash();
@@ -646,16 +646,13 @@ final class CharacterCloneImplantNamesProvider extends $FunctionalProvider<
   @$internal
   @override
   $FutureProviderElement<Map<int, String>> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<Map<int, String>> create(Ref ref) {
     final argument = this.argument as int;
-    return characterCloneImplantNames(
-      ref,
-      argument,
-    );
+    return characterCloneImplantNames(ref, argument);
   }
 
   @override
@@ -680,21 +677,19 @@ String _$characterCloneImplantNamesHash() =>
 final class CharacterCloneImplantNamesFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<Map<int, String>>, int> {
   const CharacterCloneImplantNamesFamily._()
-      : super(
-          retry: null,
-          name: r'characterCloneImplantNamesProvider',
-          dependencies: null,
-          $allTransitiveDependencies: null,
-          isAutoDispose: true,
-        );
+    : super(
+        retry: null,
+        name: r'characterCloneImplantNamesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
 
   /// Provides resolved implant names for character clones.
   ///
   /// Returns a map of implant ID → implant name for all jump clone implants.
 
-  CharacterCloneImplantNamesProvider call(
-    int characterId,
-  ) =>
+  CharacterCloneImplantNamesProvider call(int characterId) =>
       CharacterCloneImplantNamesProvider._(argument: characterId, from: this);
 
   @override

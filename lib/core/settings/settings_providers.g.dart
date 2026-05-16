@@ -15,21 +15,25 @@ const settingsRepositoryProvider = SettingsRepositoryProvider._();
 
 /// Settings repository provider.
 
-final class SettingsRepositoryProvider extends $FunctionalProvider<
-    SettingsRepository,
-    SettingsRepository,
-    SettingsRepository> with $Provider<SettingsRepository> {
+final class SettingsRepositoryProvider
+    extends
+        $FunctionalProvider<
+          SettingsRepository,
+          SettingsRepository,
+          SettingsRepository
+        >
+    with $Provider<SettingsRepository> {
   /// Settings repository provider.
   const SettingsRepositoryProvider._()
-      : super(
-          from: null,
-          argument: null,
-          retry: null,
-          name: r'settingsRepositoryProvider',
-          isAutoDispose: true,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'settingsRepositoryProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
   @override
   String debugGetCreateSourceHash() => _$settingsRepositoryHash();
@@ -37,8 +41,8 @@ final class SettingsRepositoryProvider extends $FunctionalProvider<
   @$internal
   @override
   $ProviderElement<SettingsRepository> $createElement(
-          $ProviderPointer pointer) =>
-      $ProviderElement(pointer);
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
 
   @override
   SettingsRepository create(Ref ref) {
@@ -64,20 +68,25 @@ const appSettingsProvider = AppSettingsProvider._();
 
 /// Current app settings provider (async).
 
-final class AppSettingsProvider extends $FunctionalProvider<
-        AsyncValue<AppSettings>, AppSettings, FutureOr<AppSettings>>
+final class AppSettingsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<AppSettings>,
+          AppSettings,
+          FutureOr<AppSettings>
+        >
     with $FutureModifier<AppSettings>, $FutureProvider<AppSettings> {
   /// Current app settings provider (async).
   const AppSettingsProvider._()
-      : super(
-          from: null,
-          argument: null,
-          retry: null,
-          name: r'appSettingsProvider',
-          isAutoDispose: true,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appSettingsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
   @override
   String debugGetCreateSourceHash() => _$appSettingsHash();
@@ -85,8 +94,8 @@ final class AppSettingsProvider extends $FunctionalProvider<
   @$internal
   @override
   $FutureProviderElement<AppSettings> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<AppSettings> create(Ref ref) {
@@ -103,20 +112,25 @@ const appSettingsStreamProvider = AppSettingsStreamProvider._();
 
 /// Stream of app settings for reactive updates.
 
-final class AppSettingsStreamProvider extends $FunctionalProvider<
-        AsyncValue<AppSettings>, AppSettings, Stream<AppSettings>>
+final class AppSettingsStreamProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<AppSettings>,
+          AppSettings,
+          Stream<AppSettings>
+        >
     with $FutureModifier<AppSettings>, $StreamProvider<AppSettings> {
   /// Stream of app settings for reactive updates.
   const AppSettingsStreamProvider._()
-      : super(
-          from: null,
-          argument: null,
-          retry: null,
-          name: r'appSettingsStreamProvider',
-          isAutoDispose: true,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appSettingsStreamProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
   @override
   String debugGetCreateSourceHash() => _$appSettingsStreamHash();
@@ -124,8 +138,8 @@ final class AppSettingsStreamProvider extends $FunctionalProvider<
   @$internal
   @override
   $StreamProviderElement<AppSettings> $createElement(
-          $ProviderPointer pointer) =>
-      $StreamProviderElement(pointer);
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
 
   @override
   Stream<AppSettings> create(Ref ref) {

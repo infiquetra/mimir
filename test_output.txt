@@ -1,0 +1,439 @@
+00:00 +0: loading /Users/jefcox/workspace/infiquetra/mimir/test/features/market/presentation/market_screen_test.dart
+00:00 +0: (setUpAll)
+00:00 +0: MarketOverviewScreen renders tabs and handles no character state
+[CHAR] activeCharacterProvider - setting up stream
+[CHAR] watchActiveCharacter() - subscribed to stream
+Pending timers:
+Timer (duration: 0:00:00.000000, periodic: false), created:
+#0      new FakeTimer._ (package:fake_async/fake_async.dart:342:62)
+#1      FakeAsync._createTimer (package:fake_async/fake_async.dart:260:29)
+#2      FakeAsync.run.<anonymous closure> (package:fake_async/fake_async.dart:185:15)
+#6      StreamQueryStore.markAsClosed (package:drift/src/runtime/executor/stream_queries.dart:154:11)
+#7      QueryStream._onCancelOrPause (package:drift/src/runtime/executor/stream_queries.dart:305:14)
+#8      QueryStream._stream.<anonymous closure>.<anonymous closure> (package:drift/src/runtime/executor/stream_queries.dart:237:11)
+#20     ElementWithFuture.runOnDispose (package:riverpod/src/core/element.dart:296:32)
+#21     ProviderElement.clearState (package:riverpod/src/core/element.dart:1189:5)
+#22     ProviderElement.dispose (package:riverpod/src/core/element.dart:1220:5)
+#23     ElementWithFuture.dispose (package:riverpod/src/core/element.dart:322:11)
+#24     $StreamProviderElement.dispose (package:riverpod/src/providers/stream_provider.dart:164:11)
+#25     ProviderContainer._dispose (package:riverpod/src/core/provider_container.dart:1130:15)
+#26     ProviderContainer.dispose (package:riverpod/src/core/provider_container.dart:1144:21)
+#27     ProviderScopeState.dispose (package:flutter_riverpod/src/core/provider_scope.dart:220:15)
+#28     StatefulElement.unmount (package:flutter/src/widgets/framework.dart:6030:11)
+#29     _InactiveElements._unmount (package:flutter/src/widgets/framework.dart:2117:13)
+#30     _InactiveElements._unmount.<anonymous closure> (package:flutter/src/widgets/framework.dart:2115:7)
+#31     ComponentElement.visitChildren (package:flutter/src/widgets/framework.dart:5871:14)
+#32     _InactiveElements._unmount (package:flutter/src/widgets/framework.dart:2113:13)
+#33     ListIterable.forEach (dart:_internal/iterable.dart:49:13)
+#34     _InactiveElements._unmountAll (package:flutter/src/widgets/framework.dart:2126:25)
+#35     BuildOwner.lockState (package:flutter/src/widgets/framework.dart:3020:15)
+#36     BuildOwner.finalizeTree (package:flutter/src/widgets/framework.dart:3344:7)
+#37     AutomatedTestWidgetsFlutterBinding.drawFrame (package:flutter_test/src/binding.dart:2153:19)
+#38     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+#39     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1430:15)
+#40     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1345:9)
+#41     AutomatedTestWidgetsFlutterBinding.scheduleWarmUpFrame (package:flutter_test/src/binding.dart:2057:5)
+#42     _runWidget (package:flutter/src/widgets/binding.dart:1683:7)
+#43     runApp (package:flutter/src/widgets/binding.dart:1616:3)
+#44     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1689:7)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 15 frames from dart:async and package:stack_trace)
+
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following assertion was thrown running a test:
+A Timer is still pending even after the widget tree was disposed.
+'package:flutter_test/src/binding.dart':
+Failed assertion: line 2242 pos 12: '!timersPending'
+
+When the exception was thrown, this was the stack:
+#2      AutomatedTestWidgetsFlutterBinding._verifyInvariants (package:flutter_test/src/binding.dart:2242:12)
+#3      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1703:7)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 3 frames from class _AssertionError and package:stack_trace)
+
+The test description was:
+  renders tabs and handles no character state
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +0 -1: MarketOverviewScreen renders tabs and handles no character state [E]
+  Test failed. See exception logs above.
+  The test description was: renders tabs and handles no character state
+  
+00:00 +0 -1: MarketOverviewScreen shows empty state when character has no orders
+[CHAR] activeCharacterProvider - setting up stream
+[CHAR] watchActiveCharacter() - subscribed to stream
+Pending timers:
+Timer (duration: 0:00:00.000000, periodic: false), created:
+#0      new FakeTimer._ (package:fake_async/fake_async.dart:342:62)
+#1      FakeAsync._createTimer (package:fake_async/fake_async.dart:260:29)
+#2      FakeAsync.run.<anonymous closure> (package:fake_async/fake_async.dart:185:15)
+#6      StreamQueryStore.markAsClosed (package:drift/src/runtime/executor/stream_queries.dart:154:11)
+#7      QueryStream._onCancelOrPause (package:drift/src/runtime/executor/stream_queries.dart:305:14)
+#8      QueryStream._stream.<anonymous closure>.<anonymous closure> (package:drift/src/runtime/executor/stream_queries.dart:237:11)
+#22     ElementWithFuture.runOnDispose (package:riverpod/src/core/element.dart:296:32)
+#23     ProviderElement.clearState (package:riverpod/src/core/element.dart:1189:5)
+#24     ProviderElement.dispose (package:riverpod/src/core/element.dart:1220:5)
+#25     ElementWithFuture.dispose (package:riverpod/src/core/element.dart:322:11)
+#26     $StreamProviderElement.dispose (package:riverpod/src/providers/stream_provider.dart:164:11)
+#27     ProviderContainer._dispose (package:riverpod/src/core/provider_container.dart:1130:15)
+#28     ProviderContainer.dispose (package:riverpod/src/core/provider_container.dart:1144:21)
+#29     ProviderScopeState.dispose (package:flutter_riverpod/src/core/provider_scope.dart:220:15)
+#30     StatefulElement.unmount (package:flutter/src/widgets/framework.dart:6030:11)
+#31     _InactiveElements._unmount (package:flutter/src/widgets/framework.dart:2117:13)
+#32     _InactiveElements._unmount.<anonymous closure> (package:flutter/src/widgets/framework.dart:2115:7)
+#33     ComponentElement.visitChildren (package:flutter/src/widgets/framework.dart:5871:14)
+#34     _InactiveElements._unmount (package:flutter/src/widgets/framework.dart:2113:13)
+#35     ListIterable.forEach (dart:_internal/iterable.dart:49:13)
+#36     _InactiveElements._unmountAll (package:flutter/src/widgets/framework.dart:2126:25)
+#37     BuildOwner.lockState (package:flutter/src/widgets/framework.dart:3020:15)
+#38     BuildOwner.finalizeTree (package:flutter/src/widgets/framework.dart:3344:7)
+#39     AutomatedTestWidgetsFlutterBinding.drawFrame (package:flutter_test/src/binding.dart:2153:19)
+#40     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+#41     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1430:15)
+#42     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1345:9)
+#43     AutomatedTestWidgetsFlutterBinding.scheduleWarmUpFrame (package:flutter_test/src/binding.dart:2057:5)
+#44     _runWidget (package:flutter/src/widgets/binding.dart:1683:7)
+#45     runApp (package:flutter/src/widgets/binding.dart:1616:3)
+#46     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1689:7)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 17 frames from dart:async and package:stack_trace)
+
+Timer (duration: 0:00:00.000000, periodic: false), created:
+#0      new FakeTimer._ (package:fake_async/fake_async.dart:342:62)
+#1      FakeAsync._createTimer (package:fake_async/fake_async.dart:260:29)
+#2      FakeAsync.run.<anonymous closure> (package:fake_async/fake_async.dart:185:15)
+#6      StreamQueryStore.markAsClosed (package:drift/src/runtime/executor/stream_queries.dart:154:11)
+#7      QueryStream._onCancelOrPause (package:drift/src/runtime/executor/stream_queries.dart:305:14)
+#8      QueryStream._stream.<anonymous closure>.<anonymous closure> (package:drift/src/runtime/executor/stream_queries.dart:237:11)
+#20     ElementWithFuture.runOnDispose (package:riverpod/src/core/element.dart:296:32)
+#21     ProviderElement.clearState (package:riverpod/src/core/element.dart:1189:5)
+#22     ProviderElement.dispose (package:riverpod/src/core/element.dart:1220:5)
+#23     ElementWithFuture.dispose (package:riverpod/src/core/element.dart:322:11)
+#24     $StreamProviderElement.dispose (package:riverpod/src/providers/stream_provider.dart:164:11)
+#25     ProviderContainer._dispose (package:riverpod/src/core/provider_container.dart:1130:15)
+#26     ProviderContainer.dispose (package:riverpod/src/core/provider_container.dart:1144:21)
+#27     ProviderScopeState.dispose (package:flutter_riverpod/src/core/provider_scope.dart:220:15)
+#28     StatefulElement.unmount (package:flutter/src/widgets/framework.dart:6030:11)
+#29     _InactiveElements._unmount (package:flutter/src/widgets/framework.dart:2117:13)
+#30     _InactiveElements._unmount.<anonymous closure> (package:flutter/src/widgets/framework.dart:2115:7)
+#31     ComponentElement.visitChildren (package:flutter/src/widgets/framework.dart:5871:14)
+#32     _InactiveElements._unmount (package:flutter/src/widgets/framework.dart:2113:13)
+#33     ListIterable.forEach (dart:_internal/iterable.dart:49:13)
+#34     _InactiveElements._unmountAll (package:flutter/src/widgets/framework.dart:2126:25)
+#35     BuildOwner.lockState (package:flutter/src/widgets/framework.dart:3020:15)
+#36     BuildOwner.finalizeTree (package:flutter/src/widgets/framework.dart:3344:7)
+#37     AutomatedTestWidgetsFlutterBinding.drawFrame (package:flutter_test/src/binding.dart:2153:19)
+#38     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+#39     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1430:15)
+#40     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1345:9)
+#41     AutomatedTestWidgetsFlutterBinding.scheduleWarmUpFrame (package:flutter_test/src/binding.dart:2057:5)
+#42     _runWidget (package:flutter/src/widgets/binding.dart:1683:7)
+#43     runApp (package:flutter/src/widgets/binding.dart:1616:3)
+#44     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1689:7)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 15 frames from dart:async and package:stack_trace)
+
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following assertion was thrown running a test:
+A Timer is still pending even after the widget tree was disposed.
+'package:flutter_test/src/binding.dart':
+Failed assertion: line 2242 pos 12: '!timersPending'
+
+When the exception was thrown, this was the stack:
+#2      AutomatedTestWidgetsFlutterBinding._verifyInvariants (package:flutter_test/src/binding.dart:2242:12)
+#3      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1703:7)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 3 frames from class _AssertionError and package:stack_trace)
+
+The test description was:
+  shows empty state when character has no orders
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +0 -2: MarketOverviewScreen shows empty state when character has no orders [E]
+  Test failed. See exception logs above.
+  The test description was: shows empty state when character has no orders
+  
+00:00 +0 -2: MarketOverviewScreen renders active orders when database has data
+[CHAR] activeCharacterProvider - setting up stream
+[CHAR] watchActiveCharacter() - subscribed to stream
+[WALLET.ITEM] itemNameProvider(34) - START
+[NAME.RESOLVE] resolveNames(1 IDs) - START
+[NAME.RESOLVE] 1 names missing from memory, checking database
+[NAME.RESOLVE] ℹ️ 1 names missing, fetching from ESI
+[NAME.RESOLVE] Resolved 1 names total (1 from ESI)
+[WALLET.ITEM] itemNameProvider(34) → Tritanium
+[EveTypeIcon] ❌ Failed to load icon for type 34 from https://images.evetech.net/types/34/icon?size=64
+[EveTypeIcon] Error: HTTP request failed, statusCode: 400, https://images.evetech.net/types/34/icon?size=64
+[EveTypeIcon] Stack: #0      NetworkImage._loadAsync (package:flutter/src/painting/_network_image_io.dart:131:9)
+<asynchronous suspension>
+#1      MultiFrameImageStreamCompleter._handleCodecReady (package:flutter/src/painting/image_stream.dart:1021:3)
+<asynchronous suspension>
+
+WIDGET TREE:
+TEXT: Tritanium
+TEXT: SELL
+TEXT: 4.50 ISK
+TEXT: 5000 / 10000
+TEXT: 88d 23h 59m
+TEXT: Market Tools
+TEXT: Active Orders
+TEXT: Price Checker
+Pending timers:
+Timer (duration: 0:00:00.000000, periodic: false), created:
+#0      new FakeTimer._ (package:fake_async/fake_async.dart:342:62)
+#1      FakeAsync._createTimer (package:fake_async/fake_async.dart:260:29)
+#2      FakeAsync.run.<anonymous closure> (package:fake_async/fake_async.dart:185:15)
+#6      StreamQueryStore.markAsClosed (package:drift/src/runtime/executor/stream_queries.dart:154:11)
+#7      QueryStream._onCancelOrPause (package:drift/src/runtime/executor/stream_queries.dart:305:14)
+#8      QueryStream._stream.<anonymous closure>.<anonymous closure> (package:drift/src/runtime/executor/stream_queries.dart:237:11)
+#22     ElementWithFuture.runOnDispose (package:riverpod/src/core/element.dart:296:32)
+#23     ProviderElement.clearState (package:riverpod/src/core/element.dart:1189:5)
+#24     ProviderElement.dispose (package:riverpod/src/core/element.dart:1220:5)
+#25     ElementWithFuture.dispose (package:riverpod/src/core/element.dart:322:11)
+#26     $StreamProviderElement.dispose (package:riverpod/src/providers/stream_provider.dart:164:11)
+#27     ProviderContainer._dispose (package:riverpod/src/core/provider_container.dart:1130:15)
+#28     ProviderContainer.dispose (package:riverpod/src/core/provider_container.dart:1144:21)
+#29     ProviderScopeState.dispose (package:flutter_riverpod/src/core/provider_scope.dart:220:15)
+#30     StatefulElement.unmount (package:flutter/src/widgets/framework.dart:6030:11)
+#31     _InactiveElements._unmount (package:flutter/src/widgets/framework.dart:2117:13)
+#32     _InactiveElements._unmount.<anonymous closure> (package:flutter/src/widgets/framework.dart:2115:7)
+#33     ComponentElement.visitChildren (package:flutter/src/widgets/framework.dart:5871:14)
+#34     _InactiveElements._unmount (package:flutter/src/widgets/framework.dart:2113:13)
+#35     ListIterable.forEach (dart:_internal/iterable.dart:49:13)
+#36     _InactiveElements._unmountAll (package:flutter/src/widgets/framework.dart:2126:25)
+#37     BuildOwner.lockState (package:flutter/src/widgets/framework.dart:3020:15)
+#38     BuildOwner.finalizeTree (package:flutter/src/widgets/framework.dart:3344:7)
+#39     AutomatedTestWidgetsFlutterBinding.drawFrame (package:flutter_test/src/binding.dart:2153:19)
+#40     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+#41     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1430:15)
+#42     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1345:9)
+#43     AutomatedTestWidgetsFlutterBinding.scheduleWarmUpFrame (package:flutter_test/src/binding.dart:2057:5)
+#44     _runWidget (package:flutter/src/widgets/binding.dart:1683:7)
+#45     runApp (package:flutter/src/widgets/binding.dart:1616:3)
+#46     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1689:7)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 17 frames from dart:async and package:stack_trace)
+
+Timer (duration: 0:00:00.000000, periodic: false), created:
+#0      new FakeTimer._ (package:fake_async/fake_async.dart:342:62)
+#1      FakeAsync._createTimer (package:fake_async/fake_async.dart:260:29)
+#2      FakeAsync.run.<anonymous closure> (package:fake_async/fake_async.dart:185:15)
+#6      StreamQueryStore.markAsClosed (package:drift/src/runtime/executor/stream_queries.dart:154:11)
+#7      QueryStream._onCancelOrPause (package:drift/src/runtime/executor/stream_queries.dart:305:14)
+#8      QueryStream._stream.<anonymous closure>.<anonymous closure> (package:drift/src/runtime/executor/stream_queries.dart:237:11)
+#20     ElementWithFuture.runOnDispose (package:riverpod/src/core/element.dart:296:32)
+#21     ProviderElement.clearState (package:riverpod/src/core/element.dart:1189:5)
+#22     ProviderElement.dispose (package:riverpod/src/core/element.dart:1220:5)
+#23     ElementWithFuture.dispose (package:riverpod/src/core/element.dart:322:11)
+#24     $StreamProviderElement.dispose (package:riverpod/src/providers/stream_provider.dart:164:11)
+#25     ProviderContainer._dispose (package:riverpod/src/core/provider_container.dart:1130:15)
+#26     ProviderContainer.dispose (package:riverpod/src/core/provider_container.dart:1144:21)
+#27     ProviderScopeState.dispose (package:flutter_riverpod/src/core/provider_scope.dart:220:15)
+#28     StatefulElement.unmount (package:flutter/src/widgets/framework.dart:6030:11)
+#29     _InactiveElements._unmount (package:flutter/src/widgets/framework.dart:2117:13)
+#30     _InactiveElements._unmount.<anonymous closure> (package:flutter/src/widgets/framework.dart:2115:7)
+#31     ComponentElement.visitChildren (package:flutter/src/widgets/framework.dart:5871:14)
+#32     _InactiveElements._unmount (package:flutter/src/widgets/framework.dart:2113:13)
+#33     ListIterable.forEach (dart:_internal/iterable.dart:49:13)
+#34     _InactiveElements._unmountAll (package:flutter/src/widgets/framework.dart:2126:25)
+#35     BuildOwner.lockState (package:flutter/src/widgets/framework.dart:3020:15)
+#36     BuildOwner.finalizeTree (package:flutter/src/widgets/framework.dart:3344:7)
+#37     AutomatedTestWidgetsFlutterBinding.drawFrame (package:flutter_test/src/binding.dart:2153:19)
+#38     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+#39     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1430:15)
+#40     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1345:9)
+#41     AutomatedTestWidgetsFlutterBinding.scheduleWarmUpFrame (package:flutter_test/src/binding.dart:2057:5)
+#42     _runWidget (package:flutter/src/widgets/binding.dart:1683:7)
+#43     runApp (package:flutter/src/widgets/binding.dart:1616:3)
+#44     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1689:7)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 15 frames from dart:async and package:stack_trace)
+
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following assertion was thrown running a test:
+A Timer is still pending even after the widget tree was disposed.
+'package:flutter_test/src/binding.dart':
+Failed assertion: line 2242 pos 12: '!timersPending'
+
+When the exception was thrown, this was the stack:
+#2      AutomatedTestWidgetsFlutterBinding._verifyInvariants (package:flutter_test/src/binding.dart:2242:12)
+#3      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1703:7)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 3 frames from class _AssertionError and package:stack_trace)
+
+The test description was:
+  renders active orders when database has data
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +0 -3: MarketOverviewScreen renders active orders when database has data [E]
+  Test failed. See exception logs above.
+  The test description was: renders active orders when database has data
+  
+Warning: At least one test in this suite creates an HttpClient. When running a test suite that uses
+TestWidgetsFlutterBinding, all HTTP requests will return status code 400, and no network request
+will actually be made. Any test expecting a real network connection and status code will fail.
+To test code that needs an HttpClient, provide your own HttpClient implementation to the code under
+test, so that your test can consistently provide a testable response to the code under test.
+00:00 +0 -3: MarketOverviewScreen price checker search functions
+[CHAR] activeCharacterProvider - setting up stream
+[CHAR] watchActiveCharacter() - subscribed to stream
+[WALLET.ITEM] itemNameProvider(34) - START
+[NAME.RESOLVE] resolveNames(1 IDs) - START
+[NAME.RESOLVE] 1 names missing from memory, checking database
+[NAME.RESOLVE] ℹ️ 1 names missing, fetching from ESI
+[NAME.RESOLVE] Resolved 1 names total (1 from ESI)
+[WALLET.ITEM] itemNameProvider(34) → Tritanium
+[EveTypeIcon] ❌ Failed to load icon for type 34 from https://images.evetech.net/types/34/icon?size=64
+[EveTypeIcon] Error: HTTP request failed, statusCode: 400, https://images.evetech.net/types/34/icon?size=64
+[EveTypeIcon] Stack: #0      NetworkImage._loadAsync (package:flutter/src/painting/_network_image_io.dart:131:9)
+<asynchronous suspension>
+#1      MultiFrameImageStreamCompleter._handleCodecReady (package:flutter/src/painting/image_stream.dart:1021:3)
+<asynchronous suspension>
+
+PRICE CHECKER TEXT:
+TEXT: Enter Item ID (e.g. 34)
+TEXT: Search
+TEXT: Tritanium
+TEXT: Adjusted Price
+TEXT: 4.50 ISK
+TEXT: Average Price
+TEXT: 4.60 ISK
+TEXT: Market Tools
+TEXT: Active Orders
+TEXT: Price Checker
+Pending timers:
+Timer (duration: 0:00:00.000000, periodic: false), created:
+#0      new FakeTimer._ (package:fake_async/fake_async.dart:342:62)
+#1      FakeAsync._createTimer (package:fake_async/fake_async.dart:260:29)
+#2      FakeAsync.run.<anonymous closure> (package:fake_async/fake_async.dart:185:15)
+#6      StreamQueryStore.markAsClosed (package:drift/src/runtime/executor/stream_queries.dart:154:11)
+#7      QueryStream._onCancelOrPause (package:drift/src/runtime/executor/stream_queries.dart:305:14)
+#8      QueryStream._stream.<anonymous closure>.<anonymous closure> (package:drift/src/runtime/executor/stream_queries.dart:237:11)
+#22     ElementWithFuture.runOnDispose (package:riverpod/src/core/element.dart:296:32)
+#23     ProviderElement.clearState (package:riverpod/src/core/element.dart:1189:5)
+#24     ProviderElement.dispose (package:riverpod/src/core/element.dart:1220:5)
+#25     ElementWithFuture.dispose (package:riverpod/src/core/element.dart:322:11)
+#26     $StreamProviderElement.dispose (package:riverpod/src/providers/stream_provider.dart:164:11)
+#27     ProviderContainer._dispose (package:riverpod/src/core/provider_container.dart:1130:15)
+#28     ProviderContainer.dispose (package:riverpod/src/core/provider_container.dart:1144:21)
+#29     ProviderScopeState.dispose (package:flutter_riverpod/src/core/provider_scope.dart:220:15)
+#30     StatefulElement.unmount (package:flutter/src/widgets/framework.dart:6030:11)
+#31     _InactiveElements._unmount (package:flutter/src/widgets/framework.dart:2117:13)
+#32     _InactiveElements._unmount.<anonymous closure> (package:flutter/src/widgets/framework.dart:2115:7)
+#33     ComponentElement.visitChildren (package:flutter/src/widgets/framework.dart:5871:14)
+#34     _InactiveElements._unmount (package:flutter/src/widgets/framework.dart:2113:13)
+#35     ListIterable.forEach (dart:_internal/iterable.dart:49:13)
+#36     _InactiveElements._unmountAll (package:flutter/src/widgets/framework.dart:2126:25)
+#37     BuildOwner.lockState (package:flutter/src/widgets/framework.dart:3020:15)
+#38     BuildOwner.finalizeTree (package:flutter/src/widgets/framework.dart:3344:7)
+#39     AutomatedTestWidgetsFlutterBinding.drawFrame (package:flutter_test/src/binding.dart:2153:19)
+#40     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+#41     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1430:15)
+#42     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1345:9)
+#43     AutomatedTestWidgetsFlutterBinding.scheduleWarmUpFrame (package:flutter_test/src/binding.dart:2057:5)
+#44     _runWidget (package:flutter/src/widgets/binding.dart:1683:7)
+#45     runApp (package:flutter/src/widgets/binding.dart:1616:3)
+#46     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1689:7)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 17 frames from dart:async and package:stack_trace)
+
+Timer (duration: 0:00:00.000000, periodic: false), created:
+#0      new FakeTimer._ (package:fake_async/fake_async.dart:342:62)
+#1      FakeAsync._createTimer (package:fake_async/fake_async.dart:260:29)
+#2      FakeAsync.run.<anonymous closure> (package:fake_async/fake_async.dart:185:15)
+#6      StreamQueryStore.markAsClosed (package:drift/src/runtime/executor/stream_queries.dart:154:11)
+#7      QueryStream._onCancelOrPause (package:drift/src/runtime/executor/stream_queries.dart:305:14)
+#8      QueryStream._stream.<anonymous closure>.<anonymous closure> (package:drift/src/runtime/executor/stream_queries.dart:237:11)
+#20     ElementWithFuture.runOnDispose (package:riverpod/src/core/element.dart:296:32)
+#21     ProviderElement.clearState (package:riverpod/src/core/element.dart:1189:5)
+#22     ProviderElement.dispose (package:riverpod/src/core/element.dart:1220:5)
+#23     ElementWithFuture.dispose (package:riverpod/src/core/element.dart:322:11)
+#24     $StreamProviderElement.dispose (package:riverpod/src/providers/stream_provider.dart:164:11)
+#25     ProviderContainer._dispose (package:riverpod/src/core/provider_container.dart:1130:15)
+#26     ProviderContainer.dispose (package:riverpod/src/core/provider_container.dart:1144:21)
+#27     ProviderScopeState.dispose (package:flutter_riverpod/src/core/provider_scope.dart:220:15)
+#28     StatefulElement.unmount (package:flutter/src/widgets/framework.dart:6030:11)
+#29     _InactiveElements._unmount (package:flutter/src/widgets/framework.dart:2117:13)
+#30     _InactiveElements._unmount.<anonymous closure> (package:flutter/src/widgets/framework.dart:2115:7)
+#31     ComponentElement.visitChildren (package:flutter/src/widgets/framework.dart:5871:14)
+#32     _InactiveElements._unmount (package:flutter/src/widgets/framework.dart:2113:13)
+#33     ListIterable.forEach (dart:_internal/iterable.dart:49:13)
+#34     _InactiveElements._unmountAll (package:flutter/src/widgets/framework.dart:2126:25)
+#35     BuildOwner.lockState (package:flutter/src/widgets/framework.dart:3020:15)
+#36     BuildOwner.finalizeTree (package:flutter/src/widgets/framework.dart:3344:7)
+#37     AutomatedTestWidgetsFlutterBinding.drawFrame (package:flutter_test/src/binding.dart:2153:19)
+#38     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+#39     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1430:15)
+#40     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1345:9)
+#41     AutomatedTestWidgetsFlutterBinding.scheduleWarmUpFrame (package:flutter_test/src/binding.dart:2057:5)
+#42     _runWidget (package:flutter/src/widgets/binding.dart:1683:7)
+#43     runApp (package:flutter/src/widgets/binding.dart:1616:3)
+#44     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1689:7)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 15 frames from dart:async and package:stack_trace)
+
+Timer (duration: 0:00:00.000000, periodic: false), created:
+#0      new FakeTimer._ (package:fake_async/fake_async.dart:342:62)
+#1      FakeAsync._createTimer (package:fake_async/fake_async.dart:260:29)
+#2      FakeAsync.run.<anonymous closure> (package:fake_async/fake_async.dart:185:15)
+#6      StreamQueryStore.markAsClosed (package:drift/src/runtime/executor/stream_queries.dart:154:11)
+#7      QueryStream._onCancelOrPause (package:drift/src/runtime/executor/stream_queries.dart:305:14)
+#8      QueryStream._stream.<anonymous closure>.<anonymous closure> (package:drift/src/runtime/executor/stream_queries.dart:237:11)
+#20     ElementWithFuture.runOnDispose (package:riverpod/src/core/element.dart:296:32)
+#21     ProviderElement.clearState (package:riverpod/src/core/element.dart:1189:5)
+#22     ProviderElement.dispose (package:riverpod/src/core/element.dart:1220:5)
+#23     ElementWithFuture.dispose (package:riverpod/src/core/element.dart:322:11)
+#24     $StreamProviderElement.dispose (package:riverpod/src/providers/stream_provider.dart:164:11)
+#25     ProviderContainer._dispose (package:riverpod/src/core/provider_container.dart:1130:15)
+#26     ProviderContainer.dispose (package:riverpod/src/core/provider_container.dart:1144:21)
+#27     ProviderScopeState.dispose (package:flutter_riverpod/src/core/provider_scope.dart:220:15)
+#28     StatefulElement.unmount (package:flutter/src/widgets/framework.dart:6030:11)
+#29     _InactiveElements._unmount (package:flutter/src/widgets/framework.dart:2117:13)
+#30     _InactiveElements._unmount.<anonymous closure> (package:flutter/src/widgets/framework.dart:2115:7)
+#31     ComponentElement.visitChildren (package:flutter/src/widgets/framework.dart:5871:14)
+#32     _InactiveElements._unmount (package:flutter/src/widgets/framework.dart:2113:13)
+#33     ListIterable.forEach (dart:_internal/iterable.dart:49:13)
+#34     _InactiveElements._unmountAll (package:flutter/src/widgets/framework.dart:2126:25)
+#35     BuildOwner.lockState (package:flutter/src/widgets/framework.dart:3020:15)
+#36     BuildOwner.finalizeTree (package:flutter/src/widgets/framework.dart:3344:7)
+#37     AutomatedTestWidgetsFlutterBinding.drawFrame (package:flutter_test/src/binding.dart:2153:19)
+#38     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+#39     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1430:15)
+#40     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1345:9)
+#41     AutomatedTestWidgetsFlutterBinding.scheduleWarmUpFrame (package:flutter_test/src/binding.dart:2057:5)
+#42     _runWidget (package:flutter/src/widgets/binding.dart:1683:7)
+#43     runApp (package:flutter/src/widgets/binding.dart:1616:3)
+#44     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1689:7)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 15 frames from dart:async and package:stack_trace)
+
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following assertion was thrown running a test:
+A Timer is still pending even after the widget tree was disposed.
+'package:flutter_test/src/binding.dart':
+Failed assertion: line 2242 pos 12: '!timersPending'
+
+When the exception was thrown, this was the stack:
+#2      AutomatedTestWidgetsFlutterBinding._verifyInvariants (package:flutter_test/src/binding.dart:2242:12)
+#3      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1703:7)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 3 frames from class _AssertionError and package:stack_trace)
+
+The test description was:
+  price checker search functions
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +0 -4: MarketOverviewScreen price checker search functions [E]
+  Test failed. See exception logs above.
+  The test description was: price checker search functions
+  
+00:01 +0 -4: (tearDownAll)
+00:01 +0 -4: Some tests failed.

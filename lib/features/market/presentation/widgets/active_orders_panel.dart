@@ -8,6 +8,7 @@ import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/eve_card.dart';
 import '../../../../core/widgets/eve_type_icon.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../wallet/data/wallet_providers.dart';
 import '../../data/market_providers.dart';
 
 /// Panel displaying the character's active market orders.
@@ -98,14 +99,28 @@ class _OrderListItem extends ConsumerWidget {
                     Row(
                       children: [
                         Expanded(
-                          // In MVP, we would use itemNameProvider to resolve typeId dynamically.
-                          child: Text(
-                            'Item #${order.typeId}',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+                          child: ref.watch(itemNameProvider(order.typeId)).when(
+                            data: (name) => Text(
+                              name,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            loading: () => Text(
+                              'Loading...',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: EveColors.textSecondary,
+                              ),
+                            ),
+                            error: (_, __) => Text(
+                              'Item #${order.typeId}',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
                         Container(

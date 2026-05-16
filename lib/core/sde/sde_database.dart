@@ -116,6 +116,28 @@ class SdeSkillRequirements extends Table {
   Set<Column> get primaryKey => {skillId, requiredSkillId};
 }
 
+/// Type attributes from Dogma (EVE's calculation engine).
+/// Maps a typeId and attributeId to a specific value.
+class SdeTypeAttributes extends Table {
+  IntColumn get typeId => integer()();
+  IntColumn get attributeId => integer()();
+  RealColumn get value => real()();
+
+  @override
+  Set<Column> get primaryKey => {typeId, attributeId};
+}
+
+/// Type effects from Dogma.
+/// Maps a typeId to an effectId.
+class SdeTypeEffects extends Table {
+  IntColumn get typeId => integer()();
+  IntColumn get effectId => integer()();
+  BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {typeId, effectId};
+}
+
 /// Static Data Export database using Drift.
 ///
 /// Stores EVE Online reference data for offline lookups:
@@ -131,6 +153,8 @@ class SdeSkillRequirements extends Table {
   SdeCategories,
   SdeMetadata,
   SdeSkillRequirements,
+  SdeTypeAttributes,
+  SdeTypeEffects,
 ])
 class SdeDatabase extends _$SdeDatabase {
   SdeDatabase() : super(_openConnection());
@@ -139,7 +163,7 @@ class SdeDatabase extends _$SdeDatabase {
   SdeDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -161,6 +185,11 @@ class SdeDatabase extends _$SdeDatabase {
 
           // Create SdeSkillRequirements table
           await m.createTable(sdeSkillRequirements);
+        }
+        if (from < 4) {
+          // Version 4: Add Dogma SDE tables
+          await m.createTable(sdeTypeAttributes);
+          await m.createTable(sdeTypeEffects);
         }
       },
     );
@@ -278,6 +307,15 @@ class SdeDatabase extends _$SdeDatabase {
     return (count ?? 0) > 0;
   }
 
+  /// Check if the database has Dogma data.
+  Future<bool> hasDogmaData() async {
+    final count = await (selectOnly(sdeTypeAttributes)
+          ..addColumns([sdeTypeAttributes.typeId.count()]))
+        .map((row) => row.read(sdeTypeAttributes.typeId.count()))
+        .getSingle();
+    return (count ?? 0) > 0;
+  }
+
   /// Clear all data (for refresh).
   Future<void> clearAll() async {
     await transaction(() async {
@@ -285,6 +323,8 @@ class SdeDatabase extends _$SdeDatabase {
       await delete(sdeGroups).go();
       await delete(sdeCategories).go();
       await delete(sdeSkillRequirements).go();
+      await delete(sdeTypeAttributes).go();
+      await delete(sdeTypeEffects).go();
     });
   }
 
@@ -341,6 +381,38 @@ class SdeDatabase extends _$SdeDatabase {
   /// Clear all skill requirements (for refresh).
   Future<void> clearSkillRequirements() async {
     await delete(sdeSkillRequirements).go();
+  }
+
+  // Dogma operations
+
+  /// Get attributes for a specific type.
+  Future<Map<int, double>> getTypeAttributes(int typeId) async {
+    final rows = await (select(sdeTypeAttributes)
+          ..where((a) => a.typeId.equals(typeId)))
+        .get();
+    return {for (final row in rows) row.attributeId: row.value};
+  }
+
+  /// Get effects for a specific type.
+  Future<List<int>> getTypeEffects(int typeId) async {
+    final rows = await (select(sdeTypeEffects)
+          ..where((e) => e.typeId.equals(typeId)))
+        .get();
+    return rows.map((e) => e.effectId).toList();
+  }
+
+  /// Insert or update type attributes.
+  Future<void> upsertTypeAttributes(List<SdeTypeAttributesCompanion> attributes) async {
+    await batch((b) {
+      b.insertAllOnConflictUpdate(sdeTypeAttributes, attributes);
+    });
+  }
+
+  /// Insert or update type effects.
+  Future<void> upsertTypeEffects(List<SdeTypeEffectsCompanion> effects) async {
+    await batch((b) {
+      b.insertAllOnConflictUpdate(sdeTypeEffects, effects);
+    });
   }
 }
 

@@ -1,42 +1,38 @@
-# Project: Mimir Improvements - Market Tools
-Date: 2026-05-06
+# Project: Mimir Improvements - Market & Ship Fitting
+Date: 2026-05-16
+Checkpoint: 2026-05-16-10-00
 
 ## Overview
-We are expanding Mimir's functionality to support Market Tools. This involves implementing features for price checking, active order tracking, and transaction history. We will interact with ESI endpoints to fetch market prices and character orders, store them in the local Drift database, and create a user interface to display and interact with this data.
+We are expanding Mimir's functionality to support Market Tools (Phase 3) and Ship Fitting (Phase 4). Market Tools includes price checking and active order tracking. Ship Fitting involves an integrated Dogma Engine, Drift database schemas for saved fits, and parsing EFT/DNA formats.
 
-## Phase 1: Database & ESI Infrastructure [SEQ]
+## Phase 1: Database & ESI Infrastructure (Market)
+- [x] [SEQ] Update Database Schema (`app_database.dart`) with `MarketOrders` and `MarketPrices`.
+- [x] [SEQ] Add ESI Endpoints (`esi_client.dart`).
+- [x] [SEQ] Create Models for Market.
 
-- [x] [SEQ] **Update Database Schema (`app_database.dart`)**
-  - Add `MarketOrders` table (orderId, characterId, typeId, regionId, locationId, price, volumeRemain, volumeTotal, minVolume, isBuyOrder, issued, duration, range, isCorporation, escrow, state).
-  - Add `MarketPrices` table (typeId, adjustedPrice, averagePrice, lastUpdated).
-- [x] [SEQ] **Add ESI Endpoints (`esi_client.dart`)**
-  - Implement `/markets/prices/` (get all market prices).
-  - Implement `/characters/{character_id}/orders/` (get character active orders).
-- [x] [SEQ] **Create Models**
-  - Create data models for `MarketPrice` and `CharacterOrder` using Freezed/JsonSerializable.
+## Phase 2: Repositories & Sync Services (Market)
+- [x] [SEQ] Implement `MarketRepository`.
+- [x] [SEQ] Implement `MarketSyncService`.
+- [x] [SEQ] Create Riverpod Providers.
 
-## Phase 2: Repositories & Sync Services [SEQ]
+## Phase 3: User Interface (Market)
+- [x] [SEQ] Market Dashboard / Screen
+- [x] [SEQ] Active Orders View
+- [x] [SEQ] Price Checker View
+- [x] [SEQ] Multi-Window Integration
 
-- [x] [SEQ] **Implement `MarketRepository`**
-  - Create `lib/features/market/data/market_repository.dart` to handle database CRUD operations for orders and prices.
-- [x] [SEQ] **Implement `MarketSyncService`**
-  - Create `lib/features/market/data/market_sync_service.dart` to fetch data from ESI and update the local database.
-- [x] [SEQ] **Create Riverpod Providers**
-  - Add `market_providers.dart` for streaming active orders and market prices to the UI.
+## Phase 4: Ship Fitting Backend Infrastructure
+- [x] [SEQ] Create core domain models (`Fitting`, `FittedModule`, `FittingStats`, `ShipType`, `ModuleType`).
+- [x] [SEQ] Update Drift schema with `SavedFittings`, `FittingFolders`, and `FittingFolderMembers`.
+- [x] [SEQ] Expand `sde_database.dart` and `sde_service.dart` to fetch Dogma attributes and effects.
+- [x] [SEQ] Build native `DogmaEngine` in Dart for HP, EHP, Cap, CPU, and PG calculations with stacking penalties.
+- [x] [SEQ] Build `FittingFormatParser` to handle EFT text blocks and DNA string imports/exports.
+- [ ] [CHECKPOINT] Save state before proceeding to UI implementation.
 
-## Phase 3: User Interface [SEQ]
+## Phase 5: Ship Fitting User Interface
+- [ ] [P1] Build Ship Browser
+- [ ] [P1] Build Fitting Editor Screen
+- [ ] [P1] Build Stats Panel
 
-- [ ] [SEQ] **Market Dashboard / Screen**
-  - Create `MarketOverviewScreen` with primary tabs for "Active Orders" and "Price Checker".
-- [ ] [SEQ] **Active Orders View**
-  - Implement `ActiveOrdersPanel` to list a character's current buy and sell orders, displaying progress based on `volumeRemain` vs `volumeTotal`.
-- [ ] [SEQ] **Price Checker View**
-  - Implement `PriceCheckerPanel` to search for items and view their adjusted and average prices.
-- [ ] [SEQ] **Multi-Window Integration**
-  - Add "Market" to the main NavigationRail and the Tray menu.
-
-## Phase 4: Testing & Review [SEQ]
-
-- [x] [SEQ] Update MockEsiClient and test fixtures with dummy market orders and prices.
-- [x] [SEQ] Write unit tests for `MarketRepository` and `MarketSyncService`.
-- [x] [SEQ] Run `flutter test` and generate new goldens for the Market screens.
+## Review
+- **2026-05-16**: Implemented the backend architecture for the Ship Fitting Module. The Drift schema was updated with fitting tables and new Dogma attribute tables. The native Dogma Engine was created to parse base ship stats and modules to calculate effective hitpoints, capacitor stability, and resource requirements (CPU/Powergrid) with proper EVE stacking penalties. A format parser was added to translate between EFT strings, DNA share links, and the internal `Fitting` state representation.

@@ -6,6 +6,7 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/eve_card.dart';
 import '../../../../core/widgets/eve_type_icon.dart';
+import '../../../wallet/data/wallet_providers.dart';
 import '../../data/market_providers.dart';
 
 /// Panel for checking prices of items.
@@ -107,9 +108,21 @@ class _PriceCheckerPanelState extends ConsumerState<PriceCheckerPanel> {
                 children: [
                   EveTypeIcon(typeId: typeId, size: 64),
                   const SizedBox(height: 16),
-                  Text(
-                    'Item #$typeId',
-                    style: Theme.of(context).textTheme.headlineSmall,
+                  ref.watch(itemNameProvider(typeId)).when(
+                    data: (name) => Text(
+                      name,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    loading: () => Text(
+                      'Loading...',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: EveColors.textSecondary,
+                      ),
+                    ),
+                    error: (_, __) => Text(
+                      'Item #$typeId',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   Row(

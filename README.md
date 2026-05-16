@@ -19,7 +19,10 @@ Mimir aims to replace the need for multiple disconnected EVE tools (EVEMon, Pyfa
 
 ## Status
 
-**Currently in early development (Phase 1)**
+**Currently in active development**
+- Phase 1 & 2 (Foundational/Essential Tools): Complete
+- Phase 3 (Market Tools): Backend complete, UI pending
+- Phase 4 (Ship Fitting): Backend complete (Dogma Engine, Formats), UI pending
 
 See the [mimir-blueprint](https://github.com/infiquetra/mimir-blueprint) repository for detailed specifications and roadmap.
 

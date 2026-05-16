@@ -27,15 +27,15 @@ final class SkillPlanNotifierProvider
   /// Handles all skill plan CRUD operations with proper error handling
   /// and logging.
   const SkillPlanNotifierProvider._()
-      : super(
-          from: null,
-          argument: null,
-          retry: null,
-          name: r'skillPlanProvider',
-          isAutoDispose: true,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'skillPlanProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
   @override
   String debugGetCreateSourceHash() => _$skillPlanNotifierHash();
@@ -67,11 +67,14 @@ abstract class _$SkillPlanNotifier extends $Notifier<AsyncValue<void>> {
   void runBuild() {
     final created = build();
     final ref = this.ref as $Ref<AsyncValue<void>, AsyncValue<void>>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<void>, AsyncValue<void>>,
-        AsyncValue<void>,
-        Object?,
-        Object?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<void>, AsyncValue<void>>,
+              AsyncValue<void>,
+              Object?,
+              Object?
+            >;
     element.handleValue(ref, created);
   }
 }

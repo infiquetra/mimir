@@ -593,6 +593,42 @@ class MarketPrices extends Table {
   Set<Column> get primaryKey => {typeId};
 }
 
+/// Saved fittings
+class SavedFittings extends Table {
+  TextColumn get id => text()();
+  IntColumn get characterId => integer().nullable()();  // null = shared
+  TextColumn get name => text()();
+  TextColumn get description => text().nullable()();
+  IntColumn get shipTypeId => integer()();
+  TextColumn get fittingJson => text()();  // Full fitting data
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  TextColumn get tags => text().nullable()();  // Comma-separated tags
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Fitting folders for organization
+class FittingFolders extends Table {
+  TextColumn get id => text()();
+  IntColumn get characterId => integer().nullable()();
+  TextColumn get name => text()();
+  IntColumn get sortOrder => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Folder membership
+class FittingFolderMembers extends Table {
+  TextColumn get fittingId => text()();
+  TextColumn get folderId => text()();
+
+  @override
+  Set<Column> get primaryKey => {fittingId, folderId};
+}
+
 /// Application database using Drift.
 ///
 /// Handles all local persistence for Mimir including:
@@ -624,6 +660,9 @@ class MarketPrices extends Table {
   IndustryJobs,
   MarketOrders,
   MarketPrices,
+  SavedFittings,
+  FittingFolders,
+  FittingFolderMembers,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -632,7 +671,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration {
@@ -726,6 +765,13 @@ class AppDatabase extends _$AppDatabase {
         if (from < 14) {
           await m.createTable(marketOrders);
           await m.createTable(marketPrices);
+        }
+
+        // Migration from version 14 to 15: Add fitting tables.
+        if (from < 15) {
+          await m.createTable(savedFittings);
+          await m.createTable(fittingFolders);
+          await m.createTable(fittingFolderMembers);
         }
       },
     );

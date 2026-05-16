@@ -293,6 +293,7 @@ class MockEsiClient extends Mock implements EsiClient {
 
   static final nameResolutions = <int, String>{
     // Type IDs (items, ships, skills)
+    34: 'Tritanium',
     587: 'Rifter',
     44992: 'PLEX',
     3301: 'Mechanics',

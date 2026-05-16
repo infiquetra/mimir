@@ -143,8 +143,10 @@ class _TestAppState extends State<TestApp> {
 
   @override
   void dispose() {
-    // Close database to release file locks and prevent "multiple database" warnings
-    _database.close();
+    // We intentionally DO NOT close the database here.
+    // In widget tests (using fake_async), drift's close() schedules a Timer.run
+    // which causes "A Timer is still pending" assertion errors.
+    // Since NativeDatabase.memory() is garbage collected anyway, this is safe.
     super.dispose();
   }
 
