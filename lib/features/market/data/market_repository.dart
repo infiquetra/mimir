@@ -5,7 +5,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/logging/logger.dart';
 
-/// Repository for managing Market data (Orders and Prices).
+/// Repository for managing Market data (Orders, Prices, and History).
 class MarketRepository {
   final AppDatabase _database;
 
@@ -61,6 +61,36 @@ class MarketRepository {
       });
     });
     Log.i('MARKET', 'replaceAllPrices - SUCCESS');
+  }
+
+  // --- Market History ---
+
+  /// Get cached market history for a type in a region.
+  Future<List<MarketHistoryEntry>> getMarketHistory(int typeId, int regionId) async {
+    final rows = await (_database.select(_database.marketHistoryEntries)
+          ..where((h) => h.typeId.equals(typeId) & h.regionId.equals(regionId))
+          ..orderBy([(h) => OrderingTerm.asc(h.date)]))
+        .get();
+    return rows;
+  }
+
+  /// Save market history entries (upsert).
+  Future<void> saveMarketHistory(
+    int typeId,
+    int regionId,
+    List<MarketHistoryEntriesCompanion> entries,
+  ) async {
+    Log.d('MARKET', 'saveMarketHistory(type=$typeId, region=$regionId) - saving ${entries.length} entries');
+    await _database.transaction(() async {
+      // Delete existing history for this type/region combo
+      await (_database.delete(_database.marketHistoryEntries)
+            ..where((h) => h.typeId.equals(typeId) & h.regionId.equals(regionId)))
+          .go();
+      await _database.batch((batch) {
+        batch.insertAll(_database.marketHistoryEntries, entries);
+      });
+    });
+    Log.i('MARKET', 'saveMarketHistory(type=$typeId, region=$regionId) - SUCCESS');
   }
 }
 

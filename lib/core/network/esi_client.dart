@@ -101,6 +101,10 @@ class EsiClient {
     return _dio.get<T>(path, queryParameters: queryParameters);
   }
 
+  Future<Response<T>> publicPost<T>(String path, {dynamic data}) async {
+    return _dio.post<T>(path, data: data);
+  }
+
   Future<String> _getValidAccessToken(int characterId) async {
     final tokens = await _tokenManager.getTokens(characterId);
     if (tokens == null) throw EsiException('No tokens found for character $characterId', statusCode: 401);
@@ -193,6 +197,60 @@ class EsiClient {
     final response = await authenticatedGet<List<dynamic>>('/characters/$characterId/orders/', characterId: characterId);
     final data = (response.data ?? []).map((item) => CharacterOrderData.fromJson(item as Map<String, dynamic>)).toList();
     return EsiResponse(data: data, headers: response.headers.map, statusCode: response.statusCode);
+  }
+
+  /// Fetch market history for a type in a region.
+  /// GET /markets/{region_id}/history/?type_id={type_id}
+  Future<EsiResponse<List<MarketHistoryEntry>>> getMarketHistory(int regionId, int typeId) async {
+    Log.d('ESI', 'getMarketHistory(region=$regionId, type=$typeId) - START');
+    final response = await publicGet<List<dynamic>>(
+      '/markets/$regionId/history/',
+      queryParameters: {'type_id': typeId},
+    );
+    final data = (response.data ?? [])
+        .map((item) => MarketHistoryEntry.fromJson(item as Map<String, dynamic>))
+        .toList();
+    Log.i('ESI', 'getMarketHistory - fetched ${data.length} history entries');
+    return EsiResponse(data: data, headers: response.headers.map, statusCode: response.statusCode);
+  }
+
+  // Search API
+
+  /// Search EVE universe for items by name.
+  /// GET /search/?categories=inventory_type&search={query}&strict=false
+  Future<List<int>> searchInventoryTypes(String query) async {
+    Log.d('ESI', 'searchInventoryTypes("$query") - START');
+    final response = await publicGet<Map<String, dynamic>>(
+      '/search/',
+      queryParameters: {
+        'categories': 'inventory_type',
+        'search': query,
+        'strict': false,
+      },
+    );
+    final data = response.data;
+    if (data == null || !data.containsKey('inventory_type')) {
+      Log.i('ESI', 'searchInventoryTypes - no results');
+      return [];
+    }
+    final ids = (data['inventory_type'] as List<dynamic>).cast<int>();
+    Log.i('ESI', 'searchInventoryTypes - found ${ids.length} results');
+    return ids.take(30).toList(); // Limit to 30 results
+  }
+
+  /// Resolve type IDs to names via POST /universe/names/
+  Future<List<EsiUniverseName>> resolveNames(List<int> ids) async {
+    if (ids.isEmpty) return [];
+    Log.d('ESI', 'resolveNames - resolving ${ids.length} IDs');
+    final response = await publicPost<List<dynamic>>(
+      '/universe/names/',
+      data: ids,
+    );
+    final names = (response.data ?? [])
+        .map((item) => EsiUniverseName.fromJson(item as Map<String, dynamic>))
+        .toList();
+    Log.i('ESI', 'resolveNames - resolved ${names.length} names');
+    return names;
   }
 
   // Assets API
@@ -1029,6 +1087,53 @@ class _EsiInterceptor extends Interceptor {
     debugPrint('ESI Error: $message (status: $statusCode, code: $errorCode)');
     if (err.response != null) _client._updateErrorLimit(err.response!);
     handler.reject(DioException(requestOptions: err.requestOptions, response: err.response, type: err.type, error: EsiException(message, statusCode: statusCode, errorCode: errorCode)));
+  }
+}
+
+/// A resolved name from POST /universe/names/.
+class EsiUniverseName {
+  final int id;
+  final String name;
+  final String category;
+
+  EsiUniverseName({required this.id, required this.name, required this.category});
+
+  factory EsiUniverseName.fromJson(Map<String, dynamic> json) {
+    return EsiUniverseName(
+      id: json['id'] as int,
+      name: json['name'] as String,
+      category: json['category'] as String,
+    );
+  }
+}
+
+/// A single day of market history from ESI.
+class MarketHistoryEntry {
+  final DateTime date;
+  final double average;
+  final double highest;
+  final double lowest;
+  final int volume;
+  final int orderCount;
+
+  MarketHistoryEntry({
+    required this.date,
+    required this.average,
+    required this.highest,
+    required this.lowest,
+    required this.volume,
+    required this.orderCount,
+  });
+
+  factory MarketHistoryEntry.fromJson(Map<String, dynamic> json) {
+    return MarketHistoryEntry(
+      date: DateTime.parse(json['date'] as String),
+      average: (json['average'] as num).toDouble(),
+      highest: (json['highest'] as num).toDouble(),
+      lowest: (json['lowest'] as num).toDouble(),
+      volume: (json['volume'] as num).toInt(),
+      orderCount: (json['order_count'] as num).toInt(),
+    );
   }
 }
 

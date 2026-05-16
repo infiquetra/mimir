@@ -71,6 +71,33 @@ class MarketSyncService {
       rethrow;
     }
   }
+
+  /// Fetch and store market history for a specific item in a region.
+  Future<void> syncMarketHistory(int typeId, int regionId) async {
+    Log.d('MARKET.SYNC', 'syncMarketHistory(type=$typeId, region=$regionId) - START');
+    try {
+      final response = await _esiClient.getMarketHistory(regionId, typeId);
+      final entries = response.data;
+      Log.i('MARKET.SYNC', 'Fetched ${entries.length} history entries from ESI');
+
+      final companions = entries.map((e) => MarketHistoryEntriesCompanion(
+        typeId: Value(typeId),
+        regionId: Value(regionId),
+        date: Value(e.date),
+        average: Value(e.average),
+        highest: Value(e.highest),
+        lowest: Value(e.lowest),
+        volume: Value(e.volume),
+        orderCount: Value(e.orderCount),
+      )).toList();
+
+      await _repository.saveMarketHistory(typeId, regionId, companions);
+      Log.d('MARKET.SYNC', 'syncMarketHistory(type=$typeId, region=$regionId) - SUCCESS');
+    } catch (e, stack) {
+      Log.e('MARKET.SYNC', 'syncMarketHistory(type=$typeId, region=$regionId) - FAILED', e, stack);
+      rethrow;
+    }
+  }
 }
 
 /// Provider for the [MarketSyncService].

@@ -228,6 +228,16 @@ class SdeDatabase extends _$SdeDatabase {
         .get();
   }
 
+  /// Search types by name (case-insensitive partial match).
+  /// Returns up to [limit] results.
+  Future<List<SdeType>> searchTypesByName(String query, {int limit = 50}) {
+    return (select(sdeTypes)
+          ..where((t) => t.typeName.like('%$query%'))
+          ..orderBy([(t) => OrderingTerm.asc(t.typeName)])
+          ..limit(limit))
+        .get();
+  }
+
   /// Get all skill types (category 16).
   Future<List<SdeType>> getAllSkills() async {
     // Skills have categoryId = 16

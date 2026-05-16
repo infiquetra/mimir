@@ -593,6 +593,21 @@ class MarketPrices extends Table {
   Set<Column> get primaryKey => {typeId};
 }
 
+/// Cached market price history for charts.
+class MarketHistoryEntries extends Table {
+  IntColumn get typeId => integer()();
+  IntColumn get regionId => integer()();
+  DateTimeColumn get date => dateTime()();
+  RealColumn get average => real()();
+  RealColumn get highest => real()();
+  RealColumn get lowest => real()();
+  IntColumn get volume => integer()();
+  IntColumn get orderCount => integer()();
+
+  @override
+  Set<Column> get primaryKey => {typeId, regionId, date};
+}
+
 /// Saved fittings
 class SavedFittings extends Table {
   TextColumn get id => text()();
@@ -660,6 +675,7 @@ class FittingFolderMembers extends Table {
   IndustryJobs,
   MarketOrders,
   MarketPrices,
+  MarketHistoryEntries,
   SavedFittings,
   FittingFolders,
   FittingFolderMembers,
@@ -671,7 +687,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration {
@@ -772,6 +788,11 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(savedFittings);
           await m.createTable(fittingFolders);
           await m.createTable(fittingFolderMembers);
+        }
+
+        // Migration from version 15 to 16: Add market history table.
+        if (from < 16) {
+          await m.createTable(marketHistoryEntries);
         }
       },
     );
@@ -1308,6 +1329,19 @@ class AppDatabase extends _$AppDatabase {
     return (delete(universeNames)
           ..where((n) => n.lastUpdated.isSmallerThanValue(olderThanTimestamp)))
         .go();
+  }
+
+  /// Search universe names by partial name match for a given category.
+  Future<List<UniverseName>> searchUniverseNamesByName(
+    String query, {
+    String category = 'inventory_type',
+    int limit = 30,
+  }) {
+    return (select(universeNames)
+          ..where((n) => n.name.like('%$query%') & n.category.equals(category))
+          ..orderBy([(n) => OrderingTerm.asc(n.name)])
+          ..limit(limit))
+        .get();
   }
 
   // Skill plans operations

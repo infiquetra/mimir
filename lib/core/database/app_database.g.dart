@@ -13099,6 +13099,519 @@ class MarketPricesCompanion extends UpdateCompanion<MarketPrice> {
   }
 }
 
+class $MarketHistoryEntriesTable extends MarketHistoryEntries
+    with TableInfo<$MarketHistoryEntriesTable, MarketHistoryEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MarketHistoryEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+    'type_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _regionIdMeta = const VerificationMeta(
+    'regionId',
+  );
+  @override
+  late final GeneratedColumn<int> regionId = GeneratedColumn<int>(
+    'region_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _averageMeta = const VerificationMeta(
+    'average',
+  );
+  @override
+  late final GeneratedColumn<double> average = GeneratedColumn<double>(
+    'average',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _highestMeta = const VerificationMeta(
+    'highest',
+  );
+  @override
+  late final GeneratedColumn<double> highest = GeneratedColumn<double>(
+    'highest',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lowestMeta = const VerificationMeta('lowest');
+  @override
+  late final GeneratedColumn<double> lowest = GeneratedColumn<double>(
+    'lowest',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _volumeMeta = const VerificationMeta('volume');
+  @override
+  late final GeneratedColumn<int> volume = GeneratedColumn<int>(
+    'volume',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _orderCountMeta = const VerificationMeta(
+    'orderCount',
+  );
+  @override
+  late final GeneratedColumn<int> orderCount = GeneratedColumn<int>(
+    'order_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    typeId,
+    regionId,
+    date,
+    average,
+    highest,
+    lowest,
+    volume,
+    orderCount,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'market_history_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MarketHistoryEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('type_id')) {
+      context.handle(
+        _typeIdMeta,
+        typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeIdMeta);
+    }
+    if (data.containsKey('region_id')) {
+      context.handle(
+        _regionIdMeta,
+        regionId.isAcceptableOrUnknown(data['region_id']!, _regionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_regionIdMeta);
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('average')) {
+      context.handle(
+        _averageMeta,
+        average.isAcceptableOrUnknown(data['average']!, _averageMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_averageMeta);
+    }
+    if (data.containsKey('highest')) {
+      context.handle(
+        _highestMeta,
+        highest.isAcceptableOrUnknown(data['highest']!, _highestMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_highestMeta);
+    }
+    if (data.containsKey('lowest')) {
+      context.handle(
+        _lowestMeta,
+        lowest.isAcceptableOrUnknown(data['lowest']!, _lowestMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lowestMeta);
+    }
+    if (data.containsKey('volume')) {
+      context.handle(
+        _volumeMeta,
+        volume.isAcceptableOrUnknown(data['volume']!, _volumeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_volumeMeta);
+    }
+    if (data.containsKey('order_count')) {
+      context.handle(
+        _orderCountMeta,
+        orderCount.isAcceptableOrUnknown(data['order_count']!, _orderCountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_orderCountMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {typeId, regionId, date};
+  @override
+  MarketHistoryEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MarketHistoryEntry(
+      typeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}type_id'],
+      )!,
+      regionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}region_id'],
+      )!,
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}date'],
+      )!,
+      average: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}average'],
+      )!,
+      highest: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}highest'],
+      )!,
+      lowest: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}lowest'],
+      )!,
+      volume: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}volume'],
+      )!,
+      orderCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}order_count'],
+      )!,
+    );
+  }
+
+  @override
+  $MarketHistoryEntriesTable createAlias(String alias) {
+    return $MarketHistoryEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class MarketHistoryEntry extends DataClass
+    implements Insertable<MarketHistoryEntry> {
+  final int typeId;
+  final int regionId;
+  final DateTime date;
+  final double average;
+  final double highest;
+  final double lowest;
+  final int volume;
+  final int orderCount;
+  const MarketHistoryEntry({
+    required this.typeId,
+    required this.regionId,
+    required this.date,
+    required this.average,
+    required this.highest,
+    required this.lowest,
+    required this.volume,
+    required this.orderCount,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['type_id'] = Variable<int>(typeId);
+    map['region_id'] = Variable<int>(regionId);
+    map['date'] = Variable<DateTime>(date);
+    map['average'] = Variable<double>(average);
+    map['highest'] = Variable<double>(highest);
+    map['lowest'] = Variable<double>(lowest);
+    map['volume'] = Variable<int>(volume);
+    map['order_count'] = Variable<int>(orderCount);
+    return map;
+  }
+
+  MarketHistoryEntriesCompanion toCompanion(bool nullToAbsent) {
+    return MarketHistoryEntriesCompanion(
+      typeId: Value(typeId),
+      regionId: Value(regionId),
+      date: Value(date),
+      average: Value(average),
+      highest: Value(highest),
+      lowest: Value(lowest),
+      volume: Value(volume),
+      orderCount: Value(orderCount),
+    );
+  }
+
+  factory MarketHistoryEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MarketHistoryEntry(
+      typeId: serializer.fromJson<int>(json['typeId']),
+      regionId: serializer.fromJson<int>(json['regionId']),
+      date: serializer.fromJson<DateTime>(json['date']),
+      average: serializer.fromJson<double>(json['average']),
+      highest: serializer.fromJson<double>(json['highest']),
+      lowest: serializer.fromJson<double>(json['lowest']),
+      volume: serializer.fromJson<int>(json['volume']),
+      orderCount: serializer.fromJson<int>(json['orderCount']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'typeId': serializer.toJson<int>(typeId),
+      'regionId': serializer.toJson<int>(regionId),
+      'date': serializer.toJson<DateTime>(date),
+      'average': serializer.toJson<double>(average),
+      'highest': serializer.toJson<double>(highest),
+      'lowest': serializer.toJson<double>(lowest),
+      'volume': serializer.toJson<int>(volume),
+      'orderCount': serializer.toJson<int>(orderCount),
+    };
+  }
+
+  MarketHistoryEntry copyWith({
+    int? typeId,
+    int? regionId,
+    DateTime? date,
+    double? average,
+    double? highest,
+    double? lowest,
+    int? volume,
+    int? orderCount,
+  }) => MarketHistoryEntry(
+    typeId: typeId ?? this.typeId,
+    regionId: regionId ?? this.regionId,
+    date: date ?? this.date,
+    average: average ?? this.average,
+    highest: highest ?? this.highest,
+    lowest: lowest ?? this.lowest,
+    volume: volume ?? this.volume,
+    orderCount: orderCount ?? this.orderCount,
+  );
+  MarketHistoryEntry copyWithCompanion(MarketHistoryEntriesCompanion data) {
+    return MarketHistoryEntry(
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      regionId: data.regionId.present ? data.regionId.value : this.regionId,
+      date: data.date.present ? data.date.value : this.date,
+      average: data.average.present ? data.average.value : this.average,
+      highest: data.highest.present ? data.highest.value : this.highest,
+      lowest: data.lowest.present ? data.lowest.value : this.lowest,
+      volume: data.volume.present ? data.volume.value : this.volume,
+      orderCount: data.orderCount.present
+          ? data.orderCount.value
+          : this.orderCount,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MarketHistoryEntry(')
+          ..write('typeId: $typeId, ')
+          ..write('regionId: $regionId, ')
+          ..write('date: $date, ')
+          ..write('average: $average, ')
+          ..write('highest: $highest, ')
+          ..write('lowest: $lowest, ')
+          ..write('volume: $volume, ')
+          ..write('orderCount: $orderCount')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    typeId,
+    regionId,
+    date,
+    average,
+    highest,
+    lowest,
+    volume,
+    orderCount,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MarketHistoryEntry &&
+          other.typeId == this.typeId &&
+          other.regionId == this.regionId &&
+          other.date == this.date &&
+          other.average == this.average &&
+          other.highest == this.highest &&
+          other.lowest == this.lowest &&
+          other.volume == this.volume &&
+          other.orderCount == this.orderCount);
+}
+
+class MarketHistoryEntriesCompanion
+    extends UpdateCompanion<MarketHistoryEntry> {
+  final Value<int> typeId;
+  final Value<int> regionId;
+  final Value<DateTime> date;
+  final Value<double> average;
+  final Value<double> highest;
+  final Value<double> lowest;
+  final Value<int> volume;
+  final Value<int> orderCount;
+  final Value<int> rowid;
+  const MarketHistoryEntriesCompanion({
+    this.typeId = const Value.absent(),
+    this.regionId = const Value.absent(),
+    this.date = const Value.absent(),
+    this.average = const Value.absent(),
+    this.highest = const Value.absent(),
+    this.lowest = const Value.absent(),
+    this.volume = const Value.absent(),
+    this.orderCount = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MarketHistoryEntriesCompanion.insert({
+    required int typeId,
+    required int regionId,
+    required DateTime date,
+    required double average,
+    required double highest,
+    required double lowest,
+    required int volume,
+    required int orderCount,
+    this.rowid = const Value.absent(),
+  }) : typeId = Value(typeId),
+       regionId = Value(regionId),
+       date = Value(date),
+       average = Value(average),
+       highest = Value(highest),
+       lowest = Value(lowest),
+       volume = Value(volume),
+       orderCount = Value(orderCount);
+  static Insertable<MarketHistoryEntry> custom({
+    Expression<int>? typeId,
+    Expression<int>? regionId,
+    Expression<DateTime>? date,
+    Expression<double>? average,
+    Expression<double>? highest,
+    Expression<double>? lowest,
+    Expression<int>? volume,
+    Expression<int>? orderCount,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (typeId != null) 'type_id': typeId,
+      if (regionId != null) 'region_id': regionId,
+      if (date != null) 'date': date,
+      if (average != null) 'average': average,
+      if (highest != null) 'highest': highest,
+      if (lowest != null) 'lowest': lowest,
+      if (volume != null) 'volume': volume,
+      if (orderCount != null) 'order_count': orderCount,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MarketHistoryEntriesCompanion copyWith({
+    Value<int>? typeId,
+    Value<int>? regionId,
+    Value<DateTime>? date,
+    Value<double>? average,
+    Value<double>? highest,
+    Value<double>? lowest,
+    Value<int>? volume,
+    Value<int>? orderCount,
+    Value<int>? rowid,
+  }) {
+    return MarketHistoryEntriesCompanion(
+      typeId: typeId ?? this.typeId,
+      regionId: regionId ?? this.regionId,
+      date: date ?? this.date,
+      average: average ?? this.average,
+      highest: highest ?? this.highest,
+      lowest: lowest ?? this.lowest,
+      volume: volume ?? this.volume,
+      orderCount: orderCount ?? this.orderCount,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (regionId.present) {
+      map['region_id'] = Variable<int>(regionId.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<DateTime>(date.value);
+    }
+    if (average.present) {
+      map['average'] = Variable<double>(average.value);
+    }
+    if (highest.present) {
+      map['highest'] = Variable<double>(highest.value);
+    }
+    if (lowest.present) {
+      map['lowest'] = Variable<double>(lowest.value);
+    }
+    if (volume.present) {
+      map['volume'] = Variable<int>(volume.value);
+    }
+    if (orderCount.present) {
+      map['order_count'] = Variable<int>(orderCount.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MarketHistoryEntriesCompanion(')
+          ..write('typeId: $typeId, ')
+          ..write('regionId: $regionId, ')
+          ..write('date: $date, ')
+          ..write('average: $average, ')
+          ..write('highest: $highest, ')
+          ..write('lowest: $lowest, ')
+          ..write('volume: $volume, ')
+          ..write('orderCount: $orderCount, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $SavedFittingsTable extends SavedFittings
     with TableInfo<$SavedFittingsTable, SavedFitting> {
   @override
@@ -14247,6 +14760,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $IndustryJobsTable industryJobs = $IndustryJobsTable(this);
   late final $MarketOrdersTable marketOrders = $MarketOrdersTable(this);
   late final $MarketPricesTable marketPrices = $MarketPricesTable(this);
+  late final $MarketHistoryEntriesTable marketHistoryEntries =
+      $MarketHistoryEntriesTable(this);
   late final $SavedFittingsTable savedFittings = $SavedFittingsTable(this);
   late final $FittingFoldersTable fittingFolders = $FittingFoldersTable(this);
   late final $FittingFolderMembersTable fittingFolderMembers =
@@ -14279,6 +14794,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     industryJobs,
     marketOrders,
     marketPrices,
+    marketHistoryEntries,
     savedFittings,
     fittingFolders,
     fittingFolderMembers,
@@ -24714,6 +25230,281 @@ typedef $$MarketPricesTableProcessedTableManager =
       MarketPrice,
       PrefetchHooks Function()
     >;
+typedef $$MarketHistoryEntriesTableCreateCompanionBuilder =
+    MarketHistoryEntriesCompanion Function({
+      required int typeId,
+      required int regionId,
+      required DateTime date,
+      required double average,
+      required double highest,
+      required double lowest,
+      required int volume,
+      required int orderCount,
+      Value<int> rowid,
+    });
+typedef $$MarketHistoryEntriesTableUpdateCompanionBuilder =
+    MarketHistoryEntriesCompanion Function({
+      Value<int> typeId,
+      Value<int> regionId,
+      Value<DateTime> date,
+      Value<double> average,
+      Value<double> highest,
+      Value<double> lowest,
+      Value<int> volume,
+      Value<int> orderCount,
+      Value<int> rowid,
+    });
+
+class $$MarketHistoryEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $MarketHistoryEntriesTable> {
+  $$MarketHistoryEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get regionId => $composableBuilder(
+    column: $table.regionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get average => $composableBuilder(
+    column: $table.average,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get highest => $composableBuilder(
+    column: $table.highest,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lowest => $composableBuilder(
+    column: $table.lowest,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get volume => $composableBuilder(
+    column: $table.volume,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get orderCount => $composableBuilder(
+    column: $table.orderCount,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$MarketHistoryEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $MarketHistoryEntriesTable> {
+  $$MarketHistoryEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get regionId => $composableBuilder(
+    column: $table.regionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get average => $composableBuilder(
+    column: $table.average,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get highest => $composableBuilder(
+    column: $table.highest,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lowest => $composableBuilder(
+    column: $table.lowest,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get volume => $composableBuilder(
+    column: $table.volume,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get orderCount => $composableBuilder(
+    column: $table.orderCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MarketHistoryEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MarketHistoryEntriesTable> {
+  $$MarketHistoryEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<int> get regionId =>
+      $composableBuilder(column: $table.regionId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<double> get average =>
+      $composableBuilder(column: $table.average, builder: (column) => column);
+
+  GeneratedColumn<double> get highest =>
+      $composableBuilder(column: $table.highest, builder: (column) => column);
+
+  GeneratedColumn<double> get lowest =>
+      $composableBuilder(column: $table.lowest, builder: (column) => column);
+
+  GeneratedColumn<int> get volume =>
+      $composableBuilder(column: $table.volume, builder: (column) => column);
+
+  GeneratedColumn<int> get orderCount => $composableBuilder(
+    column: $table.orderCount,
+    builder: (column) => column,
+  );
+}
+
+class $$MarketHistoryEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MarketHistoryEntriesTable,
+          MarketHistoryEntry,
+          $$MarketHistoryEntriesTableFilterComposer,
+          $$MarketHistoryEntriesTableOrderingComposer,
+          $$MarketHistoryEntriesTableAnnotationComposer,
+          $$MarketHistoryEntriesTableCreateCompanionBuilder,
+          $$MarketHistoryEntriesTableUpdateCompanionBuilder,
+          (
+            MarketHistoryEntry,
+            BaseReferences<
+              _$AppDatabase,
+              $MarketHistoryEntriesTable,
+              MarketHistoryEntry
+            >,
+          ),
+          MarketHistoryEntry,
+          PrefetchHooks Function()
+        > {
+  $$MarketHistoryEntriesTableTableManager(
+    _$AppDatabase db,
+    $MarketHistoryEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MarketHistoryEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MarketHistoryEntriesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$MarketHistoryEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> typeId = const Value.absent(),
+                Value<int> regionId = const Value.absent(),
+                Value<DateTime> date = const Value.absent(),
+                Value<double> average = const Value.absent(),
+                Value<double> highest = const Value.absent(),
+                Value<double> lowest = const Value.absent(),
+                Value<int> volume = const Value.absent(),
+                Value<int> orderCount = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MarketHistoryEntriesCompanion(
+                typeId: typeId,
+                regionId: regionId,
+                date: date,
+                average: average,
+                highest: highest,
+                lowest: lowest,
+                volume: volume,
+                orderCount: orderCount,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int typeId,
+                required int regionId,
+                required DateTime date,
+                required double average,
+                required double highest,
+                required double lowest,
+                required int volume,
+                required int orderCount,
+                Value<int> rowid = const Value.absent(),
+              }) => MarketHistoryEntriesCompanion.insert(
+                typeId: typeId,
+                regionId: regionId,
+                date: date,
+                average: average,
+                highest: highest,
+                lowest: lowest,
+                volume: volume,
+                orderCount: orderCount,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MarketHistoryEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MarketHistoryEntriesTable,
+      MarketHistoryEntry,
+      $$MarketHistoryEntriesTableFilterComposer,
+      $$MarketHistoryEntriesTableOrderingComposer,
+      $$MarketHistoryEntriesTableAnnotationComposer,
+      $$MarketHistoryEntriesTableCreateCompanionBuilder,
+      $$MarketHistoryEntriesTableUpdateCompanionBuilder,
+      (
+        MarketHistoryEntry,
+        BaseReferences<
+          _$AppDatabase,
+          $MarketHistoryEntriesTable,
+          MarketHistoryEntry
+        >,
+      ),
+      MarketHistoryEntry,
+      PrefetchHooks Function()
+    >;
 typedef $$SavedFittingsTableCreateCompanionBuilder =
     SavedFittingsCompanion Function({
       required String id,
@@ -25392,6 +26183,8 @@ class $AppDatabaseManager {
       $$MarketOrdersTableTableManager(_db, _db.marketOrders);
   $$MarketPricesTableTableManager get marketPrices =>
       $$MarketPricesTableTableManager(_db, _db.marketPrices);
+  $$MarketHistoryEntriesTableTableManager get marketHistoryEntries =>
+      $$MarketHistoryEntriesTableTableManager(_db, _db.marketHistoryEntries);
   $$SavedFittingsTableTableManager get savedFittings =>
       $$SavedFittingsTableTableManager(_db, _db.savedFittings);
   $$FittingFoldersTableTableManager get fittingFolders =>
