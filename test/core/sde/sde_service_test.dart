@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart';
 import 'package:mimir/core/sde/sde_database.dart';
 import 'package:mimir/core/sde/sde_service.dart';
+import 'package:mimir/features/fitting/domain/models.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -113,6 +114,38 @@ void main() {
       expect(ship.skillRequirements.length, 1);
       expect(ship.skillRequirements.first.skillName, 'Minmatar Frigate');
       expect(ship.skillRequirements.first.requiredLevel, 1);
+    });
+
+    test('getModulesBySlotType returns valid ModuleType list', () async {
+      // 1. Arrange
+      await database.upsertCategories([
+        SdeCategoriesCompanion.insert(categoryId: const Value(7), categoryName: 'Module'),
+      ]);
+      await database.upsertGroups([
+        SdeGroupsCompanion.insert(groupId: const Value(53), groupName: 'Energy Weapon', categoryId: 7),
+      ]);
+      await database.upsertTypes([
+        SdeTypesCompanion.insert(typeId: const Value(1234), typeName: 'Dual Light Pulse Laser I', groupId: 53),
+      ]);
+      await database.upsertTypeEffects([
+        SdeTypeEffectsCompanion.insert(typeId: 1234, effectId: 12, isDefault: const Value(true)), // effectId 12 = High Slot
+      ]);
+      await database.upsertTypeAttributes([
+        SdeTypeAttributesCompanion.insert(typeId: 1234, attributeId: 50, value: 5.0), // CPU
+        SdeTypeAttributesCompanion.insert(typeId: 1234, attributeId: 30, value: 2.0), // Powergrid
+      ]);
+
+      // 2. Act
+      final modules = await sdeService.getModulesBySlotType(SlotType.high);
+
+      // 3. Assert
+      expect(modules.isNotEmpty, isTrue);
+      final laser = modules.firstWhere((m) => m.typeId == 1234);
+      expect(laser.name, 'Dual Light Pulse Laser I');
+      expect(laser.groupName, 'Energy Weapon');
+      expect(laser.slotType, SlotType.high);
+      expect(laser.cpu, 5.0);
+      expect(laser.powergrid, 2.0);
     });
   });
 }
