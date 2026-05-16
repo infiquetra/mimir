@@ -33,41 +33,47 @@ class FittingController extends Notifier<Fitting?> {
     );
   }
 
-  /// Equip a module to the current fitting.
-  void equipModule(FittedModule module) {
+  /// Equip a module to the current fitting at its specified slot index.
+  Future<void> equipModule(FittedModule module) async {
     if (state == null) return;
     
     final ship = ref.read(activeShipTypeProvider).value;
     if (ship == null) return;
 
-    // Determine current slot counts
-    int highCount = state!.highSlots.length;
-    int medCount = state!.medSlots.length;
-    int lowCount = state!.lowSlots.length;
-    int rigCount = state!.rigSlots.length;
-    int subCount = state!.subsystems.length;
+    // Fetch Dogma attributes for the module
+    final sde = ref.read(sdeServiceProvider);
+    final moduleType = await sde.getModuleType(module.typeId);
+    final moduleWithAttributes = module.copyWith(
+      attributes: moduleType?.baseAttributes ?? {},
+    );
 
-    // Enforce limits
-    switch (module.slotType) {
+    // Re-check state since we awaited
+    if (state == null) return;
+
+    // Helper: place module at specific index in slot list, or append if index not yet filled
+    List<FittedModule> placeModule(List<FittedModule> existing, FittedModule mod, int maxSlots) {
+      if (existing.length >= maxSlots) return existing; // Full
+      // Check if slot index is already occupied
+      final existingIndices = existing.map((m) => m.slotIndex).toSet();
+      if (existingIndices.contains(mod.slotIndex)) return existing; // Already filled
+      return [...existing, mod];
+    }
+
+    switch (moduleWithAttributes.slotType) {
       case SlotType.high:
-        if (highCount >= ship.highSlots) return;
-        state = state!.copyWith(highSlots: [...state!.highSlots, module]);
+        state = state!.copyWith(highSlots: placeModule(state!.highSlots, moduleWithAttributes, ship.highSlots));
         break;
       case SlotType.med:
-        if (medCount >= ship.medSlots) return;
-        state = state!.copyWith(medSlots: [...state!.medSlots, module]);
+        state = state!.copyWith(medSlots: placeModule(state!.medSlots, moduleWithAttributes, ship.medSlots));
         break;
       case SlotType.low:
-        if (lowCount >= ship.lowSlots) return;
-        state = state!.copyWith(lowSlots: [...state!.lowSlots, module]);
+        state = state!.copyWith(lowSlots: placeModule(state!.lowSlots, moduleWithAttributes, ship.lowSlots));
         break;
       case SlotType.rig:
-        if (rigCount >= ship.rigSlots) return;
-        state = state!.copyWith(rigSlots: [...state!.rigSlots, module]);
+        state = state!.copyWith(rigSlots: placeModule(state!.rigSlots, moduleWithAttributes, ship.rigSlots));
         break;
       case SlotType.subsystem:
-        if (subCount >= 5) return; // Tech 3 ships support 5 subsystems
-        state = state!.copyWith(subsystems: [...state!.subsystems, module]);
+        state = state!.copyWith(subsystems: placeModule(state!.subsystems, moduleWithAttributes, 5));
         break;
     }
   }

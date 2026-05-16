@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/core/database/app_database.dart';
@@ -23,7 +24,7 @@ void main() {
       // Insert test data
       final companions = [
         MarketOrdersCompanion.insert(
-          orderId: 1000,
+          orderId: const Value(1000),
           characterId: characterId,
           typeId: 34,
           regionId: 10000002,
@@ -57,7 +58,7 @@ void main() {
       // Insert test data
       final companions = [
         MarketPricesCompanion.insert(
-          typeId: 34,
+          typeId: const Value(34),
           adjustedPrice: const Value(4.5),
           averagePrice: const Value(4.6),
           lastUpdated: DateTime.now(),

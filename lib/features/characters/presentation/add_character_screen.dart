@@ -68,7 +68,11 @@ class AddCharacterScreen extends ConsumerWidget {
         // Navigate back after success.
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ref.read(authControllerProvider.notifier).reset();
-          context.pop();
+          try {
+            context.pop();
+          } catch (_) {
+            Navigator.of(context).pop();
+          }
         });
         return _buildSuccessState(theme);
 

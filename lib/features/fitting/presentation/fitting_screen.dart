@@ -25,9 +25,9 @@ class _FittingScreenState extends ConsumerState<FittingScreen> {
       ),
       body: Row(
         children: [
-          // Left side: Ship/Module Browser
+          // Left side: Ship/Module Browser (narrower)
           Container(
-            width: 300,
+            width: 250,
             decoration: BoxDecoration(
               color: EveColors.surfaceDefault,
               border: Border(
@@ -44,14 +44,14 @@ class _FittingScreenState extends ConsumerState<FittingScreen> {
             ),
           ),
           
-          // Middle: Fitting Editor
-          Expanded(
-            child: const FittingEditor(),
+          // Middle: Fitting Editor (expanded, takes most space)
+          const Expanded(
+            child: FittingEditor(),
           ),
           
-          // Right side: Stats Panel
+          // Right side: Stats Panel (slimmer, secondary stats only)
           Container(
-            width: 350,
+            width: 220,
             decoration: BoxDecoration(
               color: EveColors.surfaceDefault,
               border: Border(

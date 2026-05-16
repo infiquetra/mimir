@@ -16,7 +16,7 @@ class StatsPanel extends ConsumerWidget {
       return const Center(
         child: Text(
           'No ship selected',
-          style: TextStyle(color: EveColors.textSecondary),
+          style: TextStyle(color: EveColors.textSecondary, fontSize: 12),
         ),
       );
     }
@@ -25,56 +25,54 @@ class StatsPanel extends ConsumerWidget {
       data: (stats) {
         if (stats == null) {
           return const Center(
-            child: Text('Failed to calculate stats'),
+            child: Text('Calculating...', style: TextStyle(color: EveColors.textSecondary, fontSize: 12)),
           );
         }
 
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           children: [
-            _buildSectionHeader('RESOURCES'),
-            _buildResourceBar(
-              'CPU',
-              stats.cpuUsed,
-              stats.cpuMax,
-              EveColors.photonBlue,
-            ),
-            const SizedBox(height: 8),
-            _buildResourceBar(
-              'Powergrid',
-              stats.powerUsed,
-              stats.powerMax,
-              EveColors.minmatar,
-            ),
-            const SizedBox(height: 8),
-            _buildResourceBar(
-              'Calibration',
-              stats.calibrationUsed.toDouble(),
-              stats.calibrationMax.toDouble(),
-              Colors.orange,
-            ),
-            
-            const SizedBox(height: 24),
             _buildSectionHeader('DEFENSE'),
-            _buildStatRow('Total EHP', '${stats.defenses.totalEhp.toStringAsFixed(0)} EHP'),
-            _buildStatRow('Shield HP', '${stats.defenses.shieldHp.toStringAsFixed(0)} HP'),
-            _buildStatRow('Armor HP', '${stats.defenses.armorHp.toStringAsFixed(0)} HP'),
-            _buildStatRow('Hull HP', '${stats.defenses.hullHp.toStringAsFixed(0)} HP'),
+            _buildStatRow('EHP', '${stats.defenses.totalEhp.toStringAsFixed(0)}'),
+            _buildStatRow('Shield', '${stats.defenses.shieldHp.toStringAsFixed(0)} HP'),
+            _buildStatRow('Armor', '${stats.defenses.armorHp.toStringAsFixed(0)} HP'),
+            _buildStatRow('Hull', '${stats.defenses.hullHp.toStringAsFixed(0)} HP'),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             _buildSectionHeader('CAPACITOR'),
             _buildStatRow('Capacity', '${stats.capacitorCapacity.toStringAsFixed(0)} GJ'),
             _buildStatRow('Recharge', '${(stats.capacitorRecharge / 1000).toStringAsFixed(1)} s'),
+            _buildStatRow('Stable', stats.isCapStable ? 'Yes' : '${stats.capacitorStable.toStringAsFixed(0)}s'),
+
+            const SizedBox(height: 16),
+            _buildSectionHeader('NAVIGATION'),
+            _buildStatRow('Max Speed', '${stats.maxVelocity.toStringAsFixed(0)} m/s'),
+            _buildStatRow('Align', '${stats.alignTime.toStringAsFixed(1)} s'),
+            _buildStatRow('Warp', '${stats.warpSpeed.toStringAsFixed(1)} AU/s'),
+
+            const SizedBox(height: 16),
+            _buildSectionHeader('TARGETING'),
+            _buildStatRow('Range', '${(stats.targetRange / 1000).toStringAsFixed(1)} km'),
+            _buildStatRow('Scan Res', '${stats.scanResolution.toStringAsFixed(0)} mm'),
+            _buildStatRow('Sig Radius', '${stats.signatureRadius.toStringAsFixed(0)} m'),
+            _buildStatRow('Max Targets', '${stats.maxLockedTargets}'),
+
+            if (stats.dpsTotal > 0) ...[
+              const SizedBox(height: 16),
+              _buildSectionHeader('OFFENSE'),
+              _buildStatRow('DPS', '${stats.dpsTotal.toStringAsFixed(1)}'),
+              _buildStatRow('Volley', '${stats.volley.toStringAsFixed(0)}'),
+              if (stats.optimalRange > 0)
+                _buildStatRow('Optimal', '${(stats.optimalRange / 1000).toStringAsFixed(1)} km'),
+            ],
           ],
         );
       },
-      loading: () => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => Center(
         child: Text(
           'Error: $error',
-          style: const TextStyle(color: EveColors.error),
+          style: const TextStyle(color: EveColors.error, fontSize: 11),
         ),
       ),
     );
@@ -82,14 +80,14 @@ class StatsPanel extends ConsumerWidget {
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         title,
         style: const TextStyle(
           color: EveColors.textPrimary,
-          fontSize: 14,
+          fontSize: 11,
           fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
+          letterSpacing: 1.5,
         ),
       ),
     );
@@ -97,7 +95,7 @@ class StatsPanel extends ConsumerWidget {
 
   Widget _buildStatRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -105,59 +103,19 @@ class StatsPanel extends ConsumerWidget {
             label,
             style: const TextStyle(
               color: EveColors.textSecondary,
-              fontSize: 13,
+              fontSize: 11,
             ),
           ),
           Text(
             value,
             style: const TextStyle(
               color: EveColors.textPrimary,
-              fontSize: 13,
+              fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildResourceBar(String label, double used, double max, Color color) {
-    final percent = max > 0 ? (used / max).clamp(0.0, 1.0) : 0.0;
-    final isOver = used > max;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                color: EveColors.textSecondary,
-                fontSize: 12,
-              ),
-            ),
-            Text(
-              '${used.toStringAsFixed(1)} / ${max.toStringAsFixed(1)}',
-              style: TextStyle(
-                color: isOver ? EveColors.error : EveColors.textPrimary,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        LinearProgressIndicator(
-          value: percent,
-          backgroundColor: EveColors.surfaceBright,
-          valueColor: AlwaysStoppedAnimation<Color>(
-            isOver ? EveColors.error : color,
-          ),
-          minHeight: 6,
-        ),
-      ],
     );
   }
 }

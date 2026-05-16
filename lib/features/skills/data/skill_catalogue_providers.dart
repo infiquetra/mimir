@@ -95,14 +95,19 @@ final skillsByGroupProvider =
   final characterId = activeCharacter.characterId;
   final result = <SkillWithLevel>[];
 
+  // Fetch all trained skills once
+  final allCharacterSkills = await repository.getCharacterSkills(characterId);
+  final skillMap = {for (final s in allCharacterSkills) s.skillId: s};
+
   // Get currently training skill IDs
   final queue = await repository.getSkillQueue(characterId);
   final trainingSkillIds = queue.map((e) => e.skillId).toSet();
 
   for (final skill in skills) {
-    final trainedLevel = await repository.getTrainedLevel(characterId, skill.typeId);
+    final characterSkill = skillMap[skill.typeId];
+    final trainedLevel = characterSkill?.trainedSkillLevel ?? 0;
     final isTraining = trainingSkillIds.contains(skill.typeId);
-    final isInjected = await repository.isSkillInjected(characterId, skill.typeId);
+    final isInjected = characterSkill != null;
 
     result.add(SkillWithLevel(
       skill: skill,
@@ -128,32 +133,55 @@ final skillGroupsWithProgressProvider =
   Log.d('SKILLS.CATALOGUE', 'skillGroupsWithProgress - calculating progress for all groups');
   final groups = await ref.watch(skillGroupsProvider.future);
   final activeCharacter = ref.watch(activeCharacterProvider).value;
+  final sde = ref.watch(sdeServiceProvider);
+  await sde.initialize();
 
   if (activeCharacter == null) {
     // No character - all groups show 0/N
-    final result = await Future.wait(
-      groups.map((group) async {
-        final skills = await ref.read(skillsByGroupProvider(group.groupId).future);
-        return SkillGroupWithProgress(
-          group: group,
-          trainedCount: 0,
-          totalCount: skills.length,
-        );
-      }),
-    );
+    final result = <SkillGroupWithProgress>[];
+    for (final group in groups) {
+      final groupSkills = await sde.getSkillsByGroup(group.groupId);
+      result.add(SkillGroupWithProgress(
+        group: group,
+        trainedCount: 0,
+        totalCount: groupSkills.length,
+      ));
+    }
     return result;
   }
 
   // Calculate trained count per group
+  final characterId = activeCharacter.characterId;
+  final repository = ref.watch(skillRepositoryProvider);
+  
+  // Fetch trained skills
+  final allCharacterSkills = await repository.getCharacterSkills(characterId);
+  final trainedSkillIds = allCharacterSkills
+      .where((s) => s.trainedSkillLevel > 0)
+      .map((s) => s.skillId)
+      .toList();
+  
+  // Get group mapping for trained skills
+  final typeToGroup = await sde.database.getGroupIdsForTypes(trainedSkillIds);
+  
+  // Count how many trained skills are in each group
+  final groupTrainedCounts = <int, int>{};
+  for (final skillId in trainedSkillIds) {
+    final groupId = typeToGroup[skillId];
+    if (groupId != null) {
+      groupTrainedCounts[groupId] = (groupTrainedCounts[groupId] ?? 0) + 1;
+    }
+  }
+
+  // Get total skills per group
+  final groupTotalCounts = await sde.database.getSkillCountsByGroup();
+
   final result = <SkillGroupWithProgress>[];
   for (final group in groups) {
-    final skillsWithLevel = await ref.read(skillsByGroupProvider(group.groupId).future);
-    final trainedCount = skillsWithLevel.where((s) => s.trainedLevel > 0).length;
-
     result.add(SkillGroupWithProgress(
       group: group,
-      trainedCount: trainedCount,
-      totalCount: skillsWithLevel.length,
+      trainedCount: groupTrainedCounts[group.groupId] ?? 0,
+      totalCount: groupTotalCounts[group.groupId] ?? 0,
     ));
   }
 

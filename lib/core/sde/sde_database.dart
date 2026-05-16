@@ -246,6 +246,54 @@ class SdeDatabase extends _$SdeDatabase {
         .get();
   }
 
+  /// Get the total count of skills in each group efficiently.
+  Future<Map<int, int>> getSkillCountsByGroup() async {
+    final skillGroups = await (select(sdeGroups)..where((g) => g.categoryId.equals(16))).get();
+    if (skillGroups.isEmpty) return {};
+    final groupIds = skillGroups.map((g) => g.groupId).toList();
+
+    final groupIdExpr = sdeTypes.groupId;
+    final countExpr = sdeTypes.typeId.count();
+
+    final query = selectOnly(sdeTypes)
+      ..addColumns([groupIdExpr, countExpr])
+      ..where(sdeTypes.groupId.isIn(groupIds))
+      ..groupBy([groupIdExpr]);
+
+    final results = await query.get();
+
+    return {
+      for (final row in results)
+        row.read(groupIdExpr)!: row.read(countExpr)!,
+    };
+  }
+
+  /// Quickly map a list of typeIds to their groupIds.
+  Future<Map<int, int>> getGroupIdsForTypes(List<int> typeIds) async {
+    if (typeIds.isEmpty) return {};
+
+    // SQLite has a limit on the number of variables in a single query (e.g. 999).
+    // If the user has more than 999 trained skills, we need to batch it.
+    // Fortunately, EVE characters usually have < 500 skills trained, 
+    // but we can chunk to be safe.
+    final result = <int, int>{};
+    const chunkSize = 500;
+    
+    for (int i = 0; i < typeIds.length; i += chunkSize) {
+      final chunk = typeIds.skip(i).take(chunkSize).toList();
+      final query = selectOnly(sdeTypes)
+        ..addColumns([sdeTypes.typeId, sdeTypes.groupId])
+        ..where(sdeTypes.typeId.isIn(chunk));
+        
+      final rows = await query.get();
+      for (final row in rows) {
+        result[row.read(sdeTypes.typeId)!] = row.read(sdeTypes.groupId)!;
+      }
+    }
+    
+    return result;
+  }
+
   // Group operations
 
   /// Get a group by ID.

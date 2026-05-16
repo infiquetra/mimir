@@ -27,12 +27,12 @@ We are expanding Mimir's functionality to support Market Tools (Phase 3) and Shi
 - [x] [SEQ] Expand `sde_database.dart` and `sde_service.dart` to fetch Dogma attributes and effects.
 - [x] [SEQ] Build native `DogmaEngine` in Dart for HP, EHP, Cap, CPU, and PG calculations with stacking penalties.
 - [x] [SEQ] Build `FittingFormatParser` to handle EFT text blocks and DNA string imports/exports.
-- [ ] [CHECKPOINT] Save state before proceeding to UI implementation.
+- [x] [CHECKPOINT] Save state before proceeding to UI implementation.
 
 ## Phase 5: Ship Fitting User Interface
 - [x] [P1] Build Ship Browser
 - [x] [P1] Build Fitting Editor Screen
-- [ ] [P1] Build Stats Panel
+- [x] [P1] Build Stats Panel
 
 ## Review
 - **2026-05-16**: Implemented the backend architecture for the Ship Fitting Module. The Drift schema was updated with fitting tables and new Dogma attribute tables. The native Dogma Engine was created to parse base ship stats and modules to calculate effective hitpoints, capacitor stability, and resource requirements (CPU/Powergrid) with proper EVE stacking penalties. A format parser was added to translate between EFT strings, DNA share links, and the internal `Fitting` state representation.

@@ -8,6 +8,7 @@ import 'package:mimir/features/fitting/presentation/fitting_screen.dart';
 import 'package:mimir/features/fitting/presentation/fitting_providers.dart';
 import 'package:mimir/features/fitting/presentation/widgets/ship_browser.dart';
 import 'package:mimir/features/fitting/presentation/widgets/module_browser.dart';
+import 'package:mimir/features/fitting/presentation/widgets/fitting_editor.dart';
 import 'package:mimir/features/fitting/domain/models.dart';
 
 import '../../integration_test/test_utils/test_app.dart';
@@ -92,8 +93,8 @@ void main() {
       expect($(ModuleBrowser).exists, true);
       expect($('150mm Light AutoCannon I').exists, true);
 
-      // The FittingEditor shows the High Slots label
-      expect($('High Slots').exists, true);
+      // The FittingEditor shows the CircularFittingWheel
+      expect($(CircularFittingWheel).exists, true);
 
       // Instead of flaky Drag & Drop gesture simulation, we simulate the 'drop'
       // by dispatching the equip action directly to the FittingController

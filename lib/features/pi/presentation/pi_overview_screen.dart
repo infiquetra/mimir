@@ -18,7 +18,7 @@ class PiOverviewScreen extends ConsumerStatefulWidget {
 }
 
 class _PiOverviewScreenState extends ConsumerState<PiOverviewScreen> {
-  int? _selectedCharacterId;
+  bool _showAllCharacters = false;
 
   @override
   void initState() {
@@ -34,19 +34,23 @@ class _PiOverviewScreenState extends ConsumerState<PiOverviewScreen> {
 
   Future<void> _refresh() async {
     final activeChar = ref.read(activeCharacterProvider).value;
-    final characterId = _selectedCharacterId ?? activeChar?.characterId;
-    if (characterId != null) {
-      await ref.read(piSyncProvider.notifier).sync(characterId);
+    if (_showAllCharacters) {
+      final characters = ref.read(allCharactersProvider).value ?? [];
+      for (final char in characters) {
+        await ref.read(piSyncProvider.notifier).sync(char.characterId);
+      }
+    } else if (activeChar != null) {
+      await ref.read(piSyncProvider.notifier).sync(activeChar.characterId);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    Log.d('PI',
-        'PiOverviewScreen.build() - selectedCharacterId: $_selectedCharacterId');
-    final charactersAsync = ref.watch(allCharactersProvider);
-    final activeCharacterAsync = ref.watch(activeCharacterProvider);
+    Log.d('PI', 'PiOverviewScreen.build() - showAllCharacters: $_showAllCharacters');
     final syncState = ref.watch(piSyncProvider);
+    final activeChar = ref.watch(activeCharacterProvider).value;
+    
+    final int? filterCharacterId = _showAllCharacters ? null : activeChar?.characterId;
 
     return Scaffold(
       appBar: AppBar(
@@ -69,55 +73,52 @@ class _PiOverviewScreenState extends ConsumerState<PiOverviewScreen> {
               icon: const Icon(Icons.refresh),
               onPressed: _refresh,
             ),
-          charactersAsync.when(
-            data: (characters) => _buildCharacterFilter(characters),
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
+          _buildAllCharactersToggle(),
           const SizedBox(width: 16),
         ],
       ),
       body: SpaceBackground(
         child: RefreshIndicator(
           onRefresh: _refresh,
-          child: _buildColonyGrid(_selectedCharacterId),
+          child: _buildColonyGrid(filterCharacterId),
         ),
       ),
     );
   }
 
-  Widget _buildCharacterFilter(List<Character> characters) {
-    if (characters.isEmpty) return const SizedBox.shrink();
-
+  Widget _buildAllCharactersToggle() {
     return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: EveColors.darkSurfaceVariant,
+        color: _showAllCharacters ? EveColors.photonBlue.withOpacity(0.2) : EveColors.darkSurfaceVariant,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(
+          color: _showAllCharacters ? EveColors.photonBlue : Colors.white.withOpacity(0.1),
+        ),
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int?>(
-          value: _selectedCharacterId,
-          hint: const Text('All Characters'),
-          icon: const Icon(Icons.keyboard_arrow_down, size: 20),
-          dropdownColor: EveColors.darkSurfaceElevated,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-          onChanged: (value) {
-            Log.i('PI', 'Character filter changed to: $value');
-            setState(() => _selectedCharacterId = value);
-          },
-          items: [
-            const DropdownMenuItem<int?>(
-              value: null,
-              child: Text('All Characters'),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _showAllCharacters = !_showAllCharacters;
+          });
+        },
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _showAllCharacters ? Icons.group : Icons.person,
+              size: 20,
+              color: _showAllCharacters ? EveColors.photonBlue : Colors.white,
             ),
-            ...characters.map((c) => DropdownMenuItem<int?>(
-                  value: c.characterId,
-                  child: Text(c.name),
-                )),
+            const SizedBox(width: 8),
+            Text(
+              'All Characters',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: _showAllCharacters ? EveColors.photonBlue : Colors.white,
+              ),
+            ),
           ],
         ),
       ),
@@ -126,6 +127,22 @@ class _PiOverviewScreenState extends ConsumerState<PiOverviewScreen> {
 
   Widget _buildColonyGrid(int? filterCharacterId) {
     Log.d('PI', 'Building colony grid with filter: $filterCharacterId');
+
+    final activeChar = ref.watch(activeCharacterProvider).value;
+
+    if (filterCharacterId == null && !_showAllCharacters && activeChar == null) {
+      return Center(
+        child: EmptyState(
+          icon: Icons.person_off_outlined,
+          heading: 'No Character Selected',
+          description: 'Select a character or enable "All Characters" to view PI.',
+          action: ElevatedButton(
+            onPressed: () => setState(() => _showAllCharacters = true),
+            child: const Text('View All Characters'),
+          ),
+        ),
+      );
+    }
 
     final coloniesAsync = filterCharacterId == null
         ? ref.watch(allColoniesProvider)
@@ -167,11 +184,10 @@ class _PiOverviewScreenState extends ConsumerState<PiOverviewScreen> {
               colony: colony,
               onTap: () {
                 Log.i('PI', 'ColonyCard tapped: ${colony.planetName}');
-                // TODO: Navigate to colony details
+                // Navigate to colony details
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content:
-                        Text('Details for ${colony.planetName} coming soon!'),
+                    content: Text('Details for ${colony.planetName} coming soon!'),
                     duration: const Duration(seconds: 1),
                   ),
                 );
