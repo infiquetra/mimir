@@ -37,11 +37,13 @@ class FittingController extends Notifier<Fitting?> {
   Future<void> equipModule(FittedModule module) async {
     if (state == null) return;
     
-    final ship = ref.read(activeShipTypeProvider).value;
+    // Get ship type directly from SDE — DO NOT use activeShipTypeProvider here
+    // because it watches activeFittingProvider, which would cause a circular dependency.
+    final sde = ref.read(sdeServiceProvider);
+    final ship = await sde.getShipType(state!.shipTypeId);
     if (ship == null) return;
 
     // Fetch Dogma attributes for the module
-    final sde = ref.read(sdeServiceProvider);
     final moduleType = await sde.getModuleType(module.typeId);
     final moduleWithAttributes = module.copyWith(
       attributes: moduleType?.baseAttributes ?? {},

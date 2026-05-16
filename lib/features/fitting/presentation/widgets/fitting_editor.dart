@@ -30,7 +30,7 @@ class FittingEditor extends ConsumerWidget {
         if (shipType == null) {
           return const Center(child: Text('Ship data not found'));
         }
-        return _FittingLayout(activeFit: activeFit, shipType: shipType);
+        return _FittingWheel(activeFit: activeFit, shipType: shipType);
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => Center(child: Text('Error: $error')),
@@ -38,13 +38,13 @@ class FittingEditor extends ConsumerWidget {
   }
 }
 
-/// Main fitting layout modeled after the EVE in-game fitting window.
-/// Ship render in a central circle, slot rows around it, CPU/PG at bottom.
-class _FittingLayout extends ConsumerWidget {
+/// EVE-style fitting wheel: circular ring with slots on the perimeter,
+/// ship render filling the center, CPU/PG at the bottom.
+class _FittingWheel extends ConsumerWidget {
   final Fitting activeFit;
   final ShipType shipType;
 
-  const _FittingLayout({
+  const _FittingWheel({
     required this.activeFit,
     required this.shipType,
   });
@@ -53,100 +53,130 @@ class _FittingLayout extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Calculate sizes based on available space
-        final availableSize = math.min(constraints.maxWidth, constraints.maxHeight);
-        final circleSize = (availableSize * 0.55).clamp(200.0, 380.0);
-        final slotSize = 40.0;
+        // Use the smaller dimension to size the wheel
+        final maxDim = math.min(constraints.maxWidth, constraints.maxHeight);
+        final ringDiameter = (maxDim * 0.78).clamp(280.0, 480.0);
+        final ringRadius = ringDiameter / 2;
+        final slotSize = 42.0;
+        // Total size includes slot overhang on all sides
+        final totalSize = ringDiameter + slotSize;
+        final center = totalSize / 2;
+
+        // Build all positioned slot widgets on the ring perimeter
+        final children = <Widget>[];
+
+        // Ship render fills center circle
+        final shipSize = ringDiameter * 0.65;
+        children.add(
+          Positioned(
+            left: center - shipSize / 2,
+            top: center - shipSize / 2,
+            child: _ShipRender(typeId: shipType.typeId, size: shipSize),
+          ),
+        );
+
+        // Slot placement using angles on the ring
+        // In-game layout:
+        //   High slots: top of ring (~-90° ± spread)
+        //   Med slots: right of ring (~0° ± spread)
+        //   Low slots: bottom-left (~210° ± spread)
+        //   Rig slots: bottom-right (~150° ± spread)
+
+        _addSlots(
+          children: children,
+          slotType: SlotType.high,
+          modules: activeFit.highSlots,
+          totalSlots: shipType.highSlots,
+          center: center,
+          radius: ringRadius,
+          slotSize: slotSize,
+          startAngleDeg: -120,
+          endAngleDeg: -60,
+          color: const Color(0xFF6CB4EE),
+        );
+
+        _addSlots(
+          children: children,
+          slotType: SlotType.med,
+          modules: activeFit.medSlots,
+          totalSlots: shipType.medSlots,
+          center: center,
+          radius: ringRadius,
+          slotSize: slotSize,
+          startAngleDeg: -40,
+          endAngleDeg: 40,
+          color: Colors.orange,
+        );
+
+        _addSlots(
+          children: children,
+          slotType: SlotType.rig,
+          modules: activeFit.rigSlots,
+          totalSlots: shipType.rigSlots,
+          center: center,
+          radius: ringRadius,
+          slotSize: slotSize,
+          startAngleDeg: 60,
+          endAngleDeg: 110,
+          color: const Color(0xFF9E9E9E),
+        );
+
+        _addSlots(
+          children: children,
+          slotType: SlotType.low,
+          modules: activeFit.lowSlots,
+          totalSlots: shipType.lowSlots,
+          center: center,
+          radius: ringRadius,
+          slotSize: slotSize,
+          startAngleDeg: 140,
+          endAngleDeg: 220,
+          color: const Color(0xFF50C878),
+        );
 
         return Column(
           children: [
-            // Ship name header
+            // Compact ship name
             Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 4),
+              padding: const EdgeInsets.only(top: 6, bottom: 2),
               child: Text(
                 '${activeFit.name}  ·  ${shipType.name}',
                 style: const TextStyle(
                   color: EveColors.textSecondary,
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-
-            // Main fitting area
+            // Fitting wheel
             Expanded(
               child: Center(
-                child: SizedBox(
-                  width: constraints.maxWidth,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // High slots row (above circle)
-                      _SlotRow(
-                        label: 'HIGH',
-                        slotType: SlotType.high,
-                        totalSlots: shipType.highSlots,
-                        fittedModules: activeFit.highSlots,
-                        slotSize: slotSize,
-                        color: const Color(0xFF6CB4EE), // Light blue
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Center section: Med slots | Ship Circle | Low slots
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: totalSize,
+                      height: totalSize,
+                      child: Stack(
+                        clipBehavior: Clip.none,
                         children: [
-                          // Med slots (left of circle, vertical)
-                          _VerticalSlotColumn(
-                            label: 'MED',
-                            slotType: SlotType.med,
-                            totalSlots: shipType.medSlots,
-                            fittedModules: activeFit.medSlots,
-                            slotSize: slotSize,
-                            color: Colors.orange,
+                          // Ring background
+                          Positioned.fill(
+                            child: CustomPaint(
+                              painter: _RingPainter(
+                                shipType: shipType,
+                                radius: ringRadius,
+                              ),
+                            ),
                           ),
-
-                          const SizedBox(width: 12),
-
-                          // Ship circle
-                          _ShipCircle(
-                            typeId: shipType.typeId,
-                            size: circleSize,
-                          ),
-
-                          const SizedBox(width: 12),
-
-                          // Low slots (right of circle, vertical)
-                          _VerticalSlotColumn(
-                            label: 'LOW',
-                            slotType: SlotType.low,
-                            totalSlots: shipType.lowSlots,
-                            fittedModules: activeFit.lowSlots,
-                            slotSize: slotSize,
-                            color: const Color(0xFF50C878), // Green
-                          ),
+                          ...children,
                         ],
                       ),
-
-                      const SizedBox(height: 8),
-
-                      // Rig slots row (below circle)
-                      _SlotRow(
-                        label: 'RIG',
-                        slotType: SlotType.rig,
-                        totalSlots: shipType.rigSlots,
-                        fittedModules: activeFit.rigSlots,
-                        slotSize: slotSize,
-                        color: const Color(0xFF9E9E9E), // Grey
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // CPU / Power Grid / Calibration bar
-                      const _ResourceBar(),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 8),
+                    // CPU / PG display
+                    const _ResourceDisplay(),
+                  ],
                 ),
               ),
             ),
@@ -155,68 +185,97 @@ class _FittingLayout extends ConsumerWidget {
       },
     );
   }
+
+  void _addSlots({
+    required List<Widget> children,
+    required SlotType slotType,
+    required List<FittedModule> modules,
+    required int totalSlots,
+    required double center,
+    required double radius,
+    required double slotSize,
+    required double startAngleDeg,
+    required double endAngleDeg,
+    required Color color,
+  }) {
+    if (totalSlots == 0) return;
+
+    final startAngle = startAngleDeg * math.pi / 180;
+    final endAngle = endAngleDeg * math.pi / 180;
+    final angleStep = totalSlots > 1 ? (endAngle - startAngle) / (totalSlots - 1) : 0.0;
+
+    for (int i = 0; i < totalSlots; i++) {
+      final angle = totalSlots == 1
+          ? (startAngle + endAngle) / 2
+          : startAngle + angleStep * i;
+
+      final x = center + radius * math.cos(angle) - slotSize / 2;
+      final y = center + radius * math.sin(angle) - slotSize / 2;
+
+      final module = modules.where((m) => m.slotIndex == i).firstOrNull;
+
+      children.add(
+        Positioned(
+          left: x,
+          top: y,
+          child: _FittingSlot(
+            slotType: slotType,
+            index: i,
+            module: module,
+            size: slotSize,
+            color: color,
+          ),
+        ),
+      );
+    }
+  }
 }
 
-/// Ship render inside a circular frame with a glowing ring.
-class _ShipCircle extends StatefulWidget {
+/// Ship render in center — uses 'render' variant with dark bg blending into circle.
+class _ShipRender extends StatefulWidget {
   final int typeId;
   final double size;
 
-  const _ShipCircle({required this.typeId, required this.size});
+  const _ShipRender({required this.typeId, required this.size});
 
   @override
-  State<_ShipCircle> createState() => _ShipCircleState();
+  State<_ShipRender> createState() => _ShipRenderState();
 }
 
-class _ShipCircleState extends State<_ShipCircle> {
+class _ShipRenderState extends State<_ShipRender> {
   double _rotationY = 0.0;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onHorizontalDragUpdate: (details) {
-        setState(() {
-          _rotationY += details.delta.dx * 0.008;
-        });
+        setState(() => _rotationY += details.delta.dx * 0.008);
       },
-      child: Container(
-        width: widget.size,
-        height: widget.size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: EveColors.borderSubtle.withOpacity(0.4),
-            width: 2,
-          ),
-          gradient: RadialGradient(
-            colors: [
-              const Color(0xFF1A2332),
-              const Color(0xFF0D1117),
-            ],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: EveColors.photonBlue.withOpacity(0.08),
-              blurRadius: 20,
-              spreadRadius: 2,
+      child: ClipOval(
+        child: Container(
+          width: widget.size,
+          height: widget.size,
+          decoration: const BoxDecoration(
+            gradient: RadialGradient(
+              colors: [
+                Color(0xFF1C2838),
+                Color(0xFF0F1923),
+                Color(0xFF080D14),
+              ],
+              stops: [0.0, 0.6, 1.0],
             ),
-          ],
-        ),
-        child: ClipOval(
+          ),
           child: Transform(
             alignment: Alignment.center,
             transform: Matrix4.identity()
               ..setEntry(3, 2, 0.001)
               ..rotateY(_rotationY),
-            child: Padding(
-              padding: EdgeInsets.all(widget.size * 0.1),
-              child: EveTypeIcon(
-                typeId: widget.typeId,
-                size: widget.size * 0.8,
-                variant: 'render',
-                backgroundColor: Colors.transparent,
-                borderRadius: 0,
-              ),
+            child: EveTypeIcon(
+              typeId: widget.typeId,
+              size: widget.size,
+              variant: 'render',
+              backgroundColor: Colors.transparent,
+              borderRadius: 0,
             ),
           ),
         ),
@@ -225,119 +284,7 @@ class _ShipCircleState extends State<_ShipCircle> {
   }
 }
 
-/// Horizontal row of slots (used for High and Rig).
-class _SlotRow extends StatelessWidget {
-  final String label;
-  final SlotType slotType;
-  final int totalSlots;
-  final List<FittedModule> fittedModules;
-  final double slotSize;
-  final Color color;
-
-  const _SlotRow({
-    required this.label,
-    required this.slotType,
-    required this.totalSlots,
-    required this.fittedModules,
-    required this.slotSize,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (totalSlots == 0) return const SizedBox.shrink();
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Label
-        SizedBox(
-          width: 32,
-          child: Text(
-            label,
-            style: TextStyle(
-              color: color.withOpacity(0.7),
-              fontSize: 9,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1,
-            ),
-            textAlign: TextAlign.right,
-          ),
-        ),
-        const SizedBox(width: 8),
-        // Slots
-        ...List.generate(totalSlots, (i) {
-          final module = fittedModules.where((m) => m.slotIndex == i).firstOrNull;
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
-            child: _FittingSlot(
-              slotType: slotType,
-              index: i,
-              module: module,
-              size: slotSize,
-              color: color,
-            ),
-          );
-        }),
-      ],
-    );
-  }
-}
-
-/// Vertical column of slots (used for Med and Low).
-class _VerticalSlotColumn extends StatelessWidget {
-  final String label;
-  final SlotType slotType;
-  final int totalSlots;
-  final List<FittedModule> fittedModules;
-  final double slotSize;
-  final Color color;
-
-  const _VerticalSlotColumn({
-    required this.label,
-    required this.slotType,
-    required this.totalSlots,
-    required this.fittedModules,
-    required this.slotSize,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (totalSlots == 0) return const SizedBox(width: 44);
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: color.withOpacity(0.7),
-            fontSize: 9,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1,
-          ),
-        ),
-        const SizedBox(height: 4),
-        ...List.generate(totalSlots, (i) {
-          final module = fittedModules.where((m) => m.slotIndex == i).firstOrNull;
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            child: _FittingSlot(
-              slotType: slotType,
-              index: i,
-              module: module,
-              size: slotSize,
-              color: color,
-            ),
-          );
-        }),
-      ],
-    );
-  }
-}
-
-/// Individual fitting slot — accepts drag-and-drop of modules.
+/// Individual fitting slot on the ring perimeter.
 class _FittingSlot extends ConsumerWidget {
   final SlotType slotType;
   final int index;
@@ -363,13 +310,12 @@ class _FittingSlot extends ConsumerWidget {
       },
       onAcceptWithDetails: (details) {
         Log.i('FITTING', 'DragTarget accepted: ${details.data.name} -> $slotType[$index]');
-        final newModule = details.data;
         ref.read(activeFittingProvider.notifier).equipModule(
           FittedModule(
             slotType: slotType,
             slotIndex: index,
-            typeId: newModule.typeId,
-            typeName: newModule.name,
+            typeId: details.data.typeId,
+            typeName: details.data.name,
             state: ModuleState.active,
           ),
         );
@@ -396,13 +342,13 @@ class _FittingSlot extends ConsumerWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(color: color, width: 1.5),
-                  color: const Color(0xFF1A2332),
+                  color: const Color(0xFF151C25),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(2),
                   child: EveTypeIcon(
                     typeId: module!.typeId,
-                    size: size - 4,
+                    size: size - 6,
                     borderRadius: 2,
                   ),
                 ),
@@ -412,28 +358,27 @@ class _FittingSlot extends ConsumerWidget {
         }
 
         // Empty slot
+        final borderColor = isHovered
+            ? color
+            : isRejected
+                ? EveColors.error.withOpacity(0.5)
+                : color.withOpacity(0.5);
+
         return Container(
           width: size,
           height: size,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(
-              color: isHovered
-                  ? color
-                  : isRejected
-                      ? EveColors.error.withOpacity(0.5)
-                      : color.withOpacity(0.3),
-              width: isHovered ? 2 : 1,
-            ),
+            border: Border.all(color: borderColor, width: isHovered ? 2 : 1),
             color: isHovered
                 ? color.withOpacity(0.15)
-                : const Color(0xFF0D1117).withOpacity(0.5),
+                : const Color(0xFF0D1117).withOpacity(0.7),
           ),
           child: Center(
             child: Icon(
               Icons.add,
-              size: 14,
-              color: color.withOpacity(isHovered ? 0.8 : 0.25),
+              size: 16,
+              color: color.withOpacity(isHovered ? 0.9 : 0.4),
             ),
           ),
         );
@@ -442,9 +387,9 @@ class _FittingSlot extends ConsumerWidget {
   }
 }
 
-/// Compact CPU / PG / Calibration resource display at the bottom of the wheel.
-class _ResourceBar extends ConsumerWidget {
-  const _ResourceBar();
+/// CPU / Power Grid / Calibration text at the bottom of the ring (EVE style).
+class _ResourceDisplay extends ConsumerWidget {
+  const _ResourceDisplay();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -453,38 +398,21 @@ class _ResourceBar extends ConsumerWidget {
     return statsAsync.when(
       data: (stats) {
         if (stats == null) return const SizedBox.shrink();
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0D1117),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: EveColors.borderSubtle.withOpacity(0.3)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _ResourceChip(
-                label: 'CPU',
-                used: stats.cpuUsed,
-                max: stats.cpuMax,
-                color: const Color(0xFF6CB4EE),
-              ),
-              const SizedBox(width: 20),
-              _ResourceChip(
-                label: 'Power Grid',
-                used: stats.powerUsed,
-                max: stats.powerMax,
-                color: Colors.orange,
-              ),
-              const SizedBox(width: 20),
-              _ResourceChip(
-                label: 'Calibration',
-                used: stats.calibrationUsed.toDouble(),
-                max: stats.calibrationMax.toDouble(),
-                color: const Color(0xFF9E9E9E),
-              ),
-            ],
-          ),
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _ResourceReadout(
+              label: 'CPU',
+              value: '${stats.cpuUsed.toStringAsFixed(1)}/${stats.cpuMax.toStringAsFixed(1)}',
+              isOver: stats.cpuUsed > stats.cpuMax,
+            ),
+            const SizedBox(width: 24),
+            _ResourceReadout(
+              label: 'Power Grid',
+              value: '${stats.powerUsed.toStringAsFixed(1)}/${stats.powerMax.toStringAsFixed(1)}',
+              isOver: stats.powerUsed > stats.powerMax,
+            ),
+          ],
         );
       },
       loading: () => const SizedBox.shrink(),
@@ -493,44 +421,119 @@ class _ResourceBar extends ConsumerWidget {
   }
 }
 
-class _ResourceChip extends StatelessWidget {
+class _ResourceReadout extends StatelessWidget {
   final String label;
-  final double used;
-  final double max;
-  final Color color;
+  final String value;
+  final bool isOver;
 
-  const _ResourceChip({
+  const _ResourceReadout({
     required this.label,
-    required this.used,
-    required this.max,
-    required this.color,
+    required this.value,
+    this.isOver = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isOver = used > max;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label,
-          style: TextStyle(
-            color: color.withOpacity(0.7),
-            fontSize: 9,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
+          style: const TextStyle(
+            color: EveColors.textSecondary,
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(height: 2),
         Text(
-          '${used.toStringAsFixed(1)} / ${max.toStringAsFixed(1)}',
+          value,
           style: TextStyle(
             color: isOver ? EveColors.error : EveColors.textPrimary,
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
         ),
       ],
     );
+  }
+}
+
+/// Paints the circular ring and colored arc segments.
+class _RingPainter extends CustomPainter {
+  final ShipType shipType;
+  final double radius;
+
+  _RingPainter({required this.shipType, required this.radius});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+
+    // Outer ring
+    final ringPaint = Paint()
+      ..color = const Color(0xFF3A4B5C)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+    canvas.drawCircle(center, radius, ringPaint);
+
+    // Inner subtle ring
+    ringPaint
+      ..color = const Color(0xFF1A2332)
+      ..strokeWidth = 1.0;
+    canvas.drawCircle(center, radius - 4, ringPaint);
+
+    // Colored arc segments for each slot type
+    final arcPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0
+      ..strokeCap = StrokeCap.round;
+
+    void drawArc(double startDeg, double endDeg, Color color) {
+      arcPaint.color = color;
+      final startRad = startDeg * math.pi / 180;
+      final sweepRad = (endDeg - startDeg) * math.pi / 180;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startRad,
+        sweepRad,
+        false,
+        arcPaint,
+      );
+    }
+
+    if (shipType.highSlots > 0) drawArc(-125, -55, const Color(0xFF6CB4EE).withOpacity(0.6));
+    if (shipType.medSlots > 0) drawArc(-45, 45, Colors.orange.withOpacity(0.6));
+    if (shipType.rigSlots > 0) drawArc(55, 115, const Color(0xFF9E9E9E).withOpacity(0.6));
+    if (shipType.lowSlots > 0) drawArc(135, 225, const Color(0xFF50C878).withOpacity(0.6));
+
+    // Radial tick marks from inner edge to slots
+    final tickPaint = Paint()
+      ..color = const Color(0xFF3A4B5C)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    void drawTicks(int count, double startDeg, double endDeg) {
+      if (count == 0) return;
+      final startRad = startDeg * math.pi / 180;
+      final endRad = endDeg * math.pi / 180;
+      final step = count > 1 ? (endRad - startRad) / (count - 1) : 0.0;
+
+      for (int i = 0; i < count; i++) {
+        final angle = count == 1 ? (startRad + endRad) / 2 : startRad + step * i;
+        final inner = center + Offset(math.cos(angle) * (radius * 0.7), math.sin(angle) * (radius * 0.7));
+        final outer = center + Offset(math.cos(angle) * (radius - 4), math.sin(angle) * (radius - 4));
+        canvas.drawLine(inner, outer, tickPaint);
+      }
+    }
+
+    drawTicks(shipType.highSlots, -120, -60);
+    drawTicks(shipType.medSlots, -40, 40);
+    drawTicks(shipType.rigSlots, 60, 110);
+    drawTicks(shipType.lowSlots, 140, 220);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RingPainter oldDelegate) {
+    return oldDelegate.shipType != shipType || oldDelegate.radius != radius;
   }
 }

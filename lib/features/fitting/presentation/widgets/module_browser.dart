@@ -189,9 +189,12 @@ class _ModuleListItem extends ConsumerWidget {
               child: EveTypeIcon(typeId: module.typeId, size: 28),
             ),
             const SizedBox(width: 8),
-            Text(
-              module.name,
-              style: TextStyle(color: EveColors.textSecondary.withOpacity(0.3), fontSize: 12),
+            Expanded(
+              child: Text(
+                module.name,
+                style: TextStyle(color: EveColors.textSecondary.withOpacity(0.3), fontSize: 12),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
