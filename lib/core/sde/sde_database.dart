@@ -401,6 +401,16 @@ class SdeDatabase extends _$SdeDatabase {
     return rows.map((e) => e.effectId).toList();
   }
 
+  /// Get types that have a specific effect.
+  Future<List<SdeType>> getTypesByEffectId(int effectId) async {
+    final query = select(sdeTypes).join([
+      innerJoin(sdeTypeEffects, sdeTypeEffects.typeId.equalsExp(sdeTypes.typeId)),
+    ])..where(sdeTypeEffects.effectId.equals(effectId));
+    
+    final rows = await query.get();
+    return rows.map((row) => row.readTable(sdeTypes)).toList();
+  }
+
   /// Insert or update type attributes.
   Future<void> upsertTypeAttributes(List<SdeTypeAttributesCompanion> attributes) async {
     await batch((b) {

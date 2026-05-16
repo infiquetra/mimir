@@ -12,6 +12,7 @@ import '../../features/characters/data/character_providers.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/pi/presentation/pi_overview_screen.dart';
 import '../../features/market/presentation/market_overview_screen.dart';
+import '../../features/fitting/presentation/fitting_screen.dart';
 import '../../features/assets/presentation/asset_browser_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/skills/presentation/skills_screen.dart';
@@ -228,6 +229,8 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
         return const IndustryOverviewScreen();
       case WindowType.market:
         return const MarketOverviewScreen();
+      case WindowType.fitting:
+        return const FittingScreen();
     }
   }
 }

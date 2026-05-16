@@ -30,8 +30,8 @@ We are expanding Mimir's functionality to support Market Tools (Phase 3) and Shi
 - [ ] [CHECKPOINT] Save state before proceeding to UI implementation.
 
 ## Phase 5: Ship Fitting User Interface
-- [ ] [P1] Build Ship Browser
-- [ ] [P1] Build Fitting Editor Screen
+- [x] [P1] Build Ship Browser
+- [x] [P1] Build Fitting Editor Screen
 - [ ] [P1] Build Stats Panel
 
 ## Review

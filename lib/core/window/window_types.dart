@@ -41,6 +41,9 @@ enum WindowType {
 
   /// Market Tools screen for active orders and price checking.
   market,
+
+  /// Ship Fitting tool for browsing ships and simulating fits.
+  fitting,
 }
 
 /// Extension methods for [WindowType].
@@ -70,6 +73,8 @@ extension WindowTypeExtension on WindowType {
         return 'Industry & Manufacturing - Mimir';
       case WindowType.market:
         return 'Market Tools - Mimir';
+      case WindowType.fitting:
+        return 'Ship Fitting - Mimir';
     }
   }
 
@@ -100,6 +105,8 @@ extension WindowTypeExtension on WindowType {
         return 9;
       case WindowType.market:
         return 10;
+      case WindowType.fitting:
+        return 11;
     }
   }
 
@@ -128,6 +135,8 @@ extension WindowTypeExtension on WindowType {
         return WindowType.industry;
       case 10:
         return WindowType.market;
+      case 11:
+        return WindowType.fitting;
       default:
         return WindowType.dashboard;
     }
@@ -158,6 +167,8 @@ extension WindowTypeExtension on WindowType {
         return (width: 1200, height: 900);
       case WindowType.market:
         return (width: 1200, height: 900);
+      case WindowType.fitting:
+        return (width: 1300, height: 950);
     }
   }
 
@@ -189,6 +200,8 @@ extension WindowTypeExtension on WindowType {
         return 'assets/icons/eve/industry.png';
       case WindowType.market:
         return 'assets/icons/eve/market.png';
+      case WindowType.fitting:
+        return 'assets/icons/eve/fitting.png';
     }
   }
 }

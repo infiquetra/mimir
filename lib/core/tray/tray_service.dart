@@ -187,6 +187,16 @@ class TrayService extends TrayListener {
     ));
     Log.d('TRAY', 'Added menu item: $marketLabel (key=market)');
 
+    final fittingLabel = windowService.isWindowOpen(WindowType.fitting)
+        ? '◆ Ship Fitting'
+        : 'Ship Fitting';
+    menuItems.add(MenuItem(
+      key: 'fitting',
+      label: fittingLabel,
+      icon: 'assets/icons/tray/fitting.png',
+    ));
+    Log.d('TRAY', 'Added menu item: $fittingLabel (key=fitting)');
+
     menuItems.add(MenuItem.separator());
     Log.d('TRAY', 'Added separator');
 
@@ -292,6 +302,11 @@ class TrayService extends TrayListener {
         case 'market':
           Log.i('TRAY', 'Opening market window');
           await windowService.openWindow(WindowType.market);
+          await refreshMenu();
+          break;
+        case 'fitting':
+          Log.i('TRAY', 'Opening fitting window');
+          await windowService.openWindow(WindowType.fitting);
           await refreshMenu();
           break;
         case 'onboarding':

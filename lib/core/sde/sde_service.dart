@@ -745,6 +745,34 @@ class SdeService {
   // Solar System Lookups
   // ============================================================================
 
+  /// Get modules by slot type.
+  Future<List<ModuleType>> getModulesBySlotType(SlotType slotType) async {
+    int effectId;
+    switch (slotType) {
+      case SlotType.low: effectId = 11; break;
+      case SlotType.high: effectId = 12; break;
+      case SlotType.med: effectId = 13; break;
+      case SlotType.rig: effectId = 2663; break;
+      case SlotType.subsystem: effectId = 3772; break;
+    }
+
+    final types = await database.getTypesByEffectId(effectId);
+    final modules = <ModuleType>[];
+    
+    // Process in smaller batches to avoid overwhelming the database connection
+    for (var i = 0; i < types.length; i += 50) {
+      final batch = types.skip(i).take(50);
+      final futures = batch.map((type) => getModuleType(type.typeId));
+      final batchModules = await Future.wait(futures);
+      
+      for (final module in batchModules) {
+        if (module != null) modules.add(module);
+      }
+    }
+    
+    return modules;
+  }
+
   /// Get security status for a solar system.
   ///
   /// Returns null if system ID is unknown.
