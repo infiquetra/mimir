@@ -37,41 +37,50 @@ class FittingEditor extends ConsumerWidget {
                 children: [
                   EveTypeIcon(typeId: shipType.typeId, size: 64),
                   const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        activeFit.name,
-                        style: const TextStyle(
-                          color: EveColors.textPrimary,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          activeFit.name,
+                          style: const TextStyle(
+                            color: EveColors.textPrimary,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      Text(
-                        shipType.name,
-                        style: const TextStyle(
-                          color: EveColors.textSecondary,
-                          fontSize: 16,
+                        Text(
+                          shipType.name,
+                          style: const TextStyle(
+                            color: EveColors.textSecondary,
+                            fontSize: 16,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
             
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildSlotColumn(context, ref, 'High Slots', shipType.highSlots, activeFit.highSlots, SlotType.high),
-                    _buildSlotColumn(context, ref, 'Med Slots', shipType.medSlots, activeFit.medSlots, SlotType.med),
-                    _buildSlotColumn(context, ref, 'Low Slots', shipType.lowSlots, activeFit.lowSlots, SlotType.low),
-                    _buildSlotColumn(context, ref, 'Rig Slots', shipType.rigSlots, activeFit.rigSlots, SlotType.rig),
-                  ],
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSlotColumn(context, ref, 'High Slots', shipType.highSlots, activeFit.highSlots, SlotType.high),
+                      const SizedBox(width: 24),
+                      _buildSlotColumn(context, ref, 'Med Slots', shipType.medSlots, activeFit.medSlots, SlotType.med),
+                      const SizedBox(width: 24),
+                      _buildSlotColumn(context, ref, 'Low Slots', shipType.lowSlots, activeFit.lowSlots, SlotType.low),
+                      const SizedBox(width: 24),
+                      _buildSlotColumn(context, ref, 'Rig Slots', shipType.rigSlots, activeFit.rigSlots, SlotType.rig),
+                    ],
+                  ),
                 ),
               ),
             ),
