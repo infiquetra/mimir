@@ -10,7 +10,8 @@ class ZKillboardClient {
   static const _redisQUrl = 'https://redisq.zkillboard.com/listen.php';
 
   WebSocketChannel? _channel;
-  final StreamController<ZKillmail> _killStream = StreamController<ZKillmail>.broadcast();
+  final StreamController<ZKillmail> _killStream =
+      StreamController<ZKillmail>.broadcast();
   bool _isPolling = false;
   bool _isIntentionalDisconnect = false;
 

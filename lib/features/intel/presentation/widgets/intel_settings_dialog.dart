@@ -6,7 +6,8 @@ class IntelSettingsDialog extends ConsumerStatefulWidget {
   const IntelSettingsDialog({super.key});
 
   @override
-  ConsumerState<IntelSettingsDialog> createState() => _IntelSettingsDialogState();
+  ConsumerState<IntelSettingsDialog> createState() =>
+      _IntelSettingsDialogState();
 }
 
 class _IntelSettingsDialogState extends ConsumerState<IntelSettingsDialog> {
@@ -30,7 +31,10 @@ class _IntelSettingsDialogState extends ConsumerState<IntelSettingsDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Watch List', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Watch List',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             configAsync.when(
               data: (config) {
@@ -44,11 +48,15 @@ class _IntelSettingsDialogState extends ConsumerState<IntelSettingsDialog> {
                     final item = config[index];
                     return ListTile(
                       title: Text(item.targetName),
-                      subtitle: Text('${item.watchType.toUpperCase()} - ID: ${item.entityId}'),
+                      subtitle: Text(
+                        '${item.watchType.toUpperCase()} - ID: ${item.entityId}',
+                      ),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),
                         onPressed: () {
-                          ref.read(intelRepositoryProvider).removeWatchEntity(item.entityId, item.watchType);
+                          ref
+                              .read(intelRepositoryProvider)
+                              .removeWatchEntity(item.entityId, item.watchType);
                         },
                       ),
                     );
@@ -78,11 +86,13 @@ class _IntelSettingsDialogState extends ConsumerState<IntelSettingsDialog> {
                   onPressed: () {
                     final id = int.tryParse(_systemIdController.text);
                     if (id != null) {
-                      ref.read(intelRepositoryProvider).addWatchEntity(
-                        id, 
-                        'system', 
-                        'System $id', // MVP: using raw ID as name
-                      );
+                      ref
+                          .read(intelRepositoryProvider)
+                          .addWatchEntity(
+                            id,
+                            'system',
+                            'System $id', // MVP: using raw ID as name
+                          );
                       _systemIdController.clear();
                     }
                   },

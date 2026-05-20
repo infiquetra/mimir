@@ -21,8 +21,12 @@ class KillmailCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final numberFormat = NumberFormat.compact(locale: 'en_US');
 
-    final systemNameAsync = ref.watch(intelNameProvider(killmail.solarSystemId));
-    final shipNameAsync = ref.watch(intelNameProvider(killmail.victim.shipTypeId));
+    final systemNameAsync = ref.watch(
+      intelNameProvider(killmail.solarSystemId),
+    );
+    final shipNameAsync = ref.watch(
+      intelNameProvider(killmail.victim.shipTypeId),
+    );
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -37,12 +41,9 @@ class KillmailCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Ship Icon
-              EveTypeIcon(
-                typeId: killmail.victim.shipTypeId,
-                size: 64,
-              ),
+              EveTypeIcon(typeId: killmail.victim.shipTypeId, size: 64),
               const SizedBox(width: 16),
-              
+
               // Kill Details
               Expanded(
                 child: Column(
@@ -55,37 +56,48 @@ class KillmailCard extends ConsumerWidget {
                         systemNameAsync.when(
                           data: (name) => Text(
                             name,
-                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           loading: () => const Text('Loading...'),
-                          error: (error, stack) => Text('System ${killmail.solarSystemId}'),
+                          error: (error, stack) =>
+                              Text('System ${killmail.solarSystemId}'),
                         ),
                         Text(
-                          DateFormat.Hm().format(killmail.killmailTime.toLocal()),
-                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                          DateFormat.Hm().format(
+                            killmail.killmailTime.toLocal(),
+                          ),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    
+
                     // Ship & Victim
                     shipNameAsync.when(
-                      data: (name) => Text(name, style: theme.textTheme.bodyMedium),
+                      data: (name) =>
+                          Text(name, style: theme.textTheme.bodyMedium),
                       loading: () => const Text('Loading ship...'),
-                      error: (error, stack) => Text('Ship ${killmail.victim.shipTypeId}'),
+                      error: (error, stack) =>
+                          Text('Ship ${killmail.victim.shipTypeId}'),
                     ),
-                    
+
                     if (killmail.victim.characterName != null) ...[
                       const SizedBox(height: 2),
                       Text(
                         killmail.victim.characterName!,
-                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ],
                 ),
               ),
-              
+
               // Value & Attackers
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -101,11 +113,17 @@ class KillmailCard extends ConsumerWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.person, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                      Icon(
+                        Icons.person,
+                        size: 14,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '${killmail.attackerCount}',
-                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),

@@ -33,10 +33,13 @@ class ZKillmail {
 
     return ZKillmail(
       killmailId: killmail['killmail_id'] ?? 0,
-      killmailTime: DateTime.parse(killmail['killmail_time'] ?? DateTime.now().toIso8601String()),
+      killmailTime: DateTime.parse(
+        killmail['killmail_time'] ?? DateTime.now().toIso8601String(),
+      ),
       solarSystemId: killmail['solar_system_id'] ?? 0,
       victim: KillmailVictim.fromJson(killmail['victim'] ?? {}),
-      attackers: (killmail['attackers'] as List?)
+      attackers:
+          (killmail['attackers'] as List?)
               ?.map((a) => KillmailAttacker.fromJson(a))
               .toList() ??
           [],
