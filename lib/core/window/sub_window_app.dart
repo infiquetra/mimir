@@ -17,6 +17,7 @@ import '../../features/assets/presentation/asset_browser_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/skills/presentation/skills_screen.dart';
 import '../../features/wallet/presentation/wallet_screen.dart';
+import '../../features/intel/presentation/kill_feed_screen.dart';
 import '../auth/auth_providers.dart';
 import '../sde/sde_providers.dart';
 import '../theme/app_theme.dart';
@@ -231,6 +232,8 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
         return const MarketOverviewScreen();
       case WindowType.fitting:
         return const FittingScreen();
+      case WindowType.intel:
+        return const KillFeedScreen();
     }
   }
 }

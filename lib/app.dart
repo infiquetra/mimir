@@ -13,6 +13,7 @@ import 'core/settings/settings_providers.dart';
 import 'core/theme/app_theme.dart';
 import 'core/window/window_service.dart';
 import 'core/window/window_types.dart';
+import 'features/intel/domain/intel_alert_service.dart';
 import 'features/characters/data/character_repository.dart';
 import 'features/skills/data/skill_repository.dart';
 import 'features/wallet/data/wallet_repository.dart';
@@ -154,6 +155,9 @@ class MimirApp extends ConsumerWidget {
     // This runs in the background and updates characters that have
     // placeholder corporation names.
     ref.watch(startupRefreshProvider);
+
+    // Initialize global Intel Alert Service
+    ref.watch(intelAlertServiceProvider).initialize();
 
     // Return minimal container - the main window is hidden and never shown.
     // All actual UI happens in standalone sub-windows.

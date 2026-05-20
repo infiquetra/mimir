@@ -14723,6 +14723,2145 @@ class FittingFolderMembersCompanion
   }
 }
 
+class $KillmailsTable extends Killmails
+    with TableInfo<$KillmailsTable, Killmail> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $KillmailsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _killmailIdMeta = const VerificationMeta(
+    'killmailId',
+  );
+  @override
+  late final GeneratedColumn<int> killmailId = GeneratedColumn<int>(
+    'killmail_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _killmailTimeMeta = const VerificationMeta(
+    'killmailTime',
+  );
+  @override
+  late final GeneratedColumn<DateTime> killmailTime = GeneratedColumn<DateTime>(
+    'killmail_time',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _solarSystemIdMeta = const VerificationMeta(
+    'solarSystemId',
+  );
+  @override
+  late final GeneratedColumn<int> solarSystemId = GeneratedColumn<int>(
+    'solar_system_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _victimCharacterIdMeta = const VerificationMeta(
+    'victimCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> victimCharacterId = GeneratedColumn<int>(
+    'victim_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _victimCorporationIdMeta =
+      const VerificationMeta('victimCorporationId');
+  @override
+  late final GeneratedColumn<int> victimCorporationId = GeneratedColumn<int>(
+    'victim_corporation_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _victimAllianceIdMeta = const VerificationMeta(
+    'victimAllianceId',
+  );
+  @override
+  late final GeneratedColumn<int> victimAllianceId = GeneratedColumn<int>(
+    'victim_alliance_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _victimShipTypeIdMeta = const VerificationMeta(
+    'victimShipTypeId',
+  );
+  @override
+  late final GeneratedColumn<int> victimShipTypeId = GeneratedColumn<int>(
+    'victim_ship_type_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _totalValueMeta = const VerificationMeta(
+    'totalValue',
+  );
+  @override
+  late final GeneratedColumn<double> totalValue = GeneratedColumn<double>(
+    'total_value',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _killmailJsonMeta = const VerificationMeta(
+    'killmailJson',
+  );
+  @override
+  late final GeneratedColumn<String> killmailJson = GeneratedColumn<String>(
+    'killmail_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> cachedAt = GeneratedColumn<DateTime>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    killmailId,
+    killmailTime,
+    solarSystemId,
+    victimCharacterId,
+    victimCorporationId,
+    victimAllianceId,
+    victimShipTypeId,
+    totalValue,
+    killmailJson,
+    cachedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'killmails';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Killmail> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('killmail_id')) {
+      context.handle(
+        _killmailIdMeta,
+        killmailId.isAcceptableOrUnknown(data['killmail_id']!, _killmailIdMeta),
+      );
+    }
+    if (data.containsKey('killmail_time')) {
+      context.handle(
+        _killmailTimeMeta,
+        killmailTime.isAcceptableOrUnknown(
+          data['killmail_time']!,
+          _killmailTimeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_killmailTimeMeta);
+    }
+    if (data.containsKey('solar_system_id')) {
+      context.handle(
+        _solarSystemIdMeta,
+        solarSystemId.isAcceptableOrUnknown(
+          data['solar_system_id']!,
+          _solarSystemIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_solarSystemIdMeta);
+    }
+    if (data.containsKey('victim_character_id')) {
+      context.handle(
+        _victimCharacterIdMeta,
+        victimCharacterId.isAcceptableOrUnknown(
+          data['victim_character_id']!,
+          _victimCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('victim_corporation_id')) {
+      context.handle(
+        _victimCorporationIdMeta,
+        victimCorporationId.isAcceptableOrUnknown(
+          data['victim_corporation_id']!,
+          _victimCorporationIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('victim_alliance_id')) {
+      context.handle(
+        _victimAllianceIdMeta,
+        victimAllianceId.isAcceptableOrUnknown(
+          data['victim_alliance_id']!,
+          _victimAllianceIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('victim_ship_type_id')) {
+      context.handle(
+        _victimShipTypeIdMeta,
+        victimShipTypeId.isAcceptableOrUnknown(
+          data['victim_ship_type_id']!,
+          _victimShipTypeIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_victimShipTypeIdMeta);
+    }
+    if (data.containsKey('total_value')) {
+      context.handle(
+        _totalValueMeta,
+        totalValue.isAcceptableOrUnknown(data['total_value']!, _totalValueMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_totalValueMeta);
+    }
+    if (data.containsKey('killmail_json')) {
+      context.handle(
+        _killmailJsonMeta,
+        killmailJson.isAcceptableOrUnknown(
+          data['killmail_json']!,
+          _killmailJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_killmailJsonMeta);
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cachedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {killmailId};
+  @override
+  Killmail map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Killmail(
+      killmailId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}killmail_id'],
+      )!,
+      killmailTime: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}killmail_time'],
+      )!,
+      solarSystemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}solar_system_id'],
+      )!,
+      victimCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}victim_character_id'],
+      ),
+      victimCorporationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}victim_corporation_id'],
+      ),
+      victimAllianceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}victim_alliance_id'],
+      ),
+      victimShipTypeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}victim_ship_type_id'],
+      )!,
+      totalValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}total_value'],
+      )!,
+      killmailJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}killmail_json'],
+      )!,
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cached_at'],
+      )!,
+    );
+  }
+
+  @override
+  $KillmailsTable createAlias(String alias) {
+    return $KillmailsTable(attachedDatabase, alias);
+  }
+}
+
+class Killmail extends DataClass implements Insertable<Killmail> {
+  final int killmailId;
+  final DateTime killmailTime;
+  final int solarSystemId;
+  final int? victimCharacterId;
+  final int? victimCorporationId;
+  final int? victimAllianceId;
+  final int victimShipTypeId;
+  final double totalValue;
+  final String killmailJson;
+  final DateTime cachedAt;
+  const Killmail({
+    required this.killmailId,
+    required this.killmailTime,
+    required this.solarSystemId,
+    this.victimCharacterId,
+    this.victimCorporationId,
+    this.victimAllianceId,
+    required this.victimShipTypeId,
+    required this.totalValue,
+    required this.killmailJson,
+    required this.cachedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['killmail_id'] = Variable<int>(killmailId);
+    map['killmail_time'] = Variable<DateTime>(killmailTime);
+    map['solar_system_id'] = Variable<int>(solarSystemId);
+    if (!nullToAbsent || victimCharacterId != null) {
+      map['victim_character_id'] = Variable<int>(victimCharacterId);
+    }
+    if (!nullToAbsent || victimCorporationId != null) {
+      map['victim_corporation_id'] = Variable<int>(victimCorporationId);
+    }
+    if (!nullToAbsent || victimAllianceId != null) {
+      map['victim_alliance_id'] = Variable<int>(victimAllianceId);
+    }
+    map['victim_ship_type_id'] = Variable<int>(victimShipTypeId);
+    map['total_value'] = Variable<double>(totalValue);
+    map['killmail_json'] = Variable<String>(killmailJson);
+    map['cached_at'] = Variable<DateTime>(cachedAt);
+    return map;
+  }
+
+  KillmailsCompanion toCompanion(bool nullToAbsent) {
+    return KillmailsCompanion(
+      killmailId: Value(killmailId),
+      killmailTime: Value(killmailTime),
+      solarSystemId: Value(solarSystemId),
+      victimCharacterId: victimCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(victimCharacterId),
+      victimCorporationId: victimCorporationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(victimCorporationId),
+      victimAllianceId: victimAllianceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(victimAllianceId),
+      victimShipTypeId: Value(victimShipTypeId),
+      totalValue: Value(totalValue),
+      killmailJson: Value(killmailJson),
+      cachedAt: Value(cachedAt),
+    );
+  }
+
+  factory Killmail.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Killmail(
+      killmailId: serializer.fromJson<int>(json['killmailId']),
+      killmailTime: serializer.fromJson<DateTime>(json['killmailTime']),
+      solarSystemId: serializer.fromJson<int>(json['solarSystemId']),
+      victimCharacterId: serializer.fromJson<int?>(json['victimCharacterId']),
+      victimCorporationId: serializer.fromJson<int?>(
+        json['victimCorporationId'],
+      ),
+      victimAllianceId: serializer.fromJson<int?>(json['victimAllianceId']),
+      victimShipTypeId: serializer.fromJson<int>(json['victimShipTypeId']),
+      totalValue: serializer.fromJson<double>(json['totalValue']),
+      killmailJson: serializer.fromJson<String>(json['killmailJson']),
+      cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'killmailId': serializer.toJson<int>(killmailId),
+      'killmailTime': serializer.toJson<DateTime>(killmailTime),
+      'solarSystemId': serializer.toJson<int>(solarSystemId),
+      'victimCharacterId': serializer.toJson<int?>(victimCharacterId),
+      'victimCorporationId': serializer.toJson<int?>(victimCorporationId),
+      'victimAllianceId': serializer.toJson<int?>(victimAllianceId),
+      'victimShipTypeId': serializer.toJson<int>(victimShipTypeId),
+      'totalValue': serializer.toJson<double>(totalValue),
+      'killmailJson': serializer.toJson<String>(killmailJson),
+      'cachedAt': serializer.toJson<DateTime>(cachedAt),
+    };
+  }
+
+  Killmail copyWith({
+    int? killmailId,
+    DateTime? killmailTime,
+    int? solarSystemId,
+    Value<int?> victimCharacterId = const Value.absent(),
+    Value<int?> victimCorporationId = const Value.absent(),
+    Value<int?> victimAllianceId = const Value.absent(),
+    int? victimShipTypeId,
+    double? totalValue,
+    String? killmailJson,
+    DateTime? cachedAt,
+  }) => Killmail(
+    killmailId: killmailId ?? this.killmailId,
+    killmailTime: killmailTime ?? this.killmailTime,
+    solarSystemId: solarSystemId ?? this.solarSystemId,
+    victimCharacterId: victimCharacterId.present
+        ? victimCharacterId.value
+        : this.victimCharacterId,
+    victimCorporationId: victimCorporationId.present
+        ? victimCorporationId.value
+        : this.victimCorporationId,
+    victimAllianceId: victimAllianceId.present
+        ? victimAllianceId.value
+        : this.victimAllianceId,
+    victimShipTypeId: victimShipTypeId ?? this.victimShipTypeId,
+    totalValue: totalValue ?? this.totalValue,
+    killmailJson: killmailJson ?? this.killmailJson,
+    cachedAt: cachedAt ?? this.cachedAt,
+  );
+  Killmail copyWithCompanion(KillmailsCompanion data) {
+    return Killmail(
+      killmailId: data.killmailId.present
+          ? data.killmailId.value
+          : this.killmailId,
+      killmailTime: data.killmailTime.present
+          ? data.killmailTime.value
+          : this.killmailTime,
+      solarSystemId: data.solarSystemId.present
+          ? data.solarSystemId.value
+          : this.solarSystemId,
+      victimCharacterId: data.victimCharacterId.present
+          ? data.victimCharacterId.value
+          : this.victimCharacterId,
+      victimCorporationId: data.victimCorporationId.present
+          ? data.victimCorporationId.value
+          : this.victimCorporationId,
+      victimAllianceId: data.victimAllianceId.present
+          ? data.victimAllianceId.value
+          : this.victimAllianceId,
+      victimShipTypeId: data.victimShipTypeId.present
+          ? data.victimShipTypeId.value
+          : this.victimShipTypeId,
+      totalValue: data.totalValue.present
+          ? data.totalValue.value
+          : this.totalValue,
+      killmailJson: data.killmailJson.present
+          ? data.killmailJson.value
+          : this.killmailJson,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Killmail(')
+          ..write('killmailId: $killmailId, ')
+          ..write('killmailTime: $killmailTime, ')
+          ..write('solarSystemId: $solarSystemId, ')
+          ..write('victimCharacterId: $victimCharacterId, ')
+          ..write('victimCorporationId: $victimCorporationId, ')
+          ..write('victimAllianceId: $victimAllianceId, ')
+          ..write('victimShipTypeId: $victimShipTypeId, ')
+          ..write('totalValue: $totalValue, ')
+          ..write('killmailJson: $killmailJson, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    killmailId,
+    killmailTime,
+    solarSystemId,
+    victimCharacterId,
+    victimCorporationId,
+    victimAllianceId,
+    victimShipTypeId,
+    totalValue,
+    killmailJson,
+    cachedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Killmail &&
+          other.killmailId == this.killmailId &&
+          other.killmailTime == this.killmailTime &&
+          other.solarSystemId == this.solarSystemId &&
+          other.victimCharacterId == this.victimCharacterId &&
+          other.victimCorporationId == this.victimCorporationId &&
+          other.victimAllianceId == this.victimAllianceId &&
+          other.victimShipTypeId == this.victimShipTypeId &&
+          other.totalValue == this.totalValue &&
+          other.killmailJson == this.killmailJson &&
+          other.cachedAt == this.cachedAt);
+}
+
+class KillmailsCompanion extends UpdateCompanion<Killmail> {
+  final Value<int> killmailId;
+  final Value<DateTime> killmailTime;
+  final Value<int> solarSystemId;
+  final Value<int?> victimCharacterId;
+  final Value<int?> victimCorporationId;
+  final Value<int?> victimAllianceId;
+  final Value<int> victimShipTypeId;
+  final Value<double> totalValue;
+  final Value<String> killmailJson;
+  final Value<DateTime> cachedAt;
+  const KillmailsCompanion({
+    this.killmailId = const Value.absent(),
+    this.killmailTime = const Value.absent(),
+    this.solarSystemId = const Value.absent(),
+    this.victimCharacterId = const Value.absent(),
+    this.victimCorporationId = const Value.absent(),
+    this.victimAllianceId = const Value.absent(),
+    this.victimShipTypeId = const Value.absent(),
+    this.totalValue = const Value.absent(),
+    this.killmailJson = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+  });
+  KillmailsCompanion.insert({
+    this.killmailId = const Value.absent(),
+    required DateTime killmailTime,
+    required int solarSystemId,
+    this.victimCharacterId = const Value.absent(),
+    this.victimCorporationId = const Value.absent(),
+    this.victimAllianceId = const Value.absent(),
+    required int victimShipTypeId,
+    required double totalValue,
+    required String killmailJson,
+    required DateTime cachedAt,
+  }) : killmailTime = Value(killmailTime),
+       solarSystemId = Value(solarSystemId),
+       victimShipTypeId = Value(victimShipTypeId),
+       totalValue = Value(totalValue),
+       killmailJson = Value(killmailJson),
+       cachedAt = Value(cachedAt);
+  static Insertable<Killmail> custom({
+    Expression<int>? killmailId,
+    Expression<DateTime>? killmailTime,
+    Expression<int>? solarSystemId,
+    Expression<int>? victimCharacterId,
+    Expression<int>? victimCorporationId,
+    Expression<int>? victimAllianceId,
+    Expression<int>? victimShipTypeId,
+    Expression<double>? totalValue,
+    Expression<String>? killmailJson,
+    Expression<DateTime>? cachedAt,
+  }) {
+    return RawValuesInsertable({
+      if (killmailId != null) 'killmail_id': killmailId,
+      if (killmailTime != null) 'killmail_time': killmailTime,
+      if (solarSystemId != null) 'solar_system_id': solarSystemId,
+      if (victimCharacterId != null) 'victim_character_id': victimCharacterId,
+      if (victimCorporationId != null)
+        'victim_corporation_id': victimCorporationId,
+      if (victimAllianceId != null) 'victim_alliance_id': victimAllianceId,
+      if (victimShipTypeId != null) 'victim_ship_type_id': victimShipTypeId,
+      if (totalValue != null) 'total_value': totalValue,
+      if (killmailJson != null) 'killmail_json': killmailJson,
+      if (cachedAt != null) 'cached_at': cachedAt,
+    });
+  }
+
+  KillmailsCompanion copyWith({
+    Value<int>? killmailId,
+    Value<DateTime>? killmailTime,
+    Value<int>? solarSystemId,
+    Value<int?>? victimCharacterId,
+    Value<int?>? victimCorporationId,
+    Value<int?>? victimAllianceId,
+    Value<int>? victimShipTypeId,
+    Value<double>? totalValue,
+    Value<String>? killmailJson,
+    Value<DateTime>? cachedAt,
+  }) {
+    return KillmailsCompanion(
+      killmailId: killmailId ?? this.killmailId,
+      killmailTime: killmailTime ?? this.killmailTime,
+      solarSystemId: solarSystemId ?? this.solarSystemId,
+      victimCharacterId: victimCharacterId ?? this.victimCharacterId,
+      victimCorporationId: victimCorporationId ?? this.victimCorporationId,
+      victimAllianceId: victimAllianceId ?? this.victimAllianceId,
+      victimShipTypeId: victimShipTypeId ?? this.victimShipTypeId,
+      totalValue: totalValue ?? this.totalValue,
+      killmailJson: killmailJson ?? this.killmailJson,
+      cachedAt: cachedAt ?? this.cachedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (killmailId.present) {
+      map['killmail_id'] = Variable<int>(killmailId.value);
+    }
+    if (killmailTime.present) {
+      map['killmail_time'] = Variable<DateTime>(killmailTime.value);
+    }
+    if (solarSystemId.present) {
+      map['solar_system_id'] = Variable<int>(solarSystemId.value);
+    }
+    if (victimCharacterId.present) {
+      map['victim_character_id'] = Variable<int>(victimCharacterId.value);
+    }
+    if (victimCorporationId.present) {
+      map['victim_corporation_id'] = Variable<int>(victimCorporationId.value);
+    }
+    if (victimAllianceId.present) {
+      map['victim_alliance_id'] = Variable<int>(victimAllianceId.value);
+    }
+    if (victimShipTypeId.present) {
+      map['victim_ship_type_id'] = Variable<int>(victimShipTypeId.value);
+    }
+    if (totalValue.present) {
+      map['total_value'] = Variable<double>(totalValue.value);
+    }
+    if (killmailJson.present) {
+      map['killmail_json'] = Variable<String>(killmailJson.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<DateTime>(cachedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('KillmailsCompanion(')
+          ..write('killmailId: $killmailId, ')
+          ..write('killmailTime: $killmailTime, ')
+          ..write('solarSystemId: $solarSystemId, ')
+          ..write('victimCharacterId: $victimCharacterId, ')
+          ..write('victimCorporationId: $victimCorporationId, ')
+          ..write('victimAllianceId: $victimAllianceId, ')
+          ..write('victimShipTypeId: $victimShipTypeId, ')
+          ..write('totalValue: $totalValue, ')
+          ..write('killmailJson: $killmailJson, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $IntelAlertsTable extends IntelAlerts
+    with TableInfo<$IntelAlertsTable, IntelAlert> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $IntelAlertsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _alertTypeMeta = const VerificationMeta(
+    'alertType',
+  );
+  @override
+  late final GeneratedColumn<String> alertType = GeneratedColumn<String>(
+    'alert_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _triggerConfigMeta = const VerificationMeta(
+    'triggerConfig',
+  );
+  @override
+  late final GeneratedColumn<String> triggerConfig = GeneratedColumn<String>(
+    'trigger_config',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _actionsMeta = const VerificationMeta(
+    'actions',
+  );
+  @override
+  late final GeneratedColumn<String> actions = GeneratedColumn<String>(
+    'actions',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _enabledMeta = const VerificationMeta(
+    'enabled',
+  );
+  @override
+  late final GeneratedColumn<bool> enabled = GeneratedColumn<bool>(
+    'enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("enabled" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _lastTriggeredMeta = const VerificationMeta(
+    'lastTriggered',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastTriggered =
+      GeneratedColumn<DateTime>(
+        'last_triggered',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    alertType,
+    triggerConfig,
+    actions,
+    enabled,
+    lastTriggered,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'intel_alerts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<IntelAlert> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('alert_type')) {
+      context.handle(
+        _alertTypeMeta,
+        alertType.isAcceptableOrUnknown(data['alert_type']!, _alertTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_alertTypeMeta);
+    }
+    if (data.containsKey('trigger_config')) {
+      context.handle(
+        _triggerConfigMeta,
+        triggerConfig.isAcceptableOrUnknown(
+          data['trigger_config']!,
+          _triggerConfigMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_triggerConfigMeta);
+    }
+    if (data.containsKey('actions')) {
+      context.handle(
+        _actionsMeta,
+        actions.isAcceptableOrUnknown(data['actions']!, _actionsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_actionsMeta);
+    }
+    if (data.containsKey('enabled')) {
+      context.handle(
+        _enabledMeta,
+        enabled.isAcceptableOrUnknown(data['enabled']!, _enabledMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_enabledMeta);
+    }
+    if (data.containsKey('last_triggered')) {
+      context.handle(
+        _lastTriggeredMeta,
+        lastTriggered.isAcceptableOrUnknown(
+          data['last_triggered']!,
+          _lastTriggeredMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  IntelAlert map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return IntelAlert(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      alertType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}alert_type'],
+      )!,
+      triggerConfig: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}trigger_config'],
+      )!,
+      actions: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}actions'],
+      )!,
+      enabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}enabled'],
+      )!,
+      lastTriggered: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_triggered'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $IntelAlertsTable createAlias(String alias) {
+    return $IntelAlertsTable(attachedDatabase, alias);
+  }
+}
+
+class IntelAlert extends DataClass implements Insertable<IntelAlert> {
+  final String id;
+  final String alertType;
+  final String triggerConfig;
+  final String actions;
+  final bool enabled;
+  final DateTime? lastTriggered;
+  final DateTime createdAt;
+  const IntelAlert({
+    required this.id,
+    required this.alertType,
+    required this.triggerConfig,
+    required this.actions,
+    required this.enabled,
+    this.lastTriggered,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['alert_type'] = Variable<String>(alertType);
+    map['trigger_config'] = Variable<String>(triggerConfig);
+    map['actions'] = Variable<String>(actions);
+    map['enabled'] = Variable<bool>(enabled);
+    if (!nullToAbsent || lastTriggered != null) {
+      map['last_triggered'] = Variable<DateTime>(lastTriggered);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  IntelAlertsCompanion toCompanion(bool nullToAbsent) {
+    return IntelAlertsCompanion(
+      id: Value(id),
+      alertType: Value(alertType),
+      triggerConfig: Value(triggerConfig),
+      actions: Value(actions),
+      enabled: Value(enabled),
+      lastTriggered: lastTriggered == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastTriggered),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory IntelAlert.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return IntelAlert(
+      id: serializer.fromJson<String>(json['id']),
+      alertType: serializer.fromJson<String>(json['alertType']),
+      triggerConfig: serializer.fromJson<String>(json['triggerConfig']),
+      actions: serializer.fromJson<String>(json['actions']),
+      enabled: serializer.fromJson<bool>(json['enabled']),
+      lastTriggered: serializer.fromJson<DateTime?>(json['lastTriggered']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'alertType': serializer.toJson<String>(alertType),
+      'triggerConfig': serializer.toJson<String>(triggerConfig),
+      'actions': serializer.toJson<String>(actions),
+      'enabled': serializer.toJson<bool>(enabled),
+      'lastTriggered': serializer.toJson<DateTime?>(lastTriggered),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  IntelAlert copyWith({
+    String? id,
+    String? alertType,
+    String? triggerConfig,
+    String? actions,
+    bool? enabled,
+    Value<DateTime?> lastTriggered = const Value.absent(),
+    DateTime? createdAt,
+  }) => IntelAlert(
+    id: id ?? this.id,
+    alertType: alertType ?? this.alertType,
+    triggerConfig: triggerConfig ?? this.triggerConfig,
+    actions: actions ?? this.actions,
+    enabled: enabled ?? this.enabled,
+    lastTriggered: lastTriggered.present
+        ? lastTriggered.value
+        : this.lastTriggered,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  IntelAlert copyWithCompanion(IntelAlertsCompanion data) {
+    return IntelAlert(
+      id: data.id.present ? data.id.value : this.id,
+      alertType: data.alertType.present ? data.alertType.value : this.alertType,
+      triggerConfig: data.triggerConfig.present
+          ? data.triggerConfig.value
+          : this.triggerConfig,
+      actions: data.actions.present ? data.actions.value : this.actions,
+      enabled: data.enabled.present ? data.enabled.value : this.enabled,
+      lastTriggered: data.lastTriggered.present
+          ? data.lastTriggered.value
+          : this.lastTriggered,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('IntelAlert(')
+          ..write('id: $id, ')
+          ..write('alertType: $alertType, ')
+          ..write('triggerConfig: $triggerConfig, ')
+          ..write('actions: $actions, ')
+          ..write('enabled: $enabled, ')
+          ..write('lastTriggered: $lastTriggered, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    alertType,
+    triggerConfig,
+    actions,
+    enabled,
+    lastTriggered,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is IntelAlert &&
+          other.id == this.id &&
+          other.alertType == this.alertType &&
+          other.triggerConfig == this.triggerConfig &&
+          other.actions == this.actions &&
+          other.enabled == this.enabled &&
+          other.lastTriggered == this.lastTriggered &&
+          other.createdAt == this.createdAt);
+}
+
+class IntelAlertsCompanion extends UpdateCompanion<IntelAlert> {
+  final Value<String> id;
+  final Value<String> alertType;
+  final Value<String> triggerConfig;
+  final Value<String> actions;
+  final Value<bool> enabled;
+  final Value<DateTime?> lastTriggered;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const IntelAlertsCompanion({
+    this.id = const Value.absent(),
+    this.alertType = const Value.absent(),
+    this.triggerConfig = const Value.absent(),
+    this.actions = const Value.absent(),
+    this.enabled = const Value.absent(),
+    this.lastTriggered = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  IntelAlertsCompanion.insert({
+    required String id,
+    required String alertType,
+    required String triggerConfig,
+    required String actions,
+    required bool enabled,
+    this.lastTriggered = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       alertType = Value(alertType),
+       triggerConfig = Value(triggerConfig),
+       actions = Value(actions),
+       enabled = Value(enabled),
+       createdAt = Value(createdAt);
+  static Insertable<IntelAlert> custom({
+    Expression<String>? id,
+    Expression<String>? alertType,
+    Expression<String>? triggerConfig,
+    Expression<String>? actions,
+    Expression<bool>? enabled,
+    Expression<DateTime>? lastTriggered,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (alertType != null) 'alert_type': alertType,
+      if (triggerConfig != null) 'trigger_config': triggerConfig,
+      if (actions != null) 'actions': actions,
+      if (enabled != null) 'enabled': enabled,
+      if (lastTriggered != null) 'last_triggered': lastTriggered,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  IntelAlertsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? alertType,
+    Value<String>? triggerConfig,
+    Value<String>? actions,
+    Value<bool>? enabled,
+    Value<DateTime?>? lastTriggered,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return IntelAlertsCompanion(
+      id: id ?? this.id,
+      alertType: alertType ?? this.alertType,
+      triggerConfig: triggerConfig ?? this.triggerConfig,
+      actions: actions ?? this.actions,
+      enabled: enabled ?? this.enabled,
+      lastTriggered: lastTriggered ?? this.lastTriggered,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (alertType.present) {
+      map['alert_type'] = Variable<String>(alertType.value);
+    }
+    if (triggerConfig.present) {
+      map['trigger_config'] = Variable<String>(triggerConfig.value);
+    }
+    if (actions.present) {
+      map['actions'] = Variable<String>(actions.value);
+    }
+    if (enabled.present) {
+      map['enabled'] = Variable<bool>(enabled.value);
+    }
+    if (lastTriggered.present) {
+      map['last_triggered'] = Variable<DateTime>(lastTriggered.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('IntelAlertsCompanion(')
+          ..write('id: $id, ')
+          ..write('alertType: $alertType, ')
+          ..write('triggerConfig: $triggerConfig, ')
+          ..write('actions: $actions, ')
+          ..write('enabled: $enabled, ')
+          ..write('lastTriggered: $lastTriggered, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SystemActivityTable extends SystemActivity
+    with TableInfo<$SystemActivityTable, SystemActivityData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SystemActivityTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _solarSystemIdMeta = const VerificationMeta(
+    'solarSystemId',
+  );
+  @override
+  late final GeneratedColumn<int> solarSystemId = GeneratedColumn<int>(
+    'solar_system_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _periodStartMeta = const VerificationMeta(
+    'periodStart',
+  );
+  @override
+  late final GeneratedColumn<DateTime> periodStart = GeneratedColumn<DateTime>(
+    'period_start',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _periodMinutesMeta = const VerificationMeta(
+    'periodMinutes',
+  );
+  @override
+  late final GeneratedColumn<int> periodMinutes = GeneratedColumn<int>(
+    'period_minutes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _killCountMeta = const VerificationMeta(
+    'killCount',
+  );
+  @override
+  late final GeneratedColumn<int> killCount = GeneratedColumn<int>(
+    'kill_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _npcKillCountMeta = const VerificationMeta(
+    'npcKillCount',
+  );
+  @override
+  late final GeneratedColumn<int> npcKillCount = GeneratedColumn<int>(
+    'npc_kill_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _jumpsMeta = const VerificationMeta('jumps');
+  @override
+  late final GeneratedColumn<int> jumps = GeneratedColumn<int>(
+    'jumps',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _iskDestroyedMeta = const VerificationMeta(
+    'iskDestroyed',
+  );
+  @override
+  late final GeneratedColumn<double> iskDestroyed = GeneratedColumn<double>(
+    'isk_destroyed',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    solarSystemId,
+    periodStart,
+    periodMinutes,
+    killCount,
+    npcKillCount,
+    jumps,
+    iskDestroyed,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'system_activity';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SystemActivityData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('solar_system_id')) {
+      context.handle(
+        _solarSystemIdMeta,
+        solarSystemId.isAcceptableOrUnknown(
+          data['solar_system_id']!,
+          _solarSystemIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_solarSystemIdMeta);
+    }
+    if (data.containsKey('period_start')) {
+      context.handle(
+        _periodStartMeta,
+        periodStart.isAcceptableOrUnknown(
+          data['period_start']!,
+          _periodStartMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_periodStartMeta);
+    }
+    if (data.containsKey('period_minutes')) {
+      context.handle(
+        _periodMinutesMeta,
+        periodMinutes.isAcceptableOrUnknown(
+          data['period_minutes']!,
+          _periodMinutesMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_periodMinutesMeta);
+    }
+    if (data.containsKey('kill_count')) {
+      context.handle(
+        _killCountMeta,
+        killCount.isAcceptableOrUnknown(data['kill_count']!, _killCountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_killCountMeta);
+    }
+    if (data.containsKey('npc_kill_count')) {
+      context.handle(
+        _npcKillCountMeta,
+        npcKillCount.isAcceptableOrUnknown(
+          data['npc_kill_count']!,
+          _npcKillCountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_npcKillCountMeta);
+    }
+    if (data.containsKey('jumps')) {
+      context.handle(
+        _jumpsMeta,
+        jumps.isAcceptableOrUnknown(data['jumps']!, _jumpsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_jumpsMeta);
+    }
+    if (data.containsKey('isk_destroyed')) {
+      context.handle(
+        _iskDestroyedMeta,
+        iskDestroyed.isAcceptableOrUnknown(
+          data['isk_destroyed']!,
+          _iskDestroyedMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_iskDestroyedMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {
+    solarSystemId,
+    periodStart,
+    periodMinutes,
+  };
+  @override
+  SystemActivityData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SystemActivityData(
+      solarSystemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}solar_system_id'],
+      )!,
+      periodStart: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}period_start'],
+      )!,
+      periodMinutes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}period_minutes'],
+      )!,
+      killCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}kill_count'],
+      )!,
+      npcKillCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}npc_kill_count'],
+      )!,
+      jumps: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}jumps'],
+      )!,
+      iskDestroyed: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}isk_destroyed'],
+      )!,
+    );
+  }
+
+  @override
+  $SystemActivityTable createAlias(String alias) {
+    return $SystemActivityTable(attachedDatabase, alias);
+  }
+}
+
+class SystemActivityData extends DataClass
+    implements Insertable<SystemActivityData> {
+  final int solarSystemId;
+  final DateTime periodStart;
+  final int periodMinutes;
+  final int killCount;
+  final int npcKillCount;
+  final int jumps;
+  final double iskDestroyed;
+  const SystemActivityData({
+    required this.solarSystemId,
+    required this.periodStart,
+    required this.periodMinutes,
+    required this.killCount,
+    required this.npcKillCount,
+    required this.jumps,
+    required this.iskDestroyed,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['solar_system_id'] = Variable<int>(solarSystemId);
+    map['period_start'] = Variable<DateTime>(periodStart);
+    map['period_minutes'] = Variable<int>(periodMinutes);
+    map['kill_count'] = Variable<int>(killCount);
+    map['npc_kill_count'] = Variable<int>(npcKillCount);
+    map['jumps'] = Variable<int>(jumps);
+    map['isk_destroyed'] = Variable<double>(iskDestroyed);
+    return map;
+  }
+
+  SystemActivityCompanion toCompanion(bool nullToAbsent) {
+    return SystemActivityCompanion(
+      solarSystemId: Value(solarSystemId),
+      periodStart: Value(periodStart),
+      periodMinutes: Value(periodMinutes),
+      killCount: Value(killCount),
+      npcKillCount: Value(npcKillCount),
+      jumps: Value(jumps),
+      iskDestroyed: Value(iskDestroyed),
+    );
+  }
+
+  factory SystemActivityData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SystemActivityData(
+      solarSystemId: serializer.fromJson<int>(json['solarSystemId']),
+      periodStart: serializer.fromJson<DateTime>(json['periodStart']),
+      periodMinutes: serializer.fromJson<int>(json['periodMinutes']),
+      killCount: serializer.fromJson<int>(json['killCount']),
+      npcKillCount: serializer.fromJson<int>(json['npcKillCount']),
+      jumps: serializer.fromJson<int>(json['jumps']),
+      iskDestroyed: serializer.fromJson<double>(json['iskDestroyed']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'solarSystemId': serializer.toJson<int>(solarSystemId),
+      'periodStart': serializer.toJson<DateTime>(periodStart),
+      'periodMinutes': serializer.toJson<int>(periodMinutes),
+      'killCount': serializer.toJson<int>(killCount),
+      'npcKillCount': serializer.toJson<int>(npcKillCount),
+      'jumps': serializer.toJson<int>(jumps),
+      'iskDestroyed': serializer.toJson<double>(iskDestroyed),
+    };
+  }
+
+  SystemActivityData copyWith({
+    int? solarSystemId,
+    DateTime? periodStart,
+    int? periodMinutes,
+    int? killCount,
+    int? npcKillCount,
+    int? jumps,
+    double? iskDestroyed,
+  }) => SystemActivityData(
+    solarSystemId: solarSystemId ?? this.solarSystemId,
+    periodStart: periodStart ?? this.periodStart,
+    periodMinutes: periodMinutes ?? this.periodMinutes,
+    killCount: killCount ?? this.killCount,
+    npcKillCount: npcKillCount ?? this.npcKillCount,
+    jumps: jumps ?? this.jumps,
+    iskDestroyed: iskDestroyed ?? this.iskDestroyed,
+  );
+  SystemActivityData copyWithCompanion(SystemActivityCompanion data) {
+    return SystemActivityData(
+      solarSystemId: data.solarSystemId.present
+          ? data.solarSystemId.value
+          : this.solarSystemId,
+      periodStart: data.periodStart.present
+          ? data.periodStart.value
+          : this.periodStart,
+      periodMinutes: data.periodMinutes.present
+          ? data.periodMinutes.value
+          : this.periodMinutes,
+      killCount: data.killCount.present ? data.killCount.value : this.killCount,
+      npcKillCount: data.npcKillCount.present
+          ? data.npcKillCount.value
+          : this.npcKillCount,
+      jumps: data.jumps.present ? data.jumps.value : this.jumps,
+      iskDestroyed: data.iskDestroyed.present
+          ? data.iskDestroyed.value
+          : this.iskDestroyed,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SystemActivityData(')
+          ..write('solarSystemId: $solarSystemId, ')
+          ..write('periodStart: $periodStart, ')
+          ..write('periodMinutes: $periodMinutes, ')
+          ..write('killCount: $killCount, ')
+          ..write('npcKillCount: $npcKillCount, ')
+          ..write('jumps: $jumps, ')
+          ..write('iskDestroyed: $iskDestroyed')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    solarSystemId,
+    periodStart,
+    periodMinutes,
+    killCount,
+    npcKillCount,
+    jumps,
+    iskDestroyed,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SystemActivityData &&
+          other.solarSystemId == this.solarSystemId &&
+          other.periodStart == this.periodStart &&
+          other.periodMinutes == this.periodMinutes &&
+          other.killCount == this.killCount &&
+          other.npcKillCount == this.npcKillCount &&
+          other.jumps == this.jumps &&
+          other.iskDestroyed == this.iskDestroyed);
+}
+
+class SystemActivityCompanion extends UpdateCompanion<SystemActivityData> {
+  final Value<int> solarSystemId;
+  final Value<DateTime> periodStart;
+  final Value<int> periodMinutes;
+  final Value<int> killCount;
+  final Value<int> npcKillCount;
+  final Value<int> jumps;
+  final Value<double> iskDestroyed;
+  final Value<int> rowid;
+  const SystemActivityCompanion({
+    this.solarSystemId = const Value.absent(),
+    this.periodStart = const Value.absent(),
+    this.periodMinutes = const Value.absent(),
+    this.killCount = const Value.absent(),
+    this.npcKillCount = const Value.absent(),
+    this.jumps = const Value.absent(),
+    this.iskDestroyed = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SystemActivityCompanion.insert({
+    required int solarSystemId,
+    required DateTime periodStart,
+    required int periodMinutes,
+    required int killCount,
+    required int npcKillCount,
+    required int jumps,
+    required double iskDestroyed,
+    this.rowid = const Value.absent(),
+  }) : solarSystemId = Value(solarSystemId),
+       periodStart = Value(periodStart),
+       periodMinutes = Value(periodMinutes),
+       killCount = Value(killCount),
+       npcKillCount = Value(npcKillCount),
+       jumps = Value(jumps),
+       iskDestroyed = Value(iskDestroyed);
+  static Insertable<SystemActivityData> custom({
+    Expression<int>? solarSystemId,
+    Expression<DateTime>? periodStart,
+    Expression<int>? periodMinutes,
+    Expression<int>? killCount,
+    Expression<int>? npcKillCount,
+    Expression<int>? jumps,
+    Expression<double>? iskDestroyed,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (solarSystemId != null) 'solar_system_id': solarSystemId,
+      if (periodStart != null) 'period_start': periodStart,
+      if (periodMinutes != null) 'period_minutes': periodMinutes,
+      if (killCount != null) 'kill_count': killCount,
+      if (npcKillCount != null) 'npc_kill_count': npcKillCount,
+      if (jumps != null) 'jumps': jumps,
+      if (iskDestroyed != null) 'isk_destroyed': iskDestroyed,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SystemActivityCompanion copyWith({
+    Value<int>? solarSystemId,
+    Value<DateTime>? periodStart,
+    Value<int>? periodMinutes,
+    Value<int>? killCount,
+    Value<int>? npcKillCount,
+    Value<int>? jumps,
+    Value<double>? iskDestroyed,
+    Value<int>? rowid,
+  }) {
+    return SystemActivityCompanion(
+      solarSystemId: solarSystemId ?? this.solarSystemId,
+      periodStart: periodStart ?? this.periodStart,
+      periodMinutes: periodMinutes ?? this.periodMinutes,
+      killCount: killCount ?? this.killCount,
+      npcKillCount: npcKillCount ?? this.npcKillCount,
+      jumps: jumps ?? this.jumps,
+      iskDestroyed: iskDestroyed ?? this.iskDestroyed,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (solarSystemId.present) {
+      map['solar_system_id'] = Variable<int>(solarSystemId.value);
+    }
+    if (periodStart.present) {
+      map['period_start'] = Variable<DateTime>(periodStart.value);
+    }
+    if (periodMinutes.present) {
+      map['period_minutes'] = Variable<int>(periodMinutes.value);
+    }
+    if (killCount.present) {
+      map['kill_count'] = Variable<int>(killCount.value);
+    }
+    if (npcKillCount.present) {
+      map['npc_kill_count'] = Variable<int>(npcKillCount.value);
+    }
+    if (jumps.present) {
+      map['jumps'] = Variable<int>(jumps.value);
+    }
+    if (iskDestroyed.present) {
+      map['isk_destroyed'] = Variable<double>(iskDestroyed.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SystemActivityCompanion(')
+          ..write('solarSystemId: $solarSystemId, ')
+          ..write('periodStart: $periodStart, ')
+          ..write('periodMinutes: $periodMinutes, ')
+          ..write('killCount: $killCount, ')
+          ..write('npcKillCount: $npcKillCount, ')
+          ..write('jumps: $jumps, ')
+          ..write('iskDestroyed: $iskDestroyed, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $WatchListTable extends WatchList
+    with TableInfo<$WatchListTable, WatchListData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WatchListTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _watchTypeMeta = const VerificationMeta(
+    'watchType',
+  );
+  @override
+  late final GeneratedColumn<String> watchType = GeneratedColumn<String>(
+    'watch_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _entityIdMeta = const VerificationMeta(
+    'entityId',
+  );
+  @override
+  late final GeneratedColumn<int> entityId = GeneratedColumn<int>(
+    'entity_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _targetNameMeta = const VerificationMeta(
+    'targetName',
+  );
+  @override
+  late final GeneratedColumn<String> targetName = GeneratedColumn<String>(
+    'target_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _reasonMeta = const VerificationMeta('reason');
+  @override
+  late final GeneratedColumn<String> reason = GeneratedColumn<String>(
+    'reason',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _addedAtMeta = const VerificationMeta(
+    'addedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> addedAt = GeneratedColumn<DateTime>(
+    'added_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _addedByMeta = const VerificationMeta(
+    'addedBy',
+  );
+  @override
+  late final GeneratedColumn<int> addedBy = GeneratedColumn<int>(
+    'added_by',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    watchType,
+    entityId,
+    targetName,
+    reason,
+    notes,
+    addedAt,
+    addedBy,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'watch_list';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<WatchListData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('watch_type')) {
+      context.handle(
+        _watchTypeMeta,
+        watchType.isAcceptableOrUnknown(data['watch_type']!, _watchTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_watchTypeMeta);
+    }
+    if (data.containsKey('entity_id')) {
+      context.handle(
+        _entityIdMeta,
+        entityId.isAcceptableOrUnknown(data['entity_id']!, _entityIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_entityIdMeta);
+    }
+    if (data.containsKey('target_name')) {
+      context.handle(
+        _targetNameMeta,
+        targetName.isAcceptableOrUnknown(data['target_name']!, _targetNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_targetNameMeta);
+    }
+    if (data.containsKey('reason')) {
+      context.handle(
+        _reasonMeta,
+        reason.isAcceptableOrUnknown(data['reason']!, _reasonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_reasonMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('added_at')) {
+      context.handle(
+        _addedAtMeta,
+        addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_addedAtMeta);
+    }
+    if (data.containsKey('added_by')) {
+      context.handle(
+        _addedByMeta,
+        addedBy.isAcceptableOrUnknown(data['added_by']!, _addedByMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  WatchListData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WatchListData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      watchType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}watch_type'],
+      )!,
+      entityId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}entity_id'],
+      )!,
+      targetName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}target_name'],
+      )!,
+      reason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reason'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      addedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}added_at'],
+      )!,
+      addedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}added_by'],
+      ),
+    );
+  }
+
+  @override
+  $WatchListTable createAlias(String alias) {
+    return $WatchListTable(attachedDatabase, alias);
+  }
+}
+
+class WatchListData extends DataClass implements Insertable<WatchListData> {
+  final String id;
+  final String watchType;
+  final int entityId;
+  final String targetName;
+  final String reason;
+  final String? notes;
+  final DateTime addedAt;
+  final int? addedBy;
+  const WatchListData({
+    required this.id,
+    required this.watchType,
+    required this.entityId,
+    required this.targetName,
+    required this.reason,
+    this.notes,
+    required this.addedAt,
+    this.addedBy,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['watch_type'] = Variable<String>(watchType);
+    map['entity_id'] = Variable<int>(entityId);
+    map['target_name'] = Variable<String>(targetName);
+    map['reason'] = Variable<String>(reason);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['added_at'] = Variable<DateTime>(addedAt);
+    if (!nullToAbsent || addedBy != null) {
+      map['added_by'] = Variable<int>(addedBy);
+    }
+    return map;
+  }
+
+  WatchListCompanion toCompanion(bool nullToAbsent) {
+    return WatchListCompanion(
+      id: Value(id),
+      watchType: Value(watchType),
+      entityId: Value(entityId),
+      targetName: Value(targetName),
+      reason: Value(reason),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      addedAt: Value(addedAt),
+      addedBy: addedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(addedBy),
+    );
+  }
+
+  factory WatchListData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WatchListData(
+      id: serializer.fromJson<String>(json['id']),
+      watchType: serializer.fromJson<String>(json['watchType']),
+      entityId: serializer.fromJson<int>(json['entityId']),
+      targetName: serializer.fromJson<String>(json['targetName']),
+      reason: serializer.fromJson<String>(json['reason']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      addedAt: serializer.fromJson<DateTime>(json['addedAt']),
+      addedBy: serializer.fromJson<int?>(json['addedBy']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'watchType': serializer.toJson<String>(watchType),
+      'entityId': serializer.toJson<int>(entityId),
+      'targetName': serializer.toJson<String>(targetName),
+      'reason': serializer.toJson<String>(reason),
+      'notes': serializer.toJson<String?>(notes),
+      'addedAt': serializer.toJson<DateTime>(addedAt),
+      'addedBy': serializer.toJson<int?>(addedBy),
+    };
+  }
+
+  WatchListData copyWith({
+    String? id,
+    String? watchType,
+    int? entityId,
+    String? targetName,
+    String? reason,
+    Value<String?> notes = const Value.absent(),
+    DateTime? addedAt,
+    Value<int?> addedBy = const Value.absent(),
+  }) => WatchListData(
+    id: id ?? this.id,
+    watchType: watchType ?? this.watchType,
+    entityId: entityId ?? this.entityId,
+    targetName: targetName ?? this.targetName,
+    reason: reason ?? this.reason,
+    notes: notes.present ? notes.value : this.notes,
+    addedAt: addedAt ?? this.addedAt,
+    addedBy: addedBy.present ? addedBy.value : this.addedBy,
+  );
+  WatchListData copyWithCompanion(WatchListCompanion data) {
+    return WatchListData(
+      id: data.id.present ? data.id.value : this.id,
+      watchType: data.watchType.present ? data.watchType.value : this.watchType,
+      entityId: data.entityId.present ? data.entityId.value : this.entityId,
+      targetName: data.targetName.present
+          ? data.targetName.value
+          : this.targetName,
+      reason: data.reason.present ? data.reason.value : this.reason,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
+      addedBy: data.addedBy.present ? data.addedBy.value : this.addedBy,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WatchListData(')
+          ..write('id: $id, ')
+          ..write('watchType: $watchType, ')
+          ..write('entityId: $entityId, ')
+          ..write('targetName: $targetName, ')
+          ..write('reason: $reason, ')
+          ..write('notes: $notes, ')
+          ..write('addedAt: $addedAt, ')
+          ..write('addedBy: $addedBy')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    watchType,
+    entityId,
+    targetName,
+    reason,
+    notes,
+    addedAt,
+    addedBy,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WatchListData &&
+          other.id == this.id &&
+          other.watchType == this.watchType &&
+          other.entityId == this.entityId &&
+          other.targetName == this.targetName &&
+          other.reason == this.reason &&
+          other.notes == this.notes &&
+          other.addedAt == this.addedAt &&
+          other.addedBy == this.addedBy);
+}
+
+class WatchListCompanion extends UpdateCompanion<WatchListData> {
+  final Value<String> id;
+  final Value<String> watchType;
+  final Value<int> entityId;
+  final Value<String> targetName;
+  final Value<String> reason;
+  final Value<String?> notes;
+  final Value<DateTime> addedAt;
+  final Value<int?> addedBy;
+  final Value<int> rowid;
+  const WatchListCompanion({
+    this.id = const Value.absent(),
+    this.watchType = const Value.absent(),
+    this.entityId = const Value.absent(),
+    this.targetName = const Value.absent(),
+    this.reason = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.addedAt = const Value.absent(),
+    this.addedBy = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  WatchListCompanion.insert({
+    required String id,
+    required String watchType,
+    required int entityId,
+    required String targetName,
+    required String reason,
+    this.notes = const Value.absent(),
+    required DateTime addedAt,
+    this.addedBy = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       watchType = Value(watchType),
+       entityId = Value(entityId),
+       targetName = Value(targetName),
+       reason = Value(reason),
+       addedAt = Value(addedAt);
+  static Insertable<WatchListData> custom({
+    Expression<String>? id,
+    Expression<String>? watchType,
+    Expression<int>? entityId,
+    Expression<String>? targetName,
+    Expression<String>? reason,
+    Expression<String>? notes,
+    Expression<DateTime>? addedAt,
+    Expression<int>? addedBy,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (watchType != null) 'watch_type': watchType,
+      if (entityId != null) 'entity_id': entityId,
+      if (targetName != null) 'target_name': targetName,
+      if (reason != null) 'reason': reason,
+      if (notes != null) 'notes': notes,
+      if (addedAt != null) 'added_at': addedAt,
+      if (addedBy != null) 'added_by': addedBy,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  WatchListCompanion copyWith({
+    Value<String>? id,
+    Value<String>? watchType,
+    Value<int>? entityId,
+    Value<String>? targetName,
+    Value<String>? reason,
+    Value<String?>? notes,
+    Value<DateTime>? addedAt,
+    Value<int?>? addedBy,
+    Value<int>? rowid,
+  }) {
+    return WatchListCompanion(
+      id: id ?? this.id,
+      watchType: watchType ?? this.watchType,
+      entityId: entityId ?? this.entityId,
+      targetName: targetName ?? this.targetName,
+      reason: reason ?? this.reason,
+      notes: notes ?? this.notes,
+      addedAt: addedAt ?? this.addedAt,
+      addedBy: addedBy ?? this.addedBy,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (watchType.present) {
+      map['watch_type'] = Variable<String>(watchType.value);
+    }
+    if (entityId.present) {
+      map['entity_id'] = Variable<int>(entityId.value);
+    }
+    if (targetName.present) {
+      map['target_name'] = Variable<String>(targetName.value);
+    }
+    if (reason.present) {
+      map['reason'] = Variable<String>(reason.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (addedAt.present) {
+      map['added_at'] = Variable<DateTime>(addedAt.value);
+    }
+    if (addedBy.present) {
+      map['added_by'] = Variable<int>(addedBy.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WatchListCompanion(')
+          ..write('id: $id, ')
+          ..write('watchType: $watchType, ')
+          ..write('entityId: $entityId, ')
+          ..write('targetName: $targetName, ')
+          ..write('reason: $reason, ')
+          ..write('notes: $notes, ')
+          ..write('addedAt: $addedAt, ')
+          ..write('addedBy: $addedBy, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -14766,6 +16905,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $FittingFoldersTable fittingFolders = $FittingFoldersTable(this);
   late final $FittingFolderMembersTable fittingFolderMembers =
       $FittingFolderMembersTable(this);
+  late final $KillmailsTable killmails = $KillmailsTable(this);
+  late final $IntelAlertsTable intelAlerts = $IntelAlertsTable(this);
+  late final $SystemActivityTable systemActivity = $SystemActivityTable(this);
+  late final $WatchListTable watchList = $WatchListTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -14798,6 +16941,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     savedFittings,
     fittingFolders,
     fittingFolderMembers,
+    killmails,
+    intelAlerts,
+    systemActivity,
+    watchList,
   ];
 }
 
@@ -26133,6 +28280,1062 @@ typedef $$FittingFolderMembersTableProcessedTableManager =
       FittingFolderMember,
       PrefetchHooks Function()
     >;
+typedef $$KillmailsTableCreateCompanionBuilder =
+    KillmailsCompanion Function({
+      Value<int> killmailId,
+      required DateTime killmailTime,
+      required int solarSystemId,
+      Value<int?> victimCharacterId,
+      Value<int?> victimCorporationId,
+      Value<int?> victimAllianceId,
+      required int victimShipTypeId,
+      required double totalValue,
+      required String killmailJson,
+      required DateTime cachedAt,
+    });
+typedef $$KillmailsTableUpdateCompanionBuilder =
+    KillmailsCompanion Function({
+      Value<int> killmailId,
+      Value<DateTime> killmailTime,
+      Value<int> solarSystemId,
+      Value<int?> victimCharacterId,
+      Value<int?> victimCorporationId,
+      Value<int?> victimAllianceId,
+      Value<int> victimShipTypeId,
+      Value<double> totalValue,
+      Value<String> killmailJson,
+      Value<DateTime> cachedAt,
+    });
+
+class $$KillmailsTableFilterComposer
+    extends Composer<_$AppDatabase, $KillmailsTable> {
+  $$KillmailsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get killmailId => $composableBuilder(
+    column: $table.killmailId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get killmailTime => $composableBuilder(
+    column: $table.killmailTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get solarSystemId => $composableBuilder(
+    column: $table.solarSystemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get victimCharacterId => $composableBuilder(
+    column: $table.victimCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get victimCorporationId => $composableBuilder(
+    column: $table.victimCorporationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get victimAllianceId => $composableBuilder(
+    column: $table.victimAllianceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get victimShipTypeId => $composableBuilder(
+    column: $table.victimShipTypeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get totalValue => $composableBuilder(
+    column: $table.totalValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get killmailJson => $composableBuilder(
+    column: $table.killmailJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$KillmailsTableOrderingComposer
+    extends Composer<_$AppDatabase, $KillmailsTable> {
+  $$KillmailsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get killmailId => $composableBuilder(
+    column: $table.killmailId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get killmailTime => $composableBuilder(
+    column: $table.killmailTime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get solarSystemId => $composableBuilder(
+    column: $table.solarSystemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get victimCharacterId => $composableBuilder(
+    column: $table.victimCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get victimCorporationId => $composableBuilder(
+    column: $table.victimCorporationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get victimAllianceId => $composableBuilder(
+    column: $table.victimAllianceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get victimShipTypeId => $composableBuilder(
+    column: $table.victimShipTypeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get totalValue => $composableBuilder(
+    column: $table.totalValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get killmailJson => $composableBuilder(
+    column: $table.killmailJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$KillmailsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $KillmailsTable> {
+  $$KillmailsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get killmailId => $composableBuilder(
+    column: $table.killmailId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get killmailTime => $composableBuilder(
+    column: $table.killmailTime,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get solarSystemId => $composableBuilder(
+    column: $table.solarSystemId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get victimCharacterId => $composableBuilder(
+    column: $table.victimCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get victimCorporationId => $composableBuilder(
+    column: $table.victimCorporationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get victimAllianceId => $composableBuilder(
+    column: $table.victimAllianceId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get victimShipTypeId => $composableBuilder(
+    column: $table.victimShipTypeId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get totalValue => $composableBuilder(
+    column: $table.totalValue,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get killmailJson => $composableBuilder(
+    column: $table.killmailJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
+}
+
+class $$KillmailsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $KillmailsTable,
+          Killmail,
+          $$KillmailsTableFilterComposer,
+          $$KillmailsTableOrderingComposer,
+          $$KillmailsTableAnnotationComposer,
+          $$KillmailsTableCreateCompanionBuilder,
+          $$KillmailsTableUpdateCompanionBuilder,
+          (Killmail, BaseReferences<_$AppDatabase, $KillmailsTable, Killmail>),
+          Killmail,
+          PrefetchHooks Function()
+        > {
+  $$KillmailsTableTableManager(_$AppDatabase db, $KillmailsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$KillmailsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$KillmailsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$KillmailsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> killmailId = const Value.absent(),
+                Value<DateTime> killmailTime = const Value.absent(),
+                Value<int> solarSystemId = const Value.absent(),
+                Value<int?> victimCharacterId = const Value.absent(),
+                Value<int?> victimCorporationId = const Value.absent(),
+                Value<int?> victimAllianceId = const Value.absent(),
+                Value<int> victimShipTypeId = const Value.absent(),
+                Value<double> totalValue = const Value.absent(),
+                Value<String> killmailJson = const Value.absent(),
+                Value<DateTime> cachedAt = const Value.absent(),
+              }) => KillmailsCompanion(
+                killmailId: killmailId,
+                killmailTime: killmailTime,
+                solarSystemId: solarSystemId,
+                victimCharacterId: victimCharacterId,
+                victimCorporationId: victimCorporationId,
+                victimAllianceId: victimAllianceId,
+                victimShipTypeId: victimShipTypeId,
+                totalValue: totalValue,
+                killmailJson: killmailJson,
+                cachedAt: cachedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> killmailId = const Value.absent(),
+                required DateTime killmailTime,
+                required int solarSystemId,
+                Value<int?> victimCharacterId = const Value.absent(),
+                Value<int?> victimCorporationId = const Value.absent(),
+                Value<int?> victimAllianceId = const Value.absent(),
+                required int victimShipTypeId,
+                required double totalValue,
+                required String killmailJson,
+                required DateTime cachedAt,
+              }) => KillmailsCompanion.insert(
+                killmailId: killmailId,
+                killmailTime: killmailTime,
+                solarSystemId: solarSystemId,
+                victimCharacterId: victimCharacterId,
+                victimCorporationId: victimCorporationId,
+                victimAllianceId: victimAllianceId,
+                victimShipTypeId: victimShipTypeId,
+                totalValue: totalValue,
+                killmailJson: killmailJson,
+                cachedAt: cachedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$KillmailsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $KillmailsTable,
+      Killmail,
+      $$KillmailsTableFilterComposer,
+      $$KillmailsTableOrderingComposer,
+      $$KillmailsTableAnnotationComposer,
+      $$KillmailsTableCreateCompanionBuilder,
+      $$KillmailsTableUpdateCompanionBuilder,
+      (Killmail, BaseReferences<_$AppDatabase, $KillmailsTable, Killmail>),
+      Killmail,
+      PrefetchHooks Function()
+    >;
+typedef $$IntelAlertsTableCreateCompanionBuilder =
+    IntelAlertsCompanion Function({
+      required String id,
+      required String alertType,
+      required String triggerConfig,
+      required String actions,
+      required bool enabled,
+      Value<DateTime?> lastTriggered,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$IntelAlertsTableUpdateCompanionBuilder =
+    IntelAlertsCompanion Function({
+      Value<String> id,
+      Value<String> alertType,
+      Value<String> triggerConfig,
+      Value<String> actions,
+      Value<bool> enabled,
+      Value<DateTime?> lastTriggered,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$IntelAlertsTableFilterComposer
+    extends Composer<_$AppDatabase, $IntelAlertsTable> {
+  $$IntelAlertsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get alertType => $composableBuilder(
+    column: $table.alertType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get triggerConfig => $composableBuilder(
+    column: $table.triggerConfig,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get actions => $composableBuilder(
+    column: $table.actions,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastTriggered => $composableBuilder(
+    column: $table.lastTriggered,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$IntelAlertsTableOrderingComposer
+    extends Composer<_$AppDatabase, $IntelAlertsTable> {
+  $$IntelAlertsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get alertType => $composableBuilder(
+    column: $table.alertType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get triggerConfig => $composableBuilder(
+    column: $table.triggerConfig,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get actions => $composableBuilder(
+    column: $table.actions,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastTriggered => $composableBuilder(
+    column: $table.lastTriggered,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$IntelAlertsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $IntelAlertsTable> {
+  $$IntelAlertsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get alertType =>
+      $composableBuilder(column: $table.alertType, builder: (column) => column);
+
+  GeneratedColumn<String> get triggerConfig => $composableBuilder(
+    column: $table.triggerConfig,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get actions =>
+      $composableBuilder(column: $table.actions, builder: (column) => column);
+
+  GeneratedColumn<bool> get enabled =>
+      $composableBuilder(column: $table.enabled, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastTriggered => $composableBuilder(
+    column: $table.lastTriggered,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$IntelAlertsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $IntelAlertsTable,
+          IntelAlert,
+          $$IntelAlertsTableFilterComposer,
+          $$IntelAlertsTableOrderingComposer,
+          $$IntelAlertsTableAnnotationComposer,
+          $$IntelAlertsTableCreateCompanionBuilder,
+          $$IntelAlertsTableUpdateCompanionBuilder,
+          (
+            IntelAlert,
+            BaseReferences<_$AppDatabase, $IntelAlertsTable, IntelAlert>,
+          ),
+          IntelAlert,
+          PrefetchHooks Function()
+        > {
+  $$IntelAlertsTableTableManager(_$AppDatabase db, $IntelAlertsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$IntelAlertsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$IntelAlertsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$IntelAlertsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> alertType = const Value.absent(),
+                Value<String> triggerConfig = const Value.absent(),
+                Value<String> actions = const Value.absent(),
+                Value<bool> enabled = const Value.absent(),
+                Value<DateTime?> lastTriggered = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => IntelAlertsCompanion(
+                id: id,
+                alertType: alertType,
+                triggerConfig: triggerConfig,
+                actions: actions,
+                enabled: enabled,
+                lastTriggered: lastTriggered,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String alertType,
+                required String triggerConfig,
+                required String actions,
+                required bool enabled,
+                Value<DateTime?> lastTriggered = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => IntelAlertsCompanion.insert(
+                id: id,
+                alertType: alertType,
+                triggerConfig: triggerConfig,
+                actions: actions,
+                enabled: enabled,
+                lastTriggered: lastTriggered,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$IntelAlertsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $IntelAlertsTable,
+      IntelAlert,
+      $$IntelAlertsTableFilterComposer,
+      $$IntelAlertsTableOrderingComposer,
+      $$IntelAlertsTableAnnotationComposer,
+      $$IntelAlertsTableCreateCompanionBuilder,
+      $$IntelAlertsTableUpdateCompanionBuilder,
+      (
+        IntelAlert,
+        BaseReferences<_$AppDatabase, $IntelAlertsTable, IntelAlert>,
+      ),
+      IntelAlert,
+      PrefetchHooks Function()
+    >;
+typedef $$SystemActivityTableCreateCompanionBuilder =
+    SystemActivityCompanion Function({
+      required int solarSystemId,
+      required DateTime periodStart,
+      required int periodMinutes,
+      required int killCount,
+      required int npcKillCount,
+      required int jumps,
+      required double iskDestroyed,
+      Value<int> rowid,
+    });
+typedef $$SystemActivityTableUpdateCompanionBuilder =
+    SystemActivityCompanion Function({
+      Value<int> solarSystemId,
+      Value<DateTime> periodStart,
+      Value<int> periodMinutes,
+      Value<int> killCount,
+      Value<int> npcKillCount,
+      Value<int> jumps,
+      Value<double> iskDestroyed,
+      Value<int> rowid,
+    });
+
+class $$SystemActivityTableFilterComposer
+    extends Composer<_$AppDatabase, $SystemActivityTable> {
+  $$SystemActivityTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get solarSystemId => $composableBuilder(
+    column: $table.solarSystemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get periodStart => $composableBuilder(
+    column: $table.periodStart,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get periodMinutes => $composableBuilder(
+    column: $table.periodMinutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get killCount => $composableBuilder(
+    column: $table.killCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get npcKillCount => $composableBuilder(
+    column: $table.npcKillCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get jumps => $composableBuilder(
+    column: $table.jumps,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get iskDestroyed => $composableBuilder(
+    column: $table.iskDestroyed,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SystemActivityTableOrderingComposer
+    extends Composer<_$AppDatabase, $SystemActivityTable> {
+  $$SystemActivityTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get solarSystemId => $composableBuilder(
+    column: $table.solarSystemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get periodStart => $composableBuilder(
+    column: $table.periodStart,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get periodMinutes => $composableBuilder(
+    column: $table.periodMinutes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get killCount => $composableBuilder(
+    column: $table.killCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get npcKillCount => $composableBuilder(
+    column: $table.npcKillCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get jumps => $composableBuilder(
+    column: $table.jumps,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get iskDestroyed => $composableBuilder(
+    column: $table.iskDestroyed,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SystemActivityTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SystemActivityTable> {
+  $$SystemActivityTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get solarSystemId => $composableBuilder(
+    column: $table.solarSystemId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get periodStart => $composableBuilder(
+    column: $table.periodStart,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get periodMinutes => $composableBuilder(
+    column: $table.periodMinutes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get killCount =>
+      $composableBuilder(column: $table.killCount, builder: (column) => column);
+
+  GeneratedColumn<int> get npcKillCount => $composableBuilder(
+    column: $table.npcKillCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get jumps =>
+      $composableBuilder(column: $table.jumps, builder: (column) => column);
+
+  GeneratedColumn<double> get iskDestroyed => $composableBuilder(
+    column: $table.iskDestroyed,
+    builder: (column) => column,
+  );
+}
+
+class $$SystemActivityTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SystemActivityTable,
+          SystemActivityData,
+          $$SystemActivityTableFilterComposer,
+          $$SystemActivityTableOrderingComposer,
+          $$SystemActivityTableAnnotationComposer,
+          $$SystemActivityTableCreateCompanionBuilder,
+          $$SystemActivityTableUpdateCompanionBuilder,
+          (
+            SystemActivityData,
+            BaseReferences<
+              _$AppDatabase,
+              $SystemActivityTable,
+              SystemActivityData
+            >,
+          ),
+          SystemActivityData,
+          PrefetchHooks Function()
+        > {
+  $$SystemActivityTableTableManager(
+    _$AppDatabase db,
+    $SystemActivityTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SystemActivityTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SystemActivityTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SystemActivityTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> solarSystemId = const Value.absent(),
+                Value<DateTime> periodStart = const Value.absent(),
+                Value<int> periodMinutes = const Value.absent(),
+                Value<int> killCount = const Value.absent(),
+                Value<int> npcKillCount = const Value.absent(),
+                Value<int> jumps = const Value.absent(),
+                Value<double> iskDestroyed = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SystemActivityCompanion(
+                solarSystemId: solarSystemId,
+                periodStart: periodStart,
+                periodMinutes: periodMinutes,
+                killCount: killCount,
+                npcKillCount: npcKillCount,
+                jumps: jumps,
+                iskDestroyed: iskDestroyed,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int solarSystemId,
+                required DateTime periodStart,
+                required int periodMinutes,
+                required int killCount,
+                required int npcKillCount,
+                required int jumps,
+                required double iskDestroyed,
+                Value<int> rowid = const Value.absent(),
+              }) => SystemActivityCompanion.insert(
+                solarSystemId: solarSystemId,
+                periodStart: periodStart,
+                periodMinutes: periodMinutes,
+                killCount: killCount,
+                npcKillCount: npcKillCount,
+                jumps: jumps,
+                iskDestroyed: iskDestroyed,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SystemActivityTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SystemActivityTable,
+      SystemActivityData,
+      $$SystemActivityTableFilterComposer,
+      $$SystemActivityTableOrderingComposer,
+      $$SystemActivityTableAnnotationComposer,
+      $$SystemActivityTableCreateCompanionBuilder,
+      $$SystemActivityTableUpdateCompanionBuilder,
+      (
+        SystemActivityData,
+        BaseReferences<_$AppDatabase, $SystemActivityTable, SystemActivityData>,
+      ),
+      SystemActivityData,
+      PrefetchHooks Function()
+    >;
+typedef $$WatchListTableCreateCompanionBuilder =
+    WatchListCompanion Function({
+      required String id,
+      required String watchType,
+      required int entityId,
+      required String targetName,
+      required String reason,
+      Value<String?> notes,
+      required DateTime addedAt,
+      Value<int?> addedBy,
+      Value<int> rowid,
+    });
+typedef $$WatchListTableUpdateCompanionBuilder =
+    WatchListCompanion Function({
+      Value<String> id,
+      Value<String> watchType,
+      Value<int> entityId,
+      Value<String> targetName,
+      Value<String> reason,
+      Value<String?> notes,
+      Value<DateTime> addedAt,
+      Value<int?> addedBy,
+      Value<int> rowid,
+    });
+
+class $$WatchListTableFilterComposer
+    extends Composer<_$AppDatabase, $WatchListTable> {
+  $$WatchListTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get watchType => $composableBuilder(
+    column: $table.watchType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get entityId => $composableBuilder(
+    column: $table.entityId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get targetName => $composableBuilder(
+    column: $table.targetName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get addedBy => $composableBuilder(
+    column: $table.addedBy,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$WatchListTableOrderingComposer
+    extends Composer<_$AppDatabase, $WatchListTable> {
+  $$WatchListTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get watchType => $composableBuilder(
+    column: $table.watchType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get entityId => $composableBuilder(
+    column: $table.entityId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get targetName => $composableBuilder(
+    column: $table.targetName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get addedBy => $composableBuilder(
+    column: $table.addedBy,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$WatchListTableAnnotationComposer
+    extends Composer<_$AppDatabase, $WatchListTable> {
+  $$WatchListTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get watchType =>
+      $composableBuilder(column: $table.watchType, builder: (column) => column);
+
+  GeneratedColumn<int> get entityId =>
+      $composableBuilder(column: $table.entityId, builder: (column) => column);
+
+  GeneratedColumn<String> get targetName => $composableBuilder(
+    column: $table.targetName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get reason =>
+      $composableBuilder(column: $table.reason, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get addedAt =>
+      $composableBuilder(column: $table.addedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get addedBy =>
+      $composableBuilder(column: $table.addedBy, builder: (column) => column);
+}
+
+class $$WatchListTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $WatchListTable,
+          WatchListData,
+          $$WatchListTableFilterComposer,
+          $$WatchListTableOrderingComposer,
+          $$WatchListTableAnnotationComposer,
+          $$WatchListTableCreateCompanionBuilder,
+          $$WatchListTableUpdateCompanionBuilder,
+          (
+            WatchListData,
+            BaseReferences<_$AppDatabase, $WatchListTable, WatchListData>,
+          ),
+          WatchListData,
+          PrefetchHooks Function()
+        > {
+  $$WatchListTableTableManager(_$AppDatabase db, $WatchListTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WatchListTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WatchListTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WatchListTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> watchType = const Value.absent(),
+                Value<int> entityId = const Value.absent(),
+                Value<String> targetName = const Value.absent(),
+                Value<String> reason = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<DateTime> addedAt = const Value.absent(),
+                Value<int?> addedBy = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => WatchListCompanion(
+                id: id,
+                watchType: watchType,
+                entityId: entityId,
+                targetName: targetName,
+                reason: reason,
+                notes: notes,
+                addedAt: addedAt,
+                addedBy: addedBy,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String watchType,
+                required int entityId,
+                required String targetName,
+                required String reason,
+                Value<String?> notes = const Value.absent(),
+                required DateTime addedAt,
+                Value<int?> addedBy = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => WatchListCompanion.insert(
+                id: id,
+                watchType: watchType,
+                entityId: entityId,
+                targetName: targetName,
+                reason: reason,
+                notes: notes,
+                addedAt: addedAt,
+                addedBy: addedBy,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$WatchListTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $WatchListTable,
+      WatchListData,
+      $$WatchListTableFilterComposer,
+      $$WatchListTableOrderingComposer,
+      $$WatchListTableAnnotationComposer,
+      $$WatchListTableCreateCompanionBuilder,
+      $$WatchListTableUpdateCompanionBuilder,
+      (
+        WatchListData,
+        BaseReferences<_$AppDatabase, $WatchListTable, WatchListData>,
+      ),
+      WatchListData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -26191,4 +29394,12 @@ class $AppDatabaseManager {
       $$FittingFoldersTableTableManager(_db, _db.fittingFolders);
   $$FittingFolderMembersTableTableManager get fittingFolderMembers =>
       $$FittingFolderMembersTableTableManager(_db, _db.fittingFolderMembers);
+  $$KillmailsTableTableManager get killmails =>
+      $$KillmailsTableTableManager(_db, _db.killmails);
+  $$IntelAlertsTableTableManager get intelAlerts =>
+      $$IntelAlertsTableTableManager(_db, _db.intelAlerts);
+  $$SystemActivityTableTableManager get systemActivity =>
+      $$SystemActivityTableTableManager(_db, _db.systemActivity);
+  $$WatchListTableTableManager get watchList =>
+      $$WatchListTableTableManager(_db, _db.watchList);
 }

@@ -44,6 +44,9 @@ enum WindowType {
 
   /// Ship Fitting tool for browsing ships and simulating fits.
   fitting,
+
+  /// Live Intel feed for zKillboard alerts.
+  intel,
 }
 
 /// Extension methods for [WindowType].
@@ -75,6 +78,8 @@ extension WindowTypeExtension on WindowType {
         return 'Market Tools - Mimir';
       case WindowType.fitting:
         return 'Ship Fitting - Mimir';
+      case WindowType.intel:
+        return 'Live Intel - Mimir';
     }
   }
 
@@ -107,6 +112,8 @@ extension WindowTypeExtension on WindowType {
         return 10;
       case WindowType.fitting:
         return 11;
+      case WindowType.intel:
+        return 12;
     }
   }
 
@@ -137,6 +144,8 @@ extension WindowTypeExtension on WindowType {
         return WindowType.market;
       case 11:
         return WindowType.fitting;
+      case 12:
+        return WindowType.intel;
       default:
         return WindowType.dashboard;
     }
@@ -169,6 +178,8 @@ extension WindowTypeExtension on WindowType {
         return (width: 1200, height: 900);
       case WindowType.fitting:
         return (width: 1300, height: 950);
+      case WindowType.intel:
+        return (width: 800, height: 900);
     }
   }
 
@@ -202,6 +213,8 @@ extension WindowTypeExtension on WindowType {
         return 'assets/icons/eve/market.png';
       case WindowType.fitting:
         return 'assets/icons/eve/fitting.png';
+      case WindowType.intel:
+        return 'assets/icons/eve/intel.png'; // Make sure this asset exists or use a fallback
     }
   }
 }

@@ -644,6 +644,66 @@ class FittingFolderMembers extends Table {
   Set<Column> get primaryKey => {fittingId, folderId};
 }
 
+/// Cached killmails
+class Killmails extends Table {
+  IntColumn get killmailId => integer()();
+  DateTimeColumn get killmailTime => dateTime()();
+  IntColumn get solarSystemId => integer()();
+  IntColumn get victimCharacterId => integer().nullable()();
+  IntColumn get victimCorporationId => integer().nullable()();
+  IntColumn get victimAllianceId => integer().nullable()();
+  IntColumn get victimShipTypeId => integer()();
+  RealColumn get totalValue => real()();
+  TextColumn get killmailJson => text()();  // Full killmail data
+  DateTimeColumn get cachedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {killmailId};
+}
+
+/// Alert configurations
+class IntelAlerts extends Table {
+  TextColumn get id => text()();
+  TextColumn get alertType => text()();
+  TextColumn get triggerConfig => text()();  // JSON
+  TextColumn get actions => text()();        // JSON array
+  BoolColumn get enabled => boolean()();
+  DateTimeColumn get lastTriggered => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// System activity statistics
+class SystemActivity extends Table {
+  IntColumn get solarSystemId => integer()();
+  DateTimeColumn get periodStart => dateTime()();
+  IntColumn get periodMinutes => integer()();  // 15, 60, 1440
+  IntColumn get killCount => integer()();
+  IntColumn get npcKillCount => integer()();
+  IntColumn get jumps => integer()();
+  RealColumn get iskDestroyed => real()();
+
+  @override
+  Set<Column> get primaryKey => {solarSystemId, periodStart, periodMinutes};
+}
+
+/// Watch list
+class WatchList extends Table {
+  TextColumn get id => text()();
+  TextColumn get watchType => text()();
+  IntColumn get entityId => integer()();
+  TextColumn get targetName => text()();
+  TextColumn get reason => text()();
+  TextColumn get notes => text().nullable()();
+  DateTimeColumn get addedAt => dateTime()();
+  IntColumn get addedBy => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Application database using Drift.
 ///
 /// Handles all local persistence for Mimir including:
@@ -679,6 +739,10 @@ class FittingFolderMembers extends Table {
   SavedFittings,
   FittingFolders,
   FittingFolderMembers,
+  Killmails,
+  IntelAlerts,
+  SystemActivity,
+  WatchList,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -687,7 +751,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration {
@@ -793,6 +857,14 @@ class AppDatabase extends _$AppDatabase {
         // Migration from version 15 to 16: Add market history table.
         if (from < 16) {
           await m.createTable(marketHistoryEntries);
+        }
+
+        // Migration from version 16 to 17: Add intel tables.
+        if (from < 17) {
+          await m.createTable(killmails);
+          await m.createTable(intelAlerts);
+          await m.createTable(systemActivity);
+          await m.createTable(watchList);
         }
       },
     );

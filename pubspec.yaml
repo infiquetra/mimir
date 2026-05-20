@@ -59,6 +59,10 @@ dependencies:
   equatable: ^2.0.5
   logger: ^2.2.0
   timeago: ^3.7.1
+  web_socket_channel: ^3.0.3
+  local_notifier: ^0.1.6
+  http: ^1.6.0
+  collection: ^1.19.1
 
 dev_dependencies:
   flutter_test:
