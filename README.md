@@ -24,7 +24,7 @@ Mimir aims to replace the need for multiple disconnected EVE tools (EVEMon, Pyfa
 - Phase 3 (Market Tools): Backend complete, UI pending
 - Phase 4 (Ship Fitting): Backend complete (Dogma Engine, Formats), UI pending
 
-See the [mimir-blueprint](https://github.com/infiquetra/mimir-blueprint) repository for detailed specifications and roadmap.
+See the [mimir-context-library](https://github.com/infiquetra/mimir-context-library) repository for detailed specifications and roadmap.
 
 ## Getting Started
 
@@ -88,6 +88,6 @@ This application uses data from EVE Online under the [CCP Developer License](htt
 
 ## Links
 
-- [Blueprint & Specifications](https://github.com/infiquetra/mimir-blueprint)
+- [Blueprint & Specifications](https://github.com/infiquetra/mimir-context-library)
 - [ESI API Documentation](https://docs.esi.evetech.net/)
 - [EVE Developers](https://developers.eveonline.com/)
