@@ -15,6 +15,8 @@ import 'package:mimir/features/industry/presentation/industry_overview_screen.da
 import 'package:mimir/features/market/presentation/market_overview_screen.dart';
 import 'package:mimir/features/settings/presentation/settings_screen.dart';
 import 'package:mimir/features/skills/presentation/skills_screen.dart';
+import 'package:mimir/features/skills/data/skill_catalogue_providers.dart';
+import 'package:mimir/features/wallet/data/wallet_providers.dart';
 import 'package:mimir/features/wallet/presentation/wallet_screen.dart';
 import 'package:network_image_mock/network_image_mock.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -36,11 +38,13 @@ void main() {
   setDatabasePath('.');
 
   // Mock path_provider just in case something else calls it
-  const MethodChannel channel = MethodChannel('plugins.flutter.io/path_provider');
+  const MethodChannel channel = MethodChannel(
+    'plugins.flutter.io/path_provider',
+  );
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-    return '.';
-  });
+        return '.';
+      });
 
   group('Screen Visual Validation (Golden Tests)', () {
     final characterId = 12345678;
@@ -55,9 +59,14 @@ void main() {
     const industryDevice = Device(name: 'industry', size: Size(1200, 900));
     const marketDevice = Device(name: 'market', size: Size(1200, 900));
     const onboardingDevice = Device(name: 'onboarding', size: Size(800, 600));
-    const skillsCompactDevice = Device(name: 'skills_compact', size: Size(1000, 800));
+    const skillsCompactDevice = Device(
+      name: 'skills_compact',
+      size: Size(1000, 800),
+    );
 
-    testGoldens('Dashboard renders correctly without overflows', (tester) async {
+    testGoldens('Dashboard renders correctly without overflows', (
+      tester,
+    ) async {
       await mockNetworkImagesFor(() async {
         await tester.pumpWidgetBuilder(
           TestApp(
@@ -69,32 +78,48 @@ void main() {
                   SkillFixtures.activeQueue(characterId: characterId),
                 );
               });
-              final walletData = WalletFixtures.fullWalletData(characterId: characterId);
-              await db.insertWalletJournalEntries((walletData['journal']! as List).cast());
+              final walletData = WalletFixtures.fullWalletData(
+                characterId: characterId,
+              );
+              await db.insertWalletJournalEntries(
+                (walletData['journal']! as List).cast(),
+              );
               await db.recordWalletBalance(characterId, 1500000000.0);
             },
             providerOverrides: [
-              allCharacterCombatStatsProvider.overrideWith((ref) async => const AggregateCombatStats(
-                    totalKills: 100,
-                    totalDeaths: 50,
-                    totalIskDestroyed: 1000000000.0,
-                    totalIskLost: 500000000.0,
-                    characterStats: [],
-                  )),
-              allCharacterFleetStatusProvider.overrideWith((ref) async => const AggregateFleetStatus(
-                    totalCharacters: 1,
-                    onlineCharacters: 1,
-                    offlineCharacters: 0,
-                    characterStatuses: [],
-                  )),
-              walletTrendsProvider.overrideWith((ref) async => WalletTrendsData(
-                    chartPoints: [
-                      WalletTrendsPoint(date: DateTime(2024, 1, 1), balance: 1000000000.0),
-                      WalletTrendsPoint(date: DateTime(2024, 1, 2), balance: 1200000000.0),
-                    ],
-                    income: 500000000.0,
-                    expenses: 200000000.0,
-                  )),
+              allCharacterCombatStatsProvider.overrideWith(
+                (ref) async => const AggregateCombatStats(
+                  totalKills: 100,
+                  totalDeaths: 50,
+                  totalIskDestroyed: 1000000000.0,
+                  totalIskLost: 500000000.0,
+                  characterStats: [],
+                ),
+              ),
+              allCharacterFleetStatusProvider.overrideWith(
+                (ref) async => const AggregateFleetStatus(
+                  totalCharacters: 1,
+                  onlineCharacters: 1,
+                  offlineCharacters: 0,
+                  characterStatuses: [],
+                ),
+              ),
+              walletTrendsProvider.overrideWith(
+                (ref) async => WalletTrendsData(
+                  chartPoints: [
+                    WalletTrendsPoint(
+                      date: DateTime(2024, 1, 1),
+                      balance: 1000000000.0,
+                    ),
+                    WalletTrendsPoint(
+                      date: DateTime(2024, 1, 2),
+                      balance: 1200000000.0,
+                    ),
+                  ],
+                  income: 500000000.0,
+                  expenses: 200000000.0,
+                ),
+              ),
             ],
             home: const StandaloneDashboardScreen(),
           ),
@@ -102,10 +127,14 @@ void main() {
         );
 
         await tester.pump(const Duration(seconds: 2));
-        await screenMatchesGolden(tester, 'dashboard_screen', customPump: (tester) async {
-          await tester.pump(const Duration(milliseconds: 500));
-        });
-        
+        await screenMatchesGolden(
+          tester,
+          'dashboard_screen',
+          customPump: (tester) async {
+            await tester.pump(const Duration(milliseconds: 500));
+          },
+        );
+
         // Clean up
         await tester.pumpWidget(Container());
         await tester.pump(const Duration(milliseconds: 100));
@@ -131,9 +160,13 @@ void main() {
         );
 
         await tester.pump(const Duration(seconds: 2));
-        await screenMatchesGolden(tester, 'skills_screen', customPump: (tester) async {
-          await tester.pump(const Duration(milliseconds: 500));
-        });
+        await screenMatchesGolden(
+          tester,
+          'skills_screen',
+          customPump: (tester) async {
+            await tester.pump(const Duration(milliseconds: 500));
+          },
+        );
 
         // Clean up
         await tester.pumpWidget(Container());
@@ -154,15 +187,28 @@ void main() {
                 );
               });
             },
+            providerOverrides: [
+              queueStatsProvider.overrideWithValue(
+                QueueStats(
+                  totalTrainingTime: const Duration(days: 3, hours: 11),
+                  totalSkillPoints: 308353,
+                  queueSize: 3,
+                ),
+              ),
+            ],
             home: const SkillsScreen(),
           ),
           surfaceSize: skillsCompactDevice.size,
         );
 
         await tester.pump(const Duration(seconds: 2));
-        await screenMatchesGolden(tester, 'skills_screen_compact', customPump: (tester) async {
-          await tester.pump(const Duration(milliseconds: 500));
-        });
+        await screenMatchesGolden(
+          tester,
+          'skills_screen_compact',
+          customPump: (tester) async {
+            await tester.pump(const Duration(milliseconds: 500));
+          },
+        );
 
         // Clean up
         await tester.pumpWidget(Container());
@@ -176,8 +222,12 @@ void main() {
           TestApp(
             initialCharacter: CharacterFixtures.testCharacter(),
             setupDatabase: (db) async {
-              final walletData = WalletFixtures.fullWalletData(characterId: characterId);
-              await db.insertWalletJournalEntries((walletData['journal']! as List).cast());
+              final walletData = WalletFixtures.fullWalletData(
+                characterId: characterId,
+              );
+              await db.insertWalletJournalEntries(
+                (walletData['journal']! as List).cast(),
+              );
               await db.recordWalletBalance(characterId, 1500000000.0);
             },
             home: const WalletScreen(),
@@ -186,9 +236,13 @@ void main() {
         );
 
         await tester.pump(const Duration(seconds: 2));
-        await screenMatchesGolden(tester, 'wallet_screen', customPump: (tester) async {
-          await tester.pump(const Duration(milliseconds: 500));
-        });
+        await screenMatchesGolden(
+          tester,
+          'wallet_screen',
+          customPump: (tester) async {
+            await tester.pump(const Duration(milliseconds: 500));
+          },
+        );
 
         // Clean up
         await tester.pumpWidget(Container());
@@ -201,15 +255,22 @@ void main() {
         await tester.pumpWidgetBuilder(
           TestApp(
             initialCharacter: CharacterFixtures.testCharacter(),
+            providerOverrides: [
+              walletBalanceProvider.overrideWith((ref) => 1500000000.0),
+            ],
             home: const StandaloneCharactersScreen(),
           ),
           surfaceSize: charactersDevice.size,
         );
 
         await tester.pump(const Duration(seconds: 2));
-        await screenMatchesGolden(tester, 'characters_screen', customPump: (tester) async {
-          await tester.pump(const Duration(milliseconds: 500));
-        });
+        await screenMatchesGolden(
+          tester,
+          'characters_screen',
+          customPump: (tester) async {
+            await tester.pump(const Duration(milliseconds: 500));
+          },
+        );
 
         // Clean up
         await tester.pumpWidget(Container());
@@ -220,17 +281,18 @@ void main() {
     testGoldens('Settings Screen renders correctly', (tester) async {
       await mockNetworkImagesFor(() async {
         await tester.pumpWidgetBuilder(
-          const TestApp(
-            initialCharacter: null,
-            home: SettingsScreen(),
-          ),
+          const TestApp(initialCharacter: null, home: SettingsScreen()),
           surfaceSize: settingsDevice.size,
         );
 
         await tester.pump(const Duration(seconds: 2));
-        await screenMatchesGolden(tester, 'settings_screen', customPump: (tester) async {
-          await tester.pump(const Duration(milliseconds: 500));
-        });
+        await screenMatchesGolden(
+          tester,
+          'settings_screen',
+          customPump: (tester) async {
+            await tester.pump(const Duration(milliseconds: 500));
+          },
+        );
 
         // Clean up
         await tester.pumpWidget(Container());
@@ -249,9 +311,13 @@ void main() {
         );
 
         await tester.pump(const Duration(seconds: 2));
-        await screenMatchesGolden(tester, 'pi_screen', customPump: (tester) async {
-          await tester.pump(const Duration(milliseconds: 500));
-        });
+        await screenMatchesGolden(
+          tester,
+          'pi_screen',
+          customPump: (tester) async {
+            await tester.pump(const Duration(milliseconds: 500));
+          },
+        );
 
         // Clean up
         await tester.pumpWidget(Container());
@@ -300,17 +366,18 @@ void main() {
     testGoldens('Onboarding Screen renders correctly', (tester) async {
       await mockNetworkImagesFor(() async {
         await tester.pumpWidgetBuilder(
-          const TestApp(
-            initialCharacter: null,
-            home: OnboardingScreen(),
-          ),
+          const TestApp(initialCharacter: null, home: OnboardingScreen()),
           surfaceSize: onboardingDevice.size,
         );
 
         await tester.pump(const Duration(seconds: 2));
-        await screenMatchesGolden(tester, 'onboarding_screen', customPump: (tester) async {
-          await tester.pump(const Duration(milliseconds: 500));
-        });
+        await screenMatchesGolden(
+          tester,
+          'onboarding_screen',
+          customPump: (tester) async {
+            await tester.pump(const Duration(milliseconds: 500));
+          },
+        );
 
         // Clean up
         await tester.pumpWidget(Container());

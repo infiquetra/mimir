@@ -46,10 +46,7 @@ sealed class SdeApplyResult {
 
 /// Update applied successfully.
 class SdeUpdateApplied extends SdeApplyResult {
-  const SdeUpdateApplied({
-    required this.version,
-    required this.skillCount,
-  });
+  const SdeUpdateApplied({required this.version, required this.skillCount});
 
   final String version;
   final int skillCount;
@@ -94,10 +91,7 @@ class SdeManifest {
 /// - Atomic import into the database
 /// - Version metadata tracking
 class SdeUpdateService {
-  SdeUpdateService({
-    required this.database,
-    Dio? dio,
-  }) : _dio = dio ?? Dio();
+  SdeUpdateService({required this.database, Dio? dio}) : _dio = dio ?? Dio();
 
   final SdeDatabase database;
   final Dio _dio;
@@ -296,10 +290,12 @@ class SdeUpdateService {
     if (actual == expected) return true;
 
     // Strip prefix if present for comparison
-    final actualHash =
-        actual.startsWith('sha256:') ? actual.substring(7) : actual;
-    final expectedHash =
-        expected.startsWith('sha256:') ? expected.substring(7) : expected;
+    final actualHash = actual.startsWith('sha256:')
+        ? actual.substring(7)
+        : actual;
+    final expectedHash = expected.startsWith('sha256:')
+        ? expected.substring(7)
+        : expected;
 
     return actualHash == expectedHash;
   }
@@ -314,10 +310,12 @@ class SdeUpdateService {
       // Import categories
       if (data.containsKey('categories')) {
         final categories = (data['categories'] as List)
-            .map((c) => SdeCategoriesCompanion.insert(
-                  categoryId: Value(c['categoryId'] as int),
-                  categoryName: c['categoryName'] as String,
-                ))
+            .map(
+              (c) => SdeCategoriesCompanion.insert(
+                categoryId: Value(c['categoryId'] as int),
+                categoryName: c['categoryName'] as String,
+              ),
+            )
             .toList();
         await database.upsertCategories(categories);
       }
@@ -325,11 +323,13 @@ class SdeUpdateService {
       // Import groups
       if (data.containsKey('groups')) {
         final groups = (data['groups'] as List)
-            .map((g) => SdeGroupsCompanion.insert(
-                  groupId: Value(g['groupId'] as int),
-                  groupName: g['groupName'] as String,
-                  categoryId: g['categoryId'] as int,
-                ))
+            .map(
+              (g) => SdeGroupsCompanion.insert(
+                groupId: Value(g['groupId'] as int),
+                groupName: g['groupName'] as String,
+                categoryId: g['categoryId'] as int,
+              ),
+            )
             .toList();
         await database.upsertGroups(groups);
       }
@@ -337,14 +337,16 @@ class SdeUpdateService {
       // Import types (skills)
       if (data.containsKey('types')) {
         final types = (data['types'] as List)
-            .map((t) => SdeTypesCompanion.insert(
-                  typeId: Value(t['typeId'] as int),
-                  typeName: t['typeName'] as String,
-                  groupId: t['groupId'] as int,
-                  description: t['description'] != null
-                      ? Value(t['description'] as String)
-                      : const Value.absent(),
-                ))
+            .map(
+              (t) => SdeTypesCompanion.insert(
+                typeId: Value(t['typeId'] as int),
+                typeName: t['typeName'] as String,
+                groupId: t['groupId'] as int,
+                description: t['description'] != null
+                    ? Value(t['description'] as String)
+                    : const Value.absent(),
+              ),
+            )
             .toList();
         await database.upsertTypes(types);
       }
@@ -357,10 +359,7 @@ class SdeUpdateService {
     await database.setMetadata(_keyEveVersion, manifest.eveVersion);
     await database.setMetadata(_keyChecksum, checksum);
     await database.setMetadata(_keySkillCount, manifest.skillCount.toString());
-    await database.setMetadata(
-      _keyLastCheck,
-      DateTime.now().toIso8601String(),
-    );
+    await database.setMetadata(_keyLastCheck, DateTime.now().toIso8601String());
   }
 }
 

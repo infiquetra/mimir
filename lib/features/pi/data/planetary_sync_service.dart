@@ -14,8 +14,8 @@ class PlanetarySyncService {
   PlanetarySyncService({
     required EsiClient esiClient,
     required PlanetaryRepository repository,
-  })  : _esiClient = esiClient,
-        _repository = repository;
+  }) : _esiClient = esiClient,
+       _repository = repository;
 
   /// Synchronizes all colonies and their pins for a character.
   Future<void> syncColonies(int characterId) async {
@@ -30,43 +30,57 @@ class PlanetarySyncService {
 
       // 2. Fetch pins for each colony
       for (final esiColony in esiColonies) {
-        coloniesCompanions.add(PlanetaryColoniesCompanion.insert(
-          planetId: esiColony.planetId,
-          characterId: characterId,
-          planetName: 'Planet ${esiColony.planetId}', // ESI doesn't provide name here
-          planetType: esiColony.planetType,
-          upgradeLevel: esiColony.upgradeLevel,
-          numPins: esiColony.numPins,
-          lastUpdate: esiColony.lastUpdate,
-        ));
+        coloniesCompanions.add(
+          PlanetaryColoniesCompanion.insert(
+            planetId: esiColony.planetId,
+            characterId: characterId,
+            planetName:
+                'Planet ${esiColony.planetId}', // ESI doesn't provide name here
+            planetType: esiColony.planetType,
+            upgradeLevel: esiColony.upgradeLevel,
+            numPins: esiColony.numPins,
+            lastUpdate: esiColony.lastUpdate,
+          ),
+        );
 
         final esiPins = await _esiClient.getCharacterPlanetPins(
           characterId,
           esiColony.planetId,
         );
-        Log.d('PI.SYNC', 'Fetched ${esiPins.length} pins for planet ${esiColony.planetId}');
+        Log.d(
+          'PI.SYNC',
+          'Fetched ${esiPins.length} pins for planet ${esiColony.planetId}',
+        );
 
         for (final esiPin in esiPins) {
-          pinsCompanions.add(PlanetaryPinsCompanion.insert(
-            pinId: esiPin.pinId,
-            characterId: characterId,
-            planetId: esiColony.planetId,
-            typeId: esiPin.typeId,
-            typeName: const Value(null), // Will be resolved by itemNameProvider in UI
-            latitude: esiPin.latitude,
-            longitude: esiPin.longitude,
-            installTime: esiPin.installTime,
-            expiryTime: Value(esiPin.expiryTime),
-            productTypeId: Value(esiPin.productTypeId),
-            quantityPerCycle: Value(esiPin.quantityPerCycle),
-            cycleTime: Value(esiPin.cycleTime),
-            schematicId: Value(esiPin.schematicId),
-          ));
+          pinsCompanions.add(
+            PlanetaryPinsCompanion.insert(
+              pinId: esiPin.pinId,
+              characterId: characterId,
+              planetId: esiColony.planetId,
+              typeId: esiPin.typeId,
+              typeName: const Value(
+                null,
+              ), // Will be resolved by itemNameProvider in UI
+              latitude: esiPin.latitude,
+              longitude: esiPin.longitude,
+              installTime: esiPin.installTime,
+              expiryTime: Value(esiPin.expiryTime),
+              productTypeId: Value(esiPin.productTypeId),
+              quantityPerCycle: Value(esiPin.quantityPerCycle),
+              cycleTime: Value(esiPin.cycleTime),
+              schematicId: Value(esiPin.schematicId),
+            ),
+          );
         }
       }
 
       // 3. Save to repository
-      await _repository.saveColonies(characterId, coloniesCompanions, pinsCompanions);
+      await _repository.saveColonies(
+        characterId,
+        coloniesCompanions,
+        pinsCompanions,
+      );
       Log.d('PI.SYNC', 'syncColonies($characterId) - SUCCESS');
     } catch (e, stack) {
       Log.e('PI.SYNC', 'syncColonies($characterId) - FAILED', e, stack);

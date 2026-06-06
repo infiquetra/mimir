@@ -66,10 +66,10 @@ class TrainingOverviewCard extends ConsumerWidget {
         Text(
           'COMPLETING SOON',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Colors.white.withAlpha(179),
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-              ),
+            color: Colors.white.withAlpha(179),
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
         ),
         const SizedBox(height: 12),
 
@@ -119,10 +119,7 @@ class TrainingOverviewCard extends ConsumerWidget {
         const SizedBox(width: 8),
 
         // Skill icon
-        EveSkillIcon(
-          typeId: skill.skillId,
-          size: 32,
-        ),
+        EveSkillIcon(typeId: skill.skillId, size: 32),
         const SizedBox(width: 8),
 
         // Skill info
@@ -134,9 +131,9 @@ class TrainingOverviewCard extends ConsumerWidget {
               Text(
                 character.name,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withAlpha(179),
-                      fontSize: 11,
-                    ),
+                  color: Colors.white.withAlpha(179),
+                  fontSize: 11,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -146,8 +143,8 @@ class TrainingOverviewCard extends ConsumerWidget {
               skillNameAsync.when(
                 data: (skillName) {
                   final romanNumerals = ['I', 'II', 'III', 'IV', 'V'];
-                  final levelStr = skill.finishedLevel >= 1 &&
-                          skill.finishedLevel <= 5
+                  final levelStr =
+                      skill.finishedLevel >= 1 && skill.finishedLevel <= 5
                       ? romanNumerals[skill.finishedLevel - 1]
                       : '${skill.finishedLevel}';
                   final fullName = '$skillName $levelStr';
@@ -155,9 +152,9 @@ class TrainingOverviewCard extends ConsumerWidget {
                   return Text(
                     fullName,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                          color: isUrgent ? EveColors.warning : Colors.white,
-                        ),
+                      fontWeight: FontWeight.w500,
+                      color: isUrgent ? EveColors.warning : Colors.white,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   );
@@ -173,9 +170,9 @@ class TrainingOverviewCard extends ConsumerWidget {
                 error: (_, __) => Text(
                   'Skill #${skill.skillId}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: isUrgent ? EveColors.warning : Colors.white,
-                      ),
+                    fontWeight: FontWeight.w500,
+                    color: isUrgent ? EveColors.warning : Colors.white,
+                  ),
                 ),
               ),
             ],
@@ -190,24 +187,24 @@ class TrainingOverviewCard extends ConsumerWidget {
               Icon(
                 Icons.schedule,
                 size: 14,
-                color: isUrgent ? EveColors.warning : Colors.white.withAlpha(179),
+                color: isUrgent
+                    ? EveColors.warning
+                    : Colors.white.withAlpha(179),
               ),
               const SizedBox(width: 4),
               Text(
                 formatDuration(remaining),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: isUrgent ? EveColors.warning : Colors.white.withAlpha(179),
-                      fontWeight: isUrgent ? FontWeight.bold : FontWeight.normal,
-                    ),
+                  color: isUrgent
+                      ? EveColors.warning
+                      : Colors.white.withAlpha(179),
+                  fontWeight: isUrgent ? FontWeight.bold : FontWeight.normal,
+                ),
               ),
             ],
           )
         else if (remaining != null && remaining.isNegative)
-          const Icon(
-            Icons.check_circle,
-            size: 16,
-            color: EveColors.success,
-          ),
+          const Icon(Icons.check_circle, size: 16, color: EveColors.success),
       ],
     );
   }
@@ -254,10 +251,10 @@ class TrainingOverviewCard extends ConsumerWidget {
               Text(
                 'TRAINING STATISTICS',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Colors.white.withAlpha(179),
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
+                  color: Colors.white.withAlpha(179),
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
               ),
               const SizedBox(height: 8),
               Row(
@@ -271,8 +268,8 @@ class TrainingOverviewCard extends ConsumerWidget {
                   Text(
                     '$totalSkills skills in training queue',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.white.withAlpha(204),
-                        ),
+                      color: Colors.white.withAlpha(204),
+                    ),
                   ),
                 ],
               ),
@@ -301,15 +298,15 @@ class TrainingOverviewCard extends ConsumerWidget {
             Text(
               'No Active Training',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.white.withAlpha(179),
-                  ),
+                color: Colors.white.withAlpha(179),
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               'Your characters have no skills in their training queues',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withAlpha(128),
-                  ),
+                color: Colors.white.withAlpha(128),
+              ),
               textAlign: TextAlign.center,
             ),
           ],

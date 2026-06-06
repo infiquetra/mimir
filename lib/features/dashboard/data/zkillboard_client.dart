@@ -27,9 +27,7 @@ class ZkillboardClient {
     _dio.options.receiveTimeout = const Duration(milliseconds: timeoutMs);
 
     // Add user agent header as recommended by zkillboard.
-    _dio.options.headers = {
-      'User-Agent': 'Mimir EVE Companion App',
-    };
+    _dio.options.headers = {'User-Agent': 'Mimir EVE Companion App'};
 
     // Add interceptor for logging.
     _dio.interceptors.add(_ZkillboardInterceptor());
@@ -133,10 +131,12 @@ class ZkillboardStats {
 
   factory ZkillboardStats.fromJson(Map<String, dynamic> json) {
     // zkillboard API can return different structures, handle gracefully.
-    final kills = _parseIntField(json, 'shipsDestroyed') ??
+    final kills =
+        _parseIntField(json, 'shipsDestroyed') ??
         _parseIntField(json, 'kills') ??
         0;
-    final deaths = _parseIntField(json, 'shipsLost') ??
+    final deaths =
+        _parseIntField(json, 'shipsLost') ??
         _parseIntField(json, 'deaths') ??
         0;
 

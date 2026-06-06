@@ -68,7 +68,10 @@ void main() {
           ),
         );
 
-      await tester.pumpWidgetBuilder(builder.build(), surfaceSize: const Size(800, 1600));
+      await tester.pumpWidgetBuilder(
+        builder.build(),
+        surfaceSize: const Size(800, 1600),
+      );
       // Need pumpAndSettle to resolve the FutureProviders
       await tester.pumpAndSettle();
       await screenMatchesGolden(tester, 'wallet_trends_card_states');

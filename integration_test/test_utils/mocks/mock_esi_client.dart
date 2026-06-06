@@ -307,7 +307,6 @@ class MockEsiClient extends Mock implements EsiClient {
     60008494: 'Amarr VIII (Oris) - Emperor Family Academy',
     60011866: 'Dodixie IX - Moon 20 - Federation Navy Assembly Plant',
     30000142: 'Jita', // Solar system
-
     // Character/Corporation/Alliance IDs
     12345678: 'Test Capsuleer',
     98765432: 'Test Trader',
@@ -329,61 +328,75 @@ class MockEsiClient extends Mock implements EsiClient {
 
   /// Sets up the mock to return the default test character.
   void setupDefaultCharacter(int characterId) {
-    when(() => getCharacterPublicInfo(characterId))
-        .thenAnswer((_) async => testCharacter);
+    when(
+      () => getCharacterPublicInfo(characterId),
+    ).thenAnswer((_) async => testCharacter);
   }
 
   /// Sets up the mock to return an active skill queue.
   void setupActiveSkillQueue(int characterId) {
-    when(() => getSkillQueue(characterId))
-        .thenAnswer((_) async => activeSkillQueue);
+    when(
+      () => getSkillQueue(characterId),
+    ).thenAnswer((_) async => activeSkillQueue);
   }
 
   /// Sets up the mock to return an empty skill queue.
   void setupEmptySkillQueue(int characterId) {
-    when(() => getSkillQueue(characterId))
-        .thenAnswer((_) async => emptySkillQueue);
+    when(
+      () => getSkillQueue(characterId),
+    ).thenAnswer((_) async => emptySkillQueue);
   }
 
   /// Sets up the mock to return trained skills data.
   void setupTrainedSkills(int characterId) {
-    when(() => getCharacterSkills(characterId))
-        .thenAnswer((_) async => characterSkills);
-    when(() => getSkills(characterId))
-        .thenAnswer((_) async => characterSkills);
+    when(
+      () => getCharacterSkills(characterId),
+    ).thenAnswer((_) async => characterSkills);
+    when(() => getSkills(characterId)).thenAnswer((_) async => characterSkills);
   }
 
   /// Sets up the mock to return wallet data.
   void setupWalletData(int characterId) {
-    when(() => getWalletBalance(characterId))
-        .thenAnswer((_) async => walletBalance);
-    when(() => getWalletJournal(characterId))
-        .thenAnswer((_) async => walletJournal);
-    when(() => getWalletTransactions(characterId))
-        .thenAnswer((_) async => walletTransactions);
-    when(() => getLoyaltyPoints(characterId))
-        .thenAnswer((_) async => loyaltyPoints);
+    when(
+      () => getWalletBalance(characterId),
+    ).thenAnswer((_) async => walletBalance);
+    when(
+      () => getWalletJournal(characterId),
+    ).thenAnswer((_) async => walletJournal);
+    when(
+      () => getWalletTransactions(characterId),
+    ).thenAnswer((_) async => walletTransactions);
+    when(
+      () => getLoyaltyPoints(characterId),
+    ).thenAnswer((_) async => loyaltyPoints);
   }
 
   /// Sets up the mock to return clone and implant data.
   void setupCloneData(int characterId) {
-    when(() => getCharacterClones(characterId)).thenAnswer((_) async => cloneInfo);
-    when(() => getCharacterImplants(characterId)).thenAnswer((_) async => implants);
+    when(
+      () => getCharacterClones(characterId),
+    ).thenAnswer((_) async => cloneInfo);
+    when(
+      () => getCharacterImplants(characterId),
+    ).thenAnswer((_) async => implants);
   }
 
   /// Sets up the mock to return standings data.
   void setupStandings(int characterId) {
-    when(() => getCharacterStandings(characterId)).thenAnswer((_) async => standings);
+    when(
+      () => getCharacterStandings(characterId),
+    ).thenAnswer((_) async => standings);
   }
 
   /// Sets up the mock to return fleet status data (online, location, ship).
   void setupFleetStatus(int characterId, {bool isOnline = true}) {
-    when(() => getCharacterOnline(characterId))
-        .thenAnswer((_) async => isOnline ? online : offline);
-    when(() => getCharacterLocation(characterId))
-        .thenAnswer((_) async => location);
-    when(() => getCharacterShip(characterId))
-        .thenAnswer((_) async => ship);
+    when(
+      () => getCharacterOnline(characterId),
+    ).thenAnswer((_) async => isOnline ? online : offline);
+    when(
+      () => getCharacterLocation(characterId),
+    ).thenAnswer((_) async => location);
+    when(() => getCharacterShip(characterId)).thenAnswer((_) async => ship);
   }
 
   /// Sets up the mock to resolve names via universe/names endpoint.
@@ -392,11 +405,13 @@ class MockEsiClient extends Mock implements EsiClient {
       final ids = invocation.positionalArguments[0] as List<int>;
       return ids
           .where((id) => nameResolutions.containsKey(id))
-          .map((id) => UniverseName(
-                id: id,
-                name: nameResolutions[id]!,
-                category: _getCategoryForId(id),
-              ))
+          .map(
+            (id) => UniverseName(
+              id: id,
+              name: nameResolutions[id]!,
+              category: _getCategoryForId(id),
+            ),
+          )
           .toList();
     });
   }
@@ -413,37 +428,43 @@ class MockEsiClient extends Mock implements EsiClient {
 
   /// Sets up the mock to return market data.
   void setupMarketData(int characterId) {
-    when(() => getMarketPrices())
-        .thenAnswer((_) async => EsiResponse(
-              data: testMarketPrices,
-              headers: const {},
-            ));
-    when(() => getCharacterOrders(characterId))
-        .thenAnswer((_) async => EsiResponse(
-              data: testCharacterOrders,
-              headers: const {},
-            ));
+    when(() => getMarketPrices()).thenAnswer(
+      (_) async => EsiResponse(data: testMarketPrices, headers: const {}),
+    );
+    when(() => getCharacterOrders(characterId)).thenAnswer(
+      (_) async => EsiResponse(data: testCharacterOrders, headers: const {}),
+    );
   }
 
   /// Sets up the mock to return industry data.
   void setupIndustryData(int characterId) {
-    when(() => getCharacterBlueprints(characterId, page: any(named: 'page')))
-        .thenAnswer((_) async => EsiResponse(
-              data: testBlueprints,
-              headers: const {'x-pages': ['1']},
-            ));
-    when(() => getCharacterIndustryJobs(characterId, includeCompleted: any(named: 'includeCompleted')))
-        .thenAnswer((_) async => EsiResponse(
-              data: testIndustryJobs,
-              headers: const {},
-            ));
+    when(
+      () => getCharacterBlueprints(characterId, page: any(named: 'page')),
+    ).thenAnswer(
+      (_) async => EsiResponse(
+        data: testBlueprints,
+        headers: const {
+          'x-pages': ['1'],
+        },
+      ),
+    );
+    when(
+      () => getCharacterIndustryJobs(
+        characterId,
+        includeCompleted: any(named: 'includeCompleted'),
+      ),
+    ).thenAnswer(
+      (_) async => EsiResponse(data: testIndustryJobs, headers: const {}),
+    );
   }
 
   /// Sets up the mock with all default test data for a character.
   void setupFullCharacterData(int characterId) {
     setupDefaultCharacter(characterId);
     setupActiveSkillQueue(characterId);
-    setupTrainedSkills(characterId); // Trained skills (total SP, unallocated SP, skill list)
+    setupTrainedSkills(
+      characterId,
+    ); // Trained skills (total SP, unallocated SP, skill list)
     setupWalletData(characterId);
     setupCloneData(characterId);
     setupStandings(characterId);

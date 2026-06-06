@@ -33,9 +33,16 @@ class TrainingQueuePanel extends ConsumerWidget {
 
         return skillQueue.when(
           data: (queue) {
-            Log.d('SKILLS', 'TrainingQueuePanel - queue has ${queue.length} items');
+            Log.d(
+              'SKILLS',
+              'TrainingQueuePanel - queue has ${queue.length} items',
+            );
             if (queue.isEmpty) {
-              return _buildEmptyState(context, ref, activeCharacter.characterId);
+              return _buildEmptyState(
+                context,
+                ref,
+                activeCharacter.characterId,
+              );
             }
 
             return _buildSkillList(
@@ -51,7 +58,12 @@ class TrainingQueuePanel extends ConsumerWidget {
           },
           error: (error, stack) {
             Log.e('SKILLS', 'TrainingQueuePanel - error', error, stack);
-            return _buildErrorState(context, ref, activeCharacter.characterId, error);
+            return _buildErrorState(
+              context,
+              ref,
+              activeCharacter.characterId,
+              error,
+            );
           },
         );
       },
@@ -75,10 +87,7 @@ class TrainingQueuePanel extends ConsumerWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
-            Text(
-              'No Character Selected',
-              style: theme.textTheme.titleLarge,
-            ),
+            Text('No Character Selected', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
               'Add a character to view your skill queue.',
@@ -93,7 +102,11 @@ class TrainingQueuePanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, WidgetRef ref, int characterId) {
+  Widget _buildEmptyState(
+    BuildContext context,
+    WidgetRef ref,
+    int characterId,
+  ) {
     final theme = Theme.of(context);
 
     return RefreshIndicator(
@@ -143,7 +156,10 @@ class TrainingQueuePanel extends ConsumerWidget {
     List queue,
     int characterId,
   ) {
-    Log.d('SKILLS', 'TrainingQueuePanel._buildSkillList - ${queue.length} skills');
+    Log.d(
+      'SKILLS',
+      'TrainingQueuePanel._buildSkillList - ${queue.length} skills',
+    );
     return RefreshIndicator(
       onRefresh: () => _refreshSkillQueue(ref, characterId),
       child: Column(
@@ -186,16 +202,9 @@ class TrainingQueuePanel extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: theme.colorScheme.error,
-            ),
+            Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
             const SizedBox(height: 16),
-            Text(
-              'Failed to Load Skills',
-              style: theme.textTheme.titleLarge,
-            ),
+            Text('Failed to Load Skills', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
               error.toString(),
@@ -225,16 +234,9 @@ class TrainingQueuePanel extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: theme.colorScheme.error,
-            ),
+            Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
             const SizedBox(height: 16),
-            Text(
-              'Failed to Load Character',
-              style: theme.textTheme.titleLarge,
-            ),
+            Text('Failed to Load Character', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
               error.toString(),
@@ -250,7 +252,10 @@ class TrainingQueuePanel extends ConsumerWidget {
   }
 
   Future<void> _refreshSkillQueue(WidgetRef ref, int characterId) async {
-    Log.i('SKILLS', 'TrainingQueuePanel._refreshSkillQueue - refreshing for character $characterId');
+    Log.i(
+      'SKILLS',
+      'TrainingQueuePanel._refreshSkillQueue - refreshing for character $characterId',
+    );
     final repository = ref.read(skillRepositoryProvider);
     await repository.refreshSkillQueue(characterId);
   }

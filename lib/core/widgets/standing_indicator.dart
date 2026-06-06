@@ -46,10 +46,7 @@ class StandingIndicator {
   }
 
   /// Returns a text color that contrasts well with the standing background.
-  static Color getTextColor(
-    double standing, {
-    required BuildContext context,
-  }) {
+  static Color getTextColor(double standing, {required BuildContext context}) {
     // For subtle background tints, normal text colors work fine
     return Theme.of(context).colorScheme.onSurface;
   }

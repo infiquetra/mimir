@@ -19,26 +19,33 @@ class MarketSyncService {
     try {
       final response = await _esiClient.getCharacterOrders(characterId);
       final orders = response.data;
-      Log.i('MARKET.SYNC', 'Total active orders fetched from ESI: ${orders.length}');
+      Log.i(
+        'MARKET.SYNC',
+        'Total active orders fetched from ESI: ${orders.length}',
+      );
 
-      final companions = orders.map((order) => MarketOrdersCompanion(
-        orderId: Value(order.orderId),
-        characterId: Value(characterId),
-        typeId: Value(order.typeId),
-        regionId: Value(order.regionId),
-        locationId: Value(order.locationId),
-        price: Value(order.price),
-        volumeRemain: Value(order.volumeRemain),
-        volumeTotal: Value(order.volumeTotal),
-        minVolume: Value(order.minVolume),
-        isBuyOrder: Value(order.isBuyOrder),
-        issued: Value(order.issued),
-        duration: Value(order.duration),
-        range: Value(order.range),
-        isCorporation: Value(order.isCorporation),
-        escrow: Value(order.escrow),
-        state: Value(order.state),
-      )).toList();
+      final companions = orders
+          .map(
+            (order) => MarketOrdersCompanion(
+              orderId: Value(order.orderId),
+              characterId: Value(characterId),
+              typeId: Value(order.typeId),
+              regionId: Value(order.regionId),
+              locationId: Value(order.locationId),
+              price: Value(order.price),
+              volumeRemain: Value(order.volumeRemain),
+              volumeTotal: Value(order.volumeTotal),
+              minVolume: Value(order.minVolume),
+              isBuyOrder: Value(order.isBuyOrder),
+              issued: Value(order.issued),
+              duration: Value(order.duration),
+              range: Value(order.range),
+              isCorporation: Value(order.isCorporation),
+              escrow: Value(order.escrow),
+              state: Value(order.state),
+            ),
+          )
+          .toList();
 
       await _repository.replaceAllOrders(characterId, companions);
       Log.d('MARKET.SYNC', 'syncOrders($characterId) - SUCCESS');
@@ -57,12 +64,16 @@ class MarketSyncService {
       Log.i('MARKET.SYNC', 'Total prices fetched from ESI: ${prices.length}');
 
       final now = DateTime.now();
-      final companions = prices.map((price) => MarketPricesCompanion(
-        typeId: Value(price.typeId),
-        adjustedPrice: Value(price.adjustedPrice),
-        averagePrice: Value(price.averagePrice),
-        lastUpdated: Value(now),
-      )).toList();
+      final companions = prices
+          .map(
+            (price) => MarketPricesCompanion(
+              typeId: Value(price.typeId),
+              adjustedPrice: Value(price.adjustedPrice),
+              averagePrice: Value(price.averagePrice),
+              lastUpdated: Value(now),
+            ),
+          )
+          .toList();
 
       await _repository.replaceAllPrices(companions);
       Log.d('MARKET.SYNC', 'syncPrices - SUCCESS');
@@ -74,27 +85,45 @@ class MarketSyncService {
 
   /// Fetch and store market history for a specific item in a region.
   Future<void> syncMarketHistory(int typeId, int regionId) async {
-    Log.d('MARKET.SYNC', 'syncMarketHistory(type=$typeId, region=$regionId) - START');
+    Log.d(
+      'MARKET.SYNC',
+      'syncMarketHistory(type=$typeId, region=$regionId) - START',
+    );
     try {
       final response = await _esiClient.getMarketHistory(regionId, typeId);
       final entries = response.data;
-      Log.i('MARKET.SYNC', 'Fetched ${entries.length} history entries from ESI');
+      Log.i(
+        'MARKET.SYNC',
+        'Fetched ${entries.length} history entries from ESI',
+      );
 
-      final companions = entries.map((e) => MarketHistoryEntriesCompanion(
-        typeId: Value(typeId),
-        regionId: Value(regionId),
-        date: Value(e.date),
-        average: Value(e.average),
-        highest: Value(e.highest),
-        lowest: Value(e.lowest),
-        volume: Value(e.volume),
-        orderCount: Value(e.orderCount),
-      )).toList();
+      final companions = entries
+          .map(
+            (e) => MarketHistoryEntriesCompanion(
+              typeId: Value(typeId),
+              regionId: Value(regionId),
+              date: Value(e.date),
+              average: Value(e.average),
+              highest: Value(e.highest),
+              lowest: Value(e.lowest),
+              volume: Value(e.volume),
+              orderCount: Value(e.orderCount),
+            ),
+          )
+          .toList();
 
       await _repository.saveMarketHistory(typeId, regionId, companions);
-      Log.d('MARKET.SYNC', 'syncMarketHistory(type=$typeId, region=$regionId) - SUCCESS');
+      Log.d(
+        'MARKET.SYNC',
+        'syncMarketHistory(type=$typeId, region=$regionId) - SUCCESS',
+      );
     } catch (e, stack) {
-      Log.e('MARKET.SYNC', 'syncMarketHistory(type=$typeId, region=$regionId) - FAILED', e, stack);
+      Log.e(
+        'MARKET.SYNC',
+        'syncMarketHistory(type=$typeId, region=$regionId) - FAILED',
+        e,
+        stack,
+      );
       rethrow;
     }
   }

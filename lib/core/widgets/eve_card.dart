@@ -67,7 +67,10 @@ class _EveCardState extends State<EveCard> {
     // Calculate glow intensity based on hover state
     // Hover multiplies by 1.5 (40% → 60%)
     final currentIntensity = _isHovered && widget.enableHoverGlow
-        ? (widget.glowIntensity * EveSpacing.glowHoverMultiplier).clamp(0.0, 1.0)
+        ? (widget.glowIntensity * EveSpacing.glowHoverMultiplier).clamp(
+            0.0,
+            1.0,
+          )
         : widget.glowIntensity;
 
     // Build box shadows for pronounced dual-blur glow effect
@@ -83,8 +86,7 @@ class _EveCardState extends State<EveCard> {
         ),
         // Outer glow (32px blur, half intensity)
         BoxShadow(
-          color:
-              widget.glowColor!.withAlpha((currentIntensity * 128).round()),
+          color: widget.glowColor!.withAlpha((currentIntensity * 128).round()),
           blurRadius: EveSpacing.glowBlurOuter,
           spreadRadius: EveSpacing.glowSpread,
         ),
@@ -100,14 +102,12 @@ class _EveCardState extends State<EveCard> {
         boxShadow: shadows,
         border: widget.glowColor != null
             ? Border.all(
-                color: widget.glowColor!
-                    .withAlpha((currentIntensity * 128).round()),
+                color: widget.glowColor!.withAlpha(
+                  (currentIntensity * 128).round(),
+                ),
                 width: 1,
               )
-            : Border.all(
-                color: EveColors.borderSubtle,
-                width: 1,
-              ),
+            : Border.all(color: EveColors.borderSubtle, width: 1),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(EveSpacing.cardRadius - 1),
@@ -120,10 +120,7 @@ class _EveCardState extends State<EveCard> {
                 height: 4,
                 decoration: BoxDecoration(gradient: widget.headerGradient),
               ),
-            Padding(
-              padding: effectivePadding,
-              child: widget.child,
-            ),
+            Padding(padding: effectivePadding, child: widget.child),
           ],
         ),
       ),
@@ -176,30 +173,18 @@ abstract class EveCardStyles {
 
   /// Faction-specific gradients for headers.
   static LinearGradient caldariGradient = LinearGradient(
-    colors: [
-      EveColors.caldari,
-      EveColors.caldari.withAlpha(102),
-    ],
+    colors: [EveColors.caldari, EveColors.caldari.withAlpha(102)],
   );
 
   static LinearGradient gallenteGradient = LinearGradient(
-    colors: [
-      EveColors.gallente,
-      EveColors.gallente.withAlpha(102),
-    ],
+    colors: [EveColors.gallente, EveColors.gallente.withAlpha(102)],
   );
 
   static LinearGradient amarrGradient = LinearGradient(
-    colors: [
-      EveColors.amarr,
-      EveColors.amarr.withAlpha(102),
-    ],
+    colors: [EveColors.amarr, EveColors.amarr.withAlpha(102)],
   );
 
   static LinearGradient minmatarGradient = LinearGradient(
-    colors: [
-      EveColors.minmatar,
-      EveColors.minmatar.withAlpha(102),
-    ],
+    colors: [EveColors.minmatar, EveColors.minmatar.withAlpha(102)],
   );
 }

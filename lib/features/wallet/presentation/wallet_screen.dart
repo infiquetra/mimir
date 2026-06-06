@@ -34,7 +34,10 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
     Log.d('WALLET', 'WalletScreen.initState() - creating TabController');
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
-      Log.d('WALLET', 'TabController - switched to tab ${_tabController.index}');
+      Log.d(
+        'WALLET',
+        'TabController - switched to tab ${_tabController.index}',
+      );
     });
   }
 
@@ -142,9 +145,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
 
   /// Builds the loading state.
   Widget _buildLoadingState(BuildContext context) {
-    return const Center(
-      child: CircularProgressIndicator(),
-    );
+    return const Center(child: CircularProgressIndicator());
   }
 
   /// Builds the error state.

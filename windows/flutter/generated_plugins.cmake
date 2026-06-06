@@ -6,7 +6,9 @@ list(APPEND FLUTTER_PLUGIN_LIST
   app_links
   connectivity_plus
   desktop_multi_window
+  file_selector_windows
   flutter_secure_storage_windows
+  local_notifier
   screen_retriever_windows
   sqlite3_flutter_libs
   tray_manager

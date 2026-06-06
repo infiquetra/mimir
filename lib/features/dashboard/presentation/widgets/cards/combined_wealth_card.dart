@@ -30,7 +30,8 @@ class CombinedWealthCard extends ConsumerWidget {
     final charactersAsync = ref.watch(allCharactersProvider);
 
     // Determine loading state
-    final isLoading = combinedWealthAsync.isLoading ||
+    final isLoading =
+        combinedWealthAsync.isLoading ||
         balancesAsync.isLoading ||
         charactersAsync.isLoading;
 
@@ -38,10 +39,10 @@ class CombinedWealthCard extends ConsumerWidget {
     final errorMessage = combinedWealthAsync.hasError
         ? combinedWealthAsync.error.toString()
         : balancesAsync.hasError
-            ? balancesAsync.error.toString()
-            : charactersAsync.hasError
-                ? charactersAsync.error.toString()
-                : null;
+        ? balancesAsync.error.toString()
+        : charactersAsync.hasError
+        ? charactersAsync.error.toString()
+        : null;
 
     return DashboardCard(
       title: 'Total Wealth',
@@ -56,12 +57,8 @@ class CombinedWealthCard extends ConsumerWidget {
       child: combinedWealthAsync.when(
         data: (totalWealth) => balancesAsync.when(
           data: (balances) => charactersAsync.when(
-            data: (characters) => _buildContent(
-              context,
-              totalWealth,
-              balances,
-              characters,
-            ),
+            data: (characters) =>
+                _buildContent(context, totalWealth, balances, characters),
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
           ),
@@ -99,9 +96,7 @@ class CombinedWealthCard extends ConsumerWidget {
         Center(
           child: Text(
             formatIsk(totalWealth),
-            style: EveTypography.headline(
-              color: EveColors.photonBlue,
-            ),
+            style: EveTypography.headline(color: EveColors.photonBlue),
           ),
         ),
 
@@ -184,9 +179,7 @@ class _CharacterWealthRow extends StatelessWidget {
           width: 110,
           child: Text(
             '${formatIskCompact(balance)} (${(percentage * 100).toStringAsFixed(0)}%)',
-            style: EveTypography.dataSmall(
-              color: EveColors.textSecondary,
-            ),
+            style: EveTypography.dataSmall(color: EveColors.textSecondary),
             textAlign: TextAlign.right,
           ),
         ),

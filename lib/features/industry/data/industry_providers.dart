@@ -13,18 +13,23 @@ final syncIndustryProvider = FutureProvider.autoDispose<void>((ref) async {
   if (activeCharacter == null) return;
 
   final syncService = ref.read(industrySyncServiceProvider);
-  
+
   // Run both syncs in parallel
   await Future.wait([
     syncService.syncBlueprints(activeCharacter.characterId),
-    syncService.syncIndustryJobs(activeCharacter.characterId, includeCompleted: true),
+    syncService.syncIndustryJobs(
+      activeCharacter.characterId,
+      includeCompleted: true,
+    ),
   ]);
 });
 
 // --- Blueprints ---
 
 /// Stream of all blueprints for the active character.
-final characterBlueprintsProvider = StreamProvider<List<Blueprint>>((ref) async* {
+final characterBlueprintsProvider = StreamProvider<List<Blueprint>>((
+  ref,
+) async* {
   final activeCharacter = await ref.watch(activeCharacterProvider.future);
   if (activeCharacter == null) {
     yield [];
@@ -38,7 +43,9 @@ final characterBlueprintsProvider = StreamProvider<List<Blueprint>>((ref) async*
 // --- Industry Jobs ---
 
 /// Stream of all industry jobs for the active character.
-final characterIndustryJobsProvider = StreamProvider<List<IndustryJob>>((ref) async* {
+final characterIndustryJobsProvider = StreamProvider<List<IndustryJob>>((
+  ref,
+) async* {
   final activeCharacter = await ref.watch(activeCharacterProvider.future);
   if (activeCharacter == null) {
     yield [];
@@ -46,11 +53,16 @@ final characterIndustryJobsProvider = StreamProvider<List<IndustryJob>>((ref) as
   }
 
   final repository = ref.watch(industryRepositoryProvider);
-  yield* repository.watchIndustryJobs(activeCharacter.characterId, includeCompleted: true);
+  yield* repository.watchIndustryJobs(
+    activeCharacter.characterId,
+    includeCompleted: true,
+  );
 });
 
 /// Stream of only active industry jobs for the active character.
-final activeIndustryJobsProvider = StreamProvider<List<IndustryJob>>((ref) async* {
+final activeIndustryJobsProvider = StreamProvider<List<IndustryJob>>((
+  ref,
+) async* {
   final activeCharacter = await ref.watch(activeCharacterProvider.future);
   if (activeCharacter == null) {
     yield [];
@@ -58,5 +70,8 @@ final activeIndustryJobsProvider = StreamProvider<List<IndustryJob>>((ref) async
   }
 
   final repository = ref.watch(industryRepositoryProvider);
-  yield* repository.watchIndustryJobs(activeCharacter.characterId, includeCompleted: false);
+  yield* repository.watchIndustryJobs(
+    activeCharacter.characterId,
+    includeCompleted: false,
+  );
 });

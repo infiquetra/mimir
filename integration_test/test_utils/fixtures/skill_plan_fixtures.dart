@@ -16,9 +16,7 @@ class SkillPlanFixtures {
   /// Plan name: "PvP Frigate Skills"
   /// Description: "T2 frigate PvP training"
   /// Target: Caldari frigate PvP skills
-  static SkillPlansCompanion pvpFrigatePlan({
-    required int characterId,
-  }) {
+  static SkillPlansCompanion pvpFrigatePlan({required int characterId}) {
     return SkillPlansCompanion.insert(
       characterId: characterId,
       name: 'PvP Frigate Skills',
@@ -33,9 +31,7 @@ class SkillPlanFixtures {
   /// Plan name: "Manufacturing Basics"
   /// Description: "Basic industry and manufacturing"
   /// Target: Industry and production skills
-  static SkillPlansCompanion industryPlan({
-    required int characterId,
-  }) {
+  static SkillPlansCompanion industryPlan({required int characterId}) {
     return SkillPlansCompanion.insert(
       characterId: characterId,
       name: 'Manufacturing Basics',
@@ -49,9 +45,7 @@ class SkillPlanFixtures {
   ///
   /// Plan name: "Empty Plan"
   /// Useful for testing plan creation and skill addition flows.
-  static SkillPlansCompanion emptyPlan({
-    required int characterId,
-  }) {
+  static SkillPlansCompanion emptyPlan({required int characterId}) {
     return SkillPlansCompanion.insert(
       characterId: characterId,
       name: 'Empty Plan',
@@ -66,9 +60,7 @@ class SkillPlanFixtures {
   /// Plan name: "Basic Training"
   /// Description: "Core skills complete"
   /// All skills in this plan should be already trained.
-  static SkillPlansCompanion completedPlan({
-    required int characterId,
-  }) {
+  static SkillPlansCompanion completedPlan({required int characterId}) {
     return SkillPlansCompanion.insert(
       characterId: characterId,
       name: 'Basic Training',

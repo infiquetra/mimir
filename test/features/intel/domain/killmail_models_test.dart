@@ -15,12 +15,8 @@ void main() {
             'damage_taken': 1000.0,
           },
           'attackers': [
-            {
-              'character_id': 888,
-              'damage_done': 1000.0,
-              'final_blow': true,
-            }
-          ]
+            {'character_id': 888, 'damage_done': 1000.0, 'final_blow': true},
+          ],
         },
         'zkb': {
           'locationID': 30000142,
@@ -33,7 +29,7 @@ void main() {
           'npc': false,
           'solo': true,
           'awox': false,
-        }
+        },
       };
 
       final killmail = ZKillmail.fromJson(json);

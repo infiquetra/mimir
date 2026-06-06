@@ -7,6 +7,9 @@ import '../../characters/data/character_providers.dart';
 import '../data/industry_providers.dart';
 import 'widgets/blueprint_list_panel.dart';
 import 'widgets/industry_jobs_panel.dart';
+import 'widgets/invention_calculator_panel.dart';
+import 'widgets/reaction_calculator_panel.dart';
+import 'widgets/production_chain_visualizer.dart';
 
 /// Main screen for Industry & Manufacturing feature.
 class IndustryOverviewScreen extends ConsumerStatefulWidget {
@@ -24,7 +27,7 @@ class _IndustryOverviewScreenState extends ConsumerState<IndustryOverviewScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -49,9 +52,13 @@ class _IndustryOverviewScreenState extends ConsumerState<IndustryOverviewScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
           tabs: const [
             Tab(text: 'Industry Jobs', icon: Icon(Icons.factory)),
             Tab(text: 'Blueprints', icon: Icon(Icons.architecture)),
+            Tab(text: 'Invention', icon: Icon(Icons.science)),
+            Tab(text: 'Reactions', icon: Icon(Icons.transform)),
+            Tab(text: 'Production Chains', icon: Icon(Icons.account_tree)),
           ],
         ),
       ),
@@ -74,6 +81,18 @@ class _IndustryOverviewScreenState extends ConsumerState<IndustryOverviewScreen>
                     child: BlueprintListPanel(),
                   ),
                 ),
+                const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: InventionCalculatorPanel(),
+                ),
+                const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: ReactionCalculatorPanel(),
+                ),
+                const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: ProductionChainVisualizer(),
+                ),
               ],
             ),
     );
@@ -84,8 +103,11 @@ class _IndustryOverviewScreenState extends ConsumerState<IndustryOverviewScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.person_off_outlined,
-              size: 64, color: EveColors.textSecondary),
+          const Icon(
+            Icons.person_off_outlined,
+            size: 64,
+            color: EveColors.textSecondary,
+          ),
           const SizedBox(height: 16),
           Text(
             'No Character Selected',
@@ -94,9 +116,9 @@ class _IndustryOverviewScreenState extends ConsumerState<IndustryOverviewScreen>
           const SizedBox(height: 8),
           Text(
             'Please select a character to view industry data.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: EveColors.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: EveColors.textSecondary),
           ),
         ],
       ),

@@ -30,11 +30,13 @@ class PendingAuthStore {
   static Future<void> save(AuthorizationRequest request) async {
     try {
       final file = await _getFile();
-      await file.writeAsString(jsonEncode({
-        'codeVerifier': request.codeVerifier,
-        'state': request.state,
-        'timestamp': DateTime.now().toIso8601String(),
-      }));
+      await file.writeAsString(
+        jsonEncode({
+          'codeVerifier': request.codeVerifier,
+          'state': request.state,
+          'timestamp': DateTime.now().toIso8601String(),
+        }),
+      );
       debugPrint('[PENDINGAUTH] Saved pending request to ${file.path}');
     } catch (e) {
       debugPrint('[PENDINGAUTH] ERROR saving pending request: $e');
@@ -60,14 +62,18 @@ class PendingAuthStore {
 
       // Delete immediately after reading (security + cleanup)
       await file.delete();
-      debugPrint('[PENDINGAUTH] Loaded and cleared pending request from ${file.path}');
+      debugPrint(
+        '[PENDINGAUTH] Loaded and cleared pending request from ${file.path}',
+      );
 
       // Check if request is too old (5 minutes max)
       final timestamp = DateTime.parse(json['timestamp'] as String);
       final age = DateTime.now().difference(timestamp);
 
       if (age > const Duration(minutes: 5)) {
-        debugPrint('[PENDINGAUTH] Request expired (age: ${age.inMinutes} minutes)');
+        debugPrint(
+          '[PENDINGAUTH] Request expired (age: ${age.inMinutes} minutes)',
+        );
         return null;
       }
 

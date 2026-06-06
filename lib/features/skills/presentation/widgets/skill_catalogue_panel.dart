@@ -61,14 +61,15 @@ class _SkillCataloguePanelState extends ConsumerState<SkillCataloguePanel> {
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AddToPlanDialog(
-        skill: skill,
-        trainedLevel: trainedLevel,
-      ),
+      builder: (context) =>
+          AddToPlanDialog(skill: skill, trainedLevel: trainedLevel),
     );
 
     if (result == true && mounted) {
-      Log.i('SKILLS.CATALOGUE', '_showAddToPlanDialog - skill added successfully');
+      Log.i(
+        'SKILLS.CATALOGUE',
+        '_showAddToPlanDialog - skill added successfully',
+      );
       // Show success feedback
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -113,9 +114,7 @@ class _SkillCataloguePanelState extends ConsumerState<SkillCataloguePanel> {
         },
         decoration: InputDecoration(
           hintText: 'Search skills...',
-          hintStyle: EveTypography.bodyMedium(
-            color: EveColors.textSecondary,
-          ),
+          hintStyle: EveTypography.bodyMedium(color: EveColors.textSecondary),
           prefixIcon: Icon(
             Icons.search,
             color: EveColors.textSecondary,
@@ -188,12 +187,7 @@ class _SkillCataloguePanelState extends ConsumerState<SkillCataloguePanel> {
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) {
-        Log.e(
-          'SKILLS.CATALOGUE',
-          'Failed to load skill groups',
-          error,
-          stack,
-        );
+        Log.e('SKILLS.CATALOGUE', 'Failed to load skill groups', error, stack);
         return _buildErrorState(context, error);
       },
     );
@@ -271,12 +265,16 @@ class _SkillCataloguePanelState extends ConsumerState<SkillCataloguePanel> {
                   const SizedBox(height: 16),
                   Text(
                     'No skills found',
-                    style: EveTypography.titleLarge(color: EveColors.textPrimary),
+                    style: EveTypography.titleLarge(
+                      color: EveColors.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Try a different search term',
-                    style: EveTypography.bodyMedium(color: EveColors.textSecondary),
+                    style: EveTypography.bodyMedium(
+                      color: EveColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -345,11 +343,7 @@ class _SkillCataloguePanelState extends ConsumerState<SkillCataloguePanel> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: EveColors.error,
-            ),
+            Icon(Icons.error_outline, size: 64, color: EveColors.error),
             const SizedBox(height: 16),
             Text(
               'Failed to Load Skills',

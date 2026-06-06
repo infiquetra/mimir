@@ -22,8 +22,9 @@ void main() {
       expect(find.byIcon(Icons.star), findsOneWidget);
     });
 
-    testWidgets('displays child widget in content state',
-        (WidgetTester tester) async {
+    testWidgets('displays child widget in content state', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -39,8 +40,9 @@ void main() {
       expect(find.text('Test Content'), findsOneWidget);
     });
 
-    testWidgets('shows loading state when isLoading is true',
-        (WidgetTester tester) async {
+    testWidgets('shows loading state when isLoading is true', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -62,8 +64,9 @@ void main() {
       expect(shimmerContainers, findsWidgets);
     });
 
-    testWidgets('shows error state with error message',
-        (WidgetTester tester) async {
+    testWidgets('shows error state with error message', (
+      WidgetTester tester,
+    ) async {
       const errorMessage = 'Something went wrong';
 
       await tester.pumpWidget(
@@ -88,8 +91,9 @@ void main() {
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
     });
 
-    testWidgets('error state shows retry button when onRetry is provided',
-        (WidgetTester tester) async {
+    testWidgets('error state shows retry button when onRetry is provided', (
+      WidgetTester tester,
+    ) async {
       var retryPressed = false;
 
       await tester.pumpWidget(
@@ -114,8 +118,9 @@ void main() {
       expect(retryPressed, isTrue);
     });
 
-    testWidgets('error state does not show retry button when onRetry is null',
-        (WidgetTester tester) async {
+    testWidgets('error state does not show retry button when onRetry is null', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -132,8 +137,9 @@ void main() {
       expect(find.text('Retry'), findsNothing);
     });
 
-    testWidgets('retry button triggers callback when pressed',
-        (WidgetTester tester) async {
+    testWidgets('retry button triggers callback when pressed', (
+      WidgetTester tester,
+    ) async {
       var retryCount = 0;
 
       await tester.pumpWidget(
@@ -158,8 +164,9 @@ void main() {
       expect(retryCount, 1);
     });
 
-    testWidgets('shows expand button when onExpand is provided',
-        (WidgetTester tester) async {
+    testWidgets('shows expand button when onExpand is provided', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -177,8 +184,9 @@ void main() {
       expect(find.byType(IconButton), findsOneWidget);
     });
 
-    testWidgets('expand button triggers callback when pressed',
-        (WidgetTester tester) async {
+    testWidgets('expand button triggers callback when pressed', (
+      WidgetTester tester,
+    ) async {
       var expandPressed = false;
 
       await tester.pumpWidget(
@@ -200,8 +208,9 @@ void main() {
       expect(expandPressed, isTrue);
     });
 
-    testWidgets('does not show expand button when onExpand is null',
-        (WidgetTester tester) async {
+    testWidgets('does not show expand button when onExpand is null', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -235,8 +244,9 @@ void main() {
       expect(iconWidget.color, EveColors.success);
     });
 
-    testWidgets('uses default color when glowColor is null',
-        (WidgetTester tester) async {
+    testWidgets('uses default color when glowColor is null', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -253,8 +263,9 @@ void main() {
       expect(iconWidget.color, EveColors.evePrimary);
     });
 
-    testWidgets('loading state takes precedence over content',
-        (WidgetTester tester) async {
+    testWidgets('loading state takes precedence over content', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -271,8 +282,9 @@ void main() {
       expect(find.text('Content'), findsNothing);
     });
 
-    testWidgets('error state takes precedence over loading and content',
-        (WidgetTester tester) async {
+    testWidgets('error state takes precedence over loading and content', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(

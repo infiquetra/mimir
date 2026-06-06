@@ -87,10 +87,7 @@ class TrayService extends TrayListener {
     final menuItems = <MenuItem>[];
 
     // App title header (disabled, acts as label)
-    menuItems.add(MenuItem(
-      label: 'Mimir',
-      disabled: true,
-    ));
+    menuItems.add(MenuItem(label: 'Mimir', disabled: true));
     Log.d('TRAY', 'Added menu item: Mimir (header, disabled)');
 
     menuItems.add(MenuItem.separator());
@@ -100,120 +97,164 @@ class TrayService extends TrayListener {
     final dashboardLabel = windowService.isWindowOpen(WindowType.dashboard)
         ? '◆ Dashboard'
         : 'Dashboard';
-    menuItems.add(MenuItem(
-      key: 'dashboard',
-      label: dashboardLabel,
-      icon: 'assets/icons/tray/dashboard.png',
-    ));
+    menuItems.add(
+      MenuItem(
+        key: 'dashboard',
+        label: dashboardLabel,
+        icon: 'assets/icons/tray/dashboard.png',
+      ),
+    );
     Log.d('TRAY', 'Added menu item: $dashboardLabel (key=dashboard)');
 
     final skillsLabel = windowService.isWindowOpen(WindowType.skills)
         ? '◆ Skills'
         : 'Skills';
-    menuItems.add(MenuItem(
-      key: 'skills',
-      label: skillsLabel,
-      icon: 'assets/icons/tray/skills.png',
-    ));
+    menuItems.add(
+      MenuItem(
+        key: 'skills',
+        label: skillsLabel,
+        icon: 'assets/icons/tray/skills.png',
+      ),
+    );
     Log.d('TRAY', 'Added menu item: $skillsLabel (key=skills)');
 
     final walletLabel = windowService.isWindowOpen(WindowType.wallet)
         ? '◆ Wallet'
         : 'Wallet';
-    menuItems.add(MenuItem(
-      key: 'wallet',
-      label: walletLabel,
-      icon: 'assets/icons/tray/wallet.png',
-    ));
+    menuItems.add(
+      MenuItem(
+        key: 'wallet',
+        label: walletLabel,
+        icon: 'assets/icons/tray/wallet.png',
+      ),
+    );
     Log.d('TRAY', 'Added menu item: $walletLabel (key=wallet)');
 
     final charactersLabel = windowService.isWindowOpen(WindowType.characters)
         ? '◆ Characters'
         : 'Characters';
-    menuItems.add(MenuItem(
-      key: 'characters',
-      label: charactersLabel,
-      icon: 'assets/icons/tray/characters.png',
-    ));
+    menuItems.add(
+      MenuItem(
+        key: 'characters',
+        label: charactersLabel,
+        icon: 'assets/icons/tray/characters.png',
+      ),
+    );
     Log.d('TRAY', 'Added menu item: $charactersLabel (key=characters)');
 
     final settingsLabel = windowService.isWindowOpen(WindowType.settings)
         ? '◆ Settings'
         : 'Settings';
-    menuItems.add(MenuItem(
-      key: 'settings',
-      label: settingsLabel,
-      icon: 'assets/icons/tray/settings.png',
-    ));
+    menuItems.add(
+      MenuItem(
+        key: 'settings',
+        label: settingsLabel,
+        icon: 'assets/icons/tray/settings.png',
+      ),
+    );
     Log.d('TRAY', 'Added menu item: $settingsLabel (key=settings)');
 
     final assetsLabel = windowService.isWindowOpen(WindowType.assets)
         ? '◆ Assets'
         : 'Assets';
-    menuItems.add(MenuItem(
-      key: 'assets',
-      label: assetsLabel,
-      icon: 'assets/icons/tray/assets.png',
-    ));
+    menuItems.add(
+      MenuItem(
+        key: 'assets',
+        label: assetsLabel,
+        icon: 'assets/icons/tray/assets.png',
+      ),
+    );
     Log.d('TRAY', 'Added menu item: $assetsLabel (key=assets)');
 
     final planetaryLabel = windowService.isWindowOpen(WindowType.planetary)
         ? '◆ Planetary Industry'
         : 'Planetary Industry';
-    menuItems.add(MenuItem(
-      key: 'planetary',
-      label: planetaryLabel,
-      icon: 'assets/icons/tray/planetary.png',
-    ));
+    menuItems.add(
+      MenuItem(
+        key: 'planetary',
+        label: planetaryLabel,
+        icon: 'assets/icons/tray/planetary.png',
+      ),
+    );
     Log.d('TRAY', 'Added menu item: $planetaryLabel (key=planetary)');
 
     final industryLabel = windowService.isWindowOpen(WindowType.industry)
         ? '◆ Industry & Manufacturing'
         : 'Industry & Manufacturing';
-    menuItems.add(MenuItem(
-      key: 'industry',
-      label: industryLabel,
-      icon: 'assets/icons/tray/industry.png',
-    ));
+    menuItems.add(
+      MenuItem(
+        key: 'industry',
+        label: industryLabel,
+        icon: 'assets/icons/tray/industry.png',
+      ),
+    );
     Log.d('TRAY', 'Added menu item: $industryLabel (key=industry)');
 
     final marketLabel = windowService.isWindowOpen(WindowType.market)
         ? '◆ Market Tools'
         : 'Market Tools';
-    menuItems.add(MenuItem(
-      key: 'market',
-      label: marketLabel,
-      icon: 'assets/icons/tray/market.png',
-    ));
+    menuItems.add(
+      MenuItem(
+        key: 'market',
+        label: marketLabel,
+        icon: 'assets/icons/tray/market.png',
+      ),
+    );
     Log.d('TRAY', 'Added menu item: $marketLabel (key=market)');
 
     final fittingLabel = windowService.isWindowOpen(WindowType.fitting)
         ? '◆ Ship Fitting'
         : 'Ship Fitting';
-    menuItems.add(MenuItem(
-      key: 'fitting',
-      label: fittingLabel,
-      icon: 'assets/icons/tray/fitting.png',
-    ));
+    menuItems.add(
+      MenuItem(
+        key: 'fitting',
+        label: fittingLabel,
+        icon: 'assets/icons/tray/fitting.png',
+      ),
+    );
     Log.d('TRAY', 'Added menu item: $fittingLabel (key=fitting)');
+
+    final intelLabel = windowService.isWindowOpen(WindowType.intel)
+        ? '◆ Live Intel'
+        : 'Live Intel';
+    menuItems.add(
+      MenuItem(
+        key: 'intel',
+        label: intelLabel,
+        icon:
+            'assets/icons/tray/intel.png', // Assuming an icon exists or default fallback
+      ),
+    );
+    Log.d('TRAY', 'Added menu item: $intelLabel (key=intel)');
+
+    final combatAnalyzerLabel = windowService.isWindowOpen(WindowType.combatAnalyzer)
+        ? '◆ Combat Analyzer'
+        : 'Combat Analyzer';
+    menuItems.add(
+      MenuItem(
+        key: 'combat_analyzer',
+        label: combatAnalyzerLabel,
+        icon: 'assets/icons/tray/intel.png', // Fallback icon
+      ),
+    );
+    Log.d('TRAY', 'Added menu item: $combatAnalyzerLabel (key=combat_analyzer)');
 
     menuItems.add(MenuItem.separator());
     Log.d('TRAY', 'Added separator');
 
-    menuItems.add(MenuItem(
-      key: 'onboarding',
-      label: 'Show Tutorial',
-      icon: 'assets/icons/tray/tutorial.png',
-    ));
+    menuItems.add(
+      MenuItem(
+        key: 'onboarding',
+        label: 'Show Tutorial',
+        icon: 'assets/icons/tray/tutorial.png',
+      ),
+    );
     Log.d('TRAY', 'Added menu item: Show Tutorial (key=onboarding)');
 
     menuItems.add(MenuItem.separator());
     Log.d('TRAY', 'Added separator');
 
-    menuItems.add(MenuItem(
-      key: 'quit',
-      label: 'Quit Mimir',
-    ));
+    menuItems.add(MenuItem(key: 'quit', label: 'Quit Mimir'));
     Log.d('TRAY', 'Added menu item: Quit Mimir (key=quit)');
 
     final menu = Menu(items: menuItems);
@@ -242,7 +283,10 @@ class TrayService extends TrayListener {
 
   @override
   void onTrayMenuItemClick(MenuItem menuItem) {
-    Log.i('TRAY', 'onTrayMenuItemClick - label="${menuItem.label}", key="${menuItem.key}"');
+    Log.i(
+      'TRAY',
+      'onTrayMenuItemClick - label="${menuItem.label}", key="${menuItem.key}"',
+    );
     final action = menuItem.key;
     if (action != null) {
       Log.d('TRAY', 'Handling menu click: $action');
@@ -307,6 +351,16 @@ class TrayService extends TrayListener {
         case 'fitting':
           Log.i('TRAY', 'Opening fitting window');
           await windowService.openWindow(WindowType.fitting);
+          await refreshMenu();
+          break;
+        case 'intel':
+          Log.i('TRAY', 'Opening intel window');
+          await windowService.openWindow(WindowType.intel);
+          await refreshMenu();
+          break;
+        case 'combat_analyzer':
+          Log.i('TRAY', 'Opening combat analyzer window');
+          await windowService.openWindow(WindowType.combatAnalyzer);
           await refreshMenu();
           break;
         case 'onboarding':

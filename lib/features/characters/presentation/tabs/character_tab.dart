@@ -53,10 +53,7 @@ class _CharacterTabState extends ConsumerState<CharacterTab>
         Expanded(
           child: TabBarView(
             controller: _tabController,
-            children: const [
-              AttributesSubTab(),
-              JumpClonesSubTab(),
-            ],
+            children: const [AttributesSubTab(), JumpClonesSubTab()],
           ),
         ),
       ],

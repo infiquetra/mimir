@@ -28,7 +28,10 @@ final sdeInitializerProvider = FutureProvider<void>((ref) async {
 /// Provider to get a skill name by type ID.
 ///
 /// Returns the skill name or "Skill #`<id>`" if not found.
-final skillNameProvider = FutureProvider.family<String, int>((ref, typeId) async {
+final skillNameProvider = FutureProvider.family<String, int>((
+  ref,
+  typeId,
+) async {
   final service = ref.watch(sdeServiceProvider);
 
   // Ensure SDE is initialized
@@ -42,8 +45,10 @@ final skillNameProvider = FutureProvider.family<String, int>((ref, typeId) async
 ///
 /// More efficient for lists of skills than calling skillNameProvider
 /// multiple times.
-final skillNamesProvider =
-    FutureProvider.family<Map<int, String>, List<int>>((ref, typeIds) async {
+final skillNamesProvider = FutureProvider.family<Map<int, String>, List<int>>((
+  ref,
+  typeIds,
+) async {
   final service = ref.watch(sdeServiceProvider);
 
   // Ensure SDE is initialized
@@ -70,8 +75,10 @@ final skillGroupsProvider = FutureProvider<List<SdeGroup>>((ref) async {
 });
 
 /// Provider to get skills in a specific group.
-final skillsByGroupProvider =
-    FutureProvider.family<List<SdeType>, int>((ref, groupId) async {
+final skillsByGroupProvider = FutureProvider.family<List<SdeType>, int>((
+  ref,
+  groupId,
+) async {
   final service = ref.watch(sdeServiceProvider);
 
   // Ensure SDE is initialized

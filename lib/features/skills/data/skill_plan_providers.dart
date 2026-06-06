@@ -20,11 +20,17 @@ part 'skill_plan_providers.g.dart';
 final skillPlansProvider = StreamProvider<List<SkillPlan>>((ref) {
   final activeCharacter = ref.watch(activeCharacterProvider).value;
   if (activeCharacter == null) {
-    Log.d('SKILLS', 'skillPlansProvider - no active character, returning empty stream');
+    Log.d(
+      'SKILLS',
+      'skillPlansProvider - no active character, returning empty stream',
+    );
     return Stream.value([]);
   }
 
-  Log.d('SKILLS', 'skillPlansProvider - setting up stream for character ${activeCharacter.characterId}');
+  Log.d(
+    'SKILLS',
+    'skillPlansProvider - setting up stream for character ${activeCharacter.characterId}',
+  );
   final database = ref.watch(databaseProvider);
   return database.watchSkillPlans(activeCharacter.characterId);
 });
@@ -32,18 +38,28 @@ final skillPlansProvider = StreamProvider<List<SkillPlan>>((ref) {
 /// Provider for skill plan entries for a specific plan.
 ///
 /// Returns entries sorted by sort order (display order).
-final skillPlanEntriesProvider = StreamProvider.family<List<SkillPlanEntry>, int>((ref, planId) {
-  Log.d('SKILLS', 'skillPlanEntriesProvider - setting up stream for plan $planId');
-  final database = ref.watch(databaseProvider);
-  return database.watchPlanEntries(planId);
-});
+final skillPlanEntriesProvider =
+    StreamProvider.family<List<SkillPlanEntry>, int>((ref, planId) {
+      Log.d(
+        'SKILLS',
+        'skillPlanEntriesProvider - setting up stream for plan $planId',
+      );
+      final database = ref.watch(databaseProvider);
+      return database.watchPlanEntries(planId);
+    });
 
 /// Provider for skill plan progress calculation.
 ///
 /// Compares plan target levels against character's trained skills.
 /// Returns progress data including completion percentage and training time.
-final skillPlanProgressProvider = FutureProvider.family<SkillPlanProgress, int>((ref, planId) async {
-  Log.d('SKILLS', 'skillPlanProgressProvider - calculating progress for plan $planId');
+final skillPlanProgressProvider = FutureProvider.family<SkillPlanProgress, int>((
+  ref,
+  planId,
+) async {
+  Log.d(
+    'SKILLS',
+    'skillPlanProgressProvider - calculating progress for plan $planId',
+  );
 
   final database = ref.read(databaseProvider);
   final activeCharacter = ref.watch(activeCharacterProvider).value;
@@ -62,7 +78,10 @@ final skillPlanProgressProvider = FutureProvider.family<SkillPlanProgress, int>(
 
   // Get plan entries
   final entries = await database.getPlanEntries(planId);
-  Log.d('SKILLS', 'skillPlanProgressProvider - plan has ${entries.length} entries');
+  Log.d(
+    'SKILLS',
+    'skillPlanProgressProvider - plan has ${entries.length} entries',
+  );
 
   if (entries.isEmpty) {
     return SkillPlanProgress(
@@ -76,7 +95,9 @@ final skillPlanProgressProvider = FutureProvider.family<SkillPlanProgress, int>(
   }
 
   // Get trained skills
-  final trainedSkills = await database.getCharacterSkills(activeCharacter.characterId);
+  final trainedSkills = await database.getCharacterSkills(
+    activeCharacter.characterId,
+  );
   final trainedSkillsMap = <int, int>{};
   for (final skill in trainedSkills) {
     trainedSkillsMap[skill.skillId] = skill.trainedSkillLevel;
@@ -92,7 +113,10 @@ final skillPlanProgressProvider = FutureProvider.family<SkillPlanProgress, int>(
   }
 
   final percentComplete = (trainedCount / entries.length * 100);
-  Log.i('SKILLS', 'skillPlanProgressProvider - $trainedCount/${entries.length} skills complete (${percentComplete.toStringAsFixed(1)}%)');
+  Log.i(
+    'SKILLS',
+    'skillPlanProgressProvider - $trainedCount/${entries.length} skills complete (${percentComplete.toStringAsFixed(1)}%)',
+  );
 
   // Calculate training time and SP requirements
   final calculator = ref.read(skillTrainingCalculatorProvider);
@@ -103,8 +127,13 @@ final skillPlanProgressProvider = FutureProvider.family<SkillPlanProgress, int>(
 
   try {
     // Get character attributes for accurate training time calculations
-    final characterAttributes = await esiClient.getCharacterAttributes(activeCharacter.characterId);
-    Log.d('SKILLS', 'skillPlanProgressProvider - got character attributes: int=${characterAttributes.intelligence}, per=${characterAttributes.perception}');
+    final characterAttributes = await esiClient.getCharacterAttributes(
+      activeCharacter.characterId,
+    );
+    Log.d(
+      'SKILLS',
+      'skillPlanProgressProvider - got character attributes: int=${characterAttributes.intelligence}, per=${characterAttributes.perception}',
+    );
 
     // Calculate for each untrained/partially trained skill
     for (final entry in entries) {
@@ -128,9 +157,17 @@ final skillPlanProgressProvider = FutureProvider.family<SkillPlanProgress, int>(
       }
     }
 
-    Log.i('SKILLS', 'skillPlanProgressProvider - total SP: $totalSp, total time: ${totalTimeSeconds}s (${(totalTimeSeconds / 3600).toStringAsFixed(1)}h)');
+    Log.i(
+      'SKILLS',
+      'skillPlanProgressProvider - total SP: $totalSp, total time: ${totalTimeSeconds}s (${(totalTimeSeconds / 3600).toStringAsFixed(1)}h)',
+    );
   } catch (e, stack) {
-    Log.e('SKILLS', 'skillPlanProgressProvider - failed to calculate training time', e, stack);
+    Log.e(
+      'SKILLS',
+      'skillPlanProgressProvider - failed to calculate training time',
+      e,
+      stack,
+    );
     // Continue with zeros on error
   }
 
@@ -160,10 +197,7 @@ class SkillPlanNotifier extends _$SkillPlanNotifier {
   }
 
   /// Creates a new skill plan.
-  Future<int> createPlan({
-    required String name,
-    String? description,
-  }) async {
+  Future<int> createPlan({required String name, String? description}) async {
     Log.i('SKILLS', 'SkillPlanNotifier.createPlan - name: $name');
     state = const AsyncValue.loading();
 
@@ -252,7 +286,10 @@ class SkillPlanNotifier extends _$SkillPlanNotifier {
     required int skillId,
     required int targetLevel,
   }) async {
-    Log.i('SKILLS', 'SkillPlanNotifier.addSkillToPlan - planId: $planId, skillId: $skillId, level: $targetLevel');
+    Log.i(
+      'SKILLS',
+      'SkillPlanNotifier.addSkillToPlan - planId: $planId, skillId: $skillId, level: $targetLevel',
+    );
     state = const AsyncValue.loading();
 
     try {
@@ -260,7 +297,9 @@ class SkillPlanNotifier extends _$SkillPlanNotifier {
 
       // Get current entries to determine next sort order
       final entries = await database.getPlanEntries(planId);
-      final nextSortOrder = entries.isEmpty ? 0 : entries.map((e) => e.sortOrder).reduce((a, b) => a > b ? a : b) + 1;
+      final nextSortOrder = entries.isEmpty
+          ? 0
+          : entries.map((e) => e.sortOrder).reduce((a, b) => a > b ? a : b) + 1;
 
       await database.addSkillToPlan(
         planId: planId,
@@ -269,7 +308,10 @@ class SkillPlanNotifier extends _$SkillPlanNotifier {
         sortOrder: nextSortOrder,
       );
 
-      Log.i('SKILLS', 'SkillPlanNotifier.addSkillToPlan - added skill $skillId to plan $planId');
+      Log.i(
+        'SKILLS',
+        'SkillPlanNotifier.addSkillToPlan - added skill $skillId to plan $planId',
+      );
       if (ref.mounted) {
         state = const AsyncValue.data(null);
       }
@@ -284,19 +326,30 @@ class SkillPlanNotifier extends _$SkillPlanNotifier {
 
   /// Removes a skill from a plan.
   Future<void> removeSkillFromPlan(int planId, int skillId) async {
-    Log.i('SKILLS', 'SkillPlanNotifier.removeSkillFromPlan - planId: $planId, skillId: $skillId');
+    Log.i(
+      'SKILLS',
+      'SkillPlanNotifier.removeSkillFromPlan - planId: $planId, skillId: $skillId',
+    );
     state = const AsyncValue.loading();
 
     try {
       final database = ref.read(databaseProvider);
       await database.removeSkillFromPlan(planId, skillId);
 
-      Log.i('SKILLS', 'SkillPlanNotifier.removeSkillFromPlan - removed skill $skillId from plan $planId');
+      Log.i(
+        'SKILLS',
+        'SkillPlanNotifier.removeSkillFromPlan - removed skill $skillId from plan $planId',
+      );
       if (ref.mounted) {
         state = const AsyncValue.data(null);
       }
     } catch (e, stack) {
-      Log.e('SKILLS', 'SkillPlanNotifier.removeSkillFromPlan - FAILED', e, stack);
+      Log.e(
+        'SKILLS',
+        'SkillPlanNotifier.removeSkillFromPlan - FAILED',
+        e,
+        stack,
+      );
       if (ref.mounted) {
         state = AsyncValue.error(e, stack);
       }
@@ -306,14 +359,20 @@ class SkillPlanNotifier extends _$SkillPlanNotifier {
 
   /// Reorders skills in a plan.
   Future<void> reorderSkills(int planId, List<int> skillIds) async {
-    Log.i('SKILLS', 'SkillPlanNotifier.reorderSkills - planId: $planId, ${skillIds.length} skills');
+    Log.i(
+      'SKILLS',
+      'SkillPlanNotifier.reorderSkills - planId: $planId, ${skillIds.length} skills',
+    );
     state = const AsyncValue.loading();
 
     try {
       final database = ref.read(databaseProvider);
       await database.updatePlanEntryOrder(planId, skillIds);
 
-      Log.i('SKILLS', 'SkillPlanNotifier.reorderSkills - updated order for plan $planId');
+      Log.i(
+        'SKILLS',
+        'SkillPlanNotifier.reorderSkills - updated order for plan $planId',
+      );
       if (ref.mounted) {
         state = const AsyncValue.data(null);
       }

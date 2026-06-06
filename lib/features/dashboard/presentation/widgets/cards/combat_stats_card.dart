@@ -56,10 +56,10 @@ class CombatStatsCard extends ConsumerWidget {
         Text(
           'ALL CHARACTERS',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Colors.white.withAlpha(179),
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-              ),
+            color: Colors.white.withAlpha(179),
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
         ),
         const SizedBox(height: 12),
 
@@ -73,10 +73,10 @@ class CombatStatsCard extends ConsumerWidget {
           Text(
             'BY CHARACTER',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Colors.white.withAlpha(179),
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
-                ),
+              color: Colors.white.withAlpha(179),
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
           ),
           const SizedBox(height: 12),
 
@@ -96,7 +96,9 @@ class CombatStatsCard extends ConsumerWidget {
     BuildContext context,
     AggregateCombatStats stats,
   ) {
-    final dangerColor = stats.dangerRating >= 0 ? EveColors.success : EveColors.error;
+    final dangerColor = stats.dangerRating >= 0
+        ? EveColors.success
+        : EveColors.error;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,17 +166,16 @@ class CombatStatsCard extends ConsumerWidget {
   }
 
   Widget _buildCharacterRow(BuildContext context, CombatStatsData stats) {
-    final dangerColor = stats.dangerRating >= 0 ? EveColors.success : EveColors.error;
+    final dangerColor = stats.dangerRating >= 0
+        ? EveColors.success
+        : EveColors.error;
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: EveColors.darkSurfaceVariant.withAlpha(128),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: dangerColor.withAlpha(77),
-          width: 1,
-        ),
+        border: Border.all(color: dangerColor.withAlpha(77), width: 1),
       ),
       child: Row(
         children: [
@@ -192,9 +193,9 @@ class CombatStatsCard extends ConsumerWidget {
               children: [
                 Text(
                   stats.characterName,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -202,8 +203,8 @@ class CombatStatsCard extends ConsumerWidget {
                 Text(
                   '${stats.kills} kills / ${stats.deaths} deaths',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withAlpha(179),
-                      ),
+                    color: Colors.white.withAlpha(179),
+                  ),
                 ),
               ],
             ),
@@ -215,10 +216,7 @@ class CombatStatsCard extends ConsumerWidget {
             decoration: BoxDecoration(
               color: dangerColor.withAlpha(51),
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(
-                color: dangerColor.withAlpha(128),
-                width: 1,
-              ),
+              border: Border.all(color: dangerColor.withAlpha(128), width: 1),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -234,9 +232,9 @@ class CombatStatsCard extends ConsumerWidget {
                 Text(
                   stats.dangerRating.abs().toString(),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: dangerColor,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: dangerColor,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -262,15 +260,15 @@ class CombatStatsCard extends ConsumerWidget {
             Text(
               'No Combat Data',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.white.withAlpha(179),
-                  ),
+                color: Colors.white.withAlpha(179),
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               'Your characters have no recorded combat activity',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withAlpha(128),
-                  ),
+                color: Colors.white.withAlpha(128),
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -303,10 +301,7 @@ class _StatBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: EveColors.darkSurfaceVariant.withAlpha(128),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: color.withAlpha(77),
-          width: 1,
-        ),
+        border: Border.all(color: color.withAlpha(77), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,21 +310,17 @@ class _StatBox extends StatelessWidget {
           Row(
             children: [
               if (icon != null) ...[
-                Icon(
-                  icon,
-                  size: 14,
-                  color: color.withAlpha(179),
-                ),
+                Icon(icon, size: 14, color: color.withAlpha(179)),
                 const SizedBox(width: 4),
               ],
               Expanded(
                 child: Text(
                   label,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Colors.white.withAlpha(179),
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
+                    color: Colors.white.withAlpha(179),
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -342,10 +333,10 @@ class _StatBox extends StatelessWidget {
           Text(
             value,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                  fontSize: compact ? 18 : 24,
-                ),
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: compact ? 18 : 24,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

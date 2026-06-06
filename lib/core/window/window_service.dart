@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../database/app_database.dart';
+import '../platform/app_paths.dart';
 import 'window_types.dart';
 
 /// Service for managing multiple application windows.
@@ -90,10 +91,12 @@ class WindowService {
       // Get database path to pass to sub-window.
       // Sub-windows can't use path_provider, so we resolve the path here.
       final dbPath = await getDatabasePath();
+      final supportPath = await getMimirApplicationSupportPath();
       final size = type.defaultSize;
       final args = jsonEncode({
         'windowType': type.windowId,
         'dbPath': dbPath,
+        'supportPath': supportPath,
         'width': size.width,
         'height': size.height,
       });

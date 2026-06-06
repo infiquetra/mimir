@@ -68,8 +68,7 @@ class SkillQueueEntries extends Table {
   IntColumn get id => integer().autoIncrement()();
 
   /// Character ID this queue entry belongs to.
-  IntColumn get characterId =>
-      integer().references(Characters, #characterId)();
+  IntColumn get characterId => integer().references(Characters, #characterId)();
 
   /// Position in the training queue (0 = currently training).
   IntColumn get queuePosition => integer()();
@@ -104,8 +103,7 @@ class WalletJournalEntries extends Table {
   IntColumn get id => integer()();
 
   /// Character ID this entry belongs to.
-  IntColumn get characterId =>
-      integer().references(Characters, #characterId)();
+  IntColumn get characterId => integer().references(Characters, #characterId)();
 
   /// ISK amount (positive = income, negative = expense).
   RealColumn get amount => real()();
@@ -138,8 +136,7 @@ class WalletBalances extends Table {
   IntColumn get id => integer().autoIncrement()();
 
   /// Character ID.
-  IntColumn get characterId =>
-      integer().references(Characters, #characterId)();
+  IntColumn get characterId => integer().references(Characters, #characterId)();
 
   /// Balance in ISK.
   RealColumn get balance => real()();
@@ -157,8 +154,7 @@ class WalletTransactions extends Table {
   IntColumn get transactionId => integer()();
 
   /// Character ID this transaction belongs to.
-  IntColumn get characterId =>
-      integer().references(Characters, #characterId)();
+  IntColumn get characterId => integer().references(Characters, #characterId)();
 
   /// Item type ID from EVE SDE.
   IntColumn get typeId => integer()();
@@ -196,8 +192,7 @@ class LoyaltyPoints extends Table {
   IntColumn get id => integer().autoIncrement()();
 
   /// Character ID.
-  IntColumn get characterId =>
-      integer().references(Characters, #characterId)();
+  IntColumn get characterId => integer().references(Characters, #characterId)();
 
   /// Corporation ID offering these loyalty points.
   IntColumn get corporationId => integer()();
@@ -218,8 +213,7 @@ class AssetCache extends Table {
   IntColumn get itemId => integer()();
 
   /// Character ID this asset belongs to.
-  IntColumn get characterId =>
-      integer().references(Characters, #characterId)();
+  IntColumn get characterId => integer().references(Characters, #characterId)();
 
   /// Item type ID from EVE SDE.
   IntColumn get typeId => integer()();
@@ -259,6 +253,15 @@ class AppSettingsTable extends Table {
   /// ESI Error limit reset timestamp
   DateTimeColumn get esiErrorLimitReset => dateTime().nullable()();
 
+  /// LLM API Key
+  TextColumn get llmApiKey => text().nullable()();
+
+  /// LLM Model Name
+  TextColumn get llmModelName => text().nullable()();
+
+  /// LLM Base URL (for OpenAI compatible endpoints)
+  TextColumn get llmBaseUrl => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -269,8 +272,7 @@ class AppSettingsTable extends Table {
 /// Data is refreshed periodically (minimum 1 hour between fetches).
 class CombatStats extends Table {
   /// Character ID (primary key).
-  IntColumn get characterId =>
-      integer().references(Characters, #characterId)();
+  IntColumn get characterId => integer().references(Characters, #characterId)();
 
   /// Total kills (ships destroyed).
   IntColumn get kills => integer().withDefault(const Constant(0))();
@@ -297,8 +299,7 @@ class CombatStats extends Table {
 /// Data is refreshed periodically (minimum 5 minutes between fetches).
 class CharacterStatuses extends Table {
   /// Character ID (primary key).
-  IntColumn get characterId =>
-      integer().references(Characters, #characterId)();
+  IntColumn get characterId => integer().references(Characters, #characterId)();
 
   /// Solar system ID where the character is located.
   IntColumn get solarSystemId => integer().nullable()();
@@ -363,8 +364,7 @@ class CharacterSkills extends Table {
   IntColumn get id => integer().autoIncrement()();
 
   /// Character ID this skill belongs to.
-  IntColumn get characterId =>
-      integer().references(Characters, #characterId)();
+  IntColumn get characterId => integer().references(Characters, #characterId)();
 
   /// Skill type ID from EVE SDE.
   IntColumn get skillId => integer()();
@@ -391,8 +391,7 @@ class SkillPlans extends Table {
   IntColumn get id => integer().autoIncrement()();
 
   /// Character ID this plan belongs to.
-  IntColumn get characterId =>
-      integer().references(Characters, #characterId)();
+  IntColumn get characterId => integer().references(Characters, #characterId)();
 
   /// Plan name (e.g., "PvP Frigate", "Mining Barge").
   TextColumn get name => text()();
@@ -431,8 +430,7 @@ class SkillPlanEntries extends Table {
 /// Planetary colonies table.
 class PlanetaryColonies extends Table {
   IntColumn get planetId => integer()();
-  IntColumn get characterId =>
-      integer().references(Characters, #characterId)();
+  IntColumn get characterId => integer().references(Characters, #characterId)();
   TextColumn get planetName => text()();
   TextColumn get planetType => text()();
   IntColumn get upgradeLevel => integer()();
@@ -447,8 +445,7 @@ class PlanetaryColonies extends Table {
 class PlanetaryPins extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get pinId => integer()();
-  IntColumn get characterId =>
-      integer().references(Characters, #characterId)();
+  IntColumn get characterId => integer().references(Characters, #characterId)();
   IntColumn get planetId => integer()();
   IntColumn get typeId => integer()();
   TextColumn get typeName => text().nullable()();
@@ -469,8 +466,7 @@ class PlanetaryPins extends Table {
 /// Main assets table.
 class Assets extends Table {
   IntColumn get itemId => integer()();
-  IntColumn get characterId =>
-      integer().references(Characters, #characterId)();
+  IntColumn get characterId => integer().references(Characters, #characterId)();
   IntColumn get typeId => integer()();
   IntColumn get locationId => integer()();
   TextColumn get locationFlag => text()();
@@ -504,8 +500,7 @@ class AssetLocations extends Table {
 /// Historical snapshots for asset value tracking.
 class AssetSnapshots extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get characterId =>
-      integer().references(Characters, #characterId)();
+  IntColumn get characterId => integer().references(Characters, #characterId)();
   DateTimeColumn get timestamp => dateTime()();
   RealColumn get totalValue => real()();
   IntColumn get totalItems => integer()();
@@ -515,8 +510,7 @@ class AssetSnapshots extends Table {
 /// Character blueprints.
 class Blueprints extends Table {
   IntColumn get itemId => integer()();
-  IntColumn get characterId =>
-      integer().references(Characters, #characterId)();
+  IntColumn get characterId => integer().references(Characters, #characterId)();
   IntColumn get typeId => integer()();
   IntColumn get locationId => integer()();
   IntColumn get quantity => integer()();
@@ -532,8 +526,7 @@ class Blueprints extends Table {
 /// Industry manufacturing/invention jobs.
 class IndustryJobs extends Table {
   IntColumn get jobId => integer()();
-  IntColumn get characterId =>
-      integer().references(Characters, #characterId)();
+  IntColumn get characterId => integer().references(Characters, #characterId)();
   IntColumn get installerId => integer()();
   IntColumn get facilityId => integer()();
   IntColumn get locationId => integer()();
@@ -611,14 +604,14 @@ class MarketHistoryEntries extends Table {
 /// Saved fittings
 class SavedFittings extends Table {
   TextColumn get id => text()();
-  IntColumn get characterId => integer().nullable()();  // null = shared
+  IntColumn get characterId => integer().nullable()(); // null = shared
   TextColumn get name => text()();
   TextColumn get description => text().nullable()();
   IntColumn get shipTypeId => integer()();
-  TextColumn get fittingJson => text()();  // Full fitting data
+  TextColumn get fittingJson => text()(); // Full fitting data
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
-  TextColumn get tags => text().nullable()();  // Comma-separated tags
+  TextColumn get tags => text().nullable()(); // Comma-separated tags
 
   @override
   Set<Column> get primaryKey => {id};
@@ -654,7 +647,7 @@ class Killmails extends Table {
   IntColumn get victimAllianceId => integer().nullable()();
   IntColumn get victimShipTypeId => integer()();
   RealColumn get totalValue => real()();
-  TextColumn get killmailJson => text()();  // Full killmail data
+  TextColumn get killmailJson => text()(); // Full killmail data
   DateTimeColumn get cachedAt => dateTime()();
 
   @override
@@ -665,8 +658,8 @@ class Killmails extends Table {
 class IntelAlerts extends Table {
   TextColumn get id => text()();
   TextColumn get alertType => text()();
-  TextColumn get triggerConfig => text()();  // JSON
-  TextColumn get actions => text()();        // JSON array
+  TextColumn get triggerConfig => text()(); // JSON
+  TextColumn get actions => text()(); // JSON array
   BoolColumn get enabled => boolean()();
   DateTimeColumn get lastTriggered => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
@@ -679,7 +672,7 @@ class IntelAlerts extends Table {
 class SystemActivity extends Table {
   IntColumn get solarSystemId => integer()();
   DateTimeColumn get periodStart => dateTime()();
-  IntColumn get periodMinutes => integer()();  // 15, 60, 1440
+  IntColumn get periodMinutes => integer()(); // 15, 60, 1440
   IntColumn get killCount => integer()();
   IntColumn get npcKillCount => integer()();
   IntColumn get jumps => integer()();
@@ -704,6 +697,59 @@ class WatchList extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Cached parsed combat encounters.
+class CombatParsedEncounters extends Table {
+  TextColumn get id => text()();
+  TextColumn get sourceFilePath => text()();
+  DateTimeColumn get sourceModified => dateTime()();
+  IntColumn get sourceSize => integer()();
+  IntColumn get parserVersion => integer()();
+  TextColumn get characterName => text()();
+  IntColumn get characterId => integer().nullable()();
+  DateTimeColumn get encounterStart => dateTime()();
+  DateTimeColumn get encounterEnd => dateTime()();
+  IntColumn get durationSeconds => integer()();
+  TextColumn get outcome => text()();
+  RealColumn get outcomeConfidence => real()();
+  TextColumn get outcomeEvidence => text()();
+  IntColumn get totalDamageDealt => integer()();
+  IntColumn get totalDamageReceived => integer()();
+  TextColumn get listSummaryJson => text()();
+  TextColumn get parseJson => text()();
+  DateTimeColumn get cachedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Analyzed combat encounters
+class CombatEncounters extends Table {
+  TextColumn get id => text()();
+  TextColumn get parsedEncounterId => text().nullable()();
+  IntColumn get analysisVersion => integer().nullable()();
+  TextColumn get analysisJson => text().nullable()();
+  TextColumn get parseJson => text().nullable()();
+  DateTimeColumn get encounterStart => dateTime().nullable()();
+  DateTimeColumn get encounterEnd => dateTime().nullable()();
+  IntColumn get characterId => integer().nullable()();
+  DateTimeColumn get encounterTime => dateTime()();
+  TextColumn get opposingCharacters => text()(); // JSON list
+  TextColumn get opposingCorporations => text()(); // JSON list
+  TextColumn get opposingAlliances => text()(); // JSON list
+  TextColumn get opposingShipTypes => text()(); // JSON list
+  IntColumn get totalDamageDealt => integer()();
+  IntColumn get totalDamageReceived => integer()();
+  BoolColumn get isVictory => boolean()();
+  TextColumn get llmSummary => text()();
+  TextColumn get llmFeedbackMistakes => text()();
+  TextColumn get llmFeedbackImprovements => text()();
+  TextColumn get llmFeedbackFits => text()();
+  TextColumn get damageChartData => text()(); // JSON data for drawing the chart
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Application database using Drift.
 ///
 /// Handles all local persistence for Mimir including:
@@ -711,39 +757,43 @@ class WatchList extends Table {
 /// - Skill queue caching
 /// - Wallet transaction history
 /// - Universe name resolution cache
-@DriftDatabase(tables: [
-  Characters,
-  SkillQueueEntries,
-  WalletJournalEntries,
-  WalletBalances,
-  WalletTransactions,
-  LoyaltyPoints,
-  AssetCache,
-  AppSettingsTable,
-  CombatStats,
-  CharacterStatuses,
-  UniverseNames,
-  CharacterSkills,
-  SkillPlans,
-  SkillPlanEntries,
-  PlanetaryColonies,
-  PlanetaryPins,
-  Assets,
-  AssetLocations,
-  AssetSnapshots,
-  Blueprints,
-  IndustryJobs,
-  MarketOrders,
-  MarketPrices,
-  MarketHistoryEntries,
-  SavedFittings,
-  FittingFolders,
-  FittingFolderMembers,
-  Killmails,
-  IntelAlerts,
-  SystemActivity,
-  WatchList,
-])
+@DriftDatabase(
+  tables: [
+    Characters,
+    SkillQueueEntries,
+    WalletJournalEntries,
+    WalletBalances,
+    WalletTransactions,
+    LoyaltyPoints,
+    AssetCache,
+    AppSettingsTable,
+    CombatStats,
+    CharacterStatuses,
+    UniverseNames,
+    CharacterSkills,
+    SkillPlans,
+    SkillPlanEntries,
+    PlanetaryColonies,
+    PlanetaryPins,
+    Assets,
+    AssetLocations,
+    AssetSnapshots,
+    Blueprints,
+    IndustryJobs,
+    MarketOrders,
+    MarketPrices,
+    MarketHistoryEntries,
+    SavedFittings,
+    FittingFolders,
+    FittingFolderMembers,
+    Killmails,
+    IntelAlerts,
+    SystemActivity,
+    WatchList,
+    CombatParsedEncounters,
+    CombatEncounters,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -751,17 +801,16 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (Migrator m) async {
         await m.createAll();
+        await _createCombatEnrichmentTables();
         // Insert default settings row.
-        await into(appSettingsTable).insert(
-          AppSettingsTableCompanion.insert(),
-        );
+        await into(appSettingsTable).insert(AppSettingsTableCompanion.insert());
       },
       onUpgrade: (Migrator m, int from, int to) async {
         // Migration from version 1 to 2: Add token storage columns.
@@ -774,9 +823,9 @@ class AppDatabase extends _$AppDatabase {
         if (from < 3) {
           await m.createTable(appSettingsTable);
           // Insert default settings row.
-          await into(appSettingsTable).insert(
-            AppSettingsTableCompanion.insert(),
-          );
+          await into(
+            appSettingsTable,
+          ).insert(AppSettingsTableCompanion.insert());
         }
 
         // Migration from version 3 to 4: Add combat stats table.
@@ -817,9 +866,13 @@ class AppDatabase extends _$AppDatabase {
         // Migration from version 9 to 10: Add ESI rate limit tracking.
         if (from < 10) {
           await m.addColumn(
-              appSettingsTable, appSettingsTable.esiErrorLimitRemain);
+            appSettingsTable,
+            appSettingsTable.esiErrorLimitRemain,
+          );
           await m.addColumn(
-              appSettingsTable, appSettingsTable.esiErrorLimitReset);
+            appSettingsTable,
+            appSettingsTable.esiErrorLimitReset,
+          );
         }
 
         // Migration from version 10 to 11: Add planetary industry tables.
@@ -866,7 +919,70 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(systemActivity);
           await m.createTable(watchList);
         }
+
+        // Migration from version 17 to 18: Add combat encounters and LLM config.
+        if (from < 18) {
+          await m.createTable(combatEncounters);
+          await m.addColumn(appSettingsTable, appSettingsTable.llmApiKey);
+          await m.addColumn(appSettingsTable, appSettingsTable.llmModelName);
+          await m.addColumn(appSettingsTable, appSettingsTable.llmBaseUrl);
+        }
+
+        // Migration from version 18 to 19: Add structured combat parser/report cache.
+        if (from < 19) {
+          await m.createTable(combatParsedEncounters);
+          await m.addColumn(
+            combatEncounters,
+            combatEncounters.parsedEncounterId,
+          );
+          await m.addColumn(combatEncounters, combatEncounters.analysisVersion);
+          await m.addColumn(combatEncounters, combatEncounters.analysisJson);
+          await m.addColumn(combatEncounters, combatEncounters.parseJson);
+          await m.addColumn(combatEncounters, combatEncounters.encounterStart);
+          await m.addColumn(combatEncounters, combatEncounters.encounterEnd);
+          await m.addColumn(combatEncounters, combatEncounters.characterId);
+        }
+
+        // Migration from version 19 to 20: Add combat AAR enrichment caches.
+        if (from < 20) {
+          await _createCombatEnrichmentTables();
+        }
       },
+    );
+  }
+
+  Future<void> _createCombatEnrichmentTables() async {
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS combat_encounter_enrichments (
+        parsed_encounter_id TEXT PRIMARY KEY NOT NULL,
+        status TEXT NOT NULL,
+        source TEXT NOT NULL,
+        killmail_id INTEGER NULL,
+        killmail_hash TEXT NULL,
+        killmail_time_ms INTEGER NULL,
+        match_confidence REAL NOT NULL,
+        match_reason TEXT NOT NULL,
+        raw_detail_json TEXT NULL,
+        normalized_evidence_json TEXT NOT NULL,
+        created_at_ms INTEGER NOT NULL,
+        updated_at_ms INTEGER NOT NULL
+      )
+    ''');
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS combat_killmail_search_cache (
+        cache_key TEXT PRIMARY KEY NOT NULL,
+        character_id INTEGER NOT NULL,
+        year INTEGER NOT NULL,
+        month INTEGER NOT NULL,
+        direction TEXT NOT NULL,
+        page INTEGER NOT NULL,
+        response_json TEXT NOT NULL,
+        cached_at_ms INTEGER NOT NULL
+      )
+    ''');
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_combat_killmail_search_cache_lookup '
+      'ON combat_killmail_search_cache(character_id, year, month, direction, page)',
     );
   }
 
@@ -877,8 +993,9 @@ class AppDatabase extends _$AppDatabase {
 
   /// Get a single character by ID.
   Future<Character?> getCharacter(int characterId) {
-    return (select(characters)..where((c) => c.characterId.equals(characterId)))
-        .getSingleOrNull();
+    return (select(
+      characters,
+    )..where((c) => c.characterId.equals(characterId))).getSingleOrNull();
   }
 
   /// Watch all characters for reactive updates.
@@ -886,14 +1003,16 @@ class AppDatabase extends _$AppDatabase {
 
   /// Get the currently active character.
   Future<Character?> getActiveCharacter() {
-    return (select(characters)..where((c) => c.isActive.equals(true)))
-        .getSingleOrNull();
+    return (select(
+      characters,
+    )..where((c) => c.isActive.equals(true))).getSingleOrNull();
   }
 
   /// Watch the active character for reactive updates.
   Stream<Character?> watchActiveCharacter() {
-    return (select(characters)..where((c) => c.isActive.equals(true)))
-        .watchSingleOrNull();
+    return (select(
+      characters,
+    )..where((c) => c.isActive.equals(true))).watchSingleOrNull();
   }
 
   /// Insert or update a character.
@@ -905,9 +1024,9 @@ class AppDatabase extends _$AppDatabase {
   Future<void> setActiveCharacter(int characterId) async {
     await transaction(() async {
       // Deactivate all characters.
-      await (update(characters)
-            ..where((c) => c.isActive.equals(true)))
-          .write(const CharactersCompanion(isActive: Value(false)));
+      await (update(characters)..where((c) => c.isActive.equals(true))).write(
+        const CharactersCompanion(isActive: Value(false)),
+      );
 
       // Activate the selected character.
       await (update(characters)
@@ -919,47 +1038,48 @@ class AppDatabase extends _$AppDatabase {
   /// Delete a character and all related data.
   Future<void> deleteCharacter(int characterId) async {
     await transaction(() async {
-      await (delete(skillQueueEntries)
-            ..where((e) => e.characterId.equals(characterId)))
-          .go();
-      await (delete(characterSkills)
-            ..where((cs) => cs.characterId.equals(characterId)))
-          .go();
+      await (delete(
+        skillQueueEntries,
+      )..where((e) => e.characterId.equals(characterId))).go();
+      await (delete(
+        characterSkills,
+      )..where((cs) => cs.characterId.equals(characterId))).go();
 
       // Delete skill plan entries for plans owned by this character using a subquery.
       final planIdsQuery = selectOnly(skillPlans)
         ..addColumns([skillPlans.id])
         ..where(skillPlans.characterId.equals(characterId));
-      await (delete(skillPlanEntries)..where((e) => e.planId.isInQuery(planIdsQuery)))
-          .go();
+      await (delete(
+        skillPlanEntries,
+      )..where((e) => e.planId.isInQuery(planIdsQuery))).go();
 
-      await (delete(skillPlans)
-            ..where((p) => p.characterId.equals(characterId)))
-          .go();
-      await (delete(walletJournalEntries)
-            ..where((e) => e.characterId.equals(characterId)))
-          .go();
-      await (delete(walletBalances)
-            ..where((e) => e.characterId.equals(characterId)))
-          .go();
-      await (delete(walletTransactions)
-            ..where((e) => e.characterId.equals(characterId)))
-          .go();
-      await (delete(loyaltyPoints)
-            ..where((e) => e.characterId.equals(characterId)))
-          .go();
-      await (delete(assetCache)
-            ..where((e) => e.characterId.equals(characterId)))
-          .go();
-      await (delete(combatStats)
-            ..where((s) => s.characterId.equals(characterId)))
-          .go();
-      await (delete(characterStatuses)
-            ..where((s) => s.characterId.equals(characterId)))
-          .go();
-      await (delete(characters)
-            ..where((c) => c.characterId.equals(characterId)))
-          .go();
+      await (delete(
+        skillPlans,
+      )..where((p) => p.characterId.equals(characterId))).go();
+      await (delete(
+        walletJournalEntries,
+      )..where((e) => e.characterId.equals(characterId))).go();
+      await (delete(
+        walletBalances,
+      )..where((e) => e.characterId.equals(characterId))).go();
+      await (delete(
+        walletTransactions,
+      )..where((e) => e.characterId.equals(characterId))).go();
+      await (delete(
+        loyaltyPoints,
+      )..where((e) => e.characterId.equals(characterId))).go();
+      await (delete(
+        assetCache,
+      )..where((e) => e.characterId.equals(characterId))).go();
+      await (delete(
+        combatStats,
+      )..where((s) => s.characterId.equals(characterId))).go();
+      await (delete(
+        characterStatuses,
+      )..where((s) => s.characterId.equals(characterId))).go();
+      await (delete(
+        characters,
+      )..where((c) => c.characterId.equals(characterId))).go();
     });
   }
 
@@ -971,9 +1091,9 @@ class AppDatabase extends _$AppDatabase {
     List<SkillQueueEntriesCompanion> entries,
   ) async {
     await transaction(() async {
-      await (delete(skillQueueEntries)
-            ..where((e) => e.characterId.equals(characterId)))
-          .go();
+      await (delete(
+        skillQueueEntries,
+      )..where((e) => e.characterId.equals(characterId))).go();
       await batch((b) {
         b.insertAll(skillQueueEntries, entries);
       });
@@ -1002,9 +1122,12 @@ class AppDatabase extends _$AppDatabase {
   /// Returns a map of characterId → skill queue entries.
   Future<Map<int, List<SkillQueueEntry>>> getAllSkillQueues() async {
     // Fetch all skill queue entries in a single query.
-    final allEntries = await (select(skillQueueEntries)
-          ..orderBy([(e) => OrderingTerm.asc(e.characterId), (e) => OrderingTerm.asc(e.queuePosition)]))
-        .get();
+    final allEntries =
+        await (select(skillQueueEntries)..orderBy([
+              (e) => OrderingTerm.asc(e.characterId),
+              (e) => OrderingTerm.asc(e.queuePosition),
+            ]))
+            .get();
 
     // Group by character ID.
     final queueMap = <int, List<SkillQueueEntry>>{};
@@ -1026,9 +1149,9 @@ class AppDatabase extends _$AppDatabase {
     List<CharacterSkillsCompanion> skills,
   ) async {
     await transaction(() async {
-      await (delete(characterSkills)
-            ..where((cs) => cs.characterId.equals(characterId)))
-          .go();
+      await (delete(
+        characterSkills,
+      )..where((cs) => cs.characterId.equals(characterId))).go();
       await batch((b) {
         b.insertAll(characterSkills, skills);
       });
@@ -1037,25 +1160,22 @@ class AppDatabase extends _$AppDatabase {
 
   /// Get all trained skills for a character.
   Future<List<CharacterSkill>> getCharacterSkills(int characterId) {
-    return (select(characterSkills)
-          ..where((cs) => cs.characterId.equals(characterId)))
-        .get();
+    return (select(
+      characterSkills,
+    )..where((cs) => cs.characterId.equals(characterId))).get();
   }
 
   /// Watch trained skills for reactive updates.
   Stream<List<CharacterSkill>> watchCharacterSkills(int characterId) {
-    return (select(characterSkills)
-          ..where((cs) => cs.characterId.equals(characterId)))
-        .watch();
+    return (select(
+      characterSkills,
+    )..where((cs) => cs.characterId.equals(characterId))).watch();
   }
 
   /// Get a specific trained skill for a character.
   ///
   /// Returns null if the skill is not trained.
-  Future<CharacterSkill?> getCharacterSkill(
-    int characterId,
-    int skillId,
-  ) {
+  Future<CharacterSkill?> getCharacterSkill(int characterId, int skillId) {
     return (select(characterSkills)
           ..where((cs) => cs.characterId.equals(characterId))
           ..where((cs) => cs.skillId.equals(skillId)))
@@ -1148,11 +1268,12 @@ class AppDatabase extends _$AppDatabase {
 
   /// Get latest wallet balance for a character.
   Future<double?> getLatestWalletBalance(int characterId) async {
-    final result = await (select(walletBalances)
-          ..where((e) => e.characterId.equals(characterId))
-          ..orderBy([(e) => OrderingTerm.desc(e.recordedAt)])
-          ..limit(1))
-        .getSingleOrNull();
+    final result =
+        await (select(walletBalances)
+              ..where((e) => e.characterId.equals(characterId))
+              ..orderBy([(e) => OrderingTerm.desc(e.recordedAt)])
+              ..limit(1))
+            .getSingleOrNull();
     return result?.balance;
   }
 
@@ -1228,9 +1349,9 @@ class AppDatabase extends _$AppDatabase {
     List<LoyaltyPointsCompanion> points,
   ) async {
     await transaction(() async {
-      await (delete(loyaltyPoints)
-            ..where((lp) => lp.characterId.equals(characterId)))
-          .go();
+      await (delete(
+        loyaltyPoints,
+      )..where((lp) => lp.characterId.equals(characterId))).go();
       await batch((b) {
         b.insertAll(loyaltyPoints, points);
       });
@@ -1239,16 +1360,16 @@ class AppDatabase extends _$AppDatabase {
 
   /// Get loyalty points for a character.
   Future<List<LoyaltyPoint>> getLoyaltyPoints(int characterId) {
-    return (select(loyaltyPoints)
-          ..where((lp) => lp.characterId.equals(characterId)))
-        .get();
+    return (select(
+      loyaltyPoints,
+    )..where((lp) => lp.characterId.equals(characterId))).get();
   }
 
   /// Watch loyalty points for reactive updates.
   Stream<List<LoyaltyPoint>> watchLoyaltyPoints(int characterId) {
-    return (select(loyaltyPoints)
-          ..where((lp) => lp.characterId.equals(characterId)))
-        .watch();
+    return (select(
+      loyaltyPoints,
+    )..where((lp) => lp.characterId.equals(characterId))).watch();
   }
 
   // Asset cache operations
@@ -1261,10 +1382,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   /// Get assets for a character (optionally filtered by type ID).
-  Future<List<AssetCacheData>> getAssets(
-    int characterId, {
-    int? typeId,
-  }) {
+  Future<List<AssetCacheData>> getAssets(int characterId, {int? typeId}) {
     final query = select(assetCache)
       ..where((a) => a.characterId.equals(characterId));
 
@@ -1283,28 +1401,26 @@ class AppDatabase extends _$AppDatabase {
 
   /// Clear asset cache for a character.
   Future<void> clearAssetCache(int characterId) {
-    return (delete(assetCache)
-          ..where((a) => a.characterId.equals(characterId)))
-        .go();
+    return (delete(
+      assetCache,
+    )..where((a) => a.characterId.equals(characterId))).go();
   }
 
   // App settings operations
 
   /// Get app settings (returns defaults if not found).
   Future<AppSettingsTableData> getAppSettings() async {
-    final result = await (select(appSettingsTable)
-          ..where((s) => s.id.equals(1)))
-        .getSingleOrNull();
+    final result = await (select(
+      appSettingsTable,
+    )..where((s) => s.id.equals(1))).getSingleOrNull();
 
     if (result != null) return result;
 
     // Settings don't exist yet, insert defaults.
-    await into(appSettingsTable).insert(
-      AppSettingsTableCompanion.insert(),
-    );
-    return (await (select(appSettingsTable)
-              ..where((s) => s.id.equals(1)))
-            .getSingleOrNull()) ??
+    await into(appSettingsTable).insert(AppSettingsTableCompanion.insert());
+    return (await (select(
+          appSettingsTable,
+        )..where((s) => s.id.equals(1))).getSingleOrNull()) ??
         const AppSettingsTableData(
           id: 1,
           startupBehavior: 'dashboard',
@@ -1316,22 +1432,25 @@ class AppDatabase extends _$AppDatabase {
 
   /// Watch app settings for reactive updates.
   Stream<AppSettingsTableData> watchAppSettings() {
-    return (select(appSettingsTable)..where((s) => s.id.equals(1)))
-        .watchSingle();
+    return (select(
+      appSettingsTable,
+    )..where((s) => s.id.equals(1))).watchSingle();
   }
 
   /// Update app settings.
   Future<void> updateAppSettings(AppSettingsTableCompanion settings) {
-    return (update(appSettingsTable)..where((s) => s.id.equals(1)))
-        .write(settings);
+    return (update(
+      appSettingsTable,
+    )..where((s) => s.id.equals(1))).write(settings);
   }
 
   // Combat stats operations
 
   /// Get combat stats for a character.
   Future<CombatStat?> getCombatStats(int characterId) {
-    return (select(combatStats)..where((s) => s.characterId.equals(characterId)))
-        .getSingleOrNull();
+    return (select(
+      combatStats,
+    )..where((s) => s.characterId.equals(characterId))).getSingleOrNull();
   }
 
   /// Get all combat stats.
@@ -1346,17 +1465,18 @@ class AppDatabase extends _$AppDatabase {
 
   /// Delete combat stats for a character.
   Future<void> deleteCombatStats(int characterId) {
-    return (delete(combatStats)..where((s) => s.characterId.equals(characterId)))
-        .go();
+    return (delete(
+      combatStats,
+    )..where((s) => s.characterId.equals(characterId))).go();
   }
 
   // Character status operations
 
   /// Get character status for a specific character.
   Future<CharacterStatuse?> getCharacterStatus(int characterId) {
-    return (select(characterStatuses)
-          ..where((s) => s.characterId.equals(characterId)))
-        .getSingleOrNull();
+    return (select(
+      characterStatuses,
+    )..where((s) => s.characterId.equals(characterId))).getSingleOrNull();
   }
 
   /// Get all character statuses.
@@ -1371,17 +1491,18 @@ class AppDatabase extends _$AppDatabase {
 
   /// Delete character status for a character.
   Future<void> deleteCharacterStatus(int characterId) {
-    return (delete(characterStatuses)
-          ..where((s) => s.characterId.equals(characterId)))
-        .go();
+    return (delete(
+      characterStatuses,
+    )..where((s) => s.characterId.equals(characterId))).go();
   }
 
   // Universe names cache operations
 
   /// Get a universe name by ID.
   Future<UniverseName?> getUniverseName(int id) {
-    return (select(universeNames)..where((n) => n.id.equals(id)))
-        .getSingleOrNull();
+    return (select(
+      universeNames,
+    )..where((n) => n.id.equals(id))).getSingleOrNull();
   }
 
   /// Get multiple universe names by IDs.
@@ -1398,9 +1519,9 @@ class AppDatabase extends _$AppDatabase {
 
   /// Delete old universe names (older than specified timestamp).
   Future<void> deleteOldUniverseNames(int olderThanTimestamp) {
-    return (delete(universeNames)
-          ..where((n) => n.lastUpdated.isSmallerThanValue(olderThanTimestamp)))
-        .go();
+    return (delete(
+      universeNames,
+    )..where((n) => n.lastUpdated.isSmallerThanValue(olderThanTimestamp))).go();
   }
 
   /// Search universe names by partial name match for a given category.
@@ -1447,7 +1568,9 @@ class AppDatabase extends _$AppDatabase {
     await (update(skillPlans)..where((p) => p.id.equals(planId))).write(
       SkillPlansCompanion(
         name: name != null ? Value(name) : const Value.absent(),
-        description: description != null ? Value(description) : const Value.absent(),
+        description: description != null
+            ? Value(description)
+            : const Value.absent(),
         updatedAt: Value(DateTime.now()),
       ),
     );
@@ -1456,8 +1579,9 @@ class AppDatabase extends _$AppDatabase {
   /// Delete a skill plan and all its entries.
   Future<void> deleteSkillPlan(int planId) async {
     await transaction(() async {
-      await (delete(skillPlanEntries)..where((e) => e.planId.equals(planId)))
-          .go();
+      await (delete(
+        skillPlanEntries,
+      )..where((e) => e.planId.equals(planId))).go();
       await (delete(skillPlans)..where((p) => p.id.equals(planId))).go();
     });
   }
@@ -1533,6 +1657,7 @@ class AppDatabase extends _$AppDatabase {
           ..orderBy([(e) => OrderingTerm.asc(e.sortOrder)]))
         .watch();
   }
+
   /// Updates the ESI error limit remaining and reset timestamp.
   Future<void> updateEsiErrorLimit(int remain, DateTime? reset) async {
     await (update(appSettingsTable)..where((t) => t.id.equals(1))).write(
@@ -1545,9 +1670,11 @@ class AppDatabase extends _$AppDatabase {
 
   /// Gets the current ESI error limit tracking state.
   Future<AppSettingsTableData> getEsiErrorLimit() async {
-    final settings = await (select(appSettingsTable)..where((t) => t.id.equals(1))).getSingleOrNull();
+    final settings = await (select(
+      appSettingsTable,
+    )..where((t) => t.id.equals(1))).getSingleOrNull();
     if (settings != null) return settings;
-    
+
     // Fallback if not seeded yet
     return const AppSettingsTableData(
       id: 1,

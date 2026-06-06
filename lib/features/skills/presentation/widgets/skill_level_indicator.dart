@@ -40,8 +40,10 @@ class SkillLevelIndicator extends StatefulWidget {
     this.isTraining = false,
     this.size = 14.0,
     this.spacing = 2.0,
-  }) : assert(trainedLevel >= 0 && trainedLevel <= 5,
-            'trainedLevel must be 0-5');
+  }) : assert(
+         trainedLevel >= 0 && trainedLevel <= 5,
+         'trainedLevel must be 0-5',
+       );
 
   @override
   State<SkillLevelIndicator> createState() => _SkillLevelIndicatorState();
@@ -91,76 +93,70 @@ class _SkillLevelIndicatorState extends State<SkillLevelIndicator>
 
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: List.generate(
-        5,
-        (index) {
-          final level = index + 1; // Levels are 1-5
-          final isTrained = level <= widget.trainedLevel;
-          final isTarget = level == widget.targetLevel;
-          final isNextToTrain = level == widget.trainedLevel + 1;
-          final shouldPulse = widget.isTraining && isNextToTrain;
+      children: List.generate(5, (index) {
+        final level = index + 1; // Levels are 1-5
+        final isTrained = level <= widget.trainedLevel;
+        final isTarget = level == widget.targetLevel;
+        final isNextToTrain = level == widget.trainedLevel + 1;
+        final shouldPulse = widget.isTraining && isNextToTrain;
 
-          Widget square = Container(
+        Widget square = Container(
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            color: isTrained ? colorScheme.primary : Colors.transparent,
+            border: Border.all(
+              color: isTrained
+                  ? colorScheme.primary
+                  : colorScheme.outline.withOpacity(0.8),
+              width: 1.0,
+            ),
+            borderRadius: BorderRadius.circular(2.0),
+          ),
+        );
+
+        // Add target indicator (thicker border)
+        if (isTarget && !isTrained) {
+          square = Container(
             width: widget.size,
             height: widget.size,
             decoration: BoxDecoration(
-              color: isTrained ? colorScheme.primary : Colors.transparent,
-              border: Border.all(
-                color: isTrained
-                    ? colorScheme.primary
-                    : colorScheme.outline.withOpacity(0.8),
-                width: 1.0,
-              ),
+              color: Colors.transparent,
+              border: Border.all(color: colorScheme.secondary, width: 2.0),
               borderRadius: BorderRadius.circular(2.0),
             ),
           );
+        }
 
-          // Add target indicator (thicker border)
-          if (isTarget && !isTrained) {
-            square = Container(
-              width: widget.size,
-              height: widget.size,
-              decoration: BoxDecoration(
-                color: Colors.transparent,
-                border: Border.all(
-                  color: colorScheme.secondary,
-                  width: 2.0,
-                ),
-                borderRadius: BorderRadius.circular(2.0),
-              ),
-            );
-          }
-
-          // Add pulse animation for currently training
-          if (shouldPulse) {
-            square = AnimatedBuilder(
-              animation: _pulseAnimation,
-              builder: (context, child) {
-                return Opacity(
-                  opacity: _pulseAnimation.value,
-                  child: Container(
-                    width: widget.size,
-                    height: widget.size,
-                    decoration: BoxDecoration(
-                      color: colorScheme.secondary.withOpacity(0.3),
-                      border: Border.all(
-                        color: colorScheme.secondary,
-                        width: 2.0,
-                      ),
-                      borderRadius: BorderRadius.circular(2.0),
+        // Add pulse animation for currently training
+        if (shouldPulse) {
+          square = AnimatedBuilder(
+            animation: _pulseAnimation,
+            builder: (context, child) {
+              return Opacity(
+                opacity: _pulseAnimation.value,
+                child: Container(
+                  width: widget.size,
+                  height: widget.size,
+                  decoration: BoxDecoration(
+                    color: colorScheme.secondary.withOpacity(0.3),
+                    border: Border.all(
+                      color: colorScheme.secondary,
+                      width: 2.0,
                     ),
+                    borderRadius: BorderRadius.circular(2.0),
                   ),
-                );
-              },
-            );
-          }
-
-          return Padding(
-            padding: EdgeInsets.only(right: index < 4 ? widget.spacing : 0),
-            child: square,
+                ),
+              );
+            },
           );
-        },
-      ),
+        }
+
+        return Padding(
+          padding: EdgeInsets.only(right: index < 4 ? widget.spacing : 0),
+          child: square,
+        );
+      }),
     );
   }
 }

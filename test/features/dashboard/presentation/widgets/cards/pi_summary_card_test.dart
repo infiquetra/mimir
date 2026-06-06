@@ -62,39 +62,36 @@ void main() {
     }) {
       return ProviderScope(
         overrides: [
-          allColoniesProvider.overrideWith((ref) => colonies.when(
-                data: (data) => Stream.value(data),
-                error: (e, s) => Stream.error(e, s),
-                loading: () => const Stream.empty(),
-              )),
-          if (pinsMap != null)
-            ...pinsMap.entries.map((entry) =>
-                planetPinsProvider(entry.key).overrideWith((ref) => entry.value.when(
-                      data: (data) => Stream.value(data),
-                      error: (e, s) => Stream.error(e, s),
-                      loading: () => const Stream.empty(),
-                    ))),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: PiSummaryCard(),
+          allColoniesProvider.overrideWith(
+            (ref) => colonies.when(
+              data: (data) => Stream.value(data),
+              error: (e, s) => Stream.error(e, s),
+              loading: () => const Stream.empty(),
+            ),
           ),
-        ),
+          if (pinsMap != null)
+            ...pinsMap.entries.map(
+              (entry) => planetPinsProvider(entry.key).overrideWith(
+                (ref) => entry.value.when(
+                  data: (data) => Stream.value(data),
+                  error: (e, s) => Stream.error(e, s),
+                  loading: () => const Stream.empty(),
+                ),
+              ),
+            ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: PiSummaryCard())),
       );
     }
 
     testWidgets('displays loading state', (tester) async {
-      await tester.pumpWidget(
-        buildWidget(colonies: const AsyncLoading()),
-      );
+      await tester.pumpWidget(buildWidget(colonies: const AsyncLoading()));
 
       expect(find.byType(Shimmer), findsOneWidget);
     });
 
     testWidgets('displays empty state', (tester) async {
-      await tester.pumpWidget(
-        buildWidget(colonies: const AsyncData([])),
-      );
+      await tester.pumpWidget(buildWidget(colonies: const AsyncData([])));
       await tester.pumpAndSettle();
 
       expect(find.text('No active colonies.'), findsOneWidget);
@@ -105,8 +102,12 @@ void main() {
         buildWidget(
           colonies: AsyncData([colony1, colony2]),
           pinsMap: {
-            PlanetPinsArgs(characterId: 1, planetId: 40000001): AsyncData([activePin]),
-            PlanetPinsArgs(characterId: 2, planetId: 40000002): AsyncData([idlePin]),
+            PlanetPinsArgs(characterId: 1, planetId: 40000001): AsyncData([
+              activePin,
+            ]),
+            PlanetPinsArgs(characterId: 2, planetId: 40000002): AsyncData([
+              idlePin,
+            ]),
           },
         ),
       );
@@ -121,7 +122,9 @@ void main() {
 
     testWidgets('displays error state', (tester) async {
       await tester.pumpWidget(
-        buildWidget(colonies: AsyncValue.error('API Error', StackTrace.current)),
+        buildWidget(
+          colonies: AsyncValue.error('API Error', StackTrace.current),
+        ),
       );
       await tester.pumpAndSettle();
 

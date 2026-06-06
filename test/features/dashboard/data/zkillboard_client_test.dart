@@ -35,11 +35,15 @@ void main() {
           'iskLost': 5000000000.0,
         };
 
-        when(() => mockDio.get<Map<String, dynamic>>(
-              '/stats/characterID/$characterId/',
-            )).thenAnswer(
+        when(
+          () => mockDio.get<Map<String, dynamic>>(
+            '/stats/characterID/$characterId/',
+          ),
+        ).thenAnswer(
           (_) async => Response(
-            requestOptions: RequestOptions(path: '/stats/characterID/$characterId/'),
+            requestOptions: RequestOptions(
+              path: '/stats/characterID/$characterId/',
+            ),
             data: responseData,
             statusCode: 200,
           ),
@@ -60,13 +64,19 @@ void main() {
 
       test('should return null on 404 response', () async {
         // Arrange
-        when(() => mockDio.get<Map<String, dynamic>>(
-              '/stats/characterID/$characterId/',
-            )).thenThrow(
+        when(
+          () => mockDio.get<Map<String, dynamic>>(
+            '/stats/characterID/$characterId/',
+          ),
+        ).thenThrow(
           DioException(
-            requestOptions: RequestOptions(path: '/stats/characterID/$characterId/'),
+            requestOptions: RequestOptions(
+              path: '/stats/characterID/$characterId/',
+            ),
             response: Response(
-              requestOptions: RequestOptions(path: '/stats/characterID/$characterId/'),
+              requestOptions: RequestOptions(
+                path: '/stats/characterID/$characterId/',
+              ),
               statusCode: 404,
             ),
           ),
@@ -81,13 +91,19 @@ void main() {
 
       test('should throw ZkillboardException on 429 rate limit', () async {
         // Arrange
-        when(() => mockDio.get<Map<String, dynamic>>(
-              '/stats/characterID/$characterId/',
-            )).thenThrow(
+        when(
+          () => mockDio.get<Map<String, dynamic>>(
+            '/stats/characterID/$characterId/',
+          ),
+        ).thenThrow(
           DioException(
-            requestOptions: RequestOptions(path: '/stats/characterID/$characterId/'),
+            requestOptions: RequestOptions(
+              path: '/stats/characterID/$characterId/',
+            ),
             response: Response(
-              requestOptions: RequestOptions(path: '/stats/characterID/$characterId/'),
+              requestOptions: RequestOptions(
+                path: '/stats/characterID/$characterId/',
+              ),
               statusCode: 429,
             ),
           ),
@@ -106,13 +122,19 @@ void main() {
 
       test('should throw ZkillboardException on 500 server error', () async {
         // Arrange
-        when(() => mockDio.get<Map<String, dynamic>>(
-              '/stats/characterID/$characterId/',
-            )).thenThrow(
+        when(
+          () => mockDio.get<Map<String, dynamic>>(
+            '/stats/characterID/$characterId/',
+          ),
+        ).thenThrow(
           DioException(
-            requestOptions: RequestOptions(path: '/stats/characterID/$characterId/'),
+            requestOptions: RequestOptions(
+              path: '/stats/characterID/$characterId/',
+            ),
             response: Response(
-              requestOptions: RequestOptions(path: '/stats/characterID/$characterId/'),
+              requestOptions: RequestOptions(
+                path: '/stats/characterID/$characterId/',
+              ),
               statusCode: 500,
             ),
           ),
@@ -131,11 +153,15 @@ void main() {
 
       test('should throw ZkillboardException on timeout', () async {
         // Arrange
-        when(() => mockDio.get<Map<String, dynamic>>(
-              '/stats/characterID/$characterId/',
-            )).thenThrow(
+        when(
+          () => mockDio.get<Map<String, dynamic>>(
+            '/stats/characterID/$characterId/',
+          ),
+        ).thenThrow(
           DioException(
-            requestOptions: RequestOptions(path: '/stats/characterID/$characterId/'),
+            requestOptions: RequestOptions(
+              path: '/stats/characterID/$characterId/',
+            ),
             type: DioExceptionType.connectionTimeout,
           ),
         );
@@ -143,11 +169,7 @@ void main() {
         // Act & Assert
         expect(
           () => client.getCharacterStats(characterId),
-          throwsA(
-            predicate<ZkillboardException>(
-              (e) => e.isTimeout,
-            ),
-          ),
+          throwsA(predicate<ZkillboardException>((e) => e.isTimeout)),
         );
       });
 
@@ -160,11 +182,15 @@ void main() {
           'iskLost': 2000000000.0,
         };
 
-        when(() => mockDio.get<Map<String, dynamic>>(
-              '/stats/characterID/$characterId/',
-            )).thenAnswer(
+        when(
+          () => mockDio.get<Map<String, dynamic>>(
+            '/stats/characterID/$characterId/',
+          ),
+        ).thenAnswer(
           (_) async => Response(
-            requestOptions: RequestOptions(path: '/stats/characterID/$characterId/'),
+            requestOptions: RequestOptions(
+              path: '/stats/characterID/$characterId/',
+            ),
             data: responseData,
             statusCode: 200,
           ),
@@ -181,11 +207,15 @@ void main() {
 
       test('should return null when response data is null', () async {
         // Arrange
-        when(() => mockDio.get<Map<String, dynamic>>(
-              '/stats/characterID/$characterId/',
-            )).thenAnswer(
+        when(
+          () => mockDio.get<Map<String, dynamic>>(
+            '/stats/characterID/$characterId/',
+          ),
+        ).thenAnswer(
           (_) async => Response(
-            requestOptions: RequestOptions(path: '/stats/characterID/$characterId/'),
+            requestOptions: RequestOptions(
+              path: '/stats/characterID/$characterId/',
+            ),
             data: null,
             statusCode: 200,
           ),

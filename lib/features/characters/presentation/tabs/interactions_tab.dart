@@ -87,24 +87,20 @@ class _InteractionsTabState extends ConsumerState<InteractionsTab>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 64,
-              color: EveColors.evePrimary.withAlpha(128),
-            ),
+            Icon(icon, size: 64, color: EveColors.evePrimary.withAlpha(128)),
             const SizedBox(height: 16),
             Text(
               title,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: EveColors.evePrimary,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(color: EveColors.evePrimary),
             ),
             const SizedBox(height: 8),
             Text(
               description,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
             ),
           ],

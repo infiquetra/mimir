@@ -55,32 +55,32 @@ class OverviewTab extends ConsumerWidget {
           Icon(
             Icons.person_off_outlined,
             size: 64,
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(128),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withAlpha(128),
           ),
           const SizedBox(height: 16),
           Text(
             'No Character Selected',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             'Select a character to view details',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(153),
-                ),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withAlpha(153),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildOverview(
-    BuildContext context,
-    WidgetRef ref,
-    int characterId,
-  ) {
+  Widget _buildOverview(BuildContext context, WidgetRef ref, int characterId) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(EveSpacing.lg),
       child: Column(
@@ -138,10 +138,8 @@ class OverviewTab extends ConsumerWidget {
                       ),
                     ),
                     onlineStatus.when(
-                      data: (status) => OnlineIndicator(
-                        isOnline: status.online,
-                        size: 10,
-                      ),
+                      data: (status) =>
+                          OnlineIndicator(isOnline: status.online, size: 10),
                       loading: () => SizedBox(width: 10, height: 10),
                       error: (_, __) => const SizedBox.shrink(),
                     ),
@@ -236,19 +234,12 @@ class OverviewTab extends ConsumerWidget {
       decoration: BoxDecoration(
         color: EveColors.darkSurfaceVariant.withAlpha(128),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(
-          color: EveColors.evePrimary.withAlpha(77),
-          width: 1,
-        ),
+        border: Border.all(color: EveColors.evePrimary.withAlpha(77), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 14,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+          Icon(icon, size: 14, color: theme.colorScheme.onSurfaceVariant),
           const SizedBox(width: 4),
           Text(
             '$label:',
@@ -277,17 +268,16 @@ class OverviewTab extends ConsumerWidget {
     final theme = Theme.of(context);
     final clones = ref.watch(characterClonesProvider(characterId));
     final implants = ref.watch(characterImplantsProvider(characterId));
-    final locationNames = ref.watch(characterCloneLocationNamesProvider(characterId));
+    final locationNames = ref.watch(
+      characterCloneLocationNamesProvider(characterId),
+    );
 
     return Card(
       elevation: 0,
       color: EveColors.darkSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: EveColors.evePrimary.withAlpha(51),
-          width: 1,
-        ),
+        side: BorderSide(color: EveColors.evePrimary.withAlpha(51), width: 1),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -480,10 +470,7 @@ class OverviewTab extends ConsumerWidget {
       color: EveColors.darkSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: EveColors.evePrimary.withAlpha(51),
-          width: 1,
-        ),
+        side: BorderSide(color: EveColors.evePrimary.withAlpha(51), width: 1),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -546,9 +533,7 @@ class OverviewTab extends ConsumerWidget {
               },
               loading: () => const SizedBox(
                 height: 60,
-                child: Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
               ),
               error: (_, __) => Text(
                 'Failed to load standings',
@@ -610,7 +595,10 @@ class OverviewTab extends ConsumerWidget {
 
     // Use Image.network for sub-windows to avoid path_provider issues.
     if (isSubWindow) {
-      Log.d('OVERVIEW', 'Using Image.network for portrait (sub-window context)');
+      Log.d(
+        'OVERVIEW',
+        'Using Image.network for portrait (sub-window context)',
+      );
       return Image.network(
         portraitUrl,
         width: 120,
@@ -621,7 +609,12 @@ class OverviewTab extends ConsumerWidget {
           return placeholder;
         },
         errorBuilder: (context, error, stackTrace) {
-          Log.e('OVERVIEW', 'Failed to load portrait: $portraitUrl', error, stackTrace);
+          Log.e(
+            'OVERVIEW',
+            'Failed to load portrait: $portraitUrl',
+            error,
+            stackTrace,
+          );
           return placeholder;
         },
       );
@@ -635,7 +628,12 @@ class OverviewTab extends ConsumerWidget {
       fit: BoxFit.cover,
       placeholder: (context, url) => placeholder,
       errorWidget: (context, url, error) {
-        Log.e('OVERVIEW', 'Failed to load cached portrait: $portraitUrl', error, null);
+        Log.e(
+          'OVERVIEW',
+          'Failed to load cached portrait: $portraitUrl',
+          error,
+          null,
+        );
         return placeholder;
       },
     );

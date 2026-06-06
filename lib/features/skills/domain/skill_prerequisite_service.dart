@@ -64,7 +64,10 @@ class SkillPrerequisiteService {
 
     // Get prerequisites from SDE
     final prerequisites = await sdeService.getSkillPrerequisites(skillId);
-    Log.d('SKILLS.PREREQ', 'getUnmetPrerequisites - found ${prerequisites.length} prerequisites');
+    Log.d(
+      'SKILLS.PREREQ',
+      'getUnmetPrerequisites - found ${prerequisites.length} prerequisites',
+    );
 
     if (prerequisites.isEmpty) {
       return [];
@@ -92,12 +95,15 @@ class SkillPrerequisiteService {
         Log.d(
           'SKILLS.PREREQ',
           'getUnmetPrerequisites - UNMET: ${skillName ?? prereq.requiredSkillId} '
-          '(need level ${prereq.requiredLevel}, have $trainedLevel)',
+              '(need level ${prereq.requiredLevel}, have $trainedLevel)',
         );
       }
     }
 
-    Log.i('SKILLS.PREREQ', 'getUnmetPrerequisites - found ${unmet.length} unmet prerequisites');
+    Log.i(
+      'SKILLS.PREREQ',
+      'getUnmetPrerequisites - found ${unmet.length} unmet prerequisites',
+    );
     return unmet;
   }
 
@@ -130,7 +136,10 @@ class SkillPrerequisiteService {
       depth: 0,
     );
 
-    Log.i('SKILLS.PREREQ', 'getAllPrerequisites - found ${result.length} total prerequisites');
+    Log.i(
+      'SKILLS.PREREQ',
+      'getAllPrerequisites - found ${result.length} total prerequisites',
+    );
     return result;
   }
 
@@ -145,7 +154,10 @@ class SkillPrerequisiteService {
   }) async {
     // Prevent infinite loops (though EVE shouldn't have circular deps)
     if (visited.contains(skillId)) {
-      Log.w('SKILLS.PREREQ', '_collectPrerequisitesRecursive - circular dependency detected for skill $skillId');
+      Log.w(
+        'SKILLS.PREREQ',
+        '_collectPrerequisitesRecursive - circular dependency detected for skill $skillId',
+      );
       return;
     }
 
@@ -241,7 +253,8 @@ class PrerequisiteChain {
   final String skillName;
   final int requiredLevel;
   final int trainedLevel;
-  final int depth; // 0 = direct prerequisite, 1 = prerequisite of prerequisite, etc.
+  final int
+  depth; // 0 = direct prerequisite, 1 = prerequisite of prerequisite, etc.
   final int forSkillId; // Which skill requires this prerequisite
 
   /// Human-readable description of the requirement.

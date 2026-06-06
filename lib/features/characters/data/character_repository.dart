@@ -18,8 +18,8 @@ class CharacterRepository {
   CharacterRepository({
     required AppDatabase database,
     required EsiClient esiClient,
-  })  : _database = database,
-        _esiClient = esiClient;
+  }) : _database = database,
+       _esiClient = esiClient;
 
   /// Gets all characters from the local database.
   Future<List<Character>> getAllCharacters() async {
@@ -46,7 +46,10 @@ class CharacterRepository {
     Log.d('CHAR', 'getActiveCharacter() - START');
     try {
       final character = await _database.getActiveCharacter();
-      Log.i('CHAR', 'getActiveCharacter - ${character != null ? "found ${character.name}" : "none active"}');
+      Log.i(
+        'CHAR',
+        'getActiveCharacter - ${character != null ? "found ${character.name}" : "none active"}',
+      );
       Log.d('CHAR', 'getActiveCharacter() - SUCCESS');
       return character;
     } catch (e, stack) {
@@ -83,7 +86,10 @@ class CharacterRepository {
       // Fetch public character info from ESI.
       Log.d('CHAR', 'refreshCharacter - fetching public info from ESI');
       final publicInfo = await _esiClient.getCharacterPublicInfo(characterId);
-      Log.i('CHAR', 'refreshCharacter - fetched ${publicInfo.name}, corp=${publicInfo.corporationId}');
+      Log.i(
+        'CHAR',
+        'refreshCharacter - fetched ${publicInfo.name}, corp=${publicInfo.corporationId}',
+      );
 
       // Fetch corporation name.
       Log.d('CHAR', 'refreshCharacter - fetching corporation name');
@@ -103,7 +109,10 @@ class CharacterRepository {
       final existing = await _database.getCharacter(characterId);
 
       if (existing == null) {
-        Log.w('CHAR', 'refreshCharacter - character $characterId not found in database, skipping');
+        Log.w(
+          'CHAR',
+          'refreshCharacter - character $characterId not found in database, skipping',
+        );
         return;
       }
 
@@ -125,7 +134,10 @@ class CharacterRepository {
       );
 
       await _database.upsertCharacter(companion);
-      Log.i('CHAR', 'refreshCharacter - updated ${publicInfo.name} in database');
+      Log.i(
+        'CHAR',
+        'refreshCharacter - updated ${publicInfo.name} in database',
+      );
       Log.d('CHAR', 'refreshCharacter($characterId) - SUCCESS');
     } catch (e, stack) {
       Log.e('CHAR', 'refreshCharacter($characterId) - FAILED', e, stack);
@@ -158,7 +170,10 @@ class CharacterRepository {
       Log.d('CHAR', '_fetchCorporationName($corporationId) - SUCCESS');
       return name;
     } catch (e) {
-      Log.w('CHAR', '_fetchCorporationName($corporationId) - FAILED, using fallback: $e');
+      Log.w(
+        'CHAR',
+        '_fetchCorporationName($corporationId) - FAILED, using fallback: $e',
+      );
       return 'Unknown Corporation';
     }
   }
@@ -175,7 +190,10 @@ class CharacterRepository {
       Log.d('CHAR', '_fetchAllianceName($allianceId) - SUCCESS');
       return name;
     } catch (e) {
-      Log.w('CHAR', '_fetchAllianceName($allianceId) - FAILED, using fallback: $e');
+      Log.w(
+        'CHAR',
+        '_fetchAllianceName($allianceId) - FAILED, using fallback: $e',
+      );
       return 'Unknown Alliance';
     }
   }

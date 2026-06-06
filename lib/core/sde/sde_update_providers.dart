@@ -78,10 +78,8 @@ class SdeUpdateError extends SdeUpdateUiState {
 
 /// Controller for managing SDE update state.
 class SdeUpdateController extends StateNotifier<SdeUpdateUiState> {
-  SdeUpdateController({
-    required this.updateService,
-    required this.ref,
-  }) : super(const SdeUpdateIdle());
+  SdeUpdateController({required this.updateService, required this.ref})
+    : super(const SdeUpdateIdle());
 
   final SdeUpdateService updateService;
   final Ref ref;
@@ -96,12 +94,12 @@ class SdeUpdateController extends StateNotifier<SdeUpdateUiState> {
 
     state = switch (result) {
       SdeUpToDate(currentVersion: final v) => SdeUpdateSuccess(
-          message: 'Up to date (v$v)',
-        ),
+        message: 'Up to date (v$v)',
+      ),
       SdeUpdateAvailable(
         currentVersion: final current,
         newVersion: final newV,
-        skillCount: final count
+        skillCount: final count,
       ) =>
         SdeUpdateHasUpdate(
           currentVersion: current,
@@ -109,8 +107,8 @@ class SdeUpdateController extends StateNotifier<SdeUpdateUiState> {
           skillCount: count,
         ),
       SdeUpdateCheckFailed(error: final e) => SdeUpdateError(
-          message: 'Check failed: $e',
-        ),
+        message: 'Check failed: $e',
+      ),
     };
   }
 
@@ -122,12 +120,10 @@ class SdeUpdateController extends StateNotifier<SdeUpdateUiState> {
 
     state = switch (result) {
       SdeUpdateApplied(version: final v, skillCount: final count) =>
-        SdeUpdateSuccess(
-          message: 'Updated to v$v ($count skills)',
-        ),
+        SdeUpdateSuccess(message: 'Updated to v$v ($count skills)'),
       SdeUpdateFailed(error: final e) => SdeUpdateError(
-          message: 'Update failed: $e',
-        ),
+        message: 'Update failed: $e',
+      ),
     };
 
     // If update was applied, invalidate SDE providers to reload data
@@ -174,9 +170,6 @@ class SdeUpdateController extends StateNotifier<SdeUpdateUiState> {
 /// Provider for the SDE update controller.
 final sdeUpdateControllerProvider =
     StateNotifierProvider<SdeUpdateController, SdeUpdateUiState>((ref) {
-  final service = ref.watch(sdeUpdateServiceProvider);
-  return SdeUpdateController(
-    updateService: service,
-    ref: ref,
-  );
-});
+      final service = ref.watch(sdeUpdateServiceProvider);
+      return SdeUpdateController(updateService: service, ref: ref);
+    });

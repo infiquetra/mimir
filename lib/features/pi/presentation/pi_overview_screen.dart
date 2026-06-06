@@ -46,11 +46,16 @@ class _PiOverviewScreenState extends ConsumerState<PiOverviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Log.d('PI', 'PiOverviewScreen.build() - showAllCharacters: $_showAllCharacters');
+    Log.d(
+      'PI',
+      'PiOverviewScreen.build() - showAllCharacters: $_showAllCharacters',
+    );
     final syncState = ref.watch(piSyncProvider);
     final activeChar = ref.watch(activeCharacterProvider).value;
-    
-    final int? filterCharacterId = _showAllCharacters ? null : activeChar?.characterId;
+
+    final int? filterCharacterId = _showAllCharacters
+        ? null
+        : activeChar?.characterId;
 
     return Scaffold(
       appBar: AppBar(
@@ -69,10 +74,7 @@ class _PiOverviewScreenState extends ConsumerState<PiOverviewScreen> {
               ),
             )
           else
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _refresh,
-            ),
+            IconButton(icon: const Icon(Icons.refresh), onPressed: _refresh),
           _buildAllCharactersToggle(),
           const SizedBox(width: 16),
         ],
@@ -91,10 +93,14 @@ class _PiOverviewScreenState extends ConsumerState<PiOverviewScreen> {
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: _showAllCharacters ? EveColors.photonBlue.withOpacity(0.2) : EveColors.darkSurfaceVariant,
+        color: _showAllCharacters
+            ? EveColors.photonBlue.withOpacity(0.2)
+            : EveColors.darkSurfaceVariant,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: _showAllCharacters ? EveColors.photonBlue : Colors.white.withOpacity(0.1),
+          color: _showAllCharacters
+              ? EveColors.photonBlue
+              : Colors.white.withOpacity(0.1),
         ),
       ),
       child: InkWell(
@@ -130,12 +136,15 @@ class _PiOverviewScreenState extends ConsumerState<PiOverviewScreen> {
 
     final activeChar = ref.watch(activeCharacterProvider).value;
 
-    if (filterCharacterId == null && !_showAllCharacters && activeChar == null) {
+    if (filterCharacterId == null &&
+        !_showAllCharacters &&
+        activeChar == null) {
       return Center(
         child: EmptyState(
           icon: Icons.person_off_outlined,
           heading: 'No Character Selected',
-          description: 'Select a character or enable "All Characters" to view PI.',
+          description:
+              'Select a character or enable "All Characters" to view PI.',
           action: ElevatedButton(
             onPressed: () => setState(() => _showAllCharacters = true),
             child: const Text('View All Characters'),
@@ -187,7 +196,9 @@ class _PiOverviewScreenState extends ConsumerState<PiOverviewScreen> {
                 // Navigate to colony details
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Details for ${colony.planetName} coming soon!'),
+                    content: Text(
+                      'Details for ${colony.planetName} coming soon!',
+                    ),
                     duration: const Duration(seconds: 1),
                   ),
                 );

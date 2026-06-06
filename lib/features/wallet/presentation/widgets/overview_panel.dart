@@ -33,64 +33,57 @@ class OverviewPanel extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Text(
-                '30-Day Summary',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white.withAlpha(230),
-                  letterSpacing: 0.5,
+              children: [
+                // Header
+                Text(
+                  '30-Day Summary',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white.withAlpha(230),
+                    letterSpacing: 0.5,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Income Row
-              _buildSummaryRow(
-                label: 'Income',
-                value: formatIsk(data.income),
-                color: const Color(0xFF4CAF50), // Green
-                icon: Icons.arrow_upward,
-              ),
-              const SizedBox(height: 12),
+                // Income Row
+                _buildSummaryRow(
+                  label: 'Income',
+                  value: formatIsk(data.income),
+                  color: const Color(0xFF4CAF50), // Green
+                  icon: Icons.arrow_upward,
+                ),
+                const SizedBox(height: 12),
 
-              // Expenses Row
-              _buildSummaryRow(
-                label: 'Expenses',
-                value: formatIsk(data.expenses),
-                color: const Color(0xFFF44336), // Red
-                icon: Icons.arrow_downward,
-              ),
-              const SizedBox(height: 16),
+                // Expenses Row
+                _buildSummaryRow(
+                  label: 'Expenses',
+                  value: formatIsk(data.expenses),
+                  color: const Color(0xFFF44336), // Red
+                  icon: Icons.arrow_downward,
+                ),
+                const SizedBox(height: 16),
 
-              // Divider
-              Divider(
-                color: Colors.white.withAlpha(26),
-                height: 1,
-              ),
-              const SizedBox(height: 16),
+                // Divider
+                Divider(color: Colors.white.withAlpha(26), height: 1),
+                const SizedBox(height: 16),
 
-              // Net Change Row
-              _buildSummaryRow(
-                label: 'Net Change',
-                value: formatIsk(data.net),
-                color: data.net >= 0
-                    ? const Color(0xFF4CAF50) // Green for profit
-                    : const Color(0xFFF44336), // Red for loss
-                icon: data.net >= 0
-                    ? Icons.trending_up
-                    : Icons.trending_down,
-                isBold: true,
-              ),
-            ],
+                // Net Change Row
+                _buildSummaryRow(
+                  label: 'Net Change',
+                  value: formatIsk(data.net),
+                  color: data.net >= 0
+                      ? const Color(0xFF4CAF50) // Green for profit
+                      : const Color(0xFFF44336), // Red for loss
+                  icon: data.net >= 0 ? Icons.trending_up : Icons.trending_down,
+                  isBold: true,
+                ),
+              ],
+            ),
           ),
-        ),
         );
       },
-      loading: () => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Center(
         child: EveCard(
           padding: const EdgeInsets.all(16),
@@ -125,16 +118,9 @@ class OverviewPanel extends ConsumerWidget {
           decoration: BoxDecoration(
             color: color.withAlpha(26),
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: color.withAlpha(77),
-              width: 1,
-            ),
+            border: Border.all(color: color.withAlpha(77), width: 1),
           ),
-          child: Icon(
-            icon,
-            color: color,
-            size: 18,
-          ),
+          child: Icon(icon, color: color, size: 18),
         ),
         const SizedBox(width: 12),
 

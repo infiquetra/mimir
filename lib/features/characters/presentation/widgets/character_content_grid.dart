@@ -108,10 +108,7 @@ class _EmploymentHistoryCard extends StatelessWidget {
       color: EveColors.darkSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: EveColors.evePrimary.withAlpha(51),
-          width: 1,
-        ),
+        side: BorderSide(color: EveColors.evePrimary.withAlpha(51), width: 1),
       ),
       // Removed fixed height - content determines size
       child: Padding(

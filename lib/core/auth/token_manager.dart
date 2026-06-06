@@ -55,7 +55,9 @@ class TokenManager {
       Duration(seconds: tokenResponse.expiresIn),
     );
 
-    await _database.into(_database.characters).insertOnConflictUpdate(
+    await _database
+        .into(_database.characters)
+        .insertOnConflictUpdate(
           CharactersCompanion(
             characterId: Value(characterId),
             refreshToken: Value(tokenResponse.refreshToken),
@@ -74,9 +76,9 @@ class TokenManager {
       Duration(seconds: tokenResponse.expiresIn),
     );
 
-    await (_database.update(_database.characters)
-          ..where((c) => c.characterId.equals(characterId)))
-        .write(
+    await (_database.update(
+      _database.characters,
+    )..where((c) => c.characterId.equals(characterId))).write(
       CharactersCompanion(
         refreshToken: Value(tokenResponse.refreshToken),
         accessToken: Value(tokenResponse.accessToken),
@@ -87,9 +89,9 @@ class TokenManager {
 
   /// Gets stored tokens for a character.
   Future<StoredTokens?> getTokens(int characterId) async {
-    final character = await (_database.select(_database.characters)
-          ..where((c) => c.characterId.equals(characterId)))
-        .getSingleOrNull();
+    final character = await (_database.select(
+      _database.characters,
+    )..where((c) => c.characterId.equals(characterId))).getSingleOrNull();
 
     if (character == null || character.refreshToken == null) {
       return null;
@@ -104,9 +106,9 @@ class TokenManager {
 
   /// Deletes tokens for a character (logout).
   Future<void> deleteTokens(int characterId) async {
-    await (_database.update(_database.characters)
-          ..where((c) => c.characterId.equals(characterId)))
-        .write(
+    await (_database.update(
+      _database.characters,
+    )..where((c) => c.characterId.equals(characterId))).write(
       const CharactersCompanion(
         refreshToken: Value(null),
         accessToken: Value(null),
@@ -116,16 +118,18 @@ class TokenManager {
 
   /// Gets the list of character IDs with stored tokens.
   Future<List<int>> getAuthenticatedCharacterIds() async {
-    final characters = await (_database.select(_database.characters)
-          ..where((c) => c.refreshToken.isNotNull()))
-        .get();
+    final characters = await (_database.select(
+      _database.characters,
+    )..where((c) => c.refreshToken.isNotNull())).get();
 
     return characters.map((c) => c.characterId).toList();
   }
 
   /// Clears all stored tokens (full logout).
   Future<void> clearAll() async {
-    await _database.update(_database.characters).write(
+    await _database
+        .update(_database.characters)
+        .write(
           const CharactersCompanion(
             refreshToken: Value(null),
             accessToken: Value(null),
@@ -152,12 +156,8 @@ class TokenManager {
       debugPrint('TokenManager: Starting migration from secure storage');
 
       const secureStorage = FlutterSecureStorage(
-        aOptions: AndroidOptions(
-          encryptedSharedPreferences: true,
-        ),
-        iOptions: IOSOptions(
-          accessibility: KeychainAccessibility.first_unlock,
-        ),
+        aOptions: AndroidOptions(encryptedSharedPreferences: true),
+        iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
         mOptions: MacOsOptions(
           accessibility: KeychainAccessibility.first_unlock,
         ),
@@ -192,9 +192,9 @@ class TokenManager {
         try {
           // Parse and write to database
           final tokens = json.decode(data) as Map<String, dynamic>;
-          await (_database.update(_database.characters)
-                ..where((c) => c.characterId.equals(character.characterId)))
-              .write(
+          await (_database.update(
+            _database.characters,
+          )..where((c) => c.characterId.equals(character.characterId))).write(
             CharactersCompanion(
               refreshToken: Value(tokens['refreshToken'] as String),
               accessToken: Value(tokens['accessToken'] as String?),

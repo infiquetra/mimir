@@ -46,14 +46,16 @@ class StandingsSubTab extends ConsumerWidget {
           Icon(
             Icons.person_off_outlined,
             size: 64,
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(128),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withAlpha(128),
           ),
           const SizedBox(height: 16),
           Text(
             'No Character Selected',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -138,10 +140,7 @@ class StandingsSubTab extends ConsumerWidget {
       color: EveColors.darkSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: EveColors.evePrimary.withAlpha(51),
-          width: 1,
-        ),
+        side: BorderSide(color: EveColors.evePrimary.withAlpha(51), width: 1),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -250,11 +249,7 @@ class StandingsSubTab extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
           child: Row(
             children: [
-              Icon(
-                icon,
-                size: 20,
-                color: EveColors.evePrimary,
-              ),
+              Icon(icon, size: 20, color: EveColors.evePrimary),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
@@ -308,7 +303,11 @@ class StandingsSubTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildStandingRow(BuildContext context, ThemeData theme, dynamic standing) {
+  Widget _buildStandingRow(
+    BuildContext context,
+    ThemeData theme,
+    dynamic standing,
+  ) {
     final standingValue = standing.standing as double;
     final color = _getStandingColor(standingValue);
 
@@ -383,11 +382,7 @@ class StandingsSubTab extends ConsumerWidget {
     final fromId = standing.fromId as int;
 
     if (fromType == 'faction') {
-      return FactionLogo(
-        factionId: fromId,
-        size: 40,
-        borderRadius: 8,
-      );
+      return FactionLogo(factionId: fromId, size: 40, borderRadius: 8);
     } else if (fromType == 'npc_corp') {
       return CorporationLogo.corporation(
         corporationId: fromId,
@@ -454,7 +449,8 @@ class StandingsSubTab extends ConsumerWidget {
   }
 
   Color _getStandingColor(double standing) {
-    if (standing >= 5.0) return const Color(0xFF00BFFF); // Excellent (light blue)
+    if (standing >= 5.0)
+      return const Color(0xFF00BFFF); // Excellent (light blue)
     if (standing >= 0.5) return EveColors.success; // Good (green)
     if (standing > -0.5) return Colors.grey; // Neutral
     if (standing > -5.0) return Colors.orange; // Bad
@@ -504,11 +500,7 @@ class StandingsSubTab extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: theme.colorScheme.error,
-            ),
+            Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
             const SizedBox(height: 16),
             Text(
               'Failed to load standings',

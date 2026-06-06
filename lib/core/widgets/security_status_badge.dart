@@ -50,10 +50,7 @@ class SecurityStatusBadge extends StatelessWidget {
       return Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: _statusColor,
-        ),
+        decoration: BoxDecoration(shape: BoxShape.circle, color: _statusColor),
       );
     }
 

@@ -9,23 +9,24 @@ import '../../../core/logging/logger.dart';
 class AssetRepository {
   final AppDatabase _database;
 
-  AssetRepository({
-    required AppDatabase database,
-  }) : _database = database;
+  AssetRepository({required AppDatabase database}) : _database = database;
 
   /// Replaces all assets for a character in the local database.
   Future<void> replaceAllAssets(
     int characterId,
     List<AssetsCompanion> assets,
   ) async {
-    Log.d('ASSETS', 'replaceAllAssets($characterId) - saving ${assets.length} items');
-    
+    Log.d(
+      'ASSETS',
+      'replaceAllAssets($characterId) - saving ${assets.length} items',
+    );
+
     try {
       await _database.transaction(() async {
         // 1. Delete old assets
-        await (_database.delete(_database.assets)
-              ..where((a) => a.characterId.equals(characterId)))
-            .go();
+        await (_database.delete(
+          _database.assets,
+        )..where((a) => a.characterId.equals(characterId))).go();
 
         // 2. Insert new assets in batches
         await _database.batch((batch) {
@@ -36,7 +37,7 @@ class AssetRepository {
           );
         });
       });
-      
+
       Log.d('ASSETS', 'replaceAllAssets($characterId) - SUCCESS');
     } catch (e, stack) {
       Log.e('ASSETS', 'replaceAllAssets($characterId) - FAILED', e, stack);
@@ -62,13 +63,13 @@ class AssetRepository {
 
   /// Watches all assets for a character.
   Stream<List<Asset>> watchAssets(int characterId) {
-    return (_database.select(_database.assets)
-          ..where((a) => a.characterId.equals(characterId)))
-        .watch();
+    return (_database.select(
+      _database.assets,
+    )..where((a) => a.characterId.equals(characterId))).watch();
   }
 
   /// Watches assets grouped by location.
-  /// 
+  ///
   /// This returns a stream of location IDs and their assets.
   Stream<Map<int, List<Asset>>> watchAssetsByLocation(int characterId) {
     return watchAssets(characterId).map((assets) {
@@ -82,9 +83,9 @@ class AssetRepository {
 
   /// Gets a cached location by ID.
   Future<AssetLocation?> getLocation(int locationId) {
-    return (_database.select(_database.assetLocations)
-          ..where((l) => l.locationId.equals(locationId)))
-        .getSingleOrNull();
+    return (_database.select(
+      _database.assetLocations,
+    )..where((l) => l.locationId.equals(locationId))).getSingleOrNull();
   }
 
   /// Gets all cached locations.
@@ -95,7 +96,5 @@ class AssetRepository {
 
 /// Provider for the asset repository.
 final assetRepositoryProvider = Provider<AssetRepository>((ref) {
-  return AssetRepository(
-    database: ref.watch(databaseProvider),
-  );
+  return AssetRepository(database: ref.watch(databaseProvider));
 });

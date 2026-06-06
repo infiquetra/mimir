@@ -71,9 +71,7 @@ class SettingsScreen extends ConsumerWidget {
         title.toUpperCase(),
         style: EveTypography.labelMedium(
           color: EveColors.photonBlue,
-        ).copyWith(
-          letterSpacing: 1.0,
-        ),
+        ).copyWith(letterSpacing: 1.0),
       ),
     );
   }

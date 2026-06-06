@@ -144,23 +144,24 @@ class StyledCharacterAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color:
-              isActive ? EveColors.photonBlue : EveColors.borderSubtle,
+          color: isActive ? EveColors.photonBlue : EveColors.borderSubtle,
           width: 2,
         ),
         boxShadow: isActive
             ? [
                 // Primary glow (16px blur)
                 BoxShadow(
-                  color: EveColors.photonBlue
-                      .withAlpha((EveSpacing.glowIntensity * 255).round()),
+                  color: EveColors.photonBlue.withAlpha(
+                    (EveSpacing.glowIntensity * 255).round(),
+                  ),
                   blurRadius: EveSpacing.glowBlurPrimary,
                   spreadRadius: EveSpacing.glowSpread,
                 ),
                 // Outer glow (32px blur, half intensity)
                 BoxShadow(
-                  color: EveColors.photonBlue
-                      .withAlpha((EveSpacing.glowIntensity * 128).round()),
+                  color: EveColors.photonBlue.withAlpha(
+                    (EveSpacing.glowIntensity * 128).round(),
+                  ),
                   blurRadius: EveSpacing.glowBlurOuter,
                   spreadRadius: EveSpacing.glowSpread,
                 ),
@@ -170,19 +171,13 @@ class StyledCharacterAvatar extends StatelessWidget {
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 200),
         opacity: isActive ? 1.0 : 0.6,
-        child: CharacterAvatar(
-          portraitUrl: portraitUrl,
-          size: size,
-        ),
+        child: CharacterAvatar(portraitUrl: portraitUrl, size: size),
       ),
     );
 
     // Apply tooltip FIRST (innermost) so it doesn't interfere with gestures
     if (tooltip != null) {
-      avatar = Tooltip(
-        message: tooltip!,
-        child: avatar,
-      );
+      avatar = Tooltip(message: tooltip!, child: avatar);
     }
 
     // Apply gesture detector LAST (outermost) for proper event handling

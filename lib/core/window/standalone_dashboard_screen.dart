@@ -126,10 +126,7 @@ class _StandaloneDashboardScreenState
                 color: theme.colorScheme.primary,
               ),
               const SizedBox(height: 16),
-              Text(
-                'No Characters',
-                style: theme.textTheme.headlineSmall,
-              ),
+              Text('No Characters', style: theme.textTheme.headlineSmall),
               const SizedBox(height: 8),
               Text(
                 'Open the Characters window to add a character.',

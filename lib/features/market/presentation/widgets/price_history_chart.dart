@@ -27,7 +27,9 @@ class PriceHistoryChart extends StatelessWidget {
     }
 
     // Take the last 60 days for the chart
-    final data = history.length > 60 ? history.sublist(history.length - 60) : history;
+    final data = history.length > 60
+        ? history.sublist(history.length - 60)
+        : history;
 
     final prices = data.map((e) => e.average).toList();
     final minPrice = prices.reduce((a, b) => a < b ? a : b);
@@ -56,8 +58,12 @@ class PriceHistoryChart extends StatelessWidget {
                 ),
               ),
               titlesData: FlTitlesData(
-                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
@@ -65,7 +71,8 @@ class PriceHistoryChart extends StatelessWidget {
                     interval: (data.length / 4).ceilToDouble().clamp(1, 30),
                     getTitlesWidget: (value, meta) {
                       final index = value.toInt();
-                      if (index < 0 || index >= data.length) return const SizedBox.shrink();
+                      if (index < 0 || index >= data.length)
+                        return const SizedBox.shrink();
                       return Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
@@ -123,7 +130,11 @@ class PriceHistoryChart extends StatelessWidget {
               lineBarsData: [
                 // High/low range as a filled area
                 LineChartBarData(
-                  spots: data.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.highest)).toList(),
+                  spots: data
+                      .asMap()
+                      .entries
+                      .map((e) => FlSpot(e.key.toDouble(), e.value.highest))
+                      .toList(),
                   isCurved: true,
                   curveSmoothness: 0.2,
                   color: Colors.transparent,
@@ -132,7 +143,11 @@ class PriceHistoryChart extends StatelessWidget {
                   belowBarData: BarAreaData(show: false),
                 ),
                 LineChartBarData(
-                  spots: data.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.lowest)).toList(),
+                  spots: data
+                      .asMap()
+                      .entries
+                      .map((e) => FlSpot(e.key.toDouble(), e.value.lowest))
+                      .toList(),
                   isCurved: true,
                   curveSmoothness: 0.2,
                   color: Colors.transparent,
@@ -141,7 +156,11 @@ class PriceHistoryChart extends StatelessWidget {
                 ),
                 // Average price line
                 LineChartBarData(
-                  spots: data.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.average)).toList(),
+                  spots: data
+                      .asMap()
+                      .entries
+                      .map((e) => FlSpot(e.key.toDouble(), e.value.average))
+                      .toList(),
                   isCurved: true,
                   curveSmoothness: 0.2,
                   color: const Color(0xFF4FC3F7),
@@ -167,7 +186,9 @@ class PriceHistoryChart extends StatelessWidget {
               titlesData: const FlTitlesData(show: false),
               borderData: FlBorderData(show: false),
               barGroups: data.asMap().entries.map((e) {
-                final normalizedVol = maxVolume > 0 ? e.value.volume / maxVolume : 0.0;
+                final normalizedVol = maxVolume > 0
+                    ? e.value.volume / maxVolume
+                    : 0.0;
                 return BarChartGroupData(
                   x: e.key,
                   barRods: [
@@ -193,11 +214,21 @@ class PriceHistoryChart extends StatelessWidget {
           children: [
             Container(width: 12, height: 2, color: const Color(0xFF4FC3F7)),
             const SizedBox(width: 4),
-            const Text('Average Price', style: TextStyle(color: EveColors.textSecondary, fontSize: 10)),
+            const Text(
+              'Average Price',
+              style: TextStyle(color: EveColors.textSecondary, fontSize: 10),
+            ),
             const SizedBox(width: 16),
-            Container(width: 12, height: 8, color: const Color(0xFF4FC3F7).withOpacity(0.3)),
+            Container(
+              width: 12,
+              height: 8,
+              color: const Color(0xFF4FC3F7).withOpacity(0.3),
+            ),
             const SizedBox(width: 4),
-            const Text('Volume', style: TextStyle(color: EveColors.textSecondary, fontSize: 10)),
+            const Text(
+              'Volume',
+              style: TextStyle(color: EveColors.textSecondary, fontSize: 10),
+            ),
           ],
         ),
       ],

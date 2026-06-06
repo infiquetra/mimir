@@ -101,9 +101,7 @@ class DashboardCard extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              style: EveTypography.titleMedium(
-                color: EveColors.textPrimary,
-              ),
+              style: EveTypography.titleMedium(color: EveColors.textPrimary),
             ),
           ),
           if (onExpand != null)
@@ -190,9 +188,7 @@ class DashboardCard extends StatelessWidget {
             Expanded(
               child: Text(
                 'Error',
-                style: EveTypography.titleSmall(
-                  color: EveColors.error,
-                ),
+                style: EveTypography.titleSmall(color: EveColors.error),
               ),
             ),
           ],
@@ -200,9 +196,7 @@ class DashboardCard extends StatelessWidget {
         SizedBox(height: EveSpacing.md),
         Text(
           errorMessage!,
-          style: EveTypography.bodySmall(
-            color: EveColors.textSecondary,
-          ),
+          style: EveTypography.bodySmall(color: EveColors.textSecondary),
         ),
         if (onRetry != null) ...[
           SizedBox(height: EveSpacing.lg),

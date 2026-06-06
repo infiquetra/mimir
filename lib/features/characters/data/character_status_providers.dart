@@ -14,9 +14,7 @@ part 'character_status_providers.g.dart';
 
 /// Provider for the character status repository.
 @riverpod
-CharacterStatusRepository characterStatusRepository(
-  Ref ref,
-) {
+CharacterStatusRepository characterStatusRepository(Ref ref) {
   return CharacterStatusRepository(
     database: ref.watch(databaseProvider),
     esiClient: ref.watch(esiClientProvider),
@@ -30,10 +28,7 @@ CharacterStatusRepository characterStatusRepository(
 
 /// Provides character clones (jump clones + home location).
 @riverpod
-Future<CharacterClones> characterClones(
-  Ref ref,
-  int characterId,
-) async {
+Future<CharacterClones> characterClones(Ref ref, int characterId) async {
   Log.d('PROVIDERS', 'characterClones($characterId) - START');
   final repository = ref.watch(characterStatusRepositoryProvider);
   return repository.getCharacterClones(characterId);
@@ -47,10 +42,7 @@ Future<CharacterClones> characterClones(
 ///
 /// Returns a map of implant type ID to name.
 @riverpod
-Future<Map<int, String>> characterImplants(
-  Ref ref,
-  int characterId,
-) async {
+Future<Map<int, String>> characterImplants(Ref ref, int characterId) async {
   Log.d('PROVIDERS', 'characterImplants($characterId) - START');
   final repository = ref.watch(characterStatusRepositoryProvider);
   return repository.getCharacterImplantsWithNames(characterId);
@@ -130,11 +122,17 @@ Future<Map<int, String>> characterCloneLocationNames(
 
   // Resolve both types of locations.
   if (stationIds.isEmpty && structureIds.isEmpty) {
-    Log.d('PROVIDERS', 'characterCloneLocationNames($characterId) - No IDs to resolve');
+    Log.d(
+      'PROVIDERS',
+      'characterCloneLocationNames($characterId) - No IDs to resolve',
+    );
     return {};
   }
 
-  Log.d('PROVIDERS', 'characterCloneLocationNames($characterId) - Resolving ${stationIds.length} stations, ${structureIds.length} structures');
+  Log.d(
+    'PROVIDERS',
+    'characterCloneLocationNames($characterId) - Resolving ${stationIds.length} stations, ${structureIds.length} structures',
+  );
 
   // Resolve stations via /universe/names/ endpoint.
   final stationNames = await repository.resolveNames(stationIds.toList());
@@ -149,7 +147,10 @@ Future<Map<int, String>> characterCloneLocationNames(
   // Merge both maps.
   final nameMap = {...stationNameMap, ...structureNameMap};
 
-  Log.d('PROVIDERS', 'characterCloneLocationNames($characterId) - Resolved ${nameMap.length} names total');
+  Log.d(
+    'PROVIDERS',
+    'characterCloneLocationNames($characterId) - Resolved ${nameMap.length} names total',
+  );
   return nameMap;
 }
 
@@ -159,10 +160,7 @@ Future<Map<int, String>> characterCloneLocationNames(
 
 /// Provides aggregated online status including location and ship.
 @riverpod
-Future<OnlineStatus> characterOnlineStatus(
-  Ref ref,
-  int characterId,
-) async {
+Future<OnlineStatus> characterOnlineStatus(Ref ref, int characterId) async {
   Log.d('PROVIDERS', 'characterOnlineStatus($characterId) - START');
   final esiClient = ref.watch(esiClientProvider);
   final repository = ref.watch(characterStatusRepositoryProvider);
@@ -222,7 +220,12 @@ Future<OnlineStatus> characterOnlineStatus(
       shipTypeName: shipTypeName,
     );
   } catch (e, stack) {
-    Log.e('PROVIDERS', 'characterOnlineStatus($characterId) - FAILED', e, stack);
+    Log.e(
+      'PROVIDERS',
+      'characterOnlineStatus($characterId) - FAILED',
+      e,
+      stack,
+    );
     rethrow;
   }
 }

@@ -39,15 +39,24 @@ class _MarketBrowserPanelState extends ConsumerState<MarketBrowserPanel> {
         const SizedBox(height: 8),
         Expanded(
           child: selectedItem != null
-              ? _ItemDetailView(item: selectedItem, onBack: () {
-                  ref.read(selectedMarketItemProvider.notifier).state = null;
-                })
+              ? _ItemDetailView(
+                  item: selectedItem,
+                  onBack: () {
+                    ref.read(selectedMarketItemProvider.notifier).state = null;
+                  },
+                )
               : _query.length >= 3
-                  ? _SearchResultsList(query: _query, onSelect: (item) {
-                      Log.i('MARKET', 'Selected item: ${item.name} (${item.typeId})');
-                      ref.read(selectedMarketItemProvider.notifier).state = item;
-                    })
-                  : const _BrowseEmptyState(),
+              ? _SearchResultsList(
+                  query: _query,
+                  onSelect: (item) {
+                    Log.i(
+                      'MARKET',
+                      'Selected item: ${item.name} (${item.typeId})',
+                    );
+                    ref.read(selectedMarketItemProvider.notifier).state = item;
+                  },
+                )
+              : const _BrowseEmptyState(),
         ),
       ],
     );
@@ -68,12 +77,18 @@ class _MarketBrowserPanelState extends ConsumerState<MarketBrowserPanel> {
                       onPressed: () {
                         _searchController.clear();
                         setState(() => _query = '');
-                        ref.read(selectedMarketItemProvider.notifier).state = null;
+                        ref.read(selectedMarketItemProvider.notifier).state =
+                            null;
                       },
                     )
                   : null,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
               filled: true,
               fillColor: EveColors.surfaceElevated,
             ),
@@ -105,7 +120,9 @@ class _RegionSelector extends ConsumerWidget {
       decoration: BoxDecoration(
         color: EveColors.surfaceElevated,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: EveColors.textSecondary.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: EveColors.textSecondary.withValues(alpha: 0.3),
+        ),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<int>(
@@ -139,16 +156,24 @@ class _BrowseEmptyState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.storefront_outlined, size: 64, color: EveColors.textSecondary.withValues(alpha: 0.4)),
+          Icon(
+            Icons.storefront_outlined,
+            size: 64,
+            color: EveColors.textSecondary.withValues(alpha: 0.4),
+          ),
           const SizedBox(height: 16),
           Text(
             'Market Browser',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: EveColors.textSecondary),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(color: EveColors.textSecondary),
           ),
           const SizedBox(height: 8),
           Text(
             'Search for items by name to view prices and history.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: EveColors.textSecondary),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: EveColors.textSecondary),
           ),
         ],
       ),
@@ -188,7 +213,10 @@ class _SearchResultsList extends ConsumerWidget {
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, _) => Center(
-        child: Text('Search error: $err', style: const TextStyle(color: EveColors.error)),
+        child: Text(
+          'Search error: $err',
+          style: const TextStyle(color: EveColors.error),
+        ),
       ),
     );
   }
@@ -227,14 +255,23 @@ class _SearchResultItem extends ConsumerWidget {
             ),
             priceAsync.when(
               data: (price) => Text(
-                price?.averagePrice != null ? formatIsk(price!.averagePrice!) : '—',
+                price?.averagePrice != null
+                    ? formatIsk(price!.averagePrice!)
+                    : '—',
                 style: const TextStyle(
                   color: EveColors.textSecondary,
                   fontSize: 12,
                 ),
               ),
-              loading: () => const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 1)),
-              error: (_, __) => const Text('—', style: TextStyle(color: EveColors.textSecondary)),
+              loading: () => const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 1),
+              ),
+              error: (_, __) => const Text(
+                '—',
+                style: TextStyle(color: EveColors.textSecondary),
+              ),
             ),
           ],
         ),
@@ -267,7 +304,9 @@ class _ItemDetailView extends ConsumerWidget {
             onPressed: onBack,
             icon: const Icon(Icons.arrow_back, size: 16),
             label: const Text('Back to search'),
-            style: TextButton.styleFrom(foregroundColor: EveColors.textSecondary),
+            style: TextButton.styleFrom(
+              foregroundColor: EveColors.textSecondary,
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -294,7 +333,10 @@ class _ItemDetailView extends ConsumerWidget {
                       const SizedBox(height: 4),
                       Text(
                         'Type ID: ${item.typeId}',
-                        style: const TextStyle(color: EveColors.textSecondary, fontSize: 12),
+                        style: const TextStyle(
+                          color: EveColors.textSecondary,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -308,13 +350,18 @@ class _ItemDetailView extends ConsumerWidget {
         // Price info
         priceAsync.when(
           data: (price) => _buildPriceCards(context, price),
-          loading: () => const Center(child: Padding(
-            padding: EdgeInsets.all(16),
-            child: CircularProgressIndicator(),
-          )),
+          loading: () => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: CircularProgressIndicator(),
+            ),
+          ),
           error: (err, _) => Padding(
             padding: const EdgeInsets.all(16),
-            child: Text('Error loading price: $err', style: const TextStyle(color: EveColors.error)),
+            child: Text(
+              'Error loading price: $err',
+              style: const TextStyle(color: EveColors.error),
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -328,7 +375,11 @@ class _ItemDetailView extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.show_chart, size: 18, color: Color(0xFF4FC3F7)),
+                    const Icon(
+                      Icons.show_chart,
+                      size: 18,
+                      color: Color(0xFF4FC3F7),
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Price History',
@@ -340,7 +391,10 @@ class _ItemDetailView extends ConsumerWidget {
                     const Spacer(),
                     Text(
                       kTradeHubRegions[regionId] ?? 'Region $regionId',
-                      style: const TextStyle(color: EveColors.textSecondary, fontSize: 11),
+                      style: const TextStyle(
+                        color: EveColors.textSecondary,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
@@ -356,7 +410,10 @@ class _ItemDetailView extends ConsumerWidget {
                     child: Center(
                       child: Text(
                         'Failed to load history: $err',
-                        style: const TextStyle(color: EveColors.textSecondary, fontSize: 12),
+                        style: const TextStyle(
+                          color: EveColors.textSecondary,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ),
@@ -421,7 +478,11 @@ class _PriceCard extends StatelessWidget {
                 const SizedBox(width: 6),
                 Text(
                   label,
-                  style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),

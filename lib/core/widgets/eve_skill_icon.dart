@@ -98,10 +98,7 @@ class EveSkillIcon extends StatelessWidget {
           );
 
     // Apply rounded corners
-    icon = ClipRRect(
-      borderRadius: BorderRadius.circular(4),
-      child: icon,
-    );
+    icon = ClipRRect(borderRadius: BorderRadius.circular(4), child: icon);
 
     // Apply glow border if requested
     if (showBorder) {
@@ -150,10 +147,7 @@ class EveSkillIcon extends StatelessWidget {
       decoration: BoxDecoration(
         color: EveColors.darkSurfaceVariant,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(
-          color: EveColors.evePrimary.withAlpha(51),
-          width: 1,
-        ),
+        border: Border.all(color: EveColors.evePrimary.withAlpha(51), width: 1),
       ),
       child: Stack(
         alignment: Alignment.center,

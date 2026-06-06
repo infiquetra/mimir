@@ -23,7 +23,9 @@ class PiSummaryCard extends ConsumerWidget {
       icon: Icons.public,
       glowColor: EveColors.gallente,
       isLoading: coloniesAsync.isLoading,
-      errorMessage: coloniesAsync.hasError ? coloniesAsync.error.toString() : null,
+      errorMessage: coloniesAsync.hasError
+          ? coloniesAsync.error.toString()
+          : null,
       onRetry: () => ref.invalidate(allColoniesProvider),
       child: coloniesAsync.when(
         data: (colonies) => _buildContent(context, ref, colonies),
@@ -34,7 +36,10 @@ class PiSummaryCard extends ConsumerWidget {
   }
 
   Widget _buildContent(
-      BuildContext context, WidgetRef ref, List<PlanetaryColony> colonies) {
+    BuildContext context,
+    WidgetRef ref,
+    List<PlanetaryColony> colonies,
+  ) {
     if (colonies.isEmpty) {
       return Center(
         child: Padding(
@@ -66,10 +71,12 @@ class PiSummaryCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Character ID label (could resolve name, but keeping it simple for summary)
-              ...entry.value.map((colony) => Padding(
-                    padding: EdgeInsets.only(bottom: EveSpacing.sm),
-                    child: _ColonySummaryRow(colony: colony),
-                  )),
+              ...entry.value.map(
+                (colony) => Padding(
+                  padding: EdgeInsets.only(bottom: EveSpacing.sm),
+                  child: _ColonySummaryRow(colony: colony),
+                ),
+              ),
               if (entry.key != grouped.keys.last)
                 SizedBox(height: EveSpacing.xs),
             ],
@@ -87,10 +94,14 @@ class _ColonySummaryRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pinsAsync = ref.watch(planetPinsProvider(PlanetPinsArgs(
-      characterId: colony.characterId,
-      planetId: colony.planetId,
-    )));
+    final pinsAsync = ref.watch(
+      planetPinsProvider(
+        PlanetPinsArgs(
+          characterId: colony.characterId,
+          planetId: colony.planetId,
+        ),
+      ),
+    );
 
     return pinsAsync.when(
       data: (pins) => _buildWithPins(context, pins),
@@ -102,10 +113,12 @@ class _ColonySummaryRow extends ConsumerWidget {
   Widget _buildWithPins(BuildContext context, List<PlanetaryPin> pins) {
     final extractorPins = pins.where((p) => p.productTypeId != null).toList();
     final hasActiveExtractors = extractorPins.any(
-        (p) => p.expiryTime != null && p.expiryTime!.isAfter(DateTime.now()));
+      (p) => p.expiryTime != null && p.expiryTime!.isAfter(DateTime.now()),
+    );
 
-    final statusColor =
-        hasActiveExtractors ? EveColors.success : EveColors.warning;
+    final statusColor = hasActiveExtractors
+        ? EveColors.success
+        : EveColors.warning;
     final statusText = hasActiveExtractors ? 'Extracting' : 'IDLE';
 
     DateTime? nextCompletion;

@@ -46,10 +46,20 @@ class _ModuleBrowserState extends ConsumerState<ModuleBrowser> {
             style: const TextStyle(fontSize: 12, color: EveColors.textPrimary),
             decoration: InputDecoration(
               hintText: 'Search modules...',
-              hintStyle: const TextStyle(fontSize: 12, color: EveColors.textSecondary),
+              hintStyle: const TextStyle(
+                fontSize: 12,
+                color: EveColors.textSecondary,
+              ),
               isDense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              prefixIcon: const Icon(Icons.search, size: 16, color: EveColors.textSecondary),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 8,
+              ),
+              prefixIcon: const Icon(
+                Icons.search,
+                size: 16,
+                color: EveColors.textSecondary,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(4),
                 borderSide: BorderSide(color: EveColors.borderSubtle),
@@ -81,13 +91,20 @@ class _ModuleBrowserState extends ConsumerState<ModuleBrowser> {
             data: (modules) {
               final filtered = _searchQuery.isEmpty
                   ? modules
-                  : modules.where((m) => m.name.toLowerCase().contains(_searchQuery)).toList();
+                  : modules
+                        .where(
+                          (m) => m.name.toLowerCase().contains(_searchQuery),
+                        )
+                        .toList();
 
               if (filtered.isEmpty) {
                 return Center(
                   child: Text(
                     _searchQuery.isEmpty ? 'No modules found.' : 'No matches.',
-                    style: const TextStyle(color: EveColors.textSecondary, fontSize: 12),
+                    style: const TextStyle(
+                      color: EveColors.textSecondary,
+                      fontSize: 12,
+                    ),
                   ),
                 );
               }
@@ -192,7 +209,10 @@ class _ModuleListItem extends ConsumerWidget {
             Expanded(
               child: Text(
                 module.name,
-                style: TextStyle(color: EveColors.textSecondary.withOpacity(0.3), fontSize: 12),
+                style: TextStyle(
+                  color: EveColors.textSecondary.withOpacity(0.3),
+                  fontSize: 12,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -203,7 +223,10 @@ class _ModuleListItem extends ConsumerWidget {
         Log.d('FITTING', 'Drag started: ${module.name} (${module.slotType})');
       },
       onDragEnd: (details) {
-        Log.d('FITTING', 'Drag ended: ${module.name}, wasAccepted=${details.wasAccepted}');
+        Log.d(
+          'FITTING',
+          'Drag ended: ${module.name}, wasAccepted=${details.wasAccepted}',
+        );
       },
       // Double-click to auto-equip to first available slot
       child: GestureDetector(
@@ -227,23 +250,23 @@ class _ModuleListItem extends ConsumerWidget {
           }
 
           if (emptySlot != null) {
-            ref.read(activeFittingProvider.notifier).equipModule(
-              FittedModule(
-                slotType: module.slotType,
-                slotIndex: emptySlot,
-                typeId: module.typeId,
-                typeName: module.name,
-                state: ModuleState.active,
-              ),
-            );
+            ref
+                .read(activeFittingProvider.notifier)
+                .equipModule(
+                  FittedModule(
+                    slotType: module.slotType,
+                    slotIndex: emptySlot,
+                    typeId: module.typeId,
+                    typeName: module.name,
+                    state: ModuleState.active,
+                  ),
+                );
           }
         },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(4),
-          ),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(4)),
           child: Row(
             children: [
               EveTypeIcon(typeId: module.typeId, size: 28),
@@ -254,12 +277,18 @@ class _ModuleListItem extends ConsumerWidget {
                   children: [
                     Text(
                       module.name,
-                      style: const TextStyle(color: EveColors.textPrimary, fontSize: 12),
+                      style: const TextStyle(
+                        color: EveColors.textPrimary,
+                        fontSize: 12,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       'CPU: ${module.cpu.toStringAsFixed(1)}  PG: ${module.powergrid.toStringAsFixed(1)}',
-                      style: const TextStyle(color: EveColors.textSecondary, fontSize: 10),
+                      style: const TextStyle(
+                        color: EveColors.textSecondary,
+                        fontSize: 10,
+                      ),
                     ),
                   ],
                 ),
@@ -273,21 +302,31 @@ class _ModuleListItem extends ConsumerWidget {
 
   Set<int> _getExistingIndices(Fitting fitting, SlotType slotType) {
     switch (slotType) {
-      case SlotType.high: return fitting.highSlots.map((m) => m.slotIndex).toSet();
-      case SlotType.med: return fitting.medSlots.map((m) => m.slotIndex).toSet();
-      case SlotType.low: return fitting.lowSlots.map((m) => m.slotIndex).toSet();
-      case SlotType.rig: return fitting.rigSlots.map((m) => m.slotIndex).toSet();
-      case SlotType.subsystem: return fitting.subsystems.map((m) => m.slotIndex).toSet();
+      case SlotType.high:
+        return fitting.highSlots.map((m) => m.slotIndex).toSet();
+      case SlotType.med:
+        return fitting.medSlots.map((m) => m.slotIndex).toSet();
+      case SlotType.low:
+        return fitting.lowSlots.map((m) => m.slotIndex).toSet();
+      case SlotType.rig:
+        return fitting.rigSlots.map((m) => m.slotIndex).toSet();
+      case SlotType.subsystem:
+        return fitting.subsystems.map((m) => m.slotIndex).toSet();
     }
   }
 
   int _getMaxSlots(ShipType ship, SlotType slotType) {
     switch (slotType) {
-      case SlotType.high: return ship.highSlots;
-      case SlotType.med: return ship.medSlots;
-      case SlotType.low: return ship.lowSlots;
-      case SlotType.rig: return ship.rigSlots;
-      case SlotType.subsystem: return 5;
+      case SlotType.high:
+        return ship.highSlots;
+      case SlotType.med:
+        return ship.medSlots;
+      case SlotType.low:
+        return ship.lowSlots;
+      case SlotType.rig:
+        return ship.rigSlots;
+      case SlotType.subsystem:
+        return 5;
     }
   }
 }

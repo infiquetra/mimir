@@ -43,9 +43,9 @@ class TestApp extends StatefulWidget {
     this.child,
     this.home,
   }) : assert(
-          child != null || home != null,
-          'Either child or home must be provided',
-        );
+         child != null || home != null,
+         'Either child or home must be provided',
+       );
 
   /// Initial character to insert and set as active.
   ///
@@ -112,9 +112,7 @@ class _TestAppState extends State<TestApp> {
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
     // Create in-memory database for isolation.
-    _database = AppDatabase.forTesting(
-      NativeDatabase.memory(),
-    );
+    _database = AppDatabase.forTesting(NativeDatabase.memory());
 
     // Create and configure mock ESI client.
     _mockEsiClient = MockEsiClient();
@@ -154,11 +152,7 @@ class _TestAppState extends State<TestApp> {
   Widget build(BuildContext context) {
     if (!_isInitialized) {
       return const MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        ),
+        home: Scaffold(body: Center(child: CircularProgressIndicator())),
       );
     }
 
@@ -179,10 +173,7 @@ class _TestAppState extends State<TestApp> {
       overrides: overrides.cast(),
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: widget.home ??
-            Scaffold(
-              body: widget.child!,
-            ),
+        home: widget.home ?? Scaffold(body: widget.child!),
       ),
     );
   }

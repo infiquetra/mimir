@@ -62,7 +62,8 @@ class _QuickActionsCardState extends ConsumerState<QuickActionsCard> {
         } catch (e) {
           // Continue refreshing other characters even if one fails
           debugPrint(
-              'Failed to refresh character ${character.characterId}: $e');
+            'Failed to refresh character ${character.characterId}: $e',
+          );
         }
       }
 
@@ -126,8 +127,9 @@ class _QuickActionsCardState extends ConsumerState<QuickActionsCard> {
             ..sort((a, b) => a.finishDate!.compareTo(b.finishDate!));
 
           if (nextSkill.isNotEmpty) {
-            final timeRemaining =
-                _formatTimeRemaining(nextSkill.first.finishDate!);
+            final timeRemaining = _formatTimeRemaining(
+              nextSkill.first.finishDate!,
+            );
             buffer.writeln('  Next Skill: $timeRemaining');
           }
         }
@@ -199,12 +201,14 @@ class _QuickActionsCardState extends ConsumerState<QuickActionsCard> {
     for (final character in characters) {
       final queue = queues[character.characterId] ?? [];
       if (queue.isEmpty) {
-        alerts.add(_Alert(
-          icon: Icons.warning_amber_rounded,
-          color: EveColors.warning,
-          message: '${character.name} has empty skill queue!',
-          type: _AlertType.warning,
-        ));
+        alerts.add(
+          _Alert(
+            icon: Icons.warning_amber_rounded,
+            color: EveColors.warning,
+            message: '${character.name} has empty skill queue!',
+            type: _AlertType.warning,
+          ),
+        );
       }
     }
 
@@ -287,9 +291,9 @@ class _QuickActionsCardState extends ConsumerState<QuickActionsCard> {
               Text(
                 'ALERTS',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
               ),
               const SizedBox(width: 8),
               Container(
@@ -302,9 +306,9 @@ class _QuickActionsCardState extends ConsumerState<QuickActionsCard> {
                 child: Text(
                   alerts.length.toString(),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: EveColors.warning,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: EveColors.warning,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -321,18 +325,14 @@ class _QuickActionsCardState extends ConsumerState<QuickActionsCard> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Icon(
-            alert.icon,
-            color: alert.color,
-            size: 20,
-          ),
+          Icon(alert.icon, color: alert.color, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               alert.message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: alert.color,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: alert.color),
             ),
           ),
         ],
@@ -343,9 +343,9 @@ class _QuickActionsCardState extends ConsumerState<QuickActionsCard> {
   Widget _buildError(Object error) {
     return Text(
       'Failed to load alerts: $error',
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: EveColors.error,
-          ),
+      style: Theme.of(
+        context,
+      ).textTheme.bodyMedium?.copyWith(color: EveColors.error),
     );
   }
 }

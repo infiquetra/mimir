@@ -32,102 +32,100 @@ class TrayIntroStep extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-              // Icon
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
-                  shape: BoxShape.circle,
+                // Icon
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.more_vert,
+                    size: 64,
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
                 ),
-                child: Icon(
-                  Icons.more_vert,
-                  size: 64,
-                  color: theme.colorScheme.onPrimaryContainer,
-                ),
-              ),
-              const SizedBox(height: 32),
+                const SizedBox(height: 32),
 
-              // Title
-              Text(
-                'Always Available in Your Menu Bar',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+                // Title
+                Text(
+                  'Always Available in Your Menu Bar',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Description
-              Text(
-                'Mimir lives in your menu bar for quick access to your '
-                'character information. Click the icon to view your skills, '
-                'wallet, and more.',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                // Description
+                Text(
+                  'Mimir lives in your menu bar for quick access to your '
+                  'character information. Click the icon to view your skills, '
+                  'wallet, and more.',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 48),
+                const SizedBox(height: 48),
 
-              // Startup preference section
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'When Mimir launches',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                // Startup preference section
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'When Mimir launches',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                    // Radio options
-                    RadioListTile<StartupBehavior>(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Open Dashboard'),
-                      subtitle: const Text(
-                        'Show the Dashboard window automatically',
+                      // Radio options
+                      RadioListTile<StartupBehavior>(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Open Dashboard'),
+                        subtitle: const Text(
+                          'Show the Dashboard window automatically',
+                        ),
+                        value: StartupBehavior.openDashboard,
+                        groupValue: selectedBehavior,
+                        onChanged: (value) {
+                          if (value != null) {
+                            onBehaviorChanged(value);
+                          }
+                        },
                       ),
-                      value: StartupBehavior.openDashboard,
-                      groupValue: selectedBehavior,
-                      onChanged: (value) {
-                        if (value != null) {
-                          onBehaviorChanged(value);
-                        }
-                      },
-                    ),
-                    RadioListTile<StartupBehavior>(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Show tray icon only'),
-                      subtitle: const Text(
-                        'Launch silently in the menu bar',
+                      RadioListTile<StartupBehavior>(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Show tray icon only'),
+                        subtitle: const Text('Launch silently in the menu bar'),
+                        value: StartupBehavior.trayOnly,
+                        groupValue: selectedBehavior,
+                        onChanged: (value) {
+                          if (value != null) {
+                            onBehaviorChanged(value);
+                          }
+                        },
                       ),
-                      value: StartupBehavior.trayOnly,
-                      groupValue: selectedBehavior,
-                      onChanged: (value) {
-                        if (value != null) {
-                          onBehaviorChanged(value);
-                        }
-                      },
-                    ),
 
-                    const SizedBox(height: 8),
-                    Text(
-                      'You can change this later in Settings',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
+                      const SizedBox(height: 8),
+                      Text(
+                        'You can change this later in Settings',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
               ],
             ),
           ),

@@ -61,7 +61,11 @@ class _TradeCalculatorPanelState extends State<TradeCalculatorPanel> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.calculate_outlined, size: 18, color: Color(0xFF4FC3F7)),
+                    const Icon(
+                      Icons.calculate_outlined,
+                      size: 18,
+                      color: Color(0xFF4FC3F7),
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Trade Calculator',
@@ -148,10 +152,7 @@ class _TradeCalculatorPanelState extends State<TradeCalculatorPanel> {
         if (_result != null) _buildResults(_result!),
 
         // Break-even helper
-        if (_result != null) ...[
-          const SizedBox(height: 16),
-          _buildBreakEven(),
-        ],
+        if (_result != null) ...[const SizedBox(height: 16), _buildBreakEven()],
       ],
     );
   }
@@ -167,11 +168,17 @@ class _TradeCalculatorPanelState extends State<TradeCalculatorPanel> {
         labelText: label,
         labelStyle: TextStyle(color: color, fontSize: 12),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
         filled: true,
         fillColor: EveColors.surfaceElevated,
         prefixText: 'ISK ',
-        prefixStyle: const TextStyle(color: EveColors.textSecondary, fontSize: 12),
+        prefixStyle: const TextStyle(
+          color: EveColors.textSecondary,
+          fontSize: 12,
+        ),
       ),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       style: TextStyle(color: color, fontWeight: FontWeight.bold),
@@ -193,7 +200,10 @@ class _TradeCalculatorPanelState extends State<TradeCalculatorPanel> {
           width: 90,
           child: Text(
             label,
-            style: const TextStyle(color: EveColors.textSecondary, fontSize: 12),
+            style: const TextStyle(
+              color: EveColors.textSecondary,
+              fontSize: 12,
+            ),
           ),
         ),
         Expanded(
@@ -218,7 +228,11 @@ class _TradeCalculatorPanelState extends State<TradeCalculatorPanel> {
           width: 50,
           child: Text(
             '${value.toStringAsFixed(1)}%',
-            style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
             textAlign: TextAlign.right,
           ),
         ),
@@ -228,7 +242,9 @@ class _TradeCalculatorPanelState extends State<TradeCalculatorPanel> {
 
   Widget _buildResults(TradeMargin result) {
     final theme = Theme.of(context);
-    final profitColor = result.isProfitable ? const Color(0xFF81C784) : EveColors.error;
+    final profitColor = result.isProfitable
+        ? const Color(0xFF81C784)
+        : EveColors.error;
 
     return EveCard(
       child: Padding(
@@ -261,13 +277,27 @@ class _TradeCalculatorPanelState extends State<TradeCalculatorPanel> {
 
             // Breakdown table
             _ResultRow(label: 'Buy Price', value: formatIsk(result.buyPrice)),
-            _ResultRow(label: '+ Broker Fee (buy)', value: formatIsk(result.buyPrice * _brokerFee / 100)),
-            _ResultRow(label: '= Total Cost', value: formatIsk(result.buyTotal), isBold: true),
+            _ResultRow(
+              label: '+ Broker Fee (buy)',
+              value: formatIsk(result.buyPrice * _brokerFee / 100),
+            ),
+            _ResultRow(
+              label: '= Total Cost',
+              value: formatIsk(result.buyTotal),
+              isBold: true,
+            ),
             const Divider(height: 20, color: EveColors.textSecondary),
             _ResultRow(label: 'Sell Price', value: formatIsk(result.sellPrice)),
-            _ResultRow(label: '- Broker Fee (sell)', value: formatIsk(result.sellPrice * _brokerFee / 100)),
+            _ResultRow(
+              label: '- Broker Fee (sell)',
+              value: formatIsk(result.sellPrice * _brokerFee / 100),
+            ),
             _ResultRow(label: '- Sales Tax', value: formatIsk(result.salesTax)),
-            _ResultRow(label: '= Net Revenue', value: formatIsk(result.sellNet), isBold: true),
+            _ResultRow(
+              label: '= Net Revenue',
+              value: formatIsk(result.sellNet),
+              isBold: true,
+            ),
             const Divider(height: 20, color: EveColors.textSecondary),
             _ResultRow(
               label: 'Profit / Unit',
@@ -275,7 +305,10 @@ class _TradeCalculatorPanelState extends State<TradeCalculatorPanel> {
               valueColor: profitColor,
               isBold: true,
             ),
-            _ResultRow(label: 'Total Fees', value: formatIsk(result.brokerFee + result.salesTax)),
+            _ResultRow(
+              label: 'Total Fees',
+              value: formatIsk(result.brokerFee + result.salesTax),
+            ),
           ],
         ),
       ),
@@ -304,7 +337,10 @@ class _TradeCalculatorPanelState extends State<TradeCalculatorPanel> {
               children: [
                 const Text(
                   'Break-Even Sell Price',
-                  style: TextStyle(color: EveColors.textSecondary, fontSize: 12),
+                  style: TextStyle(
+                    color: EveColors.textSecondary,
+                    fontSize: 12,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(

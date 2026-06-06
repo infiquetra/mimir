@@ -35,20 +35,11 @@ class AttributeBar extends StatelessWidget {
       child: Row(
         children: [
           // Icon
-          Icon(
-            icon,
-            size: 20,
-            color: iconColor,
-          ),
+          Icon(icon, size: 20, color: iconColor),
           const SizedBox(width: 12),
 
           // Attribute name
-          Expanded(
-            child: Text(
-              name,
-              style: theme.textTheme.bodyMedium,
-            ),
-          ),
+          Expanded(child: Text(name, style: theme.textTheme.bodyMedium)),
 
           // Value label
           Text(

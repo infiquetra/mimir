@@ -165,25 +165,27 @@ void main() {
 
   group('SdeUpdateService.checkForUpdates', () {
     // JSON string for mock manifest response
-    const manifestJson = '{"version":"20250805","checksum":"sha256:abc123",'
+    const manifestJson =
+        '{"version":"20250805","checksum":"sha256:abc123",'
         '"eveVersion":"sde-20250805-TRANQUILITY","skillCount":517}';
 
-    test('should return SdeUpdateCheckFailed when manifest fetch fails',
-        () async {
-      when(
-        () => mockDio.get<String>(
-          any(),
-          options: any(named: 'options'),
-        ),
-      ).thenThrow(DioException(
-        requestOptions: RequestOptions(path: ''),
-        error: 'Network error',
-      ));
+    test(
+      'should return SdeUpdateCheckFailed when manifest fetch fails',
+      () async {
+        when(
+          () => mockDio.get<String>(any(), options: any(named: 'options')),
+        ).thenThrow(
+          DioException(
+            requestOptions: RequestOptions(path: ''),
+            error: 'Network error',
+          ),
+        );
 
-      final result = await service.checkForUpdates();
+        final result = await service.checkForUpdates();
 
-      expect(result, isA<SdeUpdateCheckFailed>());
-    });
+        expect(result, isA<SdeUpdateCheckFailed>());
+      },
+    );
 
     test('should return SdeUpToDate when versions match', () async {
       // Set current version
@@ -191,15 +193,14 @@ void main() {
 
       // Mock manifest response (now returns String, not Map)
       when(
-        () => mockDio.get<String>(
-          any(),
-          options: any(named: 'options'),
+        () => mockDio.get<String>(any(), options: any(named: 'options')),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: ''),
+          statusCode: 200,
+          data: manifestJson,
         ),
-      ).thenAnswer((_) async => Response(
-            requestOptions: RequestOptions(path: ''),
-            statusCode: 200,
-            data: manifestJson,
-          ));
+      );
 
       final result = await service.checkForUpdates();
 
@@ -207,46 +208,46 @@ void main() {
       expect((result as SdeUpToDate).currentVersion, '20250805');
     });
 
-    test('should return SdeUpdateAvailable when newer version exists',
-        () async {
-      // Set current version
-      await database.setMetadata('version', '20250801');
+    test(
+      'should return SdeUpdateAvailable when newer version exists',
+      () async {
+        // Set current version
+        await database.setMetadata('version', '20250801');
 
-      // Mock manifest response with newer version (returns String)
-      when(
-        () => mockDio.get<String>(
-          any(),
-          options: any(named: 'options'),
-        ),
-      ).thenAnswer((_) async => Response(
+        // Mock manifest response with newer version (returns String)
+        when(
+          () => mockDio.get<String>(any(), options: any(named: 'options')),
+        ).thenAnswer(
+          (_) async => Response(
             requestOptions: RequestOptions(path: ''),
             statusCode: 200,
             data: manifestJson,
-          ));
+          ),
+        );
 
-      final result = await service.checkForUpdates();
+        final result = await service.checkForUpdates();
 
-      expect(result, isA<SdeUpdateAvailable>());
-      final available = result as SdeUpdateAvailable;
-      expect(available.currentVersion, '20250801');
-      expect(available.newVersion, '20250805');
-      expect(available.skillCount, 517);
-    });
+        expect(result, isA<SdeUpdateAvailable>());
+        final available = result as SdeUpdateAvailable;
+        expect(available.currentVersion, '20250801');
+        expect(available.newVersion, '20250805');
+        expect(available.skillCount, 517);
+      },
+    );
 
     test('should return SdeUpdateAvailable when no current version', () async {
       // No version set
 
       // Mock manifest response (returns String)
       when(
-        () => mockDio.get<String>(
-          any(),
-          options: any(named: 'options'),
+        () => mockDio.get<String>(any(), options: any(named: 'options')),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: ''),
+          statusCode: 200,
+          data: manifestJson,
         ),
-      ).thenAnswer((_) async => Response(
-            requestOptions: RequestOptions(path: ''),
-            statusCode: 200,
-            data: manifestJson,
-          ));
+      );
 
       final result = await service.checkForUpdates();
 

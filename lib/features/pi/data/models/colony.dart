@@ -46,5 +46,6 @@ abstract class Extractor with _$Extractor {
     int? headCount,
   }) = _Extractor;
 
-  factory Extractor.fromJson(Map<String, dynamic> json) => _$ExtractorFromJson(json);
+  factory Extractor.fromJson(Map<String, dynamic> json) =>
+      _$ExtractorFromJson(json);
 }

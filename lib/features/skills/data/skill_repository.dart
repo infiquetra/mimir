@@ -18,11 +18,9 @@ class SkillRepository {
   final AppDatabase _database;
   final EsiClient _esiClient;
 
-  SkillRepository({
-    required AppDatabase database,
-    required EsiClient esiClient,
-  })  : _database = database,
-        _esiClient = esiClient;
+  SkillRepository({required AppDatabase database, required EsiClient esiClient})
+    : _database = database,
+      _esiClient = esiClient;
 
   /// Refreshes the skill queue from ESI and saves to database.
   Future<void> refreshSkillQueue(int characterId) async {
@@ -31,7 +29,10 @@ class SkillRepository {
       // Fetch skill queue from ESI.
       Log.d('SKILLS', 'refreshSkillQueue - fetching from ESI');
       final queueItems = await _esiClient.getSkillQueue(characterId);
-      Log.i('SKILLS', 'refreshSkillQueue - fetched ${queueItems.length} queue items from ESI');
+      Log.i(
+        'SKILLS',
+        'refreshSkillQueue - fetched ${queueItems.length} queue items from ESI',
+      );
 
       // Convert ESI items to database companions.
       Log.d('SKILLS', 'refreshSkillQueue - converting to database companions');
@@ -52,7 +53,10 @@ class SkillRepository {
       // Replace the skill queue in the database.
       Log.d('SKILLS', 'refreshSkillQueue - saving to database');
       await _database.replaceSkillQueue(characterId, companions);
-      Log.i('SKILLS', 'refreshSkillQueue - saved ${companions.length} queue items to database');
+      Log.i(
+        'SKILLS',
+        'refreshSkillQueue - saved ${companions.length} queue items to database',
+      );
       Log.d('SKILLS', 'refreshSkillQueue($characterId) - SUCCESS');
     } catch (e, stack) {
       Log.e('SKILLS', 'refreshSkillQueue($characterId) - FAILED', e, stack);
@@ -90,7 +94,10 @@ class SkillRepository {
     try {
       // Get all characters first to include those with empty queues.
       final characters = await _database.getAllCharacters();
-      Log.i('SKILLS', 'getAllCharacterQueues - loading queues for ${characters.length} characters');
+      Log.i(
+        'SKILLS',
+        'getAllCharacterQueues - loading queues for ${characters.length} characters',
+      );
 
       // Use batch query to get all queues in a single database call.
       // This avoids N+1 query problem (N queries for N characters).
@@ -99,11 +106,18 @@ class SkillRepository {
       // Ensure all characters are in the map (even with empty queues).
       final queueMap = <int, List<SkillQueueEntry>>{};
       for (final character in characters) {
-        queueMap[character.characterId] = allQueues[character.characterId] ?? [];
-        Log.d('SKILLS', 'getAllCharacterQueues - character ${character.characterId}: ${queueMap[character.characterId]!.length} items');
+        queueMap[character.characterId] =
+            allQueues[character.characterId] ?? [];
+        Log.d(
+          'SKILLS',
+          'getAllCharacterQueues - character ${character.characterId}: ${queueMap[character.characterId]!.length} items',
+        );
       }
 
-      Log.i('SKILLS', 'getAllCharacterQueues - loaded queues for ${queueMap.length} characters in single query');
+      Log.i(
+        'SKILLS',
+        'getAllCharacterQueues - loaded queues for ${queueMap.length} characters in single query',
+      );
       Log.d('SKILLS', 'getAllCharacterQueues() - SUCCESS');
       return queueMap;
     } catch (e, stack) {
@@ -122,11 +136,20 @@ class SkillRepository {
       // Fetch character skills from ESI.
       Log.d('SKILLS', 'refreshCharacterSkills - fetching from ESI');
       final characterSkills = await _esiClient.getSkills(characterId);
-      Log.i('SKILLS', 'refreshCharacterSkills - fetched ${characterSkills.skills.length} trained skills from ESI');
-      Log.i('SKILLS', 'refreshCharacterSkills - total SP: ${characterSkills.totalSp}, unallocated: ${characterSkills.unallocatedSp ?? 0}');
+      Log.i(
+        'SKILLS',
+        'refreshCharacterSkills - fetched ${characterSkills.skills.length} trained skills from ESI',
+      );
+      Log.i(
+        'SKILLS',
+        'refreshCharacterSkills - total SP: ${characterSkills.totalSp}, unallocated: ${characterSkills.unallocatedSp ?? 0}',
+      );
 
       // Convert ESI skills to database companions.
-      Log.d('SKILLS', 'refreshCharacterSkills - converting to database companions');
+      Log.d(
+        'SKILLS',
+        'refreshCharacterSkills - converting to database companions',
+      );
       final now = DateTime.now();
       final companions = characterSkills.skills.map((skill) {
         return CharacterSkillsCompanion.insert(
@@ -142,10 +165,18 @@ class SkillRepository {
       // Replace trained skills in the database.
       Log.d('SKILLS', 'refreshCharacterSkills - saving to database');
       await _database.replaceCharacterSkills(characterId, companions);
-      Log.i('SKILLS', 'refreshCharacterSkills - saved ${companions.length} trained skills to database');
+      Log.i(
+        'SKILLS',
+        'refreshCharacterSkills - saved ${companions.length} trained skills to database',
+      );
       Log.d('SKILLS', 'refreshCharacterSkills($characterId) - SUCCESS');
     } catch (e, stack) {
-      Log.e('SKILLS', 'refreshCharacterSkills($characterId) - FAILED', e, stack);
+      Log.e(
+        'SKILLS',
+        'refreshCharacterSkills($characterId) - FAILED',
+        e,
+        stack,
+      );
       rethrow;
     }
   }
@@ -155,7 +186,10 @@ class SkillRepository {
     Log.d('SKILLS', 'getCharacterSkills($characterId) - START');
     try {
       final skills = await _database.getCharacterSkills(characterId);
-      Log.i('SKILLS', 'getCharacterSkills - found ${skills.length} trained skills');
+      Log.i(
+        'SKILLS',
+        'getCharacterSkills - found ${skills.length} trained skills',
+      );
       Log.d('SKILLS', 'getCharacterSkills($characterId) - SUCCESS');
       return skills;
     } catch (e, stack) {
@@ -166,7 +200,10 @@ class SkillRepository {
 
   /// Watches trained skills for reactive updates.
   Stream<List<CharacterSkill>> watchCharacterSkills(int characterId) {
-    Log.d('SKILLS', 'watchCharacterSkills($characterId) - subscribed to stream');
+    Log.d(
+      'SKILLS',
+      'watchCharacterSkills($characterId) - subscribed to stream',
+    );
     return _database.watchCharacterSkills(characterId);
   }
 
@@ -181,7 +218,12 @@ class SkillRepository {
       Log.d('SKILLS', 'getTrainedLevel - skillId $skillId: level $level');
       return level;
     } catch (e, stack) {
-      Log.e('SKILLS', 'getTrainedLevel($characterId, $skillId) - FAILED', e, stack);
+      Log.e(
+        'SKILLS',
+        'getTrainedLevel($characterId, $skillId) - FAILED',
+        e,
+        stack,
+      );
       rethrow;
     }
   }
@@ -199,7 +241,12 @@ class SkillRepository {
       Log.d('SKILLS', 'isSkillInjected - skillId $skillId: $isInjected');
       return isInjected;
     } catch (e, stack) {
-      Log.e('SKILLS', 'isSkillInjected($characterId, $skillId) - FAILED', e, stack);
+      Log.e(
+        'SKILLS',
+        'isSkillInjected($characterId, $skillId) - FAILED',
+        e,
+        stack,
+      );
       rethrow;
     }
   }
@@ -214,7 +261,9 @@ final skillRepositoryProvider = Provider<SkillRepository>((ref) {
 });
 
 /// Provider for the skill prerequisite service.
-final skillPrerequisiteServiceProvider = Provider<SkillPrerequisiteService>((ref) {
+final skillPrerequisiteServiceProvider = Provider<SkillPrerequisiteService>((
+  ref,
+) {
   return SkillPrerequisiteService(
     sdeService: ref.watch(sdeServiceProvider),
     skillRepository: ref.watch(skillRepositoryProvider),
@@ -222,8 +271,8 @@ final skillPrerequisiteServiceProvider = Provider<SkillPrerequisiteService>((ref
 });
 
 /// Provider for the skill training calculator.
-final skillTrainingCalculatorProvider = Provider<SkillTrainingCalculator>((ref) {
-  return SkillTrainingCalculator(
-    sdeService: ref.watch(sdeServiceProvider),
-  );
+final skillTrainingCalculatorProvider = Provider<SkillTrainingCalculator>((
+  ref,
+) {
+  return SkillTrainingCalculator(sdeService: ref.watch(sdeServiceProvider));
 });

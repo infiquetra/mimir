@@ -17,10 +17,7 @@ void main() {
     // Use in-memory database for testing.
     database = AppDatabase.forTesting(NativeDatabase.memory());
     mockEsiClient = MockEsiClient();
-    repository = WalletRepository(
-      database: database,
-      esiClient: mockEsiClient,
-    );
+    repository = WalletRepository(database: database, esiClient: mockEsiClient);
 
     // Reset any previous mock interactions.
     reset(mockEsiClient);
@@ -36,8 +33,9 @@ void main() {
       const balance = 1500000000.0;
 
       // Mock ESI client to return balance.
-      when(() => mockEsiClient.getWalletBalance(characterId))
-          .thenAnswer((_) async => balance);
+      when(
+        () => mockEsiClient.getWalletBalance(characterId),
+      ).thenAnswer((_) async => balance);
 
       // Call repository method.
       final result = await repository.refreshWalletBalance(characterId);
@@ -54,8 +52,9 @@ void main() {
       const characterId = 12345678;
 
       // Mock ESI client to throw exception.
-      when(() => mockEsiClient.getWalletBalance(characterId))
-          .thenThrow(const EsiException('API Error', statusCode: 500));
+      when(
+        () => mockEsiClient.getWalletBalance(characterId),
+      ).thenThrow(const EsiException('API Error', statusCode: 500));
 
       // Expect exception to be rethrown.
       expect(
@@ -68,15 +67,14 @@ void main() {
       const characterId = 12345678;
 
       // Mock ESI client to throw auth error.
-      when(() => mockEsiClient.getWalletBalance(characterId))
-          .thenThrow(const EsiException('Unauthorized', statusCode: 401));
+      when(
+        () => mockEsiClient.getWalletBalance(characterId),
+      ).thenThrow(const EsiException('Unauthorized', statusCode: 401));
 
       // Expect exception to be rethrown.
       expect(
         () => repository.refreshWalletBalance(characterId),
-        throwsA(
-          predicate((e) => e is EsiException && e.isAuthError),
-        ),
+        throwsA(predicate((e) => e is EsiException && e.isAuthError)),
       );
     });
   });
@@ -108,14 +106,18 @@ void main() {
       ];
 
       // Mock ESI client to return journal items.
-      when(() => mockEsiClient.getWalletJournal(characterId))
-          .thenAnswer((_) async => journalItems);
+      when(
+        () => mockEsiClient.getWalletJournal(characterId),
+      ).thenAnswer((_) async => journalItems);
 
       // Call repository method.
       await repository.refreshWalletJournal(characterId);
 
       // Verify journal entries were saved to database (ordered by date DESC).
-      final savedEntries = await database.getWalletJournal(characterId, limit: 10);
+      final savedEntries = await database.getWalletJournal(
+        characterId,
+        limit: 10,
+      );
       expect(savedEntries, hasLength(2));
       // Newest entry first (id: 2, date: 11:00)
       expect(savedEntries[0].id, equals(2));
@@ -129,14 +131,18 @@ void main() {
       const characterId = 12345678;
 
       // Mock ESI client to return empty list.
-      when(() => mockEsiClient.getWalletJournal(characterId))
-          .thenAnswer((_) async => []);
+      when(
+        () => mockEsiClient.getWalletJournal(characterId),
+      ).thenAnswer((_) async => []);
 
       // Call repository method.
       await repository.refreshWalletJournal(characterId);
 
       // Verify no entries were saved.
-      final savedEntries = await database.getWalletJournal(characterId, limit: 10);
+      final savedEntries = await database.getWalletJournal(
+        characterId,
+        limit: 10,
+      );
       expect(savedEntries, isEmpty);
     });
 
@@ -144,15 +150,14 @@ void main() {
       const characterId = 12345678;
 
       // Mock ESI client to throw scope error.
-      when(() => mockEsiClient.getWalletJournal(characterId))
-          .thenThrow(const EsiException('Forbidden - missing scope', statusCode: 403));
+      when(() => mockEsiClient.getWalletJournal(characterId)).thenThrow(
+        const EsiException('Forbidden - missing scope', statusCode: 403),
+      );
 
       // Expect exception to be rethrown.
       expect(
         () => repository.refreshWalletJournal(characterId),
-        throwsA(
-          predicate((e) => e is EsiException && e.isScopeError),
-        ),
+        throwsA(predicate((e) => e is EsiException && e.isScopeError)),
       );
     });
   });
@@ -288,24 +293,28 @@ void main() {
   group('getAllCharacterBalances', () {
     test('should return balances for all characters', () async {
       // Insert test characters.
-      await database.upsertCharacter(CharactersCompanion.insert(
-        characterId: const Value(11111111),
-        name: 'Pilot One',
-        corporationId: 98000001,
-        corporationName: 'Corp One',
-        portraitUrl: 'https://example.com/1',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      ));
-      await database.upsertCharacter(CharactersCompanion.insert(
-        characterId: const Value(22222222),
-        name: 'Pilot Two',
-        corporationId: 98000002,
-        corporationName: 'Corp Two',
-        portraitUrl: 'https://example.com/2',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      ));
+      await database.upsertCharacter(
+        CharactersCompanion.insert(
+          characterId: const Value(11111111),
+          name: 'Pilot One',
+          corporationId: 98000001,
+          corporationName: 'Corp One',
+          portraitUrl: 'https://example.com/1',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        ),
+      );
+      await database.upsertCharacter(
+        CharactersCompanion.insert(
+          characterId: const Value(22222222),
+          name: 'Pilot Two',
+          corporationId: 98000002,
+          corporationName: 'Corp Two',
+          portraitUrl: 'https://example.com/2',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        ),
+      );
 
       // Record balances for both characters.
       await database.recordWalletBalance(11111111, 1500000000.0);
@@ -322,24 +331,28 @@ void main() {
 
     test('should exclude characters without balances', () async {
       // Insert characters.
-      await database.upsertCharacter(CharactersCompanion.insert(
-        characterId: const Value(11111111),
-        name: 'Pilot One',
-        corporationId: 98000001,
-        corporationName: 'Corp One',
-        portraitUrl: 'https://example.com/1',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      ));
-      await database.upsertCharacter(CharactersCompanion.insert(
-        characterId: const Value(22222222),
-        name: 'Pilot Two',
-        corporationId: 98000002,
-        corporationName: 'Corp Two',
-        portraitUrl: 'https://example.com/2',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      ));
+      await database.upsertCharacter(
+        CharactersCompanion.insert(
+          characterId: const Value(11111111),
+          name: 'Pilot One',
+          corporationId: 98000001,
+          corporationName: 'Corp One',
+          portraitUrl: 'https://example.com/1',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        ),
+      );
+      await database.upsertCharacter(
+        CharactersCompanion.insert(
+          characterId: const Value(22222222),
+          name: 'Pilot Two',
+          corporationId: 98000002,
+          corporationName: 'Corp Two',
+          portraitUrl: 'https://example.com/2',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        ),
+      );
 
       // Only record balance for first character.
       await database.recordWalletBalance(11111111, 1500000000.0);

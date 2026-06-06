@@ -1,0 +1,5 @@
+[ 2026.05.20 20:01:12 ] Listener: John Doe
+[ 2026.05.20 20:01:15 ] (combat) <color=0xff00ffff><b>24</b> <color=0x77ffffff>from</color> <b><color=0xffffffff>State Protector Merlin</color></b><color=0x77ffffff> - </color>Light Missile - Hits
+[ 2026.05.20 20:01:17 ] (combat) <color=0xffcc0000><b>35</b> <color=0x77ffffff>to</color> <b><color=0xffffffff>State Protector Merlin</color></b><color=0x77ffffff> - </color>Hobgoblin II - Penetrates
+[ 2026.05.20 20:01:20 ] (combat) <color=0xffcc0000><b>0</b> <color=0x77ffffff>to</color> <b><color=0xffffffff>State Protector Merlin</color></b><color=0x77ffffff> - </color>Hobgoblin II - Misses completely
+[ 2026.05.20 20:01:21 ] (combat) <color=0xff00ffff><b>45</b> <color=0x77ffffff>from</color> <b><color=0xffffffff>State Protector Merlin</color></b><color=0x77ffffff> - </color>Light Missile - Penetrates

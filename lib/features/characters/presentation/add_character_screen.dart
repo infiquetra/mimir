@@ -38,9 +38,7 @@ class AddCharacterScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildContent(context, ref, authState, theme),
-              ],
+              children: [_buildContent(context, ref, authState, theme)],
             ),
           ),
         ),
@@ -81,11 +79,7 @@ class AddCharacterScreen extends ConsumerWidget {
     }
   }
 
-  Widget _buildIdleState(
-    BuildContext context,
-    WidgetRef ref,
-    ThemeData theme,
-  ) {
+  Widget _buildIdleState(BuildContext context, WidgetRef ref, ThemeData theme) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -95,10 +89,7 @@ class AddCharacterScreen extends ConsumerWidget {
           color: theme.colorScheme.primary,
         ),
         const SizedBox(height: 24),
-        Text(
-          'Add EVE Character',
-          style: theme.textTheme.headlineSmall,
-        ),
+        Text('Add EVE Character', style: theme.textTheme.headlineSmall),
         const SizedBox(height: 16),
         Text(
           'Connect your EVE Online character to view your skill queue, wallet, and more.',
@@ -136,30 +127,29 @@ class AddCharacterScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Requested Permissions',
-              style: theme.textTheme.titleSmall,
-            ),
+            Text('Requested Permissions', style: theme.textTheme.titleSmall),
             const SizedBox(height: 8),
-            ...[...EveConfig.phase1Scopes, ...EveConfig.phase2FleetScopes].map((scope) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.check_circle_outline,
-                        size: 16,
-                        color: theme.colorScheme.primary,
+            ...[...EveConfig.phase1Scopes, ...EveConfig.phase2FleetScopes].map(
+              (scope) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 16,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _formatScope(scope),
+                        style: theme.textTheme.bodySmall,
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _formatScope(scope),
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ),
-                    ],
-                  ),
-                )),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -190,10 +180,7 @@ class AddCharacterScreen extends ConsumerWidget {
       children: [
         const CircularProgressIndicator(),
         const SizedBox(height: 24),
-        Text(
-          'Waiting for Authorization',
-          style: theme.textTheme.headlineSmall,
-        ),
+        Text('Waiting for Authorization', style: theme.textTheme.headlineSmall),
         const SizedBox(height: 16),
         Text(
           'Complete the sign-in process in your browser.\nThis window will update automatically.',
@@ -219,10 +206,7 @@ class AddCharacterScreen extends ConsumerWidget {
       children: [
         const CircularProgressIndicator(),
         const SizedBox(height: 24),
-        Text(
-          'Completing Authentication',
-          style: theme.textTheme.headlineSmall,
-        ),
+        Text('Completing Authentication', style: theme.textTheme.headlineSmall),
         const SizedBox(height: 16),
         Text(
           'Securing your connection...',
@@ -239,16 +223,9 @@ class AddCharacterScreen extends ConsumerWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          Icons.check_circle,
-          size: 80,
-          color: theme.colorScheme.primary,
-        ),
+        Icon(Icons.check_circle, size: 80, color: theme.colorScheme.primary),
         const SizedBox(height: 24),
-        Text(
-          'Character Added!',
-          style: theme.textTheme.headlineSmall,
-        ),
+        Text('Character Added!', style: theme.textTheme.headlineSmall),
       ],
     );
   }
@@ -262,16 +239,9 @@ class AddCharacterScreen extends ConsumerWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          Icons.error_outline,
-          size: 80,
-          color: theme.colorScheme.error,
-        ),
+        Icon(Icons.error_outline, size: 80, color: theme.colorScheme.error),
         const SizedBox(height: 24),
-        Text(
-          'Authentication Failed',
-          style: theme.textTheme.headlineSmall,
-        ),
+        Text('Authentication Failed', style: theme.textTheme.headlineSmall),
         const SizedBox(height: 16),
         Text(
           authState.errorMessage ?? 'An unknown error occurred.',
@@ -288,10 +258,10 @@ class AddCharacterScreen extends ConsumerWidget {
               onPressed: () {
                 ref.read(authControllerProvider.notifier).reset();
                 try {
-              context.pop();
-            } catch (_) {
-              Navigator.of(context).pop();
-            }
+                  context.pop();
+                } catch (_) {
+                  Navigator.of(context).pop();
+                }
               },
               child: const Text('Cancel'),
             ),

@@ -36,6 +36,7 @@ class SdeService {
   /// Using a simpler approach with bundled JSON for reliability.
   static const String _bundledSkillsAsset = 'assets/sde/skills.json';
   static const String _bundledDogmaAsset = 'assets/sde/dogma.json';
+  static const String _bundledIndustryAsset = 'assets/sde/industry.json';
 
   /// Initialize the SDE service.
   ///
@@ -52,9 +53,14 @@ class SdeService {
       // Load from bundled assets
       await _loadBundledSkills();
     }
-    
+
     if (!hasDogmaData) {
       await _loadBundledDogma();
+    }
+    
+    final hasIndustryData = await database.hasIndustryData();
+    if (!hasIndustryData) {
+      await _loadBundledIndustry();
     }
 
     // Populate in-memory cache
@@ -85,6 +91,18 @@ class SdeService {
       debugPrint('SDE: Bundled dogma imported successfully');
     } catch (e) {
       debugPrint('SDE: Bundled dogma not found or failed to load: $e');
+    }
+  }
+
+  /// Load industry data from bundled JSON asset.
+  Future<void> _loadBundledIndustry() async {
+    try {
+      final jsonString = await rootBundle.loadString(_bundledIndustryAsset);
+      final data = json.decode(jsonString) as Map<String, dynamic>;
+      await _importIndustryData(data);
+      debugPrint('SDE: Bundled industry imported successfully');
+    } catch (e) {
+      debugPrint('SDE: Bundled industry not found or failed to load: $e');
     }
   }
 
@@ -361,44 +379,50 @@ class SdeService {
 
     if (data.containsKey('categories')) {
       final categories = (data['categories'] as List)
-          .map((c) => SdeCategoriesCompanion.insert(
-                categoryId: Value(c['categoryId'] as int),
-                categoryName: c['categoryName'] as String,
-              ))
+          .map(
+            (c) => SdeCategoriesCompanion.insert(
+              categoryId: Value(c['categoryId'] as int),
+              categoryName: c['categoryName'] as String,
+            ),
+          )
           .toList();
       await database.upsertCategories(categories);
     }
 
     if (data.containsKey('groups')) {
       final groups = (data['groups'] as List)
-          .map((g) => SdeGroupsCompanion.insert(
-                groupId: Value(g['groupId'] as int),
-                groupName: g['groupName'] as String,
-                categoryId: g['categoryId'] as int,
-              ))
+          .map(
+            (g) => SdeGroupsCompanion.insert(
+              groupId: Value(g['groupId'] as int),
+              groupName: g['groupName'] as String,
+              categoryId: g['categoryId'] as int,
+            ),
+          )
           .toList();
       await database.upsertGroups(groups);
     }
 
     if (data.containsKey('types')) {
       final types = (data['types'] as List)
-          .map((t) => SdeTypesCompanion.insert(
-                typeId: Value(t['typeId'] as int),
-                typeName: t['typeName'] as String,
-                groupId: t['groupId'] as int,
-                description: t['description'] != null
-                    ? Value(t['description'] as String)
-                    : const Value.absent(),
-                rank: t['rank'] != null
-                    ? Value(t['rank'] as int)
-                    : const Value.absent(),
-                primaryAttribute: t['primaryAttribute'] != null
-                    ? Value(t['primaryAttribute'] as String)
-                    : const Value.absent(),
-                secondaryAttribute: t['secondaryAttribute'] != null
-                    ? Value(t['secondaryAttribute'] as String)
-                    : const Value.absent(),
-              ))
+          .map(
+            (t) => SdeTypesCompanion.insert(
+              typeId: Value(t['typeId'] as int),
+              typeName: t['typeName'] as String,
+              groupId: t['groupId'] as int,
+              description: t['description'] != null
+                  ? Value(t['description'] as String)
+                  : const Value.absent(),
+              rank: t['rank'] != null
+                  ? Value(t['rank'] as int)
+                  : const Value.absent(),
+              primaryAttribute: t['primaryAttribute'] != null
+                  ? Value(t['primaryAttribute'] as String)
+                  : const Value.absent(),
+              secondaryAttribute: t['secondaryAttribute'] != null
+                  ? Value(t['secondaryAttribute'] as String)
+                  : const Value.absent(),
+            ),
+          )
           .toList();
       await database.upsertTypes(types);
 
@@ -406,10 +430,10 @@ class SdeService {
       final requirements = <SdeSkillRequirementsCompanion>[];
       final dogmaAttributes = <SdeTypeAttributesCompanion>[];
       final dogmaEffects = <SdeTypeEffectsCompanion>[];
-      
+
       for (final t in data['types'] as List) {
         final typeId = t['typeId'] as int;
-        
+
         // Prerequisites
         final prerequisites = t['prerequisites'] as List?;
         if (prerequisites != null) {
@@ -423,7 +447,7 @@ class SdeService {
             );
           }
         }
-        
+
         // Dogma Attributes
         final attributes = t['dogmaAttributes'] as List?;
         if (attributes != null) {
@@ -437,7 +461,7 @@ class SdeService {
             );
           }
         }
-        
+
         // Dogma Effects
         final effects = t['dogmaEffects'] as List?;
         if (effects != null) {
@@ -452,7 +476,7 @@ class SdeService {
           }
         }
       }
-      
+
       if (requirements.isNotEmpty) {
         await database.upsertSkillRequirements(requirements);
       }
@@ -462,6 +486,68 @@ class SdeService {
       if (dogmaEffects.isNotEmpty) {
         await database.upsertTypeEffects(dogmaEffects);
       }
+    }
+  }
+
+  /// Import Industry data from parsed JSON.
+  Future<void> _importIndustryData(Map<String, dynamic> data) async {
+    if (data.containsKey('activities')) {
+      final acts = (data['activities'] as List)
+          .map((a) => SdeIndustryActivitiesCompanion.insert(
+                typeId: a['typeId'] as int,
+                activityId: a['activityId'] as int,
+                time: a['time'] as int,
+              ))
+          .toList();
+      await database.upsertIndustryActivities(acts);
+    }
+    
+    if (data.containsKey('materials')) {
+      final mats = (data['materials'] as List)
+          .map((m) => SdeIndustryActivityMaterialsCompanion.insert(
+                typeId: m['typeId'] as int,
+                activityId: m['activityId'] as int,
+                materialTypeId: m['materialTypeId'] as int,
+                quantity: m['quantity'] as int,
+              ))
+          .toList();
+      await database.upsertIndustryMaterials(mats);
+    }
+    
+    if (data.containsKey('probabilities')) {
+      final probs = (data['probabilities'] as List)
+          .map((p) => SdeIndustryActivityProbabilitiesCompanion.insert(
+                typeId: p['typeId'] as int,
+                activityId: p['activityId'] as int,
+                productTypeId: p['productTypeId'] as int,
+                probability: (p['probability'] as num).toDouble(),
+              ))
+          .toList();
+      await database.upsertIndustryProbabilities(probs);
+    }
+    
+    if (data.containsKey('products')) {
+      final prods = (data['products'] as List)
+          .map((p) => SdeIndustryActivityProductsCompanion.insert(
+                typeId: p['typeId'] as int,
+                activityId: p['activityId'] as int,
+                productTypeId: p['productTypeId'] as int,
+                quantity: p['quantity'] as int,
+              ))
+          .toList();
+      await database.upsertIndustryProducts(prods);
+    }
+    
+    if (data.containsKey('skills')) {
+      final skills = (data['skills'] as List)
+          .map((s) => SdeIndustryActivitySkillsCompanion.insert(
+                typeId: s['typeId'] as int,
+                activityId: s['activityId'] as int,
+                skillId: s['skillId'] as int,
+                level: s['level'] as int,
+              ))
+          .toList();
+      await database.upsertIndustrySkills(skills);
     }
   }
 
@@ -598,10 +684,14 @@ class SdeService {
   ///
   /// Attributes are: perception, willpower, intelligence, memory, charisma.
   Future<({String? primary, String? secondary})?> getSkillAttributes(
-      int skillId) async {
+    int skillId,
+  ) async {
     final skill = await database.getType(skillId);
     if (skill == null) return null;
-    return (primary: skill.primaryAttribute, secondary: skill.secondaryAttribute);
+    return (
+      primary: skill.primaryAttribute,
+      secondary: skill.secondaryAttribute,
+    );
   }
 
   /// Get all skill data at once (for efficiency).
@@ -609,13 +699,15 @@ class SdeService {
   /// Returns complete skill information including name, rank, attributes,
   /// and prerequisites. Returns null if skill not found.
   Future<
-      ({
-        String name,
-        int rank,
-        String primary,
-        String secondary,
-        List<SdeSkillRequirement> prerequisites
-      })?> getSkillData(int skillId) async {
+    ({
+      String name,
+      int rank,
+      String primary,
+      String secondary,
+      List<SdeSkillRequirement> prerequisites,
+    })?
+  >
+  getSkillData(int skillId) async {
     final skill = await database.getType(skillId);
     if (skill == null) return null;
 
@@ -662,21 +754,23 @@ class SdeService {
   Future<ShipType?> getShipType(int typeId) async {
     final type = await database.getType(typeId);
     if (type == null) return null;
-    
+
     final group = await database.getGroup(type.groupId);
     final attributes = await database.getTypeAttributes(typeId);
     final prereqs = await database.getSkillPrerequisites(typeId);
-    
+
     final skillRequirements = <SkillRequirement>[];
     for (final req in prereqs) {
       final name = await getSkillName(req.requiredSkillId) ?? 'Unknown Skill';
-      skillRequirements.add(SkillRequirement(
-        skillTypeId: req.requiredSkillId,
-        skillName: name,
-        requiredLevel: req.requiredLevel,
-      ));
+      skillRequirements.add(
+        SkillRequirement(
+          skillTypeId: req.requiredSkillId,
+          skillName: name,
+          requiredLevel: req.requiredLevel,
+        ),
+      );
     }
-    
+
     return ShipType(
       typeId: type.typeId,
       name: type.typeName,
@@ -702,29 +796,36 @@ class SdeService {
   Future<ModuleType?> getModuleType(int typeId) async {
     final type = await database.getType(typeId);
     if (type == null) return null;
-    
+
     final group = await database.getGroup(type.groupId);
     final attributes = await database.getTypeAttributes(typeId);
     final prereqs = await database.getSkillPrerequisites(typeId);
-    
+
     final skillRequirements = <SkillRequirement>[];
     for (final req in prereqs) {
       final name = await getSkillName(req.requiredSkillId) ?? 'Unknown Skill';
-      skillRequirements.add(SkillRequirement(
-        skillTypeId: req.requiredSkillId,
-        skillName: name,
-        requiredLevel: req.requiredLevel,
-      ));
+      skillRequirements.add(
+        SkillRequirement(
+          skillTypeId: req.requiredSkillId,
+          skillName: name,
+          requiredLevel: req.requiredLevel,
+        ),
+      );
     }
-    
+
     final effectIds = await database.getTypeEffects(typeId);
     SlotType slotType = SlotType.high;
-    if (effectIds.contains(12)) slotType = SlotType.high;
-    else if (effectIds.contains(13)) slotType = SlotType.med;
-    else if (effectIds.contains(11)) slotType = SlotType.low;
-    else if (effectIds.contains(2663)) slotType = SlotType.rig;
-    else if (effectIds.contains(3772)) slotType = SlotType.subsystem;
-    
+    if (effectIds.contains(12))
+      slotType = SlotType.high;
+    else if (effectIds.contains(13))
+      slotType = SlotType.med;
+    else if (effectIds.contains(11))
+      slotType = SlotType.low;
+    else if (effectIds.contains(2663))
+      slotType = SlotType.rig;
+    else if (effectIds.contains(3772))
+      slotType = SlotType.subsystem;
+
     return ModuleType(
       typeId: type.typeId,
       name: type.typeName,
@@ -749,28 +850,62 @@ class SdeService {
   Future<List<ModuleType>> getModulesBySlotType(SlotType slotType) async {
     int effectId;
     switch (slotType) {
-      case SlotType.low: effectId = 11; break;
-      case SlotType.high: effectId = 12; break;
-      case SlotType.med: effectId = 13; break;
-      case SlotType.rig: effectId = 2663; break;
-      case SlotType.subsystem: effectId = 3772; break;
+      case SlotType.low:
+        effectId = 11;
+        break;
+      case SlotType.high:
+        effectId = 12;
+        break;
+      case SlotType.med:
+        effectId = 13;
+        break;
+      case SlotType.rig:
+        effectId = 2663;
+        break;
+      case SlotType.subsystem:
+        effectId = 3772;
+        break;
     }
 
     final types = await database.getTypesByEffectId(effectId);
     final modules = <ModuleType>[];
-    
+
     // Process in smaller batches to avoid overwhelming the database connection
     for (var i = 0; i < types.length; i += 50) {
       final batch = types.skip(i).take(50);
       final futures = batch.map((type) => getModuleType(type.typeId));
       final batchModules = await Future.wait(futures);
-      
+
       for (final module in batchModules) {
         if (module != null) modules.add(module);
       }
     }
-    
+
     return modules;
+  }
+
+  // ============================================================================
+  // Industry Lookups
+  // ============================================================================
+
+  Future<SdeIndustryActivity?> getIndustryActivity(int typeId, int activityId) {
+    return database.getIndustryActivity(typeId, activityId);
+  }
+
+  Future<List<SdeIndustryActivityMaterial>> getIndustryMaterials(int typeId, int activityId) {
+    return database.getIndustryMaterials(typeId, activityId);
+  }
+
+  Future<List<SdeIndustryActivityProduct>> getIndustryProducts(int typeId, int activityId) {
+    return database.getIndustryProducts(typeId, activityId);
+  }
+
+  Future<List<SdeIndustryActivityProbability>> getIndustryProbabilities(int typeId, int activityId) {
+    return database.getIndustryProbabilities(typeId, activityId);
+  }
+
+  Future<List<SdeIndustryActivitySkill>> getIndustrySkills(int typeId, int activityId) {
+    return database.getIndustrySkills(typeId, activityId);
   }
 
   /// Get security status for a solar system.

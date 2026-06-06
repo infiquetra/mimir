@@ -55,15 +55,15 @@ class WalletTrendsCard extends ConsumerWidget {
             Text(
               'No trend data available',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withAlpha(204),
-                  ),
+                color: Theme.of(context).colorScheme.onSurface.withAlpha(204),
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               'Balance history will appear here over time',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
-                  ),
+                color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
+              ),
             ),
           ],
         ),
@@ -74,10 +74,7 @@ class WalletTrendsCard extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Chart
-        SizedBox(
-          height: 200,
-          child: _buildChart(context, trends),
-        ),
+        SizedBox(height: 200, child: _buildChart(context, trends)),
 
         const SizedBox(height: 24),
 
@@ -97,7 +94,8 @@ class WalletTrendsCard extends ConsumerWidget {
     // Ensure we have a minimum range to avoid division by zero
     var range = maxBalance - minBalance;
     if (range == 0) {
-      range = maxBalance * 0.1; // Use 10% of value as range if all points are equal
+      range =
+          maxBalance * 0.1; // Use 10% of value as range if all points are equal
       if (range == 0) {
         range = 1000000.0; // Fallback to 1M ISK if value is zero
       }
@@ -133,9 +131,9 @@ class WalletTrendsCard extends ConsumerWidget {
                 getTitlesWidget: (value, meta) {
                   return Text(
                     _formatYAxisLabel(value),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 10,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(fontSize: 10),
                   );
                 },
               ),
@@ -163,9 +161,9 @@ class WalletTrendsCard extends ConsumerWidget {
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
                       '${point.date.month}/${point.date.day}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontSize: 10,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(fontSize: 10),
                     ),
                   );
                 },
@@ -204,9 +202,9 @@ class WalletTrendsCard extends ConsumerWidget {
                   final point = trends.chartPoints[spot.x.toInt()];
                   return LineTooltipItem(
                     '${point.date.month}/${point.date.day}\n${formatIskCompact(point.balance)}',
-                    Theme.of(context).textTheme.bodySmall!.copyWith(
-                          color: Colors.white,
-                        ),
+                    Theme.of(
+                      context,
+                    ).textTheme.bodySmall!.copyWith(color: Colors.white),
                   );
                 }).toList();
               },
@@ -284,16 +282,16 @@ class _StatItem extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
-              ),
+            color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           value,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
         ),
       ],
     );

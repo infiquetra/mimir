@@ -11,18 +11,26 @@ import 'wallet_repository.dart';
 final walletJournalProvider = StreamProvider<List<WalletJournalEntry>>((ref) {
   final activeCharacter = ref.watch(activeCharacterProvider).value;
   if (activeCharacter == null) {
-    Log.d('WALLET', 'walletJournalProvider - no active character, returning empty stream');
+    Log.d(
+      'WALLET',
+      'walletJournalProvider - no active character, returning empty stream',
+    );
     return Stream.value([]);
   }
 
-  Log.d('WALLET', 'walletJournalProvider - setting up stream for character ${activeCharacter.characterId}');
+  Log.d(
+    'WALLET',
+    'walletJournalProvider - setting up stream for character ${activeCharacter.characterId}',
+  );
   final repository = ref.watch(walletRepositoryProvider);
   return repository.watchWalletJournal(activeCharacter.characterId);
 });
 
 /// Provider for refreshing wallet data (balance + journal) from ESI.
-final refreshWalletProvider =
-    FutureProvider.family<double, int>((ref, characterId) async {
+final refreshWalletProvider = FutureProvider.family<double, int>((
+  ref,
+  characterId,
+) async {
   Log.i('WALLET', 'refreshWalletProvider - invoked for character $characterId');
   final repository = ref.read(walletRepositoryProvider);
 
@@ -45,7 +53,10 @@ final walletBalanceProvider = FutureProvider<double?>((ref) async {
     return null;
   }
 
-  Log.d('WALLET', 'walletBalanceProvider - fetching for character ${activeCharacter.characterId}');
+  Log.d(
+    'WALLET',
+    'walletBalanceProvider - fetching for character ${activeCharacter.characterId}',
+  );
   final repository = ref.read(walletRepositoryProvider);
   return repository.getLatestWalletBalance(activeCharacter.characterId);
 });
@@ -53,8 +64,10 @@ final walletBalanceProvider = FutureProvider<double?>((ref) async {
 /// Provider that formats a wallet balance as ISK.
 ///
 /// Example: 1234567.89 → "1,234,567.89 ISK"
-final formattedBalanceProvider =
-    Provider.family<String, double>((ref, balance) {
+final formattedBalanceProvider = Provider.family<String, double>((
+  ref,
+  balance,
+) {
   return formatIsk(balance);
 });
 
@@ -66,8 +79,10 @@ final plexCountProvider = FutureProvider<int>((ref) async {
     return 0;
   }
 
-  Log.d('WALLET',
-      'plexCountProvider - fetching for character ${activeCharacter.characterId}');
+  Log.d(
+    'WALLET',
+    'plexCountProvider - fetching for character ${activeCharacter.characterId}',
+  );
   final repository = ref.read(walletRepositoryProvider);
   return repository.getPlexCount(activeCharacter.characterId);
 });
@@ -80,23 +95,28 @@ final totalLoyaltyPointsProvider = FutureProvider<int>((ref) async {
     return 0;
   }
 
-  Log.d('WALLET',
-      'totalLoyaltyPointsProvider - fetching for character ${activeCharacter.characterId}');
+  Log.d(
+    'WALLET',
+    'totalLoyaltyPointsProvider - fetching for character ${activeCharacter.characterId}',
+  );
   final repository = ref.read(walletRepositoryProvider);
   return repository.getTotalLoyaltyPoints(activeCharacter.characterId);
 });
 
 /// Provider for loyalty points by corporation.
-final loyaltyPointsByCorporationProvider =
-    FutureProvider<List<LoyaltyPoint>>((ref) async {
+final loyaltyPointsByCorporationProvider = FutureProvider<List<LoyaltyPoint>>((
+  ref,
+) async {
   final activeCharacter = ref.watch(activeCharacterProvider).value;
   if (activeCharacter == null) {
     Log.d('WALLET', 'loyaltyPointsByCorporationProvider - no active character');
     return [];
   }
 
-  Log.d('WALLET',
-      'loyaltyPointsByCorporationProvider - fetching for character ${activeCharacter.characterId}');
+  Log.d(
+    'WALLET',
+    'loyaltyPointsByCorporationProvider - fetching for character ${activeCharacter.characterId}',
+  );
   final repository = ref.read(walletRepositoryProvider);
   return repository.getLoyaltyPointsByCorporation(activeCharacter.characterId);
 });
@@ -109,59 +129,69 @@ final walletSummaryProvider = FutureProvider<WalletSummary>((ref) async {
     return const WalletSummary(income: 0, expenses: 0);
   }
 
-  Log.d('WALLET',
-      'walletSummaryProvider - fetching for character ${activeCharacter.characterId}');
+  Log.d(
+    'WALLET',
+    'walletSummaryProvider - fetching for character ${activeCharacter.characterId}',
+  );
   final repository = ref.read(walletRepositoryProvider);
   return repository.get30DaySummary(activeCharacter.characterId);
 });
 
 /// Provider that streams wallet transactions for the active character.
-final walletTransactionsProvider =
-    StreamProvider<List<WalletTransaction>>((ref) {
+final walletTransactionsProvider = StreamProvider<List<WalletTransaction>>((
+  ref,
+) {
   final activeCharacter = ref.watch(activeCharacterProvider).value;
   if (activeCharacter == null) {
-    Log.d('WALLET',
-        'walletTransactionsProvider - no active character, returning empty stream');
+    Log.d(
+      'WALLET',
+      'walletTransactionsProvider - no active character, returning empty stream',
+    );
     return Stream.value([]);
   }
 
-  Log.d('WALLET',
-      'walletTransactionsProvider - setting up stream for character ${activeCharacter.characterId}');
+  Log.d(
+    'WALLET',
+    'walletTransactionsProvider - setting up stream for character ${activeCharacter.characterId}',
+  );
   final repository = ref.watch(walletRepositoryProvider);
   return repository.watchWalletTransactions(activeCharacter.characterId);
 });
 
 /// Provider that streams the wallet journal for the active character with filtering.
 final filteredWalletJournalProvider =
-    StreamProvider.family<List<WalletJournalEntry>, TransactionFilter>(
-        (ref, filter) {
-  final activeCharacter = ref.watch(activeCharacterProvider).value;
-  if (activeCharacter == null) {
-    Log.d('WALLET',
-        'filteredWalletJournalProvider - no active character, returning empty stream');
-    return Stream.value([]);
-  }
+    StreamProvider.family<List<WalletJournalEntry>, TransactionFilter>((
+      ref,
+      filter,
+    ) {
+      final activeCharacter = ref.watch(activeCharacterProvider).value;
+      if (activeCharacter == null) {
+        Log.d(
+          'WALLET',
+          'filteredWalletJournalProvider - no active character, returning empty stream',
+        );
+        return Stream.value([]);
+      }
 
-  Log.d('WALLET',
-      'filteredWalletJournalProvider - setting up stream for character ${activeCharacter.characterId} with filter $filter');
-  final repository = ref.watch(walletRepositoryProvider);
-  return repository.watchWalletJournal(
-    activeCharacter.characterId,
-    limit: 100, // Increase limit for filtered view
-    refType: filter.refType,
-    since: filter.startDate,
-  );
-});
+      Log.d(
+        'WALLET',
+        'filteredWalletJournalProvider - setting up stream for character ${activeCharacter.characterId} with filter $filter',
+      );
+      final repository = ref.watch(walletRepositoryProvider);
+      return repository.watchWalletJournal(
+        activeCharacter.characterId,
+        limit: 100, // Increase limit for filtered view
+        refType: filter.refType,
+        since: filter.startDate,
+      );
+    });
 
 /// Filter for wallet journal transactions.
 class TransactionFilter {
   final String? refType;
   final int? days;
 
-  const TransactionFilter({
-    this.refType,
-    this.days,
-  });
+  const TransactionFilter({this.refType, this.days});
 
   /// The start date based on the number of days.
   DateTime? get startDate {
@@ -232,7 +262,10 @@ class MarketFilter {
 /// Works for ANY EVE type ID: ships, modules, skills, etc.
 ///
 /// Returns the item name or "Unknown Item" if not found.
-final itemNameProvider = FutureProvider.family<String, int>((ref, typeId) async {
+final itemNameProvider = FutureProvider.family<String, int>((
+  ref,
+  typeId,
+) async {
   Log.d('WALLET.ITEM', 'itemNameProvider($typeId) - START');
 
   final repository = ref.watch(characterStatusRepositoryProvider);
@@ -254,7 +287,10 @@ final itemNameProvider = FutureProvider.family<String, int>((ref, typeId) async 
 /// (memory → database → ESI) to efficiently resolve location names.
 ///
 /// Returns the location name or "Unknown Location" if not found.
-final locationNameProvider = FutureProvider.family<String, int>((ref, locationId) async {
+final locationNameProvider = FutureProvider.family<String, int>((
+  ref,
+  locationId,
+) async {
   Log.d('WALLET.LOCATION', 'locationNameProvider($locationId) - START');
 
   final repository = ref.watch(characterStatusRepositoryProvider);
@@ -265,7 +301,12 @@ final locationNameProvider = FutureProvider.family<String, int>((ref, locationId
     Log.d('WALLET.LOCATION', 'locationNameProvider($locationId) → $result');
     return result;
   } catch (e, stack) {
-    Log.e('WALLET.LOCATION', 'locationNameProvider($locationId) - FAILED', e, stack);
+    Log.e(
+      'WALLET.LOCATION',
+      'locationNameProvider($locationId) - FAILED',
+      e,
+      stack,
+    );
     return 'Unknown Location';
   }
 });

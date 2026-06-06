@@ -18,6 +18,7 @@ import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/skills/presentation/skills_screen.dart';
 import '../../features/wallet/presentation/wallet_screen.dart';
 import '../../features/intel/presentation/kill_feed_screen.dart';
+import '../../features/combat_analyzer/presentation/encounter_list_screen.dart';
 import '../auth/auth_providers.dart';
 import '../sde/sde_providers.dart';
 import '../theme/app_theme.dart';
@@ -42,10 +43,7 @@ import 'window_types.dart';
 /// - Database changes are visible to all windows via Drift streams
 /// - OAuth tokens are shared via keychain
 class SubWindowApp extends ConsumerStatefulWidget {
-  const SubWindowApp({
-    required this.windowArgs,
-    super.key,
-  });
+  const SubWindowApp({required this.windowArgs, super.key});
 
   /// JSON-encoded arguments passed when creating the window.
   ///
@@ -91,7 +89,8 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
       final targetSize = _windowType.defaultSize;
       await WindowResizeService.setSize(targetSize.width, targetSize.height);
       debugPrint(
-          'SubWindow: Resized ${_windowType.title} to ${targetSize.width}x${targetSize.height}');
+        'SubWindow: Resized ${_windowType.title} to ${targetSize.width}x${targetSize.height}',
+      );
     } catch (e) {
       debugPrint('SubWindow: Failed to resize window: $e');
     }
@@ -136,7 +135,9 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.invalidate(allCharactersProvider);
       ref.invalidate(activeCharacterProvider);
-      debugPrint('[SUBWINDOW] Character $characterId deleted, providers invalidated');
+      debugPrint(
+        '[SUBWINDOW] Character $characterId deleted, providers invalidated',
+      );
     });
   }
 
@@ -144,7 +145,9 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
   void _handleCharacterRefreshed(int characterId) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.invalidate(allCharactersProvider);
-      debugPrint('[SUBWINDOW] Character $characterId refreshed, providers invalidated');
+      debugPrint(
+        '[SUBWINDOW] Character $characterId refreshed, providers invalidated',
+      );
     });
   }
 
@@ -165,7 +168,8 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
       return WindowTypeExtension.fromId(windowId);
     } catch (e) {
       debugPrint(
-          'SubWindow: Failed to parse args: $e, defaulting to dashboard');
+        'SubWindow: Failed to parse args: $e, defaulting to dashboard',
+      );
       return WindowType.dashboard;
     }
   }
@@ -234,6 +238,8 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
         return const FittingScreen();
       case WindowType.intel:
         return const KillFeedScreen();
+      case WindowType.combatAnalyzer:
+        return const EncounterListScreen();
     }
   }
 }
@@ -256,8 +262,8 @@ class _LoadingScreen extends StatelessWidget {
             Text(
               message,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -326,10 +332,7 @@ class _ErrorScreen extends StatelessWidget {
 ///
 /// Provides macOS title bar, character navigation rail, and wraps screen content.
 class _SubWindowScaffold extends StatelessWidget {
-  const _SubWindowScaffold({
-    required this.windowType,
-    required this.child,
-  });
+  const _SubWindowScaffold({required this.windowType, required this.child});
 
   final WindowType windowType;
   final Widget child;
@@ -354,7 +357,9 @@ class _SubWindowScaffold extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: Theme.of(context).colorScheme.onSurface.withAlpha(179),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withAlpha(179),
                   ),
                 ),
               ),
@@ -364,9 +369,7 @@ class _SubWindowScaffold extends StatelessWidget {
             child: Row(
               children: [
                 // Character navigation rail (Discord-style, left side).
-                CharacterNavRail(
-                  onRefresh: _getRefreshCallback(windowType),
-                ),
+                CharacterNavRail(onRefresh: _getRefreshCallback(windowType)),
                 // Screen content (takes remaining space).
                 Expanded(child: child),
               ],

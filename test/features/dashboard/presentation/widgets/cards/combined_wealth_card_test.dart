@@ -63,11 +63,7 @@ void main() {
     Widget buildWidget(List<dynamic> overrides) {
       return ProviderScope(
         overrides: overrides.cast(),
-        child: const MaterialApp(
-          home: Scaffold(
-            body: CombinedWealthCard(),
-          ),
-        ),
+        child: const MaterialApp(home: Scaffold(body: CombinedWealthCard())),
       );
     }
 
@@ -92,8 +88,9 @@ void main() {
       expect(find.text('15,000,000.00 ISK'), findsOneWidget);
     });
 
-    testWidgets('displays per-character breakdown with correct order',
-        (tester) async {
+    testWidgets('displays per-character breakdown with correct order', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         buildWidget([
           allCharactersProvider.overrideWith(
@@ -135,11 +132,7 @@ void main() {
             (ref) => Stream.value([character1, character2, character3]),
           ),
           allCharacterBalancesProvider.overrideWith(
-            (ref) => Future.value({
-              1: 100.0,
-              2: 200.0,
-              3: 300.0,
-            }),
+            (ref) => Future.value({1: 100.0, 2: 200.0, 3: 300.0}),
           ),
         ]),
       );
@@ -176,9 +169,7 @@ void main() {
             (ref) => Stream.value([character1]),
           ),
           allCharacterBalancesProvider.overrideWith(
-            (ref) => Future.value({
-              1: 5000000.0,
-            }),
+            (ref) => Future.value({1: 5000000.0}),
           ),
         ]),
       );
@@ -197,10 +188,7 @@ void main() {
             (ref) => Stream.value([character1, character2]),
           ),
           allCharacterBalancesProvider.overrideWith(
-            (ref) => Future.value({
-              1: 1000000.0,
-              2: 0.0,
-            }),
+            (ref) => Future.value({1: 1000000.0, 2: 0.0}),
           ),
         ]),
       );
@@ -221,9 +209,7 @@ void main() {
     testWidgets('shows loading state initially', (tester) async {
       await tester.pumpWidget(
         buildWidget([
-          allCharactersProvider.overrideWith(
-            (ref) => Stream.value([]),
-          ),
+          allCharactersProvider.overrideWith((ref) => Stream.value([])),
           allCharacterBalancesProvider.overrideWith(
             (ref) => Future.delayed(
               const Duration(milliseconds: 100),
@@ -272,15 +258,13 @@ void main() {
           allCharactersProvider.overrideWith(
             (ref) => Stream.value([character1]),
           ),
-          allCharacterBalancesProvider.overrideWith(
-            (ref) async {
-              // Error on first invalidation cycle, success on second
-              if (retryCount == 0) {
-                throw 'Network error';
-              }
-              return {1: 5000000.0};
-            },
-          ),
+          allCharacterBalancesProvider.overrideWith((ref) async {
+            // Error on first invalidation cycle, success on second
+            if (retryCount == 0) {
+              throw 'Network error';
+            }
+            return {1: 5000000.0};
+          }),
         ]),
       );
 
@@ -344,9 +328,7 @@ void main() {
             (ref) => Stream.value([character1]),
           ),
           allCharacterBalancesProvider.overrideWith(
-            (ref) => Future.value({
-              1: 5000000.0,
-            }),
+            (ref) => Future.value({1: 5000000.0}),
           ),
         ]),
       );

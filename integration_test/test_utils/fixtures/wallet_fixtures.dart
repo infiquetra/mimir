@@ -132,9 +132,7 @@ class WalletFixtures {
   // =========================================================================
 
   /// Serpentis Corporation loyalty points.
-  static LoyaltyPointsCompanion loyaltySerpentis({
-    required int characterId,
-  }) {
+  static LoyaltyPointsCompanion loyaltySerpentis({required int characterId}) {
     return LoyaltyPointsCompanion.insert(
       characterId: characterId,
       corporationId: 1000125, // Serpentis Corporation
@@ -144,9 +142,7 @@ class WalletFixtures {
   }
 
   /// Caldari Navy loyalty points.
-  static LoyaltyPointsCompanion loyaltyCaldariNavy({
-    required int characterId,
-  }) {
+  static LoyaltyPointsCompanion loyaltyCaldariNavy({required int characterId}) {
     return LoyaltyPointsCompanion.insert(
       characterId: characterId,
       corporationId: 1000035, // Caldari Navy
@@ -170,9 +166,7 @@ class WalletFixtures {
   // =========================================================================
 
   /// PLEX asset cache entry (50 PLEX in Jita).
-  static AssetCacheCompanion assetPlex({
-    required int characterId,
-  }) {
+  static AssetCacheCompanion assetPlex({required int characterId}) {
     return AssetCacheCompanion.insert(
       itemId: const Value(1001),
       characterId: characterId,
@@ -184,12 +178,8 @@ class WalletFixtures {
   }
 
   /// Get all assets for a character.
-  static List<AssetCacheCompanion> allAssets({
-    required int characterId,
-  }) {
-    return [
-      assetPlex(characterId: characterId),
-    ];
+  static List<AssetCacheCompanion> allAssets({required int characterId}) {
+    return [assetPlex(characterId: characterId)];
   }
 
   // =========================================================================
@@ -203,9 +193,7 @@ class WalletFixtures {
   /// - 'transactions': List<WalletTransactionsCompanion>
   /// - 'loyaltyPoints': List<LoyaltyPointsCompanion>
   /// - 'assets': List<AssetCacheCompanion>
-  static Map<String, List<Object>> fullWalletData({
-    required int characterId,
-  }) {
+  static Map<String, List<Object>> fullWalletData({required int characterId}) {
     return {
       'journal': allJournalEntries(characterId: characterId),
       'transactions': allTransactions(characterId: characterId),

@@ -34,10 +34,12 @@ class LocationAssetSummary {
 }
 
 /// Provider for assets grouped by location.
-final groupedAssetsProvider = FutureProvider<List<LocationAssetSummary>>((ref) async {
+final groupedAssetsProvider = FutureProvider<List<LocationAssetSummary>>((
+  ref,
+) async {
   final assets = await ref.watch(assetsProvider.future);
   final repository = ref.watch(assetRepositoryProvider);
-  
+
   final grouped = <int, List<Asset>>{};
   for (final asset in assets) {
     grouped.putIfAbsent(asset.locationId, () => []).add(asset);
@@ -47,19 +49,23 @@ final groupedAssetsProvider = FutureProvider<List<LocationAssetSummary>>((ref) a
   for (final entry in grouped.entries) {
     final locationId = entry.key;
     final items = entry.value;
-    
-    final location = await repository.getLocation(locationId) ?? AssetLocation(
-      locationId: locationId,
-      locationType: 'unknown',
-      locationName: 'Location #$locationId',
-      lastResolved: DateTime.now(),
-    );
 
-    summaries.add(LocationAssetSummary(
-      location: location,
-      assets: items,
-      itemCount: items.fold(0, (sum, a) => sum + a.quantity),
-    ));
+    final location =
+        await repository.getLocation(locationId) ??
+        AssetLocation(
+          locationId: locationId,
+          locationType: 'unknown',
+          locationName: 'Location #$locationId',
+          lastResolved: DateTime.now(),
+        );
+
+    summaries.add(
+      LocationAssetSummary(
+        location: location,
+        assets: items,
+        itemCount: items.fold(0, (sum, a) => sum + a.quantity),
+      ),
+    );
   }
 
   summaries.sort((a, b) => b.itemCount.compareTo(a.itemCount));
@@ -83,7 +89,7 @@ class AssetSyncNotifier extends AsyncNotifier<void> {
     state = await AsyncValue.guard(() async {
       final syncService = ref.read(assetSyncServiceProvider);
       await syncService.syncAssets(activeCharacter.characterId);
-      
+
       ref.invalidate(assetsProvider);
       ref.invalidate(groupedAssetsProvider);
     });

@@ -9,11 +9,7 @@ void main() {
     testWidgets('displays loading state initially', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(
-            home: Scaffold(
-              body: WalletTrendsCard(),
-            ),
-          ),
+          child: MaterialApp(home: Scaffold(body: WalletTrendsCard())),
         ),
       );
 
@@ -33,11 +29,7 @@ void main() {
           overrides: [
             walletTrendsProvider.overrideWith((_) async => emptyData),
           ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: WalletTrendsCard(),
-            ),
-          ),
+          child: MaterialApp(home: Scaffold(body: WalletTrendsCard())),
         ),
       );
 
@@ -75,14 +67,8 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            walletTrendsProvider.overrideWith((_) async => mockData),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: WalletTrendsCard(),
-            ),
-          ),
+          overrides: [walletTrendsProvider.overrideWith((_) async => mockData)],
+          child: MaterialApp(home: Scaffold(body: WalletTrendsCard())),
         ),
       );
 
@@ -108,11 +94,7 @@ void main() {
               (_) async => throw Exception('Database error'),
             ),
           ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: WalletTrendsCard(),
-            ),
-          ),
+          child: MaterialApp(home: Scaffold(body: WalletTrendsCard())),
         ),
       );
 
@@ -128,10 +110,7 @@ void main() {
     testWidgets('calculates net correctly', (tester) async {
       final mockData = WalletTrendsData(
         chartPoints: [
-          WalletTrendsPoint(
-            date: DateTime(2024, 1, 1),
-            balance: 1000000.0,
-          ),
+          WalletTrendsPoint(date: DateTime(2024, 1, 1), balance: 1000000.0),
         ],
         income: 500000.0,
         expenses: 300000.0,
@@ -143,10 +122,7 @@ void main() {
     testWidgets('handles negative net correctly', (tester) async {
       final mockData = WalletTrendsData(
         chartPoints: [
-          WalletTrendsPoint(
-            date: DateTime(2024, 1, 1),
-            balance: 1000000.0,
-          ),
+          WalletTrendsPoint(date: DateTime(2024, 1, 1), balance: 1000000.0),
         ],
         income: 100000.0,
         expenses: 500000.0,
@@ -154,14 +130,8 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            walletTrendsProvider.overrideWith((_) async => mockData),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: WalletTrendsCard(),
-            ),
-          ),
+          overrides: [walletTrendsProvider.overrideWith((_) async => mockData)],
+          child: MaterialApp(home: Scaffold(body: WalletTrendsCard())),
         ),
       );
 

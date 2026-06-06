@@ -17,7 +17,9 @@ class MainFlutterWindow: NSWindow {
     // Set callback to register WindowResizePlugin for ALL sub-windows
     // This must be done BEFORE any sub-windows are created
     FlutterMultiWindowPlugin.setOnWindowCreatedCallback { subWindowController in
-      NSLog("WindowResizePlugin: Callback invoked for sub-window")
+      NSLog("PluginRegistrant: Callback invoked for sub-window")
+      RegisterGeneratedPlugins(registry: subWindowController)
+      NSLog("PluginRegistrant: Generated plugin registration complete")
       WindowResizePlugin.register(
         with: subWindowController.registrar(forPlugin: "WindowResizePlugin")
       )

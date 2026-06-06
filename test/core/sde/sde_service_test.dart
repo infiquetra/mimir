@@ -73,28 +73,72 @@ void main() {
 
       // To keep it simple, let's just make a small extension or use the actual
       // database methods to insert the JSON exactly like _importSdeData does.
-      
+
       // Let's actually use the database directly for the setup, since we're testing getShipType
       await database.upsertCategories([
-        SdeCategoriesCompanion.insert(categoryId: const Value(6), categoryName: 'Ship'),
+        SdeCategoriesCompanion.insert(
+          categoryId: const Value(6),
+          categoryName: 'Ship',
+        ),
       ]);
       await database.upsertGroups([
-        SdeGroupsCompanion.insert(groupId: const Value(25), groupName: 'Frigate', categoryId: 6),
+        SdeGroupsCompanion.insert(
+          groupId: const Value(25),
+          groupName: 'Frigate',
+          categoryId: 6,
+        ),
       ]);
       await database.upsertTypes([
-        SdeTypesCompanion.insert(typeId: const Value(587), typeName: 'Rifter', groupId: 25, description: const Value('A very fast frigate.')),
-        SdeTypesCompanion.insert(typeId: const Value(3331), typeName: 'Minmatar Frigate', groupId: 255), // Mock skill
+        SdeTypesCompanion.insert(
+          typeId: const Value(587),
+          typeName: 'Rifter',
+          groupId: 25,
+          description: const Value('A very fast frigate.'),
+        ),
+        SdeTypesCompanion.insert(
+          typeId: const Value(3331),
+          typeName: 'Minmatar Frigate',
+          groupId: 255,
+        ), // Mock skill
       ]);
       await database.upsertTypeAttributes([
-        SdeTypeAttributesCompanion.insert(typeId: 587, attributeId: 14, value: 4.0), // highSlots
-        SdeTypeAttributesCompanion.insert(typeId: 587, attributeId: 13, value: 3.0), // medSlots
-        SdeTypeAttributesCompanion.insert(typeId: 587, attributeId: 12, value: 4.0), // lowSlots
-        SdeTypeAttributesCompanion.insert(typeId: 587, attributeId: 1137, value: 3.0), // rigSlots
-        SdeTypeAttributesCompanion.insert(typeId: 587, attributeId: 102, value: 3.0), // turretSlots
-        SdeTypeAttributesCompanion.insert(typeId: 587, attributeId: 101, value: 2.0), // launcherSlots
+        SdeTypeAttributesCompanion.insert(
+          typeId: 587,
+          attributeId: 14,
+          value: 4.0,
+        ), // highSlots
+        SdeTypeAttributesCompanion.insert(
+          typeId: 587,
+          attributeId: 13,
+          value: 3.0,
+        ), // medSlots
+        SdeTypeAttributesCompanion.insert(
+          typeId: 587,
+          attributeId: 12,
+          value: 4.0,
+        ), // lowSlots
+        SdeTypeAttributesCompanion.insert(
+          typeId: 587,
+          attributeId: 1137,
+          value: 3.0,
+        ), // rigSlots
+        SdeTypeAttributesCompanion.insert(
+          typeId: 587,
+          attributeId: 102,
+          value: 3.0,
+        ), // turretSlots
+        SdeTypeAttributesCompanion.insert(
+          typeId: 587,
+          attributeId: 101,
+          value: 2.0,
+        ), // launcherSlots
       ]);
       await database.upsertSkillRequirements([
-        SdeSkillRequirementsCompanion.insert(skillId: 587, requiredSkillId: 3331, requiredLevel: 1),
+        SdeSkillRequirementsCompanion.insert(
+          skillId: 587,
+          requiredSkillId: 3331,
+          requiredLevel: 1,
+        ),
       ]);
 
       // 2. Act
@@ -110,7 +154,7 @@ void main() {
       expect(ship.rigSlots, 3);
       expect(ship.turretSlots, 3);
       expect(ship.launcherSlots, 2);
-      
+
       expect(ship.skillRequirements.length, 1);
       expect(ship.skillRequirements.first.skillName, 'Minmatar Frigate');
       expect(ship.skillRequirements.first.requiredLevel, 1);
@@ -119,20 +163,43 @@ void main() {
     test('getModulesBySlotType returns valid ModuleType list', () async {
       // 1. Arrange
       await database.upsertCategories([
-        SdeCategoriesCompanion.insert(categoryId: const Value(7), categoryName: 'Module'),
+        SdeCategoriesCompanion.insert(
+          categoryId: const Value(7),
+          categoryName: 'Module',
+        ),
       ]);
       await database.upsertGroups([
-        SdeGroupsCompanion.insert(groupId: const Value(53), groupName: 'Energy Weapon', categoryId: 7),
+        SdeGroupsCompanion.insert(
+          groupId: const Value(53),
+          groupName: 'Energy Weapon',
+          categoryId: 7,
+        ),
       ]);
       await database.upsertTypes([
-        SdeTypesCompanion.insert(typeId: const Value(1234), typeName: 'Dual Light Pulse Laser I', groupId: 53),
+        SdeTypesCompanion.insert(
+          typeId: const Value(1234),
+          typeName: 'Dual Light Pulse Laser I',
+          groupId: 53,
+        ),
       ]);
       await database.upsertTypeEffects([
-        SdeTypeEffectsCompanion.insert(typeId: 1234, effectId: 12, isDefault: const Value(true)), // effectId 12 = High Slot
+        SdeTypeEffectsCompanion.insert(
+          typeId: 1234,
+          effectId: 12,
+          isDefault: const Value(true),
+        ), // effectId 12 = High Slot
       ]);
       await database.upsertTypeAttributes([
-        SdeTypeAttributesCompanion.insert(typeId: 1234, attributeId: 50, value: 5.0), // CPU
-        SdeTypeAttributesCompanion.insert(typeId: 1234, attributeId: 30, value: 2.0), // Powergrid
+        SdeTypeAttributesCompanion.insert(
+          typeId: 1234,
+          attributeId: 50,
+          value: 5.0,
+        ), // CPU
+        SdeTypeAttributesCompanion.insert(
+          typeId: 1234,
+          attributeId: 30,
+          value: 2.0,
+        ), // Powergrid
       ]);
 
       // 2. Act

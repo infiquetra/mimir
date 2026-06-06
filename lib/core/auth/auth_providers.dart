@@ -70,8 +70,9 @@ class AuthState {
     return AuthState(
       flowState: flowState ?? this.flowState,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      pendingRequest:
-          clearPending ? null : (pendingRequest ?? this.pendingRequest),
+      pendingRequest: clearPending
+          ? null
+          : (pendingRequest ?? this.pendingRequest),
     );
   }
 }
@@ -98,13 +99,13 @@ class AuthController extends StateNotifier<AuthState> {
     required CharacterRepository characterRepository,
     required WalletRepository walletRepository,
     required SkillRepository skillRepository,
-  })  : _oauthService = oauthService,
-        _tokenManager = tokenManager,
-        _database = database,
-        _characterRepository = characterRepository,
-        _walletRepository = walletRepository,
-        _skillRepository = skillRepository,
-        super(const AuthState());
+  }) : _oauthService = oauthService,
+       _tokenManager = tokenManager,
+       _database = database,
+       _characterRepository = characterRepository,
+       _walletRepository = walletRepository,
+       _skillRepository = skillRepository,
+       super(const AuthState());
 
   /// Starts the OAuth authentication flow.
   ///
@@ -113,11 +114,15 @@ class AuthController extends StateNotifier<AuthState> {
     OAuthCallbackServer? server;
 
     try {
-      debugPrint('[AUTH] startAuthFlow: Starting local HTTP server for OAuth callback');
+      debugPrint(
+        '[AUTH] startAuthFlow: Starting local HTTP server for OAuth callback',
+      );
       // Start local HTTP server to receive OAuth callback and show success page.
       server = OAuthCallbackServer();
       await server.start();
-      debugPrint('[AUTH] startAuthFlow: Server started at ${server.callbackUrl}');
+      debugPrint(
+        '[AUTH] startAuthFlow: Server started at ${server.callbackUrl}',
+      );
 
       debugPrint('[AUTH] startAuthFlow: Creating authorization request');
       // Create the authorization request with PKCE, using localhost callback.
@@ -129,7 +134,9 @@ class AuthController extends StateNotifier<AuthState> {
       // This allows the main window to access the code_verifier when
       // the OAuth callback arrives, even though it was created in a sub-window.
       await PendingAuthStore.save(request);
-      debugPrint('[AUTH] startAuthFlow: Saved pending request to shared storage');
+      debugPrint(
+        '[AUTH] startAuthFlow: Saved pending request to shared storage',
+      );
 
       // Update state to track the pending request.
       state = state.copyWith(
@@ -138,16 +145,19 @@ class AuthController extends StateNotifier<AuthState> {
         clearError: true,
       );
 
-      debugPrint('[AUTH] startAuthFlow: Launching browser with macOS open command');
+      debugPrint(
+        '[AUTH] startAuthFlow: Launching browser with macOS open command',
+      );
       // Use Process.run to bypass url_launcher plugin issues in sub-windows.
       // macOS 'open' command opens URLs in default browser.
-      final result = await Process.run(
-        'open',
-        [request.authorizationUrl.toString()],
-      );
+      final result = await Process.run('open', [
+        request.authorizationUrl.toString(),
+      ]);
 
       if (result.exitCode != 0) {
-        debugPrint('[AUTH] startAuthFlow: Failed to launch browser: ${result.stderr}');
+        debugPrint(
+          '[AUTH] startAuthFlow: Failed to launch browser: ${result.stderr}',
+        );
         await server.stop();
         state = state.copyWith(
           flowState: AuthFlowState.error,
@@ -157,12 +167,16 @@ class AuthController extends StateNotifier<AuthState> {
         return false;
       }
 
-      debugPrint('[AUTH] startAuthFlow: Browser launched, waiting for callback on local server...');
+      debugPrint(
+        '[AUTH] startAuthFlow: Browser launched, waiting for callback on local server...',
+      );
 
       // Wait for the OAuth callback on the local server.
       // The server will display a success page to the browser and give us the callback URI.
       final callbackUri = await server.onCallback;
-      debugPrint('[AUTH] startAuthFlow: Received callback from server: $callbackUri');
+      debugPrint(
+        '[AUTH] startAuthFlow: Received callback from server: $callbackUri',
+      );
 
       // Process the callback.
       final characterId = await handleCallback(callbackUri);
@@ -172,11 +186,15 @@ class AuthController extends StateNotifier<AuthState> {
 
       if (characterId != null) {
         // Broadcast success to other windows.
-        await CrossWindowEventService.broadcast(CrossWindowEvent(
-          type: CrossWindowEventType.authComplete,
-          data: {'characterId': characterId},
-        ));
-        debugPrint('[AUTH] startAuthFlow: Broadcast auth_complete event for character $characterId');
+        await CrossWindowEventService.broadcast(
+          CrossWindowEvent(
+            type: CrossWindowEventType.authComplete,
+            data: {'characterId': characterId},
+          ),
+        );
+        debugPrint(
+          '[AUTH] startAuthFlow: Broadcast auth_complete event for character $characterId',
+        );
       }
 
       return characterId != null;
@@ -206,12 +224,16 @@ class AuthController extends StateNotifier<AuthState> {
     var pendingRequest = state.pendingRequest;
 
     if (pendingRequest == null) {
-      debugPrint('[AUTH] handleCallback: No local pending request, checking shared storage');
+      debugPrint(
+        '[AUTH] handleCallback: No local pending request, checking shared storage',
+      );
       pendingRequest = await PendingAuthStore.loadAndClear();
     }
 
     if (pendingRequest == null) {
-      debugPrint('[AUTH] handleCallback: ERROR - No pending authentication request');
+      debugPrint(
+        '[AUTH] handleCallback: ERROR - No pending authentication request',
+      );
       state = state.copyWith(
         flowState: AuthFlowState.error,
         errorMessage: 'No pending authentication request',
@@ -220,7 +242,9 @@ class AuthController extends StateNotifier<AuthState> {
     }
 
     try {
-      debugPrint('[AUTH] handleCallback: Exchanging authorization code for tokens');
+      debugPrint(
+        '[AUTH] handleCallback: Exchanging authorization code for tokens',
+      );
       state = state.copyWith(flowState: AuthFlowState.exchangingTokens);
 
       // Parse the callback to get the authorization code.
@@ -230,7 +254,9 @@ class AuthController extends StateNotifier<AuthState> {
       );
 
       if (code == null) {
-        debugPrint('[AUTH] handleCallback: Authentication was cancelled by user');
+        debugPrint(
+          '[AUTH] handleCallback: Authentication was cancelled by user',
+        );
         state = state.copyWith(
           flowState: AuthFlowState.error,
           errorMessage: 'Authentication was cancelled',
@@ -247,13 +273,18 @@ class AuthController extends StateNotifier<AuthState> {
       debugPrint('[AUTH] handleCallback: Token exchange successful');
 
       // Parse the JWT to get character info.
-      final characterInfo =
-          _oauthService.parseAccessToken(tokenResponse.accessToken);
-      debugPrint('[AUTH] handleCallback: Character ${characterInfo.characterId} (${characterInfo.characterName})');
+      final characterInfo = _oauthService.parseAccessToken(
+        tokenResponse.accessToken,
+      );
+      debugPrint(
+        '[AUTH] handleCallback: Character ${characterInfo.characterId} (${characterInfo.characterName})',
+      );
 
       // Create or update the character in the database (includes tokens).
       await _createOrUpdateCharacter(characterInfo, tokenResponse);
-      debugPrint('[AUTH] handleCallback: Character and tokens saved to database');
+      debugPrint(
+        '[AUTH] handleCallback: Character and tokens saved to database',
+      );
 
       // Fetch full character data from ESI (corporation, alliance).
       // This runs in background - don't block OAuth completion on it.
@@ -263,7 +294,9 @@ class AuthController extends StateNotifier<AuthState> {
         flowState: AuthFlowState.success,
         clearPending: true,
       );
-      debugPrint('[AUTH] handleCallback: Authentication flow completed successfully');
+      debugPrint(
+        '[AUTH] handleCallback: Authentication flow completed successfully',
+      );
 
       return characterInfo.characterId;
     } on OAuthException catch (e, stack) {
@@ -301,7 +334,9 @@ class AuthController extends StateNotifier<AuthState> {
   ///
   /// Called by sub-windows when they receive auth_complete message from main window.
   void notifyAuthComplete(int characterId) {
-    debugPrint('[AUTH] notifyAuthComplete: Character $characterId authenticated via IPC');
+    debugPrint(
+      '[AUTH] notifyAuthComplete: Character $characterId authenticated via IPC',
+    );
     state = state.copyWith(
       flowState: AuthFlowState.success,
       clearPending: true,
@@ -336,17 +371,22 @@ class AuthController extends StateNotifier<AuthState> {
       if (isActiveCharacter) {
         final remainingCharacters = await _database.getAllCharacters();
         if (remainingCharacters.isNotEmpty) {
-          await _database
-              .setActiveCharacter(remainingCharacters.first.characterId);
+          await _database.setActiveCharacter(
+            remainingCharacters.first.characterId,
+          );
         }
       }
 
       // Broadcast deletion to all windows
-      await CrossWindowEventService.broadcast(CrossWindowEvent(
-        type: CrossWindowEventType.characterDeleted,
-        data: {'characterId': characterId},
-      ));
-      debugPrint('[AUTH] Broadcast character_deleted event for character $characterId');
+      await CrossWindowEventService.broadcast(
+        CrossWindowEvent(
+          type: CrossWindowEventType.characterDeleted,
+          data: {'characterId': characterId},
+        ),
+      );
+      debugPrint(
+        '[AUTH] Broadcast character_deleted event for character $characterId',
+      );
     } catch (e) {
       debugPrint('Error during logout: $e');
       // Log but don't throw - we want to clean up as much as possible.
@@ -399,26 +439,35 @@ class AuthController extends StateNotifier<AuthState> {
         _walletRepository.refreshWalletJournal(characterId),
         _skillRepository.refreshSkillQueue(characterId),
       ]);
-      Log.i('AUTH', '_refreshCharacterData - all data refreshed for character $characterId');
+      Log.i(
+        'AUTH',
+        '_refreshCharacterData - all data refreshed for character $characterId',
+      );
     } catch (error, stack) {
       // Log but don't rethrow - auth flow should complete even if data refresh fails
-      Log.e('AUTH', '_refreshCharacterData($characterId) - FAILED', error, stack);
+      Log.e(
+        'AUTH',
+        '_refreshCharacterData($characterId) - FAILED',
+        error,
+        stack,
+      );
     }
   }
 }
 
 /// Provider for the auth controller.
-final authControllerProvider =
-    StateNotifierProvider<AuthController, AuthState>((ref) {
-  return AuthController(
-    oauthService: ref.watch(oauthServiceProvider),
-    tokenManager: ref.watch(tokenManagerProvider),
-    database: ref.watch(databaseProvider),
-    characterRepository: ref.watch(characterRepositoryProvider),
-    walletRepository: ref.watch(walletRepositoryProvider),
-    skillRepository: ref.watch(skillRepositoryProvider),
-  );
-});
+final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
+  (ref) {
+    return AuthController(
+      oauthService: ref.watch(oauthServiceProvider),
+      tokenManager: ref.watch(tokenManagerProvider),
+      database: ref.watch(databaseProvider),
+      characterRepository: ref.watch(characterRepositoryProvider),
+      walletRepository: ref.watch(walletRepositoryProvider),
+      skillRepository: ref.watch(skillRepositoryProvider),
+    );
+  },
+);
 
 /// Provider that exposes whether any characters are authenticated.
 final hasAuthenticatedCharactersProvider = FutureProvider<bool>((ref) async {

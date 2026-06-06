@@ -83,21 +83,15 @@ void main() {
               2: [skillEntry2],
             }),
           ),
-          skillNameProvider(3413).overrideWith(
-            (ref) => Future.value('Spaceship Command'),
-          ),
-          skillNameProvider(3300).overrideWith(
-            (ref) => Future.value('Gunnery'),
-          ),
-          sdeInitializerProvider.overrideWith(
-            (ref) => Future.value(null),
-          ),
+          skillNameProvider(
+            3413,
+          ).overrideWith((ref) => Future.value('Spaceship Command')),
+          skillNameProvider(
+            3300,
+          ).overrideWith((ref) => Future.value('Gunnery')),
+          sdeInitializerProvider.overrideWith((ref) => Future.value(null)),
         ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: TrainingOverviewCard(),
-          ),
-        ),
+        child: const MaterialApp(home: Scaffold(body: TrainingOverviewCard())),
       );
     }
 
@@ -165,11 +159,7 @@ void main() {
             (ref) => Future.error('Test error'),
           ),
         ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: TrainingOverviewCard(),
-          ),
-        ),
+        child: const MaterialApp(home: Scaffold(body: TrainingOverviewCard())),
       );
 
       await tester.pumpWidget(widget);

@@ -117,7 +117,10 @@ class SkillPlanCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildProgressContent(BuildContext context, SkillPlanProgress progress) {
+  Widget _buildProgressContent(
+    BuildContext context,
+    SkillPlanProgress progress,
+  ) {
     final theme = Theme.of(context);
     final progressPercent = progress.percentComplete / 100.0;
 
@@ -139,10 +142,7 @@ class SkillPlanCard extends ConsumerWidget {
             // Training time
             if (progress.estimatedTimeSeconds > 0)
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.secondaryContainer,
                   borderRadius: BorderRadius.circular(4),

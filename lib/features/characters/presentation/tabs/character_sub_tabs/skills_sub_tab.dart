@@ -44,14 +44,16 @@ class SkillsSubTab extends ConsumerWidget {
           Icon(
             Icons.person_off_outlined,
             size: 64,
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(128),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withAlpha(128),
           ),
           const SizedBox(height: 16),
           Text(
             'No Character Selected',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -114,13 +116,15 @@ class SkillsSubTab extends ConsumerWidget {
                                 Icon(
                                   Icons.pause_circle_outline,
                                   size: 48,
-                                  color: theme.colorScheme.onSurfaceVariant.withAlpha(128),
+                                  color: theme.colorScheme.onSurfaceVariant
+                                      .withAlpha(128),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
                                   'No skill currently training',
                                   style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant.withAlpha(128),
+                                    color: theme.colorScheme.onSurfaceVariant
+                                        .withAlpha(128),
                                     fontStyle: FontStyle.italic,
                                   ),
                                 ),
@@ -221,13 +225,15 @@ class SkillsSubTab extends ConsumerWidget {
                                 Icon(
                                   Icons.info_outline,
                                   size: 48,
-                                  color: theme.colorScheme.onSurfaceVariant.withAlpha(128),
+                                  color: theme.colorScheme.onSurfaceVariant
+                                      .withAlpha(128),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
                                   'Skill queue is empty',
                                   style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant.withAlpha(128),
+                                    color: theme.colorScheme.onSurfaceVariant
+                                        .withAlpha(128),
                                     fontStyle: FontStyle.italic,
                                   ),
                                 ),

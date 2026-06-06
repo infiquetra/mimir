@@ -63,7 +63,9 @@ class TrainingQueueSidebar extends ConsumerWidget {
                   Text(
                     'Select a character to view their training queue',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                        0.7,
+                      ),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -82,13 +84,14 @@ class TrainingQueueSidebar extends ConsumerWidget {
       child: Container(
         decoration: BoxDecoration(
           color: EveColors.surfaceElevated,
-          border: Border.all(
-            color: theme.colorScheme.outline.withOpacity(0.2),
-          ),
+          border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
         ),
         child: queueAsync.when(
           data: (queue) {
-            Log.d('SKILLS.UI', 'TrainingQueueSidebar - rendering ${queue.length} queue items');
+            Log.d(
+              'SKILLS.UI',
+              'TrainingQueueSidebar - rendering ${queue.length} queue items',
+            );
 
             return Column(
               children: [
@@ -131,7 +134,12 @@ class TrainingQueueSidebar extends ConsumerWidget {
             );
           },
           error: (error, stack) {
-            Log.e('SKILLS.UI', 'TrainingQueueSidebar - error loading queue', error, stack);
+            Log.e(
+              'SKILLS.UI',
+              'TrainingQueueSidebar - error loading queue',
+              error,
+              stack,
+            );
             return Column(
               children: [
                 _buildHeader(context, 0),
@@ -159,7 +167,8 @@ class TrainingQueueSidebar extends ConsumerWidget {
                           Text(
                             error.toString(),
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withOpacity(0.7),
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -184,18 +193,12 @@ class TrainingQueueSidebar extends ConsumerWidget {
       decoration: BoxDecoration(
         color: EveColors.surfaceDefault,
         border: Border(
-          bottom: BorderSide(
-            color: theme.colorScheme.outline.withOpacity(0.3),
-          ),
+          bottom: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3)),
         ),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.list_alt,
-            size: 18,
-            color: EveColors.photonBlue,
-          ),
+          Icon(Icons.list_alt, size: 18, color: EveColors.photonBlue),
           const SizedBox(width: 8),
           Text(
             'TRAINING QUEUE',

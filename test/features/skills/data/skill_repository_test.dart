@@ -17,10 +17,7 @@ void main() {
     // Use in-memory database for testing.
     database = AppDatabase.forTesting(NativeDatabase.memory());
     mockEsiClient = MockEsiClient();
-    repository = SkillRepository(
-      database: database,
-      esiClient: mockEsiClient,
-    );
+    repository = SkillRepository(database: database, esiClient: mockEsiClient);
 
     // Reset any previous mock interactions.
     reset(mockEsiClient);
@@ -57,8 +54,9 @@ void main() {
       ];
 
       // Mock ESI client to return queue items.
-      when(() => mockEsiClient.getSkillQueue(characterId))
-          .thenAnswer((_) async => queueItems);
+      when(
+        () => mockEsiClient.getSkillQueue(characterId),
+      ).thenAnswer((_) async => queueItems);
 
       // Call repository method.
       await repository.refreshSkillQueue(characterId);
@@ -76,8 +74,9 @@ void main() {
       const characterId = 12345678;
 
       // Mock ESI client to return empty list.
-      when(() => mockEsiClient.getSkillQueue(characterId))
-          .thenAnswer((_) async => []);
+      when(
+        () => mockEsiClient.getSkillQueue(characterId),
+      ).thenAnswer((_) async => []);
 
       // Call repository method.
       await repository.refreshSkillQueue(characterId);
@@ -91,8 +90,9 @@ void main() {
       const characterId = 12345678;
 
       // Mock ESI client to throw exception.
-      when(() => mockEsiClient.getSkillQueue(characterId))
-          .thenThrow(const EsiException('API Error', statusCode: 500));
+      when(
+        () => mockEsiClient.getSkillQueue(characterId),
+      ).thenThrow(const EsiException('API Error', statusCode: 500));
 
       // Expect exception to be rethrown.
       expect(
@@ -105,15 +105,14 @@ void main() {
       const characterId = 12345678;
 
       // Mock ESI client to throw auth error.
-      when(() => mockEsiClient.getSkillQueue(characterId))
-          .thenThrow(const EsiException('Unauthorized', statusCode: 401));
+      when(
+        () => mockEsiClient.getSkillQueue(characterId),
+      ).thenThrow(const EsiException('Unauthorized', statusCode: 401));
 
       // Expect exception to be rethrown.
       expect(
         () => repository.refreshSkillQueue(characterId),
-        throwsA(
-          predicate((e) => e is EsiException && e.isAuthError),
-        ),
+        throwsA(predicate((e) => e is EsiException && e.isAuthError)),
       );
     });
 
@@ -149,8 +148,9 @@ void main() {
         ),
       ];
 
-      when(() => mockEsiClient.getSkillQueue(characterId))
-          .thenAnswer((_) async => newQueueItems);
+      when(
+        () => mockEsiClient.getSkillQueue(characterId),
+      ).thenAnswer((_) async => newQueueItems);
 
       // Refresh queue.
       await repository.refreshSkillQueue(characterId);
@@ -205,24 +205,28 @@ void main() {
   group('getAllCharacterQueues', () {
     test('should return queues for all characters', () async {
       // Insert test characters.
-      await database.upsertCharacter(CharactersCompanion.insert(
-        characterId: const Value(11111111),
-        name: 'Pilot One',
-        corporationId: 98000001,
-        corporationName: 'Corp One',
-        portraitUrl: 'https://example.com/1',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      ));
-      await database.upsertCharacter(CharactersCompanion.insert(
-        characterId: const Value(22222222),
-        name: 'Pilot Two',
-        corporationId: 98000002,
-        corporationName: 'Corp Two',
-        portraitUrl: 'https://example.com/2',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      ));
+      await database.upsertCharacter(
+        CharactersCompanion.insert(
+          characterId: const Value(11111111),
+          name: 'Pilot One',
+          corporationId: 98000001,
+          corporationName: 'Corp One',
+          portraitUrl: 'https://example.com/1',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        ),
+      );
+      await database.upsertCharacter(
+        CharactersCompanion.insert(
+          characterId: const Value(22222222),
+          name: 'Pilot Two',
+          corporationId: 98000002,
+          corporationName: 'Corp Two',
+          portraitUrl: 'https://example.com/2',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        ),
+      );
 
       // Insert queues for both characters.
       await database.replaceSkillQueue(11111111, [
@@ -261,24 +265,28 @@ void main() {
 
     test('should include characters with empty queues', () async {
       // Insert characters.
-      await database.upsertCharacter(CharactersCompanion.insert(
-        characterId: const Value(11111111),
-        name: 'Pilot One',
-        corporationId: 98000001,
-        corporationName: 'Corp One',
-        portraitUrl: 'https://example.com/1',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      ));
-      await database.upsertCharacter(CharactersCompanion.insert(
-        characterId: const Value(22222222),
-        name: 'Pilot Two',
-        corporationId: 98000002,
-        corporationName: 'Corp Two',
-        portraitUrl: 'https://example.com/2',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      ));
+      await database.upsertCharacter(
+        CharactersCompanion.insert(
+          characterId: const Value(11111111),
+          name: 'Pilot One',
+          corporationId: 98000001,
+          corporationName: 'Corp One',
+          portraitUrl: 'https://example.com/1',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        ),
+      );
+      await database.upsertCharacter(
+        CharactersCompanion.insert(
+          characterId: const Value(22222222),
+          name: 'Pilot Two',
+          corporationId: 98000002,
+          corporationName: 'Corp Two',
+          portraitUrl: 'https://example.com/2',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        ),
+      );
 
       // Only insert queue for first character.
       await database.replaceSkillQueue(11111111, [

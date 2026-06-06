@@ -30,11 +30,10 @@ class _TransactionsPanelState extends ConsumerState<TransactionsPanel> {
   @override
   Widget build(BuildContext context) {
     // Create filter object for the provider
-    final days = _selectedDateRange == 'all' ? null : int.parse(_selectedDateRange);
-    final filter = TransactionFilter(
-      refType: _selectedType,
-      days: days,
-    );
+    final days = _selectedDateRange == 'all'
+        ? null
+        : int.parse(_selectedDateRange);
+    final filter = TransactionFilter(refType: _selectedType, days: days);
 
     // Watch the filtered journal stream from the database
     final journal = ref.watch(filteredWalletJournalProvider(filter));
@@ -63,10 +62,7 @@ class _TransactionsPanelState extends ConsumerState<TransactionsPanel> {
         ),
 
         // Divider
-        Divider(
-          color: Colors.white.withAlpha(26),
-          height: 1,
-        ),
+        Divider(color: Colors.white.withAlpha(26), height: 1),
 
         // Transaction List
         Expanded(
@@ -83,8 +79,10 @@ class _TransactionsPanelState extends ConsumerState<TransactionsPanel> {
               // Pagination
               final totalPages = (entries.length / _itemsPerPage).ceil();
               final startIndex = _currentPage * _itemsPerPage;
-              final endIndex =
-                  (startIndex + _itemsPerPage).clamp(0, entries.length);
+              final endIndex = (startIndex + _itemsPerPage).clamp(
+                0,
+                entries.length,
+              );
               final pageEntries = entries.sublist(startIndex, endIndex);
 
               return Column(
@@ -100,9 +98,7 @@ class _TransactionsPanelState extends ConsumerState<TransactionsPanel> {
                     child: ListView.builder(
                       itemCount: pageEntries.length,
                       itemBuilder: (context, index) {
-                        return TransactionListItem(
-                          entry: pageEntries[index],
-                        );
+                        return TransactionListItem(entry: pageEntries[index]);
                       },
                     ),
                   ),
@@ -112,15 +108,14 @@ class _TransactionsPanelState extends ConsumerState<TransactionsPanel> {
                 ],
               );
             },
-            loading: () => const Center(
-              child: CircularProgressIndicator(),
-            ),
+            loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, stack) => EmptyState(
               icon: Icons.error_outline,
               heading: 'Failed to Load Transactions',
               description: error.toString(),
               action: ElevatedButton(
-                onPressed: () => ref.refresh(filteredWalletJournalProvider(filter)),
+                onPressed: () =>
+                    ref.refresh(filteredWalletJournalProvider(filter)),
                 child: const Text('Retry'),
               ),
             ),
@@ -132,17 +127,13 @@ class _TransactionsPanelState extends ConsumerState<TransactionsPanel> {
 
   /// Pagination controls... (no changes needed)
 
-
   /// Builds pagination controls with page numbers.
   Widget _buildPaginationControls(int totalPages) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(
-            color: Colors.white.withAlpha(26),
-            width: 1,
-          ),
+          top: BorderSide(color: Colors.white.withAlpha(26), width: 1),
         ),
       ),
       child: Row(
@@ -167,7 +158,8 @@ class _TransactionsPanelState extends ConsumerState<TransactionsPanel> {
               final isCurrentPage = index == _currentPage;
 
               // Show first page, last page, current page, and ±2 around current
-              final showPage = index == 0 ||
+              final showPage =
+                  index == 0 ||
                   index == totalPages - 1 ||
                   (index >= _currentPage - 2 && index <= _currentPage + 2);
 
@@ -181,9 +173,7 @@ class _TransactionsPanelState extends ConsumerState<TransactionsPanel> {
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: Text(
                     '...',
-                    style: TextStyle(
-                      color: Colors.white.withAlpha(128),
-                    ),
+                    style: TextStyle(color: Colors.white.withAlpha(128)),
                   ),
                 );
               }

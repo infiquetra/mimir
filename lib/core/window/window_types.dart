@@ -47,6 +47,9 @@ enum WindowType {
 
   /// Live Intel feed for zKillboard alerts.
   intel,
+
+  /// AI Combat/Battle Analyzer for parsing local game logs.
+  combatAnalyzer,
 }
 
 /// Extension methods for [WindowType].
@@ -80,6 +83,8 @@ extension WindowTypeExtension on WindowType {
         return 'Ship Fitting - Mimir';
       case WindowType.intel:
         return 'Live Intel - Mimir';
+      case WindowType.combatAnalyzer:
+        return 'Combat Analyzer - Mimir';
     }
   }
 
@@ -114,6 +119,8 @@ extension WindowTypeExtension on WindowType {
         return 11;
       case WindowType.intel:
         return 12;
+      case WindowType.combatAnalyzer:
+        return 13;
     }
   }
 
@@ -146,6 +153,8 @@ extension WindowTypeExtension on WindowType {
         return WindowType.fitting;
       case 12:
         return WindowType.intel;
+      case 13:
+        return WindowType.combatAnalyzer;
       default:
         return WindowType.dashboard;
     }
@@ -180,6 +189,8 @@ extension WindowTypeExtension on WindowType {
         return (width: 1300, height: 950);
       case WindowType.intel:
         return (width: 800, height: 900);
+      case WindowType.combatAnalyzer:
+        return (width: 1200, height: 800);
     }
   }
 
@@ -215,6 +226,8 @@ extension WindowTypeExtension on WindowType {
         return 'assets/icons/eve/fitting.png';
       case WindowType.intel:
         return 'assets/icons/eve/intel.png'; // Make sure this asset exists or use a fallback
+      case WindowType.combatAnalyzer:
+        return 'assets/icons/eve/intel.png'; // Using intel icon as fallback for now
     }
   }
 }

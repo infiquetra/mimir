@@ -14,10 +14,7 @@ import '../../data/skill_catalogue_providers.dart';
 ///
 /// Uses TabController passed from parent for tab management.
 class SkillsTopBar extends ConsumerWidget {
-  const SkillsTopBar({
-    super.key,
-    required this.tabController,
-  });
+  const SkillsTopBar({super.key, required this.tabController});
 
   final TabController tabController;
 
@@ -33,9 +30,7 @@ class SkillsTopBar extends ConsumerWidget {
       decoration: BoxDecoration(
         color: EveColors.surfaceDefault,
         border: Border(
-          bottom: BorderSide(
-            color: theme.colorScheme.outline.withOpacity(0.3),
-          ),
+          bottom: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3)),
         ),
       ),
       child: Row(
@@ -80,16 +75,18 @@ class SkillsTopBar extends ConsumerWidget {
     );
   }
 
-  Widget _buildFilterDropdown(BuildContext context, WidgetRef ref, SkillFilterMode filterMode) {
+  Widget _buildFilterDropdown(
+    BuildContext context,
+    WidgetRef ref,
+    SkillFilterMode filterMode,
+  ) {
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: EveColors.surfaceElevated,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.3),
-        ),
+        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
       ),
       child: DropdownButton<SkillFilterMode>(
         value: filterMode,
@@ -146,7 +143,11 @@ class SkillsTopBar extends ConsumerWidget {
     };
   }
 
-  Widget _buildSearchField(BuildContext context, WidgetRef ref, String searchQuery) {
+  Widget _buildSearchField(
+    BuildContext context,
+    WidgetRef ref,
+    String searchQuery,
+  ) {
     final theme = Theme.of(context);
     return TextField(
       onChanged: (value) {
@@ -162,7 +163,8 @@ class SkillsTopBar extends ConsumerWidget {
         suffixIcon: searchQuery.isNotEmpty
             ? IconButton(
                 icon: const Icon(Icons.clear, size: 18),
-                onPressed: () => ref.read(skillSearchQueryProvider.notifier).state = '',
+                onPressed: () =>
+                    ref.read(skillSearchQueryProvider.notifier).state = '',
               )
             : null,
         filled: true,
@@ -173,7 +175,10 @@ class SkillsTopBar extends ConsumerWidget {
             color: theme.colorScheme.outline.withOpacity(0.3),
           ),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
         isDense: true,
       ),
       style: theme.textTheme.bodySmall,

@@ -137,8 +137,9 @@ class _BlueprintListItem extends ConsumerWidget {
     final theme = Theme.of(context);
 
     // Original = Blue/Default, Copy = Green/Teal highlight
-    final typeColor =
-        blueprint.isOriginal ? Colors.blue.shade300 : Colors.teal.shade300;
+    final typeColor = blueprint.isOriginal
+        ? Colors.blue.shade300
+        : Colors.teal.shade300;
     final typeLabel = blueprint.isOriginal ? 'Original (BPO)' : 'Copy (BPC)';
 
     return Padding(
@@ -185,17 +186,21 @@ class _BlueprintListItem extends ConsumerWidget {
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: typeColor.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(
-                                color: typeColor.withValues(alpha: 0.5)),
+                              color: typeColor.withValues(alpha: 0.5),
+                            ),
                           ),
                           child: Text(
                             typeLabel,
-                            style: theme.textTheme.labelSmall
-                                ?.copyWith(color: typeColor),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: typeColor,
+                            ),
                           ),
                         ),
                       ],
@@ -209,14 +214,18 @@ class _BlueprintListItem extends ConsumerWidget {
                           label: 'ME',
                           value: '${blueprint.materialEfficiency}%',
                           color: _getEfficiencyColor(
-                              blueprint.materialEfficiency, 10),
+                            blueprint.materialEfficiency,
+                            10,
+                          ),
                         ),
                         const SizedBox(width: 8),
                         _StatChip(
                           label: 'TE',
                           value: '${blueprint.timeEfficiency}%',
-                          color:
-                              _getEfficiencyColor(blueprint.timeEfficiency, 20),
+                          color: _getEfficiencyColor(
+                            blueprint.timeEfficiency,
+                            20,
+                          ),
                         ),
                         const SizedBox(width: 16),
                         if (!blueprint.isOriginal)
@@ -268,16 +277,16 @@ class _StatChip extends StatelessWidget {
       children: [
         Text(
           '$label ',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: EveColors.textSecondary,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: EveColors.textSecondary),
         ),
         Text(
           value,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.bold,
-              ),
+            color: color,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ],
     );

@@ -18,8 +18,8 @@ class WalletRepository {
   WalletRepository({
     required AppDatabase database,
     required EsiClient esiClient,
-  })  : _database = database,
-        _esiClient = esiClient;
+  }) : _database = database,
+       _esiClient = esiClient;
 
   /// Refreshes the wallet balance from ESI and records a snapshot.
   Future<double> refreshWalletBalance(int characterId) async {
@@ -49,10 +49,16 @@ class WalletRepository {
       // Fetch wallet journal from ESI (first page).
       Log.d('WALLET', 'refreshWalletJournal - fetching from ESI');
       final journalItems = await _esiClient.getWalletJournal(characterId);
-      Log.i('WALLET', 'refreshWalletJournal - fetched ${journalItems.length} journal entries from ESI');
+      Log.i(
+        'WALLET',
+        'refreshWalletJournal - fetched ${journalItems.length} journal entries from ESI',
+      );
 
       // Convert ESI items to database companions.
-      Log.d('WALLET', 'refreshWalletJournal - converting to database companions');
+      Log.d(
+        'WALLET',
+        'refreshWalletJournal - converting to database companions',
+      );
       final companions = journalItems.map((item) {
         return WalletJournalEntriesCompanion.insert(
           id: Value(item.id),
@@ -70,7 +76,10 @@ class WalletRepository {
       // Insert entries (ignores duplicates via ON CONFLICT UPDATE).
       Log.d('WALLET', 'refreshWalletJournal - saving to database');
       await _database.insertWalletJournalEntries(companions);
-      Log.i('WALLET', 'refreshWalletJournal - saved ${companions.length} journal entries');
+      Log.i(
+        'WALLET',
+        'refreshWalletJournal - saved ${companions.length} journal entries',
+      );
       Log.d('WALLET', 'refreshWalletJournal($characterId) - SUCCESS');
     } catch (e, stack) {
       Log.e('WALLET', 'refreshWalletJournal($characterId) - FAILED', e, stack);
@@ -83,11 +92,19 @@ class WalletRepository {
     Log.d('WALLET', 'getLatestWalletBalance($characterId) - START');
     try {
       final balance = await _database.getLatestWalletBalance(characterId);
-      Log.i('WALLET', 'getLatestWalletBalance - ${balance != null ? "found: $balance ISK" : "no balance recorded"}');
+      Log.i(
+        'WALLET',
+        'getLatestWalletBalance - ${balance != null ? "found: $balance ISK" : "no balance recorded"}',
+      );
       Log.d('WALLET', 'getLatestWalletBalance($characterId) - SUCCESS');
       return balance;
     } catch (e, stack) {
-      Log.e('WALLET', 'getLatestWalletBalance($characterId) - FAILED', e, stack);
+      Log.e(
+        'WALLET',
+        'getLatestWalletBalance($characterId) - FAILED',
+        e,
+        stack,
+      );
       rethrow;
     }
   }
@@ -99,7 +116,10 @@ class WalletRepository {
     String? refType,
     DateTime? since,
   }) {
-    Log.d('WALLET', 'watchWalletJournal($characterId, limit=$limit, refType=$refType, since=$since) - subscribed to stream');
+    Log.d(
+      'WALLET',
+      'watchWalletJournal($characterId, limit=$limit, refType=$refType, since=$since) - subscribed to stream',
+    );
     return _database.watchWalletJournal(
       characterId,
       limit: limit,
@@ -115,12 +135,20 @@ class WalletRepository {
   }) async {
     Log.d('WALLET', 'getWalletJournal($characterId, limit=$limit) - START');
     try {
-      final journal = await _database.getWalletJournal(characterId, limit: limit);
+      final journal = await _database.getWalletJournal(
+        characterId,
+        limit: limit,
+      );
       Log.i('WALLET', 'getWalletJournal - found ${journal.length} entries');
       Log.d('WALLET', 'getWalletJournal($characterId, limit=$limit) - SUCCESS');
       return journal;
     } catch (e, stack) {
-      Log.e('WALLET', 'getWalletJournal($characterId, limit=$limit) - FAILED', e, stack);
+      Log.e(
+        'WALLET',
+        'getWalletJournal($characterId, limit=$limit) - FAILED',
+        e,
+        stack,
+      );
       rethrow;
     }
   }
@@ -132,12 +160,16 @@ class WalletRepository {
       // Fetch wallet transactions from ESI.
       Log.d('WALLET', 'refreshWalletTransactions - fetching from ESI');
       final transactions = await _esiClient.getWalletTransactions(characterId);
-      Log.i('WALLET',
-          'refreshWalletTransactions - fetched ${transactions.length} transactions from ESI');
+      Log.i(
+        'WALLET',
+        'refreshWalletTransactions - fetched ${transactions.length} transactions from ESI',
+      );
 
       // Convert ESI items to database companions.
       Log.d(
-          'WALLET', 'refreshWalletTransactions - converting to database companions');
+        'WALLET',
+        'refreshWalletTransactions - converting to database companions',
+      );
       final companions = transactions.map((item) {
         return WalletTransactionsCompanion.insert(
           transactionId: Value(item.transactionId),
@@ -156,12 +188,18 @@ class WalletRepository {
       // Insert entries (ignores duplicates via ON CONFLICT UPDATE).
       Log.d('WALLET', 'refreshWalletTransactions - saving to database');
       await _database.insertWalletTransactions(companions);
-      Log.i('WALLET',
-          'refreshWalletTransactions - saved ${companions.length} transactions');
+      Log.i(
+        'WALLET',
+        'refreshWalletTransactions - saved ${companions.length} transactions',
+      );
       Log.d('WALLET', 'refreshWalletTransactions($characterId) - SUCCESS');
     } catch (e, stack) {
-      Log.e('WALLET', 'refreshWalletTransactions($characterId) - FAILED', e,
-          stack);
+      Log.e(
+        'WALLET',
+        'refreshWalletTransactions($characterId) - FAILED',
+        e,
+        stack,
+      );
       rethrow;
     }
   }
@@ -173,11 +211,16 @@ class WalletRepository {
       // Fetch loyalty points from ESI.
       Log.d('WALLET', 'refreshLoyaltyPoints - fetching from ESI');
       final lpItems = await _esiClient.getLoyaltyPoints(characterId);
-      Log.i('WALLET',
-          'refreshLoyaltyPoints - fetched LP from ${lpItems.length} corporations');
+      Log.i(
+        'WALLET',
+        'refreshLoyaltyPoints - fetched LP from ${lpItems.length} corporations',
+      );
 
       // Convert ESI items to database companions.
-      Log.d('WALLET', 'refreshLoyaltyPoints - converting to database companions');
+      Log.d(
+        'WALLET',
+        'refreshLoyaltyPoints - converting to database companions',
+      );
       final companions = lpItems.map((item) {
         return LoyaltyPointsCompanion.insert(
           characterId: characterId,
@@ -190,8 +233,10 @@ class WalletRepository {
       // Replace all loyalty points for this character.
       Log.d('WALLET', 'refreshLoyaltyPoints - saving to database');
       await _database.replaceLoyaltyPoints(characterId, companions);
-      Log.i('WALLET',
-          'refreshLoyaltyPoints - saved LP for ${companions.length} corporations');
+      Log.i(
+        'WALLET',
+        'refreshLoyaltyPoints - saved LP for ${companions.length} corporations',
+      );
       Log.d('WALLET', 'refreshLoyaltyPoints($characterId) - SUCCESS');
     } catch (e, stack) {
       Log.e('WALLET', 'refreshLoyaltyPoints($characterId) - FAILED', e, stack);
@@ -207,13 +252,18 @@ class WalletRepository {
       Log.d('WALLET', 'refreshPlexCount - fetching assets from ESI');
       final response = await _esiClient.getCharacterAssets(characterId);
       final assets = response.data;
-      Log.i('WALLET', 'refreshPlexCount - fetched ${assets.length} assets from ESI');
+      Log.i(
+        'WALLET',
+        'refreshPlexCount - fetched ${assets.length} assets from ESI',
+      );
 
       // Filter for PLEX (type_id 44992) and convert to companions.
       Log.d('WALLET', 'refreshPlexCount - filtering for PLEX (type_id 44992)');
       final plexAssets = assets.where((a) => a.typeId == 44992).toList();
-      Log.i('WALLET',
-          'refreshPlexCount - found ${plexAssets.length} PLEX asset stacks');
+      Log.i(
+        'WALLET',
+        'refreshPlexCount - found ${plexAssets.length} PLEX asset stacks',
+      );
 
       final companions = plexAssets.map((item) {
         return AssetCacheCompanion.insert(
@@ -234,8 +284,10 @@ class WalletRepository {
       }
 
       // Calculate total PLEX.
-      final totalPlex =
-          plexAssets.fold<int>(0, (sum, asset) => sum + asset.quantity);
+      final totalPlex = plexAssets.fold<int>(
+        0,
+        (sum, asset) => sum + asset.quantity,
+      );
       Log.i('WALLET', 'refreshPlexCount - total PLEX: $totalPlex');
       Log.d('WALLET', 'refreshPlexCount($characterId) - SUCCESS');
       return totalPlex;
@@ -264,10 +316,14 @@ class WalletRepository {
     Log.d('WALLET', 'getTotalLoyaltyPoints($characterId) - START');
     try {
       final lpEntries = await _database.getLoyaltyPoints(characterId);
-      final total =
-          lpEntries.fold<int>(0, (sum, entry) => sum + entry.loyaltyPoints);
-      Log.i('WALLET',
-          'getTotalLoyaltyPoints - total: $total LP across ${lpEntries.length} corporations');
+      final total = lpEntries.fold<int>(
+        0,
+        (sum, entry) => sum + entry.loyaltyPoints,
+      );
+      Log.i(
+        'WALLET',
+        'getTotalLoyaltyPoints - total: $total LP across ${lpEntries.length} corporations',
+      );
       Log.d('WALLET', 'getTotalLoyaltyPoints($characterId) - SUCCESS');
       return total;
     } catch (e, stack) {
@@ -278,17 +334,24 @@ class WalletRepository {
 
   /// Gets loyalty points by corporation.
   Future<List<LoyaltyPoint>> getLoyaltyPointsByCorporation(
-      int characterId) async {
+    int characterId,
+  ) async {
     Log.d('WALLET', 'getLoyaltyPointsByCorporation($characterId) - START');
     try {
       final lpEntries = await _database.getLoyaltyPoints(characterId);
-      Log.i('WALLET',
-          'getLoyaltyPointsByCorporation - found ${lpEntries.length} corporations');
+      Log.i(
+        'WALLET',
+        'getLoyaltyPointsByCorporation - found ${lpEntries.length} corporations',
+      );
       Log.d('WALLET', 'getLoyaltyPointsByCorporation($characterId) - SUCCESS');
       return lpEntries;
     } catch (e, stack) {
-      Log.e('WALLET', 'getLoyaltyPointsByCorporation($characterId) - FAILED', e,
-          stack);
+      Log.e(
+        'WALLET',
+        'getLoyaltyPointsByCorporation($characterId) - FAILED',
+        e,
+        stack,
+      );
       rethrow;
     }
   }
@@ -298,14 +361,20 @@ class WalletRepository {
     Log.d('WALLET', 'get30DaySummary($characterId) - START');
     try {
       final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
-      Log.d('WALLET',
-          'get30DaySummary - querying journal since ${thirtyDaysAgo.toIso8601String()}');
+      Log.d(
+        'WALLET',
+        'get30DaySummary - querying journal since ${thirtyDaysAgo.toIso8601String()}',
+      );
 
       // Get journal entries from the last 30 days (filtered at SQL level).
-      final recentEntries =
-          await _database.getWalletJournalSince(characterId, thirtyDaysAgo);
-      Log.i('WALLET',
-          'get30DaySummary - analyzing ${recentEntries.length} journal entries from last 30 days');
+      final recentEntries = await _database.getWalletJournalSince(
+        characterId,
+        thirtyDaysAgo,
+      );
+      Log.i(
+        'WALLET',
+        'get30DaySummary - analyzing ${recentEntries.length} journal entries from last 30 days',
+      );
 
       // Calculate income and expenses.
       double income = 0;
@@ -318,8 +387,10 @@ class WalletRepository {
         }
       }
 
-      Log.i('WALLET',
-          'get30DaySummary - income: $income ISK, expenses: $expenses ISK, net: ${income - expenses} ISK');
+      Log.i(
+        'WALLET',
+        'get30DaySummary - income: $income ISK, expenses: $expenses ISK, net: ${income - expenses} ISK',
+      );
       Log.d('WALLET', 'get30DaySummary($characterId) - SUCCESS');
       return WalletSummary(income: income, expenses: expenses);
     } catch (e, stack) {
@@ -333,8 +404,10 @@ class WalletRepository {
     int characterId, {
     int limit = 100,
   }) {
-    Log.d('WALLET',
-        'watchWalletTransactions($characterId, limit=$limit) - subscribed to stream');
+    Log.d(
+      'WALLET',
+      'watchWalletTransactions($characterId, limit=$limit) - subscribed to stream',
+    );
     return _database.watchWalletTransactions(characterId, limit: limit);
   }
 
@@ -349,9 +422,15 @@ class WalletRepository {
       // This avoids N+1 query problem (N queries for N characters).
       final balanceMap = await _database.getAllLatestWalletBalances();
 
-      Log.i('WALLET', 'getAllCharacterBalances - loaded balances for ${balanceMap.length} characters in single query');
+      Log.i(
+        'WALLET',
+        'getAllCharacterBalances - loaded balances for ${balanceMap.length} characters in single query',
+      );
       for (final entry in balanceMap.entries) {
-        Log.d('WALLET', 'getAllCharacterBalances - character ${entry.key}: ${entry.value} ISK');
+        Log.d(
+          'WALLET',
+          'getAllCharacterBalances - character ${entry.key}: ${entry.value} ISK',
+        );
       }
 
       Log.d('WALLET', 'getAllCharacterBalances() - SUCCESS');
@@ -368,10 +447,7 @@ class WalletSummary {
   final double income;
   final double expenses;
 
-  const WalletSummary({
-    required this.income,
-    required this.expenses,
-  });
+  const WalletSummary({required this.income, required this.expenses});
 
   /// Net change (income - expenses).
   double get net => income - expenses;

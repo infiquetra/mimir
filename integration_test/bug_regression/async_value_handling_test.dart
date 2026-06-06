@@ -39,7 +39,9 @@ void main() {
 
         // WHEN: Screen is first loaded (providers are loading)
         await tester.pump(); // Pump once to start loading
-        await tester.pump(const Duration(milliseconds: 100)); // Pump during loading
+        await tester.pump(
+          const Duration(milliseconds: 100),
+        ); // Pump during loading
 
         // THEN: Loading indicator should be visible, not crashed
         expect(
@@ -77,7 +79,9 @@ void main() {
 
         // WHEN: Screen is first loaded (providers are loading)
         await tester.pump(); // Pump once to start loading
-        await tester.pump(const Duration(milliseconds: 100)); // Pump during loading
+        await tester.pump(
+          const Duration(milliseconds: 100),
+        ); // Pump during loading
 
         // THEN: Loading indicator should be visible, not crashed
         expect(
@@ -102,44 +106,43 @@ void main() {
       },
     );
 
-    testWidgets(
-      'TC-ASYNC-003: Error states show retry UI without crashing',
-      (tester) async {
-        // GIVEN: TestApp with a character but ESI client that will fail
-        final mockEsiClient = MockEsiClient();
-        // Note: We don't call setupFullCharacterData, so ESI calls will return null/fail
+    testWidgets('TC-ASYNC-003: Error states show retry UI without crashing', (
+      tester,
+    ) async {
+      // GIVEN: TestApp with a character but ESI client that will fail
+      final mockEsiClient = MockEsiClient();
+      // Note: We don't call setupFullCharacterData, so ESI calls will return null/fail
 
-        await tester.pumpWidget(
-          TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(),
-            useMockEsi: false, // Disable default mock setup
-            providerOverrides: [
-              esiClientProvider.overrideWithValue(mockEsiClient),
-            ],
-            home: const SkillsScreen(),
-          ),
-        );
+      await tester.pumpWidget(
+        TestApp(
+          initialCharacter: CharacterFixtures.testCharacter(),
+          useMockEsi: false, // Disable default mock setup
+          providerOverrides: [
+            esiClientProvider.overrideWithValue(mockEsiClient),
+          ],
+          home: const SkillsScreen(),
+        ),
+      );
 
-        // WHEN: Screen loads but providers fail
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 100));
+      // WHEN: Screen loads but providers fail
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
-        // THEN: Error state should be visible, not crashed
-        // The screen should show either an error icon or fallback content
-        expect(
-          find.byType(SkillsScreen),
-          findsOneWidget,
-          reason: 'Screen should render even with errors',
-        );
+      // THEN: Error state should be visible, not crashed
+      // The screen should show either an error icon or fallback content
+      expect(
+        find.byType(SkillsScreen),
+        findsOneWidget,
+        reason: 'Screen should render even with errors',
+      );
 
-        // Note: Exact error UI depends on screen implementation,
-        // but the key point is it should NOT crash with "Bad state" error.
+      // Note: Exact error UI depends on screen implementation,
+      // but the key point is it should NOT crash with "Bad state" error.
 
-        // REGRESSION CHECK: Before using .when(), error states would crash
-        // because .value assumed data was present. The .when() pattern
-        // provides an error callback to handle failures gracefully.
-      },
-    );
+      // REGRESSION CHECK: Before using .when(), error states would crash
+      // because .value assumed data was present. The .when() pattern
+      // provides an error callback to handle failures gracefully.
+    });
 
     testWidgets(
       'TC-ASYNC-004: AsyncValue.when() handles all three states correctly',

@@ -5,6 +5,7 @@ import 'package:mimir/features/pi/data/planetary_sync_service.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockEsiClient extends Mock implements EsiClient {}
+
 class MockPlanetaryRepository extends Mock implements PlanetaryRepository {}
 
 void main() {
@@ -28,7 +29,7 @@ void main() {
 
     test('syncColonies fetches and saves data', () async {
       final now = DateTime.now();
-      
+
       final esiColonies = [
         EsiPlanetaryColony(
           planetId: 40000001,
@@ -50,23 +51,31 @@ void main() {
         ),
       ];
 
-      when(() => mockEsiClient.getCharacterPlanets(characterId))
-          .thenAnswer((_) async => esiColonies);
-      when(() => mockEsiClient.getCharacterPlanetPins(characterId, any()))
-          .thenAnswer((_) async => esiPins);
-      when(() => mockRepository.saveColonies(characterId, any(), any()))
-          .thenAnswer((_) async => {});
+      when(
+        () => mockEsiClient.getCharacterPlanets(characterId),
+      ).thenAnswer((_) async => esiColonies);
+      when(
+        () => mockEsiClient.getCharacterPlanetPins(characterId, any()),
+      ).thenAnswer((_) async => esiPins);
+      when(
+        () => mockRepository.saveColonies(characterId, any(), any()),
+      ).thenAnswer((_) async => {});
 
       await syncService.syncColonies(characterId);
 
       verify(() => mockEsiClient.getCharacterPlanets(characterId)).called(1);
-      verify(() => mockEsiClient.getCharacterPlanetPins(characterId, 40000001)).called(1);
-      verify(() => mockRepository.saveColonies(characterId, any(), any())).called(1);
+      verify(
+        () => mockEsiClient.getCharacterPlanetPins(characterId, 40000001),
+      ).called(1);
+      verify(
+        () => mockRepository.saveColonies(characterId, any(), any()),
+      ).called(1);
     });
 
     test('syncColonies handles errors gracefully', () async {
-      when(() => mockEsiClient.getCharacterPlanets(characterId))
-          .thenThrow(Exception('ESI Error'));
+      when(
+        () => mockEsiClient.getCharacterPlanets(characterId),
+      ).thenThrow(Exception('ESI Error'));
 
       expect(
         () => syncService.syncColonies(characterId),

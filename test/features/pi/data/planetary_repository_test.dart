@@ -23,9 +23,11 @@ void main() {
 
     test('saveColonies and watchColonies', () async {
       final now = DateTime.now();
-      
+
       // 1. Insert character
-      await database.into(database.characters).insert(
+      await database
+          .into(database.characters)
+          .insert(
             CharactersCompanion.insert(
               characterId: Value(characterId),
               name: 'Test Character',
@@ -81,9 +83,11 @@ void main() {
 
     test('watchAllColonies', () async {
       final now = DateTime.now();
-      
+
       // Insert multiple characters and colonies
-      await database.into(database.characters).insert(
+      await database
+          .into(database.characters)
+          .insert(
             CharactersCompanion.insert(
               characterId: const Value(1),
               name: 'Char 1',
@@ -96,7 +100,9 @@ void main() {
               lastUpdated: now,
             ),
           );
-      await database.into(database.characters).insert(
+      await database
+          .into(database.characters)
+          .insert(
             CharactersCompanion.insert(
               characterId: const Value(2),
               name: 'Char 2',

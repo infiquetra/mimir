@@ -61,10 +61,7 @@ class DataRow extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(
-            color: EveColors.divider,
-            width: 0.5,
-          ),
+          bottom: BorderSide(color: EveColors.divider, width: 0.5),
         ),
       ),
       child: Row(
@@ -126,20 +123,14 @@ class DataRow extends StatelessWidget {
           ),
 
           // Trailing
-          if (trailing != null) ...[
-            SizedBox(width: EveSpacing.md),
-            trailing!,
-          ],
+          if (trailing != null) ...[SizedBox(width: EveSpacing.md), trailing!],
         ],
       ),
     );
 
     // Wrap with InkWell if tappable
     if (onTap != null) {
-      row = InkWell(
-        onTap: onTap,
-        child: row,
-      );
+      row = InkWell(onTap: onTap, child: row);
     }
 
     return row;
@@ -157,11 +148,7 @@ class DataRow extends StatelessWidget {
 /// )
 /// ```
 class DataHeaderRow extends StatelessWidget {
-  const DataHeaderRow({
-    super.key,
-    required this.columns,
-    this.flexValues,
-  });
+  const DataHeaderRow({super.key, required this.columns, this.flexValues});
 
   /// Column labels.
   final List<String> columns;
@@ -180,10 +167,7 @@ class DataHeaderRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: EveColors.surfaceElevated,
         border: Border(
-          bottom: BorderSide(
-            color: EveColors.borderActive,
-            width: 1,
-          ),
+          bottom: BorderSide(color: EveColors.borderActive, width: 1),
         ),
       ),
       child: Row(
@@ -199,10 +183,7 @@ class DataHeaderRow extends StatelessWidget {
               label.toUpperCase(),
               style: EveTypography.labelSmall(
                 color: EveColors.textSecondary,
-              ).copyWith(
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.5,
-              ),
+              ).copyWith(fontWeight: FontWeight.w600, letterSpacing: 0.5),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),

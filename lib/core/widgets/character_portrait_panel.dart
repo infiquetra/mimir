@@ -52,15 +52,22 @@ class CharacterPortraitPanel extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
 
     // Fetch wallet balance and total SP.
-    final walletBalance = ref.watch(_walletBalanceProvider(character.characterId));
+    final walletBalance = ref.watch(
+      _walletBalanceProvider(character.characterId),
+    );
     final totalSp = ref.watch(characterTotalSpProvider(character.characterId));
 
     // Fetch home location.
     final clones = ref.watch(characterClonesProvider(character.characterId));
-    final locationNames = ref.watch(characterCloneLocationNamesProvider(character.characterId));
+    final locationNames = ref.watch(
+      characterCloneLocationNamesProvider(character.characterId),
+    );
 
     // Debug logging
-    Log.d('CHAR', 'CharacterPortraitPanel: Loading portrait from $_portraitUrl');
+    Log.d(
+      'CHAR',
+      'CharacterPortraitPanel: Loading portrait from $_portraitUrl',
+    );
 
     return Container(
       decoration: BoxDecoration(
@@ -83,16 +90,26 @@ class CharacterPortraitPanel extends ConsumerWidget {
                       return _LoadingPlaceholder(colorScheme: colorScheme);
                     },
                     errorBuilder: (context, error, stackTrace) {
-                      Log.e('CHAR', 'Failed to load character portrait (sub-window)', error, stackTrace);
+                      Log.e(
+                        'CHAR',
+                        'Failed to load character portrait (sub-window)',
+                        error,
+                        stackTrace,
+                      );
                       return _ErrorPlaceholder(colorScheme: colorScheme);
                     },
                   )
                 : CachedNetworkImage(
                     imageUrl: _portraitUrl,
                     fit: BoxFit.cover,
-                    placeholder: (context, url) => _LoadingPlaceholder(colorScheme: colorScheme),
+                    placeholder: (context, url) =>
+                        _LoadingPlaceholder(colorScheme: colorScheme),
                     errorWidget: (context, url, error) {
-                      Log.e('CHAR', 'Failed to load character portrait (main window)', error);
+                      Log.e(
+                        'CHAR',
+                        'Failed to load character portrait (main window)',
+                        error,
+                      );
                       return _ErrorPlaceholder(colorScheme: colorScheme);
                     },
                   ),
@@ -101,20 +118,14 @@ class CharacterPortraitPanel extends ConsumerWidget {
           Positioned(
             top: 16,
             right: 16,
-            child: CorporationLogo(
-              id: character.corporationId,
-              size: 48,
-            ),
+            child: CorporationLogo(id: character.corporationId, size: 48),
           ),
           // Faction logo (bottom-left).
           if (character.factionId != null)
             Positioned(
               bottom: 16,
               left: 16,
-              child: FactionLogo(
-                factionId: character.factionId!,
-                size: 48,
-              ),
+              child: FactionLogo(factionId: character.factionId!, size: 48),
             ),
           // Info overlay (bottom).
           Positioned(
@@ -320,17 +331,11 @@ class _StatRow extends StatelessWidget {
 
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 16,
-          color: Colors.white70,
-        ),
+        Icon(icon, size: 16, color: Colors.white70),
         const SizedBox(width: 8),
         Text(
           label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: Colors.white70,
-          ),
+          style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -357,11 +362,7 @@ class _LoadingPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: CircularProgressIndicator(
-        color: colorScheme.primary,
-      ),
-    );
+    return Center(child: CircularProgressIndicator(color: colorScheme.primary));
   }
 }
 
@@ -384,8 +385,10 @@ class _ErrorPlaceholder extends StatelessWidget {
 }
 
 /// Provider for wallet balance (read-only for this character).
-final _walletBalanceProvider =
-    FutureProvider.family<double?, int>((ref, characterId) async {
+final _walletBalanceProvider = FutureProvider.family<double?, int>((
+  ref,
+  characterId,
+) async {
   final walletRepo = ref.watch(walletRepositoryProvider);
   return walletRepo.getLatestWalletBalance(characterId);
 });

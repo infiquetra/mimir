@@ -46,19 +46,23 @@ void main() {
             await db.recordWalletBalance(characterId, 1500000000.0);
           },
           providerOverrides: [
-            allCharacterCombatStatsProvider.overrideWith((ref) async => const AggregateCombatStats(
-              totalKills: 100,
-              totalDeaths: 50,
-              totalIskDestroyed: 1000000000.0,
-              totalIskLost: 500000000.0,
-              characterStats: [],
-            )),
-            allCharacterFleetStatusProvider.overrideWith((ref) async => const AggregateFleetStatus(
-              totalCharacters: 1,
-              onlineCharacters: 1,
-              offlineCharacters: 0,
-              characterStatuses: [],
-            )),
+            allCharacterCombatStatsProvider.overrideWith(
+              (ref) async => const AggregateCombatStats(
+                totalKills: 100,
+                totalDeaths: 50,
+                totalIskDestroyed: 1000000000.0,
+                totalIskLost: 500000000.0,
+                characterStats: [],
+              ),
+            ),
+            allCharacterFleetStatusProvider.overrideWith(
+              (ref) async => const AggregateFleetStatus(
+                totalCharacters: 1,
+                onlineCharacters: 1,
+                offlineCharacters: 0,
+                characterStatuses: [],
+              ),
+            ),
           ],
           home: const StandaloneDashboardScreen(),
         ),
@@ -71,23 +75,23 @@ void main() {
       expect($(CombinedWealthCard).exists, true);
       expect($(TrainingOverviewCard).exists, true);
       expect($(QuickActionsCard).exists, true);
-      
+
       // Scroll to find elements further down the dashboard
       await $(WalletTrendsCard).scrollTo();
       expect($(WalletTrendsCard).exists, true);
-      
+
       await $(TrainingTimelineCard).scrollTo();
       expect($(TrainingTimelineCard).exists, true);
-      
+
       await $(CombatStatsCard).scrollTo();
       expect($(CombatStatsCard).exists, true);
-      
+
       // Verify we don't show raw skill IDs
       expect($('Skill #3301').exists, false);
 
       // Unmount the TestApp to trigger ProviderScope disposal and cancel streams
       await $.pumpWidget(Container());
-      
+
       // Pump to clear any microtasks/timers scheduled by Drift's stream closure
       await $.pump(const Duration(milliseconds: 100));
     },

@@ -52,7 +52,8 @@ class _PriceCheckerPanelState extends ConsumerState<PriceCheckerPanel> {
               ? const EmptyState(
                   icon: Icons.search,
                   heading: 'Search for an Item',
-                  description: 'Enter an Item ID to view its current market price.',
+                  description:
+                      'Enter an Item ID to view its current market price.',
                 )
               : _buildPriceResult(_selectedTypeId!),
         ),
@@ -77,10 +78,7 @@ class _PriceCheckerPanelState extends ConsumerState<PriceCheckerPanel> {
           ),
         ),
         const SizedBox(width: 16),
-        ElevatedButton(
-          onPressed: _search,
-          child: const Text('Search'),
-        ),
+        ElevatedButton(onPressed: _search, child: const Text('Search')),
       ],
     );
   }
@@ -108,22 +106,23 @@ class _PriceCheckerPanelState extends ConsumerState<PriceCheckerPanel> {
                 children: [
                   EveTypeIcon(typeId: typeId, size: 64),
                   const SizedBox(height: 16),
-                  ref.watch(itemNameProvider(typeId)).when(
-                    data: (name) => Text(
-                      name,
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    loading: () => Text(
-                      'Loading...',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: EveColors.textSecondary,
+                  ref
+                      .watch(itemNameProvider(typeId))
+                      .when(
+                        data: (name) => Text(
+                          name,
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        loading: () => Text(
+                          'Loading...',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(color: EveColors.textSecondary),
+                        ),
+                        error: (_, __) => Text(
+                          'Item #$typeId',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
                       ),
-                    ),
-                    error: (_, __) => Text(
-                      'Item #$typeId',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                  ),
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -148,7 +147,10 @@ class _PriceCheckerPanelState extends ConsumerState<PriceCheckerPanel> {
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, stack) => Center(
-        child: Text('Error: $err', style: const TextStyle(color: EveColors.error)),
+        child: Text(
+          'Error: $err',
+          style: const TextStyle(color: EveColors.error),
+        ),
       ),
     );
   }
@@ -158,9 +160,9 @@ class _PriceCheckerPanelState extends ConsumerState<PriceCheckerPanel> {
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: EveColors.textSecondary,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: EveColors.textSecondary),
         ),
         const SizedBox(height: 4),
         Text(

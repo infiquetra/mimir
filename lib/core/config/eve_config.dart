@@ -111,14 +111,28 @@ abstract class EveConfig {
     'esi-markets.read_character_orders.v1', // Market Orders
   ];
 
+  // ==========================================================================
+  // OAuth Scopes (Combat Analyzer)
+  // ==========================================================================
+
+  /// Scope required to fetch a character's recent killmail ID/hash references.
+  static const String killmailReadScope = 'esi-killmails.read_killmails.v1';
+
+  /// OAuth scopes required for killmail-backed combat AAR enrichment.
+  ///
+  /// WARNING: Adding this scope requires users to re-authenticate.
+  /// Existing tokens will not have this permission.
+  static const List<String> combatAnalyzerScopes = [killmailReadScope];
+
   /// All OAuth scopes as a space-separated string.
-  static String get scopesString => [
-        ...phase1Scopes,
-        ...phase2FleetScopes,
-        ...phase3CharacterScopes,
-        ...phase4WalletScopes,
-        ...phase5ExpansionScopes
-      ].toSet().toList().join(' '); // Use Set to remove duplicates
+  static String get scopesString => {
+    ...phase1Scopes,
+    ...phase2FleetScopes,
+    ...phase3CharacterScopes,
+    ...phase4WalletScopes,
+    ...phase5ExpansionScopes,
+    ...combatAnalyzerScopes,
+  }.join(' '); // Use Set to remove duplicates
 
   // ==========================================================================
   // Token Configuration

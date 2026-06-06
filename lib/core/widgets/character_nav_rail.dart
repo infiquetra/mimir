@@ -20,10 +20,7 @@ import 'character_avatar.dart';
 ///
 /// Click avatar to switch character instantly.
 class CharacterNavRail extends ConsumerWidget {
-  const CharacterNavRail({
-    super.key,
-    this.onRefresh,
-  });
+  const CharacterNavRail({super.key, this.onRefresh});
 
   /// Optional refresh callback. If provided, shows a refresh button.
   final VoidCallback? onRefresh;
@@ -44,9 +41,7 @@ class CharacterNavRail extends ConsumerWidget {
       decoration: BoxDecoration(
         color: EveColors.surfaceDefault,
         border: Border(
-          right: BorderSide(
-            color: theme.colorScheme.outline.withOpacity(0.2),
-          ),
+          right: BorderSide(color: theme.colorScheme.outline.withOpacity(0.2)),
         ),
       ),
       child: charactersAsync.when(
@@ -122,11 +117,21 @@ class CharacterNavRail extends ConsumerWidget {
             return;
           }
 
-          Log.i('NAV', 'CharacterNavRail - switching to character ${character.characterId}');
+          Log.i(
+            'NAV',
+            'CharacterNavRail - switching to character ${character.characterId}',
+          );
           try {
-            await ref.read(databaseProvider).setActiveCharacter(character.characterId);
+            await ref
+                .read(databaseProvider)
+                .setActiveCharacter(character.characterId);
           } catch (e, stack) {
-            Log.e('NAV', 'CharacterNavRail - failed to switch character', e, stack);
+            Log.e(
+              'NAV',
+              'CharacterNavRail - failed to switch character',
+              e,
+              stack,
+            );
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -143,9 +148,7 @@ class CharacterNavRail extends ConsumerWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: isActive
-                  ? EveColors.photonBlue
-                  : Colors.transparent,
+              color: isActive ? EveColors.photonBlue : Colors.transparent,
               width: 2,
             ),
             boxShadow: isActive
@@ -191,11 +194,7 @@ class CharacterNavRail extends ConsumerWidget {
                 width: 2,
               ),
             ),
-            child: Icon(
-              Icons.refresh,
-              size: 24,
-              color: EveColors.photonCyan,
-            ),
+            child: Icon(Icons.refresh, size: 24, color: EveColors.photonCyan),
           ),
         ),
       ),
@@ -230,11 +229,7 @@ class CharacterNavRail extends ConsumerWidget {
                 width: 2,
               ),
             ),
-            child: Icon(
-              Icons.add,
-              size: 24,
-              color: EveColors.photonBlue,
-            ),
+            child: Icon(Icons.add, size: 24, color: EveColors.photonBlue),
           ),
         ),
       ),

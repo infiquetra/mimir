@@ -26,7 +26,10 @@ class OAuthCallbackServer {
   /// Starts the server on port 54321.
   /// This port must be registered in the EVE Developer application settings.
   Future<void> start() async {
-    _server = await HttpServer.bind(InternetAddress.loopbackIPv4, _callbackPort);
+    _server = await HttpServer.bind(
+      InternetAddress.loopbackIPv4,
+      _callbackPort,
+    );
     debugPrint('[OAUTH_SERVER] Listening on $callbackUrl');
 
     _server!.listen(_handleRequest);

@@ -45,7 +45,8 @@ class EveNavIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Determine icon color based on selection state
-    final iconColor = color ??
+    final iconColor =
+        color ??
         (isSelected
             ? EveColors.evePrimary
             : Colors.white.withAlpha(179)); // 70% white when unselected

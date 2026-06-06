@@ -48,14 +48,16 @@ class JumpClonesSubTab extends ConsumerWidget {
           Icon(
             Icons.person_off_outlined,
             size: 64,
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(128),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withAlpha(128),
           ),
           const SizedBox(height: 16),
           Text(
             'No Character Selected',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -69,8 +71,12 @@ class JumpClonesSubTab extends ConsumerWidget {
   ) {
     final theme = Theme.of(context);
     final clones = ref.watch(characterClonesProvider(characterId));
-    final locationNames = ref.watch(characterCloneLocationNamesProvider(characterId));
-    final implantNames = ref.watch(characterCloneImplantNamesProvider(characterId));
+    final locationNames = ref.watch(
+      characterCloneLocationNamesProvider(characterId),
+    );
+    final implantNames = ref.watch(
+      characterCloneImplantNamesProvider(characterId),
+    );
 
     return clones.when(
       data: (cloneData) {
@@ -159,7 +165,10 @@ class JumpClonesSubTab extends ConsumerWidget {
                     ),
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: EveColors.evePrimary.withAlpha(51),
                         borderRadius: BorderRadius.circular(12),
@@ -196,13 +205,16 @@ class JumpClonesSubTab extends ConsumerWidget {
                           Icon(
                             Icons.info_outline,
                             size: 48,
-                            color: theme.colorScheme.onSurfaceVariant.withAlpha(128),
+                            color: theme.colorScheme.onSurfaceVariant.withAlpha(
+                              128,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           Text(
                             'No jump clones available',
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant.withAlpha(128),
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withAlpha(128),
                               fontStyle: FontStyle.italic,
                             ),
                           ),
@@ -288,11 +300,7 @@ class JumpClonesSubTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildActivityRow(
-    BuildContext context,
-    String label,
-    DateTime date,
-  ) {
+  Widget _buildActivityRow(BuildContext context, String label, DateTime date) {
     final theme = Theme.of(context);
     final formatter = DateFormat('MMM d, yyyy HH:mm');
 

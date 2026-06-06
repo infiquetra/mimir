@@ -35,7 +35,9 @@ class QueueFooter extends ConsumerWidget {
     final formattedUnallocatedSp = NumberFormat('#,###').format(unallocatedSp);
 
     // Format total SP in queue
-    final formattedTotalSp = NumberFormat('#,###').format(queueStats.totalSkillPoints);
+    final formattedTotalSp = NumberFormat(
+      '#,###',
+    ).format(queueStats.totalSkillPoints);
 
     // Format training time
     final trainingTime = _formatDuration(queueStats.totalTrainingTime);
@@ -45,9 +47,7 @@ class QueueFooter extends ConsumerWidget {
       decoration: BoxDecoration(
         color: EveColors.surfaceDefault,
         border: Border(
-          top: BorderSide(
-            color: theme.colorScheme.outline.withOpacity(0.3),
-          ),
+          top: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3)),
         ),
       ),
       child: Column(

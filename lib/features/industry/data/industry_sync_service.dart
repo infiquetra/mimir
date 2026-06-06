@@ -22,7 +22,10 @@ class IndustrySyncService {
       int? totalPages;
 
       do {
-        final response = await _esiClient.getCharacterBlueprints(characterId, page: page);
+        final response = await _esiClient.getCharacterBlueprints(
+          characterId,
+          page: page,
+        );
         allItems.addAll(response.data);
 
         if (totalPages == null) {
@@ -31,26 +34,36 @@ class IndustrySyncService {
             totalPages = int.tryParse(pagesHeader);
           }
         }
-        
-        Log.d('INDUSTRY.SYNC', 'Fetched blueprints page $page of ${totalPages ?? 1}');
+
+        Log.d(
+          'INDUSTRY.SYNC',
+          'Fetched blueprints page $page of ${totalPages ?? 1}',
+        );
         page++;
       } while (totalPages != null && page <= totalPages);
 
-      Log.i('INDUSTRY.SYNC', 'Total blueprints fetched from ESI: ${allItems.length}');
+      Log.i(
+        'INDUSTRY.SYNC',
+        'Total blueprints fetched from ESI: ${allItems.length}',
+      );
 
       // Convert to Drift companions
-      final companions = allItems.map((item) => BlueprintsCompanion(
-        itemId: Value(item.itemId),
-        characterId: Value(characterId),
-        typeId: Value(item.typeId),
-        locationId: Value(item.locationId),
-        quantity: Value(item.quantity),
-        timeEfficiency: Value(item.timeEfficiency),
-        materialEfficiency: Value(item.materialEfficiency),
-        runs: Value(item.runs),
-        // If runs is -1, it's an original (BPO), otherwise a copy (BPC)
-        isOriginal: Value(item.runs == -1),
-      )).toList();
+      final companions = allItems
+          .map(
+            (item) => BlueprintsCompanion(
+              itemId: Value(item.itemId),
+              characterId: Value(characterId),
+              typeId: Value(item.typeId),
+              locationId: Value(item.locationId),
+              quantity: Value(item.quantity),
+              timeEfficiency: Value(item.timeEfficiency),
+              materialEfficiency: Value(item.materialEfficiency),
+              runs: Value(item.runs),
+              // If runs is -1, it's an original (BPO), otherwise a copy (BPC)
+              isOriginal: Value(item.runs == -1),
+            ),
+          )
+          .toList();
 
       await _repository.replaceAllBlueprints(characterId, companions);
       Log.d('INDUSTRY.SYNC', 'syncBlueprints($characterId) - SUCCESS');
@@ -61,47 +74,62 @@ class IndustrySyncService {
   }
 
   /// Fetch and store all industry jobs for a character.
-  Future<void> syncIndustryJobs(int characterId, {bool includeCompleted = false}) async {
+  Future<void> syncIndustryJobs(
+    int characterId, {
+    bool includeCompleted = false,
+  }) async {
     Log.d('INDUSTRY.SYNC', 'syncIndustryJobs($characterId) - START');
     try {
       final response = await _esiClient.getCharacterIndustryJobs(
-        characterId, 
+        characterId,
         includeCompleted: includeCompleted,
       );
-      
+
       final jobs = response.data;
-      Log.i('INDUSTRY.SYNC', 'Total industry jobs fetched from ESI: ${jobs.length}');
+      Log.i(
+        'INDUSTRY.SYNC',
+        'Total industry jobs fetched from ESI: ${jobs.length}',
+      );
 
       // Convert to Drift companions
-      final companions = jobs.map((job) => IndustryJobsCompanion(
-        jobId: Value(job.jobId),
-        characterId: Value(characterId),
-        installerId: Value(job.installerId),
-        facilityId: Value(job.facilityId),
-        locationId: Value(job.locationId),
-        activityId: Value(job.activityId),
-        blueprintId: Value(job.blueprintId),
-        blueprintTypeId: Value(job.blueprintTypeId),
-        outputLocationId: Value(job.outputLocationId),
-        runs: Value(job.runs),
-        cost: Value(job.cost ?? 0.0),
-        licensedProductionRuns: Value(job.licensedProductionRuns),
-        probability: Value(job.probability),
-        productTypeId: Value(job.productTypeId),
-        status: Value(job.status),
-        timeInSeconds: Value(job.duration),
-        startDate: Value(job.startDate),
-        endDate: Value(job.endDate),
-        pauseDate: Value(job.pauseDate),
-        completedDate: Value(job.completedDate),
-        completedCharacterId: Value(job.completedCharacterId),
-        successfulRuns: Value(job.successfulRuns),
-      )).toList();
+      final companions = jobs
+          .map(
+            (job) => IndustryJobsCompanion(
+              jobId: Value(job.jobId),
+              characterId: Value(characterId),
+              installerId: Value(job.installerId),
+              facilityId: Value(job.facilityId),
+              locationId: Value(job.locationId),
+              activityId: Value(job.activityId),
+              blueprintId: Value(job.blueprintId),
+              blueprintTypeId: Value(job.blueprintTypeId),
+              outputLocationId: Value(job.outputLocationId),
+              runs: Value(job.runs),
+              cost: Value(job.cost ?? 0.0),
+              licensedProductionRuns: Value(job.licensedProductionRuns),
+              probability: Value(job.probability),
+              productTypeId: Value(job.productTypeId),
+              status: Value(job.status),
+              timeInSeconds: Value(job.duration),
+              startDate: Value(job.startDate),
+              endDate: Value(job.endDate),
+              pauseDate: Value(job.pauseDate),
+              completedDate: Value(job.completedDate),
+              completedCharacterId: Value(job.completedCharacterId),
+              successfulRuns: Value(job.successfulRuns),
+            ),
+          )
+          .toList();
 
       await _repository.replaceAllIndustryJobs(characterId, companions);
       Log.d('INDUSTRY.SYNC', 'syncIndustryJobs($characterId) - SUCCESS');
     } catch (e, stack) {
-      Log.e('INDUSTRY.SYNC', 'syncIndustryJobs($characterId) - FAILED', e, stack);
+      Log.e(
+        'INDUSTRY.SYNC',
+        'syncIndustryJobs($characterId) - FAILED',
+        e,
+        stack,
+      );
       rethrow;
     }
   }

@@ -2000,6 +2000,1607 @@ class SdeTypeEffectsCompanion extends UpdateCompanion<SdeTypeEffect> {
   }
 }
 
+class $SdeIndustryActivitiesTable extends SdeIndustryActivities
+    with TableInfo<$SdeIndustryActivitiesTable, SdeIndustryActivity> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SdeIndustryActivitiesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+    'type_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _activityIdMeta = const VerificationMeta(
+    'activityId',
+  );
+  @override
+  late final GeneratedColumn<int> activityId = GeneratedColumn<int>(
+    'activity_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _timeMeta = const VerificationMeta('time');
+  @override
+  late final GeneratedColumn<int> time = GeneratedColumn<int>(
+    'time',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [typeId, activityId, time];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sde_industry_activities';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SdeIndustryActivity> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('type_id')) {
+      context.handle(
+        _typeIdMeta,
+        typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeIdMeta);
+    }
+    if (data.containsKey('activity_id')) {
+      context.handle(
+        _activityIdMeta,
+        activityId.isAcceptableOrUnknown(data['activity_id']!, _activityIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_activityIdMeta);
+    }
+    if (data.containsKey('time')) {
+      context.handle(
+        _timeMeta,
+        time.isAcceptableOrUnknown(data['time']!, _timeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_timeMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {typeId, activityId};
+  @override
+  SdeIndustryActivity map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SdeIndustryActivity(
+      typeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}type_id'],
+      )!,
+      activityId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}activity_id'],
+      )!,
+      time: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}time'],
+      )!,
+    );
+  }
+
+  @override
+  $SdeIndustryActivitiesTable createAlias(String alias) {
+    return $SdeIndustryActivitiesTable(attachedDatabase, alias);
+  }
+}
+
+class SdeIndustryActivity extends DataClass
+    implements Insertable<SdeIndustryActivity> {
+  final int typeId;
+  final int activityId;
+  final int time;
+  const SdeIndustryActivity({
+    required this.typeId,
+    required this.activityId,
+    required this.time,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['type_id'] = Variable<int>(typeId);
+    map['activity_id'] = Variable<int>(activityId);
+    map['time'] = Variable<int>(time);
+    return map;
+  }
+
+  SdeIndustryActivitiesCompanion toCompanion(bool nullToAbsent) {
+    return SdeIndustryActivitiesCompanion(
+      typeId: Value(typeId),
+      activityId: Value(activityId),
+      time: Value(time),
+    );
+  }
+
+  factory SdeIndustryActivity.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SdeIndustryActivity(
+      typeId: serializer.fromJson<int>(json['typeId']),
+      activityId: serializer.fromJson<int>(json['activityId']),
+      time: serializer.fromJson<int>(json['time']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'typeId': serializer.toJson<int>(typeId),
+      'activityId': serializer.toJson<int>(activityId),
+      'time': serializer.toJson<int>(time),
+    };
+  }
+
+  SdeIndustryActivity copyWith({int? typeId, int? activityId, int? time}) =>
+      SdeIndustryActivity(
+        typeId: typeId ?? this.typeId,
+        activityId: activityId ?? this.activityId,
+        time: time ?? this.time,
+      );
+  SdeIndustryActivity copyWithCompanion(SdeIndustryActivitiesCompanion data) {
+    return SdeIndustryActivity(
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      activityId: data.activityId.present
+          ? data.activityId.value
+          : this.activityId,
+      time: data.time.present ? data.time.value : this.time,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeIndustryActivity(')
+          ..write('typeId: $typeId, ')
+          ..write('activityId: $activityId, ')
+          ..write('time: $time')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(typeId, activityId, time);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SdeIndustryActivity &&
+          other.typeId == this.typeId &&
+          other.activityId == this.activityId &&
+          other.time == this.time);
+}
+
+class SdeIndustryActivitiesCompanion
+    extends UpdateCompanion<SdeIndustryActivity> {
+  final Value<int> typeId;
+  final Value<int> activityId;
+  final Value<int> time;
+  final Value<int> rowid;
+  const SdeIndustryActivitiesCompanion({
+    this.typeId = const Value.absent(),
+    this.activityId = const Value.absent(),
+    this.time = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SdeIndustryActivitiesCompanion.insert({
+    required int typeId,
+    required int activityId,
+    required int time,
+    this.rowid = const Value.absent(),
+  }) : typeId = Value(typeId),
+       activityId = Value(activityId),
+       time = Value(time);
+  static Insertable<SdeIndustryActivity> custom({
+    Expression<int>? typeId,
+    Expression<int>? activityId,
+    Expression<int>? time,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (typeId != null) 'type_id': typeId,
+      if (activityId != null) 'activity_id': activityId,
+      if (time != null) 'time': time,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SdeIndustryActivitiesCompanion copyWith({
+    Value<int>? typeId,
+    Value<int>? activityId,
+    Value<int>? time,
+    Value<int>? rowid,
+  }) {
+    return SdeIndustryActivitiesCompanion(
+      typeId: typeId ?? this.typeId,
+      activityId: activityId ?? this.activityId,
+      time: time ?? this.time,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (activityId.present) {
+      map['activity_id'] = Variable<int>(activityId.value);
+    }
+    if (time.present) {
+      map['time'] = Variable<int>(time.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeIndustryActivitiesCompanion(')
+          ..write('typeId: $typeId, ')
+          ..write('activityId: $activityId, ')
+          ..write('time: $time, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SdeIndustryActivityMaterialsTable extends SdeIndustryActivityMaterials
+    with
+        TableInfo<
+          $SdeIndustryActivityMaterialsTable,
+          SdeIndustryActivityMaterial
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SdeIndustryActivityMaterialsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+    'type_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _activityIdMeta = const VerificationMeta(
+    'activityId',
+  );
+  @override
+  late final GeneratedColumn<int> activityId = GeneratedColumn<int>(
+    'activity_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _materialTypeIdMeta = const VerificationMeta(
+    'materialTypeId',
+  );
+  @override
+  late final GeneratedColumn<int> materialTypeId = GeneratedColumn<int>(
+    'material_type_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _quantityMeta = const VerificationMeta(
+    'quantity',
+  );
+  @override
+  late final GeneratedColumn<int> quantity = GeneratedColumn<int>(
+    'quantity',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    typeId,
+    activityId,
+    materialTypeId,
+    quantity,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sde_industry_activity_materials';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SdeIndustryActivityMaterial> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('type_id')) {
+      context.handle(
+        _typeIdMeta,
+        typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeIdMeta);
+    }
+    if (data.containsKey('activity_id')) {
+      context.handle(
+        _activityIdMeta,
+        activityId.isAcceptableOrUnknown(data['activity_id']!, _activityIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_activityIdMeta);
+    }
+    if (data.containsKey('material_type_id')) {
+      context.handle(
+        _materialTypeIdMeta,
+        materialTypeId.isAcceptableOrUnknown(
+          data['material_type_id']!,
+          _materialTypeIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_materialTypeIdMeta);
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(
+        _quantityMeta,
+        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_quantityMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {typeId, activityId, materialTypeId};
+  @override
+  SdeIndustryActivityMaterial map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SdeIndustryActivityMaterial(
+      typeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}type_id'],
+      )!,
+      activityId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}activity_id'],
+      )!,
+      materialTypeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}material_type_id'],
+      )!,
+      quantity: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity'],
+      )!,
+    );
+  }
+
+  @override
+  $SdeIndustryActivityMaterialsTable createAlias(String alias) {
+    return $SdeIndustryActivityMaterialsTable(attachedDatabase, alias);
+  }
+}
+
+class SdeIndustryActivityMaterial extends DataClass
+    implements Insertable<SdeIndustryActivityMaterial> {
+  final int typeId;
+  final int activityId;
+  final int materialTypeId;
+  final int quantity;
+  const SdeIndustryActivityMaterial({
+    required this.typeId,
+    required this.activityId,
+    required this.materialTypeId,
+    required this.quantity,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['type_id'] = Variable<int>(typeId);
+    map['activity_id'] = Variable<int>(activityId);
+    map['material_type_id'] = Variable<int>(materialTypeId);
+    map['quantity'] = Variable<int>(quantity);
+    return map;
+  }
+
+  SdeIndustryActivityMaterialsCompanion toCompanion(bool nullToAbsent) {
+    return SdeIndustryActivityMaterialsCompanion(
+      typeId: Value(typeId),
+      activityId: Value(activityId),
+      materialTypeId: Value(materialTypeId),
+      quantity: Value(quantity),
+    );
+  }
+
+  factory SdeIndustryActivityMaterial.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SdeIndustryActivityMaterial(
+      typeId: serializer.fromJson<int>(json['typeId']),
+      activityId: serializer.fromJson<int>(json['activityId']),
+      materialTypeId: serializer.fromJson<int>(json['materialTypeId']),
+      quantity: serializer.fromJson<int>(json['quantity']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'typeId': serializer.toJson<int>(typeId),
+      'activityId': serializer.toJson<int>(activityId),
+      'materialTypeId': serializer.toJson<int>(materialTypeId),
+      'quantity': serializer.toJson<int>(quantity),
+    };
+  }
+
+  SdeIndustryActivityMaterial copyWith({
+    int? typeId,
+    int? activityId,
+    int? materialTypeId,
+    int? quantity,
+  }) => SdeIndustryActivityMaterial(
+    typeId: typeId ?? this.typeId,
+    activityId: activityId ?? this.activityId,
+    materialTypeId: materialTypeId ?? this.materialTypeId,
+    quantity: quantity ?? this.quantity,
+  );
+  SdeIndustryActivityMaterial copyWithCompanion(
+    SdeIndustryActivityMaterialsCompanion data,
+  ) {
+    return SdeIndustryActivityMaterial(
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      activityId: data.activityId.present
+          ? data.activityId.value
+          : this.activityId,
+      materialTypeId: data.materialTypeId.present
+          ? data.materialTypeId.value
+          : this.materialTypeId,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeIndustryActivityMaterial(')
+          ..write('typeId: $typeId, ')
+          ..write('activityId: $activityId, ')
+          ..write('materialTypeId: $materialTypeId, ')
+          ..write('quantity: $quantity')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(typeId, activityId, materialTypeId, quantity);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SdeIndustryActivityMaterial &&
+          other.typeId == this.typeId &&
+          other.activityId == this.activityId &&
+          other.materialTypeId == this.materialTypeId &&
+          other.quantity == this.quantity);
+}
+
+class SdeIndustryActivityMaterialsCompanion
+    extends UpdateCompanion<SdeIndustryActivityMaterial> {
+  final Value<int> typeId;
+  final Value<int> activityId;
+  final Value<int> materialTypeId;
+  final Value<int> quantity;
+  final Value<int> rowid;
+  const SdeIndustryActivityMaterialsCompanion({
+    this.typeId = const Value.absent(),
+    this.activityId = const Value.absent(),
+    this.materialTypeId = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SdeIndustryActivityMaterialsCompanion.insert({
+    required int typeId,
+    required int activityId,
+    required int materialTypeId,
+    required int quantity,
+    this.rowid = const Value.absent(),
+  }) : typeId = Value(typeId),
+       activityId = Value(activityId),
+       materialTypeId = Value(materialTypeId),
+       quantity = Value(quantity);
+  static Insertable<SdeIndustryActivityMaterial> custom({
+    Expression<int>? typeId,
+    Expression<int>? activityId,
+    Expression<int>? materialTypeId,
+    Expression<int>? quantity,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (typeId != null) 'type_id': typeId,
+      if (activityId != null) 'activity_id': activityId,
+      if (materialTypeId != null) 'material_type_id': materialTypeId,
+      if (quantity != null) 'quantity': quantity,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SdeIndustryActivityMaterialsCompanion copyWith({
+    Value<int>? typeId,
+    Value<int>? activityId,
+    Value<int>? materialTypeId,
+    Value<int>? quantity,
+    Value<int>? rowid,
+  }) {
+    return SdeIndustryActivityMaterialsCompanion(
+      typeId: typeId ?? this.typeId,
+      activityId: activityId ?? this.activityId,
+      materialTypeId: materialTypeId ?? this.materialTypeId,
+      quantity: quantity ?? this.quantity,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (activityId.present) {
+      map['activity_id'] = Variable<int>(activityId.value);
+    }
+    if (materialTypeId.present) {
+      map['material_type_id'] = Variable<int>(materialTypeId.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<int>(quantity.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeIndustryActivityMaterialsCompanion(')
+          ..write('typeId: $typeId, ')
+          ..write('activityId: $activityId, ')
+          ..write('materialTypeId: $materialTypeId, ')
+          ..write('quantity: $quantity, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SdeIndustryActivityProbabilitiesTable
+    extends SdeIndustryActivityProbabilities
+    with
+        TableInfo<
+          $SdeIndustryActivityProbabilitiesTable,
+          SdeIndustryActivityProbability
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SdeIndustryActivityProbabilitiesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+    'type_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _activityIdMeta = const VerificationMeta(
+    'activityId',
+  );
+  @override
+  late final GeneratedColumn<int> activityId = GeneratedColumn<int>(
+    'activity_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _productTypeIdMeta = const VerificationMeta(
+    'productTypeId',
+  );
+  @override
+  late final GeneratedColumn<int> productTypeId = GeneratedColumn<int>(
+    'product_type_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _probabilityMeta = const VerificationMeta(
+    'probability',
+  );
+  @override
+  late final GeneratedColumn<double> probability = GeneratedColumn<double>(
+    'probability',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    typeId,
+    activityId,
+    productTypeId,
+    probability,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sde_industry_activity_probabilities';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SdeIndustryActivityProbability> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('type_id')) {
+      context.handle(
+        _typeIdMeta,
+        typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeIdMeta);
+    }
+    if (data.containsKey('activity_id')) {
+      context.handle(
+        _activityIdMeta,
+        activityId.isAcceptableOrUnknown(data['activity_id']!, _activityIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_activityIdMeta);
+    }
+    if (data.containsKey('product_type_id')) {
+      context.handle(
+        _productTypeIdMeta,
+        productTypeId.isAcceptableOrUnknown(
+          data['product_type_id']!,
+          _productTypeIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_productTypeIdMeta);
+    }
+    if (data.containsKey('probability')) {
+      context.handle(
+        _probabilityMeta,
+        probability.isAcceptableOrUnknown(
+          data['probability']!,
+          _probabilityMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_probabilityMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {typeId, activityId, productTypeId};
+  @override
+  SdeIndustryActivityProbability map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SdeIndustryActivityProbability(
+      typeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}type_id'],
+      )!,
+      activityId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}activity_id'],
+      )!,
+      productTypeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}product_type_id'],
+      )!,
+      probability: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}probability'],
+      )!,
+    );
+  }
+
+  @override
+  $SdeIndustryActivityProbabilitiesTable createAlias(String alias) {
+    return $SdeIndustryActivityProbabilitiesTable(attachedDatabase, alias);
+  }
+}
+
+class SdeIndustryActivityProbability extends DataClass
+    implements Insertable<SdeIndustryActivityProbability> {
+  final int typeId;
+  final int activityId;
+  final int productTypeId;
+  final double probability;
+  const SdeIndustryActivityProbability({
+    required this.typeId,
+    required this.activityId,
+    required this.productTypeId,
+    required this.probability,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['type_id'] = Variable<int>(typeId);
+    map['activity_id'] = Variable<int>(activityId);
+    map['product_type_id'] = Variable<int>(productTypeId);
+    map['probability'] = Variable<double>(probability);
+    return map;
+  }
+
+  SdeIndustryActivityProbabilitiesCompanion toCompanion(bool nullToAbsent) {
+    return SdeIndustryActivityProbabilitiesCompanion(
+      typeId: Value(typeId),
+      activityId: Value(activityId),
+      productTypeId: Value(productTypeId),
+      probability: Value(probability),
+    );
+  }
+
+  factory SdeIndustryActivityProbability.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SdeIndustryActivityProbability(
+      typeId: serializer.fromJson<int>(json['typeId']),
+      activityId: serializer.fromJson<int>(json['activityId']),
+      productTypeId: serializer.fromJson<int>(json['productTypeId']),
+      probability: serializer.fromJson<double>(json['probability']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'typeId': serializer.toJson<int>(typeId),
+      'activityId': serializer.toJson<int>(activityId),
+      'productTypeId': serializer.toJson<int>(productTypeId),
+      'probability': serializer.toJson<double>(probability),
+    };
+  }
+
+  SdeIndustryActivityProbability copyWith({
+    int? typeId,
+    int? activityId,
+    int? productTypeId,
+    double? probability,
+  }) => SdeIndustryActivityProbability(
+    typeId: typeId ?? this.typeId,
+    activityId: activityId ?? this.activityId,
+    productTypeId: productTypeId ?? this.productTypeId,
+    probability: probability ?? this.probability,
+  );
+  SdeIndustryActivityProbability copyWithCompanion(
+    SdeIndustryActivityProbabilitiesCompanion data,
+  ) {
+    return SdeIndustryActivityProbability(
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      activityId: data.activityId.present
+          ? data.activityId.value
+          : this.activityId,
+      productTypeId: data.productTypeId.present
+          ? data.productTypeId.value
+          : this.productTypeId,
+      probability: data.probability.present
+          ? data.probability.value
+          : this.probability,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeIndustryActivityProbability(')
+          ..write('typeId: $typeId, ')
+          ..write('activityId: $activityId, ')
+          ..write('productTypeId: $productTypeId, ')
+          ..write('probability: $probability')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(typeId, activityId, productTypeId, probability);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SdeIndustryActivityProbability &&
+          other.typeId == this.typeId &&
+          other.activityId == this.activityId &&
+          other.productTypeId == this.productTypeId &&
+          other.probability == this.probability);
+}
+
+class SdeIndustryActivityProbabilitiesCompanion
+    extends UpdateCompanion<SdeIndustryActivityProbability> {
+  final Value<int> typeId;
+  final Value<int> activityId;
+  final Value<int> productTypeId;
+  final Value<double> probability;
+  final Value<int> rowid;
+  const SdeIndustryActivityProbabilitiesCompanion({
+    this.typeId = const Value.absent(),
+    this.activityId = const Value.absent(),
+    this.productTypeId = const Value.absent(),
+    this.probability = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SdeIndustryActivityProbabilitiesCompanion.insert({
+    required int typeId,
+    required int activityId,
+    required int productTypeId,
+    required double probability,
+    this.rowid = const Value.absent(),
+  }) : typeId = Value(typeId),
+       activityId = Value(activityId),
+       productTypeId = Value(productTypeId),
+       probability = Value(probability);
+  static Insertable<SdeIndustryActivityProbability> custom({
+    Expression<int>? typeId,
+    Expression<int>? activityId,
+    Expression<int>? productTypeId,
+    Expression<double>? probability,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (typeId != null) 'type_id': typeId,
+      if (activityId != null) 'activity_id': activityId,
+      if (productTypeId != null) 'product_type_id': productTypeId,
+      if (probability != null) 'probability': probability,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SdeIndustryActivityProbabilitiesCompanion copyWith({
+    Value<int>? typeId,
+    Value<int>? activityId,
+    Value<int>? productTypeId,
+    Value<double>? probability,
+    Value<int>? rowid,
+  }) {
+    return SdeIndustryActivityProbabilitiesCompanion(
+      typeId: typeId ?? this.typeId,
+      activityId: activityId ?? this.activityId,
+      productTypeId: productTypeId ?? this.productTypeId,
+      probability: probability ?? this.probability,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (activityId.present) {
+      map['activity_id'] = Variable<int>(activityId.value);
+    }
+    if (productTypeId.present) {
+      map['product_type_id'] = Variable<int>(productTypeId.value);
+    }
+    if (probability.present) {
+      map['probability'] = Variable<double>(probability.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeIndustryActivityProbabilitiesCompanion(')
+          ..write('typeId: $typeId, ')
+          ..write('activityId: $activityId, ')
+          ..write('productTypeId: $productTypeId, ')
+          ..write('probability: $probability, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SdeIndustryActivityProductsTable extends SdeIndustryActivityProducts
+    with
+        TableInfo<
+          $SdeIndustryActivityProductsTable,
+          SdeIndustryActivityProduct
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SdeIndustryActivityProductsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+    'type_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _activityIdMeta = const VerificationMeta(
+    'activityId',
+  );
+  @override
+  late final GeneratedColumn<int> activityId = GeneratedColumn<int>(
+    'activity_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _productTypeIdMeta = const VerificationMeta(
+    'productTypeId',
+  );
+  @override
+  late final GeneratedColumn<int> productTypeId = GeneratedColumn<int>(
+    'product_type_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _quantityMeta = const VerificationMeta(
+    'quantity',
+  );
+  @override
+  late final GeneratedColumn<int> quantity = GeneratedColumn<int>(
+    'quantity',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    typeId,
+    activityId,
+    productTypeId,
+    quantity,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sde_industry_activity_products';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SdeIndustryActivityProduct> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('type_id')) {
+      context.handle(
+        _typeIdMeta,
+        typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeIdMeta);
+    }
+    if (data.containsKey('activity_id')) {
+      context.handle(
+        _activityIdMeta,
+        activityId.isAcceptableOrUnknown(data['activity_id']!, _activityIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_activityIdMeta);
+    }
+    if (data.containsKey('product_type_id')) {
+      context.handle(
+        _productTypeIdMeta,
+        productTypeId.isAcceptableOrUnknown(
+          data['product_type_id']!,
+          _productTypeIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_productTypeIdMeta);
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(
+        _quantityMeta,
+        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_quantityMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {typeId, activityId, productTypeId};
+  @override
+  SdeIndustryActivityProduct map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SdeIndustryActivityProduct(
+      typeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}type_id'],
+      )!,
+      activityId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}activity_id'],
+      )!,
+      productTypeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}product_type_id'],
+      )!,
+      quantity: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity'],
+      )!,
+    );
+  }
+
+  @override
+  $SdeIndustryActivityProductsTable createAlias(String alias) {
+    return $SdeIndustryActivityProductsTable(attachedDatabase, alias);
+  }
+}
+
+class SdeIndustryActivityProduct extends DataClass
+    implements Insertable<SdeIndustryActivityProduct> {
+  final int typeId;
+  final int activityId;
+  final int productTypeId;
+  final int quantity;
+  const SdeIndustryActivityProduct({
+    required this.typeId,
+    required this.activityId,
+    required this.productTypeId,
+    required this.quantity,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['type_id'] = Variable<int>(typeId);
+    map['activity_id'] = Variable<int>(activityId);
+    map['product_type_id'] = Variable<int>(productTypeId);
+    map['quantity'] = Variable<int>(quantity);
+    return map;
+  }
+
+  SdeIndustryActivityProductsCompanion toCompanion(bool nullToAbsent) {
+    return SdeIndustryActivityProductsCompanion(
+      typeId: Value(typeId),
+      activityId: Value(activityId),
+      productTypeId: Value(productTypeId),
+      quantity: Value(quantity),
+    );
+  }
+
+  factory SdeIndustryActivityProduct.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SdeIndustryActivityProduct(
+      typeId: serializer.fromJson<int>(json['typeId']),
+      activityId: serializer.fromJson<int>(json['activityId']),
+      productTypeId: serializer.fromJson<int>(json['productTypeId']),
+      quantity: serializer.fromJson<int>(json['quantity']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'typeId': serializer.toJson<int>(typeId),
+      'activityId': serializer.toJson<int>(activityId),
+      'productTypeId': serializer.toJson<int>(productTypeId),
+      'quantity': serializer.toJson<int>(quantity),
+    };
+  }
+
+  SdeIndustryActivityProduct copyWith({
+    int? typeId,
+    int? activityId,
+    int? productTypeId,
+    int? quantity,
+  }) => SdeIndustryActivityProduct(
+    typeId: typeId ?? this.typeId,
+    activityId: activityId ?? this.activityId,
+    productTypeId: productTypeId ?? this.productTypeId,
+    quantity: quantity ?? this.quantity,
+  );
+  SdeIndustryActivityProduct copyWithCompanion(
+    SdeIndustryActivityProductsCompanion data,
+  ) {
+    return SdeIndustryActivityProduct(
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      activityId: data.activityId.present
+          ? data.activityId.value
+          : this.activityId,
+      productTypeId: data.productTypeId.present
+          ? data.productTypeId.value
+          : this.productTypeId,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeIndustryActivityProduct(')
+          ..write('typeId: $typeId, ')
+          ..write('activityId: $activityId, ')
+          ..write('productTypeId: $productTypeId, ')
+          ..write('quantity: $quantity')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(typeId, activityId, productTypeId, quantity);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SdeIndustryActivityProduct &&
+          other.typeId == this.typeId &&
+          other.activityId == this.activityId &&
+          other.productTypeId == this.productTypeId &&
+          other.quantity == this.quantity);
+}
+
+class SdeIndustryActivityProductsCompanion
+    extends UpdateCompanion<SdeIndustryActivityProduct> {
+  final Value<int> typeId;
+  final Value<int> activityId;
+  final Value<int> productTypeId;
+  final Value<int> quantity;
+  final Value<int> rowid;
+  const SdeIndustryActivityProductsCompanion({
+    this.typeId = const Value.absent(),
+    this.activityId = const Value.absent(),
+    this.productTypeId = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SdeIndustryActivityProductsCompanion.insert({
+    required int typeId,
+    required int activityId,
+    required int productTypeId,
+    required int quantity,
+    this.rowid = const Value.absent(),
+  }) : typeId = Value(typeId),
+       activityId = Value(activityId),
+       productTypeId = Value(productTypeId),
+       quantity = Value(quantity);
+  static Insertable<SdeIndustryActivityProduct> custom({
+    Expression<int>? typeId,
+    Expression<int>? activityId,
+    Expression<int>? productTypeId,
+    Expression<int>? quantity,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (typeId != null) 'type_id': typeId,
+      if (activityId != null) 'activity_id': activityId,
+      if (productTypeId != null) 'product_type_id': productTypeId,
+      if (quantity != null) 'quantity': quantity,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SdeIndustryActivityProductsCompanion copyWith({
+    Value<int>? typeId,
+    Value<int>? activityId,
+    Value<int>? productTypeId,
+    Value<int>? quantity,
+    Value<int>? rowid,
+  }) {
+    return SdeIndustryActivityProductsCompanion(
+      typeId: typeId ?? this.typeId,
+      activityId: activityId ?? this.activityId,
+      productTypeId: productTypeId ?? this.productTypeId,
+      quantity: quantity ?? this.quantity,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (activityId.present) {
+      map['activity_id'] = Variable<int>(activityId.value);
+    }
+    if (productTypeId.present) {
+      map['product_type_id'] = Variable<int>(productTypeId.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<int>(quantity.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeIndustryActivityProductsCompanion(')
+          ..write('typeId: $typeId, ')
+          ..write('activityId: $activityId, ')
+          ..write('productTypeId: $productTypeId, ')
+          ..write('quantity: $quantity, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SdeIndustryActivitySkillsTable extends SdeIndustryActivitySkills
+    with TableInfo<$SdeIndustryActivitySkillsTable, SdeIndustryActivitySkill> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SdeIndustryActivitySkillsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+    'type_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _activityIdMeta = const VerificationMeta(
+    'activityId',
+  );
+  @override
+  late final GeneratedColumn<int> activityId = GeneratedColumn<int>(
+    'activity_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _skillIdMeta = const VerificationMeta(
+    'skillId',
+  );
+  @override
+  late final GeneratedColumn<int> skillId = GeneratedColumn<int>(
+    'skill_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _levelMeta = const VerificationMeta('level');
+  @override
+  late final GeneratedColumn<int> level = GeneratedColumn<int>(
+    'level',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [typeId, activityId, skillId, level];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sde_industry_activity_skills';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SdeIndustryActivitySkill> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('type_id')) {
+      context.handle(
+        _typeIdMeta,
+        typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeIdMeta);
+    }
+    if (data.containsKey('activity_id')) {
+      context.handle(
+        _activityIdMeta,
+        activityId.isAcceptableOrUnknown(data['activity_id']!, _activityIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_activityIdMeta);
+    }
+    if (data.containsKey('skill_id')) {
+      context.handle(
+        _skillIdMeta,
+        skillId.isAcceptableOrUnknown(data['skill_id']!, _skillIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_skillIdMeta);
+    }
+    if (data.containsKey('level')) {
+      context.handle(
+        _levelMeta,
+        level.isAcceptableOrUnknown(data['level']!, _levelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_levelMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {typeId, activityId, skillId};
+  @override
+  SdeIndustryActivitySkill map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SdeIndustryActivitySkill(
+      typeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}type_id'],
+      )!,
+      activityId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}activity_id'],
+      )!,
+      skillId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}skill_id'],
+      )!,
+      level: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}level'],
+      )!,
+    );
+  }
+
+  @override
+  $SdeIndustryActivitySkillsTable createAlias(String alias) {
+    return $SdeIndustryActivitySkillsTable(attachedDatabase, alias);
+  }
+}
+
+class SdeIndustryActivitySkill extends DataClass
+    implements Insertable<SdeIndustryActivitySkill> {
+  final int typeId;
+  final int activityId;
+  final int skillId;
+  final int level;
+  const SdeIndustryActivitySkill({
+    required this.typeId,
+    required this.activityId,
+    required this.skillId,
+    required this.level,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['type_id'] = Variable<int>(typeId);
+    map['activity_id'] = Variable<int>(activityId);
+    map['skill_id'] = Variable<int>(skillId);
+    map['level'] = Variable<int>(level);
+    return map;
+  }
+
+  SdeIndustryActivitySkillsCompanion toCompanion(bool nullToAbsent) {
+    return SdeIndustryActivitySkillsCompanion(
+      typeId: Value(typeId),
+      activityId: Value(activityId),
+      skillId: Value(skillId),
+      level: Value(level),
+    );
+  }
+
+  factory SdeIndustryActivitySkill.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SdeIndustryActivitySkill(
+      typeId: serializer.fromJson<int>(json['typeId']),
+      activityId: serializer.fromJson<int>(json['activityId']),
+      skillId: serializer.fromJson<int>(json['skillId']),
+      level: serializer.fromJson<int>(json['level']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'typeId': serializer.toJson<int>(typeId),
+      'activityId': serializer.toJson<int>(activityId),
+      'skillId': serializer.toJson<int>(skillId),
+      'level': serializer.toJson<int>(level),
+    };
+  }
+
+  SdeIndustryActivitySkill copyWith({
+    int? typeId,
+    int? activityId,
+    int? skillId,
+    int? level,
+  }) => SdeIndustryActivitySkill(
+    typeId: typeId ?? this.typeId,
+    activityId: activityId ?? this.activityId,
+    skillId: skillId ?? this.skillId,
+    level: level ?? this.level,
+  );
+  SdeIndustryActivitySkill copyWithCompanion(
+    SdeIndustryActivitySkillsCompanion data,
+  ) {
+    return SdeIndustryActivitySkill(
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      activityId: data.activityId.present
+          ? data.activityId.value
+          : this.activityId,
+      skillId: data.skillId.present ? data.skillId.value : this.skillId,
+      level: data.level.present ? data.level.value : this.level,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeIndustryActivitySkill(')
+          ..write('typeId: $typeId, ')
+          ..write('activityId: $activityId, ')
+          ..write('skillId: $skillId, ')
+          ..write('level: $level')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(typeId, activityId, skillId, level);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SdeIndustryActivitySkill &&
+          other.typeId == this.typeId &&
+          other.activityId == this.activityId &&
+          other.skillId == this.skillId &&
+          other.level == this.level);
+}
+
+class SdeIndustryActivitySkillsCompanion
+    extends UpdateCompanion<SdeIndustryActivitySkill> {
+  final Value<int> typeId;
+  final Value<int> activityId;
+  final Value<int> skillId;
+  final Value<int> level;
+  final Value<int> rowid;
+  const SdeIndustryActivitySkillsCompanion({
+    this.typeId = const Value.absent(),
+    this.activityId = const Value.absent(),
+    this.skillId = const Value.absent(),
+    this.level = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SdeIndustryActivitySkillsCompanion.insert({
+    required int typeId,
+    required int activityId,
+    required int skillId,
+    required int level,
+    this.rowid = const Value.absent(),
+  }) : typeId = Value(typeId),
+       activityId = Value(activityId),
+       skillId = Value(skillId),
+       level = Value(level);
+  static Insertable<SdeIndustryActivitySkill> custom({
+    Expression<int>? typeId,
+    Expression<int>? activityId,
+    Expression<int>? skillId,
+    Expression<int>? level,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (typeId != null) 'type_id': typeId,
+      if (activityId != null) 'activity_id': activityId,
+      if (skillId != null) 'skill_id': skillId,
+      if (level != null) 'level': level,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SdeIndustryActivitySkillsCompanion copyWith({
+    Value<int>? typeId,
+    Value<int>? activityId,
+    Value<int>? skillId,
+    Value<int>? level,
+    Value<int>? rowid,
+  }) {
+    return SdeIndustryActivitySkillsCompanion(
+      typeId: typeId ?? this.typeId,
+      activityId: activityId ?? this.activityId,
+      skillId: skillId ?? this.skillId,
+      level: level ?? this.level,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (activityId.present) {
+      map['activity_id'] = Variable<int>(activityId.value);
+    }
+    if (skillId.present) {
+      map['skill_id'] = Variable<int>(skillId.value);
+    }
+    if (level.present) {
+      map['level'] = Variable<int>(level.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeIndustryActivitySkillsCompanion(')
+          ..write('typeId: $typeId, ')
+          ..write('activityId: $activityId, ')
+          ..write('skillId: $skillId, ')
+          ..write('level: $level, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$SdeDatabase extends GeneratedDatabase {
   _$SdeDatabase(QueryExecutor e) : super(e);
   $SdeDatabaseManager get managers => $SdeDatabaseManager(this);
@@ -2012,6 +3613,18 @@ abstract class _$SdeDatabase extends GeneratedDatabase {
   late final $SdeTypeAttributesTable sdeTypeAttributes =
       $SdeTypeAttributesTable(this);
   late final $SdeTypeEffectsTable sdeTypeEffects = $SdeTypeEffectsTable(this);
+  late final $SdeIndustryActivitiesTable sdeIndustryActivities =
+      $SdeIndustryActivitiesTable(this);
+  late final $SdeIndustryActivityMaterialsTable sdeIndustryActivityMaterials =
+      $SdeIndustryActivityMaterialsTable(this);
+  late final $SdeIndustryActivityProbabilitiesTable
+  sdeIndustryActivityProbabilities = $SdeIndustryActivityProbabilitiesTable(
+    this,
+  );
+  late final $SdeIndustryActivityProductsTable sdeIndustryActivityProducts =
+      $SdeIndustryActivityProductsTable(this);
+  late final $SdeIndustryActivitySkillsTable sdeIndustryActivitySkills =
+      $SdeIndustryActivitySkillsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2024,6 +3637,11 @@ abstract class _$SdeDatabase extends GeneratedDatabase {
     sdeSkillRequirements,
     sdeTypeAttributes,
     sdeTypeEffects,
+    sdeIndustryActivities,
+    sdeIndustryActivityMaterials,
+    sdeIndustryActivityProbabilities,
+    sdeIndustryActivityProducts,
+    sdeIndustryActivitySkills,
   ];
 }
 
@@ -3214,6 +4832,1005 @@ typedef $$SdeTypeEffectsTableProcessedTableManager =
       SdeTypeEffect,
       PrefetchHooks Function()
     >;
+typedef $$SdeIndustryActivitiesTableCreateCompanionBuilder =
+    SdeIndustryActivitiesCompanion Function({
+      required int typeId,
+      required int activityId,
+      required int time,
+      Value<int> rowid,
+    });
+typedef $$SdeIndustryActivitiesTableUpdateCompanionBuilder =
+    SdeIndustryActivitiesCompanion Function({
+      Value<int> typeId,
+      Value<int> activityId,
+      Value<int> time,
+      Value<int> rowid,
+    });
+
+class $$SdeIndustryActivitiesTableFilterComposer
+    extends Composer<_$SdeDatabase, $SdeIndustryActivitiesTable> {
+  $$SdeIndustryActivitiesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get activityId => $composableBuilder(
+    column: $table.activityId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get time => $composableBuilder(
+    column: $table.time,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SdeIndustryActivitiesTableOrderingComposer
+    extends Composer<_$SdeDatabase, $SdeIndustryActivitiesTable> {
+  $$SdeIndustryActivitiesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get activityId => $composableBuilder(
+    column: $table.activityId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get time => $composableBuilder(
+    column: $table.time,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SdeIndustryActivitiesTableAnnotationComposer
+    extends Composer<_$SdeDatabase, $SdeIndustryActivitiesTable> {
+  $$SdeIndustryActivitiesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<int> get activityId => $composableBuilder(
+    column: $table.activityId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get time =>
+      $composableBuilder(column: $table.time, builder: (column) => column);
+}
+
+class $$SdeIndustryActivitiesTableTableManager
+    extends
+        RootTableManager<
+          _$SdeDatabase,
+          $SdeIndustryActivitiesTable,
+          SdeIndustryActivity,
+          $$SdeIndustryActivitiesTableFilterComposer,
+          $$SdeIndustryActivitiesTableOrderingComposer,
+          $$SdeIndustryActivitiesTableAnnotationComposer,
+          $$SdeIndustryActivitiesTableCreateCompanionBuilder,
+          $$SdeIndustryActivitiesTableUpdateCompanionBuilder,
+          (
+            SdeIndustryActivity,
+            BaseReferences<
+              _$SdeDatabase,
+              $SdeIndustryActivitiesTable,
+              SdeIndustryActivity
+            >,
+          ),
+          SdeIndustryActivity,
+          PrefetchHooks Function()
+        > {
+  $$SdeIndustryActivitiesTableTableManager(
+    _$SdeDatabase db,
+    $SdeIndustryActivitiesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SdeIndustryActivitiesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$SdeIndustryActivitiesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$SdeIndustryActivitiesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> typeId = const Value.absent(),
+                Value<int> activityId = const Value.absent(),
+                Value<int> time = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SdeIndustryActivitiesCompanion(
+                typeId: typeId,
+                activityId: activityId,
+                time: time,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int typeId,
+                required int activityId,
+                required int time,
+                Value<int> rowid = const Value.absent(),
+              }) => SdeIndustryActivitiesCompanion.insert(
+                typeId: typeId,
+                activityId: activityId,
+                time: time,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SdeIndustryActivitiesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$SdeDatabase,
+      $SdeIndustryActivitiesTable,
+      SdeIndustryActivity,
+      $$SdeIndustryActivitiesTableFilterComposer,
+      $$SdeIndustryActivitiesTableOrderingComposer,
+      $$SdeIndustryActivitiesTableAnnotationComposer,
+      $$SdeIndustryActivitiesTableCreateCompanionBuilder,
+      $$SdeIndustryActivitiesTableUpdateCompanionBuilder,
+      (
+        SdeIndustryActivity,
+        BaseReferences<
+          _$SdeDatabase,
+          $SdeIndustryActivitiesTable,
+          SdeIndustryActivity
+        >,
+      ),
+      SdeIndustryActivity,
+      PrefetchHooks Function()
+    >;
+typedef $$SdeIndustryActivityMaterialsTableCreateCompanionBuilder =
+    SdeIndustryActivityMaterialsCompanion Function({
+      required int typeId,
+      required int activityId,
+      required int materialTypeId,
+      required int quantity,
+      Value<int> rowid,
+    });
+typedef $$SdeIndustryActivityMaterialsTableUpdateCompanionBuilder =
+    SdeIndustryActivityMaterialsCompanion Function({
+      Value<int> typeId,
+      Value<int> activityId,
+      Value<int> materialTypeId,
+      Value<int> quantity,
+      Value<int> rowid,
+    });
+
+class $$SdeIndustryActivityMaterialsTableFilterComposer
+    extends Composer<_$SdeDatabase, $SdeIndustryActivityMaterialsTable> {
+  $$SdeIndustryActivityMaterialsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get activityId => $composableBuilder(
+    column: $table.activityId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get materialTypeId => $composableBuilder(
+    column: $table.materialTypeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SdeIndustryActivityMaterialsTableOrderingComposer
+    extends Composer<_$SdeDatabase, $SdeIndustryActivityMaterialsTable> {
+  $$SdeIndustryActivityMaterialsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get activityId => $composableBuilder(
+    column: $table.activityId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get materialTypeId => $composableBuilder(
+    column: $table.materialTypeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SdeIndustryActivityMaterialsTableAnnotationComposer
+    extends Composer<_$SdeDatabase, $SdeIndustryActivityMaterialsTable> {
+  $$SdeIndustryActivityMaterialsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<int> get activityId => $composableBuilder(
+    column: $table.activityId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get materialTypeId => $composableBuilder(
+    column: $table.materialTypeId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+}
+
+class $$SdeIndustryActivityMaterialsTableTableManager
+    extends
+        RootTableManager<
+          _$SdeDatabase,
+          $SdeIndustryActivityMaterialsTable,
+          SdeIndustryActivityMaterial,
+          $$SdeIndustryActivityMaterialsTableFilterComposer,
+          $$SdeIndustryActivityMaterialsTableOrderingComposer,
+          $$SdeIndustryActivityMaterialsTableAnnotationComposer,
+          $$SdeIndustryActivityMaterialsTableCreateCompanionBuilder,
+          $$SdeIndustryActivityMaterialsTableUpdateCompanionBuilder,
+          (
+            SdeIndustryActivityMaterial,
+            BaseReferences<
+              _$SdeDatabase,
+              $SdeIndustryActivityMaterialsTable,
+              SdeIndustryActivityMaterial
+            >,
+          ),
+          SdeIndustryActivityMaterial,
+          PrefetchHooks Function()
+        > {
+  $$SdeIndustryActivityMaterialsTableTableManager(
+    _$SdeDatabase db,
+    $SdeIndustryActivityMaterialsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SdeIndustryActivityMaterialsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$SdeIndustryActivityMaterialsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$SdeIndustryActivityMaterialsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> typeId = const Value.absent(),
+                Value<int> activityId = const Value.absent(),
+                Value<int> materialTypeId = const Value.absent(),
+                Value<int> quantity = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SdeIndustryActivityMaterialsCompanion(
+                typeId: typeId,
+                activityId: activityId,
+                materialTypeId: materialTypeId,
+                quantity: quantity,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int typeId,
+                required int activityId,
+                required int materialTypeId,
+                required int quantity,
+                Value<int> rowid = const Value.absent(),
+              }) => SdeIndustryActivityMaterialsCompanion.insert(
+                typeId: typeId,
+                activityId: activityId,
+                materialTypeId: materialTypeId,
+                quantity: quantity,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SdeIndustryActivityMaterialsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$SdeDatabase,
+      $SdeIndustryActivityMaterialsTable,
+      SdeIndustryActivityMaterial,
+      $$SdeIndustryActivityMaterialsTableFilterComposer,
+      $$SdeIndustryActivityMaterialsTableOrderingComposer,
+      $$SdeIndustryActivityMaterialsTableAnnotationComposer,
+      $$SdeIndustryActivityMaterialsTableCreateCompanionBuilder,
+      $$SdeIndustryActivityMaterialsTableUpdateCompanionBuilder,
+      (
+        SdeIndustryActivityMaterial,
+        BaseReferences<
+          _$SdeDatabase,
+          $SdeIndustryActivityMaterialsTable,
+          SdeIndustryActivityMaterial
+        >,
+      ),
+      SdeIndustryActivityMaterial,
+      PrefetchHooks Function()
+    >;
+typedef $$SdeIndustryActivityProbabilitiesTableCreateCompanionBuilder =
+    SdeIndustryActivityProbabilitiesCompanion Function({
+      required int typeId,
+      required int activityId,
+      required int productTypeId,
+      required double probability,
+      Value<int> rowid,
+    });
+typedef $$SdeIndustryActivityProbabilitiesTableUpdateCompanionBuilder =
+    SdeIndustryActivityProbabilitiesCompanion Function({
+      Value<int> typeId,
+      Value<int> activityId,
+      Value<int> productTypeId,
+      Value<double> probability,
+      Value<int> rowid,
+    });
+
+class $$SdeIndustryActivityProbabilitiesTableFilterComposer
+    extends Composer<_$SdeDatabase, $SdeIndustryActivityProbabilitiesTable> {
+  $$SdeIndustryActivityProbabilitiesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get activityId => $composableBuilder(
+    column: $table.activityId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get productTypeId => $composableBuilder(
+    column: $table.productTypeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get probability => $composableBuilder(
+    column: $table.probability,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SdeIndustryActivityProbabilitiesTableOrderingComposer
+    extends Composer<_$SdeDatabase, $SdeIndustryActivityProbabilitiesTable> {
+  $$SdeIndustryActivityProbabilitiesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get activityId => $composableBuilder(
+    column: $table.activityId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get productTypeId => $composableBuilder(
+    column: $table.productTypeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get probability => $composableBuilder(
+    column: $table.probability,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SdeIndustryActivityProbabilitiesTableAnnotationComposer
+    extends Composer<_$SdeDatabase, $SdeIndustryActivityProbabilitiesTable> {
+  $$SdeIndustryActivityProbabilitiesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<int> get activityId => $composableBuilder(
+    column: $table.activityId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get productTypeId => $composableBuilder(
+    column: $table.productTypeId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get probability => $composableBuilder(
+    column: $table.probability,
+    builder: (column) => column,
+  );
+}
+
+class $$SdeIndustryActivityProbabilitiesTableTableManager
+    extends
+        RootTableManager<
+          _$SdeDatabase,
+          $SdeIndustryActivityProbabilitiesTable,
+          SdeIndustryActivityProbability,
+          $$SdeIndustryActivityProbabilitiesTableFilterComposer,
+          $$SdeIndustryActivityProbabilitiesTableOrderingComposer,
+          $$SdeIndustryActivityProbabilitiesTableAnnotationComposer,
+          $$SdeIndustryActivityProbabilitiesTableCreateCompanionBuilder,
+          $$SdeIndustryActivityProbabilitiesTableUpdateCompanionBuilder,
+          (
+            SdeIndustryActivityProbability,
+            BaseReferences<
+              _$SdeDatabase,
+              $SdeIndustryActivityProbabilitiesTable,
+              SdeIndustryActivityProbability
+            >,
+          ),
+          SdeIndustryActivityProbability,
+          PrefetchHooks Function()
+        > {
+  $$SdeIndustryActivityProbabilitiesTableTableManager(
+    _$SdeDatabase db,
+    $SdeIndustryActivityProbabilitiesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SdeIndustryActivityProbabilitiesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$SdeIndustryActivityProbabilitiesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$SdeIndustryActivityProbabilitiesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> typeId = const Value.absent(),
+                Value<int> activityId = const Value.absent(),
+                Value<int> productTypeId = const Value.absent(),
+                Value<double> probability = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SdeIndustryActivityProbabilitiesCompanion(
+                typeId: typeId,
+                activityId: activityId,
+                productTypeId: productTypeId,
+                probability: probability,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int typeId,
+                required int activityId,
+                required int productTypeId,
+                required double probability,
+                Value<int> rowid = const Value.absent(),
+              }) => SdeIndustryActivityProbabilitiesCompanion.insert(
+                typeId: typeId,
+                activityId: activityId,
+                productTypeId: productTypeId,
+                probability: probability,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SdeIndustryActivityProbabilitiesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$SdeDatabase,
+      $SdeIndustryActivityProbabilitiesTable,
+      SdeIndustryActivityProbability,
+      $$SdeIndustryActivityProbabilitiesTableFilterComposer,
+      $$SdeIndustryActivityProbabilitiesTableOrderingComposer,
+      $$SdeIndustryActivityProbabilitiesTableAnnotationComposer,
+      $$SdeIndustryActivityProbabilitiesTableCreateCompanionBuilder,
+      $$SdeIndustryActivityProbabilitiesTableUpdateCompanionBuilder,
+      (
+        SdeIndustryActivityProbability,
+        BaseReferences<
+          _$SdeDatabase,
+          $SdeIndustryActivityProbabilitiesTable,
+          SdeIndustryActivityProbability
+        >,
+      ),
+      SdeIndustryActivityProbability,
+      PrefetchHooks Function()
+    >;
+typedef $$SdeIndustryActivityProductsTableCreateCompanionBuilder =
+    SdeIndustryActivityProductsCompanion Function({
+      required int typeId,
+      required int activityId,
+      required int productTypeId,
+      required int quantity,
+      Value<int> rowid,
+    });
+typedef $$SdeIndustryActivityProductsTableUpdateCompanionBuilder =
+    SdeIndustryActivityProductsCompanion Function({
+      Value<int> typeId,
+      Value<int> activityId,
+      Value<int> productTypeId,
+      Value<int> quantity,
+      Value<int> rowid,
+    });
+
+class $$SdeIndustryActivityProductsTableFilterComposer
+    extends Composer<_$SdeDatabase, $SdeIndustryActivityProductsTable> {
+  $$SdeIndustryActivityProductsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get activityId => $composableBuilder(
+    column: $table.activityId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get productTypeId => $composableBuilder(
+    column: $table.productTypeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SdeIndustryActivityProductsTableOrderingComposer
+    extends Composer<_$SdeDatabase, $SdeIndustryActivityProductsTable> {
+  $$SdeIndustryActivityProductsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get activityId => $composableBuilder(
+    column: $table.activityId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get productTypeId => $composableBuilder(
+    column: $table.productTypeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SdeIndustryActivityProductsTableAnnotationComposer
+    extends Composer<_$SdeDatabase, $SdeIndustryActivityProductsTable> {
+  $$SdeIndustryActivityProductsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<int> get activityId => $composableBuilder(
+    column: $table.activityId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get productTypeId => $composableBuilder(
+    column: $table.productTypeId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+}
+
+class $$SdeIndustryActivityProductsTableTableManager
+    extends
+        RootTableManager<
+          _$SdeDatabase,
+          $SdeIndustryActivityProductsTable,
+          SdeIndustryActivityProduct,
+          $$SdeIndustryActivityProductsTableFilterComposer,
+          $$SdeIndustryActivityProductsTableOrderingComposer,
+          $$SdeIndustryActivityProductsTableAnnotationComposer,
+          $$SdeIndustryActivityProductsTableCreateCompanionBuilder,
+          $$SdeIndustryActivityProductsTableUpdateCompanionBuilder,
+          (
+            SdeIndustryActivityProduct,
+            BaseReferences<
+              _$SdeDatabase,
+              $SdeIndustryActivityProductsTable,
+              SdeIndustryActivityProduct
+            >,
+          ),
+          SdeIndustryActivityProduct,
+          PrefetchHooks Function()
+        > {
+  $$SdeIndustryActivityProductsTableTableManager(
+    _$SdeDatabase db,
+    $SdeIndustryActivityProductsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SdeIndustryActivityProductsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$SdeIndustryActivityProductsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$SdeIndustryActivityProductsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> typeId = const Value.absent(),
+                Value<int> activityId = const Value.absent(),
+                Value<int> productTypeId = const Value.absent(),
+                Value<int> quantity = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SdeIndustryActivityProductsCompanion(
+                typeId: typeId,
+                activityId: activityId,
+                productTypeId: productTypeId,
+                quantity: quantity,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int typeId,
+                required int activityId,
+                required int productTypeId,
+                required int quantity,
+                Value<int> rowid = const Value.absent(),
+              }) => SdeIndustryActivityProductsCompanion.insert(
+                typeId: typeId,
+                activityId: activityId,
+                productTypeId: productTypeId,
+                quantity: quantity,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SdeIndustryActivityProductsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$SdeDatabase,
+      $SdeIndustryActivityProductsTable,
+      SdeIndustryActivityProduct,
+      $$SdeIndustryActivityProductsTableFilterComposer,
+      $$SdeIndustryActivityProductsTableOrderingComposer,
+      $$SdeIndustryActivityProductsTableAnnotationComposer,
+      $$SdeIndustryActivityProductsTableCreateCompanionBuilder,
+      $$SdeIndustryActivityProductsTableUpdateCompanionBuilder,
+      (
+        SdeIndustryActivityProduct,
+        BaseReferences<
+          _$SdeDatabase,
+          $SdeIndustryActivityProductsTable,
+          SdeIndustryActivityProduct
+        >,
+      ),
+      SdeIndustryActivityProduct,
+      PrefetchHooks Function()
+    >;
+typedef $$SdeIndustryActivitySkillsTableCreateCompanionBuilder =
+    SdeIndustryActivitySkillsCompanion Function({
+      required int typeId,
+      required int activityId,
+      required int skillId,
+      required int level,
+      Value<int> rowid,
+    });
+typedef $$SdeIndustryActivitySkillsTableUpdateCompanionBuilder =
+    SdeIndustryActivitySkillsCompanion Function({
+      Value<int> typeId,
+      Value<int> activityId,
+      Value<int> skillId,
+      Value<int> level,
+      Value<int> rowid,
+    });
+
+class $$SdeIndustryActivitySkillsTableFilterComposer
+    extends Composer<_$SdeDatabase, $SdeIndustryActivitySkillsTable> {
+  $$SdeIndustryActivitySkillsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get activityId => $composableBuilder(
+    column: $table.activityId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get skillId => $composableBuilder(
+    column: $table.skillId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get level => $composableBuilder(
+    column: $table.level,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SdeIndustryActivitySkillsTableOrderingComposer
+    extends Composer<_$SdeDatabase, $SdeIndustryActivitySkillsTable> {
+  $$SdeIndustryActivitySkillsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get activityId => $composableBuilder(
+    column: $table.activityId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get skillId => $composableBuilder(
+    column: $table.skillId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get level => $composableBuilder(
+    column: $table.level,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SdeIndustryActivitySkillsTableAnnotationComposer
+    extends Composer<_$SdeDatabase, $SdeIndustryActivitySkillsTable> {
+  $$SdeIndustryActivitySkillsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<int> get activityId => $composableBuilder(
+    column: $table.activityId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get skillId =>
+      $composableBuilder(column: $table.skillId, builder: (column) => column);
+
+  GeneratedColumn<int> get level =>
+      $composableBuilder(column: $table.level, builder: (column) => column);
+}
+
+class $$SdeIndustryActivitySkillsTableTableManager
+    extends
+        RootTableManager<
+          _$SdeDatabase,
+          $SdeIndustryActivitySkillsTable,
+          SdeIndustryActivitySkill,
+          $$SdeIndustryActivitySkillsTableFilterComposer,
+          $$SdeIndustryActivitySkillsTableOrderingComposer,
+          $$SdeIndustryActivitySkillsTableAnnotationComposer,
+          $$SdeIndustryActivitySkillsTableCreateCompanionBuilder,
+          $$SdeIndustryActivitySkillsTableUpdateCompanionBuilder,
+          (
+            SdeIndustryActivitySkill,
+            BaseReferences<
+              _$SdeDatabase,
+              $SdeIndustryActivitySkillsTable,
+              SdeIndustryActivitySkill
+            >,
+          ),
+          SdeIndustryActivitySkill,
+          PrefetchHooks Function()
+        > {
+  $$SdeIndustryActivitySkillsTableTableManager(
+    _$SdeDatabase db,
+    $SdeIndustryActivitySkillsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SdeIndustryActivitySkillsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$SdeIndustryActivitySkillsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$SdeIndustryActivitySkillsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> typeId = const Value.absent(),
+                Value<int> activityId = const Value.absent(),
+                Value<int> skillId = const Value.absent(),
+                Value<int> level = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SdeIndustryActivitySkillsCompanion(
+                typeId: typeId,
+                activityId: activityId,
+                skillId: skillId,
+                level: level,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int typeId,
+                required int activityId,
+                required int skillId,
+                required int level,
+                Value<int> rowid = const Value.absent(),
+              }) => SdeIndustryActivitySkillsCompanion.insert(
+                typeId: typeId,
+                activityId: activityId,
+                skillId: skillId,
+                level: level,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SdeIndustryActivitySkillsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$SdeDatabase,
+      $SdeIndustryActivitySkillsTable,
+      SdeIndustryActivitySkill,
+      $$SdeIndustryActivitySkillsTableFilterComposer,
+      $$SdeIndustryActivitySkillsTableOrderingComposer,
+      $$SdeIndustryActivitySkillsTableAnnotationComposer,
+      $$SdeIndustryActivitySkillsTableCreateCompanionBuilder,
+      $$SdeIndustryActivitySkillsTableUpdateCompanionBuilder,
+      (
+        SdeIndustryActivitySkill,
+        BaseReferences<
+          _$SdeDatabase,
+          $SdeIndustryActivitySkillsTable,
+          SdeIndustryActivitySkill
+        >,
+      ),
+      SdeIndustryActivitySkill,
+      PrefetchHooks Function()
+    >;
 
 class $SdeDatabaseManager {
   final _$SdeDatabase _db;
@@ -3232,4 +5849,29 @@ class $SdeDatabaseManager {
       $$SdeTypeAttributesTableTableManager(_db, _db.sdeTypeAttributes);
   $$SdeTypeEffectsTableTableManager get sdeTypeEffects =>
       $$SdeTypeEffectsTableTableManager(_db, _db.sdeTypeEffects);
+  $$SdeIndustryActivitiesTableTableManager get sdeIndustryActivities =>
+      $$SdeIndustryActivitiesTableTableManager(_db, _db.sdeIndustryActivities);
+  $$SdeIndustryActivityMaterialsTableTableManager
+  get sdeIndustryActivityMaterials =>
+      $$SdeIndustryActivityMaterialsTableTableManager(
+        _db,
+        _db.sdeIndustryActivityMaterials,
+      );
+  $$SdeIndustryActivityProbabilitiesTableTableManager
+  get sdeIndustryActivityProbabilities =>
+      $$SdeIndustryActivityProbabilitiesTableTableManager(
+        _db,
+        _db.sdeIndustryActivityProbabilities,
+      );
+  $$SdeIndustryActivityProductsTableTableManager
+  get sdeIndustryActivityProducts =>
+      $$SdeIndustryActivityProductsTableTableManager(
+        _db,
+        _db.sdeIndustryActivityProducts,
+      );
+  $$SdeIndustryActivitySkillsTableTableManager get sdeIndustryActivitySkills =>
+      $$SdeIndustryActivitySkillsTableTableManager(
+        _db,
+        _db.sdeIndustryActivitySkills,
+      );
 }

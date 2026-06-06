@@ -22,10 +22,7 @@ import 'widgets/skill_browser_dialog.dart';
 /// - Reorder skills (drag-and-drop)
 /// - Add skills button
 class SkillPlanDetailScreen extends ConsumerStatefulWidget {
-  const SkillPlanDetailScreen({
-    required this.planId,
-    super.key,
-  });
+  const SkillPlanDetailScreen({required this.planId, super.key});
 
   final int planId;
 
@@ -37,7 +34,10 @@ class SkillPlanDetailScreen extends ConsumerStatefulWidget {
 class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
   @override
   Widget build(BuildContext context) {
-    Log.d('SKILLS.PLAN_DETAIL', 'SkillPlanDetailScreen.build - planId: ${widget.planId}');
+    Log.d(
+      'SKILLS.PLAN_DETAIL',
+      'SkillPlanDetailScreen.build - planId: ${widget.planId}',
+    );
 
     final plansAsync = ref.watch(skillPlansProvider);
     final entriesAsync = ref.watch(skillPlanEntriesProvider(widget.planId));
@@ -68,7 +68,10 @@ class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Edit Plan',
             onPressed: () {
-              Log.d('SKILLS.PLAN_DETAIL', 'Edit plan tapped - planId: ${widget.planId}');
+              Log.d(
+                'SKILLS.PLAN_DETAIL',
+                'Edit plan tapped - planId: ${widget.planId}',
+              );
               // TODO: Show edit plan dialog
             },
           ),
@@ -90,7 +93,12 @@ class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
               data: (entries) => _buildSkillsList(entries),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stack) {
-                Log.e('SKILLS.PLAN_DETAIL', 'Failed to load plan entries', error, stack);
+                Log.e(
+                  'SKILLS.PLAN_DETAIL',
+                  'Failed to load plan entries',
+                  error,
+                  stack,
+                );
                 return _buildErrorState(error);
               },
             ),
@@ -114,9 +122,7 @@ class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: EveColors.surfaceDefault,
-        border: Border(
-          bottom: BorderSide(color: EveColors.borderSubtle),
-        ),
+        border: Border(bottom: BorderSide(color: EveColors.borderSubtle)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,12 +135,16 @@ class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
                   children: [
                     Text(
                       'Progress: ${progress.trainedSkills}/${progress.totalSkills} skills',
-                      style: EveTypography.bodyMedium(color: EveColors.textSecondary),
+                      style: EveTypography.bodyMedium(
+                        color: EveColors.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Est. Time: ${progress.estimatedTimeFormatted}',
-                      style: EveTypography.bodySmall(color: EveColors.textTertiary),
+                      style: EveTypography.bodySmall(
+                        color: EveColors.textTertiary,
+                      ),
                     ),
                   ],
                 ),
@@ -172,7 +182,8 @@ class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
     return ReorderableListView.builder(
       padding: const EdgeInsets.only(bottom: 80), // Space for FAB
       itemCount: entries.length,
-      onReorder: (oldIndex, newIndex) => _handleReorder(entries, oldIndex, newIndex),
+      onReorder: (oldIndex, newIndex) =>
+          _handleReorder(entries, oldIndex, newIndex),
       itemBuilder: (context, index) {
         final entry = entries[index];
         return _SkillPlanEntryTile(
@@ -220,11 +231,7 @@ class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: EveColors.error,
-            ),
+            Icon(Icons.error_outline, size: 64, color: EveColors.error),
             const SizedBox(height: 16),
             Text(
               'Failed to Load Plan',
@@ -292,7 +299,10 @@ class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
     );
 
     if (selectedSkills == null || selectedSkills.isEmpty) {
-      Log.d('SKILLS.PLAN_DETAIL', '_showSkillBrowserDialog - no skills selected');
+      Log.d(
+        'SKILLS.PLAN_DETAIL',
+        '_showSkillBrowserDialog - no skills selected',
+      );
       return;
     }
 
@@ -379,9 +389,7 @@ class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: EveColors.error,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: EveColors.error),
             child: Text(
               'Remove',
               style: EveTypography.bodyMedium(color: Colors.white),
@@ -452,25 +460,16 @@ class _SkillPlanEntryTile extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: EveColors.borderSubtle),
-            ),
+            border: Border(bottom: BorderSide(color: EveColors.borderSubtle)),
           ),
           child: Row(
             children: [
               // Drag handle
-              Icon(
-                Icons.drag_handle,
-                color: EveColors.textTertiary,
-                size: 20,
-              ),
+              Icon(Icons.drag_handle, color: EveColors.textTertiary, size: 20),
               const SizedBox(width: 12),
 
               // Skill icon
-              EveSkillIcon(
-                typeId: entry.skillId,
-                size: 40,
-              ),
+              EveSkillIcon(typeId: entry.skillId, size: 40),
               const SizedBox(width: 12),
 
               // Skill name and level info
@@ -481,11 +480,15 @@ class _SkillPlanEntryTile extends ConsumerWidget {
                     skillNameAsync.when(
                       data: (name) => Text(
                         name,
-                        style: EveTypography.bodyMedium(color: EveColors.textPrimary),
+                        style: EveTypography.bodyMedium(
+                          color: EveColors.textPrimary,
+                        ),
                       ),
                       loading: () => Text(
                         'Loading...',
-                        style: EveTypography.bodyMedium(color: EveColors.textSecondary),
+                        style: EveTypography.bodyMedium(
+                          color: EveColors.textSecondary,
+                        ),
                       ),
                       error: (_, __) => Text(
                         'Skill #${entry.skillId}',

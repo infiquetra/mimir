@@ -68,25 +68,29 @@ void main() {
 
     test('should set active character', () async {
       // Insert two characters.
-      await database.upsertCharacter(CharactersCompanion.insert(
-        characterId: const Value(11111111),
-        name: 'Pilot One',
-        corporationId: 98000001,
-        corporationName: 'Corp One',
-        portraitUrl: 'https://example.com/1',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      ));
+      await database.upsertCharacter(
+        CharactersCompanion.insert(
+          characterId: const Value(11111111),
+          name: 'Pilot One',
+          corporationId: 98000001,
+          corporationName: 'Corp One',
+          portraitUrl: 'https://example.com/1',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        ),
+      );
 
-      await database.upsertCharacter(CharactersCompanion.insert(
-        characterId: const Value(22222222),
-        name: 'Pilot Two',
-        corporationId: 98000002,
-        corporationName: 'Corp Two',
-        portraitUrl: 'https://example.com/2',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      ));
+      await database.upsertCharacter(
+        CharactersCompanion.insert(
+          characterId: const Value(22222222),
+          name: 'Pilot Two',
+          corporationId: 98000002,
+          corporationName: 'Corp Two',
+          portraitUrl: 'https://example.com/2',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        ),
+      );
 
       // Set second character as active.
       await database.setActiveCharacter(22222222);
@@ -98,15 +102,17 @@ void main() {
     });
 
     test('should delete character and related data', () async {
-      await database.upsertCharacter(CharactersCompanion.insert(
-        characterId: const Value(12345678),
-        name: 'Test Pilot',
-        corporationId: 98000001,
-        corporationName: 'Test Corporation',
-        portraitUrl: 'https://example.com/portrait',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      ));
+      await database.upsertCharacter(
+        CharactersCompanion.insert(
+          characterId: const Value(12345678),
+          name: 'Test Pilot',
+          corporationId: 98000001,
+          corporationName: 'Test Corporation',
+          portraitUrl: 'https://example.com/portrait',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        ),
+      );
 
       await database.deleteCharacter(12345678);
 
@@ -118,15 +124,17 @@ void main() {
   group('SkillQueue', () {
     test('should replace skill queue for character', () async {
       // First insert a character.
-      await database.upsertCharacter(CharactersCompanion.insert(
-        characterId: const Value(12345678),
-        name: 'Test Pilot',
-        corporationId: 98000001,
-        corporationName: 'Test Corporation',
-        portraitUrl: 'https://example.com/portrait',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      ));
+      await database.upsertCharacter(
+        CharactersCompanion.insert(
+          characterId: const Value(12345678),
+          name: 'Test Pilot',
+          corporationId: 98000001,
+          corporationName: 'Test Corporation',
+          portraitUrl: 'https://example.com/portrait',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        ),
+      );
 
       final entries = [
         SkillQueueEntriesCompanion.insert(
@@ -154,15 +162,17 @@ void main() {
 
   group('Wallet', () {
     test('should record and retrieve wallet balance', () async {
-      await database.upsertCharacter(CharactersCompanion.insert(
-        characterId: const Value(12345678),
-        name: 'Test Pilot',
-        corporationId: 98000001,
-        corporationName: 'Test Corporation',
-        portraitUrl: 'https://example.com/portrait',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      ));
+      await database.upsertCharacter(
+        CharactersCompanion.insert(
+          characterId: const Value(12345678),
+          name: 'Test Pilot',
+          corporationId: 98000001,
+          corporationName: 'Test Corporation',
+          portraitUrl: 'https://example.com/portrait',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        ),
+      );
 
       await database.recordWalletBalance(12345678, 1234567890.50);
 
@@ -171,15 +181,17 @@ void main() {
     });
 
     test('should insert wallet journal entries', () async {
-      await database.upsertCharacter(CharactersCompanion.insert(
-        characterId: const Value(12345678),
-        name: 'Test Pilot',
-        corporationId: 98000001,
-        corporationName: 'Test Corporation',
-        portraitUrl: 'https://example.com/portrait',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      ));
+      await database.upsertCharacter(
+        CharactersCompanion.insert(
+          characterId: const Value(12345678),
+          name: 'Test Pilot',
+          corporationId: 98000001,
+          corporationName: 'Test Corporation',
+          portraitUrl: 'https://example.com/portrait',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        ),
+      );
 
       final entries = [
         WalletJournalEntriesCompanion.insert(

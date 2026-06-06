@@ -7,7 +7,9 @@ import 'package:mimir/features/dashboard/presentation/widgets/cards/combat_stats
 
 void main() {
   group('CombatStatsCard', () {
-    testWidgets('should render card title correctly', (WidgetTester tester) async {
+    testWidgets('should render card title correctly', (
+      WidgetTester tester,
+    ) async {
       // Arrange - provide dummy data
       const stats = AggregateCombatStats(
         totalKills: 100,
@@ -27,9 +29,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: ThemeData.dark(),
-            home: const Scaffold(
-              body: CombatStatsCard(),
-            ),
+            home: const Scaffold(body: CombatStatsCard()),
           ),
         ),
       );
@@ -42,8 +42,9 @@ void main() {
       expect(find.byIcon(Icons.military_tech_outlined), findsOneWidget);
     });
 
-    testWidgets('should display aggregate stats when data available',
-        (WidgetTester tester) async {
+    testWidgets('should display aggregate stats when data available', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const char1 = CombatStatsData(
         characterId: 1,
@@ -81,9 +82,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: ThemeData.dark(),
-            home: const Scaffold(
-              body: CombatStatsCard(),
-            ),
+            home: const Scaffold(body: CombatStatsCard()),
           ),
         ),
       );
@@ -101,8 +100,9 @@ void main() {
       expect(find.text('Test Character 2'), findsOneWidget);
     });
 
-    testWidgets('should show empty state when no activity',
-        (WidgetTester tester) async {
+    testWidgets('should show empty state when no activity', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const stats = AggregateCombatStats(
         totalKills: 0,
@@ -122,9 +122,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: ThemeData.dark(),
-            home: const Scaffold(
-              body: CombatStatsCard(),
-            ),
+            home: const Scaffold(body: CombatStatsCard()),
           ),
         ),
       );
@@ -141,8 +139,9 @@ void main() {
       expect(find.byIcon(Icons.shield_outlined), findsOneWidget);
     });
 
-    testWidgets('should display kills stat box correctly',
-        (WidgetTester tester) async {
+    testWidgets('should display kills stat box correctly', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const stats = AggregateCombatStats(
         totalKills: 100,
@@ -162,9 +161,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: ThemeData.dark(),
-            home: const Scaffold(
-              body: CombatStatsCard(),
-            ),
+            home: const Scaffold(body: CombatStatsCard()),
           ),
         ),
       );
@@ -177,8 +174,9 @@ void main() {
       expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
     });
 
-    testWidgets('should display deaths stat box correctly',
-        (WidgetTester tester) async {
+    testWidgets('should display deaths stat box correctly', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const stats = AggregateCombatStats(
         totalKills: 100,
@@ -198,9 +196,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: ThemeData.dark(),
-            home: const Scaffold(
-              body: CombatStatsCard(),
-            ),
+            home: const Scaffold(body: CombatStatsCard()),
           ),
         ),
       );
@@ -213,8 +209,9 @@ void main() {
       expect(find.byIcon(Icons.cancel_outlined), findsOneWidget);
     });
 
-    testWidgets('should display K/D ratio stat box correctly',
-        (WidgetTester tester) async {
+    testWidgets('should display K/D ratio stat box correctly', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const stats = AggregateCombatStats(
         totalKills: 100,
@@ -234,9 +231,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: ThemeData.dark(),
-            home: const Scaffold(
-              body: CombatStatsCard(),
-            ),
+            home: const Scaffold(body: CombatStatsCard()),
           ),
         ),
       );
@@ -249,8 +244,9 @@ void main() {
       expect(find.byIcon(Icons.assessment_outlined), findsOneWidget);
     });
 
-    testWidgets('should display ISK stat boxes correctly',
-        (WidgetTester tester) async {
+    testWidgets('should display ISK stat boxes correctly', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const stats = AggregateCombatStats(
         totalKills: 100,
@@ -270,9 +266,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: ThemeData.dark(),
-            home: const Scaffold(
-              body: CombatStatsCard(),
-            ),
+            home: const Scaffold(body: CombatStatsCard()),
           ),
         ),
       );
@@ -286,8 +280,9 @@ void main() {
       expect(find.byIcon(Icons.trending_down), findsOneWidget);
     });
 
-    testWidgets('should display character rows correctly',
-        (WidgetTester tester) async {
+    testWidgets('should display character rows correctly', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const char1 = CombatStatsData(
         characterId: 1,
@@ -316,9 +311,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: ThemeData.dark(),
-            home: const Scaffold(
-              body: CombatStatsCard(),
-            ),
+            home: const Scaffold(body: CombatStatsCard()),
           ),
         ),
       );
@@ -328,12 +321,16 @@ void main() {
       // Assert
       expect(find.text('Test Character'), findsOneWidget);
       expect(find.text('100 kills / 50 deaths'), findsOneWidget);
-      expect(find.byIcon(Icons.arrow_upward), findsOneWidget); // Positive danger rating
+      expect(
+        find.byIcon(Icons.arrow_upward),
+        findsOneWidget,
+      ); // Positive danger rating
       // Note: We expect two "50" texts - one from deaths stat box, one from danger rating
     });
 
-    testWidgets('should show negative danger rating correctly',
-        (WidgetTester tester) async {
+    testWidgets('should show negative danger rating correctly', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       const char1 = CombatStatsData(
         characterId: 1,
@@ -362,9 +359,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: ThemeData.dark(),
-            home: const Scaffold(
-              body: CombatStatsCard(),
-            ),
+            home: const Scaffold(body: CombatStatsCard()),
           ),
         ),
       );
@@ -373,7 +368,10 @@ void main() {
 
       // Assert
       expect(find.text('20'), findsOneWidget); // Danger rating (abs value)
-      expect(find.byIcon(Icons.arrow_downward), findsOneWidget); // Negative danger rating
+      expect(
+        find.byIcon(Icons.arrow_downward),
+        findsOneWidget,
+      ); // Negative danger rating
     });
   });
 }

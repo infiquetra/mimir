@@ -30,10 +30,7 @@ class SkillPlanEditor extends ConsumerStatefulWidget {
   /// The plan to edit. If null, creates a new plan.
   final SkillPlan? plan;
 
-  const SkillPlanEditor({
-    super.key,
-    this.plan,
-  });
+  const SkillPlanEditor({super.key, this.plan});
 
   @override
   ConsumerState<SkillPlanEditor> createState() => _SkillPlanEditorState();
@@ -51,7 +48,9 @@ class _SkillPlanEditorState extends ConsumerState<SkillPlanEditor> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.plan?.name ?? '');
-    _descriptionController = TextEditingController(text: widget.plan?.description ?? '');
+    _descriptionController = TextEditingController(
+      text: widget.plan?.description ?? '',
+    );
   }
 
   @override
@@ -190,7 +189,9 @@ class _SkillPlanEditorState extends ConsumerState<SkillPlanEditor> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            _isEditing ? 'Plan updated successfully' : 'Plan created successfully',
+            _isEditing
+                ? 'Plan updated successfully'
+                : 'Plan created successfully',
           ),
           duration: const Duration(seconds: 2),
         ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mimir/core/theme/eve_colors.dart';
 import 'package:mimir/features/intel/data/intel_providers.dart';
 
 class TheraConnectionsCard extends ConsumerWidget {
@@ -53,8 +55,8 @@ class TheraConnectionsCard extends ConsumerWidget {
                       '${conn.remainingHours}h',
                       style: TextStyle(
                         color: conn.remainingHours <= 2
-                            ? Colors.red
-                            : Colors.green,
+                            ? EveColors.error
+                            : EveColors.evePrimary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

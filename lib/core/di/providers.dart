@@ -21,8 +21,4 @@ final themeModeProvider = StateProvider<ThemeModeOption>((ref) {
 });
 
 /// Theme mode options.
-enum ThemeModeOption {
-  light,
-  dark,
-  system,
-}
+enum ThemeModeOption { light, dark, system }

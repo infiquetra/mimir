@@ -59,10 +59,7 @@ class CloneCard extends StatelessWidget {
       color: theme.colorScheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: theme.colorScheme.outlineVariant,
-          width: 1,
-        ),
+        side: BorderSide(color: theme.colorScheme.outlineVariant, width: 1),
       ),
       child: Padding(
         padding: compact
@@ -87,7 +84,9 @@ class CloneCard extends StatelessWidget {
                 typeId: 34126, // Alpha Clone type ID
                 size: compact ? 48 : 56,
                 borderRadius: 8,
-                backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                backgroundColor: theme.colorScheme.primary.withValues(
+                  alpha: 0.1,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -141,14 +140,16 @@ class CloneCard extends StatelessWidget {
                             Icon(
                               Icons.info_outline,
                               size: 16,
-                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.6),
                             ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
                                 'No implants',
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                  color: theme.colorScheme.onSurfaceVariant
+                                      .withValues(alpha: 0.6),
                                   fontStyle: FontStyle.italic,
                                 ),
                               ),

@@ -29,9 +29,7 @@ void main() {
     (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            databaseProvider.overrideWithValue(testDatabase),
-          ],
+          overrides: [databaseProvider.overrideWithValue(testDatabase)],
           child: const MimirApp(),
         ),
       );
@@ -49,9 +47,7 @@ void main() {
     (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            databaseProvider.overrideWithValue(testDatabase),
-          ],
+          overrides: [databaseProvider.overrideWithValue(testDatabase)],
           child: const MimirApp(),
         ),
       );

@@ -18,11 +18,9 @@ class DeepLinkHandler {
   final Ref _ref;
   StreamSubscription<Uri>? _subscription;
 
-  DeepLinkHandler({
-    required Ref ref,
-    AppLinks? appLinks,
-  })  : _ref = ref,
-        _appLinks = appLinks ?? AppLinks();
+  DeepLinkHandler({required Ref ref, AppLinks? appLinks})
+    : _ref = ref,
+      _appLinks = appLinks ?? AppLinks();
 
   /// Initializes the deep link handler.
   ///
@@ -74,11 +72,15 @@ class DeepLinkHandler {
     // If authentication was successful, broadcast to all sub-windows via file-based events
     if (characterId != null) {
       try {
-        await CrossWindowEventService.broadcast(CrossWindowEvent(
-          type: CrossWindowEventType.authComplete,
-          data: {'characterId': characterId},
-        ));
-        debugPrint('[DEEPLINK] Broadcast auth_complete event for character $characterId');
+        await CrossWindowEventService.broadcast(
+          CrossWindowEvent(
+            type: CrossWindowEventType.authComplete,
+            data: {'characterId': characterId},
+          ),
+        );
+        debugPrint(
+          '[DEEPLINK] Broadcast auth_complete event for character $characterId',
+        );
       } catch (e) {
         debugPrint('[DEEPLINK] Error broadcasting auth_complete: $e');
       }

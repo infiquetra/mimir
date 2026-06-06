@@ -14,10 +14,12 @@ class MarketOverviewScreen extends ConsumerStatefulWidget {
   const MarketOverviewScreen({super.key});
 
   @override
-  ConsumerState<MarketOverviewScreen> createState() => _MarketOverviewScreenState();
+  ConsumerState<MarketOverviewScreen> createState() =>
+      _MarketOverviewScreenState();
 }
 
-class _MarketOverviewScreenState extends ConsumerState<MarketOverviewScreen> with SingleTickerProviderStateMixin {
+class _MarketOverviewScreenState extends ConsumerState<MarketOverviewScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -45,17 +47,22 @@ class _MarketOverviewScreenState extends ConsumerState<MarketOverviewScreen> wit
       appBar: AppBar(
         title: const Text('Market Tools'),
         actions: [
-          if (activeCharacter != null)
-            RefreshAppBarAction(onRefresh: _refresh),
+          if (activeCharacter != null) RefreshAppBarAction(onRefresh: _refresh),
         ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
             Tab(text: 'Browser', icon: Icon(Icons.search, size: 18)),
             Tab(text: 'My Orders', icon: Icon(Icons.storefront, size: 18)),
-            Tab(text: 'Calculator', icon: Icon(Icons.calculate_outlined, size: 18)),
+            Tab(
+              text: 'Calculator',
+              icon: Icon(Icons.calculate_outlined, size: 18),
+            ),
           ],
-          labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          labelStyle: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
           unselectedLabelStyle: const TextStyle(fontSize: 12),
           indicatorColor: const Color(0xFF4FC3F7),
           labelColor: const Color(0xFF4FC3F7),
@@ -74,14 +81,14 @@ class _MarketOverviewScreenState extends ConsumerState<MarketOverviewScreen> wit
           activeCharacterAsync.isLoading
               ? const Center(child: CircularProgressIndicator())
               : activeCharacter == null
-                  ? _buildNoCharacterState()
-                  : RefreshIndicator(
-                      onRefresh: _refresh,
-                      child: const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: ActiveOrdersPanel(),
-                      ),
-                    ),
+              ? _buildNoCharacterState()
+              : RefreshIndicator(
+                  onRefresh: _refresh,
+                  child: const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: ActiveOrdersPanel(),
+                  ),
+                ),
           // Calculator tab — pure client-side, no character needed
           const TradeCalculatorPanel(),
         ],
@@ -94,7 +101,11 @@ class _MarketOverviewScreenState extends ConsumerState<MarketOverviewScreen> wit
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.person_off_outlined, size: 64, color: EveColors.textSecondary),
+          const Icon(
+            Icons.person_off_outlined,
+            size: 64,
+            color: EveColors.textSecondary,
+          ),
           const SizedBox(height: 16),
           Text(
             'No Character Selected',
@@ -103,9 +114,9 @@ class _MarketOverviewScreenState extends ConsumerState<MarketOverviewScreen> wit
           const SizedBox(height: 8),
           Text(
             'Please select a character to view active orders.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: EveColors.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: EveColors.textSecondary),
           ),
         ],
       ),

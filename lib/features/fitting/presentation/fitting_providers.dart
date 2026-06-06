@@ -36,7 +36,7 @@ class FittingController extends Notifier<Fitting?> {
   /// Equip a module to the current fitting at its specified slot index.
   Future<void> equipModule(FittedModule module) async {
     if (state == null) return;
-    
+
     // Get ship type directly from SDE — DO NOT use activeShipTypeProvider here
     // because it watches activeFittingProvider, which would cause a circular dependency.
     final sde = ref.read(sdeServiceProvider);
@@ -53,29 +53,60 @@ class FittingController extends Notifier<Fitting?> {
     if (state == null) return;
 
     // Helper: place module at specific index in slot list, or append if index not yet filled
-    List<FittedModule> placeModule(List<FittedModule> existing, FittedModule mod, int maxSlots) {
+    List<FittedModule> placeModule(
+      List<FittedModule> existing,
+      FittedModule mod,
+      int maxSlots,
+    ) {
       if (existing.length >= maxSlots) return existing; // Full
       // Check if slot index is already occupied
       final existingIndices = existing.map((m) => m.slotIndex).toSet();
-      if (existingIndices.contains(mod.slotIndex)) return existing; // Already filled
+      if (existingIndices.contains(mod.slotIndex))
+        return existing; // Already filled
       return [...existing, mod];
     }
 
     switch (moduleWithAttributes.slotType) {
       case SlotType.high:
-        state = state!.copyWith(highSlots: placeModule(state!.highSlots, moduleWithAttributes, ship.highSlots));
+        state = state!.copyWith(
+          highSlots: placeModule(
+            state!.highSlots,
+            moduleWithAttributes,
+            ship.highSlots,
+          ),
+        );
         break;
       case SlotType.med:
-        state = state!.copyWith(medSlots: placeModule(state!.medSlots, moduleWithAttributes, ship.medSlots));
+        state = state!.copyWith(
+          medSlots: placeModule(
+            state!.medSlots,
+            moduleWithAttributes,
+            ship.medSlots,
+          ),
+        );
         break;
       case SlotType.low:
-        state = state!.copyWith(lowSlots: placeModule(state!.lowSlots, moduleWithAttributes, ship.lowSlots));
+        state = state!.copyWith(
+          lowSlots: placeModule(
+            state!.lowSlots,
+            moduleWithAttributes,
+            ship.lowSlots,
+          ),
+        );
         break;
       case SlotType.rig:
-        state = state!.copyWith(rigSlots: placeModule(state!.rigSlots, moduleWithAttributes, ship.rigSlots));
+        state = state!.copyWith(
+          rigSlots: placeModule(
+            state!.rigSlots,
+            moduleWithAttributes,
+            ship.rigSlots,
+          ),
+        );
         break;
       case SlotType.subsystem:
-        state = state!.copyWith(subsystems: placeModule(state!.subsystems, moduleWithAttributes, 5));
+        state = state!.copyWith(
+          subsystems: placeModule(state!.subsystems, moduleWithAttributes, 5),
+        );
         break;
     }
   }
@@ -83,22 +114,36 @@ class FittingController extends Notifier<Fitting?> {
   /// Remove a module from the current fitting by slot and index.
   void removeModule(SlotType slotType, int index) {
     if (state == null) return;
-    
+
     switch (slotType) {
       case SlotType.high:
-        state = state!.copyWith(highSlots: state!.highSlots.where((m) => m.slotIndex != index).toList());
+        state = state!.copyWith(
+          highSlots: state!.highSlots
+              .where((m) => m.slotIndex != index)
+              .toList(),
+        );
         break;
       case SlotType.med:
-        state = state!.copyWith(medSlots: state!.medSlots.where((m) => m.slotIndex != index).toList());
+        state = state!.copyWith(
+          medSlots: state!.medSlots.where((m) => m.slotIndex != index).toList(),
+        );
         break;
       case SlotType.low:
-        state = state!.copyWith(lowSlots: state!.lowSlots.where((m) => m.slotIndex != index).toList());
+        state = state!.copyWith(
+          lowSlots: state!.lowSlots.where((m) => m.slotIndex != index).toList(),
+        );
         break;
       case SlotType.rig:
-        state = state!.copyWith(rigSlots: state!.rigSlots.where((m) => m.slotIndex != index).toList());
+        state = state!.copyWith(
+          rigSlots: state!.rigSlots.where((m) => m.slotIndex != index).toList(),
+        );
         break;
       case SlotType.subsystem:
-        state = state!.copyWith(subsystems: state!.subsystems.where((m) => m.slotIndex != index).toList());
+        state = state!.copyWith(
+          subsystems: state!.subsystems
+              .where((m) => m.slotIndex != index)
+              .toList(),
+        );
         break;
     }
   }
@@ -125,7 +170,7 @@ final fittingStatsProvider = FutureProvider<FittingStats?>((ref) async {
 
   final sde = ref.read(sdeServiceProvider);
   final engine = ref.read(dogmaEngineProvider);
-  
+
   // Resolve all module types
   final moduleTypes = <String, ModuleType>{};
   for (final module in fitting.allModules) {
@@ -144,7 +189,8 @@ final fittingStatsProvider = FutureProvider<FittingStats?>((ref) async {
 });
 
 /// Provides available modules filtered by slot type from the SDE
-final availableModulesProvider = FutureProvider.family<List<ModuleType>, SlotType>((ref, slotType) async {
-  final sdeService = ref.watch(sdeServiceProvider);
-  return sdeService.getModulesBySlotType(slotType);
-});
+final availableModulesProvider =
+    FutureProvider.family<List<ModuleType>, SlotType>((ref, slotType) async {
+      final sdeService = ref.watch(sdeServiceProvider);
+      return sdeService.getModulesBySlotType(slotType);
+    });

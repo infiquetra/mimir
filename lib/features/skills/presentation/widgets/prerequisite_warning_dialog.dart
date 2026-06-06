@@ -38,9 +38,7 @@ class PrerequisiteWarningDialog extends StatelessWidget {
 
     return Dialog(
       backgroundColor: EveColors.surfaceElevated,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         width: 500,
         padding: const EdgeInsets.all(24),
@@ -49,70 +47,74 @@ class PrerequisiteWarningDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            // Header
-            Row(
-              children: [
-                Icon(
-                  Icons.warning_amber_rounded,
-                  color: EveColors.warning,
-                  size: 32,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Unmet Prerequisites',
-                    style: EveTypography.titleLarge(color: EveColors.textPrimary),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Skill being added
-            _buildSkillHeader(),
-            const SizedBox(height: 16),
-
-            // Warning message
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: EveColors.warning.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: EveColors.warning.withOpacity(0.3)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              // Header
+              Row(
                 children: [
                   Icon(
-                    Icons.info_outline,
+                    Icons.warning_amber_rounded,
                     color: EveColors.warning,
-                    size: 20,
+                    size: 32,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'This skill requires the following prerequisites to be trained first:',
-                      style: EveTypography.bodySmall(color: EveColors.textPrimary),
+                      'Unmet Prerequisites',
+                      style: EveTypography.titleLarge(
+                        color: EveColors.textPrimary,
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Prerequisites list
-            Text(
-              'Missing Prerequisites',
-              style: EveTypography.titleSmall(color: EveColors.textSecondary),
-            ),
-            const SizedBox(height: 8),
-            _buildPrerequisitesList(),
-            const SizedBox(height: 24),
+              // Skill being added
+              _buildSkillHeader(),
+              const SizedBox(height: 16),
 
-            // Action buttons
-            _buildButtons(context),
-          ],
-        ),
+              // Warning message
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: EveColors.warning.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: EveColors.warning.withOpacity(0.3)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: EveColors.warning,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'This skill requires the following prerequisites to be trained first:',
+                        style: EveTypography.bodySmall(
+                          color: EveColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Prerequisites list
+              Text(
+                'Missing Prerequisites',
+                style: EveTypography.titleSmall(color: EveColors.textSecondary),
+              ),
+              const SizedBox(height: 8),
+              _buildPrerequisitesList(),
+              const SizedBox(height: 24),
+
+              // Action buttons
+              _buildButtons(context),
+            ],
+          ),
         ),
       ),
     );
@@ -128,10 +130,7 @@ class PrerequisiteWarningDialog extends StatelessWidget {
       ),
       child: Row(
         children: [
-          EveSkillIcon(
-            typeId: skillId,
-            size: 40,
-          ),
+          EveSkillIcon(typeId: skillId, size: 40),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -139,12 +138,16 @@ class PrerequisiteWarningDialog extends StatelessWidget {
               children: [
                 Text(
                   skillName,
-                  style: EveTypography.titleMedium(color: EveColors.textPrimary),
+                  style: EveTypography.titleMedium(
+                    color: EveColors.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Target: Level $targetLevel',
-                  style: EveTypography.bodySmall(color: EveColors.textSecondary),
+                  style: EveTypography.bodySmall(
+                    color: EveColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -165,10 +168,8 @@ class PrerequisiteWarningDialog extends StatelessWidget {
       child: ListView.separated(
         shrinkWrap: true,
         itemCount: unmetPrerequisites.length,
-        separatorBuilder: (context, index) => Divider(
-          height: 1,
-          color: EveColors.borderSubtle,
-        ),
+        separatorBuilder: (context, index) =>
+            Divider(height: 1, color: EveColors.borderSubtle),
         itemBuilder: (context, index) {
           final prereq = unmetPrerequisites[index];
           return _PrerequisiteItem(prereq: prereq);
@@ -189,7 +190,9 @@ class PrerequisiteWarningDialog extends StatelessWidget {
                 'SKILLS.PREREQ_DIALOG',
                 'Add with prerequisites - adding skill + ${unmetPrerequisites.length} prerequisites',
               );
-              Navigator.of(context).pop(PrerequisiteDialogResult.addWithPrerequisites);
+              Navigator.of(
+                context,
+              ).pop(PrerequisiteDialogResult.addWithPrerequisites);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: EveColors.photonBlue,
@@ -222,7 +225,9 @@ class PrerequisiteWarningDialog extends StatelessWidget {
                 ),
                 child: Text(
                   'Cancel',
-                  style: EveTypography.bodyMedium(color: EveColors.textSecondary),
+                  style: EveTypography.bodyMedium(
+                    color: EveColors.textSecondary,
+                  ),
                 ),
               ),
             ),
@@ -277,10 +282,7 @@ class _PrerequisiteItem extends StatelessWidget {
           const SizedBox(width: 12),
 
           // Skill icon
-          EveSkillIcon(
-            typeId: prereq.skillId,
-            size: 32,
-          ),
+          EveSkillIcon(typeId: prereq.skillId, size: 32),
           const SizedBox(width: 12),
 
           // Skill info

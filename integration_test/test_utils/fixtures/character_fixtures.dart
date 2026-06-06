@@ -15,9 +15,7 @@ class CharacterFixtures {
   /// Corp: Test Corporation (98000001)
   /// Alliance: Test Alliance (99000001)
   /// Security: 5.0
-  static CharactersCompanion testCharacter({
-    bool isActive = true,
-  }) {
+  static CharactersCompanion testCharacter({bool isActive = true}) {
     return CharactersCompanion.insert(
       characterId: const Value(12345678),
       name: 'Test Capsuleer',
@@ -46,9 +44,7 @@ class CharacterFixtures {
   /// Corp: Second Test Corporation (98000002)
   /// Alliance: None
   /// Security: -2.5 (outlaw)
-  static CharactersCompanion testCharacter2({
-    bool isActive = false,
-  }) {
+  static CharactersCompanion testCharacter2({bool isActive = false}) {
     return CharactersCompanion.insert(
       characterId: const Value(23456789),
       name: 'Second Test Character',
@@ -74,10 +70,7 @@ class CharacterFixtures {
 
   /// Get a list of all test characters for multi-character tests.
   static List<CharactersCompanion> allCharacters() {
-    return [
-      testCharacter(isActive: true),
-      testCharacter2(isActive: false),
-    ];
+    return [testCharacter(isActive: true), testCharacter2(isActive: false)];
   }
 
   /// Create a custom test character with override values.

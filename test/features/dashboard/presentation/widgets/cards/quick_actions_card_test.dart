@@ -11,13 +11,14 @@ void main() {
   setUp(() {
     // Setup the clipboard testing channel
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.platform,
-            (MethodCall methodCall) async {
-      if (methodCall.method == 'Clipboard.setData') {
-        return null;
-      }
-      return null;
-    });
+        .setMockMethodCallHandler(SystemChannels.platform, (
+          MethodCall methodCall,
+        ) async {
+          if (methodCall.method == 'Clipboard.setData') {
+            return null;
+          }
+          return null;
+        });
   });
 
   tearDown(() {
@@ -48,8 +49,8 @@ void main() {
     corporationName: 'Test Corp 2',
     allianceId: null,
     allianceName: null,
-      factionId: null,
-      securityStatus: 0.0,
+    factionId: null,
+    securityStatus: 0.0,
     portraitUrl: 'https://example.com/portrait2.jpg',
     tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
     lastUpdated: DateTime.now(),
@@ -63,8 +64,8 @@ void main() {
     corporationName: 'Test Corp 3',
     allianceId: null,
     allianceName: null,
-      factionId: null,
-      securityStatus: 0.0,
+    factionId: null,
+    securityStatus: 0.0,
     portraitUrl: 'https://example.com/portrait3.jpg',
     tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
     lastUpdated: DateTime.now(),
@@ -115,34 +116,23 @@ void main() {
             (ref) => Future.value(balances),
           ),
       ],
-      child: const MaterialApp(
-        home: Scaffold(
-          body: QuickActionsCard(),
-        ),
-      ),
+      child: const MaterialApp(home: Scaffold(body: QuickActionsCard())),
     );
   }
 
   group('QuickActionsCard', () {
-    testWidgets('displays loading state correctly',
-        (WidgetTester tester) async {
+    testWidgets('displays loading state correctly', (
+      WidgetTester tester,
+    ) async {
       final widget = ProviderScope(
         overrides: [
-          allCharactersProvider.overrideWith(
-            (ref) => const Stream.empty(),
-          ),
+          allCharactersProvider.overrideWith((ref) => const Stream.empty()),
           allCharacterSkillQueuesProvider.overrideWith(
             (ref) => Future.value({}),
           ),
-          allCharacterBalancesProvider.overrideWith(
-            (ref) => Future.value({}),
-          ),
+          allCharacterBalancesProvider.overrideWith((ref) => Future.value({})),
         ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: QuickActionsCard(),
-          ),
-        ),
+        child: const MaterialApp(home: Scaffold(body: QuickActionsCard())),
       );
 
       await tester.pumpWidget(widget);
@@ -152,8 +142,9 @@ void main() {
       expect(find.text('QUICK ACTIONS'), findsOneWidget);
     });
 
-    testWidgets('displays action buttons correctly',
-        (WidgetTester tester) async {
+    testWidgets('displays action buttons correctly', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         createTestWidget(
           characters: [testCharacter1, testCharacter2],
@@ -161,10 +152,7 @@ void main() {
             1: [testSkillEntry1],
             2: [testSkillEntry2],
           },
-          balances: {
-            1: 1000000.0,
-            2: 5000000.0,
-          },
+          balances: {1: 1000000.0, 2: 5000000.0},
         ),
       );
       await tester.pumpAndSettle();
@@ -174,8 +162,9 @@ void main() {
       expect(find.text('Copy Fleet Status'), findsOneWidget);
     });
 
-    testWidgets('displays empty queue alert correctly',
-        (WidgetTester tester) async {
+    testWidgets('displays empty queue alert correctly', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         createTestWidget(
           characters: [testCharacter1, testCharacter2, testCharacter3],
@@ -184,11 +173,7 @@ void main() {
             2: [testSkillEntry2],
             3: [], // Empty queue for character 3
           },
-          balances: {
-            1: 1000000.0,
-            2: 5000000.0,
-            3: 500000.0,
-          },
+          balances: {1: 1000000.0, 2: 5000000.0, 3: 500000.0},
         ),
       );
       await tester.pumpAndSettle();
@@ -201,14 +186,17 @@ void main() {
 
       // Check for empty queue alert
       expect(
-          find.text('Test Character 3 has empty skill queue!'), findsOneWidget);
+        find.text('Test Character 3 has empty skill queue!'),
+        findsOneWidget,
+      );
 
       // Check for warning icon
       expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
     });
 
-    testWidgets('displays multiple alerts correctly',
-        (WidgetTester tester) async {
+    testWidgets('displays multiple alerts correctly', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         createTestWidget(
           characters: [testCharacter1, testCharacter2, testCharacter3],
@@ -217,11 +205,7 @@ void main() {
             2: [testSkillEntry2],
             3: [], // Empty queue for character 3
           },
-          balances: {
-            1: 1000000.0,
-            2: 5000000.0,
-            3: 500000.0,
-          },
+          balances: {1: 1000000.0, 2: 5000000.0, 3: 500000.0},
         ),
       );
       await tester.pumpAndSettle();
@@ -234,13 +218,18 @@ void main() {
 
       // Check for both empty queue alerts
       expect(
-          find.text('Test Character 1 has empty skill queue!'), findsOneWidget);
+        find.text('Test Character 1 has empty skill queue!'),
+        findsOneWidget,
+      );
       expect(
-          find.text('Test Character 3 has empty skill queue!'), findsOneWidget);
+        find.text('Test Character 3 has empty skill queue!'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('no alerts shown when all queues have skills',
-        (WidgetTester tester) async {
+    testWidgets('no alerts shown when all queues have skills', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         createTestWidget(
           characters: [testCharacter1, testCharacter2],
@@ -248,10 +237,7 @@ void main() {
             1: [testSkillEntry1],
             2: [testSkillEntry2],
           },
-          balances: {
-            1: 1000000.0,
-            2: 5000000.0,
-          },
+          balances: {1: 1000000.0, 2: 5000000.0},
         ),
       );
       await tester.pumpAndSettle();
@@ -260,18 +246,20 @@ void main() {
       expect(find.text('ALERTS'), findsNothing);
     });
 
-    testWidgets('copy fleet status copies to clipboard',
-        (WidgetTester tester) async {
+    testWidgets('copy fleet status copies to clipboard', (
+      WidgetTester tester,
+    ) async {
       String? clipboardData;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform,
-              (MethodCall methodCall) async {
-        if (methodCall.method == 'Clipboard.setData') {
-          clipboardData = (methodCall.arguments as Map)['text'] as String?;
-          return null;
-        }
-        return null;
-      });
+          .setMockMethodCallHandler(SystemChannels.platform, (
+            MethodCall methodCall,
+          ) async {
+            if (methodCall.method == 'Clipboard.setData') {
+              clipboardData = (methodCall.arguments as Map)['text'] as String?;
+              return null;
+            }
+            return null;
+          });
 
       await tester.pumpWidget(
         createTestWidget(
@@ -280,10 +268,7 @@ void main() {
             1: [testSkillEntry1],
             2: [testSkillEntry2],
           },
-          balances: {
-            1: 1000000.0,
-            2: 5000000.0,
-          },
+          balances: {1: 1000000.0, 2: 5000000.0},
         ),
       );
       await tester.pumpAndSettle();
@@ -304,20 +289,19 @@ void main() {
       expect(find.text('Fleet status copied to clipboard'), findsOneWidget);
     });
 
-    testWidgets('displays error when data loading fails',
-        (WidgetTester tester) async {
+    testWidgets('displays error when data loading fails', (
+      WidgetTester tester,
+    ) async {
       final widget = ProviderScope(
         overrides: [
           allCharactersProvider.overrideWith(
-              (ref) => Stream.error(Exception('Failed to load characters'))),
-          allCharacterSkillQueuesProvider
-              .overrideWith((ref) => Future.value({})),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: QuickActionsCard(),
+            (ref) => Stream.error(Exception('Failed to load characters')),
           ),
-        ),
+          allCharacterSkillQueuesProvider.overrideWith(
+            (ref) => Future.value({}),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: QuickActionsCard())),
       );
 
       await tester.pumpWidget(widget);
@@ -327,17 +311,16 @@ void main() {
       expect(find.textContaining('Failed to load alerts:'), findsOneWidget);
     });
 
-    testWidgets('displays icon and title correctly',
-        (WidgetTester tester) async {
+    testWidgets('displays icon and title correctly', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         createTestWidget(
           characters: [testCharacter1],
           queues: {
             1: [testSkillEntry1],
           },
-          balances: {
-            1: 1000000.0,
-          },
+          balances: {1: 1000000.0},
         ),
       );
       await tester.pumpAndSettle();
@@ -349,18 +332,20 @@ void main() {
       expect(find.text('QUICK ACTIONS'), findsOneWidget);
     });
 
-    testWidgets('formats ISK values correctly in fleet status',
-        (WidgetTester tester) async {
+    testWidgets('formats ISK values correctly in fleet status', (
+      WidgetTester tester,
+    ) async {
       String? clipboardData;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform,
-              (MethodCall methodCall) async {
-        if (methodCall.method == 'Clipboard.setData') {
-          clipboardData = (methodCall.arguments as Map)['text'] as String?;
-          return null;
-        }
-        return null;
-      });
+          .setMockMethodCallHandler(SystemChannels.platform, (
+            MethodCall methodCall,
+          ) async {
+            if (methodCall.method == 'Clipboard.setData') {
+              clipboardData = (methodCall.arguments as Map)['text'] as String?;
+              return null;
+            }
+            return null;
+          });
 
       await tester.pumpWidget(
         createTestWidget(
@@ -383,8 +368,9 @@ void main() {
       expect(clipboardData, contains('1.50B ISK'));
     });
 
-    testWidgets('handles characters with no balance gracefully',
-        (WidgetTester tester) async {
+    testWidgets('handles characters with no balance gracefully', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         createTestWidget(
           characters: [testCharacter1, testCharacter2],

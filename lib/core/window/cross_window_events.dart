@@ -32,10 +32,10 @@ class CrossWindowEvent {
   }) : timestamp = timestamp ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {
-        'type': type.name,
-        'data': data,
-        'timestamp': timestamp.toIso8601String(),
-      };
+    'type': type.name,
+    'data': data,
+    'timestamp': timestamp.toIso8601String(),
+  };
 
   factory CrossWindowEvent.fromJson(Map<String, dynamic> json) {
     return CrossWindowEvent(

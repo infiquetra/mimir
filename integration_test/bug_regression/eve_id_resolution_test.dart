@@ -30,160 +30,155 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('EVE ID Resolution Regression Tests', () {
-    testWidgets(
-      'TC-ID-001: Skill names use skillNameProvider (SDE)',
-      (tester) async {
-        // GIVEN: SkillsScreen with active skill queue
-        final characterId = 12345678;
+    testWidgets('TC-ID-001: Skill names use skillNameProvider (SDE)', (
+      tester,
+    ) async {
+      // GIVEN: SkillsScreen with active skill queue
+      final characterId = 12345678;
 
-        await tester.pumpWidget(
-          TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(),
-            setupDatabase: (db) async {
-              // Insert skill queue with known skills
-              final skills = SkillFixtures.activeQueue(
-                characterId: characterId,
-              );
+      await tester.pumpWidget(
+        TestApp(
+          initialCharacter: CharacterFixtures.testCharacter(),
+          setupDatabase: (db) async {
+            // Insert skill queue with known skills
+            final skills = SkillFixtures.activeQueue(characterId: characterId);
 
-              await db.batch((batch) {
-                batch.insertAll(db.skillQueueEntries, skills);
-              });
-            },
-            home: const SkillsScreen(),
-          ),
-        );
+            await db.batch((batch) {
+              batch.insertAll(db.skillQueueEntries, skills);
+            });
+          },
+          home: const SkillsScreen(),
+        ),
+      );
 
-        // WHEN: Screen loads and displays skill queue
-        await tester.pumpAndSettle();
+      // WHEN: Screen loads and displays skill queue
+      await tester.pumpAndSettle();
 
-        // Wait for data to load
-        await waitForLoadingToComplete(tester);
+      // Wait for data to load
+      await waitForLoadingToComplete(tester);
 
-        // THEN: Skill names should be resolved from SDE, NOT showing IDs
-        // We should find skill names, not "Skill #3301"
-        expect(
-          find.textContaining('Skill #'),
-          findsNothing,
-          reason: 'Should not show raw skill IDs like "Skill #3301"',
-        );
+      // THEN: Skill names should be resolved from SDE, NOT showing IDs
+      // We should find skill names, not "Skill #3301"
+      expect(
+        find.textContaining('Skill #'),
+        findsNothing,
+        reason: 'Should not show raw skill IDs like "Skill #3301"',
+      );
 
-        // Skills should show actual names (from SDE)
-        // Note: The exact name depends on SDE loading, but we should NOT see IDs
-        expect(
-          find.byType(SkillsScreen),
-          findsOneWidget,
-          reason: 'Screen should render with skill names resolved',
-        );
+      // Skills should show actual names (from SDE)
+      // Note: The exact name depends on SDE loading, but we should NOT see IDs
+      expect(
+        find.byType(SkillsScreen),
+        findsOneWidget,
+        reason: 'Screen should render with skill names resolved',
+      );
 
-        // REGRESSION CHECK: Before using skillNameProvider, skills would
-        // display as "Skill #3301" because the wrong provider was used.
-        // skillNameProvider uses the bundled SDE database for offline resolution.
-      },
-    );
+      // REGRESSION CHECK: Before using skillNameProvider, skills would
+      // display as "Skill #3301" because the wrong provider was used.
+      // skillNameProvider uses the bundled SDE database for offline resolution.
+    });
 
-    testWidgets(
-      'TC-ID-002: Item names use itemNameProvider (ESI)',
-      (tester) async {
-        // GIVEN: WalletScreen with market transactions
-        final characterId = 12345678;
+    testWidgets('TC-ID-002: Item names use itemNameProvider (ESI)', (
+      tester,
+    ) async {
+      // GIVEN: WalletScreen with market transactions
+      final characterId = 12345678;
 
-        await tester.pumpWidget(
-          TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(),
-            setupDatabase: (db) async {
-              // Insert wallet transactions with known item type IDs
-              final transactions = WalletFixtures.allTransactions(
-                characterId: characterId,
-              );
+      await tester.pumpWidget(
+        TestApp(
+          initialCharacter: CharacterFixtures.testCharacter(),
+          setupDatabase: (db) async {
+            // Insert wallet transactions with known item type IDs
+            final transactions = WalletFixtures.allTransactions(
+              characterId: characterId,
+            );
 
-              await db.insertWalletTransactions(transactions);
-            },
-            home: const WalletScreen(),
-          ),
-        );
+            await db.insertWalletTransactions(transactions);
+          },
+          home: const WalletScreen(),
+        ),
+      );
 
-        // WHEN: Screen loads and displays transactions
-        await tester.pumpAndSettle();
+      // WHEN: Screen loads and displays transactions
+      await tester.pumpAndSettle();
 
-        // Switch to Market Transactions tab
-        await tester.tap(find.text('Market'));
-        await tester.pumpAndSettle();
+      // Switch to Market Transactions tab
+      await tester.tap(find.text('Market'));
+      await tester.pumpAndSettle();
 
-        // Wait for transaction data to load
-        await waitForLoadingToComplete(tester);
+      // Wait for transaction data to load
+      await waitForLoadingToComplete(tester);
 
-        // THEN: Item names should be resolved from ESI, NOT showing IDs
-        expect(
-          find.textContaining('Item #'),
-          findsNothing,
-          reason: 'Should not show raw item IDs like "Item #587"',
-        );
+      // THEN: Item names should be resolved from ESI, NOT showing IDs
+      expect(
+        find.textContaining('Item #'),
+        findsNothing,
+        reason: 'Should not show raw item IDs like "Item #587"',
+      );
 
-        expect(
-          find.textContaining('Unknown Item'),
-          findsNothing,
-          reason: 'Should resolve item names from ESI',
-        );
+      expect(
+        find.textContaining('Unknown Item'),
+        findsNothing,
+        reason: 'Should resolve item names from ESI',
+      );
 
-        // REGRESSION CHECK: Before using itemNameProvider, items would
-        // display as "Item #587" or "Unknown Item" because:
-        // 1. Wrong provider was used (skillNameProvider for non-skills)
-        // 2. Provider wasn't used at all (raw ID displayed)
-        // itemNameProvider uses ESI /universe/names/ endpoint with caching.
-      },
-    );
+      // REGRESSION CHECK: Before using itemNameProvider, items would
+      // display as "Item #587" or "Unknown Item" because:
+      // 1. Wrong provider was used (skillNameProvider for non-skills)
+      // 2. Provider wasn't used at all (raw ID displayed)
+      // itemNameProvider uses ESI /universe/names/ endpoint with caching.
+    });
 
-    testWidgets(
-      'TC-ID-003: Location names use locationNameProvider (ESI)',
-      (tester) async {
-        // GIVEN: WalletScreen with market transactions (locations)
-        final characterId = 12345678;
+    testWidgets('TC-ID-003: Location names use locationNameProvider (ESI)', (
+      tester,
+    ) async {
+      // GIVEN: WalletScreen with market transactions (locations)
+      final characterId = 12345678;
 
-        await tester.pumpWidget(
-          TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(),
-            setupDatabase: (db) async {
-              // Insert wallet transactions with known location IDs
-              final transactions = WalletFixtures.allTransactions(
-                characterId: characterId,
-              );
+      await tester.pumpWidget(
+        TestApp(
+          initialCharacter: CharacterFixtures.testCharacter(),
+          setupDatabase: (db) async {
+            // Insert wallet transactions with known location IDs
+            final transactions = WalletFixtures.allTransactions(
+              characterId: characterId,
+            );
 
-              await db.insertWalletTransactions(transactions);
-            },
-            home: const WalletScreen(),
-          ),
-        );
+            await db.insertWalletTransactions(transactions);
+          },
+          home: const WalletScreen(),
+        ),
+      );
 
-        // WHEN: Screen loads and displays transactions
-        await tester.pumpAndSettle();
+      // WHEN: Screen loads and displays transactions
+      await tester.pumpAndSettle();
 
-        // Switch to Market Transactions tab
-        await tester.tap(find.text('Market'));
-        await tester.pumpAndSettle();
+      // Switch to Market Transactions tab
+      await tester.tap(find.text('Market'));
+      await tester.pumpAndSettle();
 
-        // Wait for transaction data to load
-        await waitForLoadingToComplete(tester);
+      // Wait for transaction data to load
+      await waitForLoadingToComplete(tester);
 
-        // THEN: Location names should be resolved from ESI, NOT showing IDs
-        expect(
-          find.textContaining('Location #'),
-          findsNothing,
-          reason: 'Should not show raw location IDs like "Location #60003760"',
-        );
+      // THEN: Location names should be resolved from ESI, NOT showing IDs
+      expect(
+        find.textContaining('Location #'),
+        findsNothing,
+        reason: 'Should not show raw location IDs like "Location #60003760"',
+      );
 
-        expect(
-          find.textContaining('Unknown Location'),
-          findsNothing,
-          reason: 'Should resolve location names from ESI',
-        );
+      expect(
+        find.textContaining('Unknown Location'),
+        findsNothing,
+        reason: 'Should resolve location names from ESI',
+      );
 
-        // REGRESSION CHECK: Before using locationNameProvider, locations would
-        // display as "Location #60003760" or "Unknown Location" because:
-        // 1. Wrong provider was used
-        // 2. Provider wasn't used at all (raw ID displayed)
-        // locationNameProvider uses ESI /universe/names/ endpoint for stations/structures.
-      },
-    );
+      // REGRESSION CHECK: Before using locationNameProvider, locations would
+      // display as "Location #60003760" or "Unknown Location" because:
+      // 1. Wrong provider was used
+      // 2. Provider wasn't used at all (raw ID displayed)
+      // locationNameProvider uses ESI /universe/names/ endpoint for stations/structures.
+    });
 
     testWidgets(
       'TC-ID-004: Fallback to raw IDs when resolution fails gracefully',

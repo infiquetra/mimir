@@ -22,12 +22,18 @@ class MarketRepository {
   }
 
   /// Replace all active orders for a character.
-  Future<void> replaceAllOrders(int characterId, List<MarketOrdersCompanion> orders) async {
-    Log.d('MARKET', 'replaceAllOrders($characterId) - saving ${orders.length} orders');
+  Future<void> replaceAllOrders(
+    int characterId,
+    List<MarketOrdersCompanion> orders,
+  ) async {
+    Log.d(
+      'MARKET',
+      'replaceAllOrders($characterId) - saving ${orders.length} orders',
+    );
     await _database.transaction(() async {
-      await (_database.delete(_database.marketOrders)
-            ..where((o) => o.characterId.equals(characterId)))
-          .go();
+      await (_database.delete(
+        _database.marketOrders,
+      )..where((o) => o.characterId.equals(characterId))).go();
       await _database.batch((batch) {
         batch.insertAll(_database.marketOrders, orders);
       });
@@ -39,16 +45,16 @@ class MarketRepository {
 
   /// Watch a specific market price.
   Stream<MarketPrice?> watchPrice(int typeId) {
-    return (_database.select(_database.marketPrices)
-          ..where((p) => p.typeId.equals(typeId)))
-        .watchSingleOrNull();
+    return (_database.select(
+      _database.marketPrices,
+    )..where((p) => p.typeId.equals(typeId))).watchSingleOrNull();
   }
-  
+
   /// Get a specific market price asynchronously.
   Future<MarketPrice?> getPrice(int typeId) {
-    return (_database.select(_database.marketPrices)
-          ..where((p) => p.typeId.equals(typeId)))
-        .getSingleOrNull();
+    return (_database.select(
+      _database.marketPrices,
+    )..where((p) => p.typeId.equals(typeId))).getSingleOrNull();
   }
 
   /// Replace all market prices.
@@ -66,11 +72,17 @@ class MarketRepository {
   // --- Market History ---
 
   /// Get cached market history for a type in a region.
-  Future<List<MarketHistoryEntry>> getMarketHistory(int typeId, int regionId) async {
-    final rows = await (_database.select(_database.marketHistoryEntries)
-          ..where((h) => h.typeId.equals(typeId) & h.regionId.equals(regionId))
-          ..orderBy([(h) => OrderingTerm.asc(h.date)]))
-        .get();
+  Future<List<MarketHistoryEntry>> getMarketHistory(
+    int typeId,
+    int regionId,
+  ) async {
+    final rows =
+        await (_database.select(_database.marketHistoryEntries)
+              ..where(
+                (h) => h.typeId.equals(typeId) & h.regionId.equals(regionId),
+              )
+              ..orderBy([(h) => OrderingTerm.asc(h.date)]))
+            .get();
     return rows;
   }
 
@@ -80,17 +92,24 @@ class MarketRepository {
     int regionId,
     List<MarketHistoryEntriesCompanion> entries,
   ) async {
-    Log.d('MARKET', 'saveMarketHistory(type=$typeId, region=$regionId) - saving ${entries.length} entries');
+    Log.d(
+      'MARKET',
+      'saveMarketHistory(type=$typeId, region=$regionId) - saving ${entries.length} entries',
+    );
     await _database.transaction(() async {
       // Delete existing history for this type/region combo
-      await (_database.delete(_database.marketHistoryEntries)
-            ..where((h) => h.typeId.equals(typeId) & h.regionId.equals(regionId)))
+      await (_database.delete(_database.marketHistoryEntries)..where(
+            (h) => h.typeId.equals(typeId) & h.regionId.equals(regionId),
+          ))
           .go();
       await _database.batch((batch) {
         batch.insertAll(_database.marketHistoryEntries, entries);
       });
     });
-    Log.i('MARKET', 'saveMarketHistory(type=$typeId, region=$regionId) - SUCCESS');
+    Log.i(
+      'MARKET',
+      'saveMarketHistory(type=$typeId, region=$regionId) - SUCCESS',
+    );
   }
 }
 

@@ -55,9 +55,11 @@ class TrainingTimelineCard extends ConsumerWidget {
   ) {
     // Filter to only characters with active training
     final activeQueues = queuesMap.entries
-        .where((entry) =>
-            entry.value.isNotEmpty &&
-            entry.value.any((skill) => skill.finishDate != null))
+        .where(
+          (entry) =>
+              entry.value.isNotEmpty &&
+              entry.value.any((skill) => skill.finishDate != null),
+        )
         .toList();
 
     if (activeQueues.isEmpty) {
@@ -105,8 +107,7 @@ class TrainingTimelineCard extends ConsumerWidget {
       final queue = entry.value.take(maxSkillsPerCharacter);
       for (final skill in queue) {
         if (skill.finishDate != null) {
-          if (latestFinish == null ||
-              skill.finishDate!.isAfter(latestFinish)) {
+          if (latestFinish == null || skill.finishDate!.isAfter(latestFinish)) {
             latestFinish = skill.finishDate;
           }
         }
@@ -125,10 +126,7 @@ class TrainingTimelineCard extends ConsumerWidget {
   }
 
   /// Builds the timeline header with time markers.
-  Widget _buildTimelineHeader(
-    BuildContext context,
-    TimelineData timeline,
-  ) {
+  Widget _buildTimelineHeader(BuildContext context, TimelineData timeline) {
     final now = timeline.startTime;
     final tomorrow = now.add(const Duration(days: 1));
     final thisWeek = now.add(const Duration(days: 3));
@@ -145,28 +143,19 @@ class TrainingTimelineCard extends ConsumerWidget {
               left: 0,
               top: 0,
               bottom: 0,
-              child: Container(
-                width: 2,
-                color: EveColors.evePrimary,
-              ),
+              child: Container(width: 2, color: EveColors.evePrimary),
             ),
 
             // Time labels
             Row(
               children: [
-                Expanded(
-                  child: _buildTimeMarker(context, 'Now', 0),
-                ),
+                Expanded(child: _buildTimeMarker(context, 'Now', 0)),
                 if (tomorrow.isBefore(timeline.endTime))
                   Expanded(
                     child: _buildTimeMarker(
                       context,
                       'Tomorrow',
-                      _calculatePosition(
-                        now,
-                        tomorrow,
-                        timeline,
-                      ),
+                      _calculatePosition(now, tomorrow, timeline),
                     ),
                   ),
                 if (thisWeek.isBefore(timeline.endTime))
@@ -174,11 +163,7 @@ class TrainingTimelineCard extends ConsumerWidget {
                     child: _buildTimeMarker(
                       context,
                       'This Week',
-                      _calculatePosition(
-                        now,
-                        thisWeek,
-                        timeline,
-                      ),
+                      _calculatePosition(now, thisWeek, timeline),
                     ),
                   ),
                 if (nextWeek.isBefore(timeline.endTime))
@@ -186,11 +171,7 @@ class TrainingTimelineCard extends ConsumerWidget {
                     child: _buildTimeMarker(
                       context,
                       'Next Week',
-                      _calculatePosition(
-                        now,
-                        nextWeek,
-                        timeline,
-                      ),
+                      _calculatePosition(now, nextWeek, timeline),
                     ),
                   ),
               ],
@@ -205,11 +186,11 @@ class TrainingTimelineCard extends ConsumerWidget {
     return Text(
       label,
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: Colors.white.withAlpha(128),
-            fontSize: 10,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.5,
-          ),
+        color: Colors.white.withAlpha(128),
+        fontSize: 10,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.5,
+      ),
     );
   }
 
@@ -248,12 +229,7 @@ class TrainingTimelineCard extends ConsumerWidget {
 
             // Timeline bars
             Expanded(
-              child: _buildTimelineBars(
-                context,
-                ref,
-                displaySkills,
-                timeline,
-              ),
+              child: _buildTimelineBars(context, ref, displaySkills, timeline),
             ),
           ],
         );
@@ -375,12 +351,13 @@ class TrainingTimelineCard extends ConsumerWidget {
             final romanNumerals = ['I', 'II', 'III', 'IV', 'V'];
             final levelStr =
                 skill.finishedLevel >= 1 && skill.finishedLevel <= 5
-                    ? romanNumerals[skill.finishedLevel - 1]
-                    : '${skill.finishedLevel}';
+                ? romanNumerals[skill.finishedLevel - 1]
+                : '${skill.finishedLevel}';
             final fullName = '$skillName $levelStr';
 
             final now = DateTime.now();
-            final isActive = (skill.startDate?.isBefore(now) ?? false) &&
+            final isActive =
+                (skill.startDate?.isBefore(now) ?? false) &&
                 skill.finishDate!.isAfter(now);
 
             return Container(
@@ -398,12 +375,12 @@ class TrainingTimelineCard extends ConsumerWidget {
               child: Text(
                 fullName,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: isActive
-                          ? EveColors.evePrimary
-                          : Colors.white.withAlpha(179),
-                      fontSize: 10,
-                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                    ),
+                  color: isActive
+                      ? EveColors.evePrimary
+                      : Colors.white.withAlpha(179),
+                  fontSize: 10,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -420,9 +397,9 @@ class TrainingTimelineCard extends ConsumerWidget {
           error: (_, __) => Text(
             'Skill #${skill.skillId}',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Colors.white.withAlpha(128),
-                  fontSize: 10,
-                ),
+              color: Colors.white.withAlpha(128),
+              fontSize: 10,
+            ),
           ),
         );
       }).toList(),
@@ -439,10 +416,12 @@ class TrainingTimelineCard extends ConsumerWidget {
     TimelineData timeline,
   ) {
     if (timestamp.isBefore(now)) return 0.0;
-    if (timestamp.isAfter(timeline.endTime)) return 300.0; // Approximate max width
+    if (timestamp.isAfter(timeline.endTime))
+      return 300.0; // Approximate max width
 
     final elapsed = timestamp.difference(now);
-    final ratio = elapsed.inMilliseconds / timeline.totalDuration.inMilliseconds;
+    final ratio =
+        elapsed.inMilliseconds / timeline.totalDuration.inMilliseconds;
 
     // Return position in pixels (0 to ~300px for typical card width)
     return ratio * 300.0;
@@ -464,15 +443,15 @@ class TrainingTimelineCard extends ConsumerWidget {
             Text(
               'No Training Timeline',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.white.withAlpha(179),
-                  ),
+                color: Colors.white.withAlpha(179),
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               'No characters have active skill training',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withAlpha(128),
-                  ),
+                color: Colors.white.withAlpha(128),
+              ),
               textAlign: TextAlign.center,
             ),
           ],

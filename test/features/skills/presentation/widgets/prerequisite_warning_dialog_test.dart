@@ -77,7 +77,9 @@ void main() {
     expect(find.text('Need level 3 (untrained)'), findsOneWidget);
   });
 
-  testWidgets('shows trained vs required levels for partially trained skill', (tester) async {
+  testWidgets('shows trained vs required levels for partially trained skill', (
+    tester,
+  ) async {
     final unmetPrereqs = [
       const PrerequisiteRequirement(
         skillId: 3318,
@@ -108,7 +110,9 @@ void main() {
     expect(find.byIcon(Icons.arrow_upward), findsOneWidget);
   });
 
-  testWidgets('shows untrained state for completely untrained skill', (tester) async {
+  testWidgets('shows untrained state for completely untrained skill', (
+    tester,
+  ) async {
     final unmetPrereqs = [
       const PrerequisiteRequirement(
         skillId: 3327,
@@ -139,7 +143,9 @@ void main() {
     expect(find.byIcon(Icons.close), findsOneWidget);
   });
 
-  testWidgets('"Add with Prerequisites" button returns correct result', (tester) async {
+  testWidgets('"Add with Prerequisites" button returns correct result', (
+    tester,
+  ) async {
     final unmetPrereqs = [
       const PrerequisiteRequirement(
         skillId: 3318,
@@ -362,7 +368,9 @@ void main() {
 
     // Verify warning message
     expect(
-      find.text('This skill requires the following prerequisites to be trained first:'),
+      find.text(
+        'This skill requires the following prerequisites to be trained first:',
+      ),
       findsOneWidget,
     );
 

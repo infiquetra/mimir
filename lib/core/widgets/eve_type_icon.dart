@@ -57,7 +57,9 @@ class EveTypeIcon extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: backgroundColor ?? Theme.of(context).colorScheme.surfaceContainerHighest,
+        color:
+            backgroundColor ??
+            Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(borderRadius),
       ),
       clipBehavior: Clip.antiAlias,
@@ -76,14 +78,19 @@ class EveTypeIcon extends StatelessWidget {
                 strokeWidth: 2,
                 value: loadingProgress.expectedTotalBytes != null
                     ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
+                          loadingProgress.expectedTotalBytes!
                     : null,
               ),
             ),
           );
         },
         errorBuilder: (context, error, stackTrace) {
-          Log.e('EveTypeIcon', 'Failed to load icon for type $typeId from $_imageUrl', error, stackTrace);
+          Log.e(
+            'EveTypeIcon',
+            'Failed to load icon for type $typeId from $_imageUrl',
+            error,
+            stackTrace,
+          );
           return Center(
             child: Stack(
               alignment: Alignment.center,
@@ -91,7 +98,9 @@ class EveTypeIcon extends StatelessWidget {
                 Icon(
                   Icons.help_outline_rounded,
                   size: size * 0.5,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(76),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withAlpha(76),
                 ),
                 Positioned(
                   bottom: 2,
@@ -99,7 +108,9 @@ class EveTypeIcon extends StatelessWidget {
                   child: Icon(
                     Icons.square_rounded,
                     size: size * 0.15,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(128),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurfaceVariant.withAlpha(128),
                   ),
                 ),
               ],

@@ -4,8 +4,10 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   desktop_multi_window
+  file_selector_linux
   flutter_secure_storage_linux
   gtk
+  local_notifier
   screen_retriever_linux
   sqlite3_flutter_libs
   tray_manager

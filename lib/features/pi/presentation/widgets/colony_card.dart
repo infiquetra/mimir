@@ -14,20 +14,20 @@ class ColonyCard extends ConsumerWidget {
   final PlanetaryColony colony;
   final VoidCallback? onTap;
 
-  const ColonyCard({
-    super.key,
-    required this.colony,
-    this.onTap,
-  });
+  const ColonyCard({super.key, required this.colony, this.onTap});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     Log.d('PI', 'ColonyCard.build() for ${colony.planetName}');
 
-    final pinsAsync = ref.watch(planetPinsProvider(PlanetPinsArgs(
-      characterId: colony.characterId,
-      planetId: colony.planetId,
-    )));
+    final pinsAsync = ref.watch(
+      planetPinsProvider(
+        PlanetPinsArgs(
+          characterId: colony.characterId,
+          planetId: colony.planetId,
+        ),
+      ),
+    );
 
     return pinsAsync.when(
       data: (pins) => _buildWithPins(context, pins),
@@ -38,11 +38,13 @@ class ColonyCard extends ConsumerWidget {
 
   Widget _buildWithPins(BuildContext context, List<PlanetaryPin> pins) {
     final extractorPins = pins.where((p) => p.productTypeId != null).toList();
-    final hasActiveExtractors = extractorPins
-        .any((p) => p.expiryTime != null && p.expiryTime!.isAfter(DateTime.now()));
+    final hasActiveExtractors = extractorPins.any(
+      (p) => p.expiryTime != null && p.expiryTime!.isAfter(DateTime.now()),
+    );
 
-    final statusColor =
-        hasActiveExtractors ? EveColors.success : EveColors.warning;
+    final statusColor = hasActiveExtractors
+        ? EveColors.success
+        : EveColors.warning;
     final statusText = hasActiveExtractors ? 'Extracting' : 'Idle';
 
     DateTime? nextCompletion;
@@ -63,10 +65,7 @@ class ColonyCard extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AnimatedPlanet(
-            planetType: colony.planetType,
-            pins: pins,
-          ),
+          AnimatedPlanet(planetType: colony.planetType, pins: pins),
           const SizedBox(width: 24),
           Expanded(
             child: Column(
@@ -81,17 +80,16 @@ class ColonyCard extends ConsumerWidget {
                         children: [
                           Text(
                             colony.planetName,
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           Text(
                             colony.planetType,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withOpacity(0.7),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.7),
                                 ),
                           ),
                         ],
@@ -116,7 +114,9 @@ class ColonyCard extends ConsumerWidget {
                 _InfoRow(
                   label: 'Next Completion',
                   value: nextCompletion != null
-                      ? formatDuration(nextCompletion.difference(DateTime.now()))
+                      ? formatDuration(
+                          nextCompletion.difference(DateTime.now()),
+                        )
                       : 'N/A',
                   icon: Icons.timer_outlined,
                 ),
@@ -135,15 +135,11 @@ class ColonyCard extends ConsumerWidget {
   }
 
   Widget _buildLoading(BuildContext context) {
-    return const EveCard(
-      child: Center(child: CircularProgressIndicator()),
-    );
+    return const EveCard(child: Center(child: CircularProgressIndicator()));
   }
 
   Widget _buildError(BuildContext context, Object error) {
-    return EveCard(
-      child: Center(child: Text('Error: $error')),
-    );
+    return EveCard(child: Center(child: Text('Error: $error')));
   }
 }
 
@@ -161,7 +157,8 @@ class AnimatedPlanet extends StatefulWidget {
   State<AnimatedPlanet> createState() => _AnimatedPlanetState();
 }
 
-class _AnimatedPlanetState extends State<AnimatedPlanet> with SingleTickerProviderStateMixin {
+class _AnimatedPlanetState extends State<AnimatedPlanet>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _glowController;
 
   @override
@@ -181,22 +178,33 @@ class _AnimatedPlanetState extends State<AnimatedPlanet> with SingleTickerProvid
 
   int _getPlanetTypeId(String planetType) {
     switch (planetType.toLowerCase()) {
-      case 'temperate': return 11;
-      case 'ice': return 12;
-      case 'gas': return 13;
-      case 'oceanic': return 2014;
-      case 'lava': return 2015;
-      case 'barren': return 2016;
-      case 'storm': return 2017;
-      case 'plasma': return 2063;
-      default: return 11;
+      case 'temperate':
+        return 11;
+      case 'ice':
+        return 12;
+      case 'gas':
+        return 13;
+      case 'oceanic':
+        return 2014;
+      case 'lava':
+        return 2015;
+      case 'barren':
+        return 2016;
+      case 'storm':
+        return 2017;
+      case 'plasma':
+        return 2063;
+      default:
+        return 11;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final typeId = _getPlanetTypeId(widget.planetType);
-    final extractors = widget.pins.where((p) => p.productTypeId != null).toList();
+    final extractors = widget.pins
+        .where((p) => p.productTypeId != null)
+        .toList();
     final hasActive = extractors.any(
       (p) => p.expiryTime != null && p.expiryTime!.isAfter(DateTime.now()),
     );
@@ -239,9 +247,7 @@ class _AnimatedPlanetState extends State<AnimatedPlanet> with SingleTickerProvid
               alignment: Alignment.center,
               clipBehavior: Clip.none,
               children: [
-                ClipOval(
-                  child: EveTypeIcon(typeId: typeId, size: 128),
-                ),
+                ClipOval(child: EveTypeIcon(typeId: typeId, size: 128)),
                 // Extractor pin dots
                 ...extractors.map((pin) {
                   final hash = pin.pinId.hashCode;
@@ -250,8 +256,12 @@ class _AnimatedPlanetState extends State<AnimatedPlanet> with SingleTickerProvid
                   final x = r * math.cos(angle);
                   final y = r * math.sin(angle);
 
-                  final isActive = pin.expiryTime != null && pin.expiryTime!.isAfter(DateTime.now());
-                  final pinColor = isActive ? EveColors.success : EveColors.warning;
+                  final isActive =
+                      pin.expiryTime != null &&
+                      pin.expiryTime!.isAfter(DateTime.now());
+                  final pinColor = isActive
+                      ? EveColors.success
+                      : EveColors.warning;
 
                   return Positioned(
                     left: 40 + x - 3,
@@ -301,8 +311,6 @@ class _AnimatedPlanetState extends State<AnimatedPlanet> with SingleTickerProvid
   }
 }
 
-
-
 class _StatusIndicator extends StatelessWidget {
   final Color color;
   final String text;
@@ -321,9 +329,9 @@ class _StatusIndicator extends StatelessWidget {
       child: Text(
         text.toUpperCase(),
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
+          color: color,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -349,17 +357,14 @@ class _InfoRow extends StatelessWidget {
         Text(
           '$label: ',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withOpacity(0.7),
-              ),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+          ),
         ),
         Text(
           value,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
       ],
     );

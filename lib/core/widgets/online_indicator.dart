@@ -11,11 +11,7 @@ class OnlineIndicator extends StatelessWidget {
   /// Size of the indicator dot.
   final double size;
 
-  const OnlineIndicator({
-    super.key,
-    required this.isOnline,
-    this.size = 8.0,
-  });
+  const OnlineIndicator({super.key, required this.isOnline, this.size = 8.0});
 
   @override
   Widget build(BuildContext context) {

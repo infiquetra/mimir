@@ -96,15 +96,23 @@ void main() {
       test('should parse valid EVE JWT token', () {
         // Create a mock EVE JWT token.
         final header = base64Url.encode(utf8.encode('{"alg":"RS256"}'));
-        final payload = base64Url.encode(utf8.encode(json.encode({
-          'sub': 'CHARACTER:EVE:12345678',
-          'name': 'Test Pilot',
-          'exp': DateTime.now()
-                  .add(const Duration(hours: 1))
-                  .millisecondsSinceEpoch ~/
-              1000,
-          'scp': ['esi-skills.read_skills.v1', 'esi-wallet.read_character_wallet.v1'],
-        })));
+        final payload = base64Url.encode(
+          utf8.encode(
+            json.encode({
+              'sub': 'CHARACTER:EVE:12345678',
+              'name': 'Test Pilot',
+              'exp':
+                  DateTime.now()
+                      .add(const Duration(hours: 1))
+                      .millisecondsSinceEpoch ~/
+                  1000,
+              'scp': [
+                'esi-skills.read_skills.v1',
+                'esi-wallet.read_character_wallet.v1',
+              ],
+            }),
+          ),
+        );
         final signature = base64Url.encode(utf8.encode('fake_signature'));
         final token = '$header.$payload.$signature';
 
@@ -118,15 +126,21 @@ void main() {
 
       test('should handle space-separated scopes string', () {
         final header = base64Url.encode(utf8.encode('{"alg":"RS256"}'));
-        final payload = base64Url.encode(utf8.encode(json.encode({
-          'sub': 'CHARACTER:EVE:12345678',
-          'name': 'Test Pilot',
-          'exp': DateTime.now()
-                  .add(const Duration(hours: 1))
-                  .millisecondsSinceEpoch ~/
-              1000,
-          'scp': 'esi-skills.read_skills.v1 esi-wallet.read_character_wallet.v1',
-        })));
+        final payload = base64Url.encode(
+          utf8.encode(
+            json.encode({
+              'sub': 'CHARACTER:EVE:12345678',
+              'name': 'Test Pilot',
+              'exp':
+                  DateTime.now()
+                      .add(const Duration(hours: 1))
+                      .millisecondsSinceEpoch ~/
+                  1000,
+              'scp':
+                  'esi-skills.read_skills.v1 esi-wallet.read_character_wallet.v1',
+            }),
+          ),
+        );
         final signature = base64Url.encode(utf8.encode('fake_signature'));
         final token = '$header.$payload.$signature';
 
@@ -144,11 +158,15 @@ void main() {
 
       test('should throw on invalid subject format', () {
         final header = base64Url.encode(utf8.encode('{"alg":"RS256"}'));
-        final payload = base64Url.encode(utf8.encode(json.encode({
-          'sub': 'INVALID:FORMAT',
-          'name': 'Test',
-          'exp': 9999999999,
-        })));
+        final payload = base64Url.encode(
+          utf8.encode(
+            json.encode({
+              'sub': 'INVALID:FORMAT',
+              'name': 'Test',
+              'exp': 9999999999,
+            }),
+          ),
+        );
         final signature = base64Url.encode(utf8.encode('fake'));
         final token = '$header.$payload.$signature';
 

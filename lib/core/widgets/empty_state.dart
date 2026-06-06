@@ -35,11 +35,7 @@ class EmptyState extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Icon
-              Icon(
-                icon,
-                size: 64,
-                color: Colors.white.withAlpha(128),
-              ),
+              Icon(icon, size: 64, color: Colors.white.withAlpha(128)),
               const SizedBox(height: 16),
 
               // Heading
@@ -65,10 +61,7 @@ class EmptyState extends StatelessWidget {
               ),
 
               // Optional action button
-              if (action != null) ...[
-                const SizedBox(height: 24),
-                action!,
-              ],
+              if (action != null) ...[const SizedBox(height: 24), action!],
             ],
           ),
         ),

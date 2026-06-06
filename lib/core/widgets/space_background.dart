@@ -55,9 +55,7 @@ class SpaceBackground extends StatelessWidget {
 
         // Starfield
         Positioned.fill(
-          child: CustomPaint(
-            painter: _StarfieldPainter(density: starDensity),
-          ),
+          child: CustomPaint(painter: _StarfieldPainter(density: starDensity)),
         ),
 
         // Content
@@ -121,8 +119,7 @@ class _StarfieldPainter extends CustomPainter {
 
       // Some stars are slightly tinted blue/white
       final isBlueTinted = random.nextDouble() > 0.7;
-      final baseColor =
-          isBlueTinted ? EveColors.evePrimary : Colors.white;
+      final baseColor = isBlueTinted ? EveColors.evePrimary : Colors.white;
 
       starPaint.color = baseColor.withAlpha((brightness * 255).round());
 
@@ -145,19 +142,12 @@ class _StarfieldPainter extends CustomPainter {
 
 /// A pre-configured space background suitable for scaffold use.
 class EveScaffoldBackground extends StatelessWidget {
-  const EveScaffoldBackground({
-    super.key,
-    required this.child,
-  });
+  const EveScaffoldBackground({super.key, required this.child});
 
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return SpaceBackground(
-      starDensity: 0.3,
-      nebulaOpacity: 0.06,
-      child: child,
-    );
+    return SpaceBackground(starDensity: 0.3, nebulaOpacity: 0.06, child: child);
   }
 }

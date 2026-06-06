@@ -19,10 +19,7 @@ class _FittingScreenState extends ConsumerState<FittingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: EveColors.backgroundBase,
-      appBar: AppBar(
-        title: const Text('Ship Fitting'),
-        centerTitle: false,
-      ),
+      appBar: AppBar(title: const Text('Ship Fitting'), centerTitle: false),
       body: Row(
         children: [
           // Left side: Ship/Module Browser (narrower)
@@ -30,11 +27,7 @@ class _FittingScreenState extends ConsumerState<FittingScreen> {
             width: 250,
             decoration: BoxDecoration(
               color: EveColors.surfaceDefault,
-              border: Border(
-                right: BorderSide(
-                  color: EveColors.borderSubtle,
-                ),
-              ),
+              border: Border(right: BorderSide(color: EveColors.borderSubtle)),
             ),
             child: Consumer(
               builder: (context, ref, child) {
@@ -43,22 +36,16 @@ class _FittingScreenState extends ConsumerState<FittingScreen> {
               },
             ),
           ),
-          
+
           // Middle: Fitting Editor (expanded, takes most space)
-          const Expanded(
-            child: FittingEditor(),
-          ),
-          
+          const Expanded(child: FittingEditor()),
+
           // Right side: Stats Panel (slimmer, secondary stats only)
           Container(
             width: 220,
             decoration: BoxDecoration(
               color: EveColors.surfaceDefault,
-              border: Border(
-                left: BorderSide(
-                  color: EveColors.borderSubtle,
-                ),
-              ),
+              border: Border(left: BorderSide(color: EveColors.borderSubtle)),
             ),
             child: const StatsPanel(),
           ),

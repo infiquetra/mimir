@@ -40,8 +40,8 @@ class CorporationLogo extends StatelessWidget {
     this.size = 64.0,
     this.borderRadius = 4.0,
     this.backgroundColor,
-  })  : id = corporationId,
-        isAlliance = false;
+  }) : id = corporationId,
+       isAlliance = false;
 
   /// Creates an alliance logo.
   const CorporationLogo.alliance({
@@ -50,8 +50,8 @@ class CorporationLogo extends StatelessWidget {
     this.size = 64.0,
     this.borderRadius = 4.0,
     this.backgroundColor,
-  })  : id = allianceId,
-        isAlliance = true;
+  }) : id = allianceId,
+       isAlliance = true;
 
   /// Normalizes size to nearest valid EVE server size (rounds up)
   static int _normalizeSize(double requestedSize) {
@@ -65,8 +65,12 @@ class CorporationLogo extends StatelessWidget {
   String get _imageUrl {
     final normalizedSize = _normalizeSize(size);
     final endpoint = isAlliance ? 'alliances' : 'corporations';
-    final url = '${EveConfig.imageServerUrl}/$endpoint/$id/logo?size=$normalizedSize';
-    Log.d('CORP_LOGO', 'Loading ${isAlliance ? 'alliance' : 'corporation'} logo: $url');
+    final url =
+        '${EveConfig.imageServerUrl}/$endpoint/$id/logo?size=$normalizedSize';
+    Log.d(
+      'CORP_LOGO',
+      'Loading ${isAlliance ? 'alliance' : 'corporation'} logo: $url',
+    );
     return url;
   }
 
@@ -76,7 +80,9 @@ class CorporationLogo extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: backgroundColor ?? Theme.of(context).colorScheme.surfaceContainerHighest,
+        color:
+            backgroundColor ??
+            Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(borderRadius),
       ),
       clipBehavior: Clip.antiAlias,
@@ -95,7 +101,7 @@ class CorporationLogo extends StatelessWidget {
                 strokeWidth: 2,
                 value: loadingProgress.expectedTotalBytes != null
                     ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
+                          loadingProgress.expectedTotalBytes!
                     : null,
               ),
             ),

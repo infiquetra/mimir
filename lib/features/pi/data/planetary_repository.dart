@@ -9,9 +9,7 @@ import '../../../core/logging/logger.dart';
 class PlanetaryRepository {
   final AppDatabase _database;
 
-  PlanetaryRepository({
-    required AppDatabase database,
-  }) : _database = database;
+  PlanetaryRepository({required AppDatabase database}) : _database = database;
 
   /// Saves a list of colonies and their pins to the database.
   Future<void> saveColonies(
@@ -19,8 +17,11 @@ class PlanetaryRepository {
     List<PlanetaryColoniesCompanion> colonies,
     List<PlanetaryPinsCompanion> pins,
   ) async {
-    Log.d('PI.DB', 'saveColonies($characterId) - saving ${colonies.length} colonies and ${pins.length} pins');
-    
+    Log.d(
+      'PI.DB',
+      'saveColonies($characterId) - saving ${colonies.length} colonies and ${pins.length} pins',
+    );
+
     try {
       await _database.batch((batch) {
         // 1. Upsert colonies
@@ -37,7 +38,7 @@ class PlanetaryRepository {
           mode: InsertMode.insertOrReplace,
         );
       });
-      
+
       Log.d('PI.DB', 'saveColonies($characterId) - SUCCESS');
     } catch (e, stack) {
       Log.e('PI.DB', 'saveColonies($characterId) - FAILED', e, stack);
@@ -57,30 +58,30 @@ class PlanetaryRepository {
   /// Watches all colonies across all characters.
   Stream<List<PlanetaryColony>> watchAllColonies() {
     Log.d('PI.DB', 'watchAllColonies() - subscribed to stream');
-    return (_database.select(_database.planetaryColonies)
-          ..orderBy([(c) => OrderingTerm.asc(c.planetName)]))
-        .watch();
+    return (_database.select(
+      _database.planetaryColonies,
+    )..orderBy([(c) => OrderingTerm.asc(c.planetName)])).watch();
   }
 
   /// Watches pins for a specific planet.
   Stream<List<PlanetaryPin>> watchPins(int characterId, int planetId) {
     Log.d('PI.DB', 'watchPins($characterId, $planetId) - subscribed to stream');
-    return (_database.select(_database.planetaryPins)
-          ..where((p) => p.characterId.equals(characterId) & p.planetId.equals(planetId)))
+    return (_database.select(_database.planetaryPins)..where(
+          (p) =>
+              p.characterId.equals(characterId) & p.planetId.equals(planetId),
+        ))
         .watch();
   }
 
   /// Gets all colonies for a character.
   Future<List<PlanetaryColony>> getColonies(int characterId) {
-    return (_database.select(_database.planetaryColonies)
-          ..where((c) => c.characterId.equals(characterId)))
-        .get();
+    return (_database.select(
+      _database.planetaryColonies,
+    )..where((c) => c.characterId.equals(characterId))).get();
   }
 }
 
 /// Provider for the planetary repository.
 final planetaryRepositoryProvider = Provider<PlanetaryRepository>((ref) {
-  return PlanetaryRepository(
-    database: ref.watch(databaseProvider),
-  );
+  return PlanetaryRepository(database: ref.watch(databaseProvider));
 });

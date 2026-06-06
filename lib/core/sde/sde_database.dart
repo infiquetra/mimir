@@ -138,6 +138,60 @@ class SdeTypeEffects extends Table {
   Set<Column> get primaryKey => {typeId, effectId};
 }
 
+/// Represents industry activity type and duration.
+class SdeIndustryActivities extends Table {
+  IntColumn get typeId => integer()();
+  IntColumn get activityId => integer()();
+  IntColumn get time => integer()();
+  
+  @override
+  Set<Column> get primaryKey => {typeId, activityId};
+}
+
+/// Represents materials required for an industry activity.
+class SdeIndustryActivityMaterials extends Table {
+  IntColumn get typeId => integer()();
+  IntColumn get activityId => integer()();
+  IntColumn get materialTypeId => integer()();
+  IntColumn get quantity => integer()();
+  
+  @override
+  Set<Column> get primaryKey => {typeId, activityId, materialTypeId};
+}
+
+/// Represents probability of an industry activity product.
+class SdeIndustryActivityProbabilities extends Table {
+  IntColumn get typeId => integer()();
+  IntColumn get activityId => integer()();
+  IntColumn get productTypeId => integer()();
+  RealColumn get probability => real()();
+  
+  @override
+  Set<Column> get primaryKey => {typeId, activityId, productTypeId};
+}
+
+/// Represents product produced from an industry activity.
+class SdeIndustryActivityProducts extends Table {
+  IntColumn get typeId => integer()();
+  IntColumn get activityId => integer()();
+  IntColumn get productTypeId => integer()();
+  IntColumn get quantity => integer()();
+  
+  @override
+  Set<Column> get primaryKey => {typeId, activityId, productTypeId};
+}
+
+/// Represents skills required for an industry activity.
+class SdeIndustryActivitySkills extends Table {
+  IntColumn get typeId => integer()();
+  IntColumn get activityId => integer()();
+  IntColumn get skillId => integer()();
+  IntColumn get level => integer()();
+  
+  @override
+  Set<Column> get primaryKey => {typeId, activityId, skillId};
+}
+
 /// Static Data Export database using Drift.
 ///
 /// Stores EVE Online reference data for offline lookups:
@@ -147,15 +201,22 @@ class SdeTypeEffects extends Table {
 ///
 /// This is a read-mostly database that's populated from
 /// bundled assets or downloaded from Fuzzwork.
-@DriftDatabase(tables: [
-  SdeTypes,
-  SdeGroups,
-  SdeCategories,
-  SdeMetadata,
-  SdeSkillRequirements,
-  SdeTypeAttributes,
-  SdeTypeEffects,
-])
+@DriftDatabase(
+  tables: [
+    SdeTypes,
+    SdeGroups,
+    SdeCategories,
+    SdeMetadata,
+    SdeSkillRequirements,
+    SdeTypeAttributes,
+    SdeTypeEffects,
+    SdeIndustryActivities,
+    SdeIndustryActivityMaterials,
+    SdeIndustryActivityProbabilities,
+    SdeIndustryActivityProducts,
+    SdeIndustryActivitySkills,
+  ],
+)
 class SdeDatabase extends _$SdeDatabase {
   SdeDatabase() : super(_openConnection());
 
@@ -163,7 +224,7 @@ class SdeDatabase extends _$SdeDatabase {
   SdeDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -191,6 +252,14 @@ class SdeDatabase extends _$SdeDatabase {
           await m.createTable(sdeTypeAttributes);
           await m.createTable(sdeTypeEffects);
         }
+        if (from < 5) {
+          // Version 5: Add Industry Activity tables
+          await m.createTable(sdeIndustryActivities);
+          await m.createTable(sdeIndustryActivityMaterials);
+          await m.createTable(sdeIndustryActivityProbabilities);
+          await m.createTable(sdeIndustryActivityProducts);
+          await m.createTable(sdeIndustryActivitySkills);
+        }
       },
     );
   }
@@ -199,8 +268,9 @@ class SdeDatabase extends _$SdeDatabase {
 
   /// Get a type by ID.
   Future<SdeType?> getType(int typeId) {
-    return (select(sdeTypes)..where((t) => t.typeId.equals(typeId)))
-        .getSingleOrNull();
+    return (select(
+      sdeTypes,
+    )..where((t) => t.typeId.equals(typeId))).getSingleOrNull();
   }
 
   /// Get type name by ID (convenience method).
@@ -213,9 +283,9 @@ class SdeDatabase extends _$SdeDatabase {
   Future<Map<int, String>> getTypeNames(List<int> typeIds) async {
     if (typeIds.isEmpty) return {};
 
-    final types = await (select(sdeTypes)
-          ..where((t) => t.typeId.isIn(typeIds)))
-        .get();
+    final types = await (select(
+      sdeTypes,
+    )..where((t) => t.typeId.isIn(typeIds))).get();
 
     return {for (final t in types) t.typeId: t.typeName};
   }
@@ -242,9 +312,9 @@ class SdeDatabase extends _$SdeDatabase {
   Future<List<SdeType>> getAllSkills() async {
     // Skills have categoryId = 16
     // First get all groups in the Skill category
-    final skillGroups = await (select(sdeGroups)
-          ..where((g) => g.categoryId.equals(16)))
-        .get();
+    final skillGroups = await (select(
+      sdeGroups,
+    )..where((g) => g.categoryId.equals(16))).get();
 
     if (skillGroups.isEmpty) return [];
 
@@ -258,7 +328,9 @@ class SdeDatabase extends _$SdeDatabase {
 
   /// Get the total count of skills in each group efficiently.
   Future<Map<int, int>> getSkillCountsByGroup() async {
-    final skillGroups = await (select(sdeGroups)..where((g) => g.categoryId.equals(16))).get();
+    final skillGroups = await (select(
+      sdeGroups,
+    )..where((g) => g.categoryId.equals(16))).get();
     if (skillGroups.isEmpty) return {};
     final groupIds = skillGroups.map((g) => g.groupId).toList();
 
@@ -273,8 +345,7 @@ class SdeDatabase extends _$SdeDatabase {
     final results = await query.get();
 
     return {
-      for (final row in results)
-        row.read(groupIdExpr)!: row.read(countExpr)!,
+      for (final row in results) row.read(groupIdExpr)!: row.read(countExpr)!,
     };
   }
 
@@ -284,23 +355,23 @@ class SdeDatabase extends _$SdeDatabase {
 
     // SQLite has a limit on the number of variables in a single query (e.g. 999).
     // If the user has more than 999 trained skills, we need to batch it.
-    // Fortunately, EVE characters usually have < 500 skills trained, 
+    // Fortunately, EVE characters usually have < 500 skills trained,
     // but we can chunk to be safe.
     final result = <int, int>{};
     const chunkSize = 500;
-    
+
     for (int i = 0; i < typeIds.length; i += chunkSize) {
       final chunk = typeIds.skip(i).take(chunkSize).toList();
       final query = selectOnly(sdeTypes)
         ..addColumns([sdeTypes.typeId, sdeTypes.groupId])
         ..where(sdeTypes.typeId.isIn(chunk));
-        
+
       final rows = await query.get();
       for (final row in rows) {
         result[row.read(sdeTypes.typeId)!] = row.read(sdeTypes.groupId)!;
       }
     }
-    
+
     return result;
   }
 
@@ -308,8 +379,9 @@ class SdeDatabase extends _$SdeDatabase {
 
   /// Get a group by ID.
   Future<SdeGroup?> getGroup(int groupId) {
-    return (select(sdeGroups)..where((g) => g.groupId.equals(groupId)))
-        .getSingleOrNull();
+    return (select(
+      sdeGroups,
+    )..where((g) => g.groupId.equals(groupId))).getSingleOrNull();
   }
 
   /// Get all groups in a category.
@@ -329,8 +401,9 @@ class SdeDatabase extends _$SdeDatabase {
 
   /// Get a category by ID.
   Future<SdeCategory?> getCategory(int categoryId) {
-    return (select(sdeCategories)..where((c) => c.categoryId.equals(categoryId)))
-        .getSingleOrNull();
+    return (select(
+      sdeCategories,
+    )..where((c) => c.categoryId.equals(categoryId))).getSingleOrNull();
   }
 
   // Bulk insert operations (for populating the database)
@@ -358,19 +431,30 @@ class SdeDatabase extends _$SdeDatabase {
 
   /// Check if the database has any skill data.
   Future<bool> hasSkillData() async {
-    final count = await (selectOnly(sdeTypes)
-          ..addColumns([sdeTypes.typeId.count()]))
-        .map((row) => row.read(sdeTypes.typeId.count()))
-        .getSingle();
+    final count =
+        await (selectOnly(sdeTypes)..addColumns([sdeTypes.typeId.count()]))
+            .map((row) => row.read(sdeTypes.typeId.count()))
+            .getSingle();
     return (count ?? 0) > 0;
   }
 
   /// Check if the database has Dogma data.
   Future<bool> hasDogmaData() async {
-    final count = await (selectOnly(sdeTypeAttributes)
-          ..addColumns([sdeTypeAttributes.typeId.count()]))
-        .map((row) => row.read(sdeTypeAttributes.typeId.count()))
-        .getSingle();
+    final count =
+        await (selectOnly(sdeTypeAttributes)
+              ..addColumns([sdeTypeAttributes.typeId.count()]))
+            .map((row) => row.read(sdeTypeAttributes.typeId.count()))
+            .getSingle();
+    return (count ?? 0) > 0;
+  }
+
+  /// Check if the database has Industry data.
+  Future<bool> hasIndustryData() async {
+    final count =
+        await (selectOnly(sdeIndustryActivities)
+              ..addColumns([sdeIndustryActivities.typeId.count()]))
+            .map((row) => row.read(sdeIndustryActivities.typeId.count()))
+            .getSingle();
     return (count ?? 0) > 0;
   }
 
@@ -383,6 +467,11 @@ class SdeDatabase extends _$SdeDatabase {
       await delete(sdeSkillRequirements).go();
       await delete(sdeTypeAttributes).go();
       await delete(sdeTypeEffects).go();
+      await delete(sdeIndustryActivities).go();
+      await delete(sdeIndustryActivityMaterials).go();
+      await delete(sdeIndustryActivityProbabilities).go();
+      await delete(sdeIndustryActivityProducts).go();
+      await delete(sdeIndustryActivitySkills).go();
     });
   }
 
@@ -390,8 +479,9 @@ class SdeDatabase extends _$SdeDatabase {
 
   /// Get a metadata value by key.
   Future<String?> getMetadata(String key) async {
-    final row = await (select(sdeMetadata)..where((m) => m.key.equals(key)))
-        .getSingleOrNull();
+    final row = await (select(
+      sdeMetadata,
+    )..where((m) => m.key.equals(key))).getSingleOrNull();
     return row?.value;
   }
 
@@ -430,7 +520,8 @@ class SdeDatabase extends _$SdeDatabase {
 
   /// Insert or update skill requirements.
   Future<void> upsertSkillRequirements(
-      List<SdeSkillRequirementsCompanion> requirements) async {
+    List<SdeSkillRequirementsCompanion> requirements,
+  ) async {
     await batch((b) {
       b.insertAllOnConflictUpdate(sdeSkillRequirements, requirements);
     });
@@ -445,32 +536,37 @@ class SdeDatabase extends _$SdeDatabase {
 
   /// Get attributes for a specific type.
   Future<Map<int, double>> getTypeAttributes(int typeId) async {
-    final rows = await (select(sdeTypeAttributes)
-          ..where((a) => a.typeId.equals(typeId)))
-        .get();
+    final rows = await (select(
+      sdeTypeAttributes,
+    )..where((a) => a.typeId.equals(typeId))).get();
     return {for (final row in rows) row.attributeId: row.value};
   }
 
   /// Get effects for a specific type.
   Future<List<int>> getTypeEffects(int typeId) async {
-    final rows = await (select(sdeTypeEffects)
-          ..where((e) => e.typeId.equals(typeId)))
-        .get();
+    final rows = await (select(
+      sdeTypeEffects,
+    )..where((e) => e.typeId.equals(typeId))).get();
     return rows.map((e) => e.effectId).toList();
   }
 
   /// Get types that have a specific effect.
   Future<List<SdeType>> getTypesByEffectId(int effectId) async {
     final query = select(sdeTypes).join([
-      innerJoin(sdeTypeEffects, sdeTypeEffects.typeId.equalsExp(sdeTypes.typeId)),
+      innerJoin(
+        sdeTypeEffects,
+        sdeTypeEffects.typeId.equalsExp(sdeTypes.typeId),
+      ),
     ])..where(sdeTypeEffects.effectId.equals(effectId));
-    
+
     final rows = await query.get();
     return rows.map((row) => row.readTable(sdeTypes)).toList();
   }
 
   /// Insert or update type attributes.
-  Future<void> upsertTypeAttributes(List<SdeTypeAttributesCompanion> attributes) async {
+  Future<void> upsertTypeAttributes(
+    List<SdeTypeAttributesCompanion> attributes,
+  ) async {
     await batch((b) {
       b.insertAllOnConflictUpdate(sdeTypeAttributes, attributes);
     });
@@ -481,6 +577,58 @@ class SdeDatabase extends _$SdeDatabase {
     await batch((b) {
       b.insertAllOnConflictUpdate(sdeTypeEffects, effects);
     });
+  }
+
+  // Industry operations
+
+  Future<void> upsertIndustryActivities(List<SdeIndustryActivitiesCompanion> acts) async {
+    await batch((b) => b.insertAllOnConflictUpdate(sdeIndustryActivities, acts));
+  }
+  
+  Future<void> upsertIndustryMaterials(List<SdeIndustryActivityMaterialsCompanion> mats) async {
+    await batch((b) => b.insertAllOnConflictUpdate(sdeIndustryActivityMaterials, mats));
+  }
+
+  Future<void> upsertIndustryProbabilities(List<SdeIndustryActivityProbabilitiesCompanion> probs) async {
+    await batch((b) => b.insertAllOnConflictUpdate(sdeIndustryActivityProbabilities, probs));
+  }
+
+  Future<void> upsertIndustryProducts(List<SdeIndustryActivityProductsCompanion> prods) async {
+    await batch((b) => b.insertAllOnConflictUpdate(sdeIndustryActivityProducts, prods));
+  }
+
+  Future<void> upsertIndustrySkills(List<SdeIndustryActivitySkillsCompanion> skills) async {
+    await batch((b) => b.insertAllOnConflictUpdate(sdeIndustryActivitySkills, skills));
+  }
+
+  Future<List<SdeIndustryActivityMaterial>> getIndustryMaterials(int typeId, int activityId) {
+    return (select(sdeIndustryActivityMaterials)
+          ..where((m) => m.typeId.equals(typeId) & m.activityId.equals(activityId)))
+        .get();
+  }
+
+  Future<List<SdeIndustryActivityProduct>> getIndustryProducts(int typeId, int activityId) {
+    return (select(sdeIndustryActivityProducts)
+          ..where((p) => p.typeId.equals(typeId) & p.activityId.equals(activityId)))
+        .get();
+  }
+
+  Future<List<SdeIndustryActivityProbability>> getIndustryProbabilities(int typeId, int activityId) {
+    return (select(sdeIndustryActivityProbabilities)
+          ..where((p) => p.typeId.equals(typeId) & p.activityId.equals(activityId)))
+        .get();
+  }
+
+  Future<List<SdeIndustryActivitySkill>> getIndustrySkills(int typeId, int activityId) {
+    return (select(sdeIndustryActivitySkills)
+          ..where((s) => s.typeId.equals(typeId) & s.activityId.equals(activityId)))
+        .get();
+  }
+  
+  Future<SdeIndustryActivity?> getIndustryActivity(int typeId, int activityId) {
+    return (select(sdeIndustryActivities)
+          ..where((a) => a.typeId.equals(typeId) & a.activityId.equals(activityId)))
+        .getSingleOrNull();
   }
 }
 

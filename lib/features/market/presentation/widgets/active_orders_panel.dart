@@ -61,11 +61,15 @@ class _OrderListItem extends ConsumerWidget {
     final theme = Theme.of(context);
     final now = DateTime.now();
 
-    final orderTypeColor = order.isBuyOrder ? Colors.blue.shade300 : Colors.orange.shade300;
+    final orderTypeColor = order.isBuyOrder
+        ? Colors.blue.shade300
+        : Colors.orange.shade300;
     final orderTypeLabel = order.isBuyOrder ? 'BUY' : 'SELL';
 
     final filledVolume = order.volumeTotal - order.volumeRemain;
-    final progress = (order.volumeTotal > 0) ? filledVolume / order.volumeTotal : 0.0;
+    final progress = (order.volumeTotal > 0)
+        ? filledVolume / order.volumeTotal
+        : 0.0;
     final expires = order.issued.add(Duration(days: order.duration));
     final isExpired = now.isAfter(expires);
 
@@ -79,17 +83,16 @@ class _OrderListItem extends ConsumerWidget {
               // Icon
               Container(
                 decoration: BoxDecoration(
-                  border: Border.all(color: orderTypeColor.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: orderTypeColor.withValues(alpha: 0.5),
+                  ),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 padding: const EdgeInsets.all(2),
-                child: EveTypeIcon(
-                  typeId: order.typeId,
-                  size: 48,
-                ),
+                child: EveTypeIcon(typeId: order.typeId, size: 48),
               ),
               const SizedBox(width: 16),
-              
+
               // Details
               Expanded(
                 child: Column(
@@ -99,46 +102,55 @@ class _OrderListItem extends ConsumerWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: ref.watch(itemNameProvider(order.typeId)).when(
-                            data: (name) => Text(
-                              name,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
+                          child: ref
+                              .watch(itemNameProvider(order.typeId))
+                              .when(
+                                data: (name) => Text(
+                                  name,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                loading: () => Text(
+                                  'Loading...',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: EveColors.textSecondary,
+                                  ),
+                                ),
+                                error: (_, __) => Text(
+                                  'Item #${order.typeId}',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            loading: () => Text(
-                              'Loading...',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: EveColors.textSecondary,
-                              ),
-                            ),
-                            error: (_, __) => Text(
-                              'Item #${order.typeId}',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: orderTypeColor.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: orderTypeColor.withValues(alpha: 0.5)),
+                            border: Border.all(
+                              color: orderTypeColor.withValues(alpha: 0.5),
+                            ),
                           ),
                           child: Text(
                             orderTypeLabel,
-                            style: theme.textTheme.labelSmall?.copyWith(color: orderTypeColor),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: orderTypeColor,
+                            ),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    
+
                     // Stats row
                     Row(
                       children: [
@@ -171,12 +183,14 @@ class _OrderListItem extends ConsumerWidget {
                           ),
                       ],
                     ),
-                    
+
                     // Progress Bar
                     const SizedBox(height: 8),
                     LinearProgressIndicator(
                       value: progress.clamp(0.0, 1.0),
-                      backgroundColor: EveColors.backgroundDeep.withValues(alpha: 0.5),
+                      backgroundColor: EveColors.backgroundDeep.withValues(
+                        alpha: 0.5,
+                      ),
                       valueColor: AlwaysStoppedAnimation<Color>(orderTypeColor),
                       minHeight: 4,
                     ),

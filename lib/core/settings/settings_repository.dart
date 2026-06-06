@@ -29,18 +29,14 @@ class SettingsRepository {
   /// Set startup behavior preference.
   Future<void> setStartupBehavior(StartupBehavior behavior) {
     return _db.updateAppSettings(
-      AppSettingsTableCompanion(
-        startupBehavior: Value(behavior.value),
-      ),
+      AppSettingsTableCompanion(startupBehavior: Value(behavior.value)),
     );
   }
 
   /// Mark onboarding as complete.
   Future<void> completeOnboarding() {
     return _db.updateAppSettings(
-      const AppSettingsTableCompanion(
-        onboardingComplete: Value(true),
-      ),
+      const AppSettingsTableCompanion(onboardingComplete: Value(true)),
     );
   }
 

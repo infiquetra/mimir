@@ -14,12 +14,18 @@ import 'skill_repository.dart';
 final skillQueueProvider = StreamProvider<List<SkillQueueEntry>>((ref) async* {
   final activeCharacter = await ref.watch(activeCharacterProvider.future);
   if (activeCharacter == null) {
-    Log.d('SKILLS', 'skillQueueProvider - no active character, returning empty stream');
+    Log.d(
+      'SKILLS',
+      'skillQueueProvider - no active character, returning empty stream',
+    );
     yield [];
     return;
   }
 
-  Log.d('SKILLS', 'skillQueueProvider - setting up stream for character ${activeCharacter.characterId}');
+  Log.d(
+    'SKILLS',
+    'skillQueueProvider - setting up stream for character ${activeCharacter.characterId}',
+  );
   final repository = ref.watch(skillRepositoryProvider);
   yield* repository.watchSkillQueue(activeCharacter.characterId);
 });
@@ -38,16 +44,23 @@ final currentTrainingProvider = Provider<AsyncValue<SkillQueueEntry?>>((ref) {
 });
 
 /// Provider for the skill queue preview (first 3 skills for Dashboard).
-final skillQueuePreviewProvider = Provider<AsyncValue<List<SkillQueueEntry>>>((ref) {
+final skillQueuePreviewProvider = Provider<AsyncValue<List<SkillQueueEntry>>>((
+  ref,
+) {
   return ref.watch(skillQueueProvider).whenData((queue) {
     return queue.take(3).toList();
   });
 });
 
 /// Provider for refreshing the skill queue from ESI.
-final refreshSkillQueueProvider =
-    FutureProvider.family<void, int>((ref, characterId) async {
-  Log.i('SKILLS', 'refreshSkillQueueProvider - invoked for character $characterId');
+final refreshSkillQueueProvider = FutureProvider.family<void, int>((
+  ref,
+  characterId,
+) async {
+  Log.i(
+    'SKILLS',
+    'refreshSkillQueueProvider - invoked for character $characterId',
+  );
   final repository = ref.read(skillRepositoryProvider);
   await repository.refreshSkillQueue(characterId);
 });
@@ -69,15 +82,23 @@ final isSkillQueueLoadingProvider = Provider<bool>((ref) {
 /// Provider that streams trained skills for the active character.
 ///
 /// Returns all skills the character has trained with their levels and SP.
-final characterSkillsProvider = StreamProvider<List<CharacterSkill>>((ref) async* {
+final characterSkillsProvider = StreamProvider<List<CharacterSkill>>((
+  ref,
+) async* {
   final activeCharacter = await ref.watch(activeCharacterProvider.future);
   if (activeCharacter == null) {
-    Log.d('SKILLS', 'characterSkillsProvider - no active character, returning empty stream');
+    Log.d(
+      'SKILLS',
+      'characterSkillsProvider - no active character, returning empty stream',
+    );
     yield [];
     return;
   }
 
-  Log.d('SKILLS', 'characterSkillsProvider - setting up stream for character ${activeCharacter.characterId}');
+  Log.d(
+    'SKILLS',
+    'characterSkillsProvider - setting up stream for character ${activeCharacter.characterId}',
+  );
   final repository = ref.watch(skillRepositoryProvider);
   yield* repository.watchCharacterSkills(activeCharacter.characterId);
 });
@@ -89,26 +110,45 @@ final characterSkillsProvider = StreamProvider<List<CharacterSkill>>((ref) async
 final totalSkillPointsProvider = FutureProvider<int>((ref) async {
   final activeCharacter = await ref.watch(activeCharacterProvider.future);
   if (activeCharacter == null) {
-    Log.d('SKILLS', 'totalSkillPointsProvider - no active character, returning 0');
+    Log.d(
+      'SKILLS',
+      'totalSkillPointsProvider - no active character, returning 0',
+    );
     return 0;
   }
 
-  Log.d('SKILLS', 'totalSkillPointsProvider - calculating for character ${activeCharacter.characterId}');
+  Log.d(
+    'SKILLS',
+    'totalSkillPointsProvider - calculating for character ${activeCharacter.characterId}',
+  );
   final repository = ref.read(skillRepositoryProvider);
 
   // Try database first (faster)
-  final skills = await repository.getCharacterSkills(activeCharacter.characterId);
+  final skills = await repository.getCharacterSkills(
+    activeCharacter.characterId,
+  );
   if (skills.isEmpty) {
     // No cached skills, fetch from ESI
-    Log.i('SKILLS', 'totalSkillPointsProvider - no cached skills, fetching from ESI');
+    Log.i(
+      'SKILLS',
+      'totalSkillPointsProvider - no cached skills, fetching from ESI',
+    );
     await repository.refreshCharacterSkills(activeCharacter.characterId);
-    final freshSkills = await repository.getCharacterSkills(activeCharacter.characterId);
-    final total = freshSkills.fold<int>(0, (sum, skill) => sum + skill.skillpointsInSkill);
+    final freshSkills = await repository.getCharacterSkills(
+      activeCharacter.characterId,
+    );
+    final total = freshSkills.fold<int>(
+      0,
+      (sum, skill) => sum + skill.skillpointsInSkill,
+    );
     Log.i('SKILLS', 'totalSkillPointsProvider - total SP: $total');
     return total;
   }
 
-  final total = skills.fold<int>(0, (sum, skill) => sum + skill.skillpointsInSkill);
+  final total = skills.fold<int>(
+    0,
+    (sum, skill) => sum + skill.skillpointsInSkill,
+  );
   Log.i('SKILLS', 'totalSkillPointsProvider - total SP from cache: $total');
   return total;
 });
@@ -124,12 +164,20 @@ final unallocatedSpProvider = FutureProvider<int?>((ref) async {
     return null;
   }
 
-  Log.d('SKILLS', 'unallocatedSpProvider - fetching for character ${activeCharacter.characterId}');
+  Log.d(
+    'SKILLS',
+    'unallocatedSpProvider - fetching for character ${activeCharacter.characterId}',
+  );
   final esiClient = ref.read(esiClientProvider);
 
   try {
-    final characterSkills = await esiClient.getSkills(activeCharacter.characterId);
-    Log.i('SKILLS', 'unallocatedSpProvider - unallocated SP: ${characterSkills.unallocatedSp ?? 0}');
+    final characterSkills = await esiClient.getSkills(
+      activeCharacter.characterId,
+    );
+    Log.i(
+      'SKILLS',
+      'unallocatedSpProvider - unallocated SP: ${characterSkills.unallocatedSp ?? 0}',
+    );
     return characterSkills.unallocatedSp;
   } catch (e, stack) {
     Log.e('SKILLS', 'unallocatedSpProvider - failed to fetch', e, stack);
@@ -140,9 +188,15 @@ final unallocatedSpProvider = FutureProvider<int?>((ref) async {
 /// Provider for looking up trained level of a specific skill.
 ///
 /// Takes (characterId, skillId) tuple. Returns 0 if skill not trained.
-final trainedSkillLevelProvider = FutureProvider.family<int, (int, int)>((ref, ids) async {
+final trainedSkillLevelProvider = FutureProvider.family<int, (int, int)>((
+  ref,
+  ids,
+) async {
   final (characterId, skillId) = ids;
-  Log.d('SKILLS', 'trainedSkillLevelProvider - checking skill $skillId for character $characterId');
+  Log.d(
+    'SKILLS',
+    'trainedSkillLevelProvider - checking skill $skillId for character $characterId',
+  );
 
   final repository = ref.read(skillRepositoryProvider);
   final level = await repository.getTrainedLevel(characterId, skillId);
@@ -151,9 +205,14 @@ final trainedSkillLevelProvider = FutureProvider.family<int, (int, int)>((ref, i
 });
 
 /// Provider for refreshing trained skills from ESI.
-final refreshCharacterSkillsProvider =
-    FutureProvider.family<void, int>((ref, characterId) async {
-  Log.i('SKILLS', 'refreshCharacterSkillsProvider - invoked for character $characterId');
+final refreshCharacterSkillsProvider = FutureProvider.family<void, int>((
+  ref,
+  characterId,
+) async {
+  Log.i(
+    'SKILLS',
+    'refreshCharacterSkillsProvider - invoked for character $characterId',
+  );
   final repository = ref.read(skillRepositoryProvider);
   await repository.refreshCharacterSkills(characterId);
 });

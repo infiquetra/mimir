@@ -13,9 +13,9 @@ import '../../../core/sde/sde_service.dart';
 class SkillTrainingCalculator {
   final SdeService _sdeService;
 
-  SkillTrainingCalculator({
-    required SdeService sdeService,
-  }) : _sdeService = sdeService;
+  SkillTrainingCalculator({required SdeService sdeService})
+    : _sdeService = sdeService;
+
   /// Calculate SP required to train a skill from one level to another.
   ///
   /// Formula: 250 × rank × 2^(level - 1) for each level
@@ -42,7 +42,10 @@ class SkillTrainingCalculator {
       totalSp += spForLevel;
     }
 
-    Log.d('SKILLS', 'calculateSpRequired - rank $skillRank, $fromLevel→$toLevel: $totalSp SP');
+    Log.d(
+      'SKILLS',
+      'calculateSpRequired - rank $skillRank, $fromLevel→$toLevel: $totalSp SP',
+    );
     return totalSp;
   }
 
@@ -66,8 +69,10 @@ class SkillTrainingCalculator {
     final trainingRate = primaryAttribute + (secondaryAttribute / 2);
     final minutes = spRequired / trainingRate;
 
-    Log.d('SKILLS',
-        'calculateTrainingTime - $spRequired SP, rate $trainingRate SP/min: ${minutes.toInt()} min');
+    Log.d(
+      'SKILLS',
+      'calculateTrainingTime - $spRequired SP, rate $trainingRate SP/min: ${minutes.toInt()} min',
+    );
 
     return Duration(minutes: minutes.ceil());
   }
@@ -115,8 +120,10 @@ class SkillTrainingCalculator {
       totalSp += spForSkill;
     }
 
-    Log.i('SKILLS',
-        'calculateTotalTrainingTime - ${skills.length} skills, $totalSp total SP');
+    Log.i(
+      'SKILLS',
+      'calculateTotalTrainingTime - ${skills.length} skills, $totalSp total SP',
+    );
 
     return calculateTrainingTime(
       spRequired: totalSp,
@@ -133,11 +140,17 @@ class SkillTrainingCalculator {
     required int fromLevel,
     required int toLevel,
   }) async {
-    Log.d('SKILLS', 'calculateSpRequiredFromSde - skillId: $skillId, $fromLevel→$toLevel');
+    Log.d(
+      'SKILLS',
+      'calculateSpRequiredFromSde - skillId: $skillId, $fromLevel→$toLevel',
+    );
 
     final skillRank = await _sdeService.getSkillRank(skillId);
     if (skillRank == null) {
-      Log.w('SKILLS', 'calculateSpRequiredFromSde - skill $skillId has no rank in SDE, using rank 1');
+      Log.w(
+        'SKILLS',
+        'calculateSpRequiredFromSde - skill $skillId has no rank in SDE, using rank 1',
+      );
       return calculateSpRequired(
         skillRank: 1,
         fromLevel: fromLevel,
@@ -161,15 +174,23 @@ class SkillTrainingCalculator {
     required int spRequired,
     required CharacterAttributes characterAttributes,
   }) async {
-    Log.d('SKILLS', 'calculateTrainingTimeFromSde - skillId: $skillId, SP: $spRequired');
+    Log.d(
+      'SKILLS',
+      'calculateTrainingTimeFromSde - skillId: $skillId, SP: $spRequired',
+    );
 
     if (spRequired <= 0) {
       return Duration.zero;
     }
 
     final attributes = await _sdeService.getSkillAttributes(skillId);
-    if (attributes == null || attributes.primary == null || attributes.secondary == null) {
-      Log.w('SKILLS', 'calculateTrainingTimeFromSde - skill $skillId has no attributes in SDE');
+    if (attributes == null ||
+        attributes.primary == null ||
+        attributes.secondary == null) {
+      Log.w(
+        'SKILLS',
+        'calculateTrainingTimeFromSde - skill $skillId has no attributes in SDE',
+      );
       // Fallback to default 20/20
       return calculateTrainingTime(
         spRequired: spRequired,
@@ -188,8 +209,10 @@ class SkillTrainingCalculator {
       characterAttributes,
     );
 
-    Log.d('SKILLS',
-        'calculateTrainingTimeFromSde - using attributes: primary=${attributes.primary}($primaryValue), secondary=${attributes.secondary}($secondaryValue)');
+    Log.d(
+      'SKILLS',
+      'calculateTrainingTimeFromSde - using attributes: primary=${attributes.primary}($primaryValue), secondary=${attributes.secondary}($secondaryValue)',
+    );
 
     return calculateTrainingTime(
       spRequired: spRequired,
@@ -207,7 +230,10 @@ class SkillTrainingCalculator {
     required int toLevel,
     required CharacterAttributes characterAttributes,
   }) async {
-    Log.d('SKILLS', 'calculateSkillTrainingTimeFromSde - skillId: $skillId, $fromLevel→$toLevel');
+    Log.d(
+      'SKILLS',
+      'calculateSkillTrainingTimeFromSde - skillId: $skillId, $fromLevel→$toLevel',
+    );
 
     final spRequired = await calculateSpRequiredFromSde(
       skillId: skillId,
@@ -238,7 +264,10 @@ class SkillTrainingCalculator {
       case 'willpower':
         return attributes.willpower;
       default:
-        Log.w('SKILLS', '_getAttributeValue - unknown attribute: $attributeName, defaulting to 20');
+        Log.w(
+          'SKILLS',
+          '_getAttributeValue - unknown attribute: $attributeName, defaulting to 20',
+        );
         return 20;
     }
   }

@@ -27,21 +27,24 @@ class EsiClient {
     required OAuthService oauthService,
     required AppDatabase database,
     Dio? dio,
-  })  : _tokenManager = tokenManager,
-        _oauthService = oauthService,
-        _database = database,
-        _dio = dio ?? Dio() {
+  }) : _tokenManager = tokenManager,
+       _oauthService = oauthService,
+       _database = database,
+       _dio = dio ?? Dio() {
     _configureDio();
     _startWatchingErrorLimit();
   }
 
   void _startWatchingErrorLimit() {
-    _errorLimitSubscription = _database.select(_database.appSettingsTable).watch().listen((settings) {
-      if (settings.isNotEmpty) {
-        _errorLimitRemain = settings.first.esiErrorLimitRemain;
-        _errorLimitReset = settings.first.esiErrorLimitReset;
-      }
-    });
+    _errorLimitSubscription = _database
+        .select(_database.appSettingsTable)
+        .watch()
+        .listen((settings) {
+          if (settings.isNotEmpty) {
+            _errorLimitRemain = settings.first.esiErrorLimitRemain;
+            _errorLimitReset = settings.first.esiErrorLimitReset;
+          }
+        });
   }
 
   void dispose() {
@@ -50,8 +53,12 @@ class EsiClient {
 
   void _configureDio() {
     _dio.options.baseUrl = EveConfig.esiBaseUrl;
-    _dio.options.connectTimeout = const Duration(milliseconds: EveConfig.defaultTimeout);
-    _dio.options.receiveTimeout = const Duration(milliseconds: EveConfig.defaultTimeout);
+    _dio.options.connectTimeout = const Duration(
+      milliseconds: EveConfig.defaultTimeout,
+    );
+    _dio.options.receiveTimeout = const Duration(
+      milliseconds: EveConfig.defaultTimeout,
+    );
     _dio.options.queryParameters = {'datasource': EveConfig.datasource};
     _dio.interceptors.add(_EsiInterceptor(this));
   }
@@ -72,7 +79,8 @@ class EsiClient {
       final resetSeconds = int.tryParse(resetHeader);
       if (resetSeconds != null) {
         final newReset = DateTime.now().add(Duration(seconds: resetSeconds));
-        if (_errorLimitReset == null || _errorLimitReset!.difference(newReset).inSeconds.abs() > 2) {
+        if (_errorLimitReset == null ||
+            _errorLimitReset!.difference(newReset).inSeconds.abs() > 2) {
           _errorLimitReset = newReset;
           updated = true;
         }
@@ -87,17 +95,36 @@ class EsiClient {
   DateTime? get errorLimitReset => _errorLimitReset;
   bool get isNearRateLimit => _errorLimitRemain < 20;
 
-  Future<Response<T>> authenticatedGet<T>(String path, {required int characterId, Map<String, dynamic>? queryParameters}) async {
+  Future<Response<T>> authenticatedGet<T>(
+    String path, {
+    required int characterId,
+    Map<String, dynamic>? queryParameters,
+  }) async {
     final accessToken = await _getValidAccessToken(characterId);
-    return _dio.get<T>(path, queryParameters: queryParameters, options: Options(headers: {'Authorization': 'Bearer $accessToken'}));
+    return _dio.get<T>(
+      path,
+      queryParameters: queryParameters,
+      options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+    );
   }
 
-  Future<Response<T>> authenticatedPost<T>(String path, {required int characterId, dynamic data}) async {
+  Future<Response<T>> authenticatedPost<T>(
+    String path, {
+    required int characterId,
+    dynamic data,
+  }) async {
     final accessToken = await _getValidAccessToken(characterId);
-    return _dio.post<T>(path, data: data, options: Options(headers: {'Authorization': 'Bearer $accessToken'}));
+    return _dio.post<T>(
+      path,
+      data: data,
+      options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+    );
   }
 
-  Future<Response<T>> publicGet<T>(String path, {Map<String, dynamic>? queryParameters}) async {
+  Future<Response<T>> publicGet<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
     return _dio.get<T>(path, queryParameters: queryParameters);
   }
 
@@ -107,10 +134,20 @@ class EsiClient {
 
   Future<String> _getValidAccessToken(int characterId) async {
     final tokens = await _tokenManager.getTokens(characterId);
-    if (tokens == null) throw EsiException('No tokens found for character $characterId', statusCode: 401);
+    if (tokens == null) {
+      throw EsiException(
+        'No tokens found for character $characterId',
+        statusCode: 401,
+      );
+    }
     if (tokens.isAccessTokenExpired || tokens.accessToken == null) {
-      final newTokens = await _oauthService.refreshAccessToken(tokens.refreshToken);
-      await _tokenManager.updateAccessToken(characterId: characterId, tokenResponse: newTokens);
+      final newTokens = await _oauthService.refreshAccessToken(
+        tokens.refreshToken,
+      );
+      await _tokenManager.updateAccessToken(
+        characterId: characterId,
+        tokenResponse: newTokens,
+      );
       return newTokens.accessToken;
     }
     return tokens.accessToken!;
@@ -118,7 +155,9 @@ class EsiClient {
 
   // Character API
   Future<CharacterPublicInfo> getCharacterPublicInfo(int characterId) async {
-    final response = await publicGet<Map<String, dynamic>>('/characters/$characterId/');
+    final response = await publicGet<Map<String, dynamic>>(
+      '/characters/$characterId/',
+    );
     return CharacterPublicInfo.fromJson(response.data!);
   }
 
@@ -128,7 +167,10 @@ class EsiClient {
 
   // Skills API
   Future<CharacterSkills> getCharacterSkills(int characterId) async {
-    final response = await authenticatedGet<Map<String, dynamic>>('/characters/$characterId/skills/', characterId: characterId);
+    final response = await authenticatedGet<Map<String, dynamic>>(
+      '/characters/$characterId/skills/',
+      characterId: characterId,
+    );
     return CharacterSkills.fromJson(response.data!);
   }
 
@@ -137,34 +179,111 @@ class EsiClient {
   }
 
   Future<List<SkillQueueItem>> getSkillQueue(int characterId) async {
-    final response = await authenticatedGet<List<dynamic>>('/characters/$characterId/skillqueue/', characterId: characterId);
-    return (response.data ?? []).map((item) => SkillQueueItem.fromJson(item as Map<String, dynamic>)).toList();
+    final response = await authenticatedGet<List<dynamic>>(
+      '/characters/$characterId/skillqueue/',
+      characterId: characterId,
+    );
+    return (response.data ?? [])
+        .map((item) => SkillQueueItem.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
   Future<CharacterAttributes> getCharacterAttributes(int characterId) async {
-    final response = await authenticatedGet<Map<String, dynamic>>('/characters/$characterId/attributes/', characterId: characterId);
+    final response = await authenticatedGet<Map<String, dynamic>>(
+      '/characters/$characterId/attributes/',
+      characterId: characterId,
+    );
     return CharacterAttributes.fromJson(response.data!);
   }
 
   // Wallet API
   Future<double> getWalletBalance(int characterId) async {
-    final response = await authenticatedGet<double>('/characters/$characterId/wallet/', characterId: characterId);
+    final response = await authenticatedGet<double>(
+      '/characters/$characterId/wallet/',
+      characterId: characterId,
+    );
     return response.data ?? 0.0;
   }
 
-  Future<List<WalletJournalItem>> getWalletJournal(int characterId, {int page = 1}) async {
-    final response = await authenticatedGet<List<dynamic>>('/characters/$characterId/wallet/journal/', characterId: characterId, queryParameters: {'page': page});
-    return (response.data ?? []).map((item) => WalletJournalItem.fromJson(item as Map<String, dynamic>)).toList();
+  Future<List<WalletJournalItem>> getWalletJournal(
+    int characterId, {
+    int page = 1,
+  }) async {
+    final response = await authenticatedGet<List<dynamic>>(
+      '/characters/$characterId/wallet/journal/',
+      characterId: characterId,
+      queryParameters: {'page': page},
+    );
+    return (response.data ?? [])
+        .map((item) => WalletJournalItem.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
-  Future<List<WalletTransactionItem>> getWalletTransactions(int characterId) async {
-    final response = await authenticatedGet<List<dynamic>>('/characters/$characterId/wallet/transactions/', characterId: characterId);
-    return (response.data ?? []).map((item) => WalletTransactionItem.fromJson(item as Map<String, dynamic>)).toList();
+  Future<List<WalletTransactionItem>> getWalletTransactions(
+    int characterId,
+  ) async {
+    final response = await authenticatedGet<List<dynamic>>(
+      '/characters/$characterId/wallet/transactions/',
+      characterId: characterId,
+    );
+    return (response.data ?? [])
+        .map(
+          (item) =>
+              WalletTransactionItem.fromJson(item as Map<String, dynamic>),
+        )
+        .toList();
   }
 
   Future<List<LoyaltyPointItem>> getLoyaltyPoints(int characterId) async {
-    final response = await authenticatedGet<List<dynamic>>('/characters/$characterId/loyalty/points/', characterId: characterId);
-    return (response.data ?? []).map((item) => LoyaltyPointItem.fromJson(item as Map<String, dynamic>)).toList();
+    final response = await authenticatedGet<List<dynamic>>(
+      '/characters/$characterId/loyalty/points/',
+      characterId: characterId,
+    );
+    return (response.data ?? [])
+        .map((item) => LoyaltyPointItem.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  // Killmail API
+  Future<List<EsiKillmailRef>> getCharacterRecentKillmailRefs(
+    int characterId,
+  ) async {
+    Log.d('ESI', 'getCharacterRecentKillmailRefs($characterId) - START');
+    final response = await authenticatedGet<List<dynamic>>(
+      '/characters/$characterId/killmails/recent/',
+      characterId: characterId,
+    );
+    final refs = (response.data ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(EsiKillmailRef.fromJson)
+        .toList();
+    Log.i(
+      'ESI',
+      'getCharacterRecentKillmailRefs($characterId) - ${refs.length} refs',
+    );
+    return refs;
+  }
+
+  Future<EsiKillmailDetail> getKillmailDetail({
+    required int killmailId,
+    required String killmailHash,
+  }) async {
+    Log.d('ESI', 'getKillmailDetail($killmailId) - START');
+    final response = await publicGet<Map<String, dynamic>>(
+      '/killmails/$killmailId/$killmailHash/',
+    );
+    final data = response.data;
+    if (data == null) {
+      throw EsiException(
+        'Empty killmail response',
+        statusCode: response.statusCode,
+      );
+    }
+    final detail = EsiKillmailDetail.fromJson(
+      data,
+    ).copyWith(killmailHash: killmailHash);
+    Log.i('ESI', 'getKillmailDetail($killmailId) - SUCCESS');
+    return detail;
   }
 
   Future<int> getPlexCount(int characterId) async {
@@ -174,44 +293,98 @@ class EsiClient {
   }
 
   // Industry API
-  Future<EsiResponse<List<BlueprintItem>>> getCharacterBlueprints(int characterId, {int page = 1}) async {
-    final response = await authenticatedGet<List<dynamic>>('/characters/$characterId/blueprints/', characterId: characterId, queryParameters: {'page': page});
-    final data = (response.data ?? []).map((item) => BlueprintItem.fromJson(item as Map<String, dynamic>)).toList();
-    return EsiResponse(data: data, headers: response.headers.map, statusCode: response.statusCode);
+  Future<EsiResponse<List<BlueprintItem>>> getCharacterBlueprints(
+    int characterId, {
+    int page = 1,
+  }) async {
+    final response = await authenticatedGet<List<dynamic>>(
+      '/characters/$characterId/blueprints/',
+      characterId: characterId,
+      queryParameters: {'page': page},
+    );
+    final data = (response.data ?? [])
+        .map((item) => BlueprintItem.fromJson(item as Map<String, dynamic>))
+        .toList();
+    return EsiResponse(
+      data: data,
+      headers: response.headers.map,
+      statusCode: response.statusCode,
+    );
   }
 
-  Future<EsiResponse<List<IndustryJobData>>> getCharacterIndustryJobs(int characterId, {bool includeCompleted = false}) async {
-    final response = await authenticatedGet<List<dynamic>>('/characters/$characterId/industry/jobs/', characterId: characterId, queryParameters: {'include_completed': includeCompleted});
-    final data = (response.data ?? []).map((item) => IndustryJobData.fromJson(item as Map<String, dynamic>)).toList();
-    return EsiResponse(data: data, headers: response.headers.map, statusCode: response.statusCode);
+  Future<EsiResponse<List<IndustryJobData>>> getCharacterIndustryJobs(
+    int characterId, {
+    bool includeCompleted = false,
+  }) async {
+    final response = await authenticatedGet<List<dynamic>>(
+      '/characters/$characterId/industry/jobs/',
+      characterId: characterId,
+      queryParameters: {'include_completed': includeCompleted},
+    );
+    final data = (response.data ?? [])
+        .map((item) => IndustryJobData.fromJson(item as Map<String, dynamic>))
+        .toList();
+    return EsiResponse(
+      data: data,
+      headers: response.headers.map,
+      statusCode: response.statusCode,
+    );
   }
 
   // Market API
   Future<EsiResponse<List<MarketPriceData>>> getMarketPrices() async {
     final response = await publicGet<List<dynamic>>('/markets/prices/');
-    final data = (response.data ?? []).map((item) => MarketPriceData.fromJson(item as Map<String, dynamic>)).toList();
-    return EsiResponse(data: data, headers: response.headers.map, statusCode: response.statusCode);
+    final data = (response.data ?? [])
+        .map((item) => MarketPriceData.fromJson(item as Map<String, dynamic>))
+        .toList();
+    return EsiResponse(
+      data: data,
+      headers: response.headers.map,
+      statusCode: response.statusCode,
+    );
   }
 
-  Future<EsiResponse<List<CharacterOrderData>>> getCharacterOrders(int characterId) async {
-    final response = await authenticatedGet<List<dynamic>>('/characters/$characterId/orders/', characterId: characterId);
-    final data = (response.data ?? []).map((item) => CharacterOrderData.fromJson(item as Map<String, dynamic>)).toList();
-    return EsiResponse(data: data, headers: response.headers.map, statusCode: response.statusCode);
+  Future<EsiResponse<List<CharacterOrderData>>> getCharacterOrders(
+    int characterId,
+  ) async {
+    final response = await authenticatedGet<List<dynamic>>(
+      '/characters/$characterId/orders/',
+      characterId: characterId,
+    );
+    final data = (response.data ?? [])
+        .map(
+          (item) => CharacterOrderData.fromJson(item as Map<String, dynamic>),
+        )
+        .toList();
+    return EsiResponse(
+      data: data,
+      headers: response.headers.map,
+      statusCode: response.statusCode,
+    );
   }
 
   /// Fetch market history for a type in a region.
   /// GET /markets/{region_id}/history/?type_id={type_id}
-  Future<EsiResponse<List<MarketHistoryEntry>>> getMarketHistory(int regionId, int typeId) async {
+  Future<EsiResponse<List<MarketHistoryEntry>>> getMarketHistory(
+    int regionId,
+    int typeId,
+  ) async {
     Log.d('ESI', 'getMarketHistory(region=$regionId, type=$typeId) - START');
     final response = await publicGet<List<dynamic>>(
       '/markets/$regionId/history/',
       queryParameters: {'type_id': typeId},
     );
     final data = (response.data ?? [])
-        .map((item) => MarketHistoryEntry.fromJson(item as Map<String, dynamic>))
+        .map(
+          (item) => MarketHistoryEntry.fromJson(item as Map<String, dynamic>),
+        )
         .toList();
     Log.i('ESI', 'getMarketHistory - fetched ${data.length} history entries');
-    return EsiResponse(data: data, headers: response.headers.map, statusCode: response.statusCode);
+    return EsiResponse(
+      data: data,
+      headers: response.headers.map,
+      statusCode: response.statusCode,
+    );
   }
 
   // Search API
@@ -254,56 +427,114 @@ class EsiClient {
   }
 
   // Assets API
-  Future<EsiResponse<List<AssetItem>>> getCharacterAssets(int characterId, {int page = 1}) async {
-    final response = await authenticatedGet<List<dynamic>>('/characters/$characterId/assets/', characterId: characterId, queryParameters: {'page': page});
-    final data = (response.data ?? []).map((item) => AssetItem.fromJson(item as Map<String, dynamic>)).toList();
-    return EsiResponse(data: data, headers: response.headers.map, statusCode: response.statusCode);
+  Future<EsiResponse<List<AssetItem>>> getCharacterAssets(
+    int characterId, {
+    int page = 1,
+  }) async {
+    final response = await authenticatedGet<List<dynamic>>(
+      '/characters/$characterId/assets/',
+      characterId: characterId,
+      queryParameters: {'page': page},
+    );
+    final data = (response.data ?? [])
+        .map((item) => AssetItem.fromJson(item as Map<String, dynamic>))
+        .toList();
+    return EsiResponse(
+      data: data,
+      headers: response.headers.map,
+      statusCode: response.statusCode,
+    );
   }
 
-  Future<List<EsiAssetName>> getCharacterAssetNames(int characterId, List<int> itemIds) async {
+  Future<List<EsiAssetName>> getCharacterAssetNames(
+    int characterId,
+    List<int> itemIds,
+  ) async {
     if (itemIds.isEmpty) return [];
-    final response = await authenticatedPost<List<dynamic>>('/characters/$characterId/assets/names/', characterId: characterId, data: itemIds);
-    return (response.data ?? []).map((item) => EsiAssetName.fromJson(item as Map<String, dynamic>)).toList();
+    final response = await authenticatedPost<List<dynamic>>(
+      '/characters/$characterId/assets/names/',
+      characterId: characterId,
+      data: itemIds,
+    );
+    return (response.data ?? [])
+        .map((item) => EsiAssetName.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
-  Future<List<EsiAssetLocation>> getCharacterAssetLocations(int characterId, List<int> itemIds) async {
+  Future<List<EsiAssetLocation>> getCharacterAssetLocations(
+    int characterId,
+    List<int> itemIds,
+  ) async {
     if (itemIds.isEmpty) return [];
-    final response = await authenticatedPost<List<dynamic>>('/characters/$characterId/assets/locations/', characterId: characterId, data: itemIds);
-    return (response.data ?? []).map((item) => EsiAssetLocation.fromJson(item as Map<String, dynamic>)).toList();
+    final response = await authenticatedPost<List<dynamic>>(
+      '/characters/$characterId/assets/locations/',
+      characterId: characterId,
+      data: itemIds,
+    );
+    return (response.data ?? [])
+        .map((item) => EsiAssetLocation.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
   // PI API
   Future<List<EsiPlanetaryColony>> getCharacterPlanets(int characterId) async {
-    final response = await authenticatedGet<List<dynamic>>('/characters/$characterId/planets/', characterId: characterId);
-    return (response.data ?? []).map((item) => EsiPlanetaryColony.fromJson(item as Map<String, dynamic>)).toList();
+    final response = await authenticatedGet<List<dynamic>>(
+      '/characters/$characterId/planets/',
+      characterId: characterId,
+    );
+    return (response.data ?? [])
+        .map(
+          (item) => EsiPlanetaryColony.fromJson(item as Map<String, dynamic>),
+        )
+        .toList();
   }
 
-  Future<List<EsiPlanetaryPin>> getCharacterPlanetPins(int characterId, int planetId) async {
-    final response = await authenticatedGet<Map<String, dynamic>>('/characters/$characterId/planets/$planetId/', characterId: characterId);
+  Future<List<EsiPlanetaryPin>> getCharacterPlanetPins(
+    int characterId,
+    int planetId,
+  ) async {
+    final response = await authenticatedGet<Map<String, dynamic>>(
+      '/characters/$characterId/planets/$planetId/',
+      characterId: characterId,
+    );
     final pins = response.data?['pins'] as List<dynamic>?;
-    return (pins ?? []).map((item) => EsiPlanetaryPin.fromJson(item as Map<String, dynamic>)).toList();
+    return (pins ?? [])
+        .map((item) => EsiPlanetaryPin.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
   // Universe API
   Future<SolarSystemInfo> getSolarSystemInfo(int solarSystemId) async {
-    final response = await publicGet<Map<String, dynamic>>('/universe/systems/$solarSystemId/');
+    final response = await publicGet<Map<String, dynamic>>(
+      '/universe/systems/$solarSystemId/',
+    );
     return SolarSystemInfo.fromJson(response.data!);
   }
 
   Future<StationInfo> getStationInfo(int stationId) async {
-    final response = await publicGet<Map<String, dynamic>>('/universe/stations/$stationId/');
+    final response = await publicGet<Map<String, dynamic>>(
+      '/universe/stations/$stationId/',
+    );
     return StationInfo.fromJson(response.data!);
   }
 
   Future<List<UniverseName>> getUniverseNames(List<int> ids) async {
     if (ids.isEmpty) return [];
-    final response = await _dio.post<List<dynamic>>('/universe/names/', data: ids);
-    return (response.data ?? []).map((item) => UniverseName.fromJson(item as Map<String, dynamic>)).toList();
+    final response = await _dio.post<List<dynamic>>(
+      '/universe/names/',
+      data: ids,
+    );
+    return (response.data ?? [])
+        .map((item) => UniverseName.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
   Future<String?> getStructureName(int structureId, int characterId) async {
     try {
-      final response = await authenticatedGet<Map<String, dynamic>>('/universe/structures/$structureId/', characterId: characterId);
+      final response = await authenticatedGet<Map<String, dynamic>>(
+        '/universe/structures/$structureId/',
+        characterId: characterId,
+      );
       return response.data?['name'] as String?;
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) return null;
@@ -313,7 +544,9 @@ class EsiClient {
 
   // Corporation/Alliance API
   Future<CorporationInfo> getCorporationInfo(int corporationId) async {
-    final response = await publicGet<Map<String, dynamic>>('/corporations/$corporationId/');
+    final response = await publicGet<Map<String, dynamic>>(
+      '/corporations/$corporationId/',
+    );
     return CorporationInfo.fromJson(response.data!);
   }
 
@@ -322,7 +555,9 @@ class EsiClient {
   }
 
   Future<AllianceInfo> getAllianceInfo(int allianceId) async {
-    final response = await publicGet<Map<String, dynamic>>('/alliances/$allianceId/');
+    final response = await publicGet<Map<String, dynamic>>(
+      '/alliances/$allianceId/',
+    );
     return AllianceInfo.fromJson(response.data!);
   }
 
@@ -333,37 +568,61 @@ class EsiClient {
   // Location/Status API
   Future<CharacterLocation?> getCharacterLocation(int characterId) async {
     try {
-      final response = await authenticatedGet<Map<String, dynamic>>('/characters/$characterId/location/', characterId: characterId);
+      final response = await authenticatedGet<Map<String, dynamic>>(
+        '/characters/$characterId/location/',
+        characterId: characterId,
+      );
       return CharacterLocation.fromJson(response.data!);
-    } on DioException { return null; }
+    } on DioException {
+      return null;
+    }
   }
 
   Future<CharacterShip?> getCharacterShip(int characterId) async {
     try {
-      final response = await authenticatedGet<Map<String, dynamic>>('/characters/$characterId/ship/', characterId: characterId);
+      final response = await authenticatedGet<Map<String, dynamic>>(
+        '/characters/$characterId/ship/',
+        characterId: characterId,
+      );
       return CharacterShip.fromJson(response.data!);
-    } on DioException { return null; }
+    } on DioException {
+      return null;
+    }
   }
 
   Future<CharacterOnline> getCharacterOnline(int characterId) async {
-    final response = await authenticatedGet<Map<String, dynamic>>('/characters/$characterId/online/', characterId: characterId);
+    final response = await authenticatedGet<Map<String, dynamic>>(
+      '/characters/$characterId/online/',
+      characterId: characterId,
+    );
     return CharacterOnline.fromJson(response.data!);
   }
 
   // Clones/Standings
   Future<CharacterClones> getCharacterClones(int characterId) async {
-    final response = await authenticatedGet<Map<String, dynamic>>('/characters/$characterId/clones/', characterId: characterId);
+    final response = await authenticatedGet<Map<String, dynamic>>(
+      '/characters/$characterId/clones/',
+      characterId: characterId,
+    );
     return CharacterClones.fromJson(response.data!);
   }
 
   Future<List<int>> getCharacterImplants(int characterId) async {
-    final response = await authenticatedGet<List<dynamic>>('/characters/$characterId/implants/', characterId: characterId);
+    final response = await authenticatedGet<List<dynamic>>(
+      '/characters/$characterId/implants/',
+      characterId: characterId,
+    );
     return (response.data ?? []).cast<int>();
   }
 
   Future<List<Standing>> getCharacterStandings(int characterId) async {
-    final response = await authenticatedGet<List<dynamic>>('/characters/$characterId/standings/', characterId: characterId);
-    return (response.data ?? []).map((item) => Standing.fromJson(item as Map<String, dynamic>)).toList();
+    final response = await authenticatedGet<List<dynamic>>(
+      '/characters/$characterId/standings/',
+      characterId: characterId,
+    );
+    return (response.data ?? [])
+        .map((item) => Standing.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 }
 
@@ -378,7 +637,16 @@ class CharacterPublicInfo {
   final int? factionId;
   final String? title;
 
-  CharacterPublicInfo({required this.name, required this.corporationId, this.allianceId, required this.birthday, required this.securityStatus, this.description, this.factionId, this.title});
+  CharacterPublicInfo({
+    required this.name,
+    required this.corporationId,
+    this.allianceId,
+    required this.birthday,
+    required this.securityStatus,
+    this.description,
+    this.factionId,
+    this.title,
+  });
 
   factory CharacterPublicInfo.fromJson(Map<String, dynamic> json) {
     return CharacterPublicInfo(
@@ -399,11 +667,17 @@ class CharacterSkills {
   final int totalSp;
   final int? unallocatedSp;
 
-  CharacterSkills({required this.skills, required this.totalSp, this.unallocatedSp});
+  CharacterSkills({
+    required this.skills,
+    required this.totalSp,
+    this.unallocatedSp,
+  });
 
   factory CharacterSkills.fromJson(Map<String, dynamic> json) {
     return CharacterSkills(
-      skills: (json['skills'] as List<dynamic>? ?? []).map((s) => SkillItem.fromJson(s as Map<String, dynamic>)).toList(),
+      skills: (json['skills'] as List<dynamic>? ?? [])
+          .map((s) => SkillItem.fromJson(s as Map<String, dynamic>))
+          .toList(),
       totalSp: json['total_sp'] as int? ?? 0,
       unallocatedSp: json['unallocated_sp'] as int?,
     );
@@ -416,7 +690,12 @@ class SkillItem {
   final int activeSkillLevel;
   final int skillpointsInSkill;
 
-  SkillItem({required this.skillId, required this.trainedSkillLevel, required this.activeSkillLevel, required this.skillpointsInSkill});
+  SkillItem({
+    required this.skillId,
+    required this.trainedSkillLevel,
+    required this.activeSkillLevel,
+    required this.skillpointsInSkill,
+  });
 
   factory SkillItem.fromJson(Map<String, dynamic> json) {
     return SkillItem(
@@ -429,7 +708,12 @@ class SkillItem {
 }
 
 class Skill extends SkillItem {
-  Skill({required super.skillId, required super.trainedSkillLevel, required super.activeSkillLevel, required super.skillpointsInSkill});
+  Skill({
+    required super.skillId,
+    required super.trainedSkillLevel,
+    required super.activeSkillLevel,
+    required super.skillpointsInSkill,
+  });
 }
 
 class SkillQueueItem {
@@ -442,7 +726,16 @@ class SkillQueueItem {
   final DateTime? startDate;
   final DateTime? finishDate;
 
-  SkillQueueItem({required this.skillId, required this.finishedLevel, required this.queuePosition, this.trainingStartSp, this.levelStartSp, this.levelEndSp, this.startDate, this.finishDate});
+  SkillQueueItem({
+    required this.skillId,
+    required this.finishedLevel,
+    required this.queuePosition,
+    this.trainingStartSp,
+    this.levelStartSp,
+    this.levelEndSp,
+    this.startDate,
+    this.finishDate,
+  });
 
   factory SkillQueueItem.fromJson(Map<String, dynamic> json) {
     return SkillQueueItem(
@@ -452,8 +745,12 @@ class SkillQueueItem {
       trainingStartSp: json['training_start_sp'] as int?,
       levelStartSp: json['level_start_sp'] as int?,
       levelEndSp: json['level_end_sp'] as int?,
-      startDate: json['start_date'] != null ? DateTime.parse(json['start_date'] as String) : null,
-      finishDate: json['finish_date'] != null ? DateTime.parse(json['finish_date'] as String) : null,
+      startDate: json['start_date'] != null
+          ? DateTime.parse(json['start_date'] as String)
+          : null,
+      finishDate: json['finish_date'] != null
+          ? DateTime.parse(json['finish_date'] as String)
+          : null,
     );
   }
 }
@@ -468,7 +765,16 @@ class CharacterAttributes {
   final DateTime? lastRemapDate;
   final DateTime? accruedRemapCooldownDate;
 
-  const CharacterAttributes({required this.intelligence, required this.memory, required this.perception, required this.willpower, required this.charisma, this.bonusRemaps, this.lastRemapDate, this.accruedRemapCooldownDate});
+  const CharacterAttributes({
+    required this.intelligence,
+    required this.memory,
+    required this.perception,
+    required this.willpower,
+    required this.charisma,
+    this.bonusRemaps,
+    this.lastRemapDate,
+    this.accruedRemapCooldownDate,
+  });
 
   factory CharacterAttributes.fromJson(Map<String, dynamic> json) {
     return CharacterAttributes(
@@ -478,8 +784,12 @@ class CharacterAttributes {
       willpower: json['willpower'] as int,
       charisma: json['charisma'] as int,
       bonusRemaps: json['bonus_remaps'] as int?,
-      lastRemapDate: json['last_remap_date'] != null ? DateTime.parse(json['last_remap_date'] as String) : null,
-      accruedRemapCooldownDate: json['accrued_remap_cooldown_date'] != null ? DateTime.parse(json['accrued_remap_cooldown_date'] as String) : null,
+      lastRemapDate: json['last_remap_date'] != null
+          ? DateTime.parse(json['last_remap_date'] as String)
+          : null,
+      accruedRemapCooldownDate: json['accrued_remap_cooldown_date'] != null
+          ? DateTime.parse(json['accrued_remap_cooldown_date'] as String)
+          : null,
     );
   }
 
@@ -491,12 +801,18 @@ class CharacterAttributes {
 
   int _getAttributeValue(int attrId) {
     switch (attrId) {
-      case 164: return charisma;
-      case 165: return intelligence;
-      case 166: return memory;
-      case 167: return perception;
-      case 168: return willpower;
-      default: return 0;
+      case 164:
+        return charisma;
+      case 165:
+        return intelligence;
+      case 166:
+        return memory;
+      case 167:
+        return perception;
+      case 168:
+        return willpower;
+      default:
+        return 0;
     }
   }
 }
@@ -514,7 +830,19 @@ class CorporationInfo {
   final String? url;
   final bool? warEligible;
 
-  CorporationInfo({required this.name, required this.ticker, required this.memberCount, required this.ceoId, this.allianceId, this.description, this.dateFounded, this.homeStationId, this.taxRate, this.url, this.warEligible});
+  CorporationInfo({
+    required this.name,
+    required this.ticker,
+    required this.memberCount,
+    required this.ceoId,
+    this.allianceId,
+    this.description,
+    this.dateFounded,
+    this.homeStationId,
+    this.taxRate,
+    this.url,
+    this.warEligible,
+  });
 
   factory CorporationInfo.fromJson(Map<String, dynamic> json) {
     return CorporationInfo(
@@ -524,7 +852,9 @@ class CorporationInfo {
       ceoId: json['ceo_id'] as int,
       allianceId: json['alliance_id'] as int?,
       description: json['description'] as String?,
-      dateFounded: json['date_founded'] != null ? DateTime.parse(json['date_founded'] as String) : null,
+      dateFounded: json['date_founded'] != null
+          ? DateTime.parse(json['date_founded'] as String)
+          : null,
       homeStationId: json['home_station_id'] as int?,
       taxRate: (json['tax_rate'] as num?)?.toDouble(),
       url: json['url'] as String?,
@@ -542,7 +872,15 @@ class AllianceInfo {
   final int executorCorporationId;
   final int? factionId;
 
-  AllianceInfo({required this.name, required this.ticker, required this.creatorCorporationId, required this.creatorId, required this.dateFounded, required this.executorCorporationId, this.factionId});
+  AllianceInfo({
+    required this.name,
+    required this.ticker,
+    required this.creatorCorporationId,
+    required this.creatorId,
+    required this.dateFounded,
+    required this.executorCorporationId,
+    this.factionId,
+  });
 
   factory AllianceInfo.fromJson(Map<String, dynamic> json) {
     return AllianceInfo(
@@ -570,7 +908,19 @@ class WalletJournalItem {
   final int? contextId;
   final String? contextIdType;
 
-  WalletJournalItem({required this.id, required this.refType, required this.amount, this.balance, required this.date, required this.description, this.firstPartyId, this.secondPartyId, this.reason, this.contextId, this.contextIdType});
+  WalletJournalItem({
+    required this.id,
+    required this.refType,
+    required this.amount,
+    this.balance,
+    required this.date,
+    required this.description,
+    this.firstPartyId,
+    this.secondPartyId,
+    this.reason,
+    this.contextId,
+    this.contextIdType,
+  });
 
   factory WalletJournalItem.fromJson(Map<String, dynamic> json) {
     return WalletJournalItem(
@@ -600,7 +950,17 @@ class WalletTransactionItem {
   final int clientId;
   final int? journalRefId;
 
-  WalletTransactionItem({required this.transactionId, required this.typeId, required this.locationId, required this.quantity, required this.unitPrice, required this.isBuy, required this.date, required this.clientId, this.journalRefId});
+  WalletTransactionItem({
+    required this.transactionId,
+    required this.typeId,
+    required this.locationId,
+    required this.quantity,
+    required this.unitPrice,
+    required this.isBuy,
+    required this.date,
+    required this.clientId,
+    this.journalRefId,
+  });
 
   factory WalletTransactionItem.fromJson(Map<String, dynamic> json) {
     return WalletTransactionItem(
@@ -639,7 +999,14 @@ class AssetItem {
   final String locationFlag;
   final bool isSingleton;
 
-  const AssetItem({required this.itemId, required this.typeId, required this.quantity, required this.locationId, required this.locationFlag, required this.isSingleton});
+  const AssetItem({
+    required this.itemId,
+    required this.typeId,
+    required this.quantity,
+    required this.locationId,
+    required this.locationFlag,
+    required this.isSingleton,
+  });
 
   factory AssetItem.fromJson(Map<String, dynamic> json) {
     return AssetItem(
@@ -658,7 +1025,10 @@ class EsiAssetName {
   final String name;
   const EsiAssetName({required this.itemId, required this.name});
   factory EsiAssetName.fromJson(Map<String, dynamic> json) {
-    return EsiAssetName(itemId: json['item_id'] as int, name: json['name'] as String);
+    return EsiAssetName(
+      itemId: json['item_id'] as int,
+      name: json['name'] as String,
+    );
   }
 }
 
@@ -667,10 +1037,20 @@ class EsiAssetLocation {
   final double x;
   final double y;
   final double z;
-  const EsiAssetLocation({required this.itemId, required this.x, required this.y, required this.z});
+  const EsiAssetLocation({
+    required this.itemId,
+    required this.x,
+    required this.y,
+    required this.z,
+  });
   factory EsiAssetLocation.fromJson(Map<String, dynamic> json) {
     final pos = json['position'] as Map<String, dynamic>;
-    return EsiAssetLocation(itemId: json['item_id'] as int, x: (pos['x'] as num).toDouble(), y: (pos['y'] as num).toDouble(), z: (pos['z'] as num).toDouble());
+    return EsiAssetLocation(
+      itemId: json['item_id'] as int,
+      x: (pos['x'] as num).toDouble(),
+      y: (pos['y'] as num).toDouble(),
+      z: (pos['z'] as num).toDouble(),
+    );
   }
 }
 
@@ -681,7 +1061,14 @@ class EsiPlanetaryColony {
   final DateTime lastUpdate;
   final int upgradeLevel;
   final int numPins;
-  const EsiPlanetaryColony({required this.planetId, required this.planetType, required this.solarSystemId, required this.lastUpdate, required this.upgradeLevel, required this.numPins});
+  const EsiPlanetaryColony({
+    required this.planetId,
+    required this.planetType,
+    required this.solarSystemId,
+    required this.lastUpdate,
+    required this.upgradeLevel,
+    required this.numPins,
+  });
   factory EsiPlanetaryColony.fromJson(Map<String, dynamic> json) {
     return EsiPlanetaryColony(
       planetId: json['planet_id'] as int,
@@ -707,7 +1094,19 @@ class EsiPlanetaryPin {
   final int? schematicId;
   final DateTime? lastCycleStart;
 
-  const EsiPlanetaryPin({required this.pinId, required this.typeId, required this.latitude, required this.longitude, required this.installTime, this.expiryTime, this.productTypeId, this.quantityPerCycle, this.cycleTime, this.schematicId, this.lastCycleStart});
+  const EsiPlanetaryPin({
+    required this.pinId,
+    required this.typeId,
+    required this.latitude,
+    required this.longitude,
+    required this.installTime,
+    this.expiryTime,
+    this.productTypeId,
+    this.quantityPerCycle,
+    this.cycleTime,
+    this.schematicId,
+    this.lastCycleStart,
+  });
 
   factory EsiPlanetaryPin.fromJson(Map<String, dynamic> json) {
     final extractorDetails = json['extractor_details'] as Map<String, dynamic>?;
@@ -716,13 +1115,19 @@ class EsiPlanetaryPin {
       typeId: json['type_id'] as int,
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
-      installTime: json['install_time'] != null ? DateTime.parse(json['install_time'] as String) : DateTime.now(),
-      expiryTime: json['expiry_time'] != null ? DateTime.parse(json['expiry_time'] as String) : null,
+      installTime: json['install_time'] != null
+          ? DateTime.parse(json['install_time'] as String)
+          : DateTime.now(),
+      expiryTime: json['expiry_time'] != null
+          ? DateTime.parse(json['expiry_time'] as String)
+          : null,
       productTypeId: extractorDetails?['product_type_id'] as int?,
       quantityPerCycle: extractorDetails?['qty_per_cycle'] as int?,
       cycleTime: extractorDetails?['cycle_time'] as int?,
       schematicId: json['schematic_id'] as int?,
-      lastCycleStart: json['last_cycle_start'] != null ? DateTime.parse(json['last_cycle_start'] as String) : null,
+      lastCycleStart: json['last_cycle_start'] != null
+          ? DateTime.parse(json['last_cycle_start'] as String)
+          : null,
     );
   }
 }
@@ -731,9 +1136,17 @@ class SolarSystemInfo {
   final int systemId;
   final String name;
   final double securityStatus;
-  SolarSystemInfo({required this.systemId, required this.name, required this.securityStatus});
+  SolarSystemInfo({
+    required this.systemId,
+    required this.name,
+    required this.securityStatus,
+  });
   factory SolarSystemInfo.fromJson(Map<String, dynamic> json) {
-    return SolarSystemInfo(systemId: json['system_id'] as int, name: json['name'] as String, securityStatus: (json['security_status'] as num).toDouble());
+    return SolarSystemInfo(
+      systemId: json['system_id'] as int,
+      name: json['name'] as String,
+      securityStatus: (json['security_status'] as num).toDouble(),
+    );
   }
 }
 
@@ -741,9 +1154,17 @@ class StationInfo {
   final int stationId;
   final String name;
   final int systemId;
-  StationInfo({required this.stationId, required this.name, required this.systemId});
+  StationInfo({
+    required this.stationId,
+    required this.name,
+    required this.systemId,
+  });
   factory StationInfo.fromJson(Map<String, dynamic> json) {
-    return StationInfo(stationId: json['station_id'] as int, name: json['name'] as String, systemId: json['system_id'] as int);
+    return StationInfo(
+      stationId: json['station_id'] as int,
+      name: json['name'] as String,
+      systemId: json['system_id'] as int,
+    );
   }
 }
 
@@ -753,7 +1174,11 @@ class UniverseName {
   final String category;
   UniverseName({required this.id, required this.name, required this.category});
   factory UniverseName.fromJson(Map<String, dynamic> json) {
-    return UniverseName(id: json['id'] as int, name: json['name'] as String, category: json['category'] as String);
+    return UniverseName(
+      id: json['id'] as int,
+      name: json['name'] as String,
+      category: json['category'] as String,
+    );
   }
 }
 
@@ -761,9 +1186,17 @@ class CharacterLocation {
   final int solarSystemId;
   final int? stationId;
   final int? structureId;
-  CharacterLocation({required this.solarSystemId, this.stationId, this.structureId});
+  CharacterLocation({
+    required this.solarSystemId,
+    this.stationId,
+    this.structureId,
+  });
   factory CharacterLocation.fromJson(Map<String, dynamic> json) {
-    return CharacterLocation(solarSystemId: json['solar_system_id'] as int, stationId: json['station_id'] as int?, structureId: json['structure_id'] as int?);
+    return CharacterLocation(
+      solarSystemId: json['solar_system_id'] as int,
+      stationId: json['station_id'] as int?,
+      structureId: json['structure_id'] as int?,
+    );
   }
 }
 
@@ -773,7 +1206,12 @@ class CharacterShip {
   final String? shipName;
   final String? shipTypeName;
 
-  CharacterShip({required this.shipTypeId, required this.shipItemId, this.shipName, this.shipTypeName});
+  CharacterShip({
+    required this.shipTypeId,
+    required this.shipItemId,
+    this.shipName,
+    this.shipTypeName,
+  });
 
   factory CharacterShip.fromJson(Map<String, dynamic> json) {
     return CharacterShip(
@@ -790,12 +1228,21 @@ class CharacterOnline {
   final DateTime? lastLogin;
   final DateTime? lastLogout;
   final int? logins;
-  CharacterOnline({required this.online, this.lastLogin, this.lastLogout, this.logins});
+  CharacterOnline({
+    required this.online,
+    this.lastLogin,
+    this.lastLogout,
+    this.logins,
+  });
   factory CharacterOnline.fromJson(Map<String, dynamic> json) {
     return CharacterOnline(
       online: json['online'] as bool,
-      lastLogin: json['last_login'] != null ? DateTime.parse(json['last_login'] as String) : null,
-      lastLogout: json['last_logout'] != null ? DateTime.parse(json['last_logout'] as String) : null,
+      lastLogin: json['last_login'] != null
+          ? DateTime.parse(json['last_login'] as String)
+          : null,
+      lastLogout: json['last_logout'] != null
+          ? DateTime.parse(json['last_logout'] as String)
+          : null,
       logins: json['logins'] as int?,
     );
   }
@@ -807,14 +1254,27 @@ class CharacterClones {
   final DateTime? lastCloneJumpDate;
   final DateTime? lastStationChangeDate;
 
-  CharacterClones({required this.jumpClones, required this.homeLocation, this.lastCloneJumpDate, this.lastStationChangeDate});
+  CharacterClones({
+    required this.jumpClones,
+    required this.homeLocation,
+    this.lastCloneJumpDate,
+    this.lastStationChangeDate,
+  });
 
   factory CharacterClones.fromJson(Map<String, dynamic> json) {
     return CharacterClones(
-      jumpClones: (json['jump_clones'] as List<dynamic>? ?? []).map((c) => JumpClone.fromJson(c as Map<String, dynamic>)).toList(),
-      homeLocation: HomeLocation.fromJson(json['home_location'] as Map<String, dynamic>),
-      lastCloneJumpDate: json['last_clone_jump_date'] != null ? DateTime.parse(json['last_clone_jump_date'] as String) : null,
-      lastStationChangeDate: json['last_station_change_date'] != null ? DateTime.parse(json['last_station_change_date'] as String) : null,
+      jumpClones: (json['jump_clones'] as List<dynamic>? ?? [])
+          .map((c) => JumpClone.fromJson(c as Map<String, dynamic>))
+          .toList(),
+      homeLocation: HomeLocation.fromJson(
+        json['home_location'] as Map<String, dynamic>,
+      ),
+      lastCloneJumpDate: json['last_clone_jump_date'] != null
+          ? DateTime.parse(json['last_clone_jump_date'] as String)
+          : null,
+      lastStationChangeDate: json['last_station_change_date'] != null
+          ? DateTime.parse(json['last_station_change_date'] as String)
+          : null,
     );
   }
 }
@@ -825,7 +1285,13 @@ class JumpClone {
   final String locationType;
   final List<int> implants;
   final String? name;
-  JumpClone({required this.jumpCloneId, required this.locationId, required this.locationType, required this.implants, this.name});
+  JumpClone({
+    required this.jumpCloneId,
+    required this.locationId,
+    required this.locationType,
+    required this.implants,
+    this.name,
+  });
   factory JumpClone.fromJson(Map<String, dynamic> json) {
     return JumpClone(
       jumpCloneId: json['jump_clone_id'] as int,
@@ -842,7 +1308,10 @@ class HomeLocation {
   final String locationType;
   HomeLocation({required this.locationId, required this.locationType});
   factory HomeLocation.fromJson(Map<String, dynamic> json) {
-    return HomeLocation(locationId: json['location_id'] as int, locationType: json['location_type'] as String);
+    return HomeLocation(
+      locationId: json['location_id'] as int,
+      locationType: json['location_type'] as String,
+    );
   }
 }
 
@@ -850,9 +1319,17 @@ class Standing {
   final int fromId;
   final String fromType;
   final double standing;
-  Standing({required this.fromId, required this.fromType, required this.standing});
+  Standing({
+    required this.fromId,
+    required this.fromType,
+    required this.standing,
+  });
   factory Standing.fromJson(Map<String, dynamic> json) {
-    return Standing(fromId: json['from_id'] as int, fromType: json['from_type'] as String, standing: (json['standing'] as num).toDouble());
+    return Standing(
+      fromId: json['from_id'] as int,
+      fromType: json['from_type'] as String,
+      standing: (json['standing'] as num).toDouble(),
+    );
   }
 }
 
@@ -860,7 +1337,11 @@ class EsiResponse<T> {
   final T data;
   final Map<String, List<String>> headers;
   final int? statusCode;
-  const EsiResponse({required this.data, required this.headers, this.statusCode});
+  const EsiResponse({
+    required this.data,
+    required this.headers,
+    this.statusCode,
+  });
 }
 
 class BlueprintItem {
@@ -967,12 +1448,250 @@ class IndustryJobData {
       duration: json['duration'] as int,
       startDate: DateTime.parse(json['start_date'] as String),
       endDate: DateTime.parse(json['end_date'] as String),
-      pauseDate: json['pause_date'] != null ? DateTime.parse(json['pause_date'] as String) : null,
-      completedDate: json['completed_date'] != null ? DateTime.parse(json['completed_date'] as String) : null,
+      pauseDate: json['pause_date'] != null
+          ? DateTime.parse(json['pause_date'] as String)
+          : null,
+      completedDate: json['completed_date'] != null
+          ? DateTime.parse(json['completed_date'] as String)
+          : null,
       completedCharacterId: json['completed_character_id'] as int?,
       successfulRuns: json['successful_runs'] as int?,
     );
   }
+}
+
+class EsiKillmailRef {
+  final int killmailId;
+  final String killmailHash;
+
+  const EsiKillmailRef({required this.killmailId, required this.killmailHash});
+
+  factory EsiKillmailRef.fromJson(Map<String, dynamic> json) {
+    return EsiKillmailRef(
+      killmailId: json['killmail_id'] as int,
+      killmailHash: json['killmail_hash'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'killmail_id': killmailId,
+    'killmail_hash': killmailHash,
+  };
+}
+
+class EsiKillmailDetail {
+  final int killmailId;
+  final String? killmailHash;
+  final DateTime killmailTime;
+  final int solarSystemId;
+  final EsiKillmailVictim victim;
+  final List<EsiKillmailAttacker> attackers;
+
+  const EsiKillmailDetail({
+    required this.killmailId,
+    this.killmailHash,
+    required this.killmailTime,
+    required this.solarSystemId,
+    required this.victim,
+    required this.attackers,
+  });
+
+  factory EsiKillmailDetail.fromJson(Map<String, dynamic> json) {
+    return EsiKillmailDetail(
+      killmailId: json['killmail_id'] as int,
+      killmailHash: json['killmail_hash'] as String?,
+      killmailTime: DateTime.parse(json['killmail_time'] as String).toUtc(),
+      solarSystemId: json['solar_system_id'] as int,
+      victim: EsiKillmailVictim.fromJson(
+        json['victim'] as Map<String, dynamic>,
+      ),
+      attackers: ((json['attackers'] as List<dynamic>?) ?? const [])
+          .map(
+            (item) =>
+                EsiKillmailAttacker.fromJson(item as Map<String, dynamic>),
+          )
+          .toList(),
+    );
+  }
+
+  EsiKillmailDetail copyWith({
+    String? killmailHash,
+    EsiKillmailVictim? victim,
+    List<EsiKillmailAttacker>? attackers,
+  }) {
+    return EsiKillmailDetail(
+      killmailId: killmailId,
+      killmailHash: killmailHash ?? this.killmailHash,
+      killmailTime: killmailTime,
+      solarSystemId: solarSystemId,
+      victim: victim ?? this.victim,
+      attackers: attackers ?? this.attackers,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'killmail_id': killmailId,
+    if (killmailHash != null) 'killmail_hash': killmailHash,
+    'killmail_time': killmailTime.toUtc().toIso8601String(),
+    'solar_system_id': solarSystemId,
+    'victim': victim.toJson(),
+    'attackers': attackers.map((attacker) => attacker.toJson()).toList(),
+  };
+}
+
+class EsiKillmailVictim {
+  final int? characterId;
+  final String? characterName;
+  final int? corporationId;
+  final int? allianceId;
+  final int shipTypeId;
+  final int damageTaken;
+  final List<EsiKillmailItem> items;
+
+  const EsiKillmailVictim({
+    this.characterId,
+    this.characterName,
+    this.corporationId,
+    this.allianceId,
+    required this.shipTypeId,
+    required this.damageTaken,
+    required this.items,
+  });
+
+  factory EsiKillmailVictim.fromJson(Map<String, dynamic> json) {
+    return EsiKillmailVictim(
+      characterId: json['character_id'] as int?,
+      corporationId: json['corporation_id'] as int?,
+      allianceId: json['alliance_id'] as int?,
+      shipTypeId: json['ship_type_id'] as int,
+      damageTaken: (json['damage_taken'] as num?)?.toInt() ?? 0,
+      items: ((json['items'] as List<dynamic>?) ?? const [])
+          .map((item) => EsiKillmailItem.fromJson(item as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  EsiKillmailVictim copyWith({String? characterName}) {
+    return EsiKillmailVictim(
+      characterId: characterId,
+      characterName: characterName ?? this.characterName,
+      corporationId: corporationId,
+      allianceId: allianceId,
+      shipTypeId: shipTypeId,
+      damageTaken: damageTaken,
+      items: items,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    if (characterId != null) 'character_id': characterId,
+    if (characterName != null) 'character_name': characterName,
+    if (corporationId != null) 'corporation_id': corporationId,
+    if (allianceId != null) 'alliance_id': allianceId,
+    'ship_type_id': shipTypeId,
+    'damage_taken': damageTaken,
+    'items': items.map((item) => item.toJson()).toList(),
+  };
+}
+
+class EsiKillmailAttacker {
+  final int? characterId;
+  final String? characterName;
+  final int? corporationId;
+  final int? allianceId;
+  final int? shipTypeId;
+  final int? weaponTypeId;
+  final int damageDone;
+  final bool finalBlow;
+
+  const EsiKillmailAttacker({
+    this.characterId,
+    this.characterName,
+    this.corporationId,
+    this.allianceId,
+    this.shipTypeId,
+    this.weaponTypeId,
+    required this.damageDone,
+    required this.finalBlow,
+  });
+
+  factory EsiKillmailAttacker.fromJson(Map<String, dynamic> json) {
+    return EsiKillmailAttacker(
+      characterId: json['character_id'] as int?,
+      corporationId: json['corporation_id'] as int?,
+      allianceId: json['alliance_id'] as int?,
+      shipTypeId: json['ship_type_id'] as int?,
+      weaponTypeId: json['weapon_type_id'] as int?,
+      damageDone: (json['damage_done'] as num?)?.toInt() ?? 0,
+      finalBlow: json['final_blow'] as bool? ?? false,
+    );
+  }
+
+  EsiKillmailAttacker copyWith({String? characterName}) {
+    return EsiKillmailAttacker(
+      characterId: characterId,
+      characterName: characterName ?? this.characterName,
+      corporationId: corporationId,
+      allianceId: allianceId,
+      shipTypeId: shipTypeId,
+      weaponTypeId: weaponTypeId,
+      damageDone: damageDone,
+      finalBlow: finalBlow,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    if (characterId != null) 'character_id': characterId,
+    if (characterName != null) 'character_name': characterName,
+    if (corporationId != null) 'corporation_id': corporationId,
+    if (allianceId != null) 'alliance_id': allianceId,
+    if (shipTypeId != null) 'ship_type_id': shipTypeId,
+    if (weaponTypeId != null) 'weapon_type_id': weaponTypeId,
+    'damage_done': damageDone,
+    'final_blow': finalBlow,
+  };
+}
+
+class EsiKillmailItem {
+  final int typeId;
+  final int flag;
+  final int quantityDestroyed;
+  final int quantityDropped;
+  final int singleton;
+  final List<EsiKillmailItem> items;
+
+  const EsiKillmailItem({
+    required this.typeId,
+    required this.flag,
+    required this.quantityDestroyed,
+    required this.quantityDropped,
+    required this.singleton,
+    required this.items,
+  });
+
+  int get totalQuantity => quantityDestroyed + quantityDropped;
+
+  factory EsiKillmailItem.fromJson(Map<String, dynamic> json) {
+    return EsiKillmailItem(
+      typeId: json['item_type_id'] as int,
+      flag: (json['flag'] as num?)?.toInt() ?? 0,
+      quantityDestroyed: (json['quantity_destroyed'] as num?)?.toInt() ?? 0,
+      quantityDropped: (json['quantity_dropped'] as num?)?.toInt() ?? 0,
+      singleton: (json['singleton'] as num?)?.toInt() ?? 0,
+      items: ((json['items'] as List<dynamic>?) ?? const [])
+          .map((item) => EsiKillmailItem.fromJson(item as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'item_type_id': typeId,
+    'flag': flag,
+    'quantity_destroyed': quantityDestroyed,
+    'quantity_dropped': quantityDropped,
+    'singleton': singleton,
+    'items': items.map((item) => item.toJson()).toList(),
+  };
 }
 
 class EsiException implements Exception {
@@ -983,8 +1702,10 @@ class EsiException implements Exception {
   bool get isAuthError => statusCode == 401;
   bool get isScopeError => statusCode == 403;
   bool get isRateLimited => statusCode == 420 || statusCode == 429;
-  bool get isServerError => statusCode != null && statusCode! >= 500 && statusCode! < 600;
-  bool get isClientError => statusCode != null && statusCode! >= 400 && statusCode! < 500;
+  bool get isServerError =>
+      statusCode != null && statusCode! >= 500 && statusCode! < 600;
+  bool get isClientError =>
+      statusCode != null && statusCode! >= 400 && statusCode! < 500;
   @override
   String toString() => 'EsiException: $message (status: $statusCode)';
 }
@@ -1071,9 +1792,14 @@ class _EsiInterceptor extends Interceptor {
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
     _client._updateErrorLimit(response);
-    if (kDebugMode) debugPrint('ESI ${response.requestOptions.method} ${response.requestOptions.path} -> ${response.statusCode}');
+    if (kDebugMode) {
+      debugPrint(
+        'ESI ${response.requestOptions.method} ${response.requestOptions.path} -> ${response.statusCode}',
+      );
+    }
     handler.next(response);
   }
+
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
     final statusCode = err.response?.statusCode;
@@ -1083,10 +1809,23 @@ class _EsiInterceptor extends Interceptor {
     if (data is Map<String, dynamic>) {
       message = data['error'] as String? ?? err.message ?? 'Unknown error';
       errorCode = data['error_code'] as String?;
-    } else { message = err.message ?? 'Unknown error'; }
+    } else {
+      message = err.message ?? 'Unknown error';
+    }
     debugPrint('ESI Error: $message (status: $statusCode, code: $errorCode)');
     if (err.response != null) _client._updateErrorLimit(err.response!);
-    handler.reject(DioException(requestOptions: err.requestOptions, response: err.response, type: err.type, error: EsiException(message, statusCode: statusCode, errorCode: errorCode)));
+    handler.reject(
+      DioException(
+        requestOptions: err.requestOptions,
+        response: err.response,
+        type: err.type,
+        error: EsiException(
+          message,
+          statusCode: statusCode,
+          errorCode: errorCode,
+        ),
+      ),
+    );
   }
 }
 
@@ -1096,7 +1835,11 @@ class EsiUniverseName {
   final String name;
   final String category;
 
-  EsiUniverseName({required this.id, required this.name, required this.category});
+  EsiUniverseName({
+    required this.id,
+    required this.name,
+    required this.category,
+  });
 
   factory EsiUniverseName.fromJson(Map<String, dynamic> json) {
     return EsiUniverseName(
@@ -1138,7 +1881,11 @@ class MarketHistoryEntry {
 }
 
 final esiClientProvider = Provider<EsiClient>((ref) {
-  final client = EsiClient(tokenManager: ref.watch(tokenManagerProvider), oauthService: ref.watch(oauthServiceProvider), database: ref.watch(databaseProvider));
+  final client = EsiClient(
+    tokenManager: ref.watch(tokenManagerProvider),
+    oauthService: ref.watch(oauthServiceProvider),
+    database: ref.watch(databaseProvider),
+  );
   ref.onDispose(() => client.dispose());
   return client;
 });

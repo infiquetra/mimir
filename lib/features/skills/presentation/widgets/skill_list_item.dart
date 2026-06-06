@@ -22,11 +22,7 @@ import 'skill_level_indicator.dart';
 ///
 /// Very compact (~40px height), no card borders, just subtle row styling.
 class SkillListItem extends StatelessWidget {
-  const SkillListItem({
-    super.key,
-    required this.skill,
-    required this.canTrain,
-  });
+  const SkillListItem({super.key, required this.skill, required this.canTrain});
 
   final SkillWithLevel skill;
   final bool canTrain;
@@ -44,7 +40,10 @@ class SkillListItem extends StatelessWidget {
     return InkWell(
       onTap: canTrain
           ? () {
-              Log.d('SKILLS.UI', 'SkillListItem - tapped ${skill.skill.typeName}');
+              Log.d(
+                'SKILLS.UI',
+                'SkillListItem - tapped ${skill.skill.typeName}',
+              );
               // Could navigate to skill details here in future
             }
           : null,
@@ -137,18 +136,17 @@ class SkillListItem extends StatelessWidget {
                   color: EveColors.error.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Icon(
-                  Icons.book,
-                  size: 16,
-                  color: EveColors.error,
-                ),
+                child: Icon(Icons.book, size: 16, color: EveColors.error),
               )
             else
               // Add to plan button (skill is injected and not maxed)
               IconButton(
                 onPressed: canTrain
                     ? () {
-                        Log.d('SKILLS.UI', 'SkillListItem - add to plan: ${skill.skill.typeName}');
+                        Log.d(
+                          'SKILLS.UI',
+                          'SkillListItem - add to plan: ${skill.skill.typeName}',
+                        );
                         showDialog(
                           context: context,
                           builder: (context) => AddToPlanDialog(

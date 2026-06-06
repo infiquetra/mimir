@@ -92,9 +92,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           _buildStepIndicator(theme),
 
           // Current step content
-          Expanded(
-            child: _buildCurrentStep(),
-          ),
+          Expanded(child: _buildCurrentStep()),
 
           // Navigation buttons
           _buildNavigationButtons(theme),
@@ -109,10 +107,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(
-            color: theme.colorScheme.outlineVariant,
-            width: 1,
-          ),
+          bottom: BorderSide(color: theme.colorScheme.outlineVariant, width: 1),
         ),
       ),
       child: Row(
@@ -139,8 +134,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   color: isActive
                       ? theme.colorScheme.primary
                       : isCompleted
-                          ? theme.colorScheme.primary.withAlpha(128)
-                          : theme.colorScheme.surfaceContainerHighest,
+                      ? theme.colorScheme.primary.withAlpha(128)
+                      : theme.colorScheme.surfaceContainerHighest,
                   border: Border.all(
                     color: isActive || isCompleted
                         ? theme.colorScheme.primary
@@ -199,10 +194,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(
-            color: theme.colorScheme.outlineVariant,
-            width: 1,
-          ),
+          top: BorderSide(color: theme.colorScheme.outlineVariant, width: 1),
         ),
       ),
       child: Row(
@@ -210,10 +202,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         children: [
           // Skip button (only on first two steps)
           if (!isLastStep)
-            TextButton(
-              onPressed: _skipOnboarding,
-              child: const Text('Skip'),
-            )
+            TextButton(onPressed: _skipOnboarding, child: const Text('Skip'))
           else
             const SizedBox(width: 80),
 
@@ -221,10 +210,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           Row(
             children: [
               if (!isFirstStep)
-                TextButton(
-                  onPressed: _previousStep,
-                  child: const Text('Back'),
-                ),
+                TextButton(onPressed: _previousStep, child: const Text('Back')),
               const SizedBox(width: 12),
               FilledButton(
                 onPressed: _nextStep,

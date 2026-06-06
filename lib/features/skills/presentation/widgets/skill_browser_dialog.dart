@@ -18,16 +18,12 @@ import '../../data/skill_catalogue_providers.dart';
 /// - See count of selected skills
 /// - Add selected skills to a plan
 class SkillBrowserDialog extends ConsumerStatefulWidget {
-  const SkillBrowserDialog({
-    required this.planId,
-    super.key,
-  });
+  const SkillBrowserDialog({required this.planId, super.key});
 
   final int planId;
 
   @override
-  ConsumerState<SkillBrowserDialog> createState() =>
-      _SkillBrowserDialogState();
+  ConsumerState<SkillBrowserDialog> createState() => _SkillBrowserDialogState();
 }
 
 class _SkillBrowserDialogState extends ConsumerState<SkillBrowserDialog> {
@@ -80,7 +76,10 @@ class _SkillBrowserDialogState extends ConsumerState<SkillBrowserDialog> {
   void _updateTargetLevel(int skillId, int targetLevel) {
     setState(() {
       _selectedSkills[skillId] = targetLevel;
-      Log.d('SKILLS.BROWSER', 'Updated skill $skillId target level to $targetLevel');
+      Log.d(
+        'SKILLS.BROWSER',
+        'Updated skill $skillId target level to $targetLevel',
+      );
     });
   }
 
@@ -134,9 +133,7 @@ class _SkillBrowserDialogState extends ConsumerState<SkillBrowserDialog> {
         },
         decoration: InputDecoration(
           hintText: 'Search skills...',
-          hintStyle: EveTypography.bodyMedium(
-            color: EveColors.textSecondary,
-          ),
+          hintStyle: EveTypography.bodyMedium(color: EveColors.textSecondary),
           prefixIcon: Icon(
             Icons.search,
             color: EveColors.textSecondary,
@@ -220,9 +217,7 @@ class _SkillBrowserDialogState extends ConsumerState<SkillBrowserDialog> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: EveColors.surfaceDefault,
-          border: Border(
-            bottom: BorderSide(color: EveColors.borderSubtle),
-          ),
+          border: Border(bottom: BorderSide(color: EveColors.borderSubtle)),
         ),
         child: Row(
           children: [
@@ -259,7 +254,9 @@ class _SkillBrowserDialogState extends ConsumerState<SkillBrowserDialog> {
 
         return Column(
           children: skills.map((skillWithLevel) {
-            final isSelected = _selectedSkills.containsKey(skillWithLevel.skill.typeId);
+            final isSelected = _selectedSkills.containsKey(
+              skillWithLevel.skill.typeId,
+            );
             final targetLevel = _selectedSkills[skillWithLevel.skill.typeId];
 
             return _SkillBrowserItem(
@@ -272,10 +269,8 @@ class _SkillBrowserDialogState extends ConsumerState<SkillBrowserDialog> {
                 skillWithLevel.skill.typeId,
                 skillWithLevel.trainedLevel,
               ),
-              onLevelChanged: (level) => _updateTargetLevel(
-                skillWithLevel.skill.typeId,
-                level,
-              ),
+              onLevelChanged: (level) =>
+                  _updateTargetLevel(skillWithLevel.skill.typeId, level),
             );
           }).toList(),
         );
@@ -291,7 +286,12 @@ class _SkillBrowserDialogState extends ConsumerState<SkillBrowserDialog> {
         ),
       ),
       error: (error, stack) {
-        Log.e('SKILLS.BROWSER', 'Failed to load skills for group $groupId', error, stack);
+        Log.e(
+          'SKILLS.BROWSER',
+          'Failed to load skills for group $groupId',
+          error,
+          stack,
+        );
         return Padding(
           padding: const EdgeInsets.all(16.0),
           child: Text(
@@ -323,12 +323,16 @@ class _SkillBrowserDialogState extends ConsumerState<SkillBrowserDialog> {
                   const SizedBox(height: 16),
                   Text(
                     'No skills found',
-                    style: EveTypography.titleLarge(color: EveColors.textPrimary),
+                    style: EveTypography.titleLarge(
+                      color: EveColors.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Try a different search term',
-                    style: EveTypography.bodyMedium(color: EveColors.textSecondary),
+                    style: EveTypography.bodyMedium(
+                      color: EveColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -340,7 +344,9 @@ class _SkillBrowserDialogState extends ConsumerState<SkillBrowserDialog> {
           itemCount: skills.length,
           itemBuilder: (context, index) {
             final skillWithLevel = skills[index];
-            final isSelected = _selectedSkills.containsKey(skillWithLevel.skill.typeId);
+            final isSelected = _selectedSkills.containsKey(
+              skillWithLevel.skill.typeId,
+            );
             final targetLevel = _selectedSkills[skillWithLevel.skill.typeId];
 
             return _SkillBrowserItem(
@@ -353,10 +359,8 @@ class _SkillBrowserDialogState extends ConsumerState<SkillBrowserDialog> {
                 skillWithLevel.skill.typeId,
                 skillWithLevel.trainedLevel,
               ),
-              onLevelChanged: (level) => _updateTargetLevel(
-                skillWithLevel.skill.typeId,
-                level,
-              ),
+              onLevelChanged: (level) =>
+                  _updateTargetLevel(skillWithLevel.skill.typeId, level),
             );
           },
         );
@@ -374,17 +378,11 @@ class _SkillBrowserDialogState extends ConsumerState<SkillBrowserDialog> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: EveColors.surfaceElevated,
-        border: Border(
-          top: BorderSide(color: EveColors.borderActive),
-        ),
+        border: Border(top: BorderSide(color: EveColors.borderActive)),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.check_circle,
-            color: EveColors.photonBlue,
-            size: 20,
-          ),
+          Icon(Icons.check_circle, color: EveColors.photonBlue, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -451,11 +449,7 @@ class _SkillBrowserDialogState extends ConsumerState<SkillBrowserDialog> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: EveColors.error,
-            ),
+            Icon(Icons.error_outline, size: 64, color: EveColors.error),
             const SizedBox(height: 16),
             Text(
               'Failed to Load Skills',
@@ -499,17 +493,13 @@ class _SkillBrowserItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: isSelected
-          ? EveColors.surfaceBright
-          : EveColors.surfaceDefault,
+      color: isSelected ? EveColors.surfaceBright : EveColors.surfaceDefault,
       child: InkWell(
         onTap: onToggle,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: EveColors.borderSubtle),
-            ),
+            border: Border(bottom: BorderSide(color: EveColors.borderSubtle)),
           ),
           child: Row(
             children: [
@@ -527,10 +517,7 @@ class _SkillBrowserItem extends StatelessWidget {
               const SizedBox(width: 12),
 
               // Skill icon
-              EveSkillIcon(
-                typeId: skill.typeId,
-                size: 40,
-              ),
+              EveSkillIcon(typeId: skill.typeId, size: 40),
               const SizedBox(width: 12),
 
               // Skill name and info
@@ -540,7 +527,9 @@ class _SkillBrowserItem extends StatelessWidget {
                   children: [
                     Text(
                       skill.typeName,
-                      style: EveTypography.bodyMedium(color: EveColors.textPrimary),
+                      style: EveTypography.bodyMedium(
+                        color: EveColors.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(

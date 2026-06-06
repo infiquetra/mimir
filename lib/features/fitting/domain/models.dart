@@ -4,6 +4,7 @@ part 'models.freezed.dart';
 part 'models.g.dart';
 
 enum SlotType { high, med, low, rig, subsystem }
+
 enum ModuleState { offline, online, active, overloaded }
 
 @freezed
@@ -25,8 +26,9 @@ abstract class Fitting with _$Fitting {
     @Default([]) List<CargoItem> cargo,
   }) = _Fitting;
 
-  factory Fitting.fromJson(Map<String, dynamic> json) => _$FittingFromJson(json);
-  
+  factory Fitting.fromJson(Map<String, dynamic> json) =>
+      _$FittingFromJson(json);
+
   List<FittedModule> get allModules => [
     ...highSlots,
     ...medSlots,
@@ -49,7 +51,8 @@ abstract class FittedModule with _$FittedModule {
     @Default({}) Map<int, double> attributes,
   }) = _FittedModule;
 
-  factory FittedModule.fromJson(Map<String, dynamic> json) => _$FittedModuleFromJson(json);
+  factory FittedModule.fromJson(Map<String, dynamic> json) =>
+      _$FittedModuleFromJson(json);
 }
 
 @freezed
@@ -62,7 +65,8 @@ abstract class DroneGroup with _$DroneGroup {
     @Default(0) int inSpace,
   }) = _DroneGroup;
 
-  factory DroneGroup.fromJson(Map<String, dynamic> json) => _$DroneGroupFromJson(json);
+  factory DroneGroup.fromJson(Map<String, dynamic> json) =>
+      _$DroneGroupFromJson(json);
 }
 
 @freezed
@@ -73,7 +77,8 @@ abstract class CargoItem with _$CargoItem {
     required int quantity,
   }) = _CargoItem;
 
-  factory CargoItem.fromJson(Map<String, dynamic> json) => _$CargoItemFromJson(json);
+  factory CargoItem.fromJson(Map<String, dynamic> json) =>
+      _$CargoItemFromJson(json);
 }
 
 @freezed
@@ -85,14 +90,14 @@ abstract class FittingStats with _$FittingStats {
     @Default(0.0) double powerMax,
     @Default(0) int calibrationUsed,
     @Default(0) int calibrationMax,
-    
+
     @Default(0.0) double capacitorCapacity,
     @Default(0.0) double capacitorRecharge,
     @Default(0.0) double capacitorStable,
     @Default(false) bool isCapStable,
-    
+
     @Default(DefenseProfile()) DefenseProfile defenses,
-    
+
     @Default(0.0) double dpsTotal,
     @Default(0.0) double dpsGuns,
     @Default(0.0) double dpsDrones,
@@ -100,29 +105,30 @@ abstract class FittingStats with _$FittingStats {
     @Default(0.0) double volley,
     @Default(0.0) double optimalRange,
     @Default(0.0) double falloffRange,
-    
+
     @Default(0.0) double maxVelocity,
     @Default(0.0) double inertiaModifier,
     @Default(0.0) double alignTime,
     @Default(0.0) double warpSpeed,
     @Default(0.0) double massKg,
-    
+
     @Default(0.0) double targetRange,
     @Default(0.0) double scanResolution,
     @Default(0) int maxLockedTargets,
     @Default(0.0) double signatureRadius,
-    
+
     @Default(0.0) double droneBandwidthUsed,
     @Default(0.0) double droneBandwidthMax,
     @Default(0.0) double droneBayUsed,
     @Default(0.0) double droneBayMax,
-    
+
     @Default(0.0) double shipCost,
     @Default(0.0) double moduleCost,
     @Default(0.0) double totalCost,
   }) = _FittingStats;
 
-  factory FittingStats.fromJson(Map<String, dynamic> json) => _$FittingStatsFromJson(json);
+  factory FittingStats.fromJson(Map<String, dynamic> json) =>
+      _$FittingStatsFromJson(json);
 }
 
 @freezed
@@ -146,7 +152,8 @@ abstract class DefenseProfile with _$DefenseProfile {
     @Default(0.0) double effectiveArmorRepair,
   }) = _DefenseProfile;
 
-  factory DefenseProfile.fromJson(Map<String, dynamic> json) => _$DefenseProfileFromJson(json);
+  factory DefenseProfile.fromJson(Map<String, dynamic> json) =>
+      _$DefenseProfileFromJson(json);
 }
 
 @freezed
@@ -160,8 +167,9 @@ abstract class ResistProfile with _$ResistProfile {
     @Default(0.0) double explosive,
   }) = _ResistProfile;
 
-  factory ResistProfile.fromJson(Map<String, dynamic> json) => _$ResistProfileFromJson(json);
-  
+  factory ResistProfile.fromJson(Map<String, dynamic> json) =>
+      _$ResistProfileFromJson(json);
+
   double get omniResist => (em + thermal + kinetic + explosive) / 4;
 }
 
@@ -185,7 +193,8 @@ abstract class ShipType with _$ShipType {
     @Default([]) List<SkillRequirement> skillRequirements,
   }) = _ShipType;
 
-  factory ShipType.fromJson(Map<String, dynamic> json) => _$ShipTypeFromJson(json);
+  factory ShipType.fromJson(Map<String, dynamic> json) =>
+      _$ShipTypeFromJson(json);
 }
 
 @freezed
@@ -198,7 +207,8 @@ abstract class ShipBonus with _$ShipBonus {
     required int attributeId,
   }) = _ShipBonus;
 
-  factory ShipBonus.fromJson(Map<String, dynamic> json) => _$ShipBonusFromJson(json);
+  factory ShipBonus.fromJson(Map<String, dynamic> json) =>
+      _$ShipBonusFromJson(json);
 }
 
 @freezed
@@ -220,7 +230,8 @@ abstract class ModuleType with _$ModuleType {
     @Default([]) List<int> acceptedChargeGroups,
   }) = _ModuleType;
 
-  factory ModuleType.fromJson(Map<String, dynamic> json) => _$ModuleTypeFromJson(json);
+  factory ModuleType.fromJson(Map<String, dynamic> json) =>
+      _$ModuleTypeFromJson(json);
 }
 
 @freezed
@@ -232,7 +243,8 @@ abstract class DogmaEffect with _$DogmaEffect {
     @Default(false) bool isAssistance,
   }) = _DogmaEffect;
 
-  factory DogmaEffect.fromJson(Map<String, dynamic> json) => _$DogmaEffectFromJson(json);
+  factory DogmaEffect.fromJson(Map<String, dynamic> json) =>
+      _$DogmaEffectFromJson(json);
 }
 
 @freezed
@@ -243,16 +255,15 @@ abstract class SkillRequirement with _$SkillRequirement {
     required int requiredLevel,
   }) = _SkillRequirement;
 
-  factory SkillRequirement.fromJson(Map<String, dynamic> json) => _$SkillRequirementFromJson(json);
+  factory SkillRequirement.fromJson(Map<String, dynamic> json) =>
+      _$SkillRequirementFromJson(json);
 }
 
 @freezed
 abstract class CharacterSkill with _$CharacterSkill {
-  const factory CharacterSkill({
-    required int skillId,
-    required int level,
-  }) = _CharacterSkill;
+  const factory CharacterSkill({required int skillId, required int level}) =
+      _CharacterSkill;
 
-  factory CharacterSkill.fromJson(Map<String, dynamic> json) => _$CharacterSkillFromJson(json);
+  factory CharacterSkill.fromJson(Map<String, dynamic> json) =>
+      _$CharacterSkillFromJson(json);
 }
-

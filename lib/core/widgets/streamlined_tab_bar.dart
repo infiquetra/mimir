@@ -60,27 +60,22 @@ class StreamlinedTabBar extends StatelessWidget implements PreferredSizeWidget {
       child: TabBar(
         controller: controller,
         tabs: tabs
-            .map((label) => Tab(
-                  height: height,
-                  child: Text(label),
-                ))
+            .map((label) => Tab(height: height, child: Text(label)))
             .toList(),
         // Compact padding (8px screen edge, 12px between tabs)
         padding: EdgeInsets.symmetric(horizontal: EveSpacing.md),
         labelPadding: EdgeInsets.symmetric(horizontal: EveSpacing.lg),
         // Text styling with EVE typography
-        labelStyle: textStyle ??
-            EveTypography.labelLarge(color: EveColors.photonBlue),
+        labelStyle:
+            textStyle ?? EveTypography.labelLarge(color: EveColors.photonBlue),
         unselectedLabelStyle:
-            textStyle ?? EveTypography.labelLarge(color: EveColors.textSecondary),
+            textStyle ??
+            EveTypography.labelLarge(color: EveColors.textSecondary),
         labelColor: EveColors.photonBlue,
         unselectedLabelColor: EveColors.textSecondary,
         // Thin 2px underline indicator
         indicator: UnderlineTabIndicator(
-          borderSide: const BorderSide(
-            color: EveColors.photonBlue,
-            width: 2.0,
-          ),
+          borderSide: const BorderSide(color: EveColors.photonBlue, width: 2.0),
           insets: EdgeInsets.symmetric(horizontal: EveSpacing.lg),
         ),
         // Remove default divider (we have our own border)

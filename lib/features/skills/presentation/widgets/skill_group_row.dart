@@ -101,9 +101,7 @@ class SkillGroupRow extends StatelessWidget {
                       ),
                       // Expansion indicator
                       Icon(
-                        isExpanded
-                            ? Icons.expand_less
-                            : Icons.expand_more,
+                        isExpanded ? Icons.expand_less : Icons.expand_more,
                         size: 20,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

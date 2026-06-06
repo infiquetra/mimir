@@ -42,7 +42,12 @@ class SkillPlansPanel extends ConsumerWidget {
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stack) {
-            Log.e('SKILLS', 'SkillPlansPanel - error loading plans', error, stack);
+            Log.e(
+              'SKILLS',
+              'SkillPlansPanel - error loading plans',
+              error,
+              stack,
+            );
             return _buildErrorState(context, error);
           },
         );
@@ -52,11 +57,7 @@ class SkillPlansPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildPlansList(
-    BuildContext context,
-    WidgetRef ref,
-    List plans,
-  ) {
+  Widget _buildPlansList(BuildContext context, WidgetRef ref, List plans) {
     return Stack(
       children: [
         // Plans list
@@ -68,10 +69,14 @@ class SkillPlansPanel extends ConsumerWidget {
             return SkillPlanCard(
               plan: plan,
               onTap: () {
-                Log.d('SKILLS', 'SkillPlansPanel - navigating to plan ${plan.id}');
+                Log.d(
+                  'SKILLS',
+                  'SkillPlansPanel - navigating to plan ${plan.id}',
+                );
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) => SkillPlanDetailScreen(planId: plan.id),
+                    builder: (context) =>
+                        SkillPlanDetailScreen(planId: plan.id),
                   ),
                 );
               },
@@ -109,10 +114,7 @@ class SkillPlansPanel extends ConsumerWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
-            Text(
-              'No Skill Plans',
-              style: theme.textTheme.titleLarge,
-            ),
+            Text('No Skill Plans', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
               'Create a skill plan to track your training goals.',
@@ -148,10 +150,7 @@ class SkillPlansPanel extends ConsumerWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
-            Text(
-              'No Character Selected',
-              style: theme.textTheme.titleLarge,
-            ),
+            Text('No Character Selected', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
               'Add a character to create skill plans.',
@@ -175,16 +174,9 @@ class SkillPlansPanel extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: theme.colorScheme.error,
-            ),
+            Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
             const SizedBox(height: 16),
-            Text(
-              'Failed to Load Plans',
-              style: theme.textTheme.titleLarge,
-            ),
+            Text('Failed to Load Plans', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
               error.toString(),
@@ -208,16 +200,9 @@ class SkillPlansPanel extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: theme.colorScheme.error,
-            ),
+            Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
             const SizedBox(height: 16),
-            Text(
-              'Failed to Load Character',
-              style: theme.textTheme.titleLarge,
-            ),
+            Text('Failed to Load Character', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
               error.toString(),
@@ -241,7 +226,10 @@ class SkillPlansPanel extends ConsumerWidget {
   }
 
   Future<void> _handleEditPlan(BuildContext context, plan) async {
-    Log.i('SKILLS', 'SkillPlansPanel - opening edit plan dialog for ${plan.id}');
+    Log.i(
+      'SKILLS',
+      'SkillPlansPanel - opening edit plan dialog for ${plan.id}',
+    );
     await showDialog(
       context: context,
       builder: (context) => SkillPlanEditor(plan: plan),
@@ -253,7 +241,10 @@ class SkillPlansPanel extends ConsumerWidget {
     WidgetRef ref,
     plan,
   ) async {
-    Log.i('SKILLS', 'SkillPlansPanel - showing delete confirmation for plan ${plan.id}');
+    Log.i(
+      'SKILLS',
+      'SkillPlansPanel - showing delete confirmation for plan ${plan.id}',
+    );
 
     final confirmed = await showDialog<bool>(
       context: context,

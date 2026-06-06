@@ -209,9 +209,7 @@ class SkillFixtures {
   /// Skill: Gunnery (3300)
   /// Level: V
   /// SP: 256,000 (rank 1, level V)
-  static CharacterSkillsCompanion trainedGunneryV({
-    required int characterId,
-  }) {
+  static CharacterSkillsCompanion trainedGunneryV({required int characterId}) {
     return CharacterSkillsCompanion.insert(
       characterId: characterId,
       skillId: 3300, // Gunnery
@@ -460,7 +458,8 @@ class SkillFixtures {
       skillId: skillId,
       trainedSkillLevel: trainedSkillLevel,
       activeSkillLevel: trainedSkillLevel,
-      skillpointsInSkill: skillpointsInSkill ?? (250 * (1 << (trainedSkillLevel - 1))),
+      skillpointsInSkill:
+          skillpointsInSkill ?? (250 * (1 << (trainedSkillLevel - 1))),
       lastUpdated: lastUpdated ?? DateTime.now(),
     );
   }

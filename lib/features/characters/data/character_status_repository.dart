@@ -24,9 +24,9 @@ class CharacterStatusRepository {
     required db.AppDatabase database,
     required EsiClient esiClient,
     required SdeService sdeService,
-  })  : _database = database,
-        _esiClient = esiClient,
-        _sdeService = sdeService;
+  }) : _database = database,
+       _esiClient = esiClient,
+       _sdeService = sdeService;
 
   // ==========================================================================
   // Character Clones
@@ -40,12 +40,18 @@ class CharacterStatusRepository {
     Log.d('CHAR.CLONES', 'getCharacterClones($characterId) - START');
     try {
       final clones = await _esiClient.getCharacterClones(characterId);
-      Log.i('CHAR.CLONES',
-          'Fetched ${clones.jumpClones.length} jump clones from ESI');
+      Log.i(
+        'CHAR.CLONES',
+        'Fetched ${clones.jumpClones.length} jump clones from ESI',
+      );
       return clones;
     } catch (e, stack) {
-      Log.e('CHAR.CLONES', 'getCharacterClones($characterId) - FAILED',
-          e, stack);
+      Log.e(
+        'CHAR.CLONES',
+        'getCharacterClones($characterId) - FAILED',
+        e,
+        stack,
+      );
       rethrow;
     }
   }
@@ -60,7 +66,10 @@ class CharacterStatusRepository {
   Future<Map<int, String>> getCharacterImplantsWithNames(
     int characterId,
   ) async {
-    Log.d('CHAR.IMPLANTS', 'getCharacterImplantsWithNames($characterId) - START');
+    Log.d(
+      'CHAR.IMPLANTS',
+      'getCharacterImplantsWithNames($characterId) - START',
+    );
     try {
       // Fetch implant type IDs from ESI.
       final implantIds = await _esiClient.getCharacterImplants(characterId);
@@ -79,11 +88,18 @@ class CharacterStatusRepository {
         result[name.id] = name.name;
       }
 
-      Log.d('CHAR.IMPLANTS', 'getCharacterImplantsWithNames($characterId) - SUCCESS');
+      Log.d(
+        'CHAR.IMPLANTS',
+        'getCharacterImplantsWithNames($characterId) - SUCCESS',
+      );
       return result;
     } catch (e, stack) {
-      Log.e('CHAR.IMPLANTS',
-          'getCharacterImplantsWithNames($characterId) - FAILED', e, stack);
+      Log.e(
+        'CHAR.IMPLANTS',
+        'getCharacterImplantsWithNames($characterId) - FAILED',
+        e,
+        stack,
+      );
       rethrow;
     }
   }
@@ -98,8 +114,10 @@ class CharacterStatusRepository {
   Future<List<StandingWithName>> getCharacterStandingsWithNames(
     int characterId,
   ) async {
-    Log.d('CHAR.STANDINGS',
-        'getCharacterStandingsWithNames($characterId) - START');
+    Log.d(
+      'CHAR.STANDINGS',
+      'getCharacterStandingsWithNames($characterId) - START',
+    );
     try {
       // Fetch standings from ESI.
       final standings = await _esiClient.getCharacterStandings(characterId);
@@ -131,12 +149,18 @@ class CharacterStatusRepository {
         );
       }).toList();
 
-      Log.d('CHAR.STANDINGS',
-          'getCharacterStandingsWithNames($characterId) - SUCCESS');
+      Log.d(
+        'CHAR.STANDINGS',
+        'getCharacterStandingsWithNames($characterId) - SUCCESS',
+      );
       return result;
     } catch (e, stack) {
-      Log.e('CHAR.STANDINGS',
-          'getCharacterStandingsWithNames($characterId) - FAILED', e, stack);
+      Log.e(
+        'CHAR.STANDINGS',
+        'getCharacterStandingsWithNames($characterId) - FAILED',
+        e,
+        stack,
+      );
       rethrow;
     }
   }
@@ -175,8 +199,10 @@ class CharacterStatusRepository {
       return result;
     }
 
-    Log.d('NAME.RESOLVE',
-        '${missingIds.length} names missing from memory, checking database');
+    Log.d(
+      'NAME.RESOLVE',
+      '${missingIds.length} names missing from memory, checking database',
+    );
 
     // Step 2: Check database cache.
     final dbNames = await _database.getUniverseNames(missingIds);
@@ -192,13 +218,17 @@ class CharacterStatusRepository {
     final stillMissing = missingIds.where((id) => !dbIds.contains(id)).toList();
 
     if (stillMissing.isEmpty) {
-      Log.d('NAME.RESOLVE',
-          'All ${ids.length} names resolved (memory + database)');
+      Log.d(
+        'NAME.RESOLVE',
+        'All ${ids.length} names resolved (memory + database)',
+      );
       return result;
     }
 
-    Log.i('NAME.RESOLVE',
-        '${stillMissing.length} names missing, fetching from ESI');
+    Log.i(
+      'NAME.RESOLVE',
+      '${stillMissing.length} names missing, fetching from ESI',
+    );
 
     // Step 3: Fetch from ESI.
     final esiNames = await _esiClient.getUniverseNames(stillMissing);
@@ -216,21 +246,28 @@ class CharacterStatusRepository {
 
     // Step 4.5: Fallback to SDE for any IDs that ESI failed to resolve.
     final resolvedEsiIds = esiNames.map((e) => e.id).toSet();
-    final sdeFallbackIds = stillMissing.where((id) => !resolvedEsiIds.contains(id)).toList();
-    
+    final sdeFallbackIds = stillMissing
+        .where((id) => !resolvedEsiIds.contains(id))
+        .toList();
+
     if (sdeFallbackIds.isNotEmpty) {
-      Log.i('NAME.RESOLVE', '\${sdeFallbackIds.length} names not resolved by ESI, falling back to SDE');
+      Log.i(
+        'NAME.RESOLVE',
+        '\${sdeFallbackIds.length} names not resolved by ESI, falling back to SDE',
+      );
       await _sdeService.initialize();
       final sdeNames = await _sdeService.getSkillNames(sdeFallbackIds);
-      
+
       for (final entry in sdeNames.entries) {
         if (entry.value != null) {
-          companions.add(db.UniverseNamesCompanion.insert(
-            id: Value(entry.key),
-            name: entry.value!,
-            category: 'inventory_type',
-            lastUpdated: now,
-          ));
+          companions.add(
+            db.UniverseNamesCompanion.insert(
+              id: Value(entry.key),
+              name: entry.value!,
+              category: 'inventory_type',
+              lastUpdated: now,
+            ),
+          );
         }
       }
     }
@@ -248,8 +285,10 @@ class CharacterStatusRepository {
       _nameCache[name.id] = name;
     }
 
-    Log.d('NAME.RESOLVE',
-        'Resolved ${ids.length} names total (${esiNames.length} from ESI)');
+    Log.d(
+      'NAME.RESOLVE',
+      'Resolved ${ids.length} names total (${esiNames.length} from ESI)',
+    );
     return result;
   }
 
@@ -273,27 +312,43 @@ class CharacterStatusRepository {
   ) async {
     if (structureIds.isEmpty) return {};
 
-    Log.d('NAME.RESOLVE', 'resolveStructureNames(${structureIds.length} structures) - START');
+    Log.d(
+      'NAME.RESOLVE',
+      'resolveStructureNames(${structureIds.length} structures) - START',
+    );
 
     final result = <int, String>{};
 
-    final entries = await Future.wait(structureIds.map((structureId) async {
-      try {
-        final name = await _esiClient.getStructureName(structureId, characterId);
-        if (name != null) {
-          Log.d('NAME.RESOLVE', 'Structure $structureId → $name');
-          return MapEntry(structureId, name);
-        } else {
-          // Access denied (403) or structure not found
-          Log.w('NAME.RESOLVE', 'Structure $structureId → Player Structure (access denied)');
+    final entries = await Future.wait(
+      structureIds.map((structureId) async {
+        try {
+          final name = await _esiClient.getStructureName(
+            structureId,
+            characterId,
+          );
+          if (name != null) {
+            Log.d('NAME.RESOLVE', 'Structure $structureId → $name');
+            return MapEntry(structureId, name);
+          } else {
+            // Access denied (403) or structure not found
+            Log.w(
+              'NAME.RESOLVE',
+              'Structure $structureId → Player Structure (access denied)',
+            );
+            return MapEntry(structureId, 'Player Structure');
+          }
+        } catch (e) {
+          // Network error or other issue
+          Log.e(
+            'NAME.RESOLVE',
+            'Failed to resolve structure $structureId',
+            e,
+            null,
+          );
           return MapEntry(structureId, 'Player Structure');
         }
-      } catch (e) {
-        // Network error or other issue
-        Log.e('NAME.RESOLVE', 'Failed to resolve structure $structureId', e, null);
-        return MapEntry(structureId, 'Player Structure');
-      }
-    }));
+      }),
+    );
 
     result.addEntries(entries);
 
@@ -307,9 +362,11 @@ class CharacterStatusRepository {
   /// Memory cache is not affected.
   Future<void> clearOldNameCache({int daysOld = 30}) async {
     Log.i('NAME.CACHE', 'Clearing name cache entries older than $daysOld days');
-    final cutoff = DateTime.now()
-        .subtract(Duration(days: daysOld))
-        .millisecondsSinceEpoch ~/ 1000;
+    final cutoff =
+        DateTime.now()
+            .subtract(Duration(days: daysOld))
+            .millisecondsSinceEpoch ~/
+        1000;
     await _database.deleteOldUniverseNames(cutoff);
   }
 }

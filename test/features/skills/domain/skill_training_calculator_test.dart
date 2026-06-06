@@ -204,8 +204,9 @@ void main() {
       const skillId = 3301; // Mechanics
       const skillRank = 3;
 
-      when(() => mockSdeService.getSkillRank(skillId))
-          .thenAnswer((_) async => skillRank);
+      when(
+        () => mockSdeService.getSkillRank(skillId),
+      ).thenAnswer((_) async => skillRank);
 
       final sp = await calculator.calculateSpRequiredFromSde(
         skillId: skillId,
@@ -221,8 +222,9 @@ void main() {
     test('falls back to rank 1 when skill rank is null', () async {
       const skillId = 9999; // Unknown skill
 
-      when(() => mockSdeService.getSkillRank(skillId))
-          .thenAnswer((_) async => null);
+      when(
+        () => mockSdeService.getSkillRank(skillId),
+      ).thenAnswer((_) async => null);
 
       final sp = await calculator.calculateSpRequiredFromSde(
         skillId: skillId,
@@ -241,10 +243,7 @@ void main() {
       const skillId = 3301; // Mechanics
       const spRequired = 900;
 
-      final attributes = (
-        primary: 'perception',
-        secondary: 'willpower',
-      );
+      final attributes = (primary: 'perception', secondary: 'willpower');
 
       final characterAttributes = CharacterAttributes(
         charisma: 20,
@@ -254,8 +253,9 @@ void main() {
         willpower: 20, // Secondary
       );
 
-      when(() => mockSdeService.getSkillAttributes(skillId))
-          .thenAnswer((_) async => attributes);
+      when(
+        () => mockSdeService.getSkillAttributes(skillId),
+      ).thenAnswer((_) async => attributes);
 
       final duration = await calculator.calculateTrainingTimeFromSde(
         skillId: skillId,
@@ -281,8 +281,9 @@ void main() {
         willpower: 25,
       );
 
-      when(() => mockSdeService.getSkillAttributes(skillId))
-          .thenAnswer((_) async => null);
+      when(
+        () => mockSdeService.getSkillAttributes(skillId),
+      ).thenAnswer((_) async => null);
 
       final duration = await calculator.calculateTrainingTimeFromSde(
         skillId: skillId,
@@ -321,41 +322,43 @@ void main() {
   });
 
   group('calculateSkillTrainingTimeFromSde', () {
-    test('combines SDE SP calculation and attribute-based time calculation', () async {
-      const skillId = 3301; // Mechanics
-      const skillRank = 1;
+    test(
+      'combines SDE SP calculation and attribute-based time calculation',
+      () async {
+        const skillId = 3301; // Mechanics
+        const skillRank = 1;
 
-      final attributes = (
-        primary: 'perception',
-        secondary: 'willpower',
-      );
+        final attributes = (primary: 'perception', secondary: 'willpower');
 
-      final characterAttributes = CharacterAttributes(
-        charisma: 20,
-        intelligence: 20,
-        memory: 20,
-        perception: 20,
-        willpower: 20,
-      );
+        final characterAttributes = CharacterAttributes(
+          charisma: 20,
+          intelligence: 20,
+          memory: 20,
+          perception: 20,
+          willpower: 20,
+        );
 
-      when(() => mockSdeService.getSkillRank(skillId))
-          .thenAnswer((_) async => skillRank);
-      when(() => mockSdeService.getSkillAttributes(skillId))
-          .thenAnswer((_) async => attributes);
+        when(
+          () => mockSdeService.getSkillRank(skillId),
+        ).thenAnswer((_) async => skillRank);
+        when(
+          () => mockSdeService.getSkillAttributes(skillId),
+        ).thenAnswer((_) async => attributes);
 
-      final duration = await calculator.calculateSkillTrainingTimeFromSde(
-        skillId: skillId,
-        fromLevel: 0,
-        toLevel: 1,
-        characterAttributes: characterAttributes,
-      );
+        final duration = await calculator.calculateSkillTrainingTimeFromSde(
+          skillId: skillId,
+          fromLevel: 0,
+          toLevel: 1,
+          characterAttributes: characterAttributes,
+        );
 
-      // SP = 250 (rank 1, level 0→1)
-      // Training rate = 20 + (20 / 2) = 30 SP/min
-      // Time = 250 / 30 = 8.33 → ceil = 9 minutes
-      expect(duration, const Duration(minutes: 9));
-      verify(() => mockSdeService.getSkillRank(skillId)).called(1);
-      verify(() => mockSdeService.getSkillAttributes(skillId)).called(1);
-    });
+        // SP = 250 (rank 1, level 0→1)
+        // Training rate = 20 + (20 / 2) = 30 SP/min
+        // Time = 250 / 30 = 8.33 → ceil = 9 minutes
+        expect(duration, const Duration(minutes: 9));
+        verify(() => mockSdeService.getSkillRank(skillId)).called(1);
+        verify(() => mockSdeService.getSkillAttributes(skillId)).called(1);
+      },
+    );
   });
 }

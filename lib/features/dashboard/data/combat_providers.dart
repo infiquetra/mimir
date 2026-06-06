@@ -129,8 +129,10 @@ class AggregateCombatStats {
 /// from zkillboard API and caches the result.
 ///
 /// Returns null if the character has no killboard data (404 from zkillboard).
-final combatStatsProvider =
-    FutureProvider.family<CombatStatsData?, int>((ref, characterId) async {
+final combatStatsProvider = FutureProvider.family<CombatStatsData?, int>((
+  ref,
+  characterId,
+) async {
   final database = ref.watch(databaseProvider);
   final zkillboardClient = ref.watch(zkillboardClientProvider);
   final characters = await ref.watch(allCharactersProvider.future);
@@ -222,8 +224,9 @@ final combatStatsProvider =
 ///
 /// Fetches stats for each character and aggregates totals.
 /// Excludes characters with no combat data (null stats).
-final allCharacterCombatStatsProvider =
-    FutureProvider<AggregateCombatStats>((ref) async {
+final allCharacterCombatStatsProvider = FutureProvider<AggregateCombatStats>((
+  ref,
+) async {
   final characters = await ref.watch(allCharactersProvider.future);
 
   // Fetch stats for all characters in parallel.

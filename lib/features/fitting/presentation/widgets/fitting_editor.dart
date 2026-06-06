@@ -44,10 +44,7 @@ class _FittingWheel extends ConsumerWidget {
   final Fitting activeFit;
   final ShipType shipType;
 
-  const _FittingWheel({
-    required this.activeFit,
-    required this.shipType,
-  });
+  const _FittingWheel({required this.activeFit, required this.shipType});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -202,7 +199,9 @@ class _FittingWheel extends ConsumerWidget {
 
     final startAngle = startAngleDeg * math.pi / 180;
     final endAngle = endAngleDeg * math.pi / 180;
-    final angleStep = totalSlots > 1 ? (endAngle - startAngle) / (totalSlots - 1) : 0.0;
+    final angleStep = totalSlots > 1
+        ? (endAngle - startAngle) / (totalSlots - 1)
+        : 0.0;
 
     for (int i = 0; i < totalSlots; i++) {
       final angle = totalSlots == 1
@@ -257,11 +256,7 @@ class _ShipRenderState extends State<_ShipRender> {
           height: widget.size,
           decoration: const BoxDecoration(
             gradient: RadialGradient(
-              colors: [
-                Color(0xFF1C2838),
-                Color(0xFF0F1923),
-                Color(0xFF080D14),
-              ],
+              colors: [Color(0xFF1C2838), Color(0xFF0F1923), Color(0xFF080D14)],
               stops: [0.0, 0.6, 1.0],
             ),
           ),
@@ -305,20 +300,28 @@ class _FittingSlot extends ConsumerWidget {
     return DragTarget<ModuleType>(
       onWillAcceptWithDetails: (details) {
         final accepts = details.data.slotType == slotType;
-        Log.d('FITTING', 'DragTarget onWillAccept: ${details.data.name} -> $slotType[$index] = $accepts');
+        Log.d(
+          'FITTING',
+          'DragTarget onWillAccept: ${details.data.name} -> $slotType[$index] = $accepts',
+        );
         return accepts;
       },
       onAcceptWithDetails: (details) {
-        Log.i('FITTING', 'DragTarget accepted: ${details.data.name} -> $slotType[$index]');
-        ref.read(activeFittingProvider.notifier).equipModule(
-          FittedModule(
-            slotType: slotType,
-            slotIndex: index,
-            typeId: details.data.typeId,
-            typeName: details.data.name,
-            state: ModuleState.active,
-          ),
+        Log.i(
+          'FITTING',
+          'DragTarget accepted: ${details.data.name} -> $slotType[$index]',
         );
+        ref
+            .read(activeFittingProvider.notifier)
+            .equipModule(
+              FittedModule(
+                slotType: slotType,
+                slotIndex: index,
+                typeId: details.data.typeId,
+                typeName: details.data.name,
+                state: ModuleState.active,
+              ),
+            );
       },
       builder: (context, candidateData, rejectedData) {
         final isHovered = candidateData.isNotEmpty;
@@ -329,10 +332,14 @@ class _FittingSlot extends ConsumerWidget {
           return GestureDetector(
             onSecondaryTap: () {
               Log.i('FITTING', 'Removing module from $slotType[$index]');
-              ref.read(activeFittingProvider.notifier).removeModule(slotType, module!.slotIndex);
+              ref
+                  .read(activeFittingProvider.notifier)
+                  .removeModule(slotType, module!.slotIndex);
             },
             onLongPress: () {
-              ref.read(activeFittingProvider.notifier).removeModule(slotType, module!.slotIndex);
+              ref
+                  .read(activeFittingProvider.notifier)
+                  .removeModule(slotType, module!.slotIndex);
             },
             child: Tooltip(
               message: module!.typeName,
@@ -361,8 +368,8 @@ class _FittingSlot extends ConsumerWidget {
         final borderColor = isHovered
             ? color
             : isRejected
-                ? EveColors.error.withOpacity(0.5)
-                : color.withOpacity(0.5);
+            ? EveColors.error.withOpacity(0.5)
+            : color.withOpacity(0.5);
 
         return Container(
           width: size,
@@ -403,13 +410,15 @@ class _ResourceDisplay extends ConsumerWidget {
           children: [
             _ResourceReadout(
               label: 'CPU',
-              value: '${stats.cpuUsed.toStringAsFixed(1)}/${stats.cpuMax.toStringAsFixed(1)}',
+              value:
+                  '${stats.cpuUsed.toStringAsFixed(1)}/${stats.cpuMax.toStringAsFixed(1)}',
               isOver: stats.cpuUsed > stats.cpuMax,
             ),
             const SizedBox(width: 24),
             _ResourceReadout(
               label: 'Power Grid',
-              value: '${stats.powerUsed.toStringAsFixed(1)}/${stats.powerMax.toStringAsFixed(1)}',
+              value:
+                  '${stats.powerUsed.toStringAsFixed(1)}/${stats.powerMax.toStringAsFixed(1)}',
               isOver: stats.powerUsed > stats.powerMax,
             ),
           ],
@@ -501,10 +510,13 @@ class _RingPainter extends CustomPainter {
       );
     }
 
-    if (shipType.highSlots > 0) drawArc(-125, -55, const Color(0xFF6CB4EE).withOpacity(0.6));
+    if (shipType.highSlots > 0)
+      drawArc(-125, -55, const Color(0xFF6CB4EE).withOpacity(0.6));
     if (shipType.medSlots > 0) drawArc(-45, 45, Colors.orange.withOpacity(0.6));
-    if (shipType.rigSlots > 0) drawArc(55, 115, const Color(0xFF9E9E9E).withOpacity(0.6));
-    if (shipType.lowSlots > 0) drawArc(135, 225, const Color(0xFF50C878).withOpacity(0.6));
+    if (shipType.rigSlots > 0)
+      drawArc(55, 115, const Color(0xFF9E9E9E).withOpacity(0.6));
+    if (shipType.lowSlots > 0)
+      drawArc(135, 225, const Color(0xFF50C878).withOpacity(0.6));
 
     // Radial tick marks from inner edge to slots
     final tickPaint = Paint()
@@ -519,9 +531,21 @@ class _RingPainter extends CustomPainter {
       final step = count > 1 ? (endRad - startRad) / (count - 1) : 0.0;
 
       for (int i = 0; i < count; i++) {
-        final angle = count == 1 ? (startRad + endRad) / 2 : startRad + step * i;
-        final inner = center + Offset(math.cos(angle) * (radius * 0.7), math.sin(angle) * (radius * 0.7));
-        final outer = center + Offset(math.cos(angle) * (radius - 4), math.sin(angle) * (radius - 4));
+        final angle = count == 1
+            ? (startRad + endRad) / 2
+            : startRad + step * i;
+        final inner =
+            center +
+            Offset(
+              math.cos(angle) * (radius * 0.7),
+              math.sin(angle) * (radius * 0.7),
+            );
+        final outer =
+            center +
+            Offset(
+              math.cos(angle) * (radius - 4),
+              math.sin(angle) * (radius - 4),
+            );
         canvas.drawLine(inner, outer, tickPaint);
       }
     }

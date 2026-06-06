@@ -20,330 +20,321 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('Characters Screen Integration Tests', () {
-    testWidgets(
-      'TC-CHAR-001: Split panel layout renders (40/60 split)',
-      (tester) async {
-        // GIVEN: Characters screen with test character
-        await tester.pumpWidget(
-          TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(),
-            home: const StandaloneCharactersScreen(),
-          ),
-        );
+    testWidgets('TC-CHAR-001: Split panel layout renders (40/60 split)', (
+      tester,
+    ) async {
+      // GIVEN: Characters screen with test character
+      await tester.pumpWidget(
+        TestApp(
+          initialCharacter: CharacterFixtures.testCharacter(),
+          home: const StandaloneCharactersScreen(),
+        ),
+      );
 
-        // WHEN: Screen loads
-        await tester.pumpAndSettle();
-        await waitForLoadingToComplete(tester);
+      // WHEN: Screen loads
+      await tester.pumpAndSettle();
+      await waitForLoadingToComplete(tester);
 
-        // THEN: Portrait panel should be visible (left side)
-        expect(
-          find.byType(CharacterPortraitPanel),
-          findsOneWidget,
-          reason: 'Left panel: Portrait should render',
-        );
+      // THEN: Portrait panel should be visible (left side)
+      expect(
+        find.byType(CharacterPortraitPanel),
+        findsOneWidget,
+        reason: 'Left panel: Portrait should render',
+      );
 
-        // AND: Content grid should be visible (right side)
-        expect(
-          find.byType(CharacterContentGrid),
-          findsOneWidget,
-          reason: 'Right panel: Content grid should render',
-        );
+      // AND: Content grid should be visible (right side)
+      expect(
+        find.byType(CharacterContentGrid),
+        findsOneWidget,
+        reason: 'Right panel: Content grid should render',
+      );
 
-        // The split panel layout uses Expanded(flex: 40) and Expanded(flex: 60)
-        // to create the 40/60 split between portrait and content.
-        // Character switching is handled by CharacterNavRail in left navigation.
-      },
-    );
+      // The split panel layout uses Expanded(flex: 40) and Expanded(flex: 60)
+      // to create the 40/60 split between portrait and content.
+      // Character switching is handled by CharacterNavRail in left navigation.
+    });
 
-    testWidgets(
-      'TC-CHAR-002: Character switcher changes active character',
-      (tester) async {
-        // GIVEN: Characters screen with TWO characters
-        await tester.pumpWidget(
-          TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(isActive: true),
-            setupDatabase: (db) async {
-              // Add second character
-              await db.upsertCharacter(
-                CharacterFixtures.testCharacter2(isActive: false),
-              );
-            },
-            home: const StandaloneCharactersScreen(),
-          ),
-        );
+    testWidgets('TC-CHAR-002: Character switcher changes active character', (
+      tester,
+    ) async {
+      // GIVEN: Characters screen with TWO characters
+      await tester.pumpWidget(
+        TestApp(
+          initialCharacter: CharacterFixtures.testCharacter(isActive: true),
+          setupDatabase: (db) async {
+            // Add second character
+            await db.upsertCharacter(
+              CharacterFixtures.testCharacter2(isActive: false),
+            );
+          },
+          home: const StandaloneCharactersScreen(),
+        ),
+      );
 
-        await tester.pumpAndSettle();
-        await waitForLoadingToComplete(tester);
+      await tester.pumpAndSettle();
+      await waitForLoadingToComplete(tester);
 
-        // THEN: First character should be displayed
-        expect(
-          find.text('Test Capsuleer'),
-          findsAtLeastNWidgets(1),
-          reason: 'Active character name should be visible',
-        );
+      // THEN: First character should be displayed
+      expect(
+        find.text('Test Capsuleer'),
+        findsAtLeastNWidgets(1),
+        reason: 'Active character name should be visible',
+      );
 
-        // WHEN: Character switcher is available
-        // Note: Character switching is now handled by CharacterNavRail
-        // in the left navigation, which will be added in Phase 3.
+      // WHEN: Character switcher is available
+      // Note: Character switching is now handled by CharacterNavRail
+      // in the left navigation, which will be added in Phase 3.
 
-        // For now, verify the screen renders with the active character
-        expect(
-          find.byType(CharacterPortraitPanel),
-          findsOneWidget,
-          reason: 'Character screen should render with active character',
-        );
-      },
-    );
+      // For now, verify the screen renders with the active character
+      expect(
+        find.byType(CharacterPortraitPanel),
+        findsOneWidget,
+        reason: 'Character screen should render with active character',
+      );
+    });
 
-    testWidgets(
-      'TC-CHAR-003: Portrait panel shows character image',
-      (tester) async {
-        // GIVEN: Characters screen with test character
-        await tester.pumpWidget(
-          TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(),
-            home: const StandaloneCharactersScreen(),
-          ),
-        );
+    testWidgets('TC-CHAR-003: Portrait panel shows character image', (
+      tester,
+    ) async {
+      // GIVEN: Characters screen with test character
+      await tester.pumpWidget(
+        TestApp(
+          initialCharacter: CharacterFixtures.testCharacter(),
+          home: const StandaloneCharactersScreen(),
+        ),
+      );
 
-        // WHEN: Screen loads
-        await tester.pumpAndSettle();
-        await waitForLoadingToComplete(tester);
+      // WHEN: Screen loads
+      await tester.pumpAndSettle();
+      await waitForLoadingToComplete(tester);
 
-        // THEN: Character portrait panel should be visible
-        expect(
-          find.byType(CharacterPortraitPanel),
-          findsOneWidget,
-          reason: 'Portrait panel should render',
-        );
+      // THEN: Character portrait panel should be visible
+      expect(
+        find.byType(CharacterPortraitPanel),
+        findsOneWidget,
+        reason: 'Portrait panel should render',
+      );
 
-        // AND: Character name should be visible (likely in overlay)
-        expect(
-          find.textContaining('Test Capsuleer'),
-          findsAtLeastNWidgets(1),
-          reason: 'Character name should be visible',
-        );
+      // AND: Character name should be visible (likely in overlay)
+      expect(
+        find.textContaining('Test Capsuleer'),
+        findsAtLeastNWidgets(1),
+        reason: 'Character name should be visible',
+      );
 
-        // The portrait panel displays the character's portrait image
-        // (fetched from EVE Image Server) with an info overlay.
-      },
-    );
+      // The portrait panel displays the character's portrait image
+      // (fetched from EVE Image Server) with an info overlay.
+    });
 
-    testWidgets(
-      'TC-CHAR-004: Empty state shows when no characters exist',
-      (tester) async {
-        // GIVEN: Characters screen with NO characters
-        await tester.pumpWidget(
-          const TestApp(
-            initialCharacter: null,
-            home: StandaloneCharactersScreen(),
-          ),
-        );
+    testWidgets('TC-CHAR-004: Empty state shows when no characters exist', (
+      tester,
+    ) async {
+      // GIVEN: Characters screen with NO characters
+      await tester.pumpWidget(
+        const TestApp(
+          initialCharacter: null,
+          home: StandaloneCharactersScreen(),
+        ),
+      );
 
-        // WHEN: Screen loads
-        await tester.pumpAndSettle();
+      // WHEN: Screen loads
+      await tester.pumpAndSettle();
 
-        // THEN: Empty state should be visible
-        expect(
-          find.text('No Characters'),
-          findsOneWidget,
-          reason: 'Should show empty state message',
-        );
+      // THEN: Empty state should be visible
+      expect(
+        find.text('No Characters'),
+        findsOneWidget,
+        reason: 'Should show empty state message',
+      );
 
-        expect(
-          find.byIcon(Icons.person_add_outlined),
-          findsOneWidget,
-          reason: 'Should show add character icon',
-        );
+      expect(
+        find.byIcon(Icons.person_add_outlined),
+        findsOneWidget,
+        reason: 'Should show add character icon',
+      );
 
-        // AND: Split panel should NOT be visible
-        expect(
-          find.byType(CharacterPortraitPanel),
-          findsNothing,
-          reason: 'Portrait panel should not render without characters',
-        );
+      // AND: Split panel should NOT be visible
+      expect(
+        find.byType(CharacterPortraitPanel),
+        findsNothing,
+        reason: 'Portrait panel should not render without characters',
+      );
 
-        expect(
-          find.byType(CharacterContentGrid),
-          findsNothing,
-          reason: 'Content grid should not render without characters',
-        );
-      },
-    );
+      expect(
+        find.byType(CharacterContentGrid),
+        findsNothing,
+        reason: 'Content grid should not render without characters',
+      );
+    });
 
-    testWidgets(
-      'TC-CHAR-005: Corporation and alliance info displays',
-      (tester) async {
-        // GIVEN: Character with corporation and alliance
-        await tester.pumpWidget(
-          TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(),
-            home: const StandaloneCharactersScreen(),
-          ),
-        );
+    testWidgets('TC-CHAR-005: Corporation and alliance info displays', (
+      tester,
+    ) async {
+      // GIVEN: Character with corporation and alliance
+      await tester.pumpWidget(
+        TestApp(
+          initialCharacter: CharacterFixtures.testCharacter(),
+          home: const StandaloneCharactersScreen(),
+        ),
+      );
 
-        // WHEN: Screen loads
-        await tester.pumpAndSettle();
-        await waitForLoadingToComplete(tester);
+      // WHEN: Screen loads
+      await tester.pumpAndSettle();
+      await waitForLoadingToComplete(tester);
 
-        // THEN: Corporation name should be visible
-        expect(
-          find.textContaining('Test Corporation'),
-          findsAtLeastNWidgets(1),
-          reason: 'Corporation name should be displayed',
-        );
+      // THEN: Corporation name should be visible
+      expect(
+        find.textContaining('Test Corporation'),
+        findsAtLeastNWidgets(1),
+        reason: 'Corporation name should be displayed',
+      );
 
-        // AND: Alliance name should be visible
-        expect(
-          find.textContaining('Test Alliance'),
-          findsAtLeastNWidgets(1),
-          reason: 'Alliance name should be displayed',
-        );
+      // AND: Alliance name should be visible
+      expect(
+        find.textContaining('Test Alliance'),
+        findsAtLeastNWidgets(1),
+        reason: 'Alliance name should be displayed',
+      );
 
-        // Character fixture has:
-        // - Corporation: Test Corporation (98000001)
-        // - Alliance: Test Alliance (99000001)
-      },
-    );
+      // Character fixture has:
+      // - Corporation: Test Corporation (98000001)
+      // - Alliance: Test Alliance (99000001)
+    });
 
-    testWidgets(
-      'TC-CHAR-006: Character without alliance displays correctly',
-      (tester) async {
-        // GIVEN: Character with NO alliance (second test character)
-        await tester.pumpWidget(
-          TestApp(
-            initialCharacter: CharacterFixtures.testCharacter2(isActive: true),
-            home: const StandaloneCharactersScreen(),
-          ),
-        );
+    testWidgets('TC-CHAR-006: Character without alliance displays correctly', (
+      tester,
+    ) async {
+      // GIVEN: Character with NO alliance (second test character)
+      await tester.pumpWidget(
+        TestApp(
+          initialCharacter: CharacterFixtures.testCharacter2(isActive: true),
+          home: const StandaloneCharactersScreen(),
+        ),
+      );
 
-        // WHEN: Screen loads
-        await tester.pumpAndSettle();
-        await waitForLoadingToComplete(tester);
+      // WHEN: Screen loads
+      await tester.pumpAndSettle();
+      await waitForLoadingToComplete(tester);
 
-        // THEN: Character name should be visible
-        expect(
-          find.textContaining('Second Test Character'),
-          findsAtLeastNWidgets(1),
-          reason: 'Character name should be displayed',
-        );
+      // THEN: Character name should be visible
+      expect(
+        find.textContaining('Second Test Character'),
+        findsAtLeastNWidgets(1),
+        reason: 'Character name should be displayed',
+      );
 
-        // AND: Corporation name should be visible
-        expect(
-          find.textContaining('Second Test Corporation'),
-          findsAtLeastNWidgets(1),
-          reason: 'Corporation name should be displayed',
-        );
+      // AND: Corporation name should be visible
+      expect(
+        find.textContaining('Second Test Corporation'),
+        findsAtLeastNWidgets(1),
+        reason: 'Corporation name should be displayed',
+      );
 
-        // AND: Should NOT show "Test Alliance" (null alliance)
-        expect(
-          find.textContaining('Test Alliance'),
-          findsNothing,
-          reason: 'Alliance name should not be displayed (null alliance)',
-        );
+      // AND: Should NOT show "Test Alliance" (null alliance)
+      expect(
+        find.textContaining('Test Alliance'),
+        findsNothing,
+        reason: 'Alliance name should not be displayed (null alliance)',
+      );
 
-        // Second test character has:
-        // - Corporation: Second Test Corporation (98000002)
-        // - Alliance: null (not in an alliance)
-      },
-    );
+      // Second test character has:
+      // - Corporation: Second Test Corporation (98000002)
+      // - Alliance: null (not in an alliance)
+    });
 
-    testWidgets(
-      'TC-CHAR-007: Screen renders with character data',
-      (tester) async {
-        // GIVEN: Characters screen with test character
-        await tester.pumpWidget(
-          TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(),
-            home: const StandaloneCharactersScreen(),
-          ),
-        );
+    testWidgets('TC-CHAR-007: Screen renders with character data', (
+      tester,
+    ) async {
+      // GIVEN: Characters screen with test character
+      await tester.pumpWidget(
+        TestApp(
+          initialCharacter: CharacterFixtures.testCharacter(),
+          home: const StandaloneCharactersScreen(),
+        ),
+      );
 
-        // WHEN: Screen loads
-        await tester.pumpAndSettle();
-        await waitForLoadingToComplete(tester);
+      // WHEN: Screen loads
+      await tester.pumpAndSettle();
+      await waitForLoadingToComplete(tester);
 
-        // THEN: Screen should render with character data
-        expect(
-          find.byType(StandaloneCharactersScreen),
-          findsOneWidget,
-          reason: 'Characters screen should render',
-        );
+      // THEN: Screen should render with character data
+      expect(
+        find.byType(StandaloneCharactersScreen),
+        findsOneWidget,
+        reason: 'Characters screen should render',
+      );
 
-        // AND: Character name should be visible
-        expect(
-          find.textContaining('Test Capsuleer'),
-          findsAtLeastNWidgets(1),
-          reason: 'Character name should be displayed',
-        );
+      // AND: Character name should be visible
+      expect(
+        find.textContaining('Test Capsuleer'),
+        findsAtLeastNWidgets(1),
+        reason: 'Character name should be displayed',
+      );
 
-        // Note: Add character button is now in CharacterNavRail (Phase 3)
-      },
-    );
+      // Note: Add character button is now in CharacterNavRail (Phase 3)
+    });
 
-    testWidgets(
-      'TC-CHAR-008: Security status displays correctly',
-      (tester) async {
-        // GIVEN: Character with positive security status (5.0)
-        await tester.pumpWidget(
-          TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(),
-            home: const StandaloneCharactersScreen(),
-          ),
-        );
+    testWidgets('TC-CHAR-008: Security status displays correctly', (
+      tester,
+    ) async {
+      // GIVEN: Character with positive security status (5.0)
+      await tester.pumpWidget(
+        TestApp(
+          initialCharacter: CharacterFixtures.testCharacter(),
+          home: const StandaloneCharactersScreen(),
+        ),
+      );
 
-        await tester.pumpAndSettle();
-        await waitForLoadingToComplete(tester);
+      await tester.pumpAndSettle();
+      await waitForLoadingToComplete(tester);
 
-        // THEN: Security status should be visible somewhere on screen
-        // (exact location depends on portrait panel or content grid implementation)
-        expect(
-          find.byType(StandaloneCharactersScreen),
-          findsOneWidget,
-          reason: 'Screen should render with security status data',
-        );
+      // THEN: Security status should be visible somewhere on screen
+      // (exact location depends on portrait panel or content grid implementation)
+      expect(
+        find.byType(StandaloneCharactersScreen),
+        findsOneWidget,
+        reason: 'Screen should render with security status data',
+      );
 
-        // Test character has security status 5.0
-        // Second test character has security status -2.5 (outlaw)
-      },
-    );
+      // Test character has security status 5.0
+      // Second test character has security status -2.5 (outlaw)
+    });
 
-    testWidgets(
-      'TC-CHAR-009: Responsive layout adapts to narrow screens',
-      (tester) async {
-        // GIVEN: Characters screen at narrow width
-        await tester.binding.setSurfaceSize(const Size(600, 800));
+    testWidgets('TC-CHAR-009: Responsive layout adapts to narrow screens', (
+      tester,
+    ) async {
+      // GIVEN: Characters screen at narrow width
+      await tester.binding.setSurfaceSize(const Size(600, 800));
 
-        await tester.pumpWidget(
-          TestApp(
-            initialCharacter: CharacterFixtures.testCharacter(),
-            home: const StandaloneCharactersScreen(),
-          ),
-        );
+      await tester.pumpWidget(
+        TestApp(
+          initialCharacter: CharacterFixtures.testCharacter(),
+          home: const StandaloneCharactersScreen(),
+        ),
+      );
 
-        // WHEN: Screen loads at narrow width
-        await tester.pumpAndSettle();
-        await waitForLoadingToComplete(tester);
+      // WHEN: Screen loads at narrow width
+      await tester.pumpAndSettle();
+      await waitForLoadingToComplete(tester);
 
-        // THEN: Split panel should still render (40/60 split)
-        expect(
-          find.byType(CharacterPortraitPanel),
-          findsOneWidget,
-          reason: 'Portrait panel should render at narrow width',
-        );
+      // THEN: Split panel should still render (40/60 split)
+      expect(
+        find.byType(CharacterPortraitPanel),
+        findsOneWidget,
+        reason: 'Portrait panel should render at narrow width',
+      );
 
-        expect(
-          find.byType(CharacterContentGrid),
-          findsOneWidget,
-          reason: 'Content grid should render at narrow width',
-        );
+      expect(
+        find.byType(CharacterContentGrid),
+        findsOneWidget,
+        reason: 'Content grid should render at narrow width',
+      );
 
-        // The 40/60 split uses Expanded widgets which should adapt
-        // to available width without overflow
+      // The 40/60 split uses Expanded widgets which should adapt
+      // to available width without overflow
 
-        // Reset surface size
-        await tester.binding.setSurfaceSize(null);
-      },
-    );
+      // Reset surface size
+      await tester.binding.setSurfaceSize(null);
+    });
   });
 }

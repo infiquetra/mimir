@@ -142,8 +142,9 @@ class _JobListItem extends ConsumerWidget {
                             const SizedBox(width: 4),
                             Text(
                               statusText,
-                              style: theme.textTheme.bodySmall
-                                  ?.copyWith(color: statusColor),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: statusColor,
+                              ),
                             ),
                             const SizedBox(width: 16),
                             Text(
@@ -178,20 +179,24 @@ class _JobListItem extends ConsumerWidget {
                 const SizedBox(height: 12),
                 LinearProgressIndicator(
                   value: clampedProgress,
-                  backgroundColor:
-                      EveColors.backgroundDeep.withValues(alpha: 0.5),
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(Colors.blue.shade400),
+                  backgroundColor: EveColors.backgroundDeep.withValues(
+                    alpha: 0.5,
+                  ),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Colors.blue.shade400,
+                  ),
                   minHeight: 4,
                 ),
               ] else if (job.status == 'active' && isCompleted) ...[
                 const SizedBox(height: 12),
                 LinearProgressIndicator(
                   value: 1.0,
-                  backgroundColor:
-                      EveColors.backgroundDeep.withValues(alpha: 0.5),
-                  valueColor:
-                      const AlwaysStoppedAnimation<Color>(EveColors.success),
+                  backgroundColor: EveColors.backgroundDeep.withValues(
+                    alpha: 0.5,
+                  ),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    EveColors.success,
+                  ),
                   minHeight: 4,
                 ),
               ],

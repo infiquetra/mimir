@@ -21,17 +21,27 @@ final activeCharacterProvider = StreamProvider<Character?>((ref) {
 });
 
 /// Provider for switching the active character.
-final switchActiveCharacterProvider =
-    FutureProvider.family<void, int>((ref, characterId) async {
-  Log.i('CHAR', 'switchActiveCharacterProvider - invoked for character $characterId');
+final switchActiveCharacterProvider = FutureProvider.family<void, int>((
+  ref,
+  characterId,
+) async {
+  Log.i(
+    'CHAR',
+    'switchActiveCharacterProvider - invoked for character $characterId',
+  );
   final repository = ref.read(characterRepositoryProvider);
   await repository.setActiveCharacter(characterId);
 });
 
 /// Provider for refreshing a character's data from ESI.
-final refreshCharacterProvider =
-    FutureProvider.family<void, int>((ref, characterId) async {
-  Log.i('CHAR', 'refreshCharacterProvider - invoked for character $characterId');
+final refreshCharacterProvider = FutureProvider.family<void, int>((
+  ref,
+  characterId,
+) async {
+  Log.i(
+    'CHAR',
+    'refreshCharacterProvider - invoked for character $characterId',
+  );
   final repository = ref.read(characterRepositoryProvider);
   await repository.refreshCharacter(characterId);
 });
@@ -43,11 +53,16 @@ final hasCharactersProvider = Provider<AsyncValue<bool>>((ref) {
 });
 
 /// Provider for getting a character's total skill points.
-final characterTotalSpProvider =
-    FutureProvider.family<int, int>((ref, characterId) async {
+final characterTotalSpProvider = FutureProvider.family<int, int>((
+  ref,
+  characterId,
+) async {
   Log.d('CHAR', 'characterTotalSpProvider($characterId) - START');
   final esiClient = ref.watch(esiClientProvider);
   final skills = await esiClient.getCharacterSkills(characterId);
-  Log.i('CHAR', 'characterTotalSpProvider($characterId) - Total SP: ${skills.totalSp}');
+  Log.i(
+    'CHAR',
+    'characterTotalSpProvider($characterId) - Total SP: ${skills.totalSp}',
+  );
   return skills.totalSp;
 });

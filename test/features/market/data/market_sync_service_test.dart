@@ -18,7 +18,7 @@ void main() {
     mockEsiClient = MockEsiClient();
     mockRepository = MockMarketRepository();
     syncService = MarketSyncService(mockEsiClient, mockRepository);
-    
+
     registerFallbackValue(<MarketOrdersCompanion>[]);
     registerFallbackValue(<MarketPricesCompanion>[]);
   });
@@ -29,34 +29,40 @@ void main() {
     test('syncOrders fetches from ESI and saves to repository', () async {
       // Setup mock
       mockEsiClient.setupMarketData(characterId);
-      when(() => mockRepository.replaceAllOrders(any(), any()))
-          .thenAnswer((_) async {});
+      when(
+        () => mockRepository.replaceAllOrders(any(), any()),
+      ).thenAnswer((_) async {});
 
       // Execute
       await syncService.syncOrders(characterId);
 
       // Verify
       verify(() => mockEsiClient.getCharacterOrders(characterId)).called(1);
-      verify(() => mockRepository.replaceAllOrders(
-        characterId,
-        any(that: isA<List<MarketOrdersCompanion>>()),
-      )).called(1);
+      verify(
+        () => mockRepository.replaceAllOrders(
+          characterId,
+          any(that: isA<List<MarketOrdersCompanion>>()),
+        ),
+      ).called(1);
     });
 
     test('syncPrices fetches from ESI and saves to repository', () async {
       // Setup mock
       mockEsiClient.setupMarketData(characterId);
-      when(() => mockRepository.replaceAllPrices(any()))
-          .thenAnswer((_) async {});
+      when(
+        () => mockRepository.replaceAllPrices(any()),
+      ).thenAnswer((_) async {});
 
       // Execute
       await syncService.syncPrices();
 
       // Verify
       verify(() => mockEsiClient.getMarketPrices()).called(1);
-      verify(() => mockRepository.replaceAllPrices(
-        any(that: isA<List<MarketPricesCompanion>>()),
-      )).called(1);
+      verify(
+        () => mockRepository.replaceAllPrices(
+          any(that: isA<List<MarketPricesCompanion>>()),
+        ),
+      ).called(1);
     });
   });
 }

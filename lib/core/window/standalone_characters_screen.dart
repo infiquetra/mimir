@@ -69,10 +69,7 @@ class _StandaloneCharactersScreenState
 
                   // Split panel content (header bar removed, will use nav rail)
                   return activeCharacter.value != null
-                      ? _buildSplitPanelContent(
-                          context,
-                          activeCharacter.value!,
-                        )
+                      ? _buildSplitPanelContent(context, activeCharacter.value!)
                       : _buildNoCharacterState(context);
                 },
                 loading: () => const Center(
@@ -84,8 +81,11 @@ class _StandaloneCharactersScreenState
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.error_outline,
-                            size: 64, color: EveColors.error),
+                        const Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: EveColors.error,
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'Failed to load characters',
@@ -94,12 +94,12 @@ class _StandaloneCharactersScreenState
                         const SizedBox(height: 8),
                         Text(
                           error.toString(),
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -121,15 +121,13 @@ class _StandaloneCharactersScreenState
           flex: 40,
           child: CharacterPortraitPanel(
             character: character,
-            onDeleteCharacter: () => _removeCharacter(context, character.characterId),
+            onDeleteCharacter: () =>
+                _removeCharacter(context, character.characterId),
           ),
         ),
 
         // Right panel: Multi-column card grid (~60%)
-        const Expanded(
-          flex: 60,
-          child: CharacterContentGrid(),
-        ),
+        const Expanded(flex: 60, child: CharacterContentGrid()),
       ],
     );
   }
@@ -152,10 +150,7 @@ class _StandaloneCharactersScreenState
                 color: theme.colorScheme.primary,
               ),
               const SizedBox(height: 16),
-              Text(
-                'No Characters',
-                style: theme.textTheme.headlineSmall,
-              ),
+              Text('No Characters', style: theme.textTheme.headlineSmall),
               const SizedBox(height: 8),
               Text(
                 'Add an EVE Online character to get started.',
@@ -190,10 +185,7 @@ class _StandaloneCharactersScreenState
             color: theme.colorScheme.onSurface.withAlpha(128),
           ),
           const SizedBox(height: 16),
-          Text(
-            'No Character Selected',
-            style: theme.textTheme.titleLarge,
-          ),
+          Text('No Character Selected', style: theme.textTheme.titleLarge),
           const SizedBox(height: 8),
           Text(
             'Select a character from the header',
@@ -207,7 +199,10 @@ class _StandaloneCharactersScreenState
   }
 
   Future<void> _removeCharacter(BuildContext context, int characterId) async {
-    final character = ref.read(allCharactersProvider).value?.firstWhere(
+    final character = ref
+        .read(allCharactersProvider)
+        .value
+        ?.firstWhere(
           (c) => c.characterId == characterId,
           orElse: () => throw Exception('Character not found'),
         );
@@ -238,9 +233,7 @@ class _StandaloneCharactersScreenState
     );
 
     if (confirmed == true && context.mounted) {
-      await ref
-          .read(characterRepositoryProvider)
-          .deleteCharacter(characterId);
+      await ref.read(characterRepositoryProvider).deleteCharacter(characterId);
     }
   }
 }
@@ -290,10 +283,7 @@ class _HistoryTabPlaceholder extends StatelessWidget {
 
 /// View for adding a new character via OAuth.
 class _AddCharacterView extends ConsumerWidget {
-  const _AddCharacterView({
-    required this.authState,
-    required this.onCancel,
-  });
+  const _AddCharacterView({required this.authState, required this.onCancel});
 
   final AuthState authState;
   final VoidCallback onCancel;
@@ -350,10 +340,7 @@ class _AddCharacterView extends ConsumerWidget {
             color: theme.colorScheme.primary,
           ),
           const SizedBox(height: 24),
-          Text(
-            'Add EVE Character',
-            style: theme.textTheme.headlineSmall,
-          ),
+          Text('Add EVE Character', style: theme.textTheme.headlineSmall),
           const SizedBox(height: 16),
           Text(
             'Connect your EVE Online character to view your skill queue, wallet, and more.',
@@ -368,10 +355,7 @@ class _AddCharacterView extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              OutlinedButton(
-                onPressed: onCancel,
-                child: const Text('Cancel'),
-              ),
+              OutlinedButton(onPressed: onCancel, child: const Text('Cancel')),
               const SizedBox(width: 16),
               FilledButton.icon(
                 onPressed: () {
@@ -394,31 +378,29 @@ class _AddCharacterView extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Requested Permissions',
-              style: theme.textTheme.titleSmall,
-            ),
+            Text('Requested Permissions', style: theme.textTheme.titleSmall),
             const SizedBox(height: 8),
-            ...[...EveConfig.phase1Scopes, ...EveConfig.phase2FleetScopes]
-                .map((scope) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.check_circle_outline,
-                            size: 16,
-                            color: theme.colorScheme.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _formatScope(scope),
-                              style: theme.textTheme.bodySmall,
-                            ),
-                          ),
-                        ],
+            ...[...EveConfig.phase1Scopes, ...EveConfig.phase2FleetScopes].map(
+              (scope) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 16,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _formatScope(scope),
+                        style: theme.textTheme.bodySmall,
                       ),
-                    )),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -459,10 +441,7 @@ class _AddCharacterView extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          OutlinedButton(
-            onPressed: onCancel,
-            child: const Text('Cancel'),
-          ),
+          OutlinedButton(onPressed: onCancel, child: const Text('Cancel')),
         ],
       ),
     );
@@ -499,16 +478,9 @@ class _AddCharacterView extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.check_circle,
-            size: 64,
-            color: EveColors.success,
-          ),
+          Icon(Icons.check_circle, size: 64, color: EveColors.success),
           const SizedBox(height: 24),
-          Text(
-            'Character Added!',
-            style: theme.textTheme.headlineSmall,
-          ),
+          Text('Character Added!', style: theme.textTheme.headlineSmall),
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: () {
@@ -534,16 +506,9 @@ class _AddCharacterView extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: EveColors.error,
-          ),
+          Icon(Icons.error_outline, size: 64, color: EveColors.error),
           const SizedBox(height: 24),
-          Text(
-            'Authentication Failed',
-            style: theme.textTheme.headlineSmall,
-          ),
+          Text('Authentication Failed', style: theme.textTheme.headlineSmall),
           const SizedBox(height: 16),
           Text(
             authState.errorMessage ?? 'An unknown error occurred.',
@@ -556,10 +521,7 @@ class _AddCharacterView extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              OutlinedButton(
-                onPressed: onCancel,
-                child: const Text('Cancel'),
-              ),
+              OutlinedButton(onPressed: onCancel, child: const Text('Cancel')),
               const SizedBox(width: 16),
               FilledButton(
                 onPressed: () {

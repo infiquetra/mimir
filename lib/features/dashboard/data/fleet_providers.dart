@@ -113,8 +113,10 @@ class AggregateFleetStatus {
 /// from ESI and caches the result.
 ///
 /// Handles missing scopes gracefully by returning null.
-final characterFleetStatusProvider =
-    FutureProvider.family<CharacterStatusData?, int>((ref, characterId) async {
+final characterFleetStatusProvider = FutureProvider.family<CharacterStatusData?, int>((
+  ref,
+  characterId,
+) async {
   Log.d('FLEET', 'characterFleetStatusProvider($characterId) - START');
   final database = ref.watch(databaseProvider);
   final esiClient = ref.watch(esiClientProvider);
@@ -132,7 +134,10 @@ final characterFleetStatusProvider =
     final age = DateTime.now().difference(cached.lastUpdated);
     if (age < _cacheExpiry) {
       // Cache is still fresh, return cached data.
-      Log.d('FLEET', 'characterFleetStatusProvider - using cached data (age: ${age.inMinutes}min)');
+      Log.d(
+        'FLEET',
+        'characterFleetStatusProvider - using cached data (age: ${age.inMinutes}min)',
+      );
       return CharacterStatusData(
         characterId: cached.characterId,
         characterName: character.name,
@@ -167,15 +172,19 @@ final characterFleetStatusProvider =
       shipTypeName = await sdeService.getShipTypeName(ship.shipTypeId);
     }
 
-    Log.i('FLEET', 'characterFleetStatusProvider - fetched ESI data: online=${online.online}, location=${location?.solarSystemId}, ship=$shipTypeName');
+    Log.i(
+      'FLEET',
+      'characterFleetStatusProvider - fetched ESI data: online=${online.online}, location=${location?.solarSystemId}, ship=$shipTypeName',
+    );
 
     // Fetch solar system info if we have a location.
     String? systemName;
     double? secStatus;
     if (location != null) {
       try {
-        final systemInfo =
-            await esiClient.getSolarSystemInfo(location.solarSystemId);
+        final systemInfo = await esiClient.getSolarSystemInfo(
+          location.solarSystemId,
+        );
         systemName = systemInfo.name;
         secStatus = systemInfo.securityStatus;
       } catch (e) {
@@ -214,11 +223,17 @@ final characterFleetStatusProvider =
   } on EsiException catch (e, stack) {
     // Handle missing scopes gracefully.
     if (e.isScopeError) {
-      Log.w('FLEET', 'characterFleetStatusProvider - missing OAuth scopes for character $characterId');
+      Log.w(
+        'FLEET',
+        'characterFleetStatusProvider - missing OAuth scopes for character $characterId',
+      );
       // User hasn't re-authenticated with new scopes.
       // Return cached data if available, otherwise null.
       if (cached != null) {
-        Log.d('FLEET', 'characterFleetStatusProvider - returning cached data due to scope error');
+        Log.d(
+          'FLEET',
+          'characterFleetStatusProvider - returning cached data due to scope error',
+        );
         return CharacterStatusData(
           characterId: cached.characterId,
           characterName: character.name,
@@ -230,15 +245,26 @@ final characterFleetStatusProvider =
           lastLogout: cached.lastLogout,
         );
       }
-      Log.d('FLEET', 'characterFleetStatusProvider - no cached data, returning null due to scope error');
+      Log.d(
+        'FLEET',
+        'characterFleetStatusProvider - no cached data, returning null due to scope error',
+      );
       return null;
     }
 
     // Log error but don't fail the entire dashboard.
-    Log.e('FLEET', 'characterFleetStatusProvider($characterId) - ESI error', e, stack);
+    Log.e(
+      'FLEET',
+      'characterFleetStatusProvider($characterId) - ESI error',
+      e,
+      stack,
+    );
     // Return cached data if available, otherwise null.
     if (cached != null) {
-      Log.d('FLEET', 'characterFleetStatusProvider - returning cached data due to ESI error');
+      Log.d(
+        'FLEET',
+        'characterFleetStatusProvider - returning cached data due to ESI error',
+      );
       return CharacterStatusData(
         characterId: cached.characterId,
         characterName: character.name,
@@ -253,15 +279,26 @@ final characterFleetStatusProvider =
 
     // No cached data and API failed - return null to indicate no data.
     // Don't throw to avoid blocking the dashboard.
-    Log.w('FLEET', 'characterFleetStatusProvider - no cached data, returning null due to ESI error');
+    Log.w(
+      'FLEET',
+      'characterFleetStatusProvider - no cached data, returning null due to ESI error',
+    );
     return null;
   } catch (e, stack) {
     // Catch any other unexpected errors (parsing, database, type casting, etc.)
-    Log.e('FLEET', 'characterFleetStatusProvider($characterId) - unexpected error', e, stack);
+    Log.e(
+      'FLEET',
+      'characterFleetStatusProvider($characterId) - unexpected error',
+      e,
+      stack,
+    );
 
     // Return cached data if available, otherwise null.
     if (cached != null) {
-      Log.d('FLEET', 'characterFleetStatusProvider - returning cached data due to unexpected error');
+      Log.d(
+        'FLEET',
+        'characterFleetStatusProvider - returning cached data due to unexpected error',
+      );
       return CharacterStatusData(
         characterId: cached.characterId,
         characterName: character.name,
@@ -275,7 +312,10 @@ final characterFleetStatusProvider =
     }
 
     // No cached data and unexpected error - return null to avoid blocking dashboard.
-    Log.w('FLEET', 'characterFleetStatusProvider - no cached data, returning null due to unexpected error');
+    Log.w(
+      'FLEET',
+      'characterFleetStatusProvider - no cached data, returning null due to unexpected error',
+    );
     return null;
   }
 });
@@ -284,11 +324,15 @@ final characterFleetStatusProvider =
 ///
 /// Fetches status for each character and aggregates totals.
 /// Excludes characters with no status data (null status).
-final allCharacterFleetStatusProvider =
-    FutureProvider<AggregateFleetStatus>((ref) async {
+final allCharacterFleetStatusProvider = FutureProvider<AggregateFleetStatus>((
+  ref,
+) async {
   Log.d('FLEET', 'allCharacterFleetStatusProvider - START');
   final characters = await ref.watch(allCharactersProvider.future);
-  Log.i('FLEET', 'allCharacterFleetStatusProvider - fetching status for ${characters.length} characters');
+  Log.i(
+    'FLEET',
+    'allCharacterFleetStatusProvider - fetching status for ${characters.length} characters',
+  );
 
   // Fetch statuses for all characters in parallel.
   final statusFutures = characters.map((char) {
@@ -299,7 +343,10 @@ final allCharacterFleetStatusProvider =
 
   // Filter out null statuses (characters with no data or missing scopes).
   final validStatuses = allStatuses.whereType<CharacterStatusData>().toList();
-  Log.d('FLEET', 'allCharacterFleetStatusProvider - received ${validStatuses.length} valid statuses out of ${allStatuses.length}');
+  Log.d(
+    'FLEET',
+    'allCharacterFleetStatusProvider - received ${validStatuses.length} valid statuses out of ${allStatuses.length}',
+  );
 
   // Calculate aggregates.
   int onlineCount = 0;
@@ -307,7 +354,10 @@ final allCharacterFleetStatusProvider =
     if (status.isOnline) onlineCount++;
   }
 
-  Log.i('FLEET', 'allCharacterFleetStatusProvider - SUCCESS: $onlineCount online, ${validStatuses.length - onlineCount} offline (total: ${validStatuses.length})');
+  Log.i(
+    'FLEET',
+    'allCharacterFleetStatusProvider - SUCCESS: $onlineCount online, ${validStatuses.length - onlineCount} offline (total: ${validStatuses.length})',
+  );
   return AggregateFleetStatus(
     totalCharacters: validStatuses.length,
     onlineCharacters: onlineCount,

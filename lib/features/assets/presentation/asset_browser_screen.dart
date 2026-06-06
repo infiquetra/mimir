@@ -96,7 +96,7 @@ class _AssetBrowserScreenState extends ConsumerState<AssetBrowserScreen> {
             child: groupedAssetsAsync.when(
               data: (summaries) {
                 final filtered = _filterSummaries(summaries);
-                
+
                 if (filtered.isEmpty) {
                   return _buildEmptyState();
                 }
@@ -121,26 +121,32 @@ class _AssetBrowserScreenState extends ConsumerState<AssetBrowserScreen> {
     );
   }
 
-  List<LocationAssetSummary> _filterSummaries(List<LocationAssetSummary> summaries) {
+  List<LocationAssetSummary> _filterSummaries(
+    List<LocationAssetSummary> summaries,
+  ) {
     if (_searchQuery.isEmpty) return summaries;
 
     final result = <LocationAssetSummary>[];
     for (final summary in summaries) {
       // Check location name
-      final locationMatch = summary.location.locationName.toLowerCase().contains(_searchQuery);
-      
+      final locationMatch = summary.location.locationName
+          .toLowerCase()
+          .contains(_searchQuery);
+
       // Check items within location
       final matchingAssets = summary.assets.where((a) {
         return a.typeName.toLowerCase().contains(_searchQuery) ||
-               (a.customName?.toLowerCase().contains(_searchQuery) ?? false);
+            (a.customName?.toLowerCase().contains(_searchQuery) ?? false);
       }).toList();
 
       if (locationMatch || matchingAssets.isNotEmpty) {
-        result.add(LocationAssetSummary(
-          location: summary.location,
-          assets: matchingAssets.isNotEmpty ? matchingAssets : summary.assets,
-          itemCount: summary.itemCount,
-        ));
+        result.add(
+          LocationAssetSummary(
+            location: summary.location,
+            assets: matchingAssets.isNotEmpty ? matchingAssets : summary.assets,
+            itemCount: summary.itemCount,
+          ),
+        );
       }
     }
     return result;
@@ -181,7 +187,9 @@ class _LocationExpansionTile extends StatelessWidget {
       child: ExpansionTile(
         title: Text(
           summary.location.locationName,
-          style: EveTypography.bodyLarge().copyWith(fontWeight: FontWeight.bold),
+          style: EveTypography.bodyLarge().copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         subtitle: Text(
           '${summary.assets.length} item types, ${summary.itemCount} total items',
@@ -239,10 +247,14 @@ class _AssetListTile extends StatelessWidget {
               color: EveColors.surfaceElevated,
               borderRadius: BorderRadius.circular(4),
             ),
-            child: const Icon(Icons.inventory_2, size: 16, color: EveColors.textSecondary),
+            child: const Icon(
+              Icons.inventory_2,
+              size: 16,
+              color: EveColors.textSecondary,
+            ),
           ),
           const SizedBox(width: 12),
-          
+
           // Item Details
           Expanded(
             child: Column(
@@ -250,22 +262,23 @@ class _AssetListTile extends StatelessWidget {
               children: [
                 Text(
                   asset.customName ?? asset.typeName,
-                  style: EveTypography.bodyMedium().copyWith(fontWeight: FontWeight.w500),
+                  style: EveTypography.bodyMedium().copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 if (asset.customName != null)
                   Text(
                     asset.typeName,
-                    style: EveTypography.bodySmall(color: EveColors.textSecondary),
+                    style: EveTypography.bodySmall(
+                      color: EveColors.textSecondary,
+                    ),
                   ),
               ],
             ),
           ),
-          
+
           // Quantity
-          Text(
-            'x${asset.quantity}',
-            style: EveTypography.dataMedium(),
-          ),
+          Text('x${asset.quantity}', style: EveTypography.dataMedium()),
         ],
       ),
     );

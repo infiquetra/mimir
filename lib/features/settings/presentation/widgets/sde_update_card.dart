@@ -34,8 +34,8 @@ class SdeUpdateCard extends ConsumerWidget {
                 Text(
                   'Static Data (SDE)',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const Spacer(),
                 _buildStatusIcon(updateState),
@@ -68,31 +68,22 @@ class SdeUpdateCard extends ConsumerWidget {
   Widget _buildStatusIcon(SdeUpdateUiState state) {
     return switch (state) {
       SdeUpdateIdle() => const Icon(
-          Icons.check_circle_outline,
-          color: Colors.grey,
-        ),
+        Icons.check_circle_outline,
+        color: Colors.grey,
+      ),
       SdeUpdateChecking() => const SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      SdeUpdateHasUpdate() => const Icon(
-          Icons.download,
-          color: Colors.blue,
-        ),
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      SdeUpdateHasUpdate() => const Icon(Icons.download, color: Colors.blue),
       SdeUpdateApplying() => const SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      SdeUpdateSuccess() => const Icon(
-          Icons.check_circle,
-          color: Colors.green,
-        ),
-      SdeUpdateError() => const Icon(
-          Icons.error_outline,
-          color: Colors.red,
-        ),
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      SdeUpdateSuccess() => const Icon(Icons.check_circle, color: Colors.green),
+      SdeUpdateError() => const Icon(Icons.error_outline, color: Colors.red),
     };
   }
 
@@ -103,10 +94,7 @@ class SdeUpdateCard extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _InfoRow(
-          label: 'Version',
-          value: status.version ?? 'Not installed',
-        ),
+        _InfoRow(label: 'Version', value: status.version ?? 'Not installed'),
         const SizedBox(height: 4),
         _InfoRow(
           label: 'Last checked',
@@ -131,15 +119,12 @@ class SdeUpdateCard extends ConsumerWidget {
     return switch (state) {
       SdeUpdateIdle() => const SizedBox.shrink(),
       SdeUpdateChecking() => Text(
-          'Checking for updates...',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurface.withAlpha(153),
-          ),
+        'Checking for updates...',
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurface.withAlpha(153),
         ),
-      SdeUpdateHasUpdate(
-        newVersion: final newV,
-        skillCount: final count,
-      ) =>
+      ),
+      SdeUpdateHasUpdate(newVersion: final newV, skillCount: final count) =>
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
@@ -166,57 +151,57 @@ class SdeUpdateCard extends ConsumerWidget {
           ),
         ),
       SdeUpdateApplying() => Text(
-          'Downloading and installing update...',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurface.withAlpha(153),
-          ),
+        'Downloading and installing update...',
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurface.withAlpha(153),
         ),
+      ),
       SdeUpdateSuccess(message: final msg) => Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.green.withAlpha(30),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.check_circle, size: 20, color: Colors.green),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  msg,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.green.shade800,
-                  ),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.green.withAlpha(30),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.check_circle, size: 20, color: Colors.green),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                msg,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.green.shade800,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
       SdeUpdateError(message: final msg) => Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.errorContainer,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 20,
-                color: theme.colorScheme.onErrorContainer,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  msg,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onErrorContainer,
-                  ),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.errorContainer,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 20,
+              color: theme.colorScheme.onErrorContainer,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                msg,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onErrorContainer,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
     };
   }
 
@@ -261,11 +246,7 @@ class SdeUpdateCard extends ConsumerWidget {
 
 /// Row widget for displaying label-value pairs.
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
+  const _InfoRow({required this.label, required this.value, this.valueColor});
 
   final String label;
   final String value;
@@ -280,16 +261,16 @@ class _InfoRow extends StatelessWidget {
           child: Text(
             label,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
-                ),
+              color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
+            ),
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: valueColor,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: valueColor),
           ),
         ),
       ],

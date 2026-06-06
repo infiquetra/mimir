@@ -6,8 +6,11 @@ import 'package:mimir/features/characters/data/character_status_repository.dart'
 import 'package:mocktail/mocktail.dart';
 
 class MockEsiClient extends Mock implements EsiClient {}
+
 class MockAssetRepository extends Mock implements AssetRepository {}
-class MockCharacterStatusRepository extends Mock implements CharacterStatusRepository {}
+
+class MockCharacterStatusRepository extends Mock
+    implements CharacterStatusRepository {}
 
 void main() {
   late MockEsiClient mockEsiClient;
@@ -43,24 +46,45 @@ void main() {
         ),
       ];
 
-      when(() => mockEsiClient.getCharacterAssets(characterId, page: 1))
-          .thenAnswer((_) async => EsiResponse(
-                data: esiAssets,
-                headers: {'x-pages': ['1']},
-                statusCode: 200,
-              ));
+      when(
+        () => mockEsiClient.getCharacterAssets(characterId, page: 1),
+      ).thenAnswer(
+        (_) async => EsiResponse(
+          data: esiAssets,
+          headers: {
+            'x-pages': ['1'],
+          },
+          statusCode: 200,
+        ),
+      );
 
-      when(() => mockRepository.getLocation(any())).thenAnswer((_) async => null);
-      when(() => mockStatusRepo.resolveNames(any())).thenAnswer((_) async => []);
-      when(() => mockStatusRepo.resolveStructureNames(any(), any())).thenAnswer((_) async => {});
-      when(() => mockEsiClient.getCharacterAssetNames(characterId, any())).thenAnswer((_) async => []);
-      when(() => mockRepository.upsertLocations(any())).thenAnswer((_) async => {});
-      when(() => mockRepository.replaceAllAssets(characterId, any())).thenAnswer((_) async => {});
+      when(
+        () => mockRepository.getLocation(any()),
+      ).thenAnswer((_) async => null);
+      when(
+        () => mockStatusRepo.resolveNames(any()),
+      ).thenAnswer((_) async => []);
+      when(
+        () => mockStatusRepo.resolveStructureNames(any(), any()),
+      ).thenAnswer((_) async => {});
+      when(
+        () => mockEsiClient.getCharacterAssetNames(characterId, any()),
+      ).thenAnswer((_) async => []);
+      when(
+        () => mockRepository.upsertLocations(any()),
+      ).thenAnswer((_) async => {});
+      when(
+        () => mockRepository.replaceAllAssets(characterId, any()),
+      ).thenAnswer((_) async => {});
 
       await syncService.syncAssets(characterId);
 
-      verify(() => mockEsiClient.getCharacterAssets(characterId, page: 1)).called(1);
-      verify(() => mockRepository.replaceAllAssets(characterId, any())).called(1);
+      verify(
+        () => mockEsiClient.getCharacterAssets(characterId, page: 1),
+      ).called(1);
+      verify(
+        () => mockRepository.replaceAllAssets(characterId, any()),
+      ).called(1);
     });
   });
 }

@@ -41,19 +41,27 @@ class SkillListPanel extends ConsumerWidget {
     }
 
     // Watch skills for selected group
-    final skillsAsync = ref.watch(filteredSkillsByGroupProvider(selectedGroupId));
+    final skillsAsync = ref.watch(
+      filteredSkillsByGroupProvider(selectedGroupId),
+    );
 
     return skillsAsync.when(
       data: (skills) {
-        Log.d('SKILLS.UI', 'SkillListPanel - rendering ${skills.length} skills');
+        Log.d(
+          'SKILLS.UI',
+          'SkillListPanel - rendering ${skills.length} skills',
+        );
 
         if (skills.isEmpty) {
           // Different messages based on filter mode
           final emptyMessage = switch (filterMode) {
             SkillFilterMode.all => 'No skills found in this group',
-            SkillFilterMode.mySkills => 'You haven\'t trained any skills in this group yet',
-            SkillFilterMode.canTrain => 'No skills available to train in this group',
-            SkillFilterMode.havePrereqs => 'No skills with met prerequisites in this group',
+            SkillFilterMode.mySkills =>
+              'You haven\'t trained any skills in this group yet',
+            SkillFilterMode.canTrain =>
+              'No skills available to train in this group',
+            SkillFilterMode.havePrereqs =>
+              'No skills with met prerequisites in this group',
           };
 
           Log.d('SKILLS.UI', 'SkillListPanel - empty state: $emptyMessage');
@@ -78,7 +86,10 @@ class SkillListPanel extends ConsumerWidget {
               final cellWidth = (constraints.maxWidth - 4 - 4 - 2) / 2;
               final aspectRatio = cellWidth / 36.0;
 
-              Log.d('SKILLS.UI', 'SkillListPanel - cellWidth: $cellWidth, aspectRatio: $aspectRatio');
+              Log.d(
+                'SKILLS.UI',
+                'SkillListPanel - cellWidth: $cellWidth, aspectRatio: $aspectRatio',
+              );
 
               return GridView.builder(
                 padding: const EdgeInsets.all(4),
@@ -90,48 +101,46 @@ class SkillListPanel extends ConsumerWidget {
                 ),
                 itemCount: skills.length,
                 itemBuilder: (context, index) {
-              final skill = skills[index];
+                  final skill = skills[index];
 
-              // For filter modes that already check prerequisites, we know canTrain is true
-              if (filterMode == SkillFilterMode.canTrain ||
-                  filterMode == SkillFilterMode.havePrereqs) {
-                return SkillListItem(
-                  skill: skill,
-                  canTrain: true,
-                );
-              }
+                  // For filter modes that already check prerequisites, we know canTrain is true
+                  if (filterMode == SkillFilterMode.canTrain ||
+                      filterMode == SkillFilterMode.havePrereqs) {
+                    return SkillListItem(skill: skill, canTrain: true);
+                  }
 
-              // For "all" and "mySkills", check prerequisites individually
-              if (activeCharacter == null || skill.trainedLevel >= 5) {
-                // No character or already max level
-                return SkillListItem(
-                  skill: skill,
-                  canTrain: skill.trainedLevel < 5,
-                );
-              }
+                  // For "all" and "mySkills", check prerequisites individually
+                  if (activeCharacter == null || skill.trainedLevel >= 5) {
+                    // No character or already max level
+                    return SkillListItem(
+                      skill: skill,
+                      canTrain: skill.trainedLevel < 5,
+                    );
+                  }
 
-              // Check if character can train this skill
-              final prereqService = ref.read(skillPrerequisiteServiceProvider);
-              return FutureBuilder<bool>(
-                future: prereqService.canTrainSkill(
-                  characterId: activeCharacter.characterId,
-                  skillId: skill.skill.typeId,
-                  targetLevel: skill.trainedLevel + 1,
-                ),
-                builder: (context, snapshot) {
-                  final canTrain = snapshot.data ?? true; // Assume trainable while loading
+                  // Check if character can train this skill
+                  final prereqService = ref.read(
+                    skillPrerequisiteServiceProvider,
+                  );
+                  return FutureBuilder<bool>(
+                    future: prereqService.canTrainSkill(
+                      characterId: activeCharacter.characterId,
+                      skillId: skill.skill.typeId,
+                      targetLevel: skill.trainedLevel + 1,
+                    ),
+                    builder: (context, snapshot) {
+                      final canTrain =
+                          snapshot.data ??
+                          true; // Assume trainable while loading
 
-                  return SkillListItem(
-                    skill: skill,
-                    canTrain: canTrain,
+                      return SkillListItem(skill: skill, canTrain: canTrain);
+                    },
                   );
                 },
               );
             },
-          );
-        },
-      ),
-    );
+          ),
+        );
       },
       loading: () {
         Log.d('SKILLS.UI', 'SkillListPanel - loading');
@@ -139,9 +148,7 @@ class SkillListPanel extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(
-                color: EveColors.photonBlue,
-              ),
+              CircularProgressIndicator(color: EveColors.photonBlue),
               const SizedBox(height: 16),
               Text(
                 'Loading skills...',
@@ -154,7 +161,12 @@ class SkillListPanel extends ConsumerWidget {
         );
       },
       error: (error, stack) {
-        Log.e('SKILLS.UI', 'SkillListPanel - error loading skills', error, stack);
+        Log.e(
+          'SKILLS.UI',
+          'SkillListPanel - error loading skills',
+          error,
+          stack,
+        );
         return _buildErrorState(context, error);
       },
     );
@@ -204,11 +216,7 @@ class SkillListPanel extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: theme.colorScheme.error,
-          ),
+          Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
           const SizedBox(height: 16),
           Text(
             'Failed to Load Skills',

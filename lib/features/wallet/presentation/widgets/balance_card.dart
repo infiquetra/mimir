@@ -64,11 +64,7 @@ class BalanceCard extends StatelessWidget {
                       width: 1,
                     ),
                   ),
-                  child: Icon(
-                    icon,
-                    color: accentColor,
-                    size: 14,
-                  ),
+                  child: Icon(icon, color: accentColor, size: 14),
                 ),
                 const SizedBox(width: 6),
               ],
@@ -107,10 +103,7 @@ class BalanceCard extends StatelessWidget {
                     color: valueColor,
                     letterSpacing: 0.3,
                     shadows: [
-                      Shadow(
-                        color: accentColor.withAlpha(102),
-                        blurRadius: 6,
-                      ),
+                      Shadow(color: accentColor.withAlpha(102), blurRadius: 6),
                     ],
                   ),
                   overflow: TextOverflow.ellipsis,

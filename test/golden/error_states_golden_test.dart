@@ -11,15 +11,28 @@ void main() {
     testGoldens('EveSkillIcon error state renders correctly', (tester) async {
       await mockNetworkImagesFor(() async {
         final builder = GoldenBuilder.grid(columns: 3, widthToHeightRatio: 1)
-          ..addScenario('Small (32)', const EveSkillIcon(typeId: -1, size: 32, useCache: false))
-          ..addScenario('Medium (64)', const EveSkillIcon(typeId: -1, size: 64, useCache: false))
-          ..addScenario('Large (128)', const EveSkillIcon(typeId: -1, size: 128, useCache: false));
+          ..addScenario(
+            'Small (32)',
+            const EveSkillIcon(typeId: -1, size: 32, useCache: false),
+          )
+          ..addScenario(
+            'Medium (64)',
+            const EveSkillIcon(typeId: -1, size: 64, useCache: false),
+          )
+          ..addScenario(
+            'Large (128)',
+            const EveSkillIcon(typeId: -1, size: 128, useCache: false),
+          );
 
         await tester.pumpWidgetBuilder(builder.build());
         await tester.pump(const Duration(milliseconds: 100));
-        await screenMatchesGolden(tester, 'eve_skill_icon_error', customPump: (tester) async {
-          await tester.pump(const Duration(milliseconds: 100));
-        });
+        await screenMatchesGolden(
+          tester,
+          'eve_skill_icon_error',
+          customPump: (tester) async {
+            await tester.pump(const Duration(milliseconds: 100));
+          },
+        );
       });
     });
 
@@ -28,13 +41,20 @@ void main() {
         final builder = GoldenBuilder.grid(columns: 3, widthToHeightRatio: 1)
           ..addScenario('Small (32)', const EveTypeIcon(typeId: -1, size: 32))
           ..addScenario('Medium (64)', const EveTypeIcon(typeId: -1, size: 64))
-          ..addScenario('Large (128)', const EveTypeIcon(typeId: -1, size: 128));
+          ..addScenario(
+            'Large (128)',
+            const EveTypeIcon(typeId: -1, size: 128),
+          );
 
         await tester.pumpWidgetBuilder(builder.build());
         await tester.pump(const Duration(milliseconds: 100));
-        await screenMatchesGolden(tester, 'eve_type_icon_error', customPump: (tester) async {
-          await tester.pump(const Duration(milliseconds: 100));
-        });
+        await screenMatchesGolden(
+          tester,
+          'eve_type_icon_error',
+          customPump: (tester) async {
+            await tester.pump(const Duration(milliseconds: 100));
+          },
+        );
       });
     });
   });

@@ -14,15 +14,14 @@ class TransactionListItem extends StatelessWidget {
   /// The wallet journal entry to display.
   final WalletJournalEntry entry;
 
-  const TransactionListItem({
-    super.key,
-    required this.entry,
-  });
+  const TransactionListItem({super.key, required this.entry});
 
   @override
   Widget build(BuildContext context) {
     final isPositive = entry.amount >= 0;
-    final amountColor = isPositive ? EveColors.iskPositive : EveColors.iskNegative;
+    final amountColor = isPositive
+        ? EveColors.iskPositive
+        : EveColors.iskNegative;
 
     return Container(
       height: EveSpacing.rowHeight,
@@ -32,10 +31,7 @@ class TransactionListItem extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(
-            color: EveColors.divider,
-            width: 0.5,
-          ),
+          bottom: BorderSide(color: EveColors.divider, width: 0.5),
         ),
       ),
       child: Row(
@@ -69,9 +65,9 @@ class TransactionListItem extends StatelessWidget {
             flex: 2,
             child: Text(
               '${isPositive ? '+' : ''}${_formatCompactIsk(entry.amount)}',
-              style: EveTypography.dataSmall(color: amountColor).copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: EveTypography.dataSmall(
+                color: amountColor,
+              ).copyWith(fontWeight: FontWeight.w600),
               textAlign: TextAlign.right,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

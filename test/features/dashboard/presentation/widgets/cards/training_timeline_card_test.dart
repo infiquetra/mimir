@@ -44,8 +44,8 @@ void main() {
         corporationName: 'Test Corp 2',
         allianceId: null,
         allianceName: null,
-      factionId: null,
-      securityStatus: 0.0,
+        factionId: null,
+        securityStatus: 0.0,
         portraitUrl: 'https://images.evetech.net/characters/67890/portrait',
         refreshToken: 'test_token_2',
         accessToken: 'test_access_2',
@@ -102,25 +102,25 @@ void main() {
         overrides: overrides.cast(),
         child: MaterialApp(
           theme: ThemeData.dark(),
-          home: const Scaffold(
-            body: TrainingTimelineCard(),
-          ),
+          home: const Scaffold(body: TrainingTimelineCard()),
         ),
       );
     }
 
     testWidgets('displays timeline with active training', (tester) async {
-      await tester.pumpWidget(createTestWidget([
-        allCharactersProvider.overrideWith(
-          (ref) => Stream.value([testCharacter1, testCharacter2]),
-        ),
-        allCharacterSkillQueuesProvider.overrideWith(
-          (ref) => Future.value({
-            12345: [activeSkill1, queuedSkill1],
-            67890: [activeSkill2],
-          }),
-        ),
-      ]));
+      await tester.pumpWidget(
+        createTestWidget([
+          allCharactersProvider.overrideWith(
+            (ref) => Stream.value([testCharacter1, testCharacter2]),
+          ),
+          allCharacterSkillQueuesProvider.overrideWith(
+            (ref) => Future.value({
+              12345: [activeSkill1, queuedSkill1],
+              67890: [activeSkill2],
+            }),
+          ),
+        ]),
+      );
       await tester.pumpAndSettle();
 
       // Verify card title
@@ -134,16 +134,16 @@ void main() {
     });
 
     testWidgets('displays empty state when no training', (tester) async {
-      await tester.pumpWidget(createTestWidget([
-        allCharactersProvider.overrideWith(
-          (ref) => Stream.value([testCharacter1]),
-        ),
-        allCharacterSkillQueuesProvider.overrideWith(
-          (ref) => Future.value({
-            12345: [],
-          }),
-        ),
-      ]));
+      await tester.pumpWidget(
+        createTestWidget([
+          allCharactersProvider.overrideWith(
+            (ref) => Stream.value([testCharacter1]),
+          ),
+          allCharacterSkillQueuesProvider.overrideWith(
+            (ref) => Future.value({12345: []}),
+          ),
+        ]),
+      );
       await tester.pumpAndSettle();
 
       // Verify empty state
@@ -159,14 +159,16 @@ void main() {
       // Use a completer that we don't complete to keep loading state
       final completer = Completer<Map<int, List<SkillQueueEntry>>>();
 
-      await tester.pumpWidget(createTestWidget([
-        allCharactersProvider.overrideWith(
-          (ref) => Stream.value([testCharacter1]),
-        ),
-        allCharacterSkillQueuesProvider.overrideWith(
-          (ref) => completer.future,
-        ),
-      ]));
+      await tester.pumpWidget(
+        createTestWidget([
+          allCharactersProvider.overrideWith(
+            (ref) => Stream.value([testCharacter1]),
+          ),
+          allCharacterSkillQueuesProvider.overrideWith(
+            (ref) => completer.future,
+          ),
+        ]),
+      );
       await tester.pump();
 
       // Verify loading state (shimmer effect from DashboardCard)
@@ -177,14 +179,16 @@ void main() {
     });
 
     testWidgets('displays error state with retry button', (tester) async {
-      await tester.pumpWidget(createTestWidget([
-        allCharactersProvider.overrideWith(
-          (ref) => Stream.value([testCharacter1]),
-        ),
-        allCharacterSkillQueuesProvider.overrideWith(
-          (ref) => Future.error(Exception('Network error')),
-        ),
-      ]));
+      await tester.pumpWidget(
+        createTestWidget([
+          allCharactersProvider.overrideWith(
+            (ref) => Stream.value([testCharacter1]),
+          ),
+          allCharacterSkillQueuesProvider.overrideWith(
+            (ref) => Future.error(Exception('Network error')),
+          ),
+        ]),
+      );
       await tester.pumpAndSettle();
 
       // Verify error state
@@ -192,8 +196,9 @@ void main() {
       expect(find.text('Retry'), findsOneWidget);
     });
 
-    testWidgets('limits skills per character to maxSkillsPerCharacter',
-        (tester) async {
+    testWidgets('limits skills per character to maxSkillsPerCharacter', (
+      tester,
+    ) async {
       final now = DateTime.now();
 
       // Create 5 skills for one character
@@ -212,16 +217,16 @@ void main() {
         );
       });
 
-      await tester.pumpWidget(createTestWidget([
-        allCharactersProvider.overrideWith(
-          (ref) => Stream.value([testCharacter1]),
-        ),
-        allCharacterSkillQueuesProvider.overrideWith(
-          (ref) => Future.value({
-            12345: manySkills,
-          }),
-        ),
-      ]));
+      await tester.pumpWidget(
+        createTestWidget([
+          allCharactersProvider.overrideWith(
+            (ref) => Stream.value([testCharacter1]),
+          ),
+          allCharacterSkillQueuesProvider.overrideWith(
+            (ref) => Future.value({12345: manySkills}),
+          ),
+        ]),
+      );
       await tester.pumpAndSettle();
 
       // Should only show maxSkillsPerCharacter (3) skills
@@ -231,8 +236,7 @@ void main() {
       expect(find.text('Now'), findsOneWidget);
     });
 
-    testWidgets('filters out characters without finish dates',
-        (tester) async {
+    testWidgets('filters out characters without finish dates', (tester) async {
       final skillNoFinishDate = SkillQueueEntry(
         id: 4,
         characterId: 12345,
@@ -246,16 +250,18 @@ void main() {
         levelStartSp: 181020,
       );
 
-      await tester.pumpWidget(createTestWidget([
-        allCharactersProvider.overrideWith(
-          (ref) => Stream.value([testCharacter1]),
-        ),
-        allCharacterSkillQueuesProvider.overrideWith(
-          (ref) => Future.value({
-            12345: [skillNoFinishDate],
-          }),
-        ),
-      ]));
+      await tester.pumpWidget(
+        createTestWidget([
+          allCharactersProvider.overrideWith(
+            (ref) => Stream.value([testCharacter1]),
+          ),
+          allCharacterSkillQueuesProvider.overrideWith(
+            (ref) => Future.value({
+              12345: [skillNoFinishDate],
+            }),
+          ),
+        ]),
+      );
       await tester.pumpAndSettle();
 
       // Should show empty state since skill has no finish date

@@ -7,7 +7,10 @@ import 'planetary_repository.dart';
 import 'planetary_sync_service.dart';
 
 /// Provider for the list of colonies for a specific character.
-final coloniesProvider = StreamProvider.family<List<PlanetaryColony>, int>((ref, characterId) {
+final coloniesProvider = StreamProvider.family<List<PlanetaryColony>, int>((
+  ref,
+  characterId,
+) {
   final repository = ref.watch(planetaryRepositoryProvider);
   return repository.watchColonies(characterId);
 });
@@ -19,10 +22,11 @@ final allColoniesProvider = StreamProvider<List<PlanetaryColony>>((ref) {
 });
 
 /// Provider for the list of pins for a specific planet.
-final planetPinsProvider = StreamProvider.family<List<PlanetaryPin>, PlanetPinsArgs>((ref, args) {
-  final repository = ref.watch(planetaryRepositoryProvider);
-  return repository.watchPins(args.characterId, args.planetId);
-});
+final planetPinsProvider =
+    StreamProvider.family<List<PlanetaryPin>, PlanetPinsArgs>((ref, args) {
+      final repository = ref.watch(planetaryRepositoryProvider);
+      return repository.watchPins(args.characterId, args.planetId);
+    });
 
 /// Arguments for the planetPinsProvider.
 class PlanetPinsArgs {

@@ -31,23 +31,27 @@ class ShipBrowser extends ConsumerWidget {
         final isSelected = activeFit?.shipTypeId == typeId;
 
         return Card(
-          color: isSelected ? EveColors.surfaceBright : EveColors.surfaceDefault,
+          color: isSelected
+              ? EveColors.surfaceBright
+              : EveColors.surfaceDefault,
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            leading: EveTypeIcon(
-              typeId: typeId,
-              size: 40,
-            ),
+            leading: EveTypeIcon(typeId: typeId, size: 40),
             title: Text(
               name,
               style: TextStyle(
-                color: isSelected ? EveColors.photonBlue : EveColors.textPrimary,
+                color: isSelected
+                    ? EveColors.photonBlue
+                    : EveColors.textPrimary,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
             trailing: isSelected
                 ? const Icon(Icons.check_circle, color: EveColors.photonBlue)
-                : const Icon(Icons.chevron_right, color: EveColors.textSecondary),
+                : const Icon(
+                    Icons.chevron_right,
+                    color: EveColors.textSecondary,
+                  ),
             onTap: () {
               ref.read(activeFittingProvider.notifier).setShip(typeId, name);
             },

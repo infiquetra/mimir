@@ -241,9 +241,7 @@ abstract class AppTheme {
       cardTheme: CardThemeData(
         color: EveColors.lightSurface,
         elevation: 1,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
 
       // Bottom navigation theme
@@ -281,17 +279,12 @@ abstract class AppTheme {
           backgroundColor: EveColors.evePrimary,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
 
       // Divider theme
-      dividerTheme: const DividerThemeData(
-        color: Colors.black12,
-        thickness: 1,
-      ),
+      dividerTheme: const DividerThemeData(color: Colors.black12, thickness: 1),
     );
   }
 }

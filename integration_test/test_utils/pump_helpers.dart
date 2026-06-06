@@ -113,7 +113,11 @@ Future<void> scrollUntilVisible(
     await tester.pump();
   }
 
-  expect(item, findsOneWidget, reason: 'Item not found after $maxScrolls scrolls');
+  expect(
+    item,
+    findsOneWidget,
+    reason: 'Item not found after $maxScrolls scrolls',
+  );
 }
 
 /// Tap a widget and wait for the tap to complete.

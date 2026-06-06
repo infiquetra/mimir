@@ -18,9 +18,9 @@ class AssetSyncService {
     required EsiClient esiClient,
     required AssetRepository repository,
     required CharacterStatusRepository statusRepo,
-  })  : _esiClient = esiClient,
-        _repository = repository,
-        _statusRepo = statusRepo;
+  }) : _esiClient = esiClient,
+       _repository = repository,
+       _statusRepo = statusRepo;
 
   /// Performs a full asset synchronization for the character.
   Future<void> syncAssets(int characterId) async {
@@ -32,15 +32,24 @@ class AssetSyncService {
 
       // 1. Fetch all assets (paginated)
       do {
-        final response = await _esiClient.getCharacterAssets(characterId, page: page);
+        final response = await _esiClient.getCharacterAssets(
+          characterId,
+          page: page,
+        );
         allEsiAssets.addAll(response.data);
-        
+
         totalPages ??= int.tryParse(response.headers['x-pages']?.first ?? '1');
-        Log.d('ASSETS.SYNC', 'Fetched page $page of $totalPages (${allEsiAssets.length} total)');
+        Log.d(
+          'ASSETS.SYNC',
+          'Fetched page $page of $totalPages (${allEsiAssets.length} total)',
+        );
         page++;
       } while (totalPages != null && page <= totalPages);
 
-      Log.i('ASSETS.SYNC', 'Total assets fetched from ESI: ${allEsiAssets.length}');
+      Log.i(
+        'ASSETS.SYNC',
+        'Total assets fetched from ESI: ${allEsiAssets.length}',
+      );
 
       // 2. Identify locations that need resolution
       final locationIds = allEsiAssets.map((a) => a.locationId).toSet();
@@ -51,7 +60,10 @@ class AssetSyncService {
           .where((a) => a.isSingleton)
           .map((a) => a.itemId)
           .toList();
-      final customNames = await _resolveCustomNames(characterId, singletonItemIds);
+      final customNames = await _resolveCustomNames(
+        characterId,
+        singletonItemIds,
+      );
 
       // 4. Resolve type names (from ESI names endpoint)
       final typeIds = allEsiAssets.map((a) => a.typeId).toSet();
@@ -69,7 +81,9 @@ class AssetSyncService {
           isSingleton: asset.isSingleton,
           typeName: typeNameMap[asset.typeId] ?? 'Unknown Type',
           customName: Value(customNames[asset.itemId]),
-          containedInId: const Value(null), // Will implement container hierarchy in Phase 2
+          containedInId: const Value(
+            null,
+          ), // Will implement container hierarchy in Phase 2
         );
       }).toList();
 
@@ -85,17 +99,25 @@ class AssetSyncService {
     final missingIds = <int>[];
     for (final id in locationIds) {
       final cached = await _repository.getLocation(id);
-      if (cached == null || cached.lastResolved.isBefore(DateTime.now().subtract(const Duration(days: 7)))) {
+      if (cached == null ||
+          cached.lastResolved.isBefore(
+            DateTime.now().subtract(const Duration(days: 7)),
+          )) {
         missingIds.add(id);
       }
     }
 
     if (missingIds.isEmpty) return;
 
-    Log.d('ASSETS.SYNC', 'Resolving ${missingIds.length} missing/stale locations');
+    Log.d(
+      'ASSETS.SYNC',
+      'Resolving ${missingIds.length} missing/stale locations',
+    );
 
     // Split into stations (NPC) and structures (Player)
-    final stationIds = missingIds.where((id) => id >= 60000000 && id < 64000000).toList();
+    final stationIds = missingIds
+        .where((id) => id >= 60000000 && id < 64000000)
+        .toList();
     final structureIds = missingIds.where((id) => id >= 1000000000000).toList();
 
     final locationCompanions = <AssetLocationsCompanion>[];
@@ -104,25 +126,32 @@ class AssetSyncService {
     if (stationIds.isNotEmpty) {
       final names = await _statusRepo.resolveNames(stationIds);
       for (final n in names) {
-        locationCompanions.add(AssetLocationsCompanion.insert(
-          locationId: Value(n.id),
-          locationType: 'station',
-          locationName: n.name,
-          lastResolved: DateTime.now(),
-        ));
+        locationCompanions.add(
+          AssetLocationsCompanion.insert(
+            locationId: Value(n.id),
+            locationType: 'station',
+            locationName: n.name,
+            lastResolved: DateTime.now(),
+          ),
+        );
       }
     }
 
     // Resolve structures via ESI structure endpoint (requires character auth)
     if (structureIds.isNotEmpty) {
-      final structureNames = await _statusRepo.resolveStructureNames(structureIds, characterId);
+      final structureNames = await _statusRepo.resolveStructureNames(
+        structureIds,
+        characterId,
+      );
       for (final entry in structureNames.entries) {
-        locationCompanions.add(AssetLocationsCompanion.insert(
-          locationId: Value(entry.key),
-          locationType: 'structure',
-          locationName: entry.value,
-          lastResolved: DateTime.now(),
-        ));
+        locationCompanions.add(
+          AssetLocationsCompanion.insert(
+            locationId: Value(entry.key),
+            locationType: 'structure',
+            locationName: entry.value,
+            lastResolved: DateTime.now(),
+          ),
+        );
       }
     }
 
@@ -131,7 +160,10 @@ class AssetSyncService {
     }
   }
 
-  Future<Map<int, String>> _resolveCustomNames(int characterId, List<int> itemIds) async {
+  Future<Map<int, String>> _resolveCustomNames(
+    int characterId,
+    List<int> itemIds,
+  ) async {
     final result = <int, String>{};
     if (itemIds.isEmpty) return result;
 
@@ -140,7 +172,10 @@ class AssetSyncService {
       final end = (i + 1000 < itemIds.length) ? i + 1000 : itemIds.length;
       final batch = itemIds.sublist(i, end);
       try {
-        final names = await _esiClient.getCharacterAssetNames(characterId, batch);
+        final names = await _esiClient.getCharacterAssetNames(
+          characterId,
+          batch,
+        );
         for (final n in names) {
           result[n.itemId] = n.name;
         }
@@ -153,7 +188,7 @@ class AssetSyncService {
 
   Future<Map<int, String>> _resolveTypeNames(List<int> typeIds) async {
     final result = <int, String>{};
-    
+
     Log.d('ASSETS.SYNC', 'Resolving ${typeIds.length} type names from ESI');
     final names = await _statusRepo.resolveNames(typeIds);
     for (final n in names) {

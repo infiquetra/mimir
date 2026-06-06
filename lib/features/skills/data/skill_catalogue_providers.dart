@@ -25,7 +25,8 @@ class SkillWithLevel {
   final SdeType skill;
   final int trainedLevel; // 0-5
   final bool isTraining;
-  final bool isInjected; // Whether the skill has been purchased/injected (ESI returned it)
+  final bool
+  isInjected; // Whether the skill has been purchased/injected (ESI returned it)
 }
 
 /// A skill group with progress information.
@@ -66,9 +67,14 @@ final skillGroupsProvider = FutureProvider<List<SdeGroup>>((ref) async {
 ///
 /// Returns skills sorted alphabetically, with trained level (0-5)
 /// for the active character.
-final skillsByGroupProvider =
-    FutureProvider.family<List<SkillWithLevel>, int>((ref, groupId) async {
-  Log.d('SKILLS.CATALOGUE', 'skillsByGroup - fetching skills for group $groupId');
+final skillsByGroupProvider = FutureProvider.family<List<SkillWithLevel>, int>((
+  ref,
+  groupId,
+) async {
+  Log.d(
+    'SKILLS.CATALOGUE',
+    'skillsByGroup - fetching skills for group $groupId',
+  );
   final sde = ref.watch(sdeServiceProvider);
   final repository = ref.watch(skillRepositoryProvider);
   final activeCharacter = ref.watch(activeCharacterProvider).value;
@@ -77,17 +83,22 @@ final skillsByGroupProvider =
 
   // Get all skills in the group from SDE
   final skills = await sde.getSkillsByGroup(groupId);
-  Log.d('SKILLS.CATALOGUE', 'skillsByGroup - found ${skills.length} skills in group $groupId');
+  Log.d(
+    'SKILLS.CATALOGUE',
+    'skillsByGroup - found ${skills.length} skills in group $groupId',
+  );
 
   if (activeCharacter == null) {
     // No character selected - all skills at level 0, not training, not injected
     return skills
-        .map((skill) => SkillWithLevel(
-              skill: skill,
-              trainedLevel: 0,
-              isTraining: false,
-              isInjected: false,
-            ))
+        .map(
+          (skill) => SkillWithLevel(
+            skill: skill,
+            trainedLevel: 0,
+            isTraining: false,
+            isInjected: false,
+          ),
+        )
         .toList();
   }
 
@@ -109,15 +120,20 @@ final skillsByGroupProvider =
     final isTraining = trainingSkillIds.contains(skill.typeId);
     final isInjected = characterSkill != null;
 
-    result.add(SkillWithLevel(
-      skill: skill,
-      trainedLevel: trainedLevel,
-      isTraining: isTraining,
-      isInjected: isInjected,
-    ));
+    result.add(
+      SkillWithLevel(
+        skill: skill,
+        trainedLevel: trainedLevel,
+        isTraining: isTraining,
+        isInjected: isInjected,
+      ),
+    );
   }
 
-  Log.i('SKILLS.CATALOGUE', 'skillsByGroup - prepared ${result.length} skills with trained levels');
+  Log.i(
+    'SKILLS.CATALOGUE',
+    'skillsByGroup - prepared ${result.length} skills with trained levels',
+  );
   return result;
 });
 
@@ -128,42 +144,68 @@ final skillsByGroupProvider =
 /// Provider that fetches all skill groups with progress information.
 ///
 /// Shows how many skills are trained (level > 0) vs total in each group.
-final skillGroupsWithProgressProvider =
-    FutureProvider<List<SkillGroupWithProgress>>((ref) async {
-  Log.d('SKILLS.CATALOGUE', 'skillGroupsWithProgress - calculating progress for all groups');
+final skillGroupsWithProgressProvider = FutureProvider<List<SkillGroupWithProgress>>((
+  ref,
+) async {
+  Log.d(
+    'SKILLS.CATALOGUE',
+    'skillGroupsWithProgress - calculating progress for all groups',
+  );
   final groups = await ref.watch(skillGroupsProvider.future);
+  Log.d('SKILLS.CATALOGUE', 'skillGroupsWithProgress - got groups');
   final activeCharacter = ref.watch(activeCharacterProvider).value;
+  Log.d(
+    'SKILLS.CATALOGUE',
+    'skillGroupsWithProgress - got active character: ${activeCharacter?.name}',
+  );
   final sde = ref.watch(sdeServiceProvider);
   await sde.initialize();
+  Log.d('SKILLS.CATALOGUE', 'skillGroupsWithProgress - initialized sde');
 
   if (activeCharacter == null) {
     // No character - all groups show 0/N
     final result = <SkillGroupWithProgress>[];
+    Log.d(
+      'SKILLS.CATALOGUE',
+      'skillGroupsWithProgress - calculating 0/N for ${groups.length} groups',
+    );
+    int count = 0;
     for (final group in groups) {
+      count++;
+      if (count % 10 == 0)
+        Log.d('SKILLS.CATALOGUE', 'Processed $count groups...');
       final groupSkills = await sde.getSkillsByGroup(group.groupId);
-      result.add(SkillGroupWithProgress(
-        group: group,
-        trainedCount: 0,
-        totalCount: groupSkills.length,
-      ));
+      result.add(
+        SkillGroupWithProgress(
+          group: group,
+          trainedCount: 0,
+          totalCount: groupSkills.length,
+        ),
+      );
     }
+    Log.d(
+      'SKILLS.CATALOGUE',
+      'skillGroupsWithProgress - finished calculating 0/N',
+    );
     return result;
   }
 
   // Calculate trained count per group
   final characterId = activeCharacter.characterId;
   final repository = ref.watch(skillRepositoryProvider);
-  
+
   // Fetch trained skills
   final allCharacterSkills = await repository.getCharacterSkills(characterId);
   final trainedSkillIds = allCharacterSkills
       .where((s) => s.trainedSkillLevel > 0)
       .map((s) => s.skillId)
       .toList();
-  
+
   // Get group mapping for trained skills
+  Log.d('SKILLS.CATALOGUE', 'getGroupIdsForTypes...');
   final typeToGroup = await sde.database.getGroupIdsForTypes(trainedSkillIds);
-  
+  Log.d('SKILLS.CATALOGUE', 'getGroupIdsForTypes done');
+
   // Count how many trained skills are in each group
   final groupTrainedCounts = <int, int>{};
   for (final skillId in trainedSkillIds) {
@@ -174,18 +216,25 @@ final skillGroupsWithProgressProvider =
   }
 
   // Get total skills per group
+  Log.d('SKILLS.CATALOGUE', 'getSkillCountsByGroup...');
   final groupTotalCounts = await sde.database.getSkillCountsByGroup();
+  Log.d('SKILLS.CATALOGUE', 'getSkillCountsByGroup done');
 
   final result = <SkillGroupWithProgress>[];
   for (final group in groups) {
-    result.add(SkillGroupWithProgress(
-      group: group,
-      trainedCount: groupTrainedCounts[group.groupId] ?? 0,
-      totalCount: groupTotalCounts[group.groupId] ?? 0,
-    ));
+    result.add(
+      SkillGroupWithProgress(
+        group: group,
+        trainedCount: groupTrainedCounts[group.groupId] ?? 0,
+        totalCount: groupTotalCounts[group.groupId] ?? 0,
+      ),
+    );
   }
 
-  Log.i('SKILLS.CATALOGUE', 'skillGroupsWithProgress - calculated progress for ${result.length} groups');
+  Log.i(
+    'SKILLS.CATALOGUE',
+    'skillGroupsWithProgress - calculated progress for ${result.length} groups',
+  );
   return result;
 });
 
@@ -199,62 +248,81 @@ final skillGroupsWithProgressProvider =
 /// Returns empty list if query is empty or less than 2 characters.
 final searchSkillsProvider =
     FutureProvider.family<List<SkillWithLevel>, String>((ref, query) async {
-  if (query.isEmpty || query.length < 2) {
-    Log.d('SKILLS.CATALOGUE', 'searchSkills - query too short, returning empty');
-    return [];
-  }
+      if (query.isEmpty || query.length < 2) {
+        Log.d(
+          'SKILLS.CATALOGUE',
+          'searchSkills - query too short, returning empty',
+        );
+        return [];
+      }
 
-  Log.d('SKILLS.CATALOGUE', 'searchSkills - searching for "$query"');
-  final sde = ref.watch(sdeServiceProvider);
-  final repository = ref.watch(skillRepositoryProvider);
-  final activeCharacter = ref.watch(activeCharacterProvider).value;
+      Log.d('SKILLS.CATALOGUE', 'searchSkills - searching for "$query"');
+      final sde = ref.watch(sdeServiceProvider);
+      final repository = ref.watch(skillRepositoryProvider);
+      final activeCharacter = ref.watch(activeCharacterProvider).value;
 
-  await sde.initialize();
+      await sde.initialize();
 
-  // Get all skills from SDE
-  final allSkills = await sde.database.getAllSkills();
-  final lowerQuery = query.toLowerCase();
+      // Get all skills from SDE
+      final allSkills = await sde.database.getAllSkills();
+      final lowerQuery = query.toLowerCase();
 
-  // Filter by name (case-insensitive)
-  final matchingSkills = allSkills
-      .where((skill) => skill.typeName.toLowerCase().contains(lowerQuery))
-      .toList();
+      // Filter by name (case-insensitive)
+      final matchingSkills = allSkills
+          .where((skill) => skill.typeName.toLowerCase().contains(lowerQuery))
+          .toList();
 
-  Log.d('SKILLS.CATALOGUE', 'searchSkills - found ${matchingSkills.length} matches for "$query"');
+      Log.d(
+        'SKILLS.CATALOGUE',
+        'searchSkills - found ${matchingSkills.length} matches for "$query"',
+      );
 
-  if (activeCharacter == null) {
-    return matchingSkills
-        .map((skill) => SkillWithLevel(
-              skill: skill,
-              trainedLevel: 0,
-              isTraining: false,
-              isInjected: false,
-            ))
-        .toList();
-  }
+      if (activeCharacter == null) {
+        return matchingSkills
+            .map(
+              (skill) => SkillWithLevel(
+                skill: skill,
+                trainedLevel: 0,
+                isTraining: false,
+                isInjected: false,
+              ),
+            )
+            .toList();
+      }
 
-  // Get trained levels
-  final characterId = activeCharacter.characterId;
-  final queue = await repository.getSkillQueue(characterId);
-  final trainingSkillIds = queue.map((e) => e.skillId).toSet();
+      // Get trained levels
+      final characterId = activeCharacter.characterId;
+      final queue = await repository.getSkillQueue(characterId);
+      final trainingSkillIds = queue.map((e) => e.skillId).toSet();
 
-  final result = <SkillWithLevel>[];
-  for (final skill in matchingSkills) {
-    final trainedLevel = await repository.getTrainedLevel(characterId, skill.typeId);
-    final isTraining = trainingSkillIds.contains(skill.typeId);
-    final isInjected = await repository.isSkillInjected(characterId, skill.typeId);
+      final result = <SkillWithLevel>[];
+      for (final skill in matchingSkills) {
+        final trainedLevel = await repository.getTrainedLevel(
+          characterId,
+          skill.typeId,
+        );
+        final isTraining = trainingSkillIds.contains(skill.typeId);
+        final isInjected = await repository.isSkillInjected(
+          characterId,
+          skill.typeId,
+        );
 
-    result.add(SkillWithLevel(
-      skill: skill,
-      trainedLevel: trainedLevel,
-      isTraining: isTraining,
-      isInjected: isInjected,
-    ));
-  }
+        result.add(
+          SkillWithLevel(
+            skill: skill,
+            trainedLevel: trainedLevel,
+            isTraining: isTraining,
+            isInjected: isInjected,
+          ),
+        );
+      }
 
-  Log.i('SKILLS.CATALOGUE', 'searchSkills - prepared ${result.length} skills with levels');
-  return result;
-});
+      Log.i(
+        'SKILLS.CATALOGUE',
+        'searchSkills - prepared ${result.length} skills with levels',
+      );
+      return result;
+    });
 
 // =============================================================================
 // Filter and Selection Providers
@@ -286,20 +354,31 @@ final skillSearchQueryProvider = StateProvider<String>((ref) => '');
 /// Fetches the representative skill typeId for a group (used for icons).
 ///
 /// Returns the first skill in the group alphabetically, or null if group is empty.
-final groupRepresentativeSkillProvider =
-    FutureProvider.family<int?, int>((ref, groupId) async {
-  Log.d('SKILLS.CATALOGUE', 'groupRepresentativeSkill - fetching for group $groupId');
+final groupRepresentativeSkillProvider = FutureProvider.family<int?, int>((
+  ref,
+  groupId,
+) async {
+  Log.d(
+    'SKILLS.CATALOGUE',
+    'groupRepresentativeSkill - fetching for group $groupId',
+  );
   final sde = ref.watch(sdeServiceProvider);
   await sde.initialize();
 
   final skills = await sde.getSkillsByGroup(groupId);
   if (skills.isEmpty) {
-    Log.w('SKILLS.CATALOGUE', 'groupRepresentativeSkill - group $groupId has no skills');
+    Log.w(
+      'SKILLS.CATALOGUE',
+      'groupRepresentativeSkill - group $groupId has no skills',
+    );
     return null;
   }
 
   final representativeId = skills.first.typeId;
-  Log.d('SKILLS.CATALOGUE', 'groupRepresentativeSkill - using typeId $representativeId for group $groupId');
+  Log.d(
+    'SKILLS.CATALOGUE',
+    'groupRepresentativeSkill - using typeId $representativeId for group $groupId',
+  );
   return representativeId;
 });
 
@@ -310,74 +389,86 @@ final groupRepresentativeSkillProvider =
 /// Provides skills filtered by the current filter mode.
 final filteredSkillsByGroupProvider =
     FutureProvider.family<List<SkillWithLevel>, int>((ref, groupId) async {
-  final allSkills = await ref.watch(skillsByGroupProvider(groupId).future);
-  final filterMode = ref.watch(skillFilterModeProvider);
-  final activeCharacter = ref.watch(activeCharacterProvider).value;
+      final allSkills = await ref.watch(skillsByGroupProvider(groupId).future);
+      final filterMode = ref.watch(skillFilterModeProvider);
+      final activeCharacter = ref.watch(activeCharacterProvider).value;
 
-  Log.d('SKILLS.CATALOGUE', 'filteredSkillsByGroup - filtering ${allSkills.length} skills with mode $filterMode');
+      Log.d(
+        'SKILLS.CATALOGUE',
+        'filteredSkillsByGroup - filtering ${allSkills.length} skills with mode $filterMode',
+      );
 
-  switch (filterMode) {
-    case SkillFilterMode.all:
-      return allSkills;
+      switch (filterMode) {
+        case SkillFilterMode.all:
+          return allSkills;
 
-    case SkillFilterMode.mySkills:
-      final filtered = allSkills.where((s) => s.trainedLevel > 0).toList();
-      Log.d('SKILLS.CATALOGUE', 'filteredSkillsByGroup - mySkills: ${filtered.length} trained');
-      return filtered;
+        case SkillFilterMode.mySkills:
+          final filtered = allSkills.where((s) => s.trainedLevel > 0).toList();
+          Log.d(
+            'SKILLS.CATALOGUE',
+            'filteredSkillsByGroup - mySkills: ${filtered.length} trained',
+          );
+          return filtered;
 
-    case SkillFilterMode.canTrain:
-      if (activeCharacter == null) return [];
+        case SkillFilterMode.canTrain:
+          if (activeCharacter == null) return [];
 
-      final prereqService = ref.read(skillPrerequisiteServiceProvider);
-      final characterId = activeCharacter.characterId;
-      final result = <SkillWithLevel>[];
+          final prereqService = ref.read(skillPrerequisiteServiceProvider);
+          final characterId = activeCharacter.characterId;
+          final result = <SkillWithLevel>[];
 
-      for (final skill in allSkills) {
-        // Can train if: not at max level AND prereqs met
-        if (skill.trainedLevel >= 5) continue; // Already at max
+          for (final skill in allSkills) {
+            // Can train if: not at max level AND prereqs met
+            if (skill.trainedLevel >= 5) continue; // Already at max
 
-        final canTrain = await prereqService.canTrainSkill(
-          characterId: characterId,
-          skillId: skill.skill.typeId,
-          targetLevel: skill.trainedLevel + 1,
-        );
+            final canTrain = await prereqService.canTrainSkill(
+              characterId: characterId,
+              skillId: skill.skill.typeId,
+              targetLevel: skill.trainedLevel + 1,
+            );
 
-        if (canTrain) {
-          result.add(skill);
-        }
+            if (canTrain) {
+              result.add(skill);
+            }
+          }
+
+          Log.d(
+            'SKILLS.CATALOGUE',
+            'filteredSkillsByGroup - canTrain: ${result.length} skills',
+          );
+          return result;
+
+        case SkillFilterMode.havePrereqs:
+          if (activeCharacter == null) return [];
+
+          final prereqService = ref.read(skillPrerequisiteServiceProvider);
+          final characterId = activeCharacter.characterId;
+          final result = <SkillWithLevel>[];
+
+          for (final skill in allSkills) {
+            if (skill.trainedLevel >= 5) continue; // Already trained
+
+            final canTrain = await prereqService.canTrainSkill(
+              characterId: characterId,
+              skillId: skill.skill.typeId,
+              targetLevel: skill.trainedLevel + 1,
+            );
+
+            if (canTrain) {
+              result.add(skill);
+            }
+          }
+
+          Log.d(
+            'SKILLS.CATALOGUE',
+            'filteredSkillsByGroup - havePrereqs: ${result.length} skills',
+          );
+          return result;
+
+        default:
+          return allSkills; // Fallback for any new filter modes
       }
-
-      Log.d('SKILLS.CATALOGUE', 'filteredSkillsByGroup - canTrain: ${result.length} skills');
-      return result;
-
-    case SkillFilterMode.havePrereqs:
-      if (activeCharacter == null) return [];
-
-      final prereqService = ref.read(skillPrerequisiteServiceProvider);
-      final characterId = activeCharacter.characterId;
-      final result = <SkillWithLevel>[];
-
-      for (final skill in allSkills) {
-        if (skill.trainedLevel >= 5) continue; // Already trained
-
-        final canTrain = await prereqService.canTrainSkill(
-          characterId: characterId,
-          skillId: skill.skill.typeId,
-          targetLevel: skill.trainedLevel + 1,
-        );
-
-        if (canTrain) {
-          result.add(skill);
-        }
-      }
-
-      Log.d('SKILLS.CATALOGUE', 'filteredSkillsByGroup - havePrereqs: ${result.length} skills');
-      return result;
-
-    default:
-      return allSkills; // Fallback for any new filter modes
-  }
-});
+    });
 
 // =============================================================================
 // Search Matching Groups Provider
@@ -436,7 +527,8 @@ final queueStatsProvider = Provider<QueueStats>((ref) {
       for (final entry in queue) {
         // Find the latest finish date
         if (entry.finishDate != null &&
-            (lastFinishDate == null || entry.finishDate!.isAfter(lastFinishDate))) {
+            (lastFinishDate == null ||
+                entry.finishDate!.isAfter(lastFinishDate))) {
           lastFinishDate = entry.finishDate;
         }
 
@@ -451,7 +543,10 @@ final queueStatsProvider = Provider<QueueStats>((ref) {
           ? lastFinishDate.difference(now)
           : Duration.zero;
 
-      Log.d('SKILLS.CATALOGUE', 'queueStats - time: ${totalTime.inHours}h (until ${lastFinishDate?.toIso8601String()}), SP: $totalSp, size: ${queue.length}');
+      Log.d(
+        'SKILLS.CATALOGUE',
+        'queueStats - time: ${totalTime.inHours}h (until ${lastFinishDate?.toIso8601String()}), SP: $totalSp, size: ${queue.length}',
+      );
 
       return QueueStats(
         totalTrainingTime: totalTime,

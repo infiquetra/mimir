@@ -9,6 +9,7 @@ import 'package:window_manager/window_manager.dart';
 import 'app.dart';
 import 'core/database/app_database.dart';
 import 'core/logging/logger.dart';
+import 'core/platform/app_paths.dart';
 import 'core/tray/tray_service.dart';
 import 'core/window/sub_window_app.dart';
 
@@ -32,7 +33,8 @@ void main(List<String> args) async {
   if (args.firstOrNull == 'multi_window') {
     // This is a sub-window - parse the window ID and arguments
     // Note: desktop_multi_window 0.3.0 uses UUID strings, not integers
-    final windowId = args[1]; // String UUID (e.g., '7906EAC4-B83A-43C7-B965-FFB3185ECF2F')
+    final windowId =
+        args[1]; // String UUID (e.g., '7906EAC4-B83A-43C7-B965-FFB3185ECF2F')
     final windowArgs = args[2];
 
     Log.d('WINDOW', 'SubWindow[$windowId]: Starting with args=$windowArgs');
@@ -44,11 +46,21 @@ void main(List<String> args) async {
     try {
       final decoded = jsonDecode(windowArgs) as Map<String, dynamic>;
       final dbPath = decoded['dbPath'] as String?;
+      final supportPath = decoded['supportPath'] as String?;
       if (dbPath != null) {
         setDatabasePath(dbPath);
         Log.i('WINDOW', 'SubWindow[$windowId]: Database path set to $dbPath');
       } else {
         Log.e('WINDOW', 'SubWindow[$windowId]: ERROR - No dbPath in args!');
+      }
+      if (supportPath != null) {
+        setMimirApplicationSupportPath(supportPath);
+        Log.i('WINDOW', 'SubWindow[$windowId]: Support path set');
+      } else {
+        Log.e(
+          'WINDOW',
+          'SubWindow[$windowId]: ERROR - No supportPath in args!',
+        );
       }
     } catch (e) {
       Log.e('WINDOW', 'SubWindow[$windowId]: ERROR parsing args: $e');
@@ -57,22 +69,14 @@ void main(List<String> args) async {
     // Note: Sub-windows run in separate Flutter engines created by desktop_multi_window.
     // Window resizing is handled via custom WindowResizePlugin (see SubWindowApp._resizeWindow())
 
-    runApp(
-      ProviderScope(
-        child: SubWindowApp(windowArgs: windowArgs),
-      ),
-    );
+    runApp(ProviderScope(child: SubWindowApp(windowArgs: windowArgs)));
     return;
   }
 
   // Main window initialization
   await _initializeMainWindow();
 
-  runApp(
-    const ProviderScope(
-      child: MimirApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: MimirApp()));
 }
 
 /// Initializes the main window as a headless tray app.

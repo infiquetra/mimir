@@ -123,8 +123,9 @@ class OAuthService {
       'code_challenge_method': 'S256',
     };
 
-    final authorizationUrl = Uri.parse(EveConfig.oauthAuthorizeUrl)
-        .replace(queryParameters: queryParams);
+    final authorizationUrl = Uri.parse(
+      EveConfig.oauthAuthorizeUrl,
+    ).replace(queryParameters: queryParams);
 
     return AuthorizationRequest(
       authorizationUrl: authorizationUrl,
@@ -178,9 +179,7 @@ class OAuthService {
         },
         options: Options(
           contentType: Headers.formUrlEncodedContentType,
-          headers: {
-            'Host': 'login.eveonline.com',
-          },
+          headers: {'Host': 'login.eveonline.com'},
         ),
       );
 
@@ -208,9 +207,7 @@ class OAuthService {
         },
         options: Options(
           contentType: Headers.formUrlEncodedContentType,
-          headers: {
-            'Host': 'login.eveonline.com',
-          },
+          headers: {'Host': 'login.eveonline.com'},
         ),
       );
 
@@ -234,9 +231,7 @@ class OAuthService {
         },
         options: Options(
           contentType: Headers.formUrlEncodedContentType,
-          headers: {
-            'Host': 'login.eveonline.com',
-          },
+          headers: {'Host': 'login.eveonline.com'},
         ),
       );
     } on DioException catch (e) {
@@ -307,7 +302,10 @@ class OAuthService {
   /// The verifier is 64 characters from the unreserved character set.
   String _generateCodeVerifier() {
     final random = Random.secure();
-    final bytes = List.generate(64, (_) => random.nextInt(_unreservedChars.length));
+    final bytes = List.generate(
+      64,
+      (_) => random.nextInt(_unreservedChars.length),
+    );
     return bytes.map((i) => _unreservedChars[i]).join();
   }
 

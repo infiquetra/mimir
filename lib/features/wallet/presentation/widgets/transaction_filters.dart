@@ -38,10 +38,8 @@ class TransactionFilters extends StatelessWidget {
           items: [
             const DropdownMenuItem(value: 'all', child: Text('All Types')),
             ..._transactionTypes.map(
-              (type) => DropdownMenuItem(
-                value: type.value,
-                child: Text(type.label),
-              ),
+              (type) =>
+                  DropdownMenuItem(value: type.value, child: Text(type.label)),
             ),
           ],
           onChanged: (value) {
@@ -82,10 +80,7 @@ class TransactionFilters extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black.withAlpha(77),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Colors.white.withAlpha(26),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withAlpha(26), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

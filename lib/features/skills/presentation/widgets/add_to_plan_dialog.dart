@@ -47,7 +47,10 @@ class _AddToPlanDialogState extends ConsumerState<AddToPlanDialog> {
 
   Future<void> _addToPlan() async {
     if (_selectedPlanId == null) {
-      Log.w('SKILLS.CATALOGUE', 'AddToPlanDialog._addToPlan - no plan selected');
+      Log.w(
+        'SKILLS.CATALOGUE',
+        'AddToPlanDialog._addToPlan - no plan selected',
+      );
       return;
     }
 
@@ -74,7 +77,12 @@ class _AddToPlanDialogState extends ConsumerState<AddToPlanDialog> {
         Navigator.of(context).pop(true); // Return true to indicate success
       }
     } catch (e, stack) {
-      Log.e('SKILLS.CATALOGUE', 'AddToPlanDialog._addToPlan - FAILED', e, stack);
+      Log.e(
+        'SKILLS.CATALOGUE',
+        'AddToPlanDialog._addToPlan - FAILED',
+        e,
+        stack,
+      );
 
       if (mounted) {
         setState(() {
@@ -100,9 +108,7 @@ class _AddToPlanDialogState extends ConsumerState<AddToPlanDialog> {
 
     return Dialog(
       backgroundColor: EveColors.surfaceElevated,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         width: 500,
         padding: const EdgeInsets.all(24),
@@ -148,10 +154,7 @@ class _AddToPlanDialogState extends ConsumerState<AddToPlanDialog> {
   Widget _buildSkillDisplay() {
     return Row(
       children: [
-        EveSkillIcon(
-          typeId: widget.skill.typeId,
-          size: 48,
-        ),
+        EveSkillIcon(typeId: widget.skill.typeId, size: 48),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
@@ -213,8 +216,8 @@ class _AddToPlanDialogState extends ConsumerState<AddToPlanDialog> {
                   color: isDisabled
                       ? EveColors.textDisabled
                       : isSelected
-                          ? Colors.white
-                          : EveColors.textPrimary,
+                      ? Colors.white
+                      : EveColors.textPrimary,
                 ),
               ),
             );
@@ -264,7 +267,10 @@ class _AddToPlanDialogState extends ConsumerState<AddToPlanDialog> {
               setState(() {
                 _selectedPlanId = value;
               });
-              Log.d('SKILLS.CATALOGUE', 'AddToPlanDialog - plan selected: $value');
+              Log.d(
+                'SKILLS.CATALOGUE',
+                'AddToPlanDialog - plan selected: $value',
+              );
             },
           ),
         ),
@@ -282,11 +288,7 @@ class _AddToPlanDialogState extends ConsumerState<AddToPlanDialog> {
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.info_outline,
-            color: EveColors.textSecondary,
-            size: 20,
-          ),
+          Icon(Icons.info_outline, color: EveColors.textSecondary, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -309,11 +311,7 @@ class _AddToPlanDialogState extends ConsumerState<AddToPlanDialog> {
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.error_outline,
-            color: EveColors.error,
-            size: 20,
-          ),
+          Icon(Icons.error_outline, color: EveColors.error, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(

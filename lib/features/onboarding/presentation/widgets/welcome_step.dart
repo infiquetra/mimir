@@ -27,100 +27,100 @@ class WelcomeStep extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-              // App icon
-              Image.asset(
-                'assets/icons/eve/app_icon.png',
-                width: 120,
-                height: 120,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(height: 32),
-
-              // Welcome title
-              Text(
-                'Welcome to Mimir',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+                // App icon
+                Image.asset(
+                  'assets/icons/eve/app_icon.png',
+                  width: 120,
+                  height: 120,
+                  color: theme.colorScheme.primary,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 32),
 
-              // Description
-              Text(
-                'Your EVE Online companion for tracking characters, '
-                'skills, and wallet information.',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                // Welcome title
+                Text(
+                  'Welcome to Mimir',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 48),
+                const SizedBox(height: 16),
 
-              // Character status
-              charactersAsync.when(
-                data: (characters) {
-                  if (characters.isEmpty) {
-                    return Column(
-                      children: [
-                        Text(
-                          'Add your first character to get started',
-                          style: theme.textTheme.titleMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 24),
-                        FilledButton.icon(
-                          onPressed: () => _addCharacter(context, ref),
-                          icon: const Icon(Icons.person_add),
-                          label: const Text('Add Character'),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'You can also skip and add characters later',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                // Description
+                Text(
+                  'Your EVE Online companion for tracking characters, '
+                  'skills, and wallet information.',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 48),
+
+                // Character status
+                charactersAsync.when(
+                  data: (characters) {
+                    if (characters.isEmpty) {
+                      return Column(
+                        children: [
+                          Text(
+                            'Add your first character to get started',
+                            style: theme.textTheme.titleMedium,
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    );
-                  } else {
-                    // Characters already added
-                    return Column(
-                      children: [
-                        Icon(
-                          Icons.check_circle,
-                          size: 64,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          '${characters.length} character(s) configured',
-                          style: theme.textTheme.titleMedium?.copyWith(
+                          const SizedBox(height: 24),
+                          FilledButton.icon(
+                            onPressed: () => _addCharacter(context, ref),
+                            icon: const Icon(Icons.person_add),
+                            label: const Text('Add Character'),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'You can also skip and add characters later',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      );
+                    } else {
+                      // Characters already added
+                      return Column(
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            size: 64,
                             color: theme.colorScheme.primary,
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'You can add more characters anytime from the Characters window',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                          const SizedBox(height: 16),
+                          Text(
+                            '${characters.length} character(s) configured',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: theme.colorScheme.primary,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    );
-                  }
-                },
-                loading: () => const CircularProgressIndicator(),
-                error: (_, __) => Text(
-                  'Error loading characters',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.error,
+                          const SizedBox(height: 8),
+                          Text(
+                            'You can add more characters anytime from the Characters window',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      );
+                    }
+                  },
+                  loading: () => const CircularProgressIndicator(),
+                  error: (_, __) => Text(
+                    'Error loading characters',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
                   ),
                 ),
-              ),
               ],
             ),
           ),

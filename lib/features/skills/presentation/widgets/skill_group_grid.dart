@@ -33,7 +33,10 @@ class SkillGroupGrid extends ConsumerWidget {
       ),
       child: groupsAsync.when(
         data: (groups) {
-          Log.d('SKILLS.UI', 'SkillGroupGrid - rendering ${groups.length} groups');
+          Log.d(
+            'SKILLS.UI',
+            'SkillGroupGrid - rendering ${groups.length} groups',
+          );
 
           if (groups.isEmpty) {
             Log.w('SKILLS.UI', 'SkillGroupGrid - no groups found');
@@ -59,7 +62,9 @@ class SkillGroupGrid extends ConsumerWidget {
                     Text(
                       'Failed to load skill groups from SDE',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                          0.7,
+                        ),
                       ),
                     ),
                   ],
@@ -72,7 +77,10 @@ class SkillGroupGrid extends ConsumerWidget {
           final rowCount = (groups.length / 3).ceil();
           final gridHeight = rowCount * 28.0;
 
-          Log.d('SKILLS.UI', 'SkillGroupGrid - $rowCount rows, ${gridHeight}px height');
+          Log.d(
+            'SKILLS.UI',
+            'SkillGroupGrid - $rowCount rows, ${gridHeight}px height',
+          );
 
           return LayoutBuilder(
             builder: (context, constraints) {
@@ -82,7 +90,10 @@ class SkillGroupGrid extends ConsumerWidget {
               final cellWidth = constraints.maxWidth / 3;
               final aspectRatio = cellWidth / 28.0;
 
-              Log.d('SKILLS.UI', 'SkillGroupGrid - cellWidth: $cellWidth, aspectRatio: $aspectRatio');
+              Log.d(
+                'SKILLS.UI',
+                'SkillGroupGrid - cellWidth: $cellWidth, aspectRatio: $aspectRatio',
+              );
 
               return SizedBox(
                 height: gridHeight,
@@ -100,7 +111,10 @@ class SkillGroupGrid extends ConsumerWidget {
                       group: group,
                       isSelected: isSelected,
                       onTap: () {
-                        Log.d('SKILLS.UI', 'SkillGroupGrid - group ${group.group.groupId} tapped');
+                        Log.d(
+                          'SKILLS.UI',
+                          'SkillGroupGrid - group ${group.group.groupId} tapped',
+                        );
                         ref.read(selectedSkillGroupProvider.notifier).state =
                             group.group.groupId;
                       },
@@ -117,9 +131,7 @@ class SkillGroupGrid extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CircularProgressIndicator(
-                  color: EveColors.photonBlue,
-                ),
+                CircularProgressIndicator(color: EveColors.photonBlue),
                 const SizedBox(height: 16),
                 Text(
                   'Loading skill groups...',
@@ -132,7 +144,12 @@ class SkillGroupGrid extends ConsumerWidget {
           );
         },
         error: (error, stack) {
-          Log.e('SKILLS.UI', 'SkillGroupGrid - error loading groups', error, stack);
+          Log.e(
+            'SKILLS.UI',
+            'SkillGroupGrid - error loading groups',
+            error,
+            stack,
+          );
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

@@ -21,7 +21,10 @@ class BalanceCardsRow extends ConsumerWidget {
       data: (balance) => plexAsync.when(
         data: (plex) => lpAsync.when(
           data: (lps) {
-            final totalLP = lps.fold<double>(0.0, (sum, corp) => sum + corp.loyaltyPoints);
+            final totalLP = lps.fold<double>(
+              0.0,
+              (sum, corp) => sum + corp.loyaltyPoints,
+            );
             return BalanceChipRow(
               balances: {
                 'ISK': balance ?? 0.0,

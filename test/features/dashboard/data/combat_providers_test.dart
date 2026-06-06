@@ -219,155 +219,188 @@ void main() {
       await database.close();
     });
 
-    test('should fetch from zkillboard when no cache exists', () async {
-      // Arrange
-      const characterId = 12345;
-      final character = CharactersCompanion.insert(
-        characterId: const Value(characterId),
-        name: 'Test Character',
-        corporationId: 98765,
-        corporationName: 'Test Corp',
-        portraitUrl: 'https://example.com/portrait.jpg',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      );
-      await database.upsertCharacter(character);
+    test(
+      'should fetch from zkillboard when no cache exists',
+      () async {
+        // Arrange
+        const characterId = 12345;
+        final character = CharactersCompanion.insert(
+          characterId: const Value(characterId),
+          name: 'Test Character',
+          corporationId: 98765,
+          corporationName: 'Test Corp',
+          portraitUrl: 'https://example.com/portrait.jpg',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        );
+        await database.upsertCharacter(character);
 
-      final zkbStats = const ZkillboardStats(
-        kills: 100,
-        deaths: 50,
-        iskDestroyed: 10000000000.0,
-        iskLost: 5000000000.0,
-      );
+        final zkbStats = const ZkillboardStats(
+          kills: 100,
+          deaths: 50,
+          iskDestroyed: 10000000000.0,
+          iskLost: 5000000000.0,
+        );
 
-      when(() => mockZkillboardClient.getCharacterStats(characterId))
-          .thenAnswer((_) async => zkbStats);
+        when(
+          () => mockZkillboardClient.getCharacterStats(characterId),
+        ).thenAnswer((_) async => zkbStats);
 
-      // Act
-      final result = await container.read(combatStatsProvider(characterId).future);
+        // Act
+        final result = await container.read(
+          combatStatsProvider(characterId).future,
+        );
 
-      // Assert
-      expect(result, isNotNull);
-      expect(result!.characterId, characterId);
-      expect(result.characterName, 'Test Character');
-      expect(result.kills, 100);
-      expect(result.deaths, 50);
-      expect(result.iskDestroyed, 10000000000.0);
-      expect(result.iskLost, 5000000000.0);
+        // Assert
+        expect(result, isNotNull);
+        expect(result!.characterId, characterId);
+        expect(result.characterName, 'Test Character');
+        expect(result.kills, 100);
+        expect(result.deaths, 50);
+        expect(result.iskDestroyed, 10000000000.0);
+        expect(result.iskLost, 5000000000.0);
 
-      verify(() => mockZkillboardClient.getCharacterStats(characterId)).called(1);
+        verify(
+          () => mockZkillboardClient.getCharacterStats(characterId),
+        ).called(1);
 
-      // Verify data was cached
-      final cached = await database.getCombatStats(characterId);
-      expect(cached, isNotNull);
-      expect(cached!.kills, 100);
-      expect(cached.deaths, 50);
-    }, skip: 'StreamProvider tests require widget context - moved to integration tests');
+        // Verify data was cached
+        final cached = await database.getCombatStats(characterId);
+        expect(cached, isNotNull);
+        expect(cached!.kills, 100);
+        expect(cached.deaths, 50);
+      },
+      skip:
+          'StreamProvider tests require widget context - moved to integration tests',
+    );
 
-    test('should return cached data if fresh', () async {
-      // Arrange
-      const characterId = 12345;
-      final character = CharactersCompanion.insert(
-        characterId: const Value(characterId),
-        name: 'Test Character',
-        corporationId: 98765,
-        corporationName: 'Test Corp',
-        portraitUrl: 'https://example.com/portrait.jpg',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      );
-      await database.upsertCharacter(character);
+    test(
+      'should return cached data if fresh',
+      () async {
+        // Arrange
+        const characterId = 12345;
+        final character = CharactersCompanion.insert(
+          characterId: const Value(characterId),
+          name: 'Test Character',
+          corporationId: 98765,
+          corporationName: 'Test Corp',
+          portraitUrl: 'https://example.com/portrait.jpg',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        );
+        await database.upsertCharacter(character);
 
-      // Insert fresh cache
-      await database.upsertCombatStats(
-        CombatStatsCompanion.insert(
-          characterId: Value(characterId),
-          kills: const Value(75),
-          deaths: const Value(25),
-          iskDestroyed: const Value(8000000000.0),
-          iskLost: const Value(2000000000.0),
-          lastUpdated: DateTime.now().subtract(const Duration(minutes: 30)),
-        ),
-      );
+        // Insert fresh cache
+        await database.upsertCombatStats(
+          CombatStatsCompanion.insert(
+            characterId: Value(characterId),
+            kills: const Value(75),
+            deaths: const Value(25),
+            iskDestroyed: const Value(8000000000.0),
+            iskLost: const Value(2000000000.0),
+            lastUpdated: DateTime.now().subtract(const Duration(minutes: 30)),
+          ),
+        );
 
-      // Act
-      final result = await container.read(combatStatsProvider(characterId).future);
+        // Act
+        final result = await container.read(
+          combatStatsProvider(characterId).future,
+        );
 
-      // Assert
-      expect(result, isNotNull);
-      expect(result!.kills, 75);
-      expect(result.deaths, 25);
+        // Assert
+        expect(result, isNotNull);
+        expect(result!.kills, 75);
+        expect(result.deaths, 25);
 
-      // Should not call zkillboard API
-      verifyNever(() => mockZkillboardClient.getCharacterStats(characterId));
-    }, skip: 'StreamProvider tests require widget context - moved to integration tests');
+        // Should not call zkillboard API
+        verifyNever(() => mockZkillboardClient.getCharacterStats(characterId));
+      },
+      skip:
+          'StreamProvider tests require widget context - moved to integration tests',
+    );
 
-    test('should return null when character has no killboard data', () async {
-      // Arrange
-      const characterId = 12345;
-      final character = CharactersCompanion.insert(
-        characterId: const Value(characterId),
-        name: 'Test Character',
-        corporationId: 98765,
-        corporationName: 'Test Corp',
-        portraitUrl: 'https://example.com/portrait.jpg',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      );
-      await database.upsertCharacter(character);
+    test(
+      'should return null when character has no killboard data',
+      () async {
+        // Arrange
+        const characterId = 12345;
+        final character = CharactersCompanion.insert(
+          characterId: const Value(characterId),
+          name: 'Test Character',
+          corporationId: 98765,
+          corporationName: 'Test Corp',
+          portraitUrl: 'https://example.com/portrait.jpg',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        );
+        await database.upsertCharacter(character);
 
-      when(() => mockZkillboardClient.getCharacterStats(characterId))
-          .thenAnswer((_) async => null);
+        when(
+          () => mockZkillboardClient.getCharacterStats(characterId),
+        ).thenAnswer((_) async => null);
 
-      // Act
-      final result = await container.read(combatStatsProvider(characterId).future);
+        // Act
+        final result = await container.read(
+          combatStatsProvider(characterId).future,
+        );
 
-      // Assert
-      expect(result, isNull);
+        // Assert
+        expect(result, isNull);
 
-      // Verify zero-stats entry was cached
-      final cached = await database.getCombatStats(characterId);
-      expect(cached, isNotNull);
-      expect(cached!.kills, 0);
-      expect(cached.deaths, 0);
-    }, skip: 'StreamProvider tests require widget context - moved to integration tests');
+        // Verify zero-stats entry was cached
+        final cached = await database.getCombatStats(characterId);
+        expect(cached, isNotNull);
+        expect(cached!.kills, 0);
+        expect(cached.deaths, 0);
+      },
+      skip:
+          'StreamProvider tests require widget context - moved to integration tests',
+    );
 
-    test('should return cached data on zkillboard error', () async {
-      // Arrange
-      const characterId = 12345;
-      final character = CharactersCompanion.insert(
-        characterId: const Value(characterId),
-        name: 'Test Character',
-        corporationId: 98765,
-        corporationName: 'Test Corp',
-        portraitUrl: 'https://example.com/portrait.jpg',
-        tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
-        lastUpdated: DateTime.now(),
-      );
-      await database.upsertCharacter(character);
+    test(
+      'should return cached data on zkillboard error',
+      () async {
+        // Arrange
+        const characterId = 12345;
+        final character = CharactersCompanion.insert(
+          characterId: const Value(characterId),
+          name: 'Test Character',
+          corporationId: 98765,
+          corporationName: 'Test Corp',
+          portraitUrl: 'https://example.com/portrait.jpg',
+          tokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+          lastUpdated: DateTime.now(),
+        );
+        await database.upsertCharacter(character);
 
-      // Insert stale cache
-      await database.upsertCombatStats(
-        CombatStatsCompanion.insert(
-          characterId: Value(characterId),
-          kills: const Value(75),
-          deaths: const Value(25),
-          iskDestroyed: const Value(8000000000.0),
-          iskLost: const Value(2000000000.0),
-          lastUpdated: DateTime.now().subtract(const Duration(hours: 2)),
-        ),
-      );
+        // Insert stale cache
+        await database.upsertCombatStats(
+          CombatStatsCompanion.insert(
+            characterId: Value(characterId),
+            kills: const Value(75),
+            deaths: const Value(25),
+            iskDestroyed: const Value(8000000000.0),
+            iskLost: const Value(2000000000.0),
+            lastUpdated: DateTime.now().subtract(const Duration(hours: 2)),
+          ),
+        );
 
-      when(() => mockZkillboardClient.getCharacterStats(characterId))
-          .thenThrow(const ZkillboardException('Server error', statusCode: 500));
+        when(
+          () => mockZkillboardClient.getCharacterStats(characterId),
+        ).thenThrow(const ZkillboardException('Server error', statusCode: 500));
 
-      // Act
-      final result = await container.read(combatStatsProvider(characterId).future);
+        // Act
+        final result = await container.read(
+          combatStatsProvider(characterId).future,
+        );
 
-      // Assert - should return cached data despite error
-      expect(result, isNotNull);
-      expect(result!.kills, 75);
-      expect(result.deaths, 25);
-    }, skip: 'StreamProvider tests require widget context - moved to integration tests');
+        // Assert - should return cached data despite error
+        expect(result, isNotNull);
+        expect(result!.kills, 75);
+        expect(result.deaths, 25);
+      },
+      skip:
+          'StreamProvider tests require widget context - moved to integration tests',
+    );
   });
 }

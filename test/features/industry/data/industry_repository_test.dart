@@ -88,13 +88,19 @@ void main() {
       await repository.replaceAllIndustryJobs(characterId, companions);
 
       // Watch without completed jobs
-      final activeStream = repository.watchIndustryJobs(characterId, includeCompleted: false);
+      final activeStream = repository.watchIndustryJobs(
+        characterId,
+        includeCompleted: false,
+      );
       final activeJobs = await activeStream.first;
       expect(activeJobs.length, 1);
       expect(activeJobs.first.status, 'active');
 
       // Watch with completed jobs
-      final allStream = repository.watchIndustryJobs(characterId, includeCompleted: true);
+      final allStream = repository.watchIndustryJobs(
+        characterId,
+        includeCompleted: true,
+      );
       final allJobs = await allStream.first;
       expect(allJobs.length, 2);
     });

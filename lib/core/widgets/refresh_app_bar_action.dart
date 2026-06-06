@@ -57,9 +57,7 @@ class _RefreshAppBarActionState extends State<RefreshAppBarAction> {
           ? const SizedBox(
               width: 20,
               height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-              ),
+              child: CircularProgressIndicator(strokeWidth: 2),
             )
           : const Icon(Icons.refresh),
       tooltip: widget.tooltip,

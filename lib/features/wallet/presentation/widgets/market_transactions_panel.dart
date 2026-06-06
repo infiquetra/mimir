@@ -48,10 +48,7 @@ class _MarketTransactionsPanelState
         ),
 
         // Divider
-        Divider(
-          color: Colors.white.withAlpha(26),
-          height: 1,
-        ),
+        Divider(color: Colors.white.withAlpha(26), height: 1),
 
         // Transaction List
         Expanded(
@@ -63,15 +60,18 @@ class _MarketTransactionsPanelState
                 return const EmptyState(
                   icon: Icons.shopping_cart_outlined,
                   heading: 'No Market Transactions',
-                  description: 'No market transactions match the selected filters.',
+                  description:
+                      'No market transactions match the selected filters.',
                 );
               }
 
               // Pagination
               final totalPages = (filteredTxns.length / _itemsPerPage).ceil();
               final startIndex = _currentPage * _itemsPerPage;
-              final endIndex =
-                  (startIndex + _itemsPerPage).clamp(0, filteredTxns.length);
+              final endIndex = (startIndex + _itemsPerPage).clamp(
+                0,
+                filteredTxns.length,
+              );
               final pageTxns = filteredTxns.sublist(startIndex, endIndex);
 
               return Column(
@@ -93,9 +93,7 @@ class _MarketTransactionsPanelState
                 ],
               );
             },
-            loading: () => const Center(
-              child: CircularProgressIndicator(),
-            ),
+            loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, stack) => EmptyState(
               icon: Icons.error_outline,
               heading: 'Failed to Load Transactions',
@@ -127,10 +125,7 @@ class _MarketTransactionsPanelState
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(
-            color: Colors.white.withAlpha(26),
-            width: 1,
-          ),
+          top: BorderSide(color: Colors.white.withAlpha(26), width: 1),
         ),
       ),
       child: Row(
@@ -155,24 +150,22 @@ class _MarketTransactionsPanelState
               final isCurrentPage = index == _currentPage;
 
               // Show first page, last page, current page, and ±2 around current
-              final showPage = index == 0 ||
+              final showPage =
+                  index == 0 ||
                   index == totalPages - 1 ||
                   (index >= _currentPage - 2 && index <= _currentPage + 2);
 
               // Show ellipsis between gaps
               final showEllipsis =
                   (index == _currentPage - 3 && _currentPage > 3) ||
-                      (index == _currentPage + 3 &&
-                          _currentPage < totalPages - 4);
+                  (index == _currentPage + 3 && _currentPage < totalPages - 4);
 
               if (showEllipsis) {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: Text(
                     '...',
-                    style: TextStyle(
-                      color: Colors.white.withAlpha(128),
-                    ),
+                    style: TextStyle(color: Colors.white.withAlpha(128)),
                   ),
                 );
               }
@@ -205,8 +198,9 @@ class _MarketTransactionsPanelState
                     '${index + 1}',
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight:
-                          isCurrentPage ? FontWeight.bold : FontWeight.w500,
+                      fontWeight: isCurrentPage
+                          ? FontWeight.bold
+                          : FontWeight.w500,
                       color: isCurrentPage
                           ? Colors.white
                           : Colors.white.withAlpha(179),

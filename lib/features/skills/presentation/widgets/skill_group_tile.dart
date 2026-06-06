@@ -30,14 +30,18 @@ class SkillGroupTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final trainedPercent =
-        group.totalCount > 0 ? group.trainedCount / group.totalCount : 0.0;
+    final trainedPercent = group.totalCount > 0
+        ? group.trainedCount / group.totalCount
+        : 0.0;
 
     final icon = SkillGroupIcons.getIcon(group.group.groupName);
 
     return InkWell(
       onTap: () {
-        Log.d('SKILLS.UI', 'SkillGroupTile - selected group ${group.group.groupId}');
+        Log.d(
+          'SKILLS.UI',
+          'SkillGroupTile - selected group ${group.group.groupId}',
+        );
         onTap?.call();
       },
       borderRadius: BorderRadius.circular(4),
@@ -84,11 +88,16 @@ class SkillGroupTile extends ConsumerWidget {
 
                   // Group name text (top layer)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     child: Text(
                       group.group.groupName,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
                         color: isSelected
                             ? EveColors.photonBlue
                             : theme.colorScheme.onSurface,

@@ -17,10 +17,7 @@ import '../../data/skill_providers.dart';
 ///
 /// Optimized for narrow width (280px sidebar).
 class QueueSidebarItem extends ConsumerWidget {
-  const QueueSidebarItem({
-    super.key,
-    required this.entry,
-  });
+  const QueueSidebarItem({super.key, required this.entry});
 
   final SkillQueueEntry entry;
 
@@ -37,7 +34,8 @@ class QueueSidebarItem extends ConsumerWidget {
     final totalTime = entry.finishDate != null && entry.startDate != null
         ? entry.finishDate!.difference(entry.startDate!)
         : null;
-    final progress = timeRemaining != null && totalTime != null && totalTime.inSeconds > 0
+    final progress =
+        timeRemaining != null && totalTime != null && totalTime.inSeconds > 0
         ? 1.0 - (timeRemaining.inSeconds / totalTime.inSeconds)
         : 0.0;
 
@@ -72,7 +70,9 @@ class QueueSidebarItem extends ConsumerWidget {
                     child: Text(
                       '$skillName $levelRoman',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: isCurrentlyTraining ? FontWeight.w600 : FontWeight.normal,
+                        fontWeight: isCurrentlyTraining
+                            ? FontWeight.w600
+                            : FontWeight.normal,
                         color: isCurrentlyTraining
                             ? EveColors.photonBlue
                             : theme.colorScheme.onSurface,
@@ -94,7 +94,9 @@ class QueueSidebarItem extends ConsumerWidget {
                     Text(
                       'Paused',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                          0.7,
+                        ),
                       ),
                     ),
                   if (isCurrentlyTraining) ...[

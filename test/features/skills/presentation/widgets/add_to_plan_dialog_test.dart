@@ -32,10 +32,7 @@ void main() {
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: AddToPlanDialog(
-              skill: testSkill,
-              trainedLevel: 3,
-            ),
+            body: AddToPlanDialog(skill: testSkill, trainedLevel: 3),
           ),
         ),
       ),
@@ -74,10 +71,7 @@ void main() {
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: AddToPlanDialog(
-              skill: testSkill,
-              trainedLevel: 2,
-            ),
+            body: AddToPlanDialog(skill: testSkill, trainedLevel: 2),
           ),
         ),
       ),
@@ -119,10 +113,7 @@ void main() {
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: AddToPlanDialog(
-              skill: testSkill,
-              trainedLevel: 3,
-            ),
+            body: AddToPlanDialog(skill: testSkill, trainedLevel: 3),
           ),
         ),
       ),
@@ -176,10 +167,7 @@ void main() {
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: AddToPlanDialog(
-              skill: testSkill,
-              trainedLevel: 3,
-            ),
+            body: AddToPlanDialog(skill: testSkill, trainedLevel: 3),
           ),
         ),
       ),
@@ -207,15 +195,10 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          skillPlansProvider.overrideWith((ref) => Stream.value([])),
-        ],
+        overrides: [skillPlansProvider.overrideWith((ref) => Stream.value([]))],
         child: MaterialApp(
           home: Scaffold(
-            body: AddToPlanDialog(
-              skill: testSkill,
-              trainedLevel: 3,
-            ),
+            body: AddToPlanDialog(skill: testSkill, trainedLevel: 3),
           ),
         ),
       ),
@@ -257,10 +240,7 @@ void main() {
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: AddToPlanDialog(
-              skill: testSkill,
-              trainedLevel: 3,
-            ),
+            body: AddToPlanDialog(skill: testSkill, trainedLevel: 3),
           ),
         ),
       ),
@@ -301,10 +281,7 @@ void main() {
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: AddToPlanDialog(
-              skill: testSkill,
-              trainedLevel: 3,
-            ),
+            body: AddToPlanDialog(skill: testSkill, trainedLevel: 3),
           ),
         ),
       ),
@@ -359,10 +336,8 @@ void main() {
                   onPressed: () {
                     showDialog(
                       context: context,
-                      builder: (_) => AddToPlanDialog(
-                        skill: testSkill,
-                        trainedLevel: 3,
-                      ),
+                      builder: (_) =>
+                          AddToPlanDialog(skill: testSkill, trainedLevel: 3),
                     );
                   },
                   child: const Text('Open'),
@@ -404,10 +379,7 @@ void main() {
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: AddToPlanDialog(
-              skill: testSkill,
-              trainedLevel: 3,
-            ),
+            body: AddToPlanDialog(skill: testSkill, trainedLevel: 3),
           ),
         ),
       ),
@@ -418,7 +390,9 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 
-  testWidgets('shows error when plan loading fails', skip: true, (tester) async {
+  testWidgets('shows error when plan loading fails', skip: true, (
+    tester,
+  ) async {
     final testSkill = SdeType(
       typeId: 3301,
       typeName: 'Mechanics',
@@ -434,10 +408,7 @@ void main() {
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: AddToPlanDialog(
-              skill: testSkill,
-              trainedLevel: 3,
-            ),
+            body: AddToPlanDialog(skill: testSkill, trainedLevel: 3),
           ),
         ),
       ),

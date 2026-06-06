@@ -99,7 +99,9 @@ class ImplantRow extends StatelessWidget {
           child: Icon(
             Icons.add,
             size: iconSize * 0.5,
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
           ),
         ),
       );

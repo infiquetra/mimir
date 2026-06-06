@@ -14,10 +14,7 @@ class MarketTransactionItem extends ConsumerWidget {
   /// The wallet transaction to display.
   final WalletTransaction transaction;
 
-  const MarketTransactionItem({
-    super.key,
-    required this.transaction,
-  });
+  const MarketTransactionItem({super.key, required this.transaction});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,16 +26,15 @@ class MarketTransactionItem extends ConsumerWidget {
 
     // Watch providers for item name and location name
     final itemNameAsync = ref.watch(itemNameProvider(transaction.typeId));
-    final locationNameAsync = ref.watch(locationNameProvider(transaction.locationId));
+    final locationNameAsync = ref.watch(
+      locationNameProvider(transaction.locationId),
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(
-            color: Colors.white.withAlpha(13),
-            width: 1,
-          ),
+          bottom: BorderSide(color: Colors.white.withAlpha(13), width: 1),
         ),
       ),
       child: Column(
@@ -80,10 +76,7 @@ class MarketTransactionItem extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: typeColor.withAlpha(26),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: typeColor.withAlpha(77),
-                    width: 1,
-                  ),
+                  border: Border.all(color: typeColor.withAlpha(77), width: 1),
                 ),
                 child: Text(
                   isBuy ? 'BUY' : 'SELL',
@@ -180,7 +173,8 @@ class MarketTransactionItem extends ConsumerWidget {
           locationNameAsync.when(
             data: (locationName) => _buildInfoRow('Location', locationName),
             loading: () => _buildInfoRow('Location', 'Loading...'),
-            error: (_, __) => _buildInfoRow('Location', 'Location ${transaction.locationId}'),
+            error: (_, __) =>
+                _buildInfoRow('Location', 'Location ${transaction.locationId}'),
           ),
         ],
       ),
@@ -193,10 +187,7 @@ class MarketTransactionItem extends ConsumerWidget {
       children: [
         Text(
           '$label: ',
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.white.withAlpha(128),
-          ),
+          style: TextStyle(fontSize: 11, color: Colors.white.withAlpha(128)),
         ),
         Expanded(
           child: Text(

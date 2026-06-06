@@ -42,25 +42,16 @@ class SkillQueueItemWidget extends ConsumerWidget {
             ? EveColors.photonBlue.withAlpha(26) // 10% opacity
             : Colors.transparent,
         border: Border(
-          bottom: BorderSide(
-            color: EveColors.divider,
-            width: 0.5,
-          ),
+          bottom: BorderSide(color: EveColors.divider, width: 0.5),
           left: isCurrentlyTraining
-              ? BorderSide(
-                  color: EveColors.photonBlue,
-                  width: 3,
-                )
+              ? BorderSide(color: EveColors.photonBlue, width: 3)
               : BorderSide.none,
         ),
       ),
       child: Row(
         children: [
           // Compact skill icon (20px inline)
-          EveSkillIcon(
-            typeId: entry.skillId,
-            size: EveSpacing.iconSm,
-          ),
+          EveSkillIcon(typeId: entry.skillId, size: EveSpacing.iconSm),
           SizedBox(width: EveSpacing.md),
 
           // Queue position
@@ -83,14 +74,16 @@ class SkillQueueItemWidget extends ConsumerWidget {
             child: skillNameAsync.when(
               data: (skillName) => Text(
                 skillName,
-                style: EveTypography.bodySmall(
-                  color: isCurrentlyTraining
-                      ? EveColors.photonBlue
-                      : EveColors.textPrimary,
-                ).copyWith(
-                  fontWeight:
-                      isCurrentlyTraining ? FontWeight.w600 : FontWeight.normal,
-                ),
+                style:
+                    EveTypography.bodySmall(
+                      color: isCurrentlyTraining
+                          ? EveColors.photonBlue
+                          : EveColors.textPrimary,
+                    ).copyWith(
+                      fontWeight: isCurrentlyTraining
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -104,9 +97,7 @@ class SkillQueueItemWidget extends ConsumerWidget {
               ),
               error: (_, __) => Text(
                 'Skill #${entry.skillId}',
-                style: EveTypography.bodySmall(
-                  color: EveColors.textSecondary,
-                ),
+                style: EveTypography.bodySmall(color: EveColors.textSecondary),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -119,9 +110,7 @@ class SkillQueueItemWidget extends ConsumerWidget {
             width: 40,
             child: Text(
               '→ $levelRoman',
-              style: EveTypography.labelSmall(
-                color: EveColors.textSecondary,
-              ),
+              style: EveTypography.labelSmall(color: EveColors.textSecondary),
               textAlign: TextAlign.center,
             ),
           ),
@@ -129,10 +118,7 @@ class SkillQueueItemWidget extends ConsumerWidget {
 
           // Time remaining (compact)
           if (entry.finishDate != null)
-            SizedBox(
-              width: 70,
-              child: _buildCompactTimeRemaining(),
-            ),
+            SizedBox(width: 70, child: _buildCompactTimeRemaining()),
         ],
       ),
     );
@@ -156,9 +142,7 @@ class SkillQueueItemWidget extends ConsumerWidget {
           SizedBox(width: EveSpacing.xs),
           Text(
             'Done',
-            style: EveTypography.labelSmall(
-              color: EveColors.success,
-            ),
+            style: EveTypography.labelSmall(color: EveColors.success),
           ),
         ],
       );

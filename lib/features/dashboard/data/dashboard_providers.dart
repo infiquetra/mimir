@@ -33,8 +33,9 @@ class NextSkillCompletion {
 ///
 /// Returns a map of characterId → balance for all characters that
 /// have a recorded balance. Characters without balances are excluded.
-final allCharacterBalancesProvider =
-    FutureProvider<Map<int, double>>((ref) async {
+final allCharacterBalancesProvider = FutureProvider<Map<int, double>>((
+  ref,
+) async {
   final walletRepository = ref.watch(walletRepositoryProvider);
   return walletRepository.getAllCharacterBalances();
 });
@@ -45,9 +46,9 @@ final allCharacterBalancesProvider =
 /// Characters with empty queues are included with empty lists.
 final allCharacterSkillQueuesProvider =
     FutureProvider<Map<int, List<SkillQueueEntry>>>((ref) async {
-  final skillRepository = ref.watch(skillRepositoryProvider);
-  return skillRepository.getAllCharacterQueues();
-});
+      final skillRepository = ref.watch(skillRepositoryProvider);
+      return skillRepository.getAllCharacterQueues();
+    });
 
 /// Provider that calculates the total wealth across all characters.
 ///
@@ -68,8 +69,9 @@ final combinedWealthProvider = Provider<AsyncValue<double>>((ref) {
 ///
 /// Skills without finish dates are excluded. Returns empty list if no
 /// characters or no active training.
-final nextSkillsCompletingProvider =
-    FutureProvider<List<NextSkillCompletion>>((ref) async {
+final nextSkillsCompletingProvider = FutureProvider<List<NextSkillCompletion>>((
+  ref,
+) async {
   final characters = await ref.watch(allCharactersProvider.future);
   final queues = await ref.watch(allCharacterSkillQueuesProvider.future);
 
@@ -82,10 +84,9 @@ final nextSkillsCompletingProvider =
     // Add all skills with a finish date (they are actively training or in queue)
     for (final skill in queue) {
       if (skill.finishDate != null) {
-        completions.add(NextSkillCompletion(
-          character: character,
-          skillEntry: skill,
-        ));
+        completions.add(
+          NextSkillCompletion(character: character, skillEntry: skill),
+        );
       }
     }
   }
@@ -143,10 +144,7 @@ class WalletTrendsPoint {
   final DateTime date;
   final double balance;
 
-  const WalletTrendsPoint({
-    required this.date,
-    required this.balance,
-  });
+  const WalletTrendsPoint({required this.date, required this.balance});
 
   @override
   bool operator ==(Object other) =>
@@ -174,8 +172,9 @@ final walletTrendsProvider = FutureProvider<WalletTrendsData>((ref) async {
   final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
 
   // Get all balance snapshots from the last 30 days
-  final balances = await database.customSelect(
-    '''
+  final balances = await database
+      .customSelect(
+        '''
     SELECT
       strftime('%Y-%m-%d', recorded_at, 'unixepoch') as date,
       SUM(balance) as total_balance
@@ -184,34 +183,38 @@ final walletTrendsProvider = FutureProvider<WalletTrendsData>((ref) async {
     GROUP BY date
     ORDER BY date ASC
     ''',
-    variables: [Variable.withDateTime(thirtyDaysAgo)],
-    readsFrom: {database.walletBalances},
-  ).get();
+        variables: [Variable.withDateTime(thirtyDaysAgo)],
+        readsFrom: {database.walletBalances},
+      )
+      .get();
 
   // Convert to chart points, filtering out any null dates
   final chartPoints = balances
       .where((row) => row.read<String?>('date') != null)
       .map((row) {
-    final dateStr = row.read<String?>('date')!;
-    final balance = row.read<double>('total_balance');
-    return WalletTrendsPoint(
-      date: DateTime.parse(dateStr),
-      balance: balance,
-    );
-  }).toList();
+        final dateStr = row.read<String?>('date')!;
+        final balance = row.read<double>('total_balance');
+        return WalletTrendsPoint(
+          date: DateTime.parse(dateStr),
+          balance: balance,
+        );
+      })
+      .toList();
 
   // Calculate income and expenses from journal entries
-  final transactions = await database.customSelect(
-    '''
+  final transactions = await database
+      .customSelect(
+        '''
     SELECT
       SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as total_income,
       SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as total_expenses
     FROM wallet_journal_entries
     WHERE date >= ?
     ''',
-    variables: [Variable.withDateTime(thirtyDaysAgo)],
-    readsFrom: {database.walletJournalEntries},
-  ).getSingleOrNull();
+        variables: [Variable.withDateTime(thirtyDaysAgo)],
+        readsFrom: {database.walletJournalEntries},
+      )
+      .getSingleOrNull();
 
   final income = transactions?.read<double?>('total_income') ?? 0.0;
   final expenses = transactions?.read<double?>('total_expenses') ?? 0.0;

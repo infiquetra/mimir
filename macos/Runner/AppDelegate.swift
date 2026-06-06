@@ -11,10 +11,12 @@ class AppDelegate: FlutterAppDelegate {
 
     // Register WindowResizePlugin for ALL sub-windows.
     // This callback is invoked by desktop_multi_window whenever a new window is created.
-    // Without this, the WindowResizePlugin is only available in the main window,
-    // causing resize calls in sub-windows to fail silently.
+    // Without this, generated plugins are only available in the main window,
+    // causing sub-window plugin calls like file_selector to fail.
     FlutterMultiWindowPlugin.setOnWindowCreatedCallback { flutterViewController in
-      print("WindowResizePlugin: *** Callback invoked for sub-window ***")
+      print("PluginRegistrant: *** Callback invoked for sub-window ***")
+      RegisterGeneratedPlugins(registry: flutterViewController)
+      print("PluginRegistrant: *** Generated plugin registration complete ***")
       WindowResizePlugin.register(
         with: flutterViewController.registrar(forPlugin: "WindowResizePlugin")
       )

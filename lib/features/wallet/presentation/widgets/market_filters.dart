@@ -27,10 +27,7 @@ class MarketFilters extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.black.withAlpha(77),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: Colors.white.withAlpha(26),
-              width: 1,
-            ),
+            border: Border.all(color: Colors.white.withAlpha(26), width: 1),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -80,18 +77,13 @@ class MarketFilters extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected
-              ? Colors.white.withAlpha(26)
-              : Colors.transparent,
+          color: isSelected ? Colors.white.withAlpha(26) : Colors.transparent,
           borderRadius: BorderRadius.horizontal(
             left: isFirst ? const Radius.circular(8) : Radius.zero,
             right: isLast ? const Radius.circular(8) : Radius.zero,
           ),
           border: isSelected
-              ? Border.all(
-                  color: Colors.white.withAlpha(77),
-                  width: 1,
-                )
+              ? Border.all(color: Colors.white.withAlpha(77), width: 1)
               : null,
         ),
         child: Text(

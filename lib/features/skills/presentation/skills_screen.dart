@@ -50,10 +50,16 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen>
   @override
   void initState() {
     super.initState();
-    Log.d('SKILLS', 'SkillsScreen.initState() - creating TabController (2 tabs), starting on Skill Catalogue');
+    Log.d(
+      'SKILLS',
+      'SkillsScreen.initState() - creating TabController (2 tabs), starting on Skill Catalogue',
+    );
     _tabController = TabController(length: 2, vsync: this, initialIndex: 1);
     _tabController.addListener(() {
-      Log.d('SKILLS', 'TabController - switched to tab ${_tabController.index}');
+      Log.d(
+        'SKILLS',
+        'TabController - switched to tab ${_tabController.index}',
+      );
     });
   }
 
@@ -78,7 +84,10 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen>
             if (character == null) {
               return _buildNoCharacterState(context);
             }
-            Log.d('SKILLS', 'SkillsScreen - building content for character ${character.characterId}');
+            Log.d(
+              'SKILLS',
+              'SkillsScreen - building content for character ${character.characterId}',
+            );
             return _buildSkillsContent(context);
           },
           loading: () {
@@ -86,7 +95,12 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen>
             return _buildLoadingState(context);
           },
           error: (error, stack) {
-            Log.e('SKILLS', 'SkillsScreen - error loading character', error, stack);
+            Log.e(
+              'SKILLS',
+              'SkillsScreen - error loading character',
+              error,
+              stack,
+            );
             return _buildErrorState(context, error);
           },
         ),
@@ -96,7 +110,10 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen>
 
   /// Builds the main skills content with horizontal split layout.
   Widget _buildSkillsContent(BuildContext context) {
-    Log.d('SKILLS', 'SkillsScreen._buildSkillsContent() - building EVE-style layout');
+    Log.d(
+      'SKILLS',
+      'SkillsScreen._buildSkillsContent() - building EVE-style layout',
+    );
 
     return Row(
       children: [
@@ -132,7 +149,10 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen>
 
   /// Builds the Skill Catalogue tab with group grid and skill list.
   Widget _buildSkillCatalogueTab(BuildContext context) {
-    Log.d('SKILLS', 'SkillsScreen._buildSkillCatalogueTab() - building catalogue');
+    Log.d(
+      'SKILLS',
+      'SkillsScreen._buildSkillCatalogueTab() - building catalogue',
+    );
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(12),
@@ -166,10 +186,7 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen>
               color: theme.colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
-            Text(
-              'No Character Selected',
-              style: theme.textTheme.titleLarge,
-            ),
+            Text('No Character Selected', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
               'Add a character to view your skills.',
@@ -197,16 +214,9 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: theme.colorScheme.error,
-            ),
+            Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
             const SizedBox(height: 16),
-            Text(
-              'Failed to Load Character',
-              style: theme.textTheme.titleLarge,
-            ),
+            Text('Failed to Load Character', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
               error.toString(),

@@ -73,10 +73,10 @@ class FleetStatusCard extends ConsumerWidget {
         Text(
           'CHARACTERS',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Colors.white.withAlpha(179),
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-              ),
+            color: Colors.white.withAlpha(179),
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
         ),
         const SizedBox(height: 12),
 
@@ -97,10 +97,7 @@ class FleetStatusCard extends ConsumerWidget {
       decoration: BoxDecoration(
         color: EveColors.darkSurfaceVariant.withAlpha(128),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: EveColors.evePrimary.withAlpha(77),
-          width: 1,
-        ),
+        border: Border.all(color: EveColors.evePrimary.withAlpha(77), width: 1),
       ),
       child: Row(
         children: [
@@ -111,19 +108,15 @@ class FleetStatusCard extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    Icon(
-                      Icons.circle,
-                      size: 12,
-                      color: EveColors.success,
-                    ),
+                    Icon(Icons.circle, size: 12, color: EveColors.success),
                     const SizedBox(width: 6),
                     Text(
                       'ONLINE',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: Colors.white.withAlpha(179),
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
+                        color: Colors.white.withAlpha(179),
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ],
                 ),
@@ -131,20 +124,16 @@ class FleetStatusCard extends ConsumerWidget {
                 Text(
                   '${status.onlineCharacters}',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: EveColors.success,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: EveColors.success,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
           ),
 
           // Divider
-          Container(
-            width: 1,
-            height: 48,
-            color: Colors.white.withAlpha(26),
-          ),
+          Container(width: 1, height: 48, color: Colors.white.withAlpha(26)),
           const SizedBox(width: 16),
 
           // Offline count
@@ -163,10 +152,10 @@ class FleetStatusCard extends ConsumerWidget {
                     Text(
                       'OFFLINE',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: Colors.white.withAlpha(179),
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
+                        color: Colors.white.withAlpha(179),
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ],
                 ),
@@ -174,20 +163,16 @@ class FleetStatusCard extends ConsumerWidget {
                 Text(
                   '${status.offlineCharacters}',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: Colors.white.withAlpha(179),
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: Colors.white.withAlpha(179),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
           ),
 
           // Divider
-          Container(
-            width: 1,
-            height: 48,
-            color: Colors.white.withAlpha(26),
-          ),
+          Container(width: 1, height: 48, color: Colors.white.withAlpha(26)),
           const SizedBox(width: 16),
 
           // Total
@@ -198,18 +183,18 @@ class FleetStatusCard extends ConsumerWidget {
                 Text(
                   'TOTAL',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Colors.white.withAlpha(179),
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
+                    color: Colors.white.withAlpha(179),
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${status.totalCharacters}',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: EveColors.evePrimary,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: EveColors.evePrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -235,10 +220,7 @@ class FleetStatusCard extends ConsumerWidget {
       decoration: BoxDecoration(
         color: EveColors.darkSurfaceVariant.withAlpha(128),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: statusColor.withAlpha(77),
-          width: 1,
-        ),
+        border: Border.all(color: statusColor.withAlpha(77), width: 1),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,8 +264,8 @@ class FleetStatusCard extends ConsumerWidget {
                       child: Text(
                         status.characterName,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                          fontWeight: FontWeight.w600,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -301,13 +283,13 @@ class FleetStatusCard extends ConsumerWidget {
                         ),
                         child: Text(
                           'OFFLINE',
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: Colors.white.withAlpha(179),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.5,
-                                  ),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: Colors.white.withAlpha(179),
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
                         ),
                       ),
                     ],
@@ -329,11 +311,12 @@ class FleetStatusCard extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             status.solarSystemName!,
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: _getSecurityStatusColor(
-                                          status.securityStatus),
-                                    ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: _getSecurityStatusColor(
+                                    status.securityStatus,
+                                  ),
+                                ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -342,12 +325,13 @@ class FleetStatusCard extends ConsumerWidget {
                         if (status.securityStatus != null)
                           Text(
                             '(${status.securityStatus!.toStringAsFixed(1)})',
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: _getSecurityStatusColor(
-                                          status.securityStatus),
-                                      fontSize: 11,
-                                    ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: _getSecurityStatusColor(
+                                    status.securityStatus,
+                                  ),
+                                  fontSize: 11,
+                                ),
                           ),
                       ],
                     ),
@@ -367,10 +351,8 @@ class FleetStatusCard extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             status.shipTypeName!,
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Colors.white.withAlpha(179),
-                                    ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: Colors.white.withAlpha(179)),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -390,10 +372,8 @@ class FleetStatusCard extends ConsumerWidget {
                         const SizedBox(width: 4),
                         Text(
                           'Last seen ${timeago.format(status.lastLogout!)}',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.white.withAlpha(128),
-                                  ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: Colors.white.withAlpha(128)),
                         ),
                       ],
                     ),
@@ -422,15 +402,15 @@ class FleetStatusCard extends ConsumerWidget {
             Text(
               'No Fleet Data',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.white.withAlpha(179),
-                  ),
+                color: Colors.white.withAlpha(179),
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               'Add characters to see fleet status',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withAlpha(128),
-                  ),
+                color: Colors.white.withAlpha(128),
+              ),
               textAlign: TextAlign.center,
             ),
           ],

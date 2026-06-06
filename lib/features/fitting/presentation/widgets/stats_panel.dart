@@ -25,7 +25,10 @@ class StatsPanel extends ConsumerWidget {
       data: (stats) {
         if (stats == null) {
           return const Center(
-            child: Text('Calculating...', style: TextStyle(color: EveColors.textSecondary, fontSize: 12)),
+            child: Text(
+              'Calculating...',
+              style: TextStyle(color: EveColors.textSecondary, fontSize: 12),
+            ),
           );
         }
 
@@ -33,28 +36,63 @@ class StatsPanel extends ConsumerWidget {
           padding: const EdgeInsets.all(12),
           children: [
             _buildSectionHeader('DEFENSE'),
-            _buildStatRow('EHP', '${stats.defenses.totalEhp.toStringAsFixed(0)}'),
-            _buildStatRow('Shield', '${stats.defenses.shieldHp.toStringAsFixed(0)} HP'),
-            _buildStatRow('Armor', '${stats.defenses.armorHp.toStringAsFixed(0)} HP'),
-            _buildStatRow('Hull', '${stats.defenses.hullHp.toStringAsFixed(0)} HP'),
+            _buildStatRow(
+              'EHP',
+              '${stats.defenses.totalEhp.toStringAsFixed(0)}',
+            ),
+            _buildStatRow(
+              'Shield',
+              '${stats.defenses.shieldHp.toStringAsFixed(0)} HP',
+            ),
+            _buildStatRow(
+              'Armor',
+              '${stats.defenses.armorHp.toStringAsFixed(0)} HP',
+            ),
+            _buildStatRow(
+              'Hull',
+              '${stats.defenses.hullHp.toStringAsFixed(0)} HP',
+            ),
 
             const SizedBox(height: 16),
             _buildSectionHeader('CAPACITOR'),
-            _buildStatRow('Capacity', '${stats.capacitorCapacity.toStringAsFixed(0)} GJ'),
-            _buildStatRow('Recharge', '${(stats.capacitorRecharge / 1000).toStringAsFixed(1)} s'),
-            _buildStatRow('Stable', stats.isCapStable ? 'Yes' : '${stats.capacitorStable.toStringAsFixed(0)}s'),
+            _buildStatRow(
+              'Capacity',
+              '${stats.capacitorCapacity.toStringAsFixed(0)} GJ',
+            ),
+            _buildStatRow(
+              'Recharge',
+              '${(stats.capacitorRecharge / 1000).toStringAsFixed(1)} s',
+            ),
+            _buildStatRow(
+              'Stable',
+              stats.isCapStable
+                  ? 'Yes'
+                  : '${stats.capacitorStable.toStringAsFixed(0)}s',
+            ),
 
             const SizedBox(height: 16),
             _buildSectionHeader('NAVIGATION'),
-            _buildStatRow('Max Speed', '${stats.maxVelocity.toStringAsFixed(0)} m/s'),
+            _buildStatRow(
+              'Max Speed',
+              '${stats.maxVelocity.toStringAsFixed(0)} m/s',
+            ),
             _buildStatRow('Align', '${stats.alignTime.toStringAsFixed(1)} s'),
             _buildStatRow('Warp', '${stats.warpSpeed.toStringAsFixed(1)} AU/s'),
 
             const SizedBox(height: 16),
             _buildSectionHeader('TARGETING'),
-            _buildStatRow('Range', '${(stats.targetRange / 1000).toStringAsFixed(1)} km'),
-            _buildStatRow('Scan Res', '${stats.scanResolution.toStringAsFixed(0)} mm'),
-            _buildStatRow('Sig Radius', '${stats.signatureRadius.toStringAsFixed(0)} m'),
+            _buildStatRow(
+              'Range',
+              '${(stats.targetRange / 1000).toStringAsFixed(1)} km',
+            ),
+            _buildStatRow(
+              'Scan Res',
+              '${stats.scanResolution.toStringAsFixed(0)} mm',
+            ),
+            _buildStatRow(
+              'Sig Radius',
+              '${stats.signatureRadius.toStringAsFixed(0)} m',
+            ),
             _buildStatRow('Max Targets', '${stats.maxLockedTargets}'),
 
             if (stats.dpsTotal > 0) ...[
@@ -63,7 +101,10 @@ class StatsPanel extends ConsumerWidget {
               _buildStatRow('DPS', '${stats.dpsTotal.toStringAsFixed(1)}'),
               _buildStatRow('Volley', '${stats.volley.toStringAsFixed(0)}'),
               if (stats.optimalRange > 0)
-                _buildStatRow('Optimal', '${(stats.optimalRange / 1000).toStringAsFixed(1)} km'),
+                _buildStatRow(
+                  'Optimal',
+                  '${(stats.optimalRange / 1000).toStringAsFixed(1)} km',
+                ),
             ],
           ],
         );

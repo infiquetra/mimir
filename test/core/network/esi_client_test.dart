@@ -4,13 +4,34 @@ import 'package:mimir/core/network/esi_client.dart';
 void main() {
   group('EsiException', () {
     test('should have correct error type helpers', () {
-      expect(const EsiException('Auth error', statusCode: 401).isAuthError, isTrue);
-      expect(const EsiException('Scope error', statusCode: 403).isScopeError, isTrue);
-      expect(const EsiException('Rate limit', statusCode: 420).isRateLimited, isTrue);
-      expect(const EsiException('Server error', statusCode: 500).isServerError, isTrue);
-      expect(const EsiException('Server error', statusCode: 502).isServerError, isTrue);
-      expect(const EsiException('Client error', statusCode: 400).isClientError, isTrue);
-      expect(const EsiException('Not found', statusCode: 404).isClientError, isTrue);
+      expect(
+        const EsiException('Auth error', statusCode: 401).isAuthError,
+        isTrue,
+      );
+      expect(
+        const EsiException('Scope error', statusCode: 403).isScopeError,
+        isTrue,
+      );
+      expect(
+        const EsiException('Rate limit', statusCode: 420).isRateLimited,
+        isTrue,
+      );
+      expect(
+        const EsiException('Server error', statusCode: 500).isServerError,
+        isTrue,
+      );
+      expect(
+        const EsiException('Server error', statusCode: 502).isServerError,
+        isTrue,
+      );
+      expect(
+        const EsiException('Client error', statusCode: 400).isClientError,
+        isTrue,
+      );
+      expect(
+        const EsiException('Not found', statusCode: 404).isClientError,
+        isTrue,
+      );
     });
 
     test('should have correct toString representation', () {
@@ -100,10 +121,7 @@ void main() {
     });
 
     test('should handle null unallocated_sp', () {
-      final json = {
-        'total_sp': 5000000,
-        'skills': [],
-      };
+      final json = {'total_sp': 5000000, 'skills': []};
 
       final skills = CharacterSkills.fromJson(json);
 
@@ -161,8 +179,14 @@ void main() {
       );
 
       // 164 = Charisma, 165 = Intelligence, 166 = Memory, 167 = Perception, 168 = Willpower
-      expect(attrs.spPerHour(164, 165), (17 + 25 / 2) * 60); // Charisma + Intelligence
-      expect(attrs.spPerHour(167, 168), (20 + 19 / 2) * 60); // Perception + Willpower
+      expect(
+        attrs.spPerHour(164, 165),
+        (17 + 25 / 2) * 60,
+      ); // Charisma + Intelligence
+      expect(
+        attrs.spPerHour(167, 168),
+        (20 + 19 / 2) * 60,
+      ); // Perception + Willpower
     });
   });
 
@@ -236,11 +260,7 @@ void main() {
 
   group('SkillQueueItem', () {
     test('should parse from JSON with required fields', () {
-      final json = {
-        'queue_position': 0,
-        'skill_id': 3327,
-        'finished_level': 5,
-      };
+      final json = {'queue_position': 0, 'skill_id': 3327, 'finished_level': 5};
 
       final item = SkillQueueItem.fromJson(json);
 

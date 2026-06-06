@@ -3955,6 +3955,39 @@ class $AppSettingsTableTable extends AppSettingsTable
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _llmApiKeyMeta = const VerificationMeta(
+    'llmApiKey',
+  );
+  @override
+  late final GeneratedColumn<String> llmApiKey = GeneratedColumn<String>(
+    'llm_api_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _llmModelNameMeta = const VerificationMeta(
+    'llmModelName',
+  );
+  @override
+  late final GeneratedColumn<String> llmModelName = GeneratedColumn<String>(
+    'llm_model_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _llmBaseUrlMeta = const VerificationMeta(
+    'llmBaseUrl',
+  );
+  @override
+  late final GeneratedColumn<String> llmBaseUrl = GeneratedColumn<String>(
+    'llm_base_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3962,6 +3995,9 @@ class $AppSettingsTableTable extends AppSettingsTable
     onboardingComplete,
     esiErrorLimitRemain,
     esiErrorLimitReset,
+    llmApiKey,
+    llmModelName,
+    llmBaseUrl,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4014,6 +4050,30 @@ class $AppSettingsTableTable extends AppSettingsTable
         ),
       );
     }
+    if (data.containsKey('llm_api_key')) {
+      context.handle(
+        _llmApiKeyMeta,
+        llmApiKey.isAcceptableOrUnknown(data['llm_api_key']!, _llmApiKeyMeta),
+      );
+    }
+    if (data.containsKey('llm_model_name')) {
+      context.handle(
+        _llmModelNameMeta,
+        llmModelName.isAcceptableOrUnknown(
+          data['llm_model_name']!,
+          _llmModelNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('llm_base_url')) {
+      context.handle(
+        _llmBaseUrlMeta,
+        llmBaseUrl.isAcceptableOrUnknown(
+          data['llm_base_url']!,
+          _llmBaseUrlMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -4043,6 +4103,18 @@ class $AppSettingsTableTable extends AppSettingsTable
         DriftSqlType.dateTime,
         data['${effectivePrefix}esi_error_limit_reset'],
       ),
+      llmApiKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}llm_api_key'],
+      ),
+      llmModelName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}llm_model_name'],
+      ),
+      llmBaseUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}llm_base_url'],
+      ),
     );
   }
 
@@ -4068,12 +4140,24 @@ class AppSettingsTableData extends DataClass
 
   /// ESI Error limit reset timestamp
   final DateTime? esiErrorLimitReset;
+
+  /// LLM API Key
+  final String? llmApiKey;
+
+  /// LLM Model Name
+  final String? llmModelName;
+
+  /// LLM Base URL (for OpenAI compatible endpoints)
+  final String? llmBaseUrl;
   const AppSettingsTableData({
     required this.id,
     required this.startupBehavior,
     required this.onboardingComplete,
     required this.esiErrorLimitRemain,
     this.esiErrorLimitReset,
+    this.llmApiKey,
+    this.llmModelName,
+    this.llmBaseUrl,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4084,6 +4168,15 @@ class AppSettingsTableData extends DataClass
     map['esi_error_limit_remain'] = Variable<int>(esiErrorLimitRemain);
     if (!nullToAbsent || esiErrorLimitReset != null) {
       map['esi_error_limit_reset'] = Variable<DateTime>(esiErrorLimitReset);
+    }
+    if (!nullToAbsent || llmApiKey != null) {
+      map['llm_api_key'] = Variable<String>(llmApiKey);
+    }
+    if (!nullToAbsent || llmModelName != null) {
+      map['llm_model_name'] = Variable<String>(llmModelName);
+    }
+    if (!nullToAbsent || llmBaseUrl != null) {
+      map['llm_base_url'] = Variable<String>(llmBaseUrl);
     }
     return map;
   }
@@ -4097,6 +4190,15 @@ class AppSettingsTableData extends DataClass
       esiErrorLimitReset: esiErrorLimitReset == null && nullToAbsent
           ? const Value.absent()
           : Value(esiErrorLimitReset),
+      llmApiKey: llmApiKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(llmApiKey),
+      llmModelName: llmModelName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(llmModelName),
+      llmBaseUrl: llmBaseUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(llmBaseUrl),
     );
   }
 
@@ -4115,6 +4217,9 @@ class AppSettingsTableData extends DataClass
       esiErrorLimitReset: serializer.fromJson<DateTime?>(
         json['esiErrorLimitReset'],
       ),
+      llmApiKey: serializer.fromJson<String?>(json['llmApiKey']),
+      llmModelName: serializer.fromJson<String?>(json['llmModelName']),
+      llmBaseUrl: serializer.fromJson<String?>(json['llmBaseUrl']),
     );
   }
   @override
@@ -4126,6 +4231,9 @@ class AppSettingsTableData extends DataClass
       'onboardingComplete': serializer.toJson<bool>(onboardingComplete),
       'esiErrorLimitRemain': serializer.toJson<int>(esiErrorLimitRemain),
       'esiErrorLimitReset': serializer.toJson<DateTime?>(esiErrorLimitReset),
+      'llmApiKey': serializer.toJson<String?>(llmApiKey),
+      'llmModelName': serializer.toJson<String?>(llmModelName),
+      'llmBaseUrl': serializer.toJson<String?>(llmBaseUrl),
     };
   }
 
@@ -4135,6 +4243,9 @@ class AppSettingsTableData extends DataClass
     bool? onboardingComplete,
     int? esiErrorLimitRemain,
     Value<DateTime?> esiErrorLimitReset = const Value.absent(),
+    Value<String?> llmApiKey = const Value.absent(),
+    Value<String?> llmModelName = const Value.absent(),
+    Value<String?> llmBaseUrl = const Value.absent(),
   }) => AppSettingsTableData(
     id: id ?? this.id,
     startupBehavior: startupBehavior ?? this.startupBehavior,
@@ -4143,6 +4254,9 @@ class AppSettingsTableData extends DataClass
     esiErrorLimitReset: esiErrorLimitReset.present
         ? esiErrorLimitReset.value
         : this.esiErrorLimitReset,
+    llmApiKey: llmApiKey.present ? llmApiKey.value : this.llmApiKey,
+    llmModelName: llmModelName.present ? llmModelName.value : this.llmModelName,
+    llmBaseUrl: llmBaseUrl.present ? llmBaseUrl.value : this.llmBaseUrl,
   );
   AppSettingsTableData copyWithCompanion(AppSettingsTableCompanion data) {
     return AppSettingsTableData(
@@ -4159,6 +4273,13 @@ class AppSettingsTableData extends DataClass
       esiErrorLimitReset: data.esiErrorLimitReset.present
           ? data.esiErrorLimitReset.value
           : this.esiErrorLimitReset,
+      llmApiKey: data.llmApiKey.present ? data.llmApiKey.value : this.llmApiKey,
+      llmModelName: data.llmModelName.present
+          ? data.llmModelName.value
+          : this.llmModelName,
+      llmBaseUrl: data.llmBaseUrl.present
+          ? data.llmBaseUrl.value
+          : this.llmBaseUrl,
     );
   }
 
@@ -4169,7 +4290,10 @@ class AppSettingsTableData extends DataClass
           ..write('startupBehavior: $startupBehavior, ')
           ..write('onboardingComplete: $onboardingComplete, ')
           ..write('esiErrorLimitRemain: $esiErrorLimitRemain, ')
-          ..write('esiErrorLimitReset: $esiErrorLimitReset')
+          ..write('esiErrorLimitReset: $esiErrorLimitReset, ')
+          ..write('llmApiKey: $llmApiKey, ')
+          ..write('llmModelName: $llmModelName, ')
+          ..write('llmBaseUrl: $llmBaseUrl')
           ..write(')'))
         .toString();
   }
@@ -4181,6 +4305,9 @@ class AppSettingsTableData extends DataClass
     onboardingComplete,
     esiErrorLimitRemain,
     esiErrorLimitReset,
+    llmApiKey,
+    llmModelName,
+    llmBaseUrl,
   );
   @override
   bool operator ==(Object other) =>
@@ -4190,7 +4317,10 @@ class AppSettingsTableData extends DataClass
           other.startupBehavior == this.startupBehavior &&
           other.onboardingComplete == this.onboardingComplete &&
           other.esiErrorLimitRemain == this.esiErrorLimitRemain &&
-          other.esiErrorLimitReset == this.esiErrorLimitReset);
+          other.esiErrorLimitReset == this.esiErrorLimitReset &&
+          other.llmApiKey == this.llmApiKey &&
+          other.llmModelName == this.llmModelName &&
+          other.llmBaseUrl == this.llmBaseUrl);
 }
 
 class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
@@ -4199,12 +4329,18 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
   final Value<bool> onboardingComplete;
   final Value<int> esiErrorLimitRemain;
   final Value<DateTime?> esiErrorLimitReset;
+  final Value<String?> llmApiKey;
+  final Value<String?> llmModelName;
+  final Value<String?> llmBaseUrl;
   const AppSettingsTableCompanion({
     this.id = const Value.absent(),
     this.startupBehavior = const Value.absent(),
     this.onboardingComplete = const Value.absent(),
     this.esiErrorLimitRemain = const Value.absent(),
     this.esiErrorLimitReset = const Value.absent(),
+    this.llmApiKey = const Value.absent(),
+    this.llmModelName = const Value.absent(),
+    this.llmBaseUrl = const Value.absent(),
   });
   AppSettingsTableCompanion.insert({
     this.id = const Value.absent(),
@@ -4212,6 +4348,9 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
     this.onboardingComplete = const Value.absent(),
     this.esiErrorLimitRemain = const Value.absent(),
     this.esiErrorLimitReset = const Value.absent(),
+    this.llmApiKey = const Value.absent(),
+    this.llmModelName = const Value.absent(),
+    this.llmBaseUrl = const Value.absent(),
   });
   static Insertable<AppSettingsTableData> custom({
     Expression<int>? id,
@@ -4219,6 +4358,9 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
     Expression<bool>? onboardingComplete,
     Expression<int>? esiErrorLimitRemain,
     Expression<DateTime>? esiErrorLimitReset,
+    Expression<String>? llmApiKey,
+    Expression<String>? llmModelName,
+    Expression<String>? llmBaseUrl,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4228,6 +4370,9 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
         'esi_error_limit_remain': esiErrorLimitRemain,
       if (esiErrorLimitReset != null)
         'esi_error_limit_reset': esiErrorLimitReset,
+      if (llmApiKey != null) 'llm_api_key': llmApiKey,
+      if (llmModelName != null) 'llm_model_name': llmModelName,
+      if (llmBaseUrl != null) 'llm_base_url': llmBaseUrl,
     });
   }
 
@@ -4237,6 +4382,9 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
     Value<bool>? onboardingComplete,
     Value<int>? esiErrorLimitRemain,
     Value<DateTime?>? esiErrorLimitReset,
+    Value<String?>? llmApiKey,
+    Value<String?>? llmModelName,
+    Value<String?>? llmBaseUrl,
   }) {
     return AppSettingsTableCompanion(
       id: id ?? this.id,
@@ -4244,6 +4392,9 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
       onboardingComplete: onboardingComplete ?? this.onboardingComplete,
       esiErrorLimitRemain: esiErrorLimitRemain ?? this.esiErrorLimitRemain,
       esiErrorLimitReset: esiErrorLimitReset ?? this.esiErrorLimitReset,
+      llmApiKey: llmApiKey ?? this.llmApiKey,
+      llmModelName: llmModelName ?? this.llmModelName,
+      llmBaseUrl: llmBaseUrl ?? this.llmBaseUrl,
     );
   }
 
@@ -4267,6 +4418,15 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
         esiErrorLimitReset.value,
       );
     }
+    if (llmApiKey.present) {
+      map['llm_api_key'] = Variable<String>(llmApiKey.value);
+    }
+    if (llmModelName.present) {
+      map['llm_model_name'] = Variable<String>(llmModelName.value);
+    }
+    if (llmBaseUrl.present) {
+      map['llm_base_url'] = Variable<String>(llmBaseUrl.value);
+    }
     return map;
   }
 
@@ -4277,7 +4437,10 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
           ..write('startupBehavior: $startupBehavior, ')
           ..write('onboardingComplete: $onboardingComplete, ')
           ..write('esiErrorLimitRemain: $esiErrorLimitRemain, ')
-          ..write('esiErrorLimitReset: $esiErrorLimitReset')
+          ..write('esiErrorLimitReset: $esiErrorLimitReset, ')
+          ..write('llmApiKey: $llmApiKey, ')
+          ..write('llmModelName: $llmModelName, ')
+          ..write('llmBaseUrl: $llmBaseUrl')
           ..write(')'))
         .toString();
   }
@@ -16862,6 +17025,2346 @@ class WatchListCompanion extends UpdateCompanion<WatchListData> {
   }
 }
 
+class $CombatParsedEncountersTable extends CombatParsedEncounters
+    with TableInfo<$CombatParsedEncountersTable, CombatParsedEncounter> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CombatParsedEncountersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceFilePathMeta = const VerificationMeta(
+    'sourceFilePath',
+  );
+  @override
+  late final GeneratedColumn<String> sourceFilePath = GeneratedColumn<String>(
+    'source_file_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceModifiedMeta = const VerificationMeta(
+    'sourceModified',
+  );
+  @override
+  late final GeneratedColumn<DateTime> sourceModified =
+      GeneratedColumn<DateTime>(
+        'source_modified',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _sourceSizeMeta = const VerificationMeta(
+    'sourceSize',
+  );
+  @override
+  late final GeneratedColumn<int> sourceSize = GeneratedColumn<int>(
+    'source_size',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _parserVersionMeta = const VerificationMeta(
+    'parserVersion',
+  );
+  @override
+  late final GeneratedColumn<int> parserVersion = GeneratedColumn<int>(
+    'parser_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _characterNameMeta = const VerificationMeta(
+    'characterName',
+  );
+  @override
+  late final GeneratedColumn<String> characterName = GeneratedColumn<String>(
+    'character_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _encounterStartMeta = const VerificationMeta(
+    'encounterStart',
+  );
+  @override
+  late final GeneratedColumn<DateTime> encounterStart =
+      GeneratedColumn<DateTime>(
+        'encounter_start',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _encounterEndMeta = const VerificationMeta(
+    'encounterEnd',
+  );
+  @override
+  late final GeneratedColumn<DateTime> encounterEnd = GeneratedColumn<DateTime>(
+    'encounter_end',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _durationSecondsMeta = const VerificationMeta(
+    'durationSeconds',
+  );
+  @override
+  late final GeneratedColumn<int> durationSeconds = GeneratedColumn<int>(
+    'duration_seconds',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _outcomeMeta = const VerificationMeta(
+    'outcome',
+  );
+  @override
+  late final GeneratedColumn<String> outcome = GeneratedColumn<String>(
+    'outcome',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _outcomeConfidenceMeta = const VerificationMeta(
+    'outcomeConfidence',
+  );
+  @override
+  late final GeneratedColumn<double> outcomeConfidence =
+      GeneratedColumn<double>(
+        'outcome_confidence',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _outcomeEvidenceMeta = const VerificationMeta(
+    'outcomeEvidence',
+  );
+  @override
+  late final GeneratedColumn<String> outcomeEvidence = GeneratedColumn<String>(
+    'outcome_evidence',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _totalDamageDealtMeta = const VerificationMeta(
+    'totalDamageDealt',
+  );
+  @override
+  late final GeneratedColumn<int> totalDamageDealt = GeneratedColumn<int>(
+    'total_damage_dealt',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _totalDamageReceivedMeta =
+      const VerificationMeta('totalDamageReceived');
+  @override
+  late final GeneratedColumn<int> totalDamageReceived = GeneratedColumn<int>(
+    'total_damage_received',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _listSummaryJsonMeta = const VerificationMeta(
+    'listSummaryJson',
+  );
+  @override
+  late final GeneratedColumn<String> listSummaryJson = GeneratedColumn<String>(
+    'list_summary_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _parseJsonMeta = const VerificationMeta(
+    'parseJson',
+  );
+  @override
+  late final GeneratedColumn<String> parseJson = GeneratedColumn<String>(
+    'parse_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> cachedAt = GeneratedColumn<DateTime>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    sourceFilePath,
+    sourceModified,
+    sourceSize,
+    parserVersion,
+    characterName,
+    characterId,
+    encounterStart,
+    encounterEnd,
+    durationSeconds,
+    outcome,
+    outcomeConfidence,
+    outcomeEvidence,
+    totalDamageDealt,
+    totalDamageReceived,
+    listSummaryJson,
+    parseJson,
+    cachedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'combat_parsed_encounters';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CombatParsedEncounter> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('source_file_path')) {
+      context.handle(
+        _sourceFilePathMeta,
+        sourceFilePath.isAcceptableOrUnknown(
+          data['source_file_path']!,
+          _sourceFilePathMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceFilePathMeta);
+    }
+    if (data.containsKey('source_modified')) {
+      context.handle(
+        _sourceModifiedMeta,
+        sourceModified.isAcceptableOrUnknown(
+          data['source_modified']!,
+          _sourceModifiedMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceModifiedMeta);
+    }
+    if (data.containsKey('source_size')) {
+      context.handle(
+        _sourceSizeMeta,
+        sourceSize.isAcceptableOrUnknown(data['source_size']!, _sourceSizeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceSizeMeta);
+    }
+    if (data.containsKey('parser_version')) {
+      context.handle(
+        _parserVersionMeta,
+        parserVersion.isAcceptableOrUnknown(
+          data['parser_version']!,
+          _parserVersionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_parserVersionMeta);
+    }
+    if (data.containsKey('character_name')) {
+      context.handle(
+        _characterNameMeta,
+        characterName.isAcceptableOrUnknown(
+          data['character_name']!,
+          _characterNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_characterNameMeta);
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('encounter_start')) {
+      context.handle(
+        _encounterStartMeta,
+        encounterStart.isAcceptableOrUnknown(
+          data['encounter_start']!,
+          _encounterStartMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_encounterStartMeta);
+    }
+    if (data.containsKey('encounter_end')) {
+      context.handle(
+        _encounterEndMeta,
+        encounterEnd.isAcceptableOrUnknown(
+          data['encounter_end']!,
+          _encounterEndMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_encounterEndMeta);
+    }
+    if (data.containsKey('duration_seconds')) {
+      context.handle(
+        _durationSecondsMeta,
+        durationSeconds.isAcceptableOrUnknown(
+          data['duration_seconds']!,
+          _durationSecondsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_durationSecondsMeta);
+    }
+    if (data.containsKey('outcome')) {
+      context.handle(
+        _outcomeMeta,
+        outcome.isAcceptableOrUnknown(data['outcome']!, _outcomeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_outcomeMeta);
+    }
+    if (data.containsKey('outcome_confidence')) {
+      context.handle(
+        _outcomeConfidenceMeta,
+        outcomeConfidence.isAcceptableOrUnknown(
+          data['outcome_confidence']!,
+          _outcomeConfidenceMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_outcomeConfidenceMeta);
+    }
+    if (data.containsKey('outcome_evidence')) {
+      context.handle(
+        _outcomeEvidenceMeta,
+        outcomeEvidence.isAcceptableOrUnknown(
+          data['outcome_evidence']!,
+          _outcomeEvidenceMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_outcomeEvidenceMeta);
+    }
+    if (data.containsKey('total_damage_dealt')) {
+      context.handle(
+        _totalDamageDealtMeta,
+        totalDamageDealt.isAcceptableOrUnknown(
+          data['total_damage_dealt']!,
+          _totalDamageDealtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_totalDamageDealtMeta);
+    }
+    if (data.containsKey('total_damage_received')) {
+      context.handle(
+        _totalDamageReceivedMeta,
+        totalDamageReceived.isAcceptableOrUnknown(
+          data['total_damage_received']!,
+          _totalDamageReceivedMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_totalDamageReceivedMeta);
+    }
+    if (data.containsKey('list_summary_json')) {
+      context.handle(
+        _listSummaryJsonMeta,
+        listSummaryJson.isAcceptableOrUnknown(
+          data['list_summary_json']!,
+          _listSummaryJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_listSummaryJsonMeta);
+    }
+    if (data.containsKey('parse_json')) {
+      context.handle(
+        _parseJsonMeta,
+        parseJson.isAcceptableOrUnknown(data['parse_json']!, _parseJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_parseJsonMeta);
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cachedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CombatParsedEncounter map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CombatParsedEncounter(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      sourceFilePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_file_path'],
+      )!,
+      sourceModified: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}source_modified'],
+      )!,
+      sourceSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}source_size'],
+      )!,
+      parserVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}parser_version'],
+      )!,
+      characterName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}character_name'],
+      )!,
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      ),
+      encounterStart: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}encounter_start'],
+      )!,
+      encounterEnd: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}encounter_end'],
+      )!,
+      durationSeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration_seconds'],
+      )!,
+      outcome: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}outcome'],
+      )!,
+      outcomeConfidence: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}outcome_confidence'],
+      )!,
+      outcomeEvidence: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}outcome_evidence'],
+      )!,
+      totalDamageDealt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_damage_dealt'],
+      )!,
+      totalDamageReceived: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_damage_received'],
+      )!,
+      listSummaryJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}list_summary_json'],
+      )!,
+      parseJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}parse_json'],
+      )!,
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cached_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CombatParsedEncountersTable createAlias(String alias) {
+    return $CombatParsedEncountersTable(attachedDatabase, alias);
+  }
+}
+
+class CombatParsedEncounter extends DataClass
+    implements Insertable<CombatParsedEncounter> {
+  final String id;
+  final String sourceFilePath;
+  final DateTime sourceModified;
+  final int sourceSize;
+  final int parserVersion;
+  final String characterName;
+  final int? characterId;
+  final DateTime encounterStart;
+  final DateTime encounterEnd;
+  final int durationSeconds;
+  final String outcome;
+  final double outcomeConfidence;
+  final String outcomeEvidence;
+  final int totalDamageDealt;
+  final int totalDamageReceived;
+  final String listSummaryJson;
+  final String parseJson;
+  final DateTime cachedAt;
+  const CombatParsedEncounter({
+    required this.id,
+    required this.sourceFilePath,
+    required this.sourceModified,
+    required this.sourceSize,
+    required this.parserVersion,
+    required this.characterName,
+    this.characterId,
+    required this.encounterStart,
+    required this.encounterEnd,
+    required this.durationSeconds,
+    required this.outcome,
+    required this.outcomeConfidence,
+    required this.outcomeEvidence,
+    required this.totalDamageDealt,
+    required this.totalDamageReceived,
+    required this.listSummaryJson,
+    required this.parseJson,
+    required this.cachedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['source_file_path'] = Variable<String>(sourceFilePath);
+    map['source_modified'] = Variable<DateTime>(sourceModified);
+    map['source_size'] = Variable<int>(sourceSize);
+    map['parser_version'] = Variable<int>(parserVersion);
+    map['character_name'] = Variable<String>(characterName);
+    if (!nullToAbsent || characterId != null) {
+      map['character_id'] = Variable<int>(characterId);
+    }
+    map['encounter_start'] = Variable<DateTime>(encounterStart);
+    map['encounter_end'] = Variable<DateTime>(encounterEnd);
+    map['duration_seconds'] = Variable<int>(durationSeconds);
+    map['outcome'] = Variable<String>(outcome);
+    map['outcome_confidence'] = Variable<double>(outcomeConfidence);
+    map['outcome_evidence'] = Variable<String>(outcomeEvidence);
+    map['total_damage_dealt'] = Variable<int>(totalDamageDealt);
+    map['total_damage_received'] = Variable<int>(totalDamageReceived);
+    map['list_summary_json'] = Variable<String>(listSummaryJson);
+    map['parse_json'] = Variable<String>(parseJson);
+    map['cached_at'] = Variable<DateTime>(cachedAt);
+    return map;
+  }
+
+  CombatParsedEncountersCompanion toCompanion(bool nullToAbsent) {
+    return CombatParsedEncountersCompanion(
+      id: Value(id),
+      sourceFilePath: Value(sourceFilePath),
+      sourceModified: Value(sourceModified),
+      sourceSize: Value(sourceSize),
+      parserVersion: Value(parserVersion),
+      characterName: Value(characterName),
+      characterId: characterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(characterId),
+      encounterStart: Value(encounterStart),
+      encounterEnd: Value(encounterEnd),
+      durationSeconds: Value(durationSeconds),
+      outcome: Value(outcome),
+      outcomeConfidence: Value(outcomeConfidence),
+      outcomeEvidence: Value(outcomeEvidence),
+      totalDamageDealt: Value(totalDamageDealt),
+      totalDamageReceived: Value(totalDamageReceived),
+      listSummaryJson: Value(listSummaryJson),
+      parseJson: Value(parseJson),
+      cachedAt: Value(cachedAt),
+    );
+  }
+
+  factory CombatParsedEncounter.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CombatParsedEncounter(
+      id: serializer.fromJson<String>(json['id']),
+      sourceFilePath: serializer.fromJson<String>(json['sourceFilePath']),
+      sourceModified: serializer.fromJson<DateTime>(json['sourceModified']),
+      sourceSize: serializer.fromJson<int>(json['sourceSize']),
+      parserVersion: serializer.fromJson<int>(json['parserVersion']),
+      characterName: serializer.fromJson<String>(json['characterName']),
+      characterId: serializer.fromJson<int?>(json['characterId']),
+      encounterStart: serializer.fromJson<DateTime>(json['encounterStart']),
+      encounterEnd: serializer.fromJson<DateTime>(json['encounterEnd']),
+      durationSeconds: serializer.fromJson<int>(json['durationSeconds']),
+      outcome: serializer.fromJson<String>(json['outcome']),
+      outcomeConfidence: serializer.fromJson<double>(json['outcomeConfidence']),
+      outcomeEvidence: serializer.fromJson<String>(json['outcomeEvidence']),
+      totalDamageDealt: serializer.fromJson<int>(json['totalDamageDealt']),
+      totalDamageReceived: serializer.fromJson<int>(
+        json['totalDamageReceived'],
+      ),
+      listSummaryJson: serializer.fromJson<String>(json['listSummaryJson']),
+      parseJson: serializer.fromJson<String>(json['parseJson']),
+      cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'sourceFilePath': serializer.toJson<String>(sourceFilePath),
+      'sourceModified': serializer.toJson<DateTime>(sourceModified),
+      'sourceSize': serializer.toJson<int>(sourceSize),
+      'parserVersion': serializer.toJson<int>(parserVersion),
+      'characterName': serializer.toJson<String>(characterName),
+      'characterId': serializer.toJson<int?>(characterId),
+      'encounterStart': serializer.toJson<DateTime>(encounterStart),
+      'encounterEnd': serializer.toJson<DateTime>(encounterEnd),
+      'durationSeconds': serializer.toJson<int>(durationSeconds),
+      'outcome': serializer.toJson<String>(outcome),
+      'outcomeConfidence': serializer.toJson<double>(outcomeConfidence),
+      'outcomeEvidence': serializer.toJson<String>(outcomeEvidence),
+      'totalDamageDealt': serializer.toJson<int>(totalDamageDealt),
+      'totalDamageReceived': serializer.toJson<int>(totalDamageReceived),
+      'listSummaryJson': serializer.toJson<String>(listSummaryJson),
+      'parseJson': serializer.toJson<String>(parseJson),
+      'cachedAt': serializer.toJson<DateTime>(cachedAt),
+    };
+  }
+
+  CombatParsedEncounter copyWith({
+    String? id,
+    String? sourceFilePath,
+    DateTime? sourceModified,
+    int? sourceSize,
+    int? parserVersion,
+    String? characterName,
+    Value<int?> characterId = const Value.absent(),
+    DateTime? encounterStart,
+    DateTime? encounterEnd,
+    int? durationSeconds,
+    String? outcome,
+    double? outcomeConfidence,
+    String? outcomeEvidence,
+    int? totalDamageDealt,
+    int? totalDamageReceived,
+    String? listSummaryJson,
+    String? parseJson,
+    DateTime? cachedAt,
+  }) => CombatParsedEncounter(
+    id: id ?? this.id,
+    sourceFilePath: sourceFilePath ?? this.sourceFilePath,
+    sourceModified: sourceModified ?? this.sourceModified,
+    sourceSize: sourceSize ?? this.sourceSize,
+    parserVersion: parserVersion ?? this.parserVersion,
+    characterName: characterName ?? this.characterName,
+    characterId: characterId.present ? characterId.value : this.characterId,
+    encounterStart: encounterStart ?? this.encounterStart,
+    encounterEnd: encounterEnd ?? this.encounterEnd,
+    durationSeconds: durationSeconds ?? this.durationSeconds,
+    outcome: outcome ?? this.outcome,
+    outcomeConfidence: outcomeConfidence ?? this.outcomeConfidence,
+    outcomeEvidence: outcomeEvidence ?? this.outcomeEvidence,
+    totalDamageDealt: totalDamageDealt ?? this.totalDamageDealt,
+    totalDamageReceived: totalDamageReceived ?? this.totalDamageReceived,
+    listSummaryJson: listSummaryJson ?? this.listSummaryJson,
+    parseJson: parseJson ?? this.parseJson,
+    cachedAt: cachedAt ?? this.cachedAt,
+  );
+  CombatParsedEncounter copyWithCompanion(
+    CombatParsedEncountersCompanion data,
+  ) {
+    return CombatParsedEncounter(
+      id: data.id.present ? data.id.value : this.id,
+      sourceFilePath: data.sourceFilePath.present
+          ? data.sourceFilePath.value
+          : this.sourceFilePath,
+      sourceModified: data.sourceModified.present
+          ? data.sourceModified.value
+          : this.sourceModified,
+      sourceSize: data.sourceSize.present
+          ? data.sourceSize.value
+          : this.sourceSize,
+      parserVersion: data.parserVersion.present
+          ? data.parserVersion.value
+          : this.parserVersion,
+      characterName: data.characterName.present
+          ? data.characterName.value
+          : this.characterName,
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      encounterStart: data.encounterStart.present
+          ? data.encounterStart.value
+          : this.encounterStart,
+      encounterEnd: data.encounterEnd.present
+          ? data.encounterEnd.value
+          : this.encounterEnd,
+      durationSeconds: data.durationSeconds.present
+          ? data.durationSeconds.value
+          : this.durationSeconds,
+      outcome: data.outcome.present ? data.outcome.value : this.outcome,
+      outcomeConfidence: data.outcomeConfidence.present
+          ? data.outcomeConfidence.value
+          : this.outcomeConfidence,
+      outcomeEvidence: data.outcomeEvidence.present
+          ? data.outcomeEvidence.value
+          : this.outcomeEvidence,
+      totalDamageDealt: data.totalDamageDealt.present
+          ? data.totalDamageDealt.value
+          : this.totalDamageDealt,
+      totalDamageReceived: data.totalDamageReceived.present
+          ? data.totalDamageReceived.value
+          : this.totalDamageReceived,
+      listSummaryJson: data.listSummaryJson.present
+          ? data.listSummaryJson.value
+          : this.listSummaryJson,
+      parseJson: data.parseJson.present ? data.parseJson.value : this.parseJson,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CombatParsedEncounter(')
+          ..write('id: $id, ')
+          ..write('sourceFilePath: $sourceFilePath, ')
+          ..write('sourceModified: $sourceModified, ')
+          ..write('sourceSize: $sourceSize, ')
+          ..write('parserVersion: $parserVersion, ')
+          ..write('characterName: $characterName, ')
+          ..write('characterId: $characterId, ')
+          ..write('encounterStart: $encounterStart, ')
+          ..write('encounterEnd: $encounterEnd, ')
+          ..write('durationSeconds: $durationSeconds, ')
+          ..write('outcome: $outcome, ')
+          ..write('outcomeConfidence: $outcomeConfidence, ')
+          ..write('outcomeEvidence: $outcomeEvidence, ')
+          ..write('totalDamageDealt: $totalDamageDealt, ')
+          ..write('totalDamageReceived: $totalDamageReceived, ')
+          ..write('listSummaryJson: $listSummaryJson, ')
+          ..write('parseJson: $parseJson, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    sourceFilePath,
+    sourceModified,
+    sourceSize,
+    parserVersion,
+    characterName,
+    characterId,
+    encounterStart,
+    encounterEnd,
+    durationSeconds,
+    outcome,
+    outcomeConfidence,
+    outcomeEvidence,
+    totalDamageDealt,
+    totalDamageReceived,
+    listSummaryJson,
+    parseJson,
+    cachedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CombatParsedEncounter &&
+          other.id == this.id &&
+          other.sourceFilePath == this.sourceFilePath &&
+          other.sourceModified == this.sourceModified &&
+          other.sourceSize == this.sourceSize &&
+          other.parserVersion == this.parserVersion &&
+          other.characterName == this.characterName &&
+          other.characterId == this.characterId &&
+          other.encounterStart == this.encounterStart &&
+          other.encounterEnd == this.encounterEnd &&
+          other.durationSeconds == this.durationSeconds &&
+          other.outcome == this.outcome &&
+          other.outcomeConfidence == this.outcomeConfidence &&
+          other.outcomeEvidence == this.outcomeEvidence &&
+          other.totalDamageDealt == this.totalDamageDealt &&
+          other.totalDamageReceived == this.totalDamageReceived &&
+          other.listSummaryJson == this.listSummaryJson &&
+          other.parseJson == this.parseJson &&
+          other.cachedAt == this.cachedAt);
+}
+
+class CombatParsedEncountersCompanion
+    extends UpdateCompanion<CombatParsedEncounter> {
+  final Value<String> id;
+  final Value<String> sourceFilePath;
+  final Value<DateTime> sourceModified;
+  final Value<int> sourceSize;
+  final Value<int> parserVersion;
+  final Value<String> characterName;
+  final Value<int?> characterId;
+  final Value<DateTime> encounterStart;
+  final Value<DateTime> encounterEnd;
+  final Value<int> durationSeconds;
+  final Value<String> outcome;
+  final Value<double> outcomeConfidence;
+  final Value<String> outcomeEvidence;
+  final Value<int> totalDamageDealt;
+  final Value<int> totalDamageReceived;
+  final Value<String> listSummaryJson;
+  final Value<String> parseJson;
+  final Value<DateTime> cachedAt;
+  final Value<int> rowid;
+  const CombatParsedEncountersCompanion({
+    this.id = const Value.absent(),
+    this.sourceFilePath = const Value.absent(),
+    this.sourceModified = const Value.absent(),
+    this.sourceSize = const Value.absent(),
+    this.parserVersion = const Value.absent(),
+    this.characterName = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.encounterStart = const Value.absent(),
+    this.encounterEnd = const Value.absent(),
+    this.durationSeconds = const Value.absent(),
+    this.outcome = const Value.absent(),
+    this.outcomeConfidence = const Value.absent(),
+    this.outcomeEvidence = const Value.absent(),
+    this.totalDamageDealt = const Value.absent(),
+    this.totalDamageReceived = const Value.absent(),
+    this.listSummaryJson = const Value.absent(),
+    this.parseJson = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CombatParsedEncountersCompanion.insert({
+    required String id,
+    required String sourceFilePath,
+    required DateTime sourceModified,
+    required int sourceSize,
+    required int parserVersion,
+    required String characterName,
+    this.characterId = const Value.absent(),
+    required DateTime encounterStart,
+    required DateTime encounterEnd,
+    required int durationSeconds,
+    required String outcome,
+    required double outcomeConfidence,
+    required String outcomeEvidence,
+    required int totalDamageDealt,
+    required int totalDamageReceived,
+    required String listSummaryJson,
+    required String parseJson,
+    required DateTime cachedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       sourceFilePath = Value(sourceFilePath),
+       sourceModified = Value(sourceModified),
+       sourceSize = Value(sourceSize),
+       parserVersion = Value(parserVersion),
+       characterName = Value(characterName),
+       encounterStart = Value(encounterStart),
+       encounterEnd = Value(encounterEnd),
+       durationSeconds = Value(durationSeconds),
+       outcome = Value(outcome),
+       outcomeConfidence = Value(outcomeConfidence),
+       outcomeEvidence = Value(outcomeEvidence),
+       totalDamageDealt = Value(totalDamageDealt),
+       totalDamageReceived = Value(totalDamageReceived),
+       listSummaryJson = Value(listSummaryJson),
+       parseJson = Value(parseJson),
+       cachedAt = Value(cachedAt);
+  static Insertable<CombatParsedEncounter> custom({
+    Expression<String>? id,
+    Expression<String>? sourceFilePath,
+    Expression<DateTime>? sourceModified,
+    Expression<int>? sourceSize,
+    Expression<int>? parserVersion,
+    Expression<String>? characterName,
+    Expression<int>? characterId,
+    Expression<DateTime>? encounterStart,
+    Expression<DateTime>? encounterEnd,
+    Expression<int>? durationSeconds,
+    Expression<String>? outcome,
+    Expression<double>? outcomeConfidence,
+    Expression<String>? outcomeEvidence,
+    Expression<int>? totalDamageDealt,
+    Expression<int>? totalDamageReceived,
+    Expression<String>? listSummaryJson,
+    Expression<String>? parseJson,
+    Expression<DateTime>? cachedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sourceFilePath != null) 'source_file_path': sourceFilePath,
+      if (sourceModified != null) 'source_modified': sourceModified,
+      if (sourceSize != null) 'source_size': sourceSize,
+      if (parserVersion != null) 'parser_version': parserVersion,
+      if (characterName != null) 'character_name': characterName,
+      if (characterId != null) 'character_id': characterId,
+      if (encounterStart != null) 'encounter_start': encounterStart,
+      if (encounterEnd != null) 'encounter_end': encounterEnd,
+      if (durationSeconds != null) 'duration_seconds': durationSeconds,
+      if (outcome != null) 'outcome': outcome,
+      if (outcomeConfidence != null) 'outcome_confidence': outcomeConfidence,
+      if (outcomeEvidence != null) 'outcome_evidence': outcomeEvidence,
+      if (totalDamageDealt != null) 'total_damage_dealt': totalDamageDealt,
+      if (totalDamageReceived != null)
+        'total_damage_received': totalDamageReceived,
+      if (listSummaryJson != null) 'list_summary_json': listSummaryJson,
+      if (parseJson != null) 'parse_json': parseJson,
+      if (cachedAt != null) 'cached_at': cachedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CombatParsedEncountersCompanion copyWith({
+    Value<String>? id,
+    Value<String>? sourceFilePath,
+    Value<DateTime>? sourceModified,
+    Value<int>? sourceSize,
+    Value<int>? parserVersion,
+    Value<String>? characterName,
+    Value<int?>? characterId,
+    Value<DateTime>? encounterStart,
+    Value<DateTime>? encounterEnd,
+    Value<int>? durationSeconds,
+    Value<String>? outcome,
+    Value<double>? outcomeConfidence,
+    Value<String>? outcomeEvidence,
+    Value<int>? totalDamageDealt,
+    Value<int>? totalDamageReceived,
+    Value<String>? listSummaryJson,
+    Value<String>? parseJson,
+    Value<DateTime>? cachedAt,
+    Value<int>? rowid,
+  }) {
+    return CombatParsedEncountersCompanion(
+      id: id ?? this.id,
+      sourceFilePath: sourceFilePath ?? this.sourceFilePath,
+      sourceModified: sourceModified ?? this.sourceModified,
+      sourceSize: sourceSize ?? this.sourceSize,
+      parserVersion: parserVersion ?? this.parserVersion,
+      characterName: characterName ?? this.characterName,
+      characterId: characterId ?? this.characterId,
+      encounterStart: encounterStart ?? this.encounterStart,
+      encounterEnd: encounterEnd ?? this.encounterEnd,
+      durationSeconds: durationSeconds ?? this.durationSeconds,
+      outcome: outcome ?? this.outcome,
+      outcomeConfidence: outcomeConfidence ?? this.outcomeConfidence,
+      outcomeEvidence: outcomeEvidence ?? this.outcomeEvidence,
+      totalDamageDealt: totalDamageDealt ?? this.totalDamageDealt,
+      totalDamageReceived: totalDamageReceived ?? this.totalDamageReceived,
+      listSummaryJson: listSummaryJson ?? this.listSummaryJson,
+      parseJson: parseJson ?? this.parseJson,
+      cachedAt: cachedAt ?? this.cachedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (sourceFilePath.present) {
+      map['source_file_path'] = Variable<String>(sourceFilePath.value);
+    }
+    if (sourceModified.present) {
+      map['source_modified'] = Variable<DateTime>(sourceModified.value);
+    }
+    if (sourceSize.present) {
+      map['source_size'] = Variable<int>(sourceSize.value);
+    }
+    if (parserVersion.present) {
+      map['parser_version'] = Variable<int>(parserVersion.value);
+    }
+    if (characterName.present) {
+      map['character_name'] = Variable<String>(characterName.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (encounterStart.present) {
+      map['encounter_start'] = Variable<DateTime>(encounterStart.value);
+    }
+    if (encounterEnd.present) {
+      map['encounter_end'] = Variable<DateTime>(encounterEnd.value);
+    }
+    if (durationSeconds.present) {
+      map['duration_seconds'] = Variable<int>(durationSeconds.value);
+    }
+    if (outcome.present) {
+      map['outcome'] = Variable<String>(outcome.value);
+    }
+    if (outcomeConfidence.present) {
+      map['outcome_confidence'] = Variable<double>(outcomeConfidence.value);
+    }
+    if (outcomeEvidence.present) {
+      map['outcome_evidence'] = Variable<String>(outcomeEvidence.value);
+    }
+    if (totalDamageDealt.present) {
+      map['total_damage_dealt'] = Variable<int>(totalDamageDealt.value);
+    }
+    if (totalDamageReceived.present) {
+      map['total_damage_received'] = Variable<int>(totalDamageReceived.value);
+    }
+    if (listSummaryJson.present) {
+      map['list_summary_json'] = Variable<String>(listSummaryJson.value);
+    }
+    if (parseJson.present) {
+      map['parse_json'] = Variable<String>(parseJson.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<DateTime>(cachedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CombatParsedEncountersCompanion(')
+          ..write('id: $id, ')
+          ..write('sourceFilePath: $sourceFilePath, ')
+          ..write('sourceModified: $sourceModified, ')
+          ..write('sourceSize: $sourceSize, ')
+          ..write('parserVersion: $parserVersion, ')
+          ..write('characterName: $characterName, ')
+          ..write('characterId: $characterId, ')
+          ..write('encounterStart: $encounterStart, ')
+          ..write('encounterEnd: $encounterEnd, ')
+          ..write('durationSeconds: $durationSeconds, ')
+          ..write('outcome: $outcome, ')
+          ..write('outcomeConfidence: $outcomeConfidence, ')
+          ..write('outcomeEvidence: $outcomeEvidence, ')
+          ..write('totalDamageDealt: $totalDamageDealt, ')
+          ..write('totalDamageReceived: $totalDamageReceived, ')
+          ..write('listSummaryJson: $listSummaryJson, ')
+          ..write('parseJson: $parseJson, ')
+          ..write('cachedAt: $cachedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CombatEncountersTable extends CombatEncounters
+    with TableInfo<$CombatEncountersTable, CombatEncounter> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CombatEncountersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _parsedEncounterIdMeta = const VerificationMeta(
+    'parsedEncounterId',
+  );
+  @override
+  late final GeneratedColumn<String> parsedEncounterId =
+      GeneratedColumn<String>(
+        'parsed_encounter_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _analysisVersionMeta = const VerificationMeta(
+    'analysisVersion',
+  );
+  @override
+  late final GeneratedColumn<int> analysisVersion = GeneratedColumn<int>(
+    'analysis_version',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _analysisJsonMeta = const VerificationMeta(
+    'analysisJson',
+  );
+  @override
+  late final GeneratedColumn<String> analysisJson = GeneratedColumn<String>(
+    'analysis_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _parseJsonMeta = const VerificationMeta(
+    'parseJson',
+  );
+  @override
+  late final GeneratedColumn<String> parseJson = GeneratedColumn<String>(
+    'parse_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _encounterStartMeta = const VerificationMeta(
+    'encounterStart',
+  );
+  @override
+  late final GeneratedColumn<DateTime> encounterStart =
+      GeneratedColumn<DateTime>(
+        'encounter_start',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _encounterEndMeta = const VerificationMeta(
+    'encounterEnd',
+  );
+  @override
+  late final GeneratedColumn<DateTime> encounterEnd = GeneratedColumn<DateTime>(
+    'encounter_end',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _encounterTimeMeta = const VerificationMeta(
+    'encounterTime',
+  );
+  @override
+  late final GeneratedColumn<DateTime> encounterTime =
+      GeneratedColumn<DateTime>(
+        'encounter_time',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _opposingCharactersMeta =
+      const VerificationMeta('opposingCharacters');
+  @override
+  late final GeneratedColumn<String> opposingCharacters =
+      GeneratedColumn<String>(
+        'opposing_characters',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _opposingCorporationsMeta =
+      const VerificationMeta('opposingCorporations');
+  @override
+  late final GeneratedColumn<String> opposingCorporations =
+      GeneratedColumn<String>(
+        'opposing_corporations',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _opposingAlliancesMeta = const VerificationMeta(
+    'opposingAlliances',
+  );
+  @override
+  late final GeneratedColumn<String> opposingAlliances =
+      GeneratedColumn<String>(
+        'opposing_alliances',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _opposingShipTypesMeta = const VerificationMeta(
+    'opposingShipTypes',
+  );
+  @override
+  late final GeneratedColumn<String> opposingShipTypes =
+      GeneratedColumn<String>(
+        'opposing_ship_types',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _totalDamageDealtMeta = const VerificationMeta(
+    'totalDamageDealt',
+  );
+  @override
+  late final GeneratedColumn<int> totalDamageDealt = GeneratedColumn<int>(
+    'total_damage_dealt',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _totalDamageReceivedMeta =
+      const VerificationMeta('totalDamageReceived');
+  @override
+  late final GeneratedColumn<int> totalDamageReceived = GeneratedColumn<int>(
+    'total_damage_received',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isVictoryMeta = const VerificationMeta(
+    'isVictory',
+  );
+  @override
+  late final GeneratedColumn<bool> isVictory = GeneratedColumn<bool>(
+    'is_victory',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_victory" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _llmSummaryMeta = const VerificationMeta(
+    'llmSummary',
+  );
+  @override
+  late final GeneratedColumn<String> llmSummary = GeneratedColumn<String>(
+    'llm_summary',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _llmFeedbackMistakesMeta =
+      const VerificationMeta('llmFeedbackMistakes');
+  @override
+  late final GeneratedColumn<String> llmFeedbackMistakes =
+      GeneratedColumn<String>(
+        'llm_feedback_mistakes',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _llmFeedbackImprovementsMeta =
+      const VerificationMeta('llmFeedbackImprovements');
+  @override
+  late final GeneratedColumn<String> llmFeedbackImprovements =
+      GeneratedColumn<String>(
+        'llm_feedback_improvements',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _llmFeedbackFitsMeta = const VerificationMeta(
+    'llmFeedbackFits',
+  );
+  @override
+  late final GeneratedColumn<String> llmFeedbackFits = GeneratedColumn<String>(
+    'llm_feedback_fits',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _damageChartDataMeta = const VerificationMeta(
+    'damageChartData',
+  );
+  @override
+  late final GeneratedColumn<String> damageChartData = GeneratedColumn<String>(
+    'damage_chart_data',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    parsedEncounterId,
+    analysisVersion,
+    analysisJson,
+    parseJson,
+    encounterStart,
+    encounterEnd,
+    characterId,
+    encounterTime,
+    opposingCharacters,
+    opposingCorporations,
+    opposingAlliances,
+    opposingShipTypes,
+    totalDamageDealt,
+    totalDamageReceived,
+    isVictory,
+    llmSummary,
+    llmFeedbackMistakes,
+    llmFeedbackImprovements,
+    llmFeedbackFits,
+    damageChartData,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'combat_encounters';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CombatEncounter> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('parsed_encounter_id')) {
+      context.handle(
+        _parsedEncounterIdMeta,
+        parsedEncounterId.isAcceptableOrUnknown(
+          data['parsed_encounter_id']!,
+          _parsedEncounterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('analysis_version')) {
+      context.handle(
+        _analysisVersionMeta,
+        analysisVersion.isAcceptableOrUnknown(
+          data['analysis_version']!,
+          _analysisVersionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('analysis_json')) {
+      context.handle(
+        _analysisJsonMeta,
+        analysisJson.isAcceptableOrUnknown(
+          data['analysis_json']!,
+          _analysisJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('parse_json')) {
+      context.handle(
+        _parseJsonMeta,
+        parseJson.isAcceptableOrUnknown(data['parse_json']!, _parseJsonMeta),
+      );
+    }
+    if (data.containsKey('encounter_start')) {
+      context.handle(
+        _encounterStartMeta,
+        encounterStart.isAcceptableOrUnknown(
+          data['encounter_start']!,
+          _encounterStartMeta,
+        ),
+      );
+    }
+    if (data.containsKey('encounter_end')) {
+      context.handle(
+        _encounterEndMeta,
+        encounterEnd.isAcceptableOrUnknown(
+          data['encounter_end']!,
+          _encounterEndMeta,
+        ),
+      );
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('encounter_time')) {
+      context.handle(
+        _encounterTimeMeta,
+        encounterTime.isAcceptableOrUnknown(
+          data['encounter_time']!,
+          _encounterTimeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_encounterTimeMeta);
+    }
+    if (data.containsKey('opposing_characters')) {
+      context.handle(
+        _opposingCharactersMeta,
+        opposingCharacters.isAcceptableOrUnknown(
+          data['opposing_characters']!,
+          _opposingCharactersMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_opposingCharactersMeta);
+    }
+    if (data.containsKey('opposing_corporations')) {
+      context.handle(
+        _opposingCorporationsMeta,
+        opposingCorporations.isAcceptableOrUnknown(
+          data['opposing_corporations']!,
+          _opposingCorporationsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_opposingCorporationsMeta);
+    }
+    if (data.containsKey('opposing_alliances')) {
+      context.handle(
+        _opposingAlliancesMeta,
+        opposingAlliances.isAcceptableOrUnknown(
+          data['opposing_alliances']!,
+          _opposingAlliancesMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_opposingAlliancesMeta);
+    }
+    if (data.containsKey('opposing_ship_types')) {
+      context.handle(
+        _opposingShipTypesMeta,
+        opposingShipTypes.isAcceptableOrUnknown(
+          data['opposing_ship_types']!,
+          _opposingShipTypesMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_opposingShipTypesMeta);
+    }
+    if (data.containsKey('total_damage_dealt')) {
+      context.handle(
+        _totalDamageDealtMeta,
+        totalDamageDealt.isAcceptableOrUnknown(
+          data['total_damage_dealt']!,
+          _totalDamageDealtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_totalDamageDealtMeta);
+    }
+    if (data.containsKey('total_damage_received')) {
+      context.handle(
+        _totalDamageReceivedMeta,
+        totalDamageReceived.isAcceptableOrUnknown(
+          data['total_damage_received']!,
+          _totalDamageReceivedMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_totalDamageReceivedMeta);
+    }
+    if (data.containsKey('is_victory')) {
+      context.handle(
+        _isVictoryMeta,
+        isVictory.isAcceptableOrUnknown(data['is_victory']!, _isVictoryMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_isVictoryMeta);
+    }
+    if (data.containsKey('llm_summary')) {
+      context.handle(
+        _llmSummaryMeta,
+        llmSummary.isAcceptableOrUnknown(data['llm_summary']!, _llmSummaryMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_llmSummaryMeta);
+    }
+    if (data.containsKey('llm_feedback_mistakes')) {
+      context.handle(
+        _llmFeedbackMistakesMeta,
+        llmFeedbackMistakes.isAcceptableOrUnknown(
+          data['llm_feedback_mistakes']!,
+          _llmFeedbackMistakesMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_llmFeedbackMistakesMeta);
+    }
+    if (data.containsKey('llm_feedback_improvements')) {
+      context.handle(
+        _llmFeedbackImprovementsMeta,
+        llmFeedbackImprovements.isAcceptableOrUnknown(
+          data['llm_feedback_improvements']!,
+          _llmFeedbackImprovementsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_llmFeedbackImprovementsMeta);
+    }
+    if (data.containsKey('llm_feedback_fits')) {
+      context.handle(
+        _llmFeedbackFitsMeta,
+        llmFeedbackFits.isAcceptableOrUnknown(
+          data['llm_feedback_fits']!,
+          _llmFeedbackFitsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_llmFeedbackFitsMeta);
+    }
+    if (data.containsKey('damage_chart_data')) {
+      context.handle(
+        _damageChartDataMeta,
+        damageChartData.isAcceptableOrUnknown(
+          data['damage_chart_data']!,
+          _damageChartDataMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_damageChartDataMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CombatEncounter map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CombatEncounter(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      parsedEncounterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}parsed_encounter_id'],
+      ),
+      analysisVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}analysis_version'],
+      ),
+      analysisJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}analysis_json'],
+      ),
+      parseJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}parse_json'],
+      ),
+      encounterStart: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}encounter_start'],
+      ),
+      encounterEnd: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}encounter_end'],
+      ),
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      ),
+      encounterTime: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}encounter_time'],
+      )!,
+      opposingCharacters: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}opposing_characters'],
+      )!,
+      opposingCorporations: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}opposing_corporations'],
+      )!,
+      opposingAlliances: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}opposing_alliances'],
+      )!,
+      opposingShipTypes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}opposing_ship_types'],
+      )!,
+      totalDamageDealt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_damage_dealt'],
+      )!,
+      totalDamageReceived: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_damage_received'],
+      )!,
+      isVictory: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_victory'],
+      )!,
+      llmSummary: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}llm_summary'],
+      )!,
+      llmFeedbackMistakes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}llm_feedback_mistakes'],
+      )!,
+      llmFeedbackImprovements: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}llm_feedback_improvements'],
+      )!,
+      llmFeedbackFits: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}llm_feedback_fits'],
+      )!,
+      damageChartData: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}damage_chart_data'],
+      )!,
+    );
+  }
+
+  @override
+  $CombatEncountersTable createAlias(String alias) {
+    return $CombatEncountersTable(attachedDatabase, alias);
+  }
+}
+
+class CombatEncounter extends DataClass implements Insertable<CombatEncounter> {
+  final String id;
+  final String? parsedEncounterId;
+  final int? analysisVersion;
+  final String? analysisJson;
+  final String? parseJson;
+  final DateTime? encounterStart;
+  final DateTime? encounterEnd;
+  final int? characterId;
+  final DateTime encounterTime;
+  final String opposingCharacters;
+  final String opposingCorporations;
+  final String opposingAlliances;
+  final String opposingShipTypes;
+  final int totalDamageDealt;
+  final int totalDamageReceived;
+  final bool isVictory;
+  final String llmSummary;
+  final String llmFeedbackMistakes;
+  final String llmFeedbackImprovements;
+  final String llmFeedbackFits;
+  final String damageChartData;
+  const CombatEncounter({
+    required this.id,
+    this.parsedEncounterId,
+    this.analysisVersion,
+    this.analysisJson,
+    this.parseJson,
+    this.encounterStart,
+    this.encounterEnd,
+    this.characterId,
+    required this.encounterTime,
+    required this.opposingCharacters,
+    required this.opposingCorporations,
+    required this.opposingAlliances,
+    required this.opposingShipTypes,
+    required this.totalDamageDealt,
+    required this.totalDamageReceived,
+    required this.isVictory,
+    required this.llmSummary,
+    required this.llmFeedbackMistakes,
+    required this.llmFeedbackImprovements,
+    required this.llmFeedbackFits,
+    required this.damageChartData,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    if (!nullToAbsent || parsedEncounterId != null) {
+      map['parsed_encounter_id'] = Variable<String>(parsedEncounterId);
+    }
+    if (!nullToAbsent || analysisVersion != null) {
+      map['analysis_version'] = Variable<int>(analysisVersion);
+    }
+    if (!nullToAbsent || analysisJson != null) {
+      map['analysis_json'] = Variable<String>(analysisJson);
+    }
+    if (!nullToAbsent || parseJson != null) {
+      map['parse_json'] = Variable<String>(parseJson);
+    }
+    if (!nullToAbsent || encounterStart != null) {
+      map['encounter_start'] = Variable<DateTime>(encounterStart);
+    }
+    if (!nullToAbsent || encounterEnd != null) {
+      map['encounter_end'] = Variable<DateTime>(encounterEnd);
+    }
+    if (!nullToAbsent || characterId != null) {
+      map['character_id'] = Variable<int>(characterId);
+    }
+    map['encounter_time'] = Variable<DateTime>(encounterTime);
+    map['opposing_characters'] = Variable<String>(opposingCharacters);
+    map['opposing_corporations'] = Variable<String>(opposingCorporations);
+    map['opposing_alliances'] = Variable<String>(opposingAlliances);
+    map['opposing_ship_types'] = Variable<String>(opposingShipTypes);
+    map['total_damage_dealt'] = Variable<int>(totalDamageDealt);
+    map['total_damage_received'] = Variable<int>(totalDamageReceived);
+    map['is_victory'] = Variable<bool>(isVictory);
+    map['llm_summary'] = Variable<String>(llmSummary);
+    map['llm_feedback_mistakes'] = Variable<String>(llmFeedbackMistakes);
+    map['llm_feedback_improvements'] = Variable<String>(
+      llmFeedbackImprovements,
+    );
+    map['llm_feedback_fits'] = Variable<String>(llmFeedbackFits);
+    map['damage_chart_data'] = Variable<String>(damageChartData);
+    return map;
+  }
+
+  CombatEncountersCompanion toCompanion(bool nullToAbsent) {
+    return CombatEncountersCompanion(
+      id: Value(id),
+      parsedEncounterId: parsedEncounterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parsedEncounterId),
+      analysisVersion: analysisVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(analysisVersion),
+      analysisJson: analysisJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(analysisJson),
+      parseJson: parseJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parseJson),
+      encounterStart: encounterStart == null && nullToAbsent
+          ? const Value.absent()
+          : Value(encounterStart),
+      encounterEnd: encounterEnd == null && nullToAbsent
+          ? const Value.absent()
+          : Value(encounterEnd),
+      characterId: characterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(characterId),
+      encounterTime: Value(encounterTime),
+      opposingCharacters: Value(opposingCharacters),
+      opposingCorporations: Value(opposingCorporations),
+      opposingAlliances: Value(opposingAlliances),
+      opposingShipTypes: Value(opposingShipTypes),
+      totalDamageDealt: Value(totalDamageDealt),
+      totalDamageReceived: Value(totalDamageReceived),
+      isVictory: Value(isVictory),
+      llmSummary: Value(llmSummary),
+      llmFeedbackMistakes: Value(llmFeedbackMistakes),
+      llmFeedbackImprovements: Value(llmFeedbackImprovements),
+      llmFeedbackFits: Value(llmFeedbackFits),
+      damageChartData: Value(damageChartData),
+    );
+  }
+
+  factory CombatEncounter.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CombatEncounter(
+      id: serializer.fromJson<String>(json['id']),
+      parsedEncounterId: serializer.fromJson<String?>(
+        json['parsedEncounterId'],
+      ),
+      analysisVersion: serializer.fromJson<int?>(json['analysisVersion']),
+      analysisJson: serializer.fromJson<String?>(json['analysisJson']),
+      parseJson: serializer.fromJson<String?>(json['parseJson']),
+      encounterStart: serializer.fromJson<DateTime?>(json['encounterStart']),
+      encounterEnd: serializer.fromJson<DateTime?>(json['encounterEnd']),
+      characterId: serializer.fromJson<int?>(json['characterId']),
+      encounterTime: serializer.fromJson<DateTime>(json['encounterTime']),
+      opposingCharacters: serializer.fromJson<String>(
+        json['opposingCharacters'],
+      ),
+      opposingCorporations: serializer.fromJson<String>(
+        json['opposingCorporations'],
+      ),
+      opposingAlliances: serializer.fromJson<String>(json['opposingAlliances']),
+      opposingShipTypes: serializer.fromJson<String>(json['opposingShipTypes']),
+      totalDamageDealt: serializer.fromJson<int>(json['totalDamageDealt']),
+      totalDamageReceived: serializer.fromJson<int>(
+        json['totalDamageReceived'],
+      ),
+      isVictory: serializer.fromJson<bool>(json['isVictory']),
+      llmSummary: serializer.fromJson<String>(json['llmSummary']),
+      llmFeedbackMistakes: serializer.fromJson<String>(
+        json['llmFeedbackMistakes'],
+      ),
+      llmFeedbackImprovements: serializer.fromJson<String>(
+        json['llmFeedbackImprovements'],
+      ),
+      llmFeedbackFits: serializer.fromJson<String>(json['llmFeedbackFits']),
+      damageChartData: serializer.fromJson<String>(json['damageChartData']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'parsedEncounterId': serializer.toJson<String?>(parsedEncounterId),
+      'analysisVersion': serializer.toJson<int?>(analysisVersion),
+      'analysisJson': serializer.toJson<String?>(analysisJson),
+      'parseJson': serializer.toJson<String?>(parseJson),
+      'encounterStart': serializer.toJson<DateTime?>(encounterStart),
+      'encounterEnd': serializer.toJson<DateTime?>(encounterEnd),
+      'characterId': serializer.toJson<int?>(characterId),
+      'encounterTime': serializer.toJson<DateTime>(encounterTime),
+      'opposingCharacters': serializer.toJson<String>(opposingCharacters),
+      'opposingCorporations': serializer.toJson<String>(opposingCorporations),
+      'opposingAlliances': serializer.toJson<String>(opposingAlliances),
+      'opposingShipTypes': serializer.toJson<String>(opposingShipTypes),
+      'totalDamageDealt': serializer.toJson<int>(totalDamageDealt),
+      'totalDamageReceived': serializer.toJson<int>(totalDamageReceived),
+      'isVictory': serializer.toJson<bool>(isVictory),
+      'llmSummary': serializer.toJson<String>(llmSummary),
+      'llmFeedbackMistakes': serializer.toJson<String>(llmFeedbackMistakes),
+      'llmFeedbackImprovements': serializer.toJson<String>(
+        llmFeedbackImprovements,
+      ),
+      'llmFeedbackFits': serializer.toJson<String>(llmFeedbackFits),
+      'damageChartData': serializer.toJson<String>(damageChartData),
+    };
+  }
+
+  CombatEncounter copyWith({
+    String? id,
+    Value<String?> parsedEncounterId = const Value.absent(),
+    Value<int?> analysisVersion = const Value.absent(),
+    Value<String?> analysisJson = const Value.absent(),
+    Value<String?> parseJson = const Value.absent(),
+    Value<DateTime?> encounterStart = const Value.absent(),
+    Value<DateTime?> encounterEnd = const Value.absent(),
+    Value<int?> characterId = const Value.absent(),
+    DateTime? encounterTime,
+    String? opposingCharacters,
+    String? opposingCorporations,
+    String? opposingAlliances,
+    String? opposingShipTypes,
+    int? totalDamageDealt,
+    int? totalDamageReceived,
+    bool? isVictory,
+    String? llmSummary,
+    String? llmFeedbackMistakes,
+    String? llmFeedbackImprovements,
+    String? llmFeedbackFits,
+    String? damageChartData,
+  }) => CombatEncounter(
+    id: id ?? this.id,
+    parsedEncounterId: parsedEncounterId.present
+        ? parsedEncounterId.value
+        : this.parsedEncounterId,
+    analysisVersion: analysisVersion.present
+        ? analysisVersion.value
+        : this.analysisVersion,
+    analysisJson: analysisJson.present ? analysisJson.value : this.analysisJson,
+    parseJson: parseJson.present ? parseJson.value : this.parseJson,
+    encounterStart: encounterStart.present
+        ? encounterStart.value
+        : this.encounterStart,
+    encounterEnd: encounterEnd.present ? encounterEnd.value : this.encounterEnd,
+    characterId: characterId.present ? characterId.value : this.characterId,
+    encounterTime: encounterTime ?? this.encounterTime,
+    opposingCharacters: opposingCharacters ?? this.opposingCharacters,
+    opposingCorporations: opposingCorporations ?? this.opposingCorporations,
+    opposingAlliances: opposingAlliances ?? this.opposingAlliances,
+    opposingShipTypes: opposingShipTypes ?? this.opposingShipTypes,
+    totalDamageDealt: totalDamageDealt ?? this.totalDamageDealt,
+    totalDamageReceived: totalDamageReceived ?? this.totalDamageReceived,
+    isVictory: isVictory ?? this.isVictory,
+    llmSummary: llmSummary ?? this.llmSummary,
+    llmFeedbackMistakes: llmFeedbackMistakes ?? this.llmFeedbackMistakes,
+    llmFeedbackImprovements:
+        llmFeedbackImprovements ?? this.llmFeedbackImprovements,
+    llmFeedbackFits: llmFeedbackFits ?? this.llmFeedbackFits,
+    damageChartData: damageChartData ?? this.damageChartData,
+  );
+  CombatEncounter copyWithCompanion(CombatEncountersCompanion data) {
+    return CombatEncounter(
+      id: data.id.present ? data.id.value : this.id,
+      parsedEncounterId: data.parsedEncounterId.present
+          ? data.parsedEncounterId.value
+          : this.parsedEncounterId,
+      analysisVersion: data.analysisVersion.present
+          ? data.analysisVersion.value
+          : this.analysisVersion,
+      analysisJson: data.analysisJson.present
+          ? data.analysisJson.value
+          : this.analysisJson,
+      parseJson: data.parseJson.present ? data.parseJson.value : this.parseJson,
+      encounterStart: data.encounterStart.present
+          ? data.encounterStart.value
+          : this.encounterStart,
+      encounterEnd: data.encounterEnd.present
+          ? data.encounterEnd.value
+          : this.encounterEnd,
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      encounterTime: data.encounterTime.present
+          ? data.encounterTime.value
+          : this.encounterTime,
+      opposingCharacters: data.opposingCharacters.present
+          ? data.opposingCharacters.value
+          : this.opposingCharacters,
+      opposingCorporations: data.opposingCorporations.present
+          ? data.opposingCorporations.value
+          : this.opposingCorporations,
+      opposingAlliances: data.opposingAlliances.present
+          ? data.opposingAlliances.value
+          : this.opposingAlliances,
+      opposingShipTypes: data.opposingShipTypes.present
+          ? data.opposingShipTypes.value
+          : this.opposingShipTypes,
+      totalDamageDealt: data.totalDamageDealt.present
+          ? data.totalDamageDealt.value
+          : this.totalDamageDealt,
+      totalDamageReceived: data.totalDamageReceived.present
+          ? data.totalDamageReceived.value
+          : this.totalDamageReceived,
+      isVictory: data.isVictory.present ? data.isVictory.value : this.isVictory,
+      llmSummary: data.llmSummary.present
+          ? data.llmSummary.value
+          : this.llmSummary,
+      llmFeedbackMistakes: data.llmFeedbackMistakes.present
+          ? data.llmFeedbackMistakes.value
+          : this.llmFeedbackMistakes,
+      llmFeedbackImprovements: data.llmFeedbackImprovements.present
+          ? data.llmFeedbackImprovements.value
+          : this.llmFeedbackImprovements,
+      llmFeedbackFits: data.llmFeedbackFits.present
+          ? data.llmFeedbackFits.value
+          : this.llmFeedbackFits,
+      damageChartData: data.damageChartData.present
+          ? data.damageChartData.value
+          : this.damageChartData,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CombatEncounter(')
+          ..write('id: $id, ')
+          ..write('parsedEncounterId: $parsedEncounterId, ')
+          ..write('analysisVersion: $analysisVersion, ')
+          ..write('analysisJson: $analysisJson, ')
+          ..write('parseJson: $parseJson, ')
+          ..write('encounterStart: $encounterStart, ')
+          ..write('encounterEnd: $encounterEnd, ')
+          ..write('characterId: $characterId, ')
+          ..write('encounterTime: $encounterTime, ')
+          ..write('opposingCharacters: $opposingCharacters, ')
+          ..write('opposingCorporations: $opposingCorporations, ')
+          ..write('opposingAlliances: $opposingAlliances, ')
+          ..write('opposingShipTypes: $opposingShipTypes, ')
+          ..write('totalDamageDealt: $totalDamageDealt, ')
+          ..write('totalDamageReceived: $totalDamageReceived, ')
+          ..write('isVictory: $isVictory, ')
+          ..write('llmSummary: $llmSummary, ')
+          ..write('llmFeedbackMistakes: $llmFeedbackMistakes, ')
+          ..write('llmFeedbackImprovements: $llmFeedbackImprovements, ')
+          ..write('llmFeedbackFits: $llmFeedbackFits, ')
+          ..write('damageChartData: $damageChartData')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    id,
+    parsedEncounterId,
+    analysisVersion,
+    analysisJson,
+    parseJson,
+    encounterStart,
+    encounterEnd,
+    characterId,
+    encounterTime,
+    opposingCharacters,
+    opposingCorporations,
+    opposingAlliances,
+    opposingShipTypes,
+    totalDamageDealt,
+    totalDamageReceived,
+    isVictory,
+    llmSummary,
+    llmFeedbackMistakes,
+    llmFeedbackImprovements,
+    llmFeedbackFits,
+    damageChartData,
+  ]);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CombatEncounter &&
+          other.id == this.id &&
+          other.parsedEncounterId == this.parsedEncounterId &&
+          other.analysisVersion == this.analysisVersion &&
+          other.analysisJson == this.analysisJson &&
+          other.parseJson == this.parseJson &&
+          other.encounterStart == this.encounterStart &&
+          other.encounterEnd == this.encounterEnd &&
+          other.characterId == this.characterId &&
+          other.encounterTime == this.encounterTime &&
+          other.opposingCharacters == this.opposingCharacters &&
+          other.opposingCorporations == this.opposingCorporations &&
+          other.opposingAlliances == this.opposingAlliances &&
+          other.opposingShipTypes == this.opposingShipTypes &&
+          other.totalDamageDealt == this.totalDamageDealt &&
+          other.totalDamageReceived == this.totalDamageReceived &&
+          other.isVictory == this.isVictory &&
+          other.llmSummary == this.llmSummary &&
+          other.llmFeedbackMistakes == this.llmFeedbackMistakes &&
+          other.llmFeedbackImprovements == this.llmFeedbackImprovements &&
+          other.llmFeedbackFits == this.llmFeedbackFits &&
+          other.damageChartData == this.damageChartData);
+}
+
+class CombatEncountersCompanion extends UpdateCompanion<CombatEncounter> {
+  final Value<String> id;
+  final Value<String?> parsedEncounterId;
+  final Value<int?> analysisVersion;
+  final Value<String?> analysisJson;
+  final Value<String?> parseJson;
+  final Value<DateTime?> encounterStart;
+  final Value<DateTime?> encounterEnd;
+  final Value<int?> characterId;
+  final Value<DateTime> encounterTime;
+  final Value<String> opposingCharacters;
+  final Value<String> opposingCorporations;
+  final Value<String> opposingAlliances;
+  final Value<String> opposingShipTypes;
+  final Value<int> totalDamageDealt;
+  final Value<int> totalDamageReceived;
+  final Value<bool> isVictory;
+  final Value<String> llmSummary;
+  final Value<String> llmFeedbackMistakes;
+  final Value<String> llmFeedbackImprovements;
+  final Value<String> llmFeedbackFits;
+  final Value<String> damageChartData;
+  final Value<int> rowid;
+  const CombatEncountersCompanion({
+    this.id = const Value.absent(),
+    this.parsedEncounterId = const Value.absent(),
+    this.analysisVersion = const Value.absent(),
+    this.analysisJson = const Value.absent(),
+    this.parseJson = const Value.absent(),
+    this.encounterStart = const Value.absent(),
+    this.encounterEnd = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.encounterTime = const Value.absent(),
+    this.opposingCharacters = const Value.absent(),
+    this.opposingCorporations = const Value.absent(),
+    this.opposingAlliances = const Value.absent(),
+    this.opposingShipTypes = const Value.absent(),
+    this.totalDamageDealt = const Value.absent(),
+    this.totalDamageReceived = const Value.absent(),
+    this.isVictory = const Value.absent(),
+    this.llmSummary = const Value.absent(),
+    this.llmFeedbackMistakes = const Value.absent(),
+    this.llmFeedbackImprovements = const Value.absent(),
+    this.llmFeedbackFits = const Value.absent(),
+    this.damageChartData = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CombatEncountersCompanion.insert({
+    required String id,
+    this.parsedEncounterId = const Value.absent(),
+    this.analysisVersion = const Value.absent(),
+    this.analysisJson = const Value.absent(),
+    this.parseJson = const Value.absent(),
+    this.encounterStart = const Value.absent(),
+    this.encounterEnd = const Value.absent(),
+    this.characterId = const Value.absent(),
+    required DateTime encounterTime,
+    required String opposingCharacters,
+    required String opposingCorporations,
+    required String opposingAlliances,
+    required String opposingShipTypes,
+    required int totalDamageDealt,
+    required int totalDamageReceived,
+    required bool isVictory,
+    required String llmSummary,
+    required String llmFeedbackMistakes,
+    required String llmFeedbackImprovements,
+    required String llmFeedbackFits,
+    required String damageChartData,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       encounterTime = Value(encounterTime),
+       opposingCharacters = Value(opposingCharacters),
+       opposingCorporations = Value(opposingCorporations),
+       opposingAlliances = Value(opposingAlliances),
+       opposingShipTypes = Value(opposingShipTypes),
+       totalDamageDealt = Value(totalDamageDealt),
+       totalDamageReceived = Value(totalDamageReceived),
+       isVictory = Value(isVictory),
+       llmSummary = Value(llmSummary),
+       llmFeedbackMistakes = Value(llmFeedbackMistakes),
+       llmFeedbackImprovements = Value(llmFeedbackImprovements),
+       llmFeedbackFits = Value(llmFeedbackFits),
+       damageChartData = Value(damageChartData);
+  static Insertable<CombatEncounter> custom({
+    Expression<String>? id,
+    Expression<String>? parsedEncounterId,
+    Expression<int>? analysisVersion,
+    Expression<String>? analysisJson,
+    Expression<String>? parseJson,
+    Expression<DateTime>? encounterStart,
+    Expression<DateTime>? encounterEnd,
+    Expression<int>? characterId,
+    Expression<DateTime>? encounterTime,
+    Expression<String>? opposingCharacters,
+    Expression<String>? opposingCorporations,
+    Expression<String>? opposingAlliances,
+    Expression<String>? opposingShipTypes,
+    Expression<int>? totalDamageDealt,
+    Expression<int>? totalDamageReceived,
+    Expression<bool>? isVictory,
+    Expression<String>? llmSummary,
+    Expression<String>? llmFeedbackMistakes,
+    Expression<String>? llmFeedbackImprovements,
+    Expression<String>? llmFeedbackFits,
+    Expression<String>? damageChartData,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (parsedEncounterId != null) 'parsed_encounter_id': parsedEncounterId,
+      if (analysisVersion != null) 'analysis_version': analysisVersion,
+      if (analysisJson != null) 'analysis_json': analysisJson,
+      if (parseJson != null) 'parse_json': parseJson,
+      if (encounterStart != null) 'encounter_start': encounterStart,
+      if (encounterEnd != null) 'encounter_end': encounterEnd,
+      if (characterId != null) 'character_id': characterId,
+      if (encounterTime != null) 'encounter_time': encounterTime,
+      if (opposingCharacters != null) 'opposing_characters': opposingCharacters,
+      if (opposingCorporations != null)
+        'opposing_corporations': opposingCorporations,
+      if (opposingAlliances != null) 'opposing_alliances': opposingAlliances,
+      if (opposingShipTypes != null) 'opposing_ship_types': opposingShipTypes,
+      if (totalDamageDealt != null) 'total_damage_dealt': totalDamageDealt,
+      if (totalDamageReceived != null)
+        'total_damage_received': totalDamageReceived,
+      if (isVictory != null) 'is_victory': isVictory,
+      if (llmSummary != null) 'llm_summary': llmSummary,
+      if (llmFeedbackMistakes != null)
+        'llm_feedback_mistakes': llmFeedbackMistakes,
+      if (llmFeedbackImprovements != null)
+        'llm_feedback_improvements': llmFeedbackImprovements,
+      if (llmFeedbackFits != null) 'llm_feedback_fits': llmFeedbackFits,
+      if (damageChartData != null) 'damage_chart_data': damageChartData,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CombatEncountersCompanion copyWith({
+    Value<String>? id,
+    Value<String?>? parsedEncounterId,
+    Value<int?>? analysisVersion,
+    Value<String?>? analysisJson,
+    Value<String?>? parseJson,
+    Value<DateTime?>? encounterStart,
+    Value<DateTime?>? encounterEnd,
+    Value<int?>? characterId,
+    Value<DateTime>? encounterTime,
+    Value<String>? opposingCharacters,
+    Value<String>? opposingCorporations,
+    Value<String>? opposingAlliances,
+    Value<String>? opposingShipTypes,
+    Value<int>? totalDamageDealt,
+    Value<int>? totalDamageReceived,
+    Value<bool>? isVictory,
+    Value<String>? llmSummary,
+    Value<String>? llmFeedbackMistakes,
+    Value<String>? llmFeedbackImprovements,
+    Value<String>? llmFeedbackFits,
+    Value<String>? damageChartData,
+    Value<int>? rowid,
+  }) {
+    return CombatEncountersCompanion(
+      id: id ?? this.id,
+      parsedEncounterId: parsedEncounterId ?? this.parsedEncounterId,
+      analysisVersion: analysisVersion ?? this.analysisVersion,
+      analysisJson: analysisJson ?? this.analysisJson,
+      parseJson: parseJson ?? this.parseJson,
+      encounterStart: encounterStart ?? this.encounterStart,
+      encounterEnd: encounterEnd ?? this.encounterEnd,
+      characterId: characterId ?? this.characterId,
+      encounterTime: encounterTime ?? this.encounterTime,
+      opposingCharacters: opposingCharacters ?? this.opposingCharacters,
+      opposingCorporations: opposingCorporations ?? this.opposingCorporations,
+      opposingAlliances: opposingAlliances ?? this.opposingAlliances,
+      opposingShipTypes: opposingShipTypes ?? this.opposingShipTypes,
+      totalDamageDealt: totalDamageDealt ?? this.totalDamageDealt,
+      totalDamageReceived: totalDamageReceived ?? this.totalDamageReceived,
+      isVictory: isVictory ?? this.isVictory,
+      llmSummary: llmSummary ?? this.llmSummary,
+      llmFeedbackMistakes: llmFeedbackMistakes ?? this.llmFeedbackMistakes,
+      llmFeedbackImprovements:
+          llmFeedbackImprovements ?? this.llmFeedbackImprovements,
+      llmFeedbackFits: llmFeedbackFits ?? this.llmFeedbackFits,
+      damageChartData: damageChartData ?? this.damageChartData,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (parsedEncounterId.present) {
+      map['parsed_encounter_id'] = Variable<String>(parsedEncounterId.value);
+    }
+    if (analysisVersion.present) {
+      map['analysis_version'] = Variable<int>(analysisVersion.value);
+    }
+    if (analysisJson.present) {
+      map['analysis_json'] = Variable<String>(analysisJson.value);
+    }
+    if (parseJson.present) {
+      map['parse_json'] = Variable<String>(parseJson.value);
+    }
+    if (encounterStart.present) {
+      map['encounter_start'] = Variable<DateTime>(encounterStart.value);
+    }
+    if (encounterEnd.present) {
+      map['encounter_end'] = Variable<DateTime>(encounterEnd.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (encounterTime.present) {
+      map['encounter_time'] = Variable<DateTime>(encounterTime.value);
+    }
+    if (opposingCharacters.present) {
+      map['opposing_characters'] = Variable<String>(opposingCharacters.value);
+    }
+    if (opposingCorporations.present) {
+      map['opposing_corporations'] = Variable<String>(
+        opposingCorporations.value,
+      );
+    }
+    if (opposingAlliances.present) {
+      map['opposing_alliances'] = Variable<String>(opposingAlliances.value);
+    }
+    if (opposingShipTypes.present) {
+      map['opposing_ship_types'] = Variable<String>(opposingShipTypes.value);
+    }
+    if (totalDamageDealt.present) {
+      map['total_damage_dealt'] = Variable<int>(totalDamageDealt.value);
+    }
+    if (totalDamageReceived.present) {
+      map['total_damage_received'] = Variable<int>(totalDamageReceived.value);
+    }
+    if (isVictory.present) {
+      map['is_victory'] = Variable<bool>(isVictory.value);
+    }
+    if (llmSummary.present) {
+      map['llm_summary'] = Variable<String>(llmSummary.value);
+    }
+    if (llmFeedbackMistakes.present) {
+      map['llm_feedback_mistakes'] = Variable<String>(
+        llmFeedbackMistakes.value,
+      );
+    }
+    if (llmFeedbackImprovements.present) {
+      map['llm_feedback_improvements'] = Variable<String>(
+        llmFeedbackImprovements.value,
+      );
+    }
+    if (llmFeedbackFits.present) {
+      map['llm_feedback_fits'] = Variable<String>(llmFeedbackFits.value);
+    }
+    if (damageChartData.present) {
+      map['damage_chart_data'] = Variable<String>(damageChartData.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CombatEncountersCompanion(')
+          ..write('id: $id, ')
+          ..write('parsedEncounterId: $parsedEncounterId, ')
+          ..write('analysisVersion: $analysisVersion, ')
+          ..write('analysisJson: $analysisJson, ')
+          ..write('parseJson: $parseJson, ')
+          ..write('encounterStart: $encounterStart, ')
+          ..write('encounterEnd: $encounterEnd, ')
+          ..write('characterId: $characterId, ')
+          ..write('encounterTime: $encounterTime, ')
+          ..write('opposingCharacters: $opposingCharacters, ')
+          ..write('opposingCorporations: $opposingCorporations, ')
+          ..write('opposingAlliances: $opposingAlliances, ')
+          ..write('opposingShipTypes: $opposingShipTypes, ')
+          ..write('totalDamageDealt: $totalDamageDealt, ')
+          ..write('totalDamageReceived: $totalDamageReceived, ')
+          ..write('isVictory: $isVictory, ')
+          ..write('llmSummary: $llmSummary, ')
+          ..write('llmFeedbackMistakes: $llmFeedbackMistakes, ')
+          ..write('llmFeedbackImprovements: $llmFeedbackImprovements, ')
+          ..write('llmFeedbackFits: $llmFeedbackFits, ')
+          ..write('damageChartData: $damageChartData, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -16909,6 +19412,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $IntelAlertsTable intelAlerts = $IntelAlertsTable(this);
   late final $SystemActivityTable systemActivity = $SystemActivityTable(this);
   late final $WatchListTable watchList = $WatchListTable(this);
+  late final $CombatParsedEncountersTable combatParsedEncounters =
+      $CombatParsedEncountersTable(this);
+  late final $CombatEncountersTable combatEncounters = $CombatEncountersTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -16945,6 +19453,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     intelAlerts,
     systemActivity,
     watchList,
+    combatParsedEncounters,
+    combatEncounters,
   ];
 }
 
@@ -21325,6 +23835,9 @@ typedef $$AppSettingsTableTableCreateCompanionBuilder =
       Value<bool> onboardingComplete,
       Value<int> esiErrorLimitRemain,
       Value<DateTime?> esiErrorLimitReset,
+      Value<String?> llmApiKey,
+      Value<String?> llmModelName,
+      Value<String?> llmBaseUrl,
     });
 typedef $$AppSettingsTableTableUpdateCompanionBuilder =
     AppSettingsTableCompanion Function({
@@ -21333,6 +23846,9 @@ typedef $$AppSettingsTableTableUpdateCompanionBuilder =
       Value<bool> onboardingComplete,
       Value<int> esiErrorLimitRemain,
       Value<DateTime?> esiErrorLimitReset,
+      Value<String?> llmApiKey,
+      Value<String?> llmModelName,
+      Value<String?> llmBaseUrl,
     });
 
 class $$AppSettingsTableTableFilterComposer
@@ -21366,6 +23882,21 @@ class $$AppSettingsTableTableFilterComposer
 
   ColumnFilters<DateTime> get esiErrorLimitReset => $composableBuilder(
     column: $table.esiErrorLimitReset,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get llmApiKey => $composableBuilder(
+    column: $table.llmApiKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get llmModelName => $composableBuilder(
+    column: $table.llmModelName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get llmBaseUrl => $composableBuilder(
+    column: $table.llmBaseUrl,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -21403,6 +23934,21 @@ class $$AppSettingsTableTableOrderingComposer
     column: $table.esiErrorLimitReset,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get llmApiKey => $composableBuilder(
+    column: $table.llmApiKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get llmModelName => $composableBuilder(
+    column: $table.llmModelName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get llmBaseUrl => $composableBuilder(
+    column: $table.llmBaseUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableTableAnnotationComposer
@@ -21434,6 +23980,19 @@ class $$AppSettingsTableTableAnnotationComposer
 
   GeneratedColumn<DateTime> get esiErrorLimitReset => $composableBuilder(
     column: $table.esiErrorLimitReset,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get llmApiKey =>
+      $composableBuilder(column: $table.llmApiKey, builder: (column) => column);
+
+  GeneratedColumn<String> get llmModelName => $composableBuilder(
+    column: $table.llmModelName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get llmBaseUrl => $composableBuilder(
+    column: $table.llmBaseUrl,
     builder: (column) => column,
   );
 }
@@ -21480,12 +24039,18 @@ class $$AppSettingsTableTableTableManager
                 Value<bool> onboardingComplete = const Value.absent(),
                 Value<int> esiErrorLimitRemain = const Value.absent(),
                 Value<DateTime?> esiErrorLimitReset = const Value.absent(),
+                Value<String?> llmApiKey = const Value.absent(),
+                Value<String?> llmModelName = const Value.absent(),
+                Value<String?> llmBaseUrl = const Value.absent(),
               }) => AppSettingsTableCompanion(
                 id: id,
                 startupBehavior: startupBehavior,
                 onboardingComplete: onboardingComplete,
                 esiErrorLimitRemain: esiErrorLimitRemain,
                 esiErrorLimitReset: esiErrorLimitReset,
+                llmApiKey: llmApiKey,
+                llmModelName: llmModelName,
+                llmBaseUrl: llmBaseUrl,
               ),
           createCompanionCallback:
               ({
@@ -21494,12 +24059,18 @@ class $$AppSettingsTableTableTableManager
                 Value<bool> onboardingComplete = const Value.absent(),
                 Value<int> esiErrorLimitRemain = const Value.absent(),
                 Value<DateTime?> esiErrorLimitReset = const Value.absent(),
+                Value<String?> llmApiKey = const Value.absent(),
+                Value<String?> llmModelName = const Value.absent(),
+                Value<String?> llmBaseUrl = const Value.absent(),
               }) => AppSettingsTableCompanion.insert(
                 id: id,
                 startupBehavior: startupBehavior,
                 onboardingComplete: onboardingComplete,
                 esiErrorLimitRemain: esiErrorLimitRemain,
                 esiErrorLimitReset: esiErrorLimitReset,
+                llmApiKey: llmApiKey,
+                llmModelName: llmModelName,
+                llmBaseUrl: llmBaseUrl,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -29336,6 +31907,1046 @@ typedef $$WatchListTableProcessedTableManager =
       WatchListData,
       PrefetchHooks Function()
     >;
+typedef $$CombatParsedEncountersTableCreateCompanionBuilder =
+    CombatParsedEncountersCompanion Function({
+      required String id,
+      required String sourceFilePath,
+      required DateTime sourceModified,
+      required int sourceSize,
+      required int parserVersion,
+      required String characterName,
+      Value<int?> characterId,
+      required DateTime encounterStart,
+      required DateTime encounterEnd,
+      required int durationSeconds,
+      required String outcome,
+      required double outcomeConfidence,
+      required String outcomeEvidence,
+      required int totalDamageDealt,
+      required int totalDamageReceived,
+      required String listSummaryJson,
+      required String parseJson,
+      required DateTime cachedAt,
+      Value<int> rowid,
+    });
+typedef $$CombatParsedEncountersTableUpdateCompanionBuilder =
+    CombatParsedEncountersCompanion Function({
+      Value<String> id,
+      Value<String> sourceFilePath,
+      Value<DateTime> sourceModified,
+      Value<int> sourceSize,
+      Value<int> parserVersion,
+      Value<String> characterName,
+      Value<int?> characterId,
+      Value<DateTime> encounterStart,
+      Value<DateTime> encounterEnd,
+      Value<int> durationSeconds,
+      Value<String> outcome,
+      Value<double> outcomeConfidence,
+      Value<String> outcomeEvidence,
+      Value<int> totalDamageDealt,
+      Value<int> totalDamageReceived,
+      Value<String> listSummaryJson,
+      Value<String> parseJson,
+      Value<DateTime> cachedAt,
+      Value<int> rowid,
+    });
+
+class $$CombatParsedEncountersTableFilterComposer
+    extends Composer<_$AppDatabase, $CombatParsedEncountersTable> {
+  $$CombatParsedEncountersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceFilePath => $composableBuilder(
+    column: $table.sourceFilePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get sourceModified => $composableBuilder(
+    column: $table.sourceModified,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sourceSize => $composableBuilder(
+    column: $table.sourceSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get parserVersion => $composableBuilder(
+    column: $table.parserVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get characterName => $composableBuilder(
+    column: $table.characterName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get encounterStart => $composableBuilder(
+    column: $table.encounterStart,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get encounterEnd => $composableBuilder(
+    column: $table.encounterEnd,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get durationSeconds => $composableBuilder(
+    column: $table.durationSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get outcome => $composableBuilder(
+    column: $table.outcome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get outcomeConfidence => $composableBuilder(
+    column: $table.outcomeConfidence,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get outcomeEvidence => $composableBuilder(
+    column: $table.outcomeEvidence,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get totalDamageDealt => $composableBuilder(
+    column: $table.totalDamageDealt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get totalDamageReceived => $composableBuilder(
+    column: $table.totalDamageReceived,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get listSummaryJson => $composableBuilder(
+    column: $table.listSummaryJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get parseJson => $composableBuilder(
+    column: $table.parseJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CombatParsedEncountersTableOrderingComposer
+    extends Composer<_$AppDatabase, $CombatParsedEncountersTable> {
+  $$CombatParsedEncountersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceFilePath => $composableBuilder(
+    column: $table.sourceFilePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get sourceModified => $composableBuilder(
+    column: $table.sourceModified,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sourceSize => $composableBuilder(
+    column: $table.sourceSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get parserVersion => $composableBuilder(
+    column: $table.parserVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get characterName => $composableBuilder(
+    column: $table.characterName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get encounterStart => $composableBuilder(
+    column: $table.encounterStart,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get encounterEnd => $composableBuilder(
+    column: $table.encounterEnd,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get durationSeconds => $composableBuilder(
+    column: $table.durationSeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get outcome => $composableBuilder(
+    column: $table.outcome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get outcomeConfidence => $composableBuilder(
+    column: $table.outcomeConfidence,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get outcomeEvidence => $composableBuilder(
+    column: $table.outcomeEvidence,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get totalDamageDealt => $composableBuilder(
+    column: $table.totalDamageDealt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get totalDamageReceived => $composableBuilder(
+    column: $table.totalDamageReceived,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get listSummaryJson => $composableBuilder(
+    column: $table.listSummaryJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get parseJson => $composableBuilder(
+    column: $table.parseJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CombatParsedEncountersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CombatParsedEncountersTable> {
+  $$CombatParsedEncountersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceFilePath => $composableBuilder(
+    column: $table.sourceFilePath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get sourceModified => $composableBuilder(
+    column: $table.sourceModified,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sourceSize => $composableBuilder(
+    column: $table.sourceSize,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get parserVersion => $composableBuilder(
+    column: $table.parserVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get characterName => $composableBuilder(
+    column: $table.characterName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get encounterStart => $composableBuilder(
+    column: $table.encounterStart,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get encounterEnd => $composableBuilder(
+    column: $table.encounterEnd,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get durationSeconds => $composableBuilder(
+    column: $table.durationSeconds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get outcome =>
+      $composableBuilder(column: $table.outcome, builder: (column) => column);
+
+  GeneratedColumn<double> get outcomeConfidence => $composableBuilder(
+    column: $table.outcomeConfidence,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get outcomeEvidence => $composableBuilder(
+    column: $table.outcomeEvidence,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get totalDamageDealt => $composableBuilder(
+    column: $table.totalDamageDealt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get totalDamageReceived => $composableBuilder(
+    column: $table.totalDamageReceived,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get listSummaryJson => $composableBuilder(
+    column: $table.listSummaryJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get parseJson =>
+      $composableBuilder(column: $table.parseJson, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
+}
+
+class $$CombatParsedEncountersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CombatParsedEncountersTable,
+          CombatParsedEncounter,
+          $$CombatParsedEncountersTableFilterComposer,
+          $$CombatParsedEncountersTableOrderingComposer,
+          $$CombatParsedEncountersTableAnnotationComposer,
+          $$CombatParsedEncountersTableCreateCompanionBuilder,
+          $$CombatParsedEncountersTableUpdateCompanionBuilder,
+          (
+            CombatParsedEncounter,
+            BaseReferences<
+              _$AppDatabase,
+              $CombatParsedEncountersTable,
+              CombatParsedEncounter
+            >,
+          ),
+          CombatParsedEncounter,
+          PrefetchHooks Function()
+        > {
+  $$CombatParsedEncountersTableTableManager(
+    _$AppDatabase db,
+    $CombatParsedEncountersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CombatParsedEncountersTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CombatParsedEncountersTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CombatParsedEncountersTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> sourceFilePath = const Value.absent(),
+                Value<DateTime> sourceModified = const Value.absent(),
+                Value<int> sourceSize = const Value.absent(),
+                Value<int> parserVersion = const Value.absent(),
+                Value<String> characterName = const Value.absent(),
+                Value<int?> characterId = const Value.absent(),
+                Value<DateTime> encounterStart = const Value.absent(),
+                Value<DateTime> encounterEnd = const Value.absent(),
+                Value<int> durationSeconds = const Value.absent(),
+                Value<String> outcome = const Value.absent(),
+                Value<double> outcomeConfidence = const Value.absent(),
+                Value<String> outcomeEvidence = const Value.absent(),
+                Value<int> totalDamageDealt = const Value.absent(),
+                Value<int> totalDamageReceived = const Value.absent(),
+                Value<String> listSummaryJson = const Value.absent(),
+                Value<String> parseJson = const Value.absent(),
+                Value<DateTime> cachedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CombatParsedEncountersCompanion(
+                id: id,
+                sourceFilePath: sourceFilePath,
+                sourceModified: sourceModified,
+                sourceSize: sourceSize,
+                parserVersion: parserVersion,
+                characterName: characterName,
+                characterId: characterId,
+                encounterStart: encounterStart,
+                encounterEnd: encounterEnd,
+                durationSeconds: durationSeconds,
+                outcome: outcome,
+                outcomeConfidence: outcomeConfidence,
+                outcomeEvidence: outcomeEvidence,
+                totalDamageDealt: totalDamageDealt,
+                totalDamageReceived: totalDamageReceived,
+                listSummaryJson: listSummaryJson,
+                parseJson: parseJson,
+                cachedAt: cachedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String sourceFilePath,
+                required DateTime sourceModified,
+                required int sourceSize,
+                required int parserVersion,
+                required String characterName,
+                Value<int?> characterId = const Value.absent(),
+                required DateTime encounterStart,
+                required DateTime encounterEnd,
+                required int durationSeconds,
+                required String outcome,
+                required double outcomeConfidence,
+                required String outcomeEvidence,
+                required int totalDamageDealt,
+                required int totalDamageReceived,
+                required String listSummaryJson,
+                required String parseJson,
+                required DateTime cachedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => CombatParsedEncountersCompanion.insert(
+                id: id,
+                sourceFilePath: sourceFilePath,
+                sourceModified: sourceModified,
+                sourceSize: sourceSize,
+                parserVersion: parserVersion,
+                characterName: characterName,
+                characterId: characterId,
+                encounterStart: encounterStart,
+                encounterEnd: encounterEnd,
+                durationSeconds: durationSeconds,
+                outcome: outcome,
+                outcomeConfidence: outcomeConfidence,
+                outcomeEvidence: outcomeEvidence,
+                totalDamageDealt: totalDamageDealt,
+                totalDamageReceived: totalDamageReceived,
+                listSummaryJson: listSummaryJson,
+                parseJson: parseJson,
+                cachedAt: cachedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CombatParsedEncountersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CombatParsedEncountersTable,
+      CombatParsedEncounter,
+      $$CombatParsedEncountersTableFilterComposer,
+      $$CombatParsedEncountersTableOrderingComposer,
+      $$CombatParsedEncountersTableAnnotationComposer,
+      $$CombatParsedEncountersTableCreateCompanionBuilder,
+      $$CombatParsedEncountersTableUpdateCompanionBuilder,
+      (
+        CombatParsedEncounter,
+        BaseReferences<
+          _$AppDatabase,
+          $CombatParsedEncountersTable,
+          CombatParsedEncounter
+        >,
+      ),
+      CombatParsedEncounter,
+      PrefetchHooks Function()
+    >;
+typedef $$CombatEncountersTableCreateCompanionBuilder =
+    CombatEncountersCompanion Function({
+      required String id,
+      Value<String?> parsedEncounterId,
+      Value<int?> analysisVersion,
+      Value<String?> analysisJson,
+      Value<String?> parseJson,
+      Value<DateTime?> encounterStart,
+      Value<DateTime?> encounterEnd,
+      Value<int?> characterId,
+      required DateTime encounterTime,
+      required String opposingCharacters,
+      required String opposingCorporations,
+      required String opposingAlliances,
+      required String opposingShipTypes,
+      required int totalDamageDealt,
+      required int totalDamageReceived,
+      required bool isVictory,
+      required String llmSummary,
+      required String llmFeedbackMistakes,
+      required String llmFeedbackImprovements,
+      required String llmFeedbackFits,
+      required String damageChartData,
+      Value<int> rowid,
+    });
+typedef $$CombatEncountersTableUpdateCompanionBuilder =
+    CombatEncountersCompanion Function({
+      Value<String> id,
+      Value<String?> parsedEncounterId,
+      Value<int?> analysisVersion,
+      Value<String?> analysisJson,
+      Value<String?> parseJson,
+      Value<DateTime?> encounterStart,
+      Value<DateTime?> encounterEnd,
+      Value<int?> characterId,
+      Value<DateTime> encounterTime,
+      Value<String> opposingCharacters,
+      Value<String> opposingCorporations,
+      Value<String> opposingAlliances,
+      Value<String> opposingShipTypes,
+      Value<int> totalDamageDealt,
+      Value<int> totalDamageReceived,
+      Value<bool> isVictory,
+      Value<String> llmSummary,
+      Value<String> llmFeedbackMistakes,
+      Value<String> llmFeedbackImprovements,
+      Value<String> llmFeedbackFits,
+      Value<String> damageChartData,
+      Value<int> rowid,
+    });
+
+class $$CombatEncountersTableFilterComposer
+    extends Composer<_$AppDatabase, $CombatEncountersTable> {
+  $$CombatEncountersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get parsedEncounterId => $composableBuilder(
+    column: $table.parsedEncounterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get analysisVersion => $composableBuilder(
+    column: $table.analysisVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get analysisJson => $composableBuilder(
+    column: $table.analysisJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get parseJson => $composableBuilder(
+    column: $table.parseJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get encounterStart => $composableBuilder(
+    column: $table.encounterStart,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get encounterEnd => $composableBuilder(
+    column: $table.encounterEnd,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get encounterTime => $composableBuilder(
+    column: $table.encounterTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get opposingCharacters => $composableBuilder(
+    column: $table.opposingCharacters,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get opposingCorporations => $composableBuilder(
+    column: $table.opposingCorporations,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get opposingAlliances => $composableBuilder(
+    column: $table.opposingAlliances,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get opposingShipTypes => $composableBuilder(
+    column: $table.opposingShipTypes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get totalDamageDealt => $composableBuilder(
+    column: $table.totalDamageDealt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get totalDamageReceived => $composableBuilder(
+    column: $table.totalDamageReceived,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isVictory => $composableBuilder(
+    column: $table.isVictory,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get llmSummary => $composableBuilder(
+    column: $table.llmSummary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get llmFeedbackMistakes => $composableBuilder(
+    column: $table.llmFeedbackMistakes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get llmFeedbackImprovements => $composableBuilder(
+    column: $table.llmFeedbackImprovements,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get llmFeedbackFits => $composableBuilder(
+    column: $table.llmFeedbackFits,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get damageChartData => $composableBuilder(
+    column: $table.damageChartData,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CombatEncountersTableOrderingComposer
+    extends Composer<_$AppDatabase, $CombatEncountersTable> {
+  $$CombatEncountersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get parsedEncounterId => $composableBuilder(
+    column: $table.parsedEncounterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get analysisVersion => $composableBuilder(
+    column: $table.analysisVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get analysisJson => $composableBuilder(
+    column: $table.analysisJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get parseJson => $composableBuilder(
+    column: $table.parseJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get encounterStart => $composableBuilder(
+    column: $table.encounterStart,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get encounterEnd => $composableBuilder(
+    column: $table.encounterEnd,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get encounterTime => $composableBuilder(
+    column: $table.encounterTime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get opposingCharacters => $composableBuilder(
+    column: $table.opposingCharacters,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get opposingCorporations => $composableBuilder(
+    column: $table.opposingCorporations,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get opposingAlliances => $composableBuilder(
+    column: $table.opposingAlliances,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get opposingShipTypes => $composableBuilder(
+    column: $table.opposingShipTypes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get totalDamageDealt => $composableBuilder(
+    column: $table.totalDamageDealt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get totalDamageReceived => $composableBuilder(
+    column: $table.totalDamageReceived,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isVictory => $composableBuilder(
+    column: $table.isVictory,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get llmSummary => $composableBuilder(
+    column: $table.llmSummary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get llmFeedbackMistakes => $composableBuilder(
+    column: $table.llmFeedbackMistakes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get llmFeedbackImprovements => $composableBuilder(
+    column: $table.llmFeedbackImprovements,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get llmFeedbackFits => $composableBuilder(
+    column: $table.llmFeedbackFits,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get damageChartData => $composableBuilder(
+    column: $table.damageChartData,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CombatEncountersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CombatEncountersTable> {
+  $$CombatEncountersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get parsedEncounterId => $composableBuilder(
+    column: $table.parsedEncounterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get analysisVersion => $composableBuilder(
+    column: $table.analysisVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get analysisJson => $composableBuilder(
+    column: $table.analysisJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get parseJson =>
+      $composableBuilder(column: $table.parseJson, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get encounterStart => $composableBuilder(
+    column: $table.encounterStart,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get encounterEnd => $composableBuilder(
+    column: $table.encounterEnd,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get encounterTime => $composableBuilder(
+    column: $table.encounterTime,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get opposingCharacters => $composableBuilder(
+    column: $table.opposingCharacters,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get opposingCorporations => $composableBuilder(
+    column: $table.opposingCorporations,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get opposingAlliances => $composableBuilder(
+    column: $table.opposingAlliances,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get opposingShipTypes => $composableBuilder(
+    column: $table.opposingShipTypes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get totalDamageDealt => $composableBuilder(
+    column: $table.totalDamageDealt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get totalDamageReceived => $composableBuilder(
+    column: $table.totalDamageReceived,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isVictory =>
+      $composableBuilder(column: $table.isVictory, builder: (column) => column);
+
+  GeneratedColumn<String> get llmSummary => $composableBuilder(
+    column: $table.llmSummary,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get llmFeedbackMistakes => $composableBuilder(
+    column: $table.llmFeedbackMistakes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get llmFeedbackImprovements => $composableBuilder(
+    column: $table.llmFeedbackImprovements,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get llmFeedbackFits => $composableBuilder(
+    column: $table.llmFeedbackFits,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get damageChartData => $composableBuilder(
+    column: $table.damageChartData,
+    builder: (column) => column,
+  );
+}
+
+class $$CombatEncountersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CombatEncountersTable,
+          CombatEncounter,
+          $$CombatEncountersTableFilterComposer,
+          $$CombatEncountersTableOrderingComposer,
+          $$CombatEncountersTableAnnotationComposer,
+          $$CombatEncountersTableCreateCompanionBuilder,
+          $$CombatEncountersTableUpdateCompanionBuilder,
+          (
+            CombatEncounter,
+            BaseReferences<
+              _$AppDatabase,
+              $CombatEncountersTable,
+              CombatEncounter
+            >,
+          ),
+          CombatEncounter,
+          PrefetchHooks Function()
+        > {
+  $$CombatEncountersTableTableManager(
+    _$AppDatabase db,
+    $CombatEncountersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CombatEncountersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CombatEncountersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CombatEncountersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String?> parsedEncounterId = const Value.absent(),
+                Value<int?> analysisVersion = const Value.absent(),
+                Value<String?> analysisJson = const Value.absent(),
+                Value<String?> parseJson = const Value.absent(),
+                Value<DateTime?> encounterStart = const Value.absent(),
+                Value<DateTime?> encounterEnd = const Value.absent(),
+                Value<int?> characterId = const Value.absent(),
+                Value<DateTime> encounterTime = const Value.absent(),
+                Value<String> opposingCharacters = const Value.absent(),
+                Value<String> opposingCorporations = const Value.absent(),
+                Value<String> opposingAlliances = const Value.absent(),
+                Value<String> opposingShipTypes = const Value.absent(),
+                Value<int> totalDamageDealt = const Value.absent(),
+                Value<int> totalDamageReceived = const Value.absent(),
+                Value<bool> isVictory = const Value.absent(),
+                Value<String> llmSummary = const Value.absent(),
+                Value<String> llmFeedbackMistakes = const Value.absent(),
+                Value<String> llmFeedbackImprovements = const Value.absent(),
+                Value<String> llmFeedbackFits = const Value.absent(),
+                Value<String> damageChartData = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CombatEncountersCompanion(
+                id: id,
+                parsedEncounterId: parsedEncounterId,
+                analysisVersion: analysisVersion,
+                analysisJson: analysisJson,
+                parseJson: parseJson,
+                encounterStart: encounterStart,
+                encounterEnd: encounterEnd,
+                characterId: characterId,
+                encounterTime: encounterTime,
+                opposingCharacters: opposingCharacters,
+                opposingCorporations: opposingCorporations,
+                opposingAlliances: opposingAlliances,
+                opposingShipTypes: opposingShipTypes,
+                totalDamageDealt: totalDamageDealt,
+                totalDamageReceived: totalDamageReceived,
+                isVictory: isVictory,
+                llmSummary: llmSummary,
+                llmFeedbackMistakes: llmFeedbackMistakes,
+                llmFeedbackImprovements: llmFeedbackImprovements,
+                llmFeedbackFits: llmFeedbackFits,
+                damageChartData: damageChartData,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<String?> parsedEncounterId = const Value.absent(),
+                Value<int?> analysisVersion = const Value.absent(),
+                Value<String?> analysisJson = const Value.absent(),
+                Value<String?> parseJson = const Value.absent(),
+                Value<DateTime?> encounterStart = const Value.absent(),
+                Value<DateTime?> encounterEnd = const Value.absent(),
+                Value<int?> characterId = const Value.absent(),
+                required DateTime encounterTime,
+                required String opposingCharacters,
+                required String opposingCorporations,
+                required String opposingAlliances,
+                required String opposingShipTypes,
+                required int totalDamageDealt,
+                required int totalDamageReceived,
+                required bool isVictory,
+                required String llmSummary,
+                required String llmFeedbackMistakes,
+                required String llmFeedbackImprovements,
+                required String llmFeedbackFits,
+                required String damageChartData,
+                Value<int> rowid = const Value.absent(),
+              }) => CombatEncountersCompanion.insert(
+                id: id,
+                parsedEncounterId: parsedEncounterId,
+                analysisVersion: analysisVersion,
+                analysisJson: analysisJson,
+                parseJson: parseJson,
+                encounterStart: encounterStart,
+                encounterEnd: encounterEnd,
+                characterId: characterId,
+                encounterTime: encounterTime,
+                opposingCharacters: opposingCharacters,
+                opposingCorporations: opposingCorporations,
+                opposingAlliances: opposingAlliances,
+                opposingShipTypes: opposingShipTypes,
+                totalDamageDealt: totalDamageDealt,
+                totalDamageReceived: totalDamageReceived,
+                isVictory: isVictory,
+                llmSummary: llmSummary,
+                llmFeedbackMistakes: llmFeedbackMistakes,
+                llmFeedbackImprovements: llmFeedbackImprovements,
+                llmFeedbackFits: llmFeedbackFits,
+                damageChartData: damageChartData,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CombatEncountersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CombatEncountersTable,
+      CombatEncounter,
+      $$CombatEncountersTableFilterComposer,
+      $$CombatEncountersTableOrderingComposer,
+      $$CombatEncountersTableAnnotationComposer,
+      $$CombatEncountersTableCreateCompanionBuilder,
+      $$CombatEncountersTableUpdateCompanionBuilder,
+      (
+        CombatEncounter,
+        BaseReferences<_$AppDatabase, $CombatEncountersTable, CombatEncounter>,
+      ),
+      CombatEncounter,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -29402,4 +33013,11 @@ class $AppDatabaseManager {
       $$SystemActivityTableTableManager(_db, _db.systemActivity);
   $$WatchListTableTableManager get watchList =>
       $$WatchListTableTableManager(_db, _db.watchList);
+  $$CombatParsedEncountersTableTableManager get combatParsedEncounters =>
+      $$CombatParsedEncountersTableTableManager(
+        _db,
+        _db.combatParsedEncounters,
+      );
+  $$CombatEncountersTableTableManager get combatEncounters =>
+      $$CombatEncountersTableTableManager(_db, _db.combatEncounters);
 }

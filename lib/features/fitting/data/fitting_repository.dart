@@ -19,18 +19,20 @@ class FittingRepository {
     try {
       final query = _database.select(_database.savedFittings);
       if (characterId != null) {
-        query.where((f) => f.characterId.equals(characterId) | f.characterId.isNull());
+        query.where(
+          (f) => f.characterId.equals(characterId) | f.characterId.isNull(),
+        );
       } else {
         query.where((f) => f.characterId.isNull());
       }
-      
+
       final records = await query.get();
-      
+
       final fittings = records.map((record) {
         final jsonMap = jsonDecode(record.fittingJson) as Map<String, dynamic>;
         return Fitting.fromJson(jsonMap);
       }).toList();
-      
+
       Log.d('FITTING', 'getFittings - SUCCESS, found ${fittings.length}');
       return fittings;
     } catch (e, stack) {
@@ -38,16 +40,18 @@ class FittingRepository {
       rethrow;
     }
   }
-  
+
   /// Watch saved fittings for a character
   Stream<List<Fitting>> watchFittings({required int? characterId}) {
     final query = _database.select(_database.savedFittings);
     if (characterId != null) {
-      query.where((f) => f.characterId.equals(characterId) | f.characterId.isNull());
+      query.where(
+        (f) => f.characterId.equals(characterId) | f.characterId.isNull(),
+      );
     } else {
       query.where((f) => f.characterId.isNull());
     }
-    
+
     return query.watch().map((records) {
       return records.map((record) {
         final jsonMap = jsonDecode(record.fittingJson) as Map<String, dynamic>;
@@ -61,7 +65,7 @@ class FittingRepository {
     Log.d('FITTING', 'saveFitting(id: ${fitting.id}) - START');
     try {
       final jsonString = jsonEncode(fitting.toJson());
-      
+
       final companion = SavedFittingsCompanion.insert(
         id: fitting.id,
         characterId: Value(characterId),
@@ -72,8 +76,10 @@ class FittingRepository {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      
-      await _database.into(_database.savedFittings).insertOnConflictUpdate(companion);
+
+      await _database
+          .into(_database.savedFittings)
+          .insertOnConflictUpdate(companion);
       Log.i('FITTING', 'saveFitting - SUCCESS');
     } catch (e, stack) {
       Log.e('FITTING', 'saveFitting - ERROR', e, stack);
@@ -85,7 +91,9 @@ class FittingRepository {
   Future<void> deleteFitting(String id) async {
     Log.d('FITTING', 'deleteFitting(id: $id) - START');
     try {
-      await (_database.delete(_database.savedFittings)..where((f) => f.id.equals(id))).go();
+      await (_database.delete(
+        _database.savedFittings,
+      )..where((f) => f.id.equals(id))).go();
       Log.i('FITTING', 'deleteFitting - SUCCESS');
     } catch (e, stack) {
       Log.e('FITTING', 'deleteFitting - ERROR', e, stack);
