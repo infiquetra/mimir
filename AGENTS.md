@@ -1,8 +1,32 @@
 # AGENTS.md
 
 This file provides guidance to Codex when working with code in this repository.
-Also read `CLAUDE.md`; it contains the Mimir architecture, build commands,
-testing patterns, logging rules, and EVE-specific implementation guidance.
+
+## Purpose
+
+Mimir is a Flutter-based EVE Online companion app (macOS first, mobile to follow):
+character dashboard, skill-queue monitoring, wallet history, and multi-character
+switching. Also read `CLAUDE.md`; it carries the full Mimir architecture, the
+data-refresh and AsyncValue patterns, logging rules, and the EVE ID-resolution
+guidance that this file deliberately does not duplicate.
+
+## Commands
+
+```bash
+flutter pub get          # install dependencies
+flutter run -d macos     # run on macOS
+flutter test             # run unit + widget tests
+flutter analyze          # static analysis
+dart format .            # format
+```
+
+## Repo-specific rule
+
+Every code change MUST add appropriate debug logging via
+`package:mimir/core/logging/logger.dart` with a `[FEATURE]` tag (see `CLAUDE.md`
+> Debug Logging Requirements). Resolve EVE numeric IDs to names — never display
+raw IDs (`skillNameProvider` for skills, `itemNameProvider`/`locationNameProvider`
+otherwise).
 
 ## 📓 Engineering journal — auto-maintain
 
