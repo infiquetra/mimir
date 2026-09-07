@@ -36,6 +36,9 @@ migrate_working_dir/
 # Symbolication related
 app.*.symbols
 
+# Golden-test failure diagnostics, regenerated on every mismatched run
+test/golden/failures/
+
 # Obfuscation related
 app.*.map.json
 
