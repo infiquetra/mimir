@@ -2,13 +2,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:uuid/uuid.dart';
 
+import '../../../core/logging/logger.dart';
 import '../../../core/sde/sde_providers.dart';
+import '../../characters/data/character_repository.dart';
+import '../data/fitting_repository.dart';
 import '../domain/dogma_engine.dart';
+import '../domain/format_parser.dart';
 import '../domain/models.dart';
 
 /// Provider for the DogmaEngine instance.
 final dogmaEngineProvider = Provider<DogmaEngine>((ref) {
   return DogmaEngine();
+});
+
+/// Parser for EFT/DNA import and EFT export.
+final fittingFormatParserProvider = Provider<FittingFormatParser>((ref) {
+  return FittingFormatParser(ref.watch(sdeServiceProvider));
+});
+
+/// Saved fittings for a character, including shared (character-agnostic) ones.
+final savedFittingsProvider = StreamProvider.family<List<Fitting>, int?>((
+  ref,
+  characterId,
+) {
+  return ref
+      .watch(fittingRepositoryProvider)
+      .watchFittings(characterId: characterId);
 });
 
 /// State notifier for the active fitting session.
@@ -110,6 +129,50 @@ class FittingController extends Notifier<Fitting?> {
         );
         break;
     }
+  }
+
+  /// Replace the working fitting with a saved or imported one.
+  void loadFitting(Fitting fitting) {
+    state = fitting;
+  }
+
+  /// Persist the working fitting for the active character.
+  ///
+  /// Returns false when there is nothing to save.
+  Future<bool> saveCurrent() async {
+    final fitting = state;
+    if (fitting == null) return false;
+
+    // One-shot read: a save must not subscribe to the character stream.
+    final character = await ref
+        .read(characterRepositoryProvider)
+        .getActiveCharacter();
+    await ref
+        .read(fittingRepositoryProvider)
+        .saveFitting(fitting, characterId: character?.characterId);
+    Log.i('FITTING', 'Saved fitting "${fitting.name}" (${fitting.id})');
+    return true;
+  }
+
+  /// Import an EFT block or a DNA link into the working fitting.
+  ///
+  /// Returns the parsed fitting, or null when neither format matched.
+  Future<Fitting?> importFromText(String text) async {
+    final parser = ref.read(fittingFormatParserProvider);
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return null;
+
+    final fitting = await parser.parseEft(trimmed) ??
+        await parser.parseDna(trimmed);
+    if (fitting != null) {
+      state = fitting;
+      Log.i(
+        'FITTING',
+        'Imported fitting "${fitting.name}" with '
+        '${fitting.allModules.length} modules',
+      );
+    }
+    return fitting;
   }
 
   /// Remove a module from the current fitting by slot and index.
