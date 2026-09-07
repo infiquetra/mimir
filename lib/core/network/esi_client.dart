@@ -112,11 +112,13 @@ class EsiClient {
     String path, {
     required int characterId,
     dynamic data,
+    Map<String, dynamic>? queryParameters,
   }) async {
     final accessToken = await _getValidAccessToken(characterId);
     return _dio.post<T>(
       path,
       data: data,
+      queryParameters: queryParameters,
       options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
     );
   }
@@ -443,6 +445,68 @@ class EsiClient {
       id: first['id'] as int,
       name: first['name'] as String,
       category: 'solar_system',
+    );
+  }
+
+  // Write API (Phase 6)
+  //
+  // ESI has no skill-queue write endpoint; these are the write actions it
+  // does support that let Mimir act on the running game. Both require scopes
+  // added in EveConfig.phase6WriteScopes, so tokens issued before that fail
+  // with 403 and callers must surface a re-authorize prompt.
+
+  /// Save a fitting into the character's in-game fitting list.
+  ///
+  /// POST /characters/{character_id}/fittings/ — scope
+  /// esi-fittings.write_fittings.v1. [items] entries must carry type_id,
+  /// flag (one of the ESI slot flags) and quantity; see EsiFittingExporter.
+  Future<void> saveFittingToEve(
+    int characterId, {
+    required String name,
+    required String description,
+    required int shipTypeId,
+    required List<Map<String, dynamic>> items,
+  }) async {
+    Log.i(
+      'ESI',
+      'saveFittingToEve - saving "$name" (${items.length} items) '
+          'for character $characterId',
+    );
+    await authenticatedPost<Map<String, dynamic>>(
+      '/characters/$characterId/fittings/',
+      characterId: characterId,
+      data: {
+        'name': name,
+        'description': description,
+        'ship_type_id': shipTypeId,
+        'items': items,
+      },
+    );
+  }
+
+  /// Set or add an autopilot waypoint in the running game client.
+  ///
+  /// POST /ui/autopilot/waypoint/ — scope esi-ui.write_waypoint.v1. All three
+  /// query parameters are required by the endpoint.
+  Future<void> setAutopilotWaypoint(
+    int characterId, {
+    required int destinationId,
+    bool clearOtherWaypoints = true,
+    bool addToBeginning = false,
+  }) async {
+    Log.i(
+      'ESI',
+      'setAutopilotWaypoint - destination $destinationId '
+          '(clear: $clearOtherWaypoints) for character $characterId',
+    );
+    await authenticatedPost<Map<String, dynamic>>(
+      '/ui/autopilot/waypoint/',
+      characterId: characterId,
+      queryParameters: {
+        'add_to_beginning': addToBeginning,
+        'clear_other_waypoints': clearOtherWaypoints,
+        'destination_id': destinationId,
+      },
     );
   }
 

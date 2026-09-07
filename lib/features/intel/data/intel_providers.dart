@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mimir/core/di/providers.dart';
 import '../../../core/network/esi_client.dart';
+import '../../characters/data/character_repository.dart';
 import '../domain/killmail_models.dart';
 import '../domain/thera_models.dart';
 import 'eve_scout_client.dart';
@@ -64,3 +65,25 @@ final solarSystemByNameProvider =
       }
       return ref.watch(esiClientProvider).resolveSolarSystemByName(name);
     });
+
+/// Sets the running game client's autopilot destination.
+///
+/// Throws [EsiException]; statusCode 403 means the stored token predates
+/// esi-ui.write_waypoint.v1 and the caller must ask the user to re-authorize.
+final setDestinationProvider = FutureProvider.family<void, int>((
+  ref,
+  destinationId,
+) async {
+  final character = await ref
+      .read(characterRepositoryProvider)
+      .getActiveCharacter();
+  if (character == null) {
+    throw StateError('No active character');
+  }
+  await ref
+      .read(esiClientProvider)
+      .setAutopilotWaypoint(
+        character.characterId,
+        destinationId: destinationId,
+      );
+});

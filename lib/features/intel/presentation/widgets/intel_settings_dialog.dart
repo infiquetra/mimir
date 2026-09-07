@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/network/esi_client.dart';
+import '../../../../core/widgets/confirm_action_dialog.dart';
 import '../../data/intel_providers.dart';
 
 class IntelSettingsDialog extends ConsumerStatefulWidget {
@@ -19,6 +21,41 @@ class _IntelSettingsDialogState extends ConsumerState<IntelSettingsDialog> {
   void dispose() {
     _systemNameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _setDestination(
+    BuildContext context,
+    WidgetRef ref,
+    int systemId,
+    String systemName,
+  ) async {
+    final confirmed = await confirmAction(
+      context,
+      title: 'Set in-game destination?',
+      message:
+          'Your running EVE client\'s autopilot will be set to $systemName.',
+      confirmLabel: 'Set destination',
+    );
+    if (!confirmed) return;
+
+    try {
+      await ref.read(setDestinationProvider(systemId).future);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Destination set to $systemName')));
+    } on EsiException catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.statusCode == 403
+                ? 'Re-authorize Mimir to control the in-game autopilot.'
+                : 'Could not set destination: ${e.message}',
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _addByName() async {
@@ -82,13 +119,35 @@ class _IntelSettingsDialogState extends ConsumerState<IntelSettingsDialog> {
                     return ListTile(
                       title: Text(item.targetName),
                       subtitle: Text(item.watchType.toUpperCase()),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          ref
-                              .read(intelRepositoryProvider)
-                              .removeWatchEntity(item.entityId, item.watchType);
-                        },
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (item.watchType == 'system')
+                            IconButton(
+                              tooltip: 'Set in-game destination',
+                              icon: const Icon(
+                                Icons.navigation_outlined,
+                                size: 18,
+                              ),
+                              onPressed: () => _setDestination(
+                                context,
+                                ref,
+                                item.entityId,
+                                item.targetName,
+                              ),
+                            ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () {
+                              ref
+                                  .read(intelRepositoryProvider)
+                                  .removeWatchEntity(
+                                    item.entityId,
+                                    item.watchType,
+                                  );
+                            },
+                          ),
+                        ],
                       ),
                     );
                   },

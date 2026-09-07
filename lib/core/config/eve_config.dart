@@ -124,6 +124,27 @@ abstract class EveConfig {
   /// Existing tokens will not have this permission.
   static const List<String> combatAnalyzerScopes = [killmailReadScope];
 
+  // ==========================================================================
+  // OAuth Scopes (Phase 6 - Acting on the game)
+  // ==========================================================================
+
+  /// Scopes for the ESI write actions Mimir supports.
+  ///
+  /// ESI exposes no skill-queue write endpoint — verified against the live
+  /// OpenAPI spec on 2026-09-07, where the only skill scopes are
+  /// esi-skills.read_skills.v1 and esi-skills.read_skillqueue.v1 — so every
+  /// EVE companion app is read-only for skills. "Acting on the game" here
+  /// means saving fittings into the character's in-game fitting list and
+  /// driving the in-game autopilot.
+  ///
+  /// WARNING: Adding these scopes requires users to re-authenticate.
+  /// Existing tokens will not have these permissions; write calls made with
+  /// an old token fail with 403 and the UI asks the user to re-authorize.
+  static const List<String> phase6WriteScopes = [
+    'esi-fittings.write_fittings.v1', // Save Mimir fits into the game
+    'esi-ui.write_waypoint.v1', // Set/add autopilot waypoints
+  ];
+
   /// All OAuth scopes as a space-separated string.
   static String get scopesString => {
     ...phase1Scopes,
@@ -132,6 +153,7 @@ abstract class EveConfig {
     ...phase4WalletScopes,
     ...phase5ExpansionScopes,
     ...combatAnalyzerScopes,
+    ...phase6WriteScopes,
   }.join(' '); // Use Set to remove duplicates
 
   // ==========================================================================

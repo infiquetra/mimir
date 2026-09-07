@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/logging/logger.dart';
+import '../../../core/network/esi_client.dart';
 import '../../../core/sde/sde_providers.dart';
 import '../../characters/data/character_repository.dart';
 import '../../skills/data/skill_providers.dart';
 import '../data/fitting_repository.dart';
 import '../domain/dogma_engine.dart';
+import '../domain/esi_fitting_export.dart';
 import '../domain/format_parser.dart';
 import '../domain/models.dart';
 
@@ -174,6 +176,45 @@ class FittingController extends Notifier<Fitting?> {
       );
     }
     return fitting;
+  }
+
+  /// Save the working fitting into the active character's in-game fitting
+  /// list via ESI.
+  ///
+  /// Returns the export so the caller can report modules ESI could not
+  /// represent. Throws [EsiException]; statusCode 403 means the stored token
+  /// predates the phase-6 scopes and the caller must ask the user to
+  /// re-authorize.
+  Future<EsiFittingExport> saveCurrentToEve() async {
+    final fitting = state;
+    if (fitting == null) {
+      throw StateError('No fitting to save');
+    }
+    final character = await ref
+        .read(characterRepositoryProvider)
+        .getActiveCharacter();
+    if (character == null) {
+      throw StateError('No active character');
+    }
+
+    final export = EsiFittingExporter.export(fitting);
+    final trimmed = fitting.name.trim();
+    final name = trimmed.isEmpty
+        ? 'Unnamed fit'
+        : trimmed.length > 50
+        ? trimmed.substring(0, 50)
+        : trimmed;
+
+    await ref
+        .read(esiClientProvider)
+        .saveFittingToEve(
+          character.characterId,
+          name: name,
+          description: 'Saved from Mimir',
+          shipTypeId: fitting.shipTypeId,
+          items: export.items,
+        );
+    return export;
   }
 
   /// Remove a module from the current fitting by slot and index.

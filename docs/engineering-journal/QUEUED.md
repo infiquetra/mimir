@@ -126,6 +126,18 @@ bill-of-materials style recommendations.
 
 ## Maybe
 
+### Skill-queue push, if ESI ever gains a write endpoint
+
+**Author.** Qwen Code
+**Priority.** Maybe
+**Effort.** One to two days once the endpoint exists.
+**Worth it when.** The live OpenAPI spec shows a POST/PUT under
+`/characters/{character_id}/skillqueue` or a manage-skills scope.
+**Context.** Requested in the 2026-09-07 trust pass and verified impossible on
+that date (LEARNINGS 2026-09-07). Do not re-plan it without re-checking the
+spec first.
+**Refs.** LEARNINGS 2026-09-07 "ESI cannot write the skill queue".
+
 ### Discord Rich Presence
 
 **Author.** Qwen Code

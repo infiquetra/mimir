@@ -24,6 +24,23 @@
 
 ---
 
+### Phase 6 writes: fittings and autopilot, behind confirmation (commit: pending)
+
+**Author.** Qwen Code
+**Decision.** Add `esi-fittings.write_fittings.v1` and
+`esi-ui.write_waypoint.v1` (EveConfig.phase6WriteScopes). Every game-affecting
+call goes through `confirmAction`, and a 403 response is surfaced as
+"re-authorize Mimir" because tokens issued before the scope addition lack it.
+**Rejected alternatives.** Skill-queue push (verified impossible, LEARNINGS
+2026-09-07); performing writes without confirmation.
+**Rationale.** The user chose these two after learning the skill queue cannot
+be written. Confirmation matters because these calls change a running game
+client or the character's in-game fitting list.
+**Revisit when.** CCP adds a skill-queue write endpoint to ESI, or users ask
+for mail/contacts/fleet writes (all present in the spec).
+**Refs.** lib/core/widgets/confirm_action_dialog.dart;
+lib/features/fitting/domain/esi_fitting_export.dart.
+
 ## 2026-09-07
 
 ### Fabricated intel data is deleted, not gated (59f031b, d903ff9)

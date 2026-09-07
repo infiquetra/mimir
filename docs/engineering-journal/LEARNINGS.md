@@ -29,6 +29,24 @@
 
 ---
 
+### ESI cannot write the skill queue — verified against the live OpenAPI spec
+
+**Author.** Qwen Code
+**Context.** The 2026-09-07 audit listed "zero authenticated ESI writes" as the
+top capability gap and proposed pushing skill plans to the game.
+**Evidence.** `https://esi.evetech.net/meta/openapi.json` fetched 2026-09-07:
+34 write operations in total, none under `/characters/{id}/skillqueue` or
+`/characters/{id}/skills` (both GET-only), and the only skill scopes are
+`esi-skills.read_skills.v1` and `esi-skills.read_skillqueue.v1`.
+**Mechanism.** CCP never exposed skill-queue management over ESI, so every EVE
+companion app — not just Mimir — is read-only for skills. The audit item was a
+platform property misread as a product gap.
+**Fix.** Shipped the writes ESI does support instead: save-fitting-to-EVE and
+autopilot waypoints, both behind an explicit confirmation dialog.
+**Generalizable rule.** Verify a capability against the live spec before
+planning a feature around it; a missing endpoint is invisible from the client.
+**Refs.** DECISIONS 2026-09-07 "Phase 6 writes"; QUEUED Maybe entry.
+
 ## 2026-09-07
 
 ### ESI removed GET /search/; POST /universe/ids/ is the supported replacement
