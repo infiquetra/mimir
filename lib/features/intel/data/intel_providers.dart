@@ -1,5 +1,7 @@
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mimir/core/di/providers.dart';
+import '../../../core/network/esi_client.dart';
 import '../domain/killmail_models.dart';
 import '../domain/thera_models.dart';
 import 'eve_scout_client.dart';
@@ -38,3 +40,28 @@ final theraConnectionsProvider =
       final client = ref.watch(eveScoutClientProvider);
       return client.getTheraConnections();
     });
+
+/// Resolves a solar-system name to a watch-list target, offline-first: the
+/// cached universe-name table, then ESI `POST /universe/ids/`.
+///
+/// The watch list used to accept only raw numeric system IDs and display them
+/// verbatim — unusable, and against the project rule that EVE IDs are never
+/// shown to users.
+final solarSystemByNameProvider = FutureProvider.family<EsiUniverseName?, String>((
+  ref,
+  name,
+) async {
+  final db = ref.watch(databaseProvider);
+  final cached = await (db.select(db.universeNames)
+        ..where((u) => u.category.equals('solar_system'))
+        ..where((u) => u.name.lower().equals(name.toLowerCase())))
+      .get();
+  if (cached.isNotEmpty) {
+    return EsiUniverseName(
+      id: cached.first.id,
+      name: cached.first.name,
+      category: 'solar_system',
+    );
+  }
+  return ref.watch(esiClientProvider).resolveSolarSystemByName(name);
+});

@@ -423,6 +423,29 @@ class EsiClient {
     return result;
   }
 
+  /// Resolve an exact solar-system name to its ID via POST /universe/ids/.
+  ///
+  /// Returns null when ESI has no solar system by that name. Verified against
+  /// the live endpoint: the matching key is `systems`.
+  Future<EsiUniverseName?> resolveSolarSystemByName(String name) async {
+    Log.d('ESI', 'resolveSolarSystemByName("$name") - START');
+    final response = await publicPost<Map<String, dynamic>>(
+      '/universe/ids/',
+      data: [name],
+    );
+    final systems = response.data?['systems'];
+    if (systems == null || (systems as List).isEmpty) {
+      Log.i('ESI', 'resolveSolarSystemByName - no match for "$name"');
+      return null;
+    }
+    final first = systems.first as Map<String, dynamic>;
+    return EsiUniverseName(
+      id: first['id'] as int,
+      name: first['name'] as String,
+      category: 'solar_system',
+    );
+  }
+
   /// Resolve type IDs to names via POST /universe/names/
   Future<List<EsiUniverseName>> resolveNames(List<int> ids) async {
     if (ids.isEmpty) return [];

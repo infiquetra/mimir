@@ -11,12 +11,45 @@ class IntelSettingsDialog extends ConsumerStatefulWidget {
 }
 
 class _IntelSettingsDialogState extends ConsumerState<IntelSettingsDialog> {
-  final _systemIdController = TextEditingController();
+  final _systemNameController = TextEditingController();
+  bool _resolving = false;
+  String? _resolveError;
 
   @override
   void dispose() {
-    _systemIdController.dispose();
+    _systemNameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _addByName() async {
+    final name = _systemNameController.text.trim();
+    if (name.isEmpty) return;
+
+    setState(() {
+      _resolving = true;
+      _resolveError = null;
+    });
+
+    final resolved = await ref.read(solarSystemByNameProvider(name).future);
+    if (!mounted) return;
+
+    if (resolved == null) {
+      setState(() {
+        _resolving = false;
+        _resolveError = 'No solar system named "$name" was found.';
+      });
+      return;
+    }
+
+    await ref
+        .read(intelRepositoryProvider)
+        .addWatchEntity(resolved.id, 'system', resolved.name);
+    if (!mounted) return;
+    ref.invalidate(solarSystemByNameProvider(name));
+    setState(() {
+      _resolving = false;
+      _systemNameController.clear();
+    });
   }
 
   @override
@@ -48,9 +81,7 @@ class _IntelSettingsDialogState extends ConsumerState<IntelSettingsDialog> {
                     final item = config[index];
                     return ListTile(
                       title: Text(item.targetName),
-                      subtitle: Text(
-                        '${item.watchType.toUpperCase()} - ID: ${item.entityId}',
-                      ),
+                      subtitle: Text(item.watchType.toUpperCase()),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),
                         onPressed: () {
@@ -67,39 +98,43 @@ class _IntelSettingsDialogState extends ConsumerState<IntelSettingsDialog> {
               error: (e, _) => Text('Error: $e'),
             ),
             const Divider(),
-            const Text('Add System ID (Testing)'),
+            const Text('Watch a solar system'),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: TextField(
-                    controller: _systemIdController,
+                    controller: _systemNameController,
                     decoration: const InputDecoration(
-                      labelText: 'System ID (e.g. 30000142 for Jita)',
+                      labelText: 'System name (e.g. Jita)',
                       border: OutlineInputBorder(),
                     ),
-                    keyboardType: TextInputType.number,
+                    onSubmitted: (_) => _addByName(),
                   ),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: () {
-                    final id = int.tryParse(_systemIdController.text);
-                    if (id != null) {
-                      ref
-                          .read(intelRepositoryProvider)
-                          .addWatchEntity(
-                            id,
-                            'system',
-                            'System $id', // MVP: using raw ID as name
-                          );
-                      _systemIdController.clear();
-                    }
-                  },
-                  child: const Text('Add'),
+                  onPressed: _resolving ? null : _addByName,
+                  child: _resolving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Add'),
                 ),
               ],
             ),
+            if (_resolveError != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _resolveError!,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ],
         ),
       ),

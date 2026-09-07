@@ -61,8 +61,9 @@ class KillmailCard extends ConsumerWidget {
                             ),
                           ),
                           loading: () => const Text('Loading...'),
-                          error: (error, stack) =>
-                              Text('System ${killmail.solarSystemId}'),
+                          // Never fall back to the raw solar system ID: the
+                          // project rule is that EVE IDs are not shown to users.
+                          error: (error, stack) => const Text('Unknown system'),
                         ),
                         Text(
                           DateFormat.Hm().format(
