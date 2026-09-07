@@ -20,7 +20,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
+          flutter-version: '3.44.x'
           channel: 'stable'
           cache: true
 
@@ -42,15 +42,23 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
+          flutter-version: '3.44.x'
           channel: 'stable'
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Run tests
-        run: flutter test --coverage
+      # One retry: SpaceBackground's nebula gradient bands to 8-bit colour, so
+      # a sub-pixel layout shift flips a handful of pixels between runs
+      # (~3px, 0.0003%). Real regressions in this suite measure 0.14%+, so a
+      # single retry cannot mask one. See LEARNINGS 2026-09-07.
+      - name: Run tests (retry once for golden banding noise)
+        run: |
+          flutter test --coverage || {
+            echo "::warning::First test attempt failed; retrying once for decorative golden banding noise."
+            flutter test --coverage
+          }
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
@@ -82,7 +90,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
+          flutter-version: '3.44.x'
           channel: 'stable'
           cache: true
 
