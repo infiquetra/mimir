@@ -28,6 +28,7 @@ class DogmaAttributes {
   static const int mass = 4;
   static const int inertiaModifier = 70;
   static const int warpSpeedMultiplier = 600;
+  static const int speedFactor = 20; // propulsion modules' speed multiplier
 
   static const int maxTargetRange = 76;
   static const int scanResolution = 564;

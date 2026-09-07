@@ -36,10 +36,7 @@ class StatsPanel extends ConsumerWidget {
           padding: const EdgeInsets.all(12),
           children: [
             _buildSectionHeader('DEFENSE'),
-            _buildStatRow(
-              'EHP',
-              stats.defenses.totalEhp.toStringAsFixed(0),
-            ),
+            _buildStatRow('EHP', stats.defenses.totalEhp.toStringAsFixed(0)),
             _buildStatRow(
               'Shield',
               '${stats.defenses.shieldHp.toStringAsFixed(0)} HP',
@@ -67,7 +64,10 @@ class StatsPanel extends ConsumerWidget {
               'Stable',
               stats.isCapStable
                   ? 'Yes'
-                  : '${stats.capacitorStable.toStringAsFixed(0)}s',
+                  : _dashIfUnmodelled(
+                      stats.capacitorStable,
+                      '${stats.capacitorStable.toStringAsFixed(0)}s',
+                    ),
             ),
 
             const SizedBox(height: 16),
@@ -76,8 +76,20 @@ class StatsPanel extends ConsumerWidget {
               'Max Speed',
               '${stats.maxVelocity.toStringAsFixed(0)} m/s',
             ),
-            _buildStatRow('Align', '${stats.alignTime.toStringAsFixed(1)} s'),
-            _buildStatRow('Warp', '${stats.warpSpeed.toStringAsFixed(1)} AU/s'),
+            _buildStatRow(
+              'Align',
+              _dashIfUnmodelled(
+                stats.alignTime,
+                '${stats.alignTime.toStringAsFixed(1)} s',
+              ),
+            ),
+            _buildStatRow(
+              'Warp',
+              _dashIfUnmodelled(
+                stats.warpSpeed,
+                '${stats.warpSpeed.toStringAsFixed(1)} AU/s',
+              ),
+            ),
 
             const SizedBox(height: 16),
             _buildSectionHeader('TARGETING'),
@@ -118,6 +130,12 @@ class StatsPanel extends ConsumerWidget {
       ),
     );
   }
+
+  /// The engine leaves stats it does not model at zero. A real ship never has
+  /// 0 m/s or a 0 s align time, so zero unambiguously means "not calculated"
+  /// and must render as a dash rather than a fake measurement.
+  String _dashIfUnmodelled(double value, String formatted) =>
+      value == 0 ? '—' : formatted;
 
   Widget _buildSectionHeader(String title) {
     return Padding(

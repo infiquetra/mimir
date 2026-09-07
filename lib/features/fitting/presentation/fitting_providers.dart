@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/sde/sde_providers.dart';
 import '../../characters/data/character_repository.dart';
+import '../../skills/data/skill_providers.dart';
 import '../data/fitting_repository.dart';
 import '../domain/dogma_engine.dart';
 import '../domain/format_parser.dart';
@@ -162,14 +163,14 @@ class FittingController extends Notifier<Fitting?> {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return null;
 
-    final fitting = await parser.parseEft(trimmed) ??
-        await parser.parseDna(trimmed);
+    final fitting =
+        await parser.parseEft(trimmed) ?? await parser.parseDna(trimmed);
     if (fitting != null) {
       state = fitting;
       Log.i(
         'FITTING',
         'Imported fitting "${fitting.name}" with '
-        '${fitting.allModules.length} modules',
+            '${fitting.allModules.length} modules',
       );
     }
     return fitting;
@@ -247,9 +248,23 @@ final fittingStatsProvider = FutureProvider<FittingStats?>((ref) async {
     }
   }
 
-  // Calculate stats using DogmaEngine
-  // For now, character skills are empty. Later we will pass the active character's skills.
-  return engine.calculateStats(fitting, shipType, moduleTypes, []);
+  // Stats must reflect the character who will actually fly the ship: skill
+  // modifiers change CPU/power output, speed, tank and capacitor.
+  final character = await ref
+      .read(characterRepositoryProvider)
+      .getActiveCharacter();
+  final trainedSkills = character == null
+      ? const <CharacterSkill>[]
+      : (await ref.watch(trainedSkillsProvider(character.characterId).future))
+            .map(
+              (skill) => CharacterSkill(
+                skillId: skill.skillId,
+                level: skill.trainedSkillLevel,
+              ),
+            )
+            .toList();
+
+  return engine.calculateStats(fitting, shipType, moduleTypes, trainedSkills);
 });
 
 /// Provides available modules filtered by slot type from the SDE

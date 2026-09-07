@@ -144,5 +144,162 @@ void main() {
       expect(stats.cpuUsed, 30.0);
       expect(stats.powerUsed, 1.0);
     });
+
+    test('character skills modify ship attributes postMul', () async {
+      final stats = await engine.calculateStats(
+        _emptyFitting(),
+        _rifter(),
+        {},
+        [
+          const CharacterSkill(skillId: 3418, level: 5), // CPU Management +25%
+          const CharacterSkill(skillId: 3455, level: 4), // Navigation +20%
+        ],
+      );
+
+      expect(stats.cpuMax, closeTo(125 * 1.25, 0.001));
+      expect(stats.maxVelocity, closeTo(300 * 1.20, 0.001));
+    });
+
+    test('an untrained character sees unmodified base attributes', () async {
+      final stats = await engine.calculateStats(
+        _emptyFitting(),
+        _rifter(),
+        {},
+        [],
+      );
+
+      expect(stats.cpuMax, 125.0);
+      expect(stats.maxVelocity, 300.0);
+    });
+
+    test('propulsion modules apply speedFactor to max velocity', () async {
+      const afterburner = ModuleType(
+        typeId: 449,
+        name: 'Afterburner I',
+        groupId: 46,
+        groupName: 'Propulsion',
+        slotType: SlotType.med,
+        cpu: 10,
+        powergrid: 20,
+        baseAttributes: {DogmaAttributes.speedFactor: 0.5},
+      );
+      final fitting = Fitting(
+        id: 'ab',
+        name: 'Rifter with AB',
+        shipTypeId: 587,
+        shipName: 'Rifter',
+        medSlots: [
+          FittedModule(
+            typeId: 449,
+            typeName: 'Afterburner I',
+            state: ModuleState.online,
+            slotType: SlotType.med,
+            slotIndex: 0,
+          ),
+        ],
+      );
+
+      final stats = await engine.calculateStats(fitting, _rifter(), {
+        '449': afterburner,
+      }, []);
+
+      expect(stats.maxVelocity, closeTo(300 * 1.5, 0.001));
+      expect(stats.cpuUsed, 10.0);
+    });
+
+    test('offline modules contribute nothing', () async {
+      const afterburner = ModuleType(
+        typeId: 449,
+        name: 'Afterburner I',
+        groupId: 46,
+        groupName: 'Propulsion',
+        slotType: SlotType.med,
+        cpu: 10,
+        powergrid: 20,
+        baseAttributes: {DogmaAttributes.speedFactor: 0.5},
+      );
+      final fitting = Fitting(
+        id: 'ab-off',
+        name: 'Rifter with offline AB',
+        shipTypeId: 587,
+        shipName: 'Rifter',
+        medSlots: [
+          FittedModule(
+            typeId: 449,
+            typeName: 'Afterburner I',
+            state: ModuleState.offline,
+            slotType: SlotType.med,
+            slotIndex: 0,
+          ),
+        ],
+      );
+
+      final stats = await engine.calculateStats(fitting, _rifter(), {
+        '449': afterburner,
+      }, []);
+
+      expect(stats.maxVelocity, 300.0);
+      expect(stats.cpuUsed, 0.0);
+    });
+
+    test('shield management raises shield HP and total EHP', () async {
+      final untrained = await engine.calculateStats(
+        _emptyFitting(),
+        _rifter(),
+        {},
+        [],
+      );
+      final trained = await engine.calculateStats(
+        _emptyFitting(),
+        _rifter(),
+        {},
+        [const CharacterSkill(skillId: 3425, level: 5)], // Shield Management
+      );
+
+      expect(trained.defenses.shieldHp, closeTo(400 * 1.25, 0.001));
+      expect(
+        trained.defenses.totalEhp,
+        greaterThan(untrained.defenses.totalEhp),
+      );
+    });
   });
 }
+
+ShipType _rifter() => ShipType(
+  typeId: 587,
+  name: 'Rifter',
+  description: 'A Minmatar frigate',
+  groupId: 25,
+  groupName: 'Frigate',
+  highSlots: 4,
+  medSlots: 3,
+  lowSlots: 3,
+  rigSlots: 3,
+  baseAttributes: {
+    DogmaAttributes.cpuOutput: 125.0,
+    DogmaAttributes.powerOutput: 37.0,
+    DogmaAttributes.maxVelocity: 300.0,
+    DogmaAttributes.shieldCapacity: 400.0,
+    DogmaAttributes.armorHp: 400.0,
+    DogmaAttributes.hullHp: 350.0,
+    DogmaAttributes.shieldEmResist: 1.0,
+    DogmaAttributes.shieldThermalResist: 1.0,
+    DogmaAttributes.shieldKineticResist: 1.0,
+    DogmaAttributes.shieldExplosiveResist: 1.0,
+    DogmaAttributes.armorEmResist: 1.0,
+    DogmaAttributes.armorThermalResist: 1.0,
+    DogmaAttributes.armorKineticResist: 1.0,
+    DogmaAttributes.armorExplosiveResist: 1.0,
+    DogmaAttributes.hullEmResist: 1.0,
+    DogmaAttributes.hullThermalResist: 1.0,
+    DogmaAttributes.hullKineticResist: 1.0,
+    DogmaAttributes.hullExplosiveResist: 1.0,
+  },
+);
+
+Fitting _emptyFitting() => Fitting(
+  id: 'empty',
+  name: 'Empty Rifter',
+  shipTypeId: 587,
+  shipName: 'Rifter',
+);

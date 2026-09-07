@@ -16,6 +16,21 @@ class DogmaEngine {
     return exp(-pow((n - 1) / 2.67, 2));
   }
 
+  /// Skill-driven postMul modifiers applied to ship attributes.
+  ///
+  /// Entries are (skillTypeId, attributeId, bonusPerLevel). These are EVE's
+  /// classic +5%/level skill effects; applying them postMul to the ship
+  /// attribute reproduces how the game derives the same values.
+  static const List<(int, int, double)> _skillModifiers = [
+    (3418, DogmaAttributes.cpuOutput, 0.05), // CPU Management
+    (3402, DogmaAttributes.powerOutput, 0.05), // Engineering
+    (3455, DogmaAttributes.maxVelocity, 0.05), // Navigation
+    (3424, DogmaAttributes.capacitorCapacity, 0.05), // Capacitor Management
+    (3425, DogmaAttributes.shieldCapacity, 0.05), // Shield Management
+    (3394, DogmaAttributes.armorHp, 0.05), // Hull Upgrades
+    (3392, DogmaAttributes.hullHp, 0.05), // Mechanics
+  ];
+
   /// Calculate full statistics for a fitting.
   Future<FittingStats> calculateStats(
     Fitting fitting,
@@ -25,20 +40,24 @@ class DogmaEngine {
   ) async {
     Log.d('DOGMA', 'Calculating stats for fitting: ${fitting.name}');
 
-    // 1. Gather base attributes from Ship
-    final baseCpu = shipType.baseAttributes[DogmaAttributes.cpuOutput] ?? 0.0;
-    final basePower =
-        shipType.baseAttributes[DogmaAttributes.powerOutput] ?? 0.0;
-    final baseCalibration =
-        shipType.baseAttributes[DogmaAttributes.upgradeLoad]?.toInt() ??
-        400; // default 400
+    // 1. Attribute pipeline: ship base attributes, then character skills,
+    //    then module effects. Everything below reads from this map so a
+    //    trained skill or a fitted module visibly changes the numbers.
+    final attributes = Map<int, double>.from(shipType.baseAttributes);
 
-    // TODO: Apply character skills to base ship attributes (e.g., Engineering, CPU Management)
+    final skillLevels = {
+      for (final skill in characterSkills) skill.skillId: skill.level,
+    };
+    for (final (skillId, attributeId, perLevel) in _skillModifiers) {
+      final level = skillLevels[skillId] ?? 0;
+      final base = attributes[attributeId];
+      if (level == 0 || base == null) continue;
+      attributes[attributeId] = base * (1 + perLevel * level);
+    }
 
-    double cpuMax = baseCpu;
-    double powerMax = basePower;
+    double attr(int id, [double fallback = 0.0]) => attributes[id] ?? fallback;
 
-    // 2. Calculate resource usage
+    // 2. Resource usage and module attribute effects.
     double cpuUsed = 0.0;
     double powerUsed = 0.0;
     int calibrationUsed = 0;
@@ -52,55 +71,48 @@ class DogmaEngine {
       cpuUsed += type.cpu;
       powerUsed += type.powergrid;
       calibrationUsed += type.calibration;
+
+      // Propulsion modules carry their multiplier as speedFactor, applied
+      // postPercent to max velocity, i.e. a factor of 0.5 means +50%.
+      final speedFactor = type.baseAttributes[DogmaAttributes.speedFactor];
+      if (speedFactor != null) {
+        attributes[DogmaAttributes.maxVelocity] =
+            attr(DogmaAttributes.maxVelocity) * (1 + speedFactor);
+      }
     }
 
+    final cpuMax = attr(DogmaAttributes.cpuOutput);
+    final powerMax = attr(DogmaAttributes.powerOutput);
+    final calibrationMax = attr(DogmaAttributes.upgradeLoad, 400).toInt();
+
     // 3. Calculate Defenses
-    final shieldHp =
-        shipType.baseAttributes[DogmaAttributes.shieldCapacity] ?? 0.0;
-    final armorHp = shipType.baseAttributes[DogmaAttributes.armorHp] ?? 0.0;
-    final hullHp = shipType.baseAttributes[DogmaAttributes.hullHp] ?? 0.0;
+    final shieldHp = attr(DogmaAttributes.shieldCapacity);
+    final armorHp = attr(DogmaAttributes.armorHp);
+    final hullHp = attr(DogmaAttributes.hullHp);
 
     // Convert resonance to resist % (resonance 1.0 = 0% resist, 0.2 = 80% resist)
     double toResist(double? resonance) =>
         resonance != null ? (1.0 - resonance) * 100 : 0.0;
 
     final shieldResists = ResistProfile(
-      em: toResist(shipType.baseAttributes[DogmaAttributes.shieldEmResist]),
-      thermal: toResist(
-        shipType.baseAttributes[DogmaAttributes.shieldThermalResist],
-      ),
-      kinetic: toResist(
-        shipType.baseAttributes[DogmaAttributes.shieldKineticResist],
-      ),
-      explosive: toResist(
-        shipType.baseAttributes[DogmaAttributes.shieldExplosiveResist],
-      ),
+      em: toResist(attr(DogmaAttributes.shieldEmResist, 1.0)),
+      thermal: toResist(attr(DogmaAttributes.shieldThermalResist, 1.0)),
+      kinetic: toResist(attr(DogmaAttributes.shieldKineticResist, 1.0)),
+      explosive: toResist(attr(DogmaAttributes.shieldExplosiveResist, 1.0)),
     );
 
     final armorResists = ResistProfile(
-      em: toResist(shipType.baseAttributes[DogmaAttributes.armorEmResist]),
-      thermal: toResist(
-        shipType.baseAttributes[DogmaAttributes.armorThermalResist],
-      ),
-      kinetic: toResist(
-        shipType.baseAttributes[DogmaAttributes.armorKineticResist],
-      ),
-      explosive: toResist(
-        shipType.baseAttributes[DogmaAttributes.armorExplosiveResist],
-      ),
+      em: toResist(attr(DogmaAttributes.armorEmResist, 1.0)),
+      thermal: toResist(attr(DogmaAttributes.armorThermalResist, 1.0)),
+      kinetic: toResist(attr(DogmaAttributes.armorKineticResist, 1.0)),
+      explosive: toResist(attr(DogmaAttributes.armorExplosiveResist, 1.0)),
     );
 
     final hullResists = ResistProfile(
-      em: toResist(shipType.baseAttributes[DogmaAttributes.hullEmResist]),
-      thermal: toResist(
-        shipType.baseAttributes[DogmaAttributes.hullThermalResist],
-      ),
-      kinetic: toResist(
-        shipType.baseAttributes[DogmaAttributes.hullKineticResist],
-      ),
-      explosive: toResist(
-        shipType.baseAttributes[DogmaAttributes.hullExplosiveResist],
-      ),
+      em: toResist(attr(DogmaAttributes.hullEmResist, 1.0)),
+      thermal: toResist(attr(DogmaAttributes.hullThermalResist, 1.0)),
+      kinetic: toResist(attr(DogmaAttributes.hullKineticResist, 1.0)),
+      explosive: toResist(attr(DogmaAttributes.hullExplosiveResist, 1.0)),
     );
 
     // EHP Calculation
@@ -117,6 +129,7 @@ class DogmaEngine {
 
     final defenses = DefenseProfile(
       shieldHp: shieldHp,
+      shieldRecharge: attr(DogmaAttributes.shieldRechargeTime),
       shieldResists: shieldResists,
       shieldEhp: shieldEhp,
       armorHp: armorHp,
@@ -129,23 +142,32 @@ class DogmaEngine {
     );
 
     // 4. Calculate Capacitor
-    final capCapacity =
-        shipType.baseAttributes[DogmaAttributes.capacitorCapacity] ?? 0.0;
-    final capRecharge =
-        shipType.baseAttributes[DogmaAttributes.capacitorRechargeTime] ?? 0.0;
+    final capCapacity = attr(DogmaAttributes.capacitorCapacity);
+    final capRecharge = attr(DogmaAttributes.capacitorRechargeTime);
 
-    // 5. Build Stats Object
+    // 5. Build Stats Object.
+    //
+    // dps*, alignTime, warpSpeed and capacitorStable are left at their zero
+    // defaults on purpose: the engine does not model them yet, and the stats
+    // panel renders those zeros as "—" instead of presenting them as real
+    // measurements.
     return FittingStats(
       cpuUsed: cpuUsed,
       cpuMax: cpuMax,
       powerUsed: powerUsed,
       powerMax: powerMax,
       calibrationUsed: calibrationUsed,
-      calibrationMax: baseCalibration,
+      calibrationMax: calibrationMax,
       defenses: defenses,
       capacitorCapacity: capCapacity,
       capacitorRecharge: capRecharge,
-      // TODO: proper calculation of other stats
+      maxVelocity: attr(DogmaAttributes.maxVelocity),
+      inertiaModifier: attr(DogmaAttributes.inertiaModifier),
+      massKg: attr(DogmaAttributes.mass),
+      targetRange: attr(DogmaAttributes.maxTargetRange),
+      scanResolution: attr(DogmaAttributes.scanResolution),
+      maxLockedTargets: attr(DogmaAttributes.maxLockedTargets).toInt(),
+      signatureRadius: attr(DogmaAttributes.signatureRadius),
     );
   }
 }
