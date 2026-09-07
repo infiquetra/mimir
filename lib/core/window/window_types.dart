@@ -225,9 +225,9 @@ extension WindowTypeExtension on WindowType {
       case WindowType.fitting:
         return 'assets/icons/eve/fitting.png';
       case WindowType.intel:
-        return 'assets/icons/eve/intel.png'; // Make sure this asset exists or use a fallback
+        return 'assets/icons/eve/intel.png';
       case WindowType.combatAnalyzer:
-        return 'assets/icons/eve/intel.png'; // Using intel icon as fallback for now
+        return 'assets/icons/eve/intel.png'; // shares the intel glyph
     }
   }
 }

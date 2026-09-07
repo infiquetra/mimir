@@ -221,8 +221,7 @@ class TrayService extends TrayListener {
       MenuItem(
         key: 'intel',
         label: intelLabel,
-        icon:
-            'assets/icons/tray/intel.png', // Assuming an icon exists or default fallback
+        icon: 'assets/icons/tray/intel.png',
       ),
     );
     Log.d('TRAY', 'Added menu item: $intelLabel (key=intel)');
@@ -234,7 +233,7 @@ class TrayService extends TrayListener {
       MenuItem(
         key: 'combat_analyzer',
         label: combatAnalyzerLabel,
-        icon: 'assets/icons/tray/intel.png', // Fallback icon
+        icon: 'assets/icons/tray/intel.png', // shares the intel glyph
       ),
     );
     Log.d('TRAY', 'Added menu item: $combatAnalyzerLabel (key=combat_analyzer)');
