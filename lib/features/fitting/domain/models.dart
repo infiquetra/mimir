@@ -247,6 +247,28 @@ abstract class DogmaEffect with _$DogmaEffect {
       _$DogmaEffectFromJson(json);
 }
 
+/// One dogma modifier of an effect, as published by ESI's
+/// `/dogma/effects/{id}/` and cached in [SdeEffectModifiers].
+///
+/// [operator] follows CCP's dogma operator enum as observed live:
+/// 6 = postPercent (`modified *= 1 + value/100`, e.g. shield hardeners) and
+/// 0 = postMul (`modified *= value`, e.g. Damage Control resonances).
+/// postPercent is confirmed by hardener bonus attributes carrying percent
+/// units (-55 for EM Shield Hardener II); postMul by elimination, since
+/// postPercent would make a 0.85 resonance bonus a no-op and assignment
+/// would overwrite better base resonances.
+@freezed
+abstract class EffectModifier with _$EffectModifier {
+  const factory EffectModifier({
+    required int effectId,
+    required String func,
+    required int operator,
+    required int modifiedAttributeId,
+    int? modifyingAttributeId,
+    @Default('shipID') String domain,
+  }) = _EffectModifier;
+}
+
 @freezed
 abstract class SkillRequirement with _$SkillRequirement {
   const factory SkillRequirement({

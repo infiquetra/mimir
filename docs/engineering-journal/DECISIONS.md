@@ -24,6 +24,22 @@
 
 ---
 
+### Fitting tank math is data-driven from cached ESI modifiers (commit: pending)
+
+**Author.** Qwen Code
+**Decision.** New `SdeEffectModifiers` Drift table (SDE schema v6) plus
+`SdeService.ensureEffectModifiers`, which fetches missing effect modifiers
+from public ESI and tolerates failure; DogmaEngine applies operator 6 as
+postPercent (stacking-penalised on resonances) and operator 0 as postMul.
+**Rejected alternatives.** Hardcoded per-module bonus constants (breaks on
+every balance change, and our first guess was wrong by two orders of
+magnitude); a full expression-tree engine (ESI publishes expression IDs only).
+**Rationale.** CCP's published modifiers make hardener and Damage Control
+math correct by construction and cacheable for offline use.
+**Revisit when.** ESI publishes effect expressions, or Mimir bundles the full
+SDE dogma expression tables.
+**Refs.** LEARNINGS 2026-09-07 operator-semantics entry.
+
 ### Phase 6 writes: fittings and autopilot, behind confirmation (commit: pending)
 
 **Author.** Qwen Code

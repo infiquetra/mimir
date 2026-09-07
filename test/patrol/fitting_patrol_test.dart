@@ -35,6 +35,11 @@ class MockSdeService extends Mock implements SdeService {
     if (slotType == mockModule.slotType) return [mockModule];
     return [];
   }
+
+  @override
+  Future<Map<int, List<EffectModifier>>> ensureEffectModifiers(
+    List<int> effectIds,
+  ) async => const {};
 }
 
 void main() {

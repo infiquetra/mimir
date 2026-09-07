@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/services.dart';
 
@@ -24,6 +25,11 @@ class SdeService {
   /// In-memory cache for fast skill name lookups.
   final Map<int, String> _skillNameCache = {};
 
+  /// Effect IDs whose modifiers we already tried to fetch this session, so
+  /// being offline does not turn every fitting stats calculation into a
+  /// retry storm of failed ESI calls.
+  final Set<int> _modifierFetchAttempted = {};
+
   /// Whether the service has been initialized.
   bool _initialized = false;
 
@@ -31,6 +37,9 @@ class SdeService {
   static const String _bundledSkillsAsset = 'assets/sde/skills.json';
   static const String _bundledDogmaAsset = 'assets/sde/dogma.json';
   static const String _bundledIndustryAsset = 'assets/sde/industry.json';
+
+  /// Public ESI base URL for dogma reference data.
+  static const String _esiBaseUrl = 'https://esi.evetech.net/latest';
 
   /// Initialize the SDE service.
   ///
@@ -624,6 +633,89 @@ class SdeService {
   /// Get skills in a specific group.
   Future<List<SdeType>> getSkillsByGroup(int groupId) {
     return database.getTypesByGroup(groupId);
+  }
+
+  /// Returns dogma modifiers for the given effects, fetching any that are
+  /// not cached yet from ESI's public `/dogma/effects/{id}/`.
+  ///
+  /// The bundled SDE only stores effect IDs; the modifier list (operator,
+  /// modified/modifying attributes) is what makes module bonuses computable.
+  /// Failures are tolerated: an offline caller gets whatever is cached, and
+  /// the engine then reports base attributes rather than wrong ones.
+  Future<Map<int, List<EffectModifier>>> ensureEffectModifiers(
+    List<int> effectIds,
+  ) async {
+    final unique = effectIds.toSet();
+    if (unique.isEmpty) return const {};
+
+    final cached = await database.getEffectModifiers(unique.toList());
+    final cachedIds = cached.map((m) => m.effectId).toSet();
+    final missing = unique
+        .where((id) => !cachedIds.contains(id))
+        .where((id) => !_modifierFetchAttempted.contains(id))
+        .toList();
+
+    if (missing.isNotEmpty) {
+      _modifierFetchAttempted.addAll(missing);
+      final rows = <SdeEffectModifiersCompanion>[];
+      await Future.wait(
+        missing.map((effectId) async {
+          try {
+            final response = await Dio().get<Map<String, dynamic>>(
+              '$_esiBaseUrl/dogma/effects/$effectId/',
+            );
+            for (final modifier
+                in (response.data?['modifiers'] as List? ?? [])) {
+              final map = modifier as Map<String, dynamic>;
+              rows.add(
+                SdeEffectModifiersCompanion.insert(
+                  effectId: effectId,
+                  func: map['func'] as String? ?? '',
+                  operator: map['operator'] as int? ?? -1,
+                  modifiedAttributeId: map['modified_attribute_id'] as int,
+                  modifyingAttributeId: Value(
+                    map['modifying_attribute_id'] as int?,
+                  ),
+                  domain: Value(map['domain'] as String? ?? 'shipID'),
+                ),
+              );
+            }
+          } catch (e) {
+            Log.w(
+              'SDE',
+              'ensureEffectModifiers - fetch failed for $effectId: $e',
+            );
+          }
+        }),
+      );
+      await database.upsertEffectModifiers(rows);
+      if (rows.isNotEmpty) {
+        return _groupModifiers(
+          await database.getEffectModifiers(unique.toList()),
+        );
+      }
+    }
+
+    return _groupModifiers(cached);
+  }
+
+  Map<int, List<EffectModifier>> _groupModifiers(List<SdeEffectModifier> rows) {
+    final grouped = <int, List<EffectModifier>>{};
+    for (final row in rows) {
+      grouped
+          .putIfAbsent(row.effectId, () => [])
+          .add(
+            EffectModifier(
+              effectId: row.effectId,
+              func: row.func,
+              operator: row.operator,
+              modifiedAttributeId: row.modifiedAttributeId,
+              modifyingAttributeId: row.modifyingAttributeId,
+              domain: row.domain,
+            ),
+          );
+    }
+    return grouped;
   }
 
   /// Get initialization status.

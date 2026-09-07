@@ -2000,6 +2000,472 @@ class SdeTypeEffectsCompanion extends UpdateCompanion<SdeTypeEffect> {
   }
 }
 
+class $SdeEffectModifiersTable extends SdeEffectModifiers
+    with TableInfo<$SdeEffectModifiersTable, SdeEffectModifier> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SdeEffectModifiersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _effectIdMeta = const VerificationMeta(
+    'effectId',
+  );
+  @override
+  late final GeneratedColumn<int> effectId = GeneratedColumn<int>(
+    'effect_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _funcMeta = const VerificationMeta('func');
+  @override
+  late final GeneratedColumn<String> func = GeneratedColumn<String>(
+    'func',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _operatorMeta = const VerificationMeta(
+    'operator',
+  );
+  @override
+  late final GeneratedColumn<int> operator = GeneratedColumn<int>(
+    'operator',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _modifiedAttributeIdMeta =
+      const VerificationMeta('modifiedAttributeId');
+  @override
+  late final GeneratedColumn<int> modifiedAttributeId = GeneratedColumn<int>(
+    'modified_attribute_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _modifyingAttributeIdMeta =
+      const VerificationMeta('modifyingAttributeId');
+  @override
+  late final GeneratedColumn<int> modifyingAttributeId = GeneratedColumn<int>(
+    'modifying_attribute_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _domainMeta = const VerificationMeta('domain');
+  @override
+  late final GeneratedColumn<String> domain = GeneratedColumn<String>(
+    'domain',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('shipID'),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    effectId,
+    func,
+    operator,
+    modifiedAttributeId,
+    modifyingAttributeId,
+    domain,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sde_effect_modifiers';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SdeEffectModifier> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('effect_id')) {
+      context.handle(
+        _effectIdMeta,
+        effectId.isAcceptableOrUnknown(data['effect_id']!, _effectIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_effectIdMeta);
+    }
+    if (data.containsKey('func')) {
+      context.handle(
+        _funcMeta,
+        func.isAcceptableOrUnknown(data['func']!, _funcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_funcMeta);
+    }
+    if (data.containsKey('operator')) {
+      context.handle(
+        _operatorMeta,
+        operator.isAcceptableOrUnknown(data['operator']!, _operatorMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_operatorMeta);
+    }
+    if (data.containsKey('modified_attribute_id')) {
+      context.handle(
+        _modifiedAttributeIdMeta,
+        modifiedAttributeId.isAcceptableOrUnknown(
+          data['modified_attribute_id']!,
+          _modifiedAttributeIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_modifiedAttributeIdMeta);
+    }
+    if (data.containsKey('modifying_attribute_id')) {
+      context.handle(
+        _modifyingAttributeIdMeta,
+        modifyingAttributeId.isAcceptableOrUnknown(
+          data['modifying_attribute_id']!,
+          _modifyingAttributeIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('domain')) {
+      context.handle(
+        _domainMeta,
+        domain.isAcceptableOrUnknown(data['domain']!, _domainMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SdeEffectModifier map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SdeEffectModifier(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      effectId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}effect_id'],
+      )!,
+      func: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}func'],
+      )!,
+      operator: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}operator'],
+      )!,
+      modifiedAttributeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}modified_attribute_id'],
+      )!,
+      modifyingAttributeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}modifying_attribute_id'],
+      ),
+      domain: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}domain'],
+      )!,
+    );
+  }
+
+  @override
+  $SdeEffectModifiersTable createAlias(String alias) {
+    return $SdeEffectModifiersTable(attachedDatabase, alias);
+  }
+}
+
+class SdeEffectModifier extends DataClass
+    implements Insertable<SdeEffectModifier> {
+  final int id;
+  final int effectId;
+  final String func;
+  final int operator;
+  final int modifiedAttributeId;
+  final int? modifyingAttributeId;
+  final String domain;
+  const SdeEffectModifier({
+    required this.id,
+    required this.effectId,
+    required this.func,
+    required this.operator,
+    required this.modifiedAttributeId,
+    this.modifyingAttributeId,
+    required this.domain,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['effect_id'] = Variable<int>(effectId);
+    map['func'] = Variable<String>(func);
+    map['operator'] = Variable<int>(operator);
+    map['modified_attribute_id'] = Variable<int>(modifiedAttributeId);
+    if (!nullToAbsent || modifyingAttributeId != null) {
+      map['modifying_attribute_id'] = Variable<int>(modifyingAttributeId);
+    }
+    map['domain'] = Variable<String>(domain);
+    return map;
+  }
+
+  SdeEffectModifiersCompanion toCompanion(bool nullToAbsent) {
+    return SdeEffectModifiersCompanion(
+      id: Value(id),
+      effectId: Value(effectId),
+      func: Value(func),
+      operator: Value(operator),
+      modifiedAttributeId: Value(modifiedAttributeId),
+      modifyingAttributeId: modifyingAttributeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(modifyingAttributeId),
+      domain: Value(domain),
+    );
+  }
+
+  factory SdeEffectModifier.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SdeEffectModifier(
+      id: serializer.fromJson<int>(json['id']),
+      effectId: serializer.fromJson<int>(json['effectId']),
+      func: serializer.fromJson<String>(json['func']),
+      operator: serializer.fromJson<int>(json['operator']),
+      modifiedAttributeId: serializer.fromJson<int>(
+        json['modifiedAttributeId'],
+      ),
+      modifyingAttributeId: serializer.fromJson<int?>(
+        json['modifyingAttributeId'],
+      ),
+      domain: serializer.fromJson<String>(json['domain']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'effectId': serializer.toJson<int>(effectId),
+      'func': serializer.toJson<String>(func),
+      'operator': serializer.toJson<int>(operator),
+      'modifiedAttributeId': serializer.toJson<int>(modifiedAttributeId),
+      'modifyingAttributeId': serializer.toJson<int?>(modifyingAttributeId),
+      'domain': serializer.toJson<String>(domain),
+    };
+  }
+
+  SdeEffectModifier copyWith({
+    int? id,
+    int? effectId,
+    String? func,
+    int? operator,
+    int? modifiedAttributeId,
+    Value<int?> modifyingAttributeId = const Value.absent(),
+    String? domain,
+  }) => SdeEffectModifier(
+    id: id ?? this.id,
+    effectId: effectId ?? this.effectId,
+    func: func ?? this.func,
+    operator: operator ?? this.operator,
+    modifiedAttributeId: modifiedAttributeId ?? this.modifiedAttributeId,
+    modifyingAttributeId: modifyingAttributeId.present
+        ? modifyingAttributeId.value
+        : this.modifyingAttributeId,
+    domain: domain ?? this.domain,
+  );
+  SdeEffectModifier copyWithCompanion(SdeEffectModifiersCompanion data) {
+    return SdeEffectModifier(
+      id: data.id.present ? data.id.value : this.id,
+      effectId: data.effectId.present ? data.effectId.value : this.effectId,
+      func: data.func.present ? data.func.value : this.func,
+      operator: data.operator.present ? data.operator.value : this.operator,
+      modifiedAttributeId: data.modifiedAttributeId.present
+          ? data.modifiedAttributeId.value
+          : this.modifiedAttributeId,
+      modifyingAttributeId: data.modifyingAttributeId.present
+          ? data.modifyingAttributeId.value
+          : this.modifyingAttributeId,
+      domain: data.domain.present ? data.domain.value : this.domain,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeEffectModifier(')
+          ..write('id: $id, ')
+          ..write('effectId: $effectId, ')
+          ..write('func: $func, ')
+          ..write('operator: $operator, ')
+          ..write('modifiedAttributeId: $modifiedAttributeId, ')
+          ..write('modifyingAttributeId: $modifyingAttributeId, ')
+          ..write('domain: $domain')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    effectId,
+    func,
+    operator,
+    modifiedAttributeId,
+    modifyingAttributeId,
+    domain,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SdeEffectModifier &&
+          other.id == this.id &&
+          other.effectId == this.effectId &&
+          other.func == this.func &&
+          other.operator == this.operator &&
+          other.modifiedAttributeId == this.modifiedAttributeId &&
+          other.modifyingAttributeId == this.modifyingAttributeId &&
+          other.domain == this.domain);
+}
+
+class SdeEffectModifiersCompanion extends UpdateCompanion<SdeEffectModifier> {
+  final Value<int> id;
+  final Value<int> effectId;
+  final Value<String> func;
+  final Value<int> operator;
+  final Value<int> modifiedAttributeId;
+  final Value<int?> modifyingAttributeId;
+  final Value<String> domain;
+  const SdeEffectModifiersCompanion({
+    this.id = const Value.absent(),
+    this.effectId = const Value.absent(),
+    this.func = const Value.absent(),
+    this.operator = const Value.absent(),
+    this.modifiedAttributeId = const Value.absent(),
+    this.modifyingAttributeId = const Value.absent(),
+    this.domain = const Value.absent(),
+  });
+  SdeEffectModifiersCompanion.insert({
+    this.id = const Value.absent(),
+    required int effectId,
+    required String func,
+    required int operator,
+    required int modifiedAttributeId,
+    this.modifyingAttributeId = const Value.absent(),
+    this.domain = const Value.absent(),
+  }) : effectId = Value(effectId),
+       func = Value(func),
+       operator = Value(operator),
+       modifiedAttributeId = Value(modifiedAttributeId);
+  static Insertable<SdeEffectModifier> custom({
+    Expression<int>? id,
+    Expression<int>? effectId,
+    Expression<String>? func,
+    Expression<int>? operator,
+    Expression<int>? modifiedAttributeId,
+    Expression<int>? modifyingAttributeId,
+    Expression<String>? domain,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (effectId != null) 'effect_id': effectId,
+      if (func != null) 'func': func,
+      if (operator != null) 'operator': operator,
+      if (modifiedAttributeId != null)
+        'modified_attribute_id': modifiedAttributeId,
+      if (modifyingAttributeId != null)
+        'modifying_attribute_id': modifyingAttributeId,
+      if (domain != null) 'domain': domain,
+    });
+  }
+
+  SdeEffectModifiersCompanion copyWith({
+    Value<int>? id,
+    Value<int>? effectId,
+    Value<String>? func,
+    Value<int>? operator,
+    Value<int>? modifiedAttributeId,
+    Value<int?>? modifyingAttributeId,
+    Value<String>? domain,
+  }) {
+    return SdeEffectModifiersCompanion(
+      id: id ?? this.id,
+      effectId: effectId ?? this.effectId,
+      func: func ?? this.func,
+      operator: operator ?? this.operator,
+      modifiedAttributeId: modifiedAttributeId ?? this.modifiedAttributeId,
+      modifyingAttributeId: modifyingAttributeId ?? this.modifyingAttributeId,
+      domain: domain ?? this.domain,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (effectId.present) {
+      map['effect_id'] = Variable<int>(effectId.value);
+    }
+    if (func.present) {
+      map['func'] = Variable<String>(func.value);
+    }
+    if (operator.present) {
+      map['operator'] = Variable<int>(operator.value);
+    }
+    if (modifiedAttributeId.present) {
+      map['modified_attribute_id'] = Variable<int>(modifiedAttributeId.value);
+    }
+    if (modifyingAttributeId.present) {
+      map['modifying_attribute_id'] = Variable<int>(modifyingAttributeId.value);
+    }
+    if (domain.present) {
+      map['domain'] = Variable<String>(domain.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeEffectModifiersCompanion(')
+          ..write('id: $id, ')
+          ..write('effectId: $effectId, ')
+          ..write('func: $func, ')
+          ..write('operator: $operator, ')
+          ..write('modifiedAttributeId: $modifiedAttributeId, ')
+          ..write('modifyingAttributeId: $modifyingAttributeId, ')
+          ..write('domain: $domain')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $SdeIndustryActivitiesTable extends SdeIndustryActivities
     with TableInfo<$SdeIndustryActivitiesTable, SdeIndustryActivity> {
   @override
@@ -3613,6 +4079,8 @@ abstract class _$SdeDatabase extends GeneratedDatabase {
   late final $SdeTypeAttributesTable sdeTypeAttributes =
       $SdeTypeAttributesTable(this);
   late final $SdeTypeEffectsTable sdeTypeEffects = $SdeTypeEffectsTable(this);
+  late final $SdeEffectModifiersTable sdeEffectModifiers =
+      $SdeEffectModifiersTable(this);
   late final $SdeIndustryActivitiesTable sdeIndustryActivities =
       $SdeIndustryActivitiesTable(this);
   late final $SdeIndustryActivityMaterialsTable sdeIndustryActivityMaterials =
@@ -3637,6 +4105,7 @@ abstract class _$SdeDatabase extends GeneratedDatabase {
     sdeSkillRequirements,
     sdeTypeAttributes,
     sdeTypeEffects,
+    sdeEffectModifiers,
     sdeIndustryActivities,
     sdeIndustryActivityMaterials,
     sdeIndustryActivityProbabilities,
@@ -4832,6 +5301,255 @@ typedef $$SdeTypeEffectsTableProcessedTableManager =
       SdeTypeEffect,
       PrefetchHooks Function()
     >;
+typedef $$SdeEffectModifiersTableCreateCompanionBuilder =
+    SdeEffectModifiersCompanion Function({
+      Value<int> id,
+      required int effectId,
+      required String func,
+      required int operator,
+      required int modifiedAttributeId,
+      Value<int?> modifyingAttributeId,
+      Value<String> domain,
+    });
+typedef $$SdeEffectModifiersTableUpdateCompanionBuilder =
+    SdeEffectModifiersCompanion Function({
+      Value<int> id,
+      Value<int> effectId,
+      Value<String> func,
+      Value<int> operator,
+      Value<int> modifiedAttributeId,
+      Value<int?> modifyingAttributeId,
+      Value<String> domain,
+    });
+
+class $$SdeEffectModifiersTableFilterComposer
+    extends Composer<_$SdeDatabase, $SdeEffectModifiersTable> {
+  $$SdeEffectModifiersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get effectId => $composableBuilder(
+    column: $table.effectId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get func => $composableBuilder(
+    column: $table.func,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get operator => $composableBuilder(
+    column: $table.operator,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get modifiedAttributeId => $composableBuilder(
+    column: $table.modifiedAttributeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get modifyingAttributeId => $composableBuilder(
+    column: $table.modifyingAttributeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get domain => $composableBuilder(
+    column: $table.domain,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SdeEffectModifiersTableOrderingComposer
+    extends Composer<_$SdeDatabase, $SdeEffectModifiersTable> {
+  $$SdeEffectModifiersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get effectId => $composableBuilder(
+    column: $table.effectId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get func => $composableBuilder(
+    column: $table.func,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get operator => $composableBuilder(
+    column: $table.operator,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get modifiedAttributeId => $composableBuilder(
+    column: $table.modifiedAttributeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get modifyingAttributeId => $composableBuilder(
+    column: $table.modifyingAttributeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get domain => $composableBuilder(
+    column: $table.domain,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SdeEffectModifiersTableAnnotationComposer
+    extends Composer<_$SdeDatabase, $SdeEffectModifiersTable> {
+  $$SdeEffectModifiersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get effectId =>
+      $composableBuilder(column: $table.effectId, builder: (column) => column);
+
+  GeneratedColumn<String> get func =>
+      $composableBuilder(column: $table.func, builder: (column) => column);
+
+  GeneratedColumn<int> get operator =>
+      $composableBuilder(column: $table.operator, builder: (column) => column);
+
+  GeneratedColumn<int> get modifiedAttributeId => $composableBuilder(
+    column: $table.modifiedAttributeId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get modifyingAttributeId => $composableBuilder(
+    column: $table.modifyingAttributeId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get domain =>
+      $composableBuilder(column: $table.domain, builder: (column) => column);
+}
+
+class $$SdeEffectModifiersTableTableManager
+    extends
+        RootTableManager<
+          _$SdeDatabase,
+          $SdeEffectModifiersTable,
+          SdeEffectModifier,
+          $$SdeEffectModifiersTableFilterComposer,
+          $$SdeEffectModifiersTableOrderingComposer,
+          $$SdeEffectModifiersTableAnnotationComposer,
+          $$SdeEffectModifiersTableCreateCompanionBuilder,
+          $$SdeEffectModifiersTableUpdateCompanionBuilder,
+          (
+            SdeEffectModifier,
+            BaseReferences<
+              _$SdeDatabase,
+              $SdeEffectModifiersTable,
+              SdeEffectModifier
+            >,
+          ),
+          SdeEffectModifier,
+          PrefetchHooks Function()
+        > {
+  $$SdeEffectModifiersTableTableManager(
+    _$SdeDatabase db,
+    $SdeEffectModifiersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SdeEffectModifiersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SdeEffectModifiersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SdeEffectModifiersTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> effectId = const Value.absent(),
+                Value<String> func = const Value.absent(),
+                Value<int> operator = const Value.absent(),
+                Value<int> modifiedAttributeId = const Value.absent(),
+                Value<int?> modifyingAttributeId = const Value.absent(),
+                Value<String> domain = const Value.absent(),
+              }) => SdeEffectModifiersCompanion(
+                id: id,
+                effectId: effectId,
+                func: func,
+                operator: operator,
+                modifiedAttributeId: modifiedAttributeId,
+                modifyingAttributeId: modifyingAttributeId,
+                domain: domain,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int effectId,
+                required String func,
+                required int operator,
+                required int modifiedAttributeId,
+                Value<int?> modifyingAttributeId = const Value.absent(),
+                Value<String> domain = const Value.absent(),
+              }) => SdeEffectModifiersCompanion.insert(
+                id: id,
+                effectId: effectId,
+                func: func,
+                operator: operator,
+                modifiedAttributeId: modifiedAttributeId,
+                modifyingAttributeId: modifyingAttributeId,
+                domain: domain,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SdeEffectModifiersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$SdeDatabase,
+      $SdeEffectModifiersTable,
+      SdeEffectModifier,
+      $$SdeEffectModifiersTableFilterComposer,
+      $$SdeEffectModifiersTableOrderingComposer,
+      $$SdeEffectModifiersTableAnnotationComposer,
+      $$SdeEffectModifiersTableCreateCompanionBuilder,
+      $$SdeEffectModifiersTableUpdateCompanionBuilder,
+      (
+        SdeEffectModifier,
+        BaseReferences<
+          _$SdeDatabase,
+          $SdeEffectModifiersTable,
+          SdeEffectModifier
+        >,
+      ),
+      SdeEffectModifier,
+      PrefetchHooks Function()
+    >;
 typedef $$SdeIndustryActivitiesTableCreateCompanionBuilder =
     SdeIndustryActivitiesCompanion Function({
       required int typeId,
@@ -5849,6 +6567,8 @@ class $SdeDatabaseManager {
       $$SdeTypeAttributesTableTableManager(_db, _db.sdeTypeAttributes);
   $$SdeTypeEffectsTableTableManager get sdeTypeEffects =>
       $$SdeTypeEffectsTableTableManager(_db, _db.sdeTypeEffects);
+  $$SdeEffectModifiersTableTableManager get sdeEffectModifiers =>
+      $$SdeEffectModifiersTableTableManager(_db, _db.sdeEffectModifiers);
   $$SdeIndustryActivitiesTableTableManager get sdeIndustryActivities =>
       $$SdeIndustryActivitiesTableTableManager(_db, _db.sdeIndustryActivities);
   $$SdeIndustryActivityMaterialsTableTableManager

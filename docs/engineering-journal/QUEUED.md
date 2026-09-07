@@ -60,6 +60,19 @@ instead of burying them in prose.
 
 ## P2 - Important
 
+### Model dogma expression trees for bonuses ESI hides (propulsion speed first)
+
+**Author.** Qwen Code
+**Priority.** P2
+**Effort.** Two to four days, gated on obtaining an SDE dogma-expression dump.
+**Worth it when.** Users compare Mimir's speed/DPS numbers against pyfa or EFT
+and find them missing.
+**Context.** Afterburner/MWD speed bonuses (and turret DPS chains) live in
+effect expression trees that ESI does not publish as modifiers (verified
+2026-09-07: effect 6731 has an empty modifier list). The engine therefore
+reports base+skill velocity rather than guessing.
+**Refs.** LEARNINGS 2026-09-07 operator-semantics entry.
+
 ### Real wormhole-mapper integration (replaces the removed Pathfinder mock)
 
 **Author.** Qwen Code

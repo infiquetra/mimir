@@ -172,40 +172,49 @@ void main() {
       expect(stats.maxVelocity, 300.0);
     });
 
-    test('propulsion modules apply speedFactor to max velocity', () async {
-      const afterburner = ModuleType(
-        typeId: 449,
-        name: 'Afterburner I',
-        groupId: 46,
-        groupName: 'Propulsion',
-        slotType: SlotType.med,
-        cpu: 10,
-        powergrid: 20,
-        baseAttributes: {DogmaAttributes.speedFactor: 0.5},
-      );
-      final fitting = Fitting(
-        id: 'ab',
-        name: 'Rifter with AB',
-        shipTypeId: 587,
-        shipName: 'Rifter',
-        medSlots: [
-          FittedModule(
-            typeId: 449,
-            typeName: 'Afterburner I',
-            state: ModuleState.online,
-            slotType: SlotType.med,
-            slotIndex: 0,
-          ),
-        ],
-      );
+    test(
+      'propulsion modules do not invent speed without ESI modifiers',
+      () async {
+        // The afterburner/MWD speed bonus lives in a dogma expression tree that
+        // ESI does not publish as modifiers (verified live: effect 6731 returns
+        // an empty modifier list), and the module's speedFactor attribute is in
+        // percent units (135 on a 1MN AB II). Until expression trees are
+        // modelled, the engine reports base+skill velocity rather than a
+        // guessed multiplier — a wrong speed would be worse than no speed.
+        const afterburner = ModuleType(
+          typeId: 449,
+          name: 'Afterburner I',
+          groupId: 46,
+          groupName: 'Propulsion',
+          slotType: SlotType.med,
+          cpu: 10,
+          powergrid: 20,
+          baseAttributes: {DogmaAttributes.speedFactor: 135.0},
+        );
+        final fitting = Fitting(
+          id: 'ab',
+          name: 'Rifter with AB',
+          shipTypeId: 587,
+          shipName: 'Rifter',
+          medSlots: [
+            FittedModule(
+              typeId: 449,
+              typeName: 'Afterburner I',
+              state: ModuleState.online,
+              slotType: SlotType.med,
+              slotIndex: 0,
+            ),
+          ],
+        );
 
-      final stats = await engine.calculateStats(fitting, _rifter(), {
-        '449': afterburner,
-      }, []);
+        final stats = await engine.calculateStats(fitting, _rifter(), {
+          '449': afterburner,
+        }, []);
 
-      expect(stats.maxVelocity, closeTo(300 * 1.5, 0.001));
-      expect(stats.cpuUsed, 10.0);
-    });
+        expect(stats.maxVelocity, 300.0);
+        expect(stats.cpuUsed, 10.0);
+      },
+    );
 
     test('offline modules contribute nothing', () async {
       const afterburner = ModuleType(

@@ -305,7 +305,20 @@ final fittingStatsProvider = FutureProvider<FittingStats?>((ref) async {
             )
             .toList();
 
-  return engine.calculateStats(fitting, shipType, moduleTypes, trainedSkills);
+  // Module bonuses need the dogma modifiers ESI publishes per effect; the
+  // service caches them in Drift so repeat calculations stay offline-fast.
+  final effectIds = moduleTypes.values
+      .expand((type) => type.effects.map((effect) => effect.effectId))
+      .toList();
+  final effectModifiers = await sde.ensureEffectModifiers(effectIds);
+
+  return engine.calculateStats(
+    fitting,
+    shipType,
+    moduleTypes,
+    trainedSkills,
+    effectModifiers: effectModifiers,
+  );
 });
 
 /// Provides available modules filtered by slot type from the SDE

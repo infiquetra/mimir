@@ -3384,6 +3384,278 @@ as bool,
 
 }
 
+/// @nodoc
+mixin _$EffectModifier {
+
+ int get effectId; String get func; int get operator; int get modifiedAttributeId; int? get modifyingAttributeId; String get domain;
+/// Create a copy of EffectModifier
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$EffectModifierCopyWith<EffectModifier> get copyWith => _$EffectModifierCopyWithImpl<EffectModifier>(this as EffectModifier, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is EffectModifier&&(identical(other.effectId, effectId) || other.effectId == effectId)&&(identical(other.func, func) || other.func == func)&&(identical(other.operator, operator) || other.operator == operator)&&(identical(other.modifiedAttributeId, modifiedAttributeId) || other.modifiedAttributeId == modifiedAttributeId)&&(identical(other.modifyingAttributeId, modifyingAttributeId) || other.modifyingAttributeId == modifyingAttributeId)&&(identical(other.domain, domain) || other.domain == domain));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,effectId,func,operator,modifiedAttributeId,modifyingAttributeId,domain);
+
+@override
+String toString() {
+  return 'EffectModifier(effectId: $effectId, func: $func, operator: $operator, modifiedAttributeId: $modifiedAttributeId, modifyingAttributeId: $modifyingAttributeId, domain: $domain)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $EffectModifierCopyWith<$Res>  {
+  factory $EffectModifierCopyWith(EffectModifier value, $Res Function(EffectModifier) _then) = _$EffectModifierCopyWithImpl;
+@useResult
+$Res call({
+ int effectId, String func, int operator, int modifiedAttributeId, int? modifyingAttributeId, String domain
+});
+
+
+
+
+}
+/// @nodoc
+class _$EffectModifierCopyWithImpl<$Res>
+    implements $EffectModifierCopyWith<$Res> {
+  _$EffectModifierCopyWithImpl(this._self, this._then);
+
+  final EffectModifier _self;
+  final $Res Function(EffectModifier) _then;
+
+/// Create a copy of EffectModifier
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? effectId = null,Object? func = null,Object? operator = null,Object? modifiedAttributeId = null,Object? modifyingAttributeId = freezed,Object? domain = null,}) {
+  return _then(_self.copyWith(
+effectId: null == effectId ? _self.effectId : effectId // ignore: cast_nullable_to_non_nullable
+as int,func: null == func ? _self.func : func // ignore: cast_nullable_to_non_nullable
+as String,operator: null == operator ? _self.operator : operator // ignore: cast_nullable_to_non_nullable
+as int,modifiedAttributeId: null == modifiedAttributeId ? _self.modifiedAttributeId : modifiedAttributeId // ignore: cast_nullable_to_non_nullable
+as int,modifyingAttributeId: freezed == modifyingAttributeId ? _self.modifyingAttributeId : modifyingAttributeId // ignore: cast_nullable_to_non_nullable
+as int?,domain: null == domain ? _self.domain : domain // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [EffectModifier].
+extension EffectModifierPatterns on EffectModifier {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _EffectModifier value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _EffectModifier() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _EffectModifier value)  $default,){
+final _that = this;
+switch (_that) {
+case _EffectModifier():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _EffectModifier value)?  $default,){
+final _that = this;
+switch (_that) {
+case _EffectModifier() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int effectId,  String func,  int operator,  int modifiedAttributeId,  int? modifyingAttributeId,  String domain)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _EffectModifier() when $default != null:
+return $default(_that.effectId,_that.func,_that.operator,_that.modifiedAttributeId,_that.modifyingAttributeId,_that.domain);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int effectId,  String func,  int operator,  int modifiedAttributeId,  int? modifyingAttributeId,  String domain)  $default,) {final _that = this;
+switch (_that) {
+case _EffectModifier():
+return $default(_that.effectId,_that.func,_that.operator,_that.modifiedAttributeId,_that.modifyingAttributeId,_that.domain);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int effectId,  String func,  int operator,  int modifiedAttributeId,  int? modifyingAttributeId,  String domain)?  $default,) {final _that = this;
+switch (_that) {
+case _EffectModifier() when $default != null:
+return $default(_that.effectId,_that.func,_that.operator,_that.modifiedAttributeId,_that.modifyingAttributeId,_that.domain);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _EffectModifier implements EffectModifier {
+  const _EffectModifier({required this.effectId, required this.func, required this.operator, required this.modifiedAttributeId, this.modifyingAttributeId, this.domain = 'shipID'});
+  
+
+@override final  int effectId;
+@override final  String func;
+@override final  int operator;
+@override final  int modifiedAttributeId;
+@override final  int? modifyingAttributeId;
+@override@JsonKey() final  String domain;
+
+/// Create a copy of EffectModifier
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$EffectModifierCopyWith<_EffectModifier> get copyWith => __$EffectModifierCopyWithImpl<_EffectModifier>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EffectModifier&&(identical(other.effectId, effectId) || other.effectId == effectId)&&(identical(other.func, func) || other.func == func)&&(identical(other.operator, operator) || other.operator == operator)&&(identical(other.modifiedAttributeId, modifiedAttributeId) || other.modifiedAttributeId == modifiedAttributeId)&&(identical(other.modifyingAttributeId, modifyingAttributeId) || other.modifyingAttributeId == modifyingAttributeId)&&(identical(other.domain, domain) || other.domain == domain));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,effectId,func,operator,modifiedAttributeId,modifyingAttributeId,domain);
+
+@override
+String toString() {
+  return 'EffectModifier(effectId: $effectId, func: $func, operator: $operator, modifiedAttributeId: $modifiedAttributeId, modifyingAttributeId: $modifyingAttributeId, domain: $domain)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$EffectModifierCopyWith<$Res> implements $EffectModifierCopyWith<$Res> {
+  factory _$EffectModifierCopyWith(_EffectModifier value, $Res Function(_EffectModifier) _then) = __$EffectModifierCopyWithImpl;
+@override @useResult
+$Res call({
+ int effectId, String func, int operator, int modifiedAttributeId, int? modifyingAttributeId, String domain
+});
+
+
+
+
+}
+/// @nodoc
+class __$EffectModifierCopyWithImpl<$Res>
+    implements _$EffectModifierCopyWith<$Res> {
+  __$EffectModifierCopyWithImpl(this._self, this._then);
+
+  final _EffectModifier _self;
+  final $Res Function(_EffectModifier) _then;
+
+/// Create a copy of EffectModifier
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? effectId = null,Object? func = null,Object? operator = null,Object? modifiedAttributeId = null,Object? modifyingAttributeId = freezed,Object? domain = null,}) {
+  return _then(_EffectModifier(
+effectId: null == effectId ? _self.effectId : effectId // ignore: cast_nullable_to_non_nullable
+as int,func: null == func ? _self.func : func // ignore: cast_nullable_to_non_nullable
+as String,operator: null == operator ? _self.operator : operator // ignore: cast_nullable_to_non_nullable
+as int,modifiedAttributeId: null == modifiedAttributeId ? _self.modifiedAttributeId : modifiedAttributeId // ignore: cast_nullable_to_non_nullable
+as int,modifyingAttributeId: freezed == modifyingAttributeId ? _self.modifyingAttributeId : modifyingAttributeId // ignore: cast_nullable_to_non_nullable
+as int?,domain: null == domain ? _self.domain : domain // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
 
 /// @nodoc
 mixin _$SkillRequirement {

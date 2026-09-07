@@ -138,6 +138,22 @@ class SdeTypeEffects extends Table {
   Set<Column> get primaryKey => {typeId, effectId};
 }
 
+/// Dogma effect modifiers, cached from ESI's /dogma/effects/{id}/.
+///
+/// The bundled SDE stores which effects a type has but not what they do.
+/// ESI exposes each effect's modifier list (func, operator, modified and
+/// modifying attributes), which is what lets the fitting engine apply module
+/// bonuses with CCP's own semantics instead of guessed constants.
+class SdeEffectModifiers extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get effectId => integer()();
+  TextColumn get func => text()();
+  IntColumn get operator => integer()();
+  IntColumn get modifiedAttributeId => integer()();
+  IntColumn get modifyingAttributeId => integer().nullable()();
+  TextColumn get domain => text().withDefault(const Constant('shipID'))();
+}
+
 /// Represents industry activity type and duration.
 class SdeIndustryActivities extends Table {
   IntColumn get typeId => integer()();
@@ -210,6 +226,7 @@ class SdeIndustryActivitySkills extends Table {
     SdeSkillRequirements,
     SdeTypeAttributes,
     SdeTypeEffects,
+    SdeEffectModifiers,
     SdeIndustryActivities,
     SdeIndustryActivityMaterials,
     SdeIndustryActivityProbabilities,
@@ -224,7 +241,7 @@ class SdeDatabase extends _$SdeDatabase {
   SdeDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
@@ -259,6 +276,10 @@ class SdeDatabase extends _$SdeDatabase {
           await m.createTable(sdeIndustryActivityProbabilities);
           await m.createTable(sdeIndustryActivityProducts);
           await m.createTable(sdeIndustryActivitySkills);
+        }
+        if (from < 6) {
+          // Version 6: Cache ESI dogma effect modifiers for fitting math.
+          await m.createTable(sdeEffectModifiers);
         }
       },
     );
@@ -573,6 +594,24 @@ class SdeDatabase extends _$SdeDatabase {
       sdeTypeEffects,
     )..where((e) => e.typeId.equals(typeId))).get();
     return rows.map((e) => e.effectId).toList();
+  }
+
+  /// Get cached dogma modifiers for the given effects.
+  Future<List<SdeEffectModifier>> getEffectModifiers(List<int> effectIds) {
+    if (effectIds.isEmpty) return Future.value(const []);
+    return (select(
+      sdeEffectModifiers,
+    )..where((m) => m.effectId.isIn(effectIds))).get();
+  }
+
+  /// Store dogma modifiers fetched from ESI.
+  Future<void> upsertEffectModifiers(
+    List<SdeEffectModifiersCompanion> rows,
+  ) async {
+    if (rows.isEmpty) return;
+    await batch((b) {
+      b.insertAll(sdeEffectModifiers, rows);
+    });
   }
 
   /// Get types that have a specific effect.

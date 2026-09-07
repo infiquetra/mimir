@@ -29,6 +29,36 @@
 
 ---
 
+### Dogma operator semantics come from live ESI; some bonuses hide in expression trees
+
+**Author.** Qwen Code
+**Context.** Making module resist/EHP modification real required knowing how
+each effect transforms ship attributes, which the bundled SDE does not store
+(it carries effect IDs only).
+**Evidence.** Live `GET /dogma/effects/{id}/` on 2026-09-07: effect 5230
+(EM Shield Hardener II) uses operator 6 with modifying attributes 984-987 whose
+local values are percent units (-55); effect 2302 (Damage Control) uses
+operator 0 mapping module resonances onto ship resonances (0.85); effect 6731
+(moduleBonusAfterburner) returns an EMPTY modifier list while the module's
+speedFactor attribute is 135 on a 1MN AB II.
+**Mechanism.** Operator 6 is postPercent (confirmed by the percent-unit bonus
+attributes); operator 0 must be postMul, since postPercent would make a 0.85
+resonance bonus a no-op and assignment would overwrite better base resonances.
+Effects with empty modifier lists encode their bonus in pre/post expression
+trees, which ESI does not publish (only expression IDs), so they cannot be
+derived from ESI alone.
+**Fix.** Engine applies cached ESI modifiers (new SdeEffectModifiers table,
+SDE schema v6) with {6: postPercent + stacking penalty on resonances,
+0: postMul}; the earlier guessed `speedFactor` multiplication was removed —
+with the real value of 135 it would have multiplied speed by 136. Velocity
+stays base+skills until expression trees are modelled.
+**Validation.** Engine tests pin postPercent, postMul, stacking-penalty and
+domain-filtering maths; three consecutive full-suite runs green (404 tests).
+**Generalizable rule.** Check a dogma attribute's units and operator against
+live data before applying any "attribute times factor" maths.
+**Refs.** DECISIONS 2026-09-07 "Fitting tank math is data-driven";
+QUEUED P2 expression-tree entry.
+
 ### ESI cannot write the skill queue — verified against the live OpenAPI spec
 
 **Author.** Qwen Code

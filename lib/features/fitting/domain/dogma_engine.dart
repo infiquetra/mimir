@@ -9,6 +9,28 @@ import 'models.dart';
 /// Processes a [Fitting], applies character skills, and calculates
 /// derived statistics like EHP, DPS, capacitor stability, and resource usage.
 class DogmaEngine {
+  /// Dogma operator codes as observed from ESI's live effect data.
+  static const int _postMul = 0;
+  static const int _postPercent = 6;
+
+  /// Damage resonances are non-stackable: multiple modifiers on the same
+  /// resonance take the stacking penalty. Everything else ESI points at
+  /// (cpu, powergrid, velocity, ...) is stackable.
+  static const Set<int> _nonStackableAttributes = {
+    DogmaAttributes.armorEmResist,
+    DogmaAttributes.armorExplosiveResist,
+    DogmaAttributes.armorKineticResist,
+    DogmaAttributes.armorThermalResist,
+    DogmaAttributes.shieldEmResist,
+    DogmaAttributes.shieldExplosiveResist,
+    DogmaAttributes.shieldKineticResist,
+    DogmaAttributes.shieldThermalResist,
+    DogmaAttributes.hullEmResist,
+    DogmaAttributes.hullExplosiveResist,
+    DogmaAttributes.hullKineticResist,
+    DogmaAttributes.hullThermalResist,
+  };
+
   /// Calculate stacking penalty for the n-th module affecting an attribute.
   /// Note: n is 1-indexed. The first module (highest bonus) has n=1 and penalty=1.0.
   static double getStackingPenalty(int n) {
@@ -32,12 +54,17 @@ class DogmaEngine {
   ];
 
   /// Calculate full statistics for a fitting.
+  ///
+  /// [effectModifiers] maps an effectId to the modifiers ESI publishes for
+  /// it; without them (offline, never fetched) modules contribute resource
+  /// usage only and the stats reflect base plus skill attributes.
   Future<FittingStats> calculateStats(
     Fitting fitting,
     ShipType shipType,
     Map<String, ModuleType> moduleTypes,
-    List<CharacterSkill> characterSkills,
-  ) async {
+    List<CharacterSkill> characterSkills, {
+    Map<int, List<EffectModifier>> effectModifiers = const {},
+  }) async {
     Log.d('DOGMA', 'Calculating stats for fitting: ${fitting.name}');
 
     // 1. Attribute pipeline: ship base attributes, then character skills,
@@ -57,10 +84,15 @@ class DogmaEngine {
 
     double attr(int id, [double fallback = 0.0]) => attributes[id] ?? fallback;
 
-    // 2. Resource usage and module attribute effects.
+    // 2. Resource usage, and collect dogma modifiers from fitted modules.
+    //
+    // Modifier semantics come from ESI's published effect modifiers (cached
+    // in the SDE database), not from guessed constants: operator 6 is
+    // postPercent and operator 0 is postMul. See EffectModifier.
     double cpuUsed = 0.0;
     double powerUsed = 0.0;
     int calibrationUsed = 0;
+    final percentModifiers = <int, List<double>>{};
 
     for (final module in fitting.allModules) {
       if (module.state == ModuleState.offline) continue;
@@ -72,14 +104,43 @@ class DogmaEngine {
       powerUsed += type.powergrid;
       calibrationUsed += type.calibration;
 
-      // Propulsion modules carry their multiplier as speedFactor, applied
-      // postPercent to max velocity, i.e. a factor of 0.5 means +50%.
-      final speedFactor = type.baseAttributes[DogmaAttributes.speedFactor];
-      if (speedFactor != null) {
-        attributes[DogmaAttributes.maxVelocity] =
-            attr(DogmaAttributes.maxVelocity) * (1 + speedFactor);
+      for (final effect in type.effects) {
+        for (final modifier
+            in effectModifiers[effect.effectId] ?? const <EffectModifier>[]) {
+          if (modifier.domain != 'shipID') continue;
+          final modifyingId = modifier.modifyingAttributeId;
+          if (modifyingId == null) continue;
+          final value =
+              type.baseAttributes[modifyingId] ??
+              module.attributes[modifyingId];
+          if (value == null) continue;
+
+          if (modifier.operator == _postMul) {
+            attributes[modifier.modifiedAttributeId] =
+                attr(modifier.modifiedAttributeId, 1.0) * value;
+          } else if (modifier.operator == _postPercent) {
+            percentModifiers
+                .putIfAbsent(modifier.modifiedAttributeId, () => [])
+                .add(value);
+          }
+        }
       }
     }
+
+    // postPercent modifiers combine multiplicatively; on non-stackable
+    // attributes (the damage resonances) the n-th strongest bonus is scaled
+    // by the dogma stacking penalty.
+    percentModifiers.forEach((attributeId, values) {
+      final sorted = [...values]..sort((a, b) => b.abs().compareTo(a.abs()));
+      var factor = 1.0;
+      for (var i = 0; i < sorted.length; i++) {
+        final penalty = _nonStackableAttributes.contains(attributeId)
+            ? getStackingPenalty(i + 1)
+            : 1.0;
+        factor *= 1 + (sorted[i] / 100) * penalty;
+      }
+      attributes[attributeId] = attr(attributeId, 1.0) * factor;
+    });
 
     final cpuMax = attr(DogmaAttributes.cpuOutput);
     final powerMax = attr(DogmaAttributes.powerOutput);
