@@ -50,8 +50,13 @@ derived from ESI alone.
 **Fix.** Engine applies cached ESI modifiers (new SdeEffectModifiers table,
 SDE schema v6) with {6: postPercent + stacking penalty on resonances,
 0: postMul}; the earlier guessed `speedFactor` multiplication was removed —
-with the real value of 135 it would have multiplied speed by 136. Velocity
-stays base+skills until expression trees are modelled.
+with the real value of 135 it would have multiplied speed by 136. Propulsion
+is nonetheless modelled via a small curated map for the two expression-tree
+effects (6730 MWD, 6731 AB): speedFactor is percent units and the bundled SDE
+values (AB I 115, AB II 135, MWD I 500, MWD II 510) match the in-game
+multipliers x2.15/x2.35/x6/x6.1. Unknown propulsion-style effects are ignored
+rather than guessed. (Amended inline 2026-09-07; earlier text said velocity
+stays base+skills.)
 **Validation.** Engine tests pin postPercent, postMul, stacking-penalty and
 domain-filtering maths; three consecutive full-suite runs green (404 tests).
 **Generalizable rule.** Check a dogma attribute's units and operator against

@@ -216,6 +216,82 @@ void main() {
       },
     );
 
+    test('propulsion modules apply the verified speedFactor bonus', () async {
+      // Effect 6731 (moduleBonusAfterburner) carries its bonus in an
+      // expression tree ESI does not publish; the engine applies the
+      // curated, cross-checked mapping: speedFactor 135 (percent units)
+      // postPercent onto max velocity, i.e. x2.35.
+      const afterburner = ModuleType(
+        typeId: 438,
+        name: '1MN Afterburner II',
+        groupId: 46,
+        groupName: 'Propulsion',
+        slotType: SlotType.med,
+        cpu: 10,
+        powergrid: 20,
+        baseAttributes: {DogmaAttributes.speedFactor: 135.0},
+        effects: [DogmaEffect(effectId: 6731, name: 'moduleBonusAfterburner')],
+      );
+      final fitting = Fitting(
+        id: 'ab',
+        name: 'Rifter with AB II',
+        shipTypeId: 587,
+        shipName: 'Rifter',
+        medSlots: [
+          FittedModule(
+            typeId: 438,
+            typeName: '1MN Afterburner II',
+            state: ModuleState.online,
+            slotType: SlotType.med,
+            slotIndex: 0,
+          ),
+        ],
+      );
+
+      final stats = await engine.calculateStats(fitting, _rifter(), {
+        '438': afterburner,
+      }, []);
+
+      expect(stats.maxVelocity, closeTo(300 * 2.35, 0.001));
+      expect(stats.cpuUsed, 10.0);
+    });
+
+    test(
+      'propulsion effects without the curated mapping change nothing',
+      () async {
+        const mystery = ModuleType(
+          typeId: 999,
+          name: 'Mystery drive',
+          groupId: 46,
+          groupName: 'Propulsion',
+          slotType: SlotType.med,
+          baseAttributes: {DogmaAttributes.speedFactor: 500.0},
+          effects: [DogmaEffect(effectId: 424242, name: 'unknown')],
+        );
+        final fitting = Fitting(
+          id: 'm',
+          name: 'Rifter with mystery',
+          shipTypeId: 587,
+          shipName: 'Rifter',
+          medSlots: [
+            FittedModule(
+              typeId: 999,
+              typeName: 'Mystery drive',
+              state: ModuleState.online,
+              slotType: SlotType.med,
+              slotIndex: 0,
+            ),
+          ],
+        );
+
+        final stats = await engine.calculateStats(fitting, _rifter(), {
+          '999': mystery,
+        }, []);
+
+        expect(stats.maxVelocity, 300.0);
+      },
+    );
+
     test('offline modules contribute nothing', () async {
       const afterburner = ModuleType(
         typeId: 449,

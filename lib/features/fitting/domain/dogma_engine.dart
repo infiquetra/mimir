@@ -31,6 +31,20 @@ class DogmaEngine {
     DogmaAttributes.hullThermalResist,
   };
 
+  /// Effects whose bonus lives in a dogma expression tree that ESI does not
+  /// publish as modifiers (verified live on 2026-09-07: effects 6730 and
+  /// 6731 return empty modifier lists).
+  ///
+  /// Maps effectId to (modified attribute, modifying attribute): speedFactor
+  /// (20, display name "Maximum Velocity Bonus", percent unit) applied
+  /// postPercent to maxVelocity (37). Cross-checked against the bundled SDE
+  /// values — AB I 115, AB II 135, MWD I 500, MWD II 510 — which match the
+  /// in-game multipliers (x2.15, x2.35, x6, x6.1).
+  static const Map<int, (int, int)> _expressionTreeSpeedEffects = {
+    6730: (DogmaAttributes.maxVelocity, DogmaAttributes.speedFactor),
+    6731: (DogmaAttributes.maxVelocity, DogmaAttributes.speedFactor),
+  };
+
   /// Calculate stacking penalty for the n-th module affecting an attribute.
   /// Note: n is 1-indexed. The first module (highest bonus) has n=1 and penalty=1.0.
   static double getStackingPenalty(int n) {
@@ -122,6 +136,19 @@ class DogmaEngine {
             percentModifiers
                 .putIfAbsent(modifier.modifiedAttributeId, () => [])
                 .add(value);
+          }
+        }
+
+        // Propulsion bonuses hide in expression trees ESI does not publish;
+        // apply the verified curated mapping for those effects.
+        final speedEffect = _expressionTreeSpeedEffects[effect.effectId];
+        if (speedEffect != null) {
+          final (modifiedId, modifyingId) = speedEffect;
+          final value =
+              type.baseAttributes[modifyingId] ??
+              module.attributes[modifyingId];
+          if (value != null) {
+            percentModifiers.putIfAbsent(modifiedId, () => []).add(value);
           }
         }
       }
