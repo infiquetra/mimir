@@ -60,6 +60,24 @@ instead of burying them in prose.
 
 ## P2 - Important
 
+### Real wormhole-mapper integration (replaces the removed Pathfinder mock)
+
+**Author.** Qwen Code
+**Priority.** P2
+**Effort.** Two to four days, dominated by finding a stable public mapper API
+contract; the UI shell already existed.
+**Worth it when.** A maintained public endpoint for live chain maps is
+identified and its auth model is understood.
+**Context.** Until 2026-09-07 `MapperSyncCard` connected to
+`https://pathfinder.example.com` with `test-api-key` and rendered a hardcoded
+`J210333` payload on a 30s timer behind a green "Connected to Pathfinder"
+badge. That was fabricated data in an intel tool, so it was deleted outright
+(card, `mapper_client.dart`, and `mapperClientProvider`) rather than gated.
+A future implementation must derive its connection state from a real socket
+and render an explicit disconnected state when there is none.
+**Refs.** commit removing `lib/features/intel/data/mapper_client.dart`;
+`lib/features/intel/presentation/kill_feed_screen.dart`.
+
 ### AAR fit import and capture UI tests
 
 **Author.** Codex
@@ -108,4 +126,13 @@ bill-of-materials style recommendations.
 
 ## Maybe
 
-<!-- Speculative entries go here. -->
+### Discord Rich Presence
+
+**Author.** Qwen Code
+**Priority.** Maybe
+**Effort.** One to two days once a Dart Discord RPC transport is chosen.
+**Worth it when.** Users ask to broadcast their in-game status from Mimir.
+**Context.** `discord_rpc_service.dart` was a log-only mock ("Initializing
+Discord RPC Mock") whose provider nothing watched; it was deleted with the
+Pathfinder mock on 2026-09-07. Re-adding needs a real transport, not a stub.
+**Refs.** commit removing `lib/features/intel/domain/discord_rpc_service.dart`.

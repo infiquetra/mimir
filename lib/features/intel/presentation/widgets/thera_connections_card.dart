@@ -34,33 +34,37 @@ class TheraConnectionsCard extends ConsumerWidget {
                 );
               }
 
-              return ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: connections.length,
-                itemBuilder: (context, index) {
-                  final conn = connections[index];
+              // Cap the height so the kill feed — this window's namesake —
+              // stays visible without scrolling past every Thera connection.
+              return ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 320),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: connections.length,
+                  itemBuilder: (context, index) {
+                    final conn = connections[index];
 
-                  return ListTile(
-                    dense: true,
-                    leading: const Icon(Icons.compare_arrows),
-                    title: Text(
-                      '${conn.inSystemName} (${conn.inSystemClass.toUpperCase()})',
-                    ),
-                    subtitle: Text(
-                      '${conn.inRegionName} • ${conn.whType} • ${conn.maxShipSize}',
-                    ),
-                    trailing: Text(
-                      '${conn.remainingHours}h',
-                      style: TextStyle(
-                        color: conn.remainingHours <= 2
-                            ? EveColors.error
-                            : EveColors.evePrimary,
-                        fontWeight: FontWeight.bold,
+                    return ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.compare_arrows),
+                      title: Text(
+                        '${conn.inSystemName} (${conn.inSystemClass.toUpperCase()})',
                       ),
-                    ),
-                  );
-                },
+                      subtitle: Text(
+                        '${conn.inRegionName} • ${conn.whType} • ${conn.maxShipSize}',
+                      ),
+                      trailing: Text(
+                        '${conn.remainingHours}h',
+                        style: TextStyle(
+                          color: conn.remainingHours <= 2
+                              ? EveColors.error
+                              : EveColors.evePrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               );
             },
             loading: () => const Padding(

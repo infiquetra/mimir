@@ -2,10 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mimir/core/di/providers.dart';
 import '../domain/killmail_models.dart';
 import '../domain/thera_models.dart';
-import '../domain/discord_rpc_service.dart';
 import 'eve_scout_client.dart';
 import 'intel_repository.dart';
-import 'mapper_client.dart';
 import 'zkillboard_client.dart';
 
 final intelRepositoryProvider = Provider<IntelRepository>((ref) {
@@ -40,16 +38,3 @@ final theraConnectionsProvider =
       final client = ref.watch(eveScoutClientProvider);
       return client.getTheraConnections();
     });
-
-final mapperClientProvider = Provider<MapperClient>((ref) {
-  final client = PathfinderClient();
-  ref.onDispose(() => client.disconnect());
-  return client;
-});
-
-final discordRpcProvider = Provider<DiscordRpcService>((ref) {
-  final service = DiscordRpcService();
-  service.initialize();
-  ref.onDispose(() => service.dispose());
-  return service;
-});

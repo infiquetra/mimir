@@ -5,7 +5,6 @@ import '../../../core/widgets/space_background.dart';
 import '../data/intel_providers.dart';
 import 'widgets/intel_settings_dialog.dart';
 import 'widgets/killmail_card.dart';
-import 'widgets/mapper_sync_card.dart';
 import 'widgets/thera_connections_card.dart';
 
 class KillFeedScreen extends ConsumerWidget {
@@ -74,10 +73,6 @@ class KillFeedScreen extends ConsumerWidget {
                 slivers: [
                   const SliverPadding(
                     padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    sliver: SliverToBoxAdapter(child: MapperSyncCard()),
-                  ),
-                  const SliverPadding(
-                    padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
                     sliver: SliverToBoxAdapter(child: TheraConnectionsCard()),
                   ),
                   SliverPadding(
