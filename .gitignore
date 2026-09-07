@@ -36,6 +36,11 @@ migrate_working_dir/
 # Symbolication related
 app.*.symbols
 
+# SDE download caches used by scripts/sde generators
+scripts/sde/*.bz2
+scripts/sde/*.zip
+scripts/sde/*.md5
+
 # Golden-test failure diagnostics, regenerated on every mismatched run
 test/golden/failures/
 

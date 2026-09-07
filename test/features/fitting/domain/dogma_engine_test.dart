@@ -348,6 +348,23 @@ void main() {
       );
     });
 
+    test('align time and warp speed follow the pyfa closed forms', () async {
+      final ship = _rifter().copyWith(
+        baseAttributes: {
+          ..._rifter().baseAttributes,
+          DogmaAttributes.mass: 1067000.0,
+          DogmaAttributes.inertiaModifier: 3.2,
+          DogmaAttributes.warpSpeedMultiplier: 5.0,
+        },
+      );
+
+      final stats = await engine.calculateStats(_emptyFitting(), ship, {}, []);
+
+      // -ln(0.25) * 3.2 * 1067000 / 1e6
+      expect(stats.alignTime, closeTo(4.7334, 0.001));
+      expect(stats.warpSpeed, 5.0);
+    });
+
     test(
       'drone bandwidth and bay capacity come from ship attributes',
       () async {

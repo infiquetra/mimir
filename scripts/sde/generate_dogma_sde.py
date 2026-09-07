@@ -95,6 +95,14 @@ def main():
                 "dogmaAttributes": [],
                 "dogmaEffects": []
             }
+            # mass lives in the invTypes column, not in dgmTypeAttributes,
+            # but dogma consumers (align time) need it as attribute 4.
+            mass = row.get('mass')
+            if mass and mass != 'None':
+                types_dict[type_id]["dogmaAttributes"].append({
+                    "attributeId": 4,
+                    "value": float(mass)
+                })
 
     print("Processing Attributes...")
     for row in attributes_raw:

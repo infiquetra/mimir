@@ -60,23 +60,21 @@ instead of burying them in prose.
 
 ## P2 - Important
 
-### Align time and warp speed rows stay dashed until their inputs are verifiable
+### Align time and warp speed (shipped 2026-09-07; cap-stable still open)
 
 **Author.** Qwen Code
-**Priority.** P2
-**Effort.** Align: half a day once the bundled SDE carries mass. Warp: half a
-day once the interpretation of attribute 600 is confirmed against an
-authoritative source.
-**Worth it when.** Users ask why the Navigation card shows dashes, or compares
-align/warp numbers against pyfa.
-**Context.** Verified 2026-09-07: the bundled assets/sde/dogma.json omits
-attribute 4 (mass) for ships, and align time needs mass x inertia, so it
-cannot be computed from what Mimir ships; re-exporting the asset with mass is
-the prerequisite. Warp speed needs to know whether attribute 600
-(warpSpeedMultiplier, Rifter 5.0 / Drake 3.5 / Dominix 3.0) is the displayed
-AU/s value directly or a multiplier over a base speed; EVE University's pages
-404 and no other authoritative source was reachable, so the engine leaves the
-row dashed instead of guessing.
+**Priority.** P2 (was blocking, now mostly resolved)
+**Effort.** Cap-stable: one to two days, needs pyfa's capSim cycle simulation
+(staggered module cycles, reloads) plus per-module duration (attribute 73,
+present in the regenerated asset).
+**Worth it when.** Users compare cap stability against pyfa or EFT.
+**Context.** Align time and warp speed shipped using pyfa's closed forms
+(align = -ln(0.25) * agility * mass / 1e6; warp = warpSpeedMultiplier, since
+baseWarpSpeed is absent from current SDE/ESI data — attribute ids 6950-6962 do
+not exist). Prerequisite fixed: scripts/sde/generate_dogma_sde.py now copies
+the invTypes mass column into dogma attribute 4, and assets/sde/dogma.json was
+regenerated from the current fuzzwork dump. Cap-stable remains dashed: it
+needs the full cycle simulator, not a closed form.
 **Refs.** LEARNINGS 2026-09-07 operator-semantics entry.
 
 ### Model dogma expression trees for bonuses ESI hides (propulsion speed first)

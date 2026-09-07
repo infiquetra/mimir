@@ -173,6 +173,18 @@ class DogmaEngine {
     final powerMax = attr(DogmaAttributes.powerOutput);
     final calibrationMax = attr(DogmaAttributes.upgradeLoad, 400).toInt();
 
+    // Align time and warp speed follow pyfa's closed-form definitions.
+    // align = -ln(0.25) * agility * mass / 1e6 seconds; warp speed is
+    // baseWarpSpeed (absent from current SDE and ESI data, verified
+    // 2026-09-07) times the warp speed multiplier, i.e. the multiplier
+    // itself, in AU/s.
+    final massKg = attr(DogmaAttributes.mass);
+    final agility = attr(DogmaAttributes.inertiaModifier);
+    final alignTime = massKg > 0 && agility > 0
+        ? -log(0.25) * agility * massKg / 1e6
+        : 0.0;
+    final warpSpeed = attr(DogmaAttributes.warpSpeedMultiplier);
+
     // 3. Calculate Defenses
     final shieldHp = attr(DogmaAttributes.shieldCapacity);
     final armorHp = attr(DogmaAttributes.armorHp);
@@ -250,8 +262,10 @@ class DogmaEngine {
       capacitorCapacity: capCapacity,
       capacitorRecharge: capRecharge,
       maxVelocity: attr(DogmaAttributes.maxVelocity),
-      inertiaModifier: attr(DogmaAttributes.inertiaModifier),
-      massKg: attr(DogmaAttributes.mass),
+      inertiaModifier: agility,
+      massKg: massKg,
+      alignTime: alignTime,
+      warpSpeed: warpSpeed,
       targetRange: attr(DogmaAttributes.maxTargetRange),
       scanResolution: attr(DogmaAttributes.scanResolution),
       maxLockedTargets: attr(DogmaAttributes.maxLockedTargets).toInt(),
