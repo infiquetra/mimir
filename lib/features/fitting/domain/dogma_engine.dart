@@ -256,6 +256,8 @@ class DogmaEngine {
       scanResolution: attr(DogmaAttributes.scanResolution),
       maxLockedTargets: attr(DogmaAttributes.maxLockedTargets).toInt(),
       signatureRadius: attr(DogmaAttributes.signatureRadius),
+      droneBandwidthMax: attr(DogmaAttributes.droneBandwidth),
+      droneBayMax: attr(DogmaAttributes.droneCapacity),
     );
   }
 }

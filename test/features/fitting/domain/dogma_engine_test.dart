@@ -347,6 +347,29 @@ void main() {
         greaterThan(untrained.defenses.totalEhp),
       );
     });
+
+    test(
+      'drone bandwidth and bay capacity come from ship attributes',
+      () async {
+        final ship = _rifter().copyWith(
+          baseAttributes: {
+            ..._rifter().baseAttributes,
+            DogmaAttributes.droneBandwidth: 50.0,
+            DogmaAttributes.droneCapacity: 40.0,
+          },
+        );
+
+        final stats = await engine.calculateStats(
+          _emptyFitting(),
+          ship,
+          {},
+          [],
+        );
+
+        expect(stats.droneBandwidthMax, 50.0);
+        expect(stats.droneBayMax, 40.0);
+      },
+    );
   });
 }
 
