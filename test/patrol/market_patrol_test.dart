@@ -1,8 +1,14 @@
 @Tags(['patrol'])
 library;
 
+import 'package:drift/drift.dart' show Value;
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mimir/core/sde/sde_database.dart';
+import 'package:mimir/core/sde/sde_providers.dart';
+import 'package:mimir/core/sde/sde_service.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:patrol/patrol.dart';
 
 import 'package:mimir/features/market/presentation/market_overview_screen.dart';
@@ -13,17 +19,35 @@ import 'package:mimir/features/wallet/data/wallet_providers.dart';
 import '../../integration_test/test_utils/fixtures/character_fixtures.dart';
 import '../../integration_test/test_utils/test_app.dart';
 
+class MockSdeService extends Mock implements SdeService {}
+
 void main() {
   patrolWidgetTest('Market E2E - verifies empty state and tab flows', (
     $,
   ) async {
     final character = CharacterFixtures.testCharacter();
 
+    // The Browser tab searches the bundled SDE. Importing the shipped assets
+    // never completes under a test binding's fake async, so serve search from
+    // a small in-memory SDE instead.
+    final sdeDatabase = SdeDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(sdeDatabase.close);
+    await sdeDatabase.into(sdeDatabase.sdeTypes).insert(
+      SdeTypesCompanion.insert(
+        typeId: const Value(34),
+        typeName: 'Tritanium',
+        groupId: 18,
+      ),
+    );
+    final mockSde = MockSdeService();
+    when(() => mockSde.database).thenReturn(sdeDatabase);
+    when(() => mockSde.initialize()).thenAnswer((_) async {});
+
     await $.pumpWidget(
       TestApp(
         initialCharacter: character,
         providerOverrides: [
-          // Ensure any sde specific requests are mocked if necessary
+          sdeServiceProvider.overrideWithValue(mockSde),
           itemNameProvider(34).overrideWith((ref) => Future.value('Tritanium')),
         ],
         home: const MarketOverviewScreen(),

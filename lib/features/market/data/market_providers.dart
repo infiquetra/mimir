@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/logging/logger.dart';
 import '../../../core/network/esi_client.dart' hide MarketHistoryEntry;
+import '../../../core/sde/sde_providers.dart';
 import '../../characters/data/character_providers.dart';
 import 'market_repository.dart';
 import 'market_sync_service.dart';
@@ -108,27 +110,48 @@ final marketHistoryProvider = FutureProvider.autoDispose
 /// Currently selected region ID for market browsing.
 final selectedRegionProvider = StateProvider<int>((ref) => kDefaultRegionId);
 
-/// Search results via ESI search endpoint + name resolution.
-/// Returns MarketItem objects with typeId and name.
+/// Search results: bundled SDE substring match first (offline and instant),
+/// augmented by an exact-name lookup against ESI `POST /universe/ids/` so
+/// items outside the bundled SDE (minerals, commodities, ...) still resolve
+/// while online. The old `GET /search/` route was removed from ESI, which is
+/// why this provider could never return a result.
 final searchItemsProvider = FutureProvider.autoDispose
     .family<List<MarketItem>, String>((ref, query) async {
-      if (query.trim().length < 3) return [];
+      final trimmed = query.trim();
+      if (trimmed.length < 3) return [];
 
-      final esiClient = ref.watch(esiClientProvider);
+      final sde = ref.watch(sdeServiceProvider);
+      await sde.initialize();
 
-      // Step 1: Search ESI for matching type IDs
-      final typeIds = await esiClient.searchInventoryTypes(query.trim());
-      if (typeIds.isEmpty) return [];
+      final byId = <int, MarketItem>{};
+      for (final type in await sde.database.searchTypesByName(trimmed)) {
+        byId[type.typeId] = MarketItem(
+          typeId: type.typeId,
+          name: type.typeName,
+        );
+      }
 
-      // Step 2: Resolve IDs to names
-      final names = await esiClient.resolveNames(typeIds);
+      // /universe/ids/ matches whole names only, so it can only add an exact
+      // hit that the SDE substring search missed.
+      try {
+        final esiClient = ref.watch(esiClientProvider);
+        final exact = await esiClient.resolveInventoryTypesByName([trimmed]);
+        for (final name in exact) {
+          byId.putIfAbsent(
+            name.id,
+            () => MarketItem(typeId: name.id, name: name.name),
+          );
+        }
+      } catch (e) {
+        // Offline or rate-limited: the local SDE results still stand.
+        Log.w('MARKET', 'searchItems - ESI name lookup failed, SDE only: $e');
+      }
 
-      // Step 3: Convert to MarketItem list
-      return names
-          .where((n) => n.category == 'inventory_type')
-          .map((n) => MarketItem(typeId: n.id, name: n.name))
-          .toList()
-        ..sort((a, b) => a.name.compareTo(b.name));
+      Log.i('MARKET', 'searchItems("$trimmed") - ${byId.length} results');
+      return byId.values.toList()
+        ..sort(
+          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+        );
     });
 
 /// Simple holder for a selected market item (typeId + name).

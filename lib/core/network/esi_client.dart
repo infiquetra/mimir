@@ -389,26 +389,38 @@ class EsiClient {
 
   // Search API
 
-  /// Search EVE universe for items by name.
-  /// GET /search/?categories=inventory_type&search={query}&strict=false
-  Future<List<int>> searchInventoryTypes(String query) async {
-    Log.d('ESI', 'searchInventoryTypes("$query") - START');
-    final response = await publicGet<Map<String, dynamic>>(
-      '/search/',
-      queryParameters: {
-        'categories': 'inventory_type',
-        'search': query,
-        'strict': false,
-      },
+  /// Resolve exact inventory-type names to IDs via POST /universe/ids/.
+  ///
+  /// The standalone `GET /search/` route this used to call was removed from
+  /// ESI (it now 404s), which left the Market Browser permanently empty.
+  /// `/universe/ids/` is the supported public replacement. It matches whole
+  /// names case-insensitively rather than substrings, so substring browsing
+  /// is served from the bundled SDE by `searchItemsProvider`.
+  Future<List<EsiUniverseName>> resolveInventoryTypesByName(
+    List<String> names,
+  ) async {
+    if (names.isEmpty) return [];
+    Log.d('ESI', 'resolveInventoryTypesByName(${names.length} names) - START');
+    final response = await publicPost<Map<String, dynamic>>(
+      '/universe/ids/',
+      data: names,
     );
-    final data = response.data;
-    if (data == null || !data.containsKey('inventory_type')) {
-      Log.i('ESI', 'searchInventoryTypes - no results');
+    final types = response.data?['inventory_types'];
+    if (types == null) {
+      Log.i('ESI', 'resolveInventoryTypesByName - no inventory_type matches');
       return [];
     }
-    final ids = (data['inventory_type'] as List<dynamic>).cast<int>();
-    Log.i('ESI', 'searchInventoryTypes - found ${ids.length} results');
-    return ids.take(30).toList(); // Limit to 30 results
+    final result = (types as List<dynamic>)
+        .map(
+          (item) => EsiUniverseName(
+            id: (item as Map<String, dynamic>)['id'] as int,
+            name: item['name'] as String,
+            category: 'inventory_type',
+          ),
+        )
+        .toList();
+    Log.i('ESI', 'resolveInventoryTypesByName - found ${result.length} types');
+    return result;
   }
 
   /// Resolve type IDs to names via POST /universe/names/

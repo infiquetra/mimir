@@ -196,9 +196,28 @@ class _SearchResultsList extends ConsumerWidget {
       data: (items) {
         if (items.isEmpty) {
           return Center(
-            child: Text(
-              'No items found for "$query"',
-              style: const TextStyle(color: EveColors.textSecondary),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'No items found for "$query"',
+                    style: const TextStyle(color: EveColors.textSecondary),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Offline search covers the bundled SDE (ships, modules, '
+                    'drones, implants, charges, subsystems). Other types '
+                    'resolve by exact name while online.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: EveColors.textSecondary.withValues(alpha: 0.7),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }

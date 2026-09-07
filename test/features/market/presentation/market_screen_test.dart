@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:drift/drift.dart' show Value;
+import 'package:drift/native.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/core/network/esi_client.dart';
+import 'package:mimir/core/sde/sde_database.dart';
+import 'package:mimir/core/sde/sde_providers.dart';
+import 'package:mimir/core/sde/sde_service.dart';
+import 'package:mimir/features/market/data/market_providers.dart';
 import 'package:mimir/features/market/presentation/market_overview_screen.dart';
 
 import '../../../../integration_test/test_utils/fixtures/character_fixtures.dart';
@@ -8,6 +15,8 @@ import '../../../../integration_test/test_utils/test_app.dart';
 import 'package:mimir/core/database/app_database.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:network_image_mock/network_image_mock.dart';
+
+class MockSdeService extends Mock implements SdeService {}
 
 void main() {
   group('MarketOverviewScreen', () {
@@ -124,11 +133,33 @@ void main() {
       });
     });
 
-    testWidgets('price checker search functions', (tester) async {
+    testWidgets('browser search returns results from the bundled SDE', (
+      tester,
+    ) async {
       await mockNetworkImagesFor(() async {
+        // The Browser tab searches the bundled SDE offline, so give it a real
+        // in-memory SDE containing Tritanium instead of letting the provider
+        // try to import the shipped assets under fake async.
+        final sdeDatabase = SdeDatabase.forTesting(NativeDatabase.memory());
+        addTearDown(sdeDatabase.close);
+        await sdeDatabase.into(sdeDatabase.sdeTypes).insert(
+          SdeTypesCompanion.insert(
+            typeId: const Value(34),
+            typeName: 'Tritanium',
+            groupId: 18,
+          ),
+        );
+
+        final mockSde = MockSdeService();
+        when(() => mockSde.database).thenReturn(sdeDatabase);
+        when(() => mockSde.initialize()).thenAnswer((_) async {});
+
         await tester.pumpWidget(
           TestApp(
             initialCharacter: CharacterFixtures.testCharacter(),
+            providerOverrides: [
+              sdeServiceProvider.overrideWithValue(mockSde),
+            ],
             setupDatabase: (db) async {
               await db
                   .into(db.marketPrices)
@@ -150,31 +181,39 @@ void main() {
         // We should be on 'Browser' by default
         expect(find.text('Search items by name...'), findsOneWidget);
 
-        // Search for an item (3 characters minimum to trigger search)
-        await tester.enterText(find.byType(TextField), 'Tri');
-        await tester.pump();
-        await tester.pumpAndSettle();
-
-        // Wait for search debounce or mock future
-        await tester.pump(const Duration(milliseconds: 500));
-        await tester.pump(const Duration(milliseconds: 500));
-        await tester.pumpAndSettle();
-
-        // The mock might not return Tritanium for 'Tri', wait what does searchItemsProvider do?
-        // Let's just enter 'Tritanium'
         await tester.enterText(find.byType(TextField), 'Tritanium');
         await tester.pump();
-        await tester.pumpAndSettle();
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
 
-        await tester.pump(const Duration(milliseconds: 500));
-        await tester.pumpAndSettle();
+        // A real result row must appear in the results list, not just the
+        // typed text in the field.
+        expect(
+          find.descendant(
+            of: find.byType(ListView),
+            matching: find.text('Tritanium'),
+          ),
+          findsOneWidget,
+          reason: 'Market Browser must return SDE matches for a query',
+        );
 
-        // The price checker search function mock data might not be wired up.
-        // We added a marketPrices insert, but does searchItemsProvider fetch from DB?
-        // The test doesn't mock the SDE, so searchItemsProvider might return nothing.
-        // Wait, the test has a SdeDatabase? No, it only inserts into AppDatabase.
-        // I will just expect that 'Tritanium' is in the text field.
-        expect(find.text('Tritanium'), findsOneWidget);
+        // Selecting it must drive the detail view's selection state.
+        await tester.tap(
+          find.descendant(
+            of: find.byType(ListView),
+            matching: find.text('Tritanium'),
+          ),
+        );
+        await tester.pump();
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(MarketOverviewScreen)),
+        );
+        expect(container.read(selectedMarketItemProvider)?.typeId, 34);
 
         // Teardown to flush Riverpod/Drift timers
         await tester.pumpWidget(const SizedBox());
