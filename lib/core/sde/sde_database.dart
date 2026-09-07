@@ -475,6 +475,30 @@ class SdeDatabase extends _$SdeDatabase {
     });
   }
 
+  /// Deletes only the skill slice of the SDE: skill types (by group) and the
+  /// prerequisites of the given skill types.
+  ///
+  /// A skills-only update must never call [clearAll]: the update payload
+  /// carries no dogma attributes, effects, or industry rows, so wiping those
+  /// tables leaves Ship Fitting and Industry empty until the app restarts.
+  ///
+  /// Not transactional by itself; call it inside the caller's transaction so
+  /// the delete and the following upserts commit atomically.
+  Future<void> deleteSkillSlice({
+    required List<int> skillGroupIds,
+    required List<int> skillTypeIds,
+  }) async {
+    if (skillGroupIds.isNotEmpty) {
+      await (delete(sdeTypes)..where((t) => t.groupId.isIn(skillGroupIds)))
+          .go();
+    }
+    if (skillTypeIds.isNotEmpty) {
+      await (delete(sdeSkillRequirements)
+            ..where((r) => r.skillId.isIn(skillTypeIds)))
+          .go();
+    }
+  }
+
   // Metadata operations
 
   /// Get a metadata value by key.

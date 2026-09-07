@@ -128,8 +128,13 @@ class SdeUpdateController extends StateNotifier<SdeUpdateUiState> {
 
     // If update was applied, invalidate SDE providers to reload data
     if (result is SdeUpdateApplied) {
-      // Force SDE service to reload with fresh data
+      // Force SDE service to reload with fresh data. sdeServiceProvider must
+      // be invalidated too: SdeService.initialize() early-returns on its
+      // _initialized flag, so without a new instance the session keeps the
+      // stale in-memory caches (and, before the scoped wipe, kept serving
+      // empty dogma/industry until restart).
       ref.invalidate(sdeInitializerProvider);
+      ref.invalidate(sdeServiceProvider);
       ref.invalidate(sdeStatusProvider);
     }
   }

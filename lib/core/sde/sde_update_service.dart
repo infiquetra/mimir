@@ -301,54 +301,79 @@ class SdeUpdateService {
   }
 
   /// Import skills data into the database atomically.
+  ///
+  /// Only the skill slice is replaced. The payload carries no dogma
+  /// attributes, effects, or industry rows, so clearing those tables here
+  /// (as `clearAll()` used to) left Ship Fitting and Industry empty for the
+  /// rest of the session.
   Future<void> _importSkillsData(Map<String, dynamic> data) async {
-    // Use database transaction for atomic update
-    await database.transaction(() async {
-      // Clear existing data
-      await database.clearAll();
+    final categories = (data['categories'] as List? ?? [])
+        .map(
+          (c) => SdeCategoriesCompanion.insert(
+            categoryId: Value(c['categoryId'] as int),
+            categoryName: c['categoryName'] as String,
+          ),
+        )
+        .toList();
 
-      // Import categories
-      if (data.containsKey('categories')) {
-        final categories = (data['categories'] as List)
-            .map(
-              (c) => SdeCategoriesCompanion.insert(
-                categoryId: Value(c['categoryId'] as int),
-                categoryName: c['categoryName'] as String,
-              ),
-            )
-            .toList();
+    final groups = (data['groups'] as List? ?? [])
+        .map(
+          (g) => SdeGroupsCompanion.insert(
+            groupId: Value(g['groupId'] as int),
+            groupName: g['groupName'] as String,
+            categoryId: g['categoryId'] as int,
+          ),
+        )
+        .toList();
+
+    final types = (data['types'] as List? ?? [])
+        .map(
+          (t) => SdeTypesCompanion.insert(
+            typeId: Value(t['typeId'] as int),
+            typeName: t['typeName'] as String,
+            groupId: t['groupId'] as int,
+            description: t['description'] != null
+                ? Value(t['description'] as String)
+                : const Value.absent(),
+          ),
+        )
+        .toList();
+
+    final requirements = <SdeSkillRequirementsCompanion>[];
+    for (final t in (data['types'] as List? ?? [])) {
+      final prerequisites = t['prerequisites'] as List?;
+      if (prerequisites == null) continue;
+      for (final prereq in prerequisites) {
+        requirements.add(
+          SdeSkillRequirementsCompanion.insert(
+            skillId: t['typeId'] as int,
+            requiredSkillId: prereq['skillId'] as int,
+            requiredLevel: prereq['level'] as int,
+          ),
+        );
+      }
+    }
+
+    final groupIds = groups.map((g) => g.groupId.value).toList();
+    final typeIds = types.map((t) => t.typeId.value).toList();
+
+    await database.transaction(() async {
+      await database.deleteSkillSlice(
+        skillGroupIds: groupIds,
+        skillTypeIds: typeIds,
+      );
+
+      if (categories.isNotEmpty) {
         await database.upsertCategories(categories);
       }
-
-      // Import groups
-      if (data.containsKey('groups')) {
-        final groups = (data['groups'] as List)
-            .map(
-              (g) => SdeGroupsCompanion.insert(
-                groupId: Value(g['groupId'] as int),
-                groupName: g['groupName'] as String,
-                categoryId: g['categoryId'] as int,
-              ),
-            )
-            .toList();
+      if (groups.isNotEmpty) {
         await database.upsertGroups(groups);
       }
-
-      // Import types (skills)
-      if (data.containsKey('types')) {
-        final types = (data['types'] as List)
-            .map(
-              (t) => SdeTypesCompanion.insert(
-                typeId: Value(t['typeId'] as int),
-                typeName: t['typeName'] as String,
-                groupId: t['groupId'] as int,
-                description: t['description'] != null
-                    ? Value(t['description'] as String)
-                    : const Value.absent(),
-              ),
-            )
-            .toList();
+      if (types.isNotEmpty) {
         await database.upsertTypes(types);
+      }
+      if (requirements.isNotEmpty) {
+        await database.upsertSkillRequirements(requirements);
       }
     });
   }

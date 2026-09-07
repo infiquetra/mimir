@@ -1,11 +1,10 @@
 import 'dart:convert';
 
-import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../../features/fitting/domain/models.dart';
+import '../logging/logger.dart';
 import 'sde_database.dart';
 
 /// Service for managing Static Data Export (SDE) data.
@@ -28,12 +27,7 @@ class SdeService {
   /// Whether the service has been initialized.
   bool _initialized = false;
 
-  /// URL to fetch skills data (Fuzzwork SDE API).
-  static const String _skillsApiUrl =
-      'https://www.fuzzwork.co.uk/api/typematerials.php?categoryID=16';
-
-  /// Alternative: Direct SDE endpoint for skill types.
-  /// Using a simpler approach with bundled JSON for reliability.
+  /// Bundled SDE assets, imported on first launch.
   static const String _bundledSkillsAsset = 'assets/sde/skills.json';
   static const String _bundledDogmaAsset = 'assets/sde/dogma.json';
   static const String _bundledIndustryAsset = 'assets/sde/industry.json';
@@ -77,7 +71,7 @@ class SdeService {
       await _importSdeData(data);
     } catch (e) {
       // Asset not found - use fallback hardcoded data for common skills
-      debugPrint('SDE: Bundled skills not found, using fallback data');
+      Log.w('SDE', 'Bundled skills not found, using fallback data: $e');
       await _loadFallbackSkills();
     }
   }
@@ -88,9 +82,9 @@ class SdeService {
       final jsonString = await rootBundle.loadString(_bundledDogmaAsset);
       final data = json.decode(jsonString) as Map<String, dynamic>;
       await _importSdeData(data);
-      debugPrint('SDE: Bundled dogma imported successfully');
-    } catch (e) {
-      debugPrint('SDE: Bundled dogma not found or failed to load: $e');
+      Log.i('SDE', 'Bundled dogma imported successfully');
+    } catch (e, stack) {
+      Log.e('SDE', 'Bundled dogma not found or failed to load', e, stack);
     }
   }
 
@@ -100,9 +94,9 @@ class SdeService {
       final jsonString = await rootBundle.loadString(_bundledIndustryAsset);
       final data = json.decode(jsonString) as Map<String, dynamic>;
       await _importIndustryData(data);
-      debugPrint('SDE: Bundled industry imported successfully');
-    } catch (e) {
-      debugPrint('SDE: Bundled industry not found or failed to load: $e');
+      Log.i('SDE', 'Bundled industry imported successfully');
+    } catch (e, stack) {
+      Log.e('SDE', 'Bundled industry not found or failed to load', e, stack);
     }
   }
 
@@ -558,7 +552,7 @@ class SdeService {
     for (final skill in skills) {
       _skillNameCache[skill.typeId] = skill.typeName;
     }
-    debugPrint('SDE: Loaded ${_skillNameCache.length} skills into cache');
+    Log.d('SDE', 'Loaded ${_skillNameCache.length} skills into cache');
   }
 
   /// Get a skill name by type ID.
@@ -620,34 +614,6 @@ class SdeService {
   /// Get skills in a specific group.
   Future<List<SdeType>> getSkillsByGroup(int groupId) {
     return database.getTypesByGroup(groupId);
-  }
-
-  /// Check for SDE updates from remote source.
-  ///
-  /// This is a background operation that should not block the UI.
-  Future<void> checkForUpdates() async {
-    // TODO: Implement version checking and incremental updates
-    // For now, this is a placeholder for future enhancement
-    debugPrint('SDE: Update check not yet implemented');
-  }
-
-  /// Force refresh all SDE data.
-  ///
-  /// Downloads fresh data and repopulates the database.
-  Future<void> forceRefresh() async {
-    try {
-      final dio = Dio();
-      final response = await dio.get(_skillsApiUrl);
-      if (response.statusCode == 200) {
-        final data = response.data as Map<String, dynamic>;
-        await database.clearAll();
-        await _importSdeData(data);
-        await _populateCache();
-      }
-    } catch (e) {
-      debugPrint('SDE: Force refresh failed: $e');
-      rethrow;
-    }
   }
 
   /// Get initialization status.
