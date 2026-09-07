@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/characters/data/character_providers.dart';
 import '../../features/characters/data/character_repository.dart';
+import '../../features/characters/presentation/tabs/overview_tab.dart';
 import '../../features/characters/presentation/widgets/character_content_grid.dart';
 import '../auth/auth_providers.dart';
 import '../config/eve_config.dart';
@@ -16,7 +17,8 @@ import '../widgets/space_background.dart';
 /// Layout:
 /// - Split panels:
 ///   - Left panel (~40%): Character portrait with info overlay
-///   - Right panel (~60%): Multi-column card grid
+///   - Right panel (~60%): Overview / Details tabs — a dense vitals overview
+///     and the multi-column card grid
 ///
 /// This matches EVE Online's character sheet design with portrait panel
 /// and efficient card-based information display.
@@ -125,8 +127,25 @@ class _StandaloneCharactersScreenState
           ),
         ),
 
-        // Right panel: Multi-column card grid (~60%)
-        const Expanded(flex: 60, child: CharacterContentGrid()),
+        // Right panel: dense overview plus the detailed card grid (~60%)
+        Expanded(
+          flex: 60,
+          child: DefaultTabController(
+            length: 2,
+            child: Column(
+              children: [
+                const TabBar(
+                  tabs: [Tab(text: 'Overview'), Tab(text: 'Details')],
+                ),
+                const Expanded(
+                  child: TabBarView(
+                    children: [OverviewTab(), CharacterContentGrid()],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -234,49 +253,6 @@ class _StandaloneCharactersScreenState
     if (confirmed == true && context.mounted) {
       await ref.read(characterRepositoryProvider).deleteCharacter(characterId);
     }
-  }
-}
-
-/// Placeholder for employment history tab.
-///
-/// Will show character's employment history (previous corporations).
-class _HistoryTabPlaceholder extends StatelessWidget {
-  const _HistoryTabPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.history,
-              size: 64,
-              color: theme.colorScheme.onSurfaceVariant.withAlpha(128),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Employment History',
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Coming soon',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant.withAlpha(153),
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
