@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../../../core/logging/logger.dart';
+import 'cap_simulator.dart';
 import 'dogma_attributes.dart';
 import 'models.dart';
 
@@ -107,6 +108,7 @@ class DogmaEngine {
     double powerUsed = 0.0;
     int calibrationUsed = 0;
     final percentModifiers = <int, List<double>>{};
+    final capDrains = <String, CapDrain>{};
 
     for (final module in fitting.allModules) {
       if (module.state == ModuleState.offline) continue;
@@ -117,6 +119,17 @@ class DogmaEngine {
       cpuUsed += type.cpu;
       powerUsed += type.powergrid;
       calibrationUsed += type.calibration;
+
+      final capNeed = type.baseAttributes[DogmaAttributes.capacitorNeed];
+      final cycleMs = type.baseAttributes[DogmaAttributes.duration];
+      if (capNeed != null && capNeed > 0 && cycleMs != null && cycleMs > 0) {
+        final key = '${cycleMs.round()}:${capNeed.toStringAsFixed(3)}';
+        capDrains[key] = CapDrain(
+          durationMs: cycleMs,
+          capNeed: capNeed,
+          count: (capDrains[key]?.count ?? 0) + 1,
+        );
+      }
 
       for (final effect in type.effects) {
         for (final modifier
@@ -245,12 +258,28 @@ class DogmaEngine {
     final capCapacity = attr(DogmaAttributes.capacitorCapacity);
     final capRecharge = attr(DogmaAttributes.capacitorRechargeTime);
 
+    // Capacitor stability: simulate the repeating drains against pyfa's
+    // recharge curve. Without capacitor attributes the row stays unmodelled
+    // (0 / false) and the panel renders a dash.
+    var capStableValue = 0.0;
+    var capIsStable = false;
+    if (capCapacity > 0 && capRecharge > 0) {
+      final capResult = CapSimulator(
+        capacity: capCapacity,
+        rechargeMs: capRecharge,
+        drains: capDrains.values.toList(),
+      ).run();
+      capIsStable = capResult.isStable;
+      capStableValue = capResult.isStable
+          ? capResult.stablePercent
+          : capResult.secondsToEmpty;
+    }
+
     // 5. Build Stats Object.
     //
-    // dps*, alignTime, warpSpeed and capacitorStable are left at their zero
-    // defaults on purpose: the engine does not model them yet, and the stats
-    // panel renders those zeros as "—" instead of presenting them as real
-    // measurements.
+    // dps* is left at its zero default on purpose: turret/missile damage
+    // needs ship weapon bonuses, which live in dogma expression trees ESI
+    // does not publish. The panel renders those zeros as dashes.
     return FittingStats(
       cpuUsed: cpuUsed,
       cpuMax: cpuMax,
@@ -261,6 +290,8 @@ class DogmaEngine {
       defenses: defenses,
       capacitorCapacity: capCapacity,
       capacitorRecharge: capRecharge,
+      capacitorStable: capStableValue,
+      isCapStable: capIsStable,
       maxVelocity: attr(DogmaAttributes.maxVelocity),
       inertiaModifier: agility,
       massKg: massKg,

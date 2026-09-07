@@ -348,6 +348,65 @@ void main() {
       );
     });
 
+    test('capacitor stability simulates repeating drains', () async {
+      final ship = _rifter().copyWith(
+        baseAttributes: {
+          ..._rifter().baseAttributes,
+          DogmaAttributes.capacitorCapacity: 1000.0,
+          DogmaAttributes.capacitorRechargeTime: 60000.0,
+        },
+      );
+      const module = ModuleType(
+        typeId: 777,
+        name: 'Cap hungry module',
+        groupId: 1,
+        groupName: 'Test',
+        slotType: SlotType.med,
+        baseAttributes: {
+          DogmaAttributes.capacitorNeed: 60.0,
+          DogmaAttributes.duration: 5000.0,
+        },
+      );
+      final fitting = Fitting(
+        id: 'cap',
+        name: 'Rifter with cap drain',
+        shipTypeId: 587,
+        shipName: 'Rifter',
+        medSlots: [
+          FittedModule(
+            typeId: 777,
+            typeName: 'Cap hungry module',
+            slotType: SlotType.med,
+            slotIndex: 0,
+            state: ModuleState.online,
+          ),
+        ],
+      );
+
+      final stats = await engine.calculateStats(fitting, ship, {
+        '777': module,
+      }, []);
+
+      expect(stats.isCapStable, isTrue);
+      expect(stats.capacitorStable, greaterThan(0));
+      expect(stats.capacitorStable, lessThanOrEqualTo(100));
+    });
+
+    test('without drains the capacitor reports fully stable', () async {
+      final ship = _rifter().copyWith(
+        baseAttributes: {
+          ..._rifter().baseAttributes,
+          DogmaAttributes.capacitorCapacity: 1000.0,
+          DogmaAttributes.capacitorRechargeTime: 60000.0,
+        },
+      );
+
+      final stats = await engine.calculateStats(_emptyFitting(), ship, {}, []);
+
+      expect(stats.isCapStable, isTrue);
+      expect(stats.capacitorStable, closeTo(100, 0.001));
+    });
+
     test('align time and warp speed follow the pyfa closed forms', () async {
       final ship = _rifter().copyWith(
         baseAttributes: {

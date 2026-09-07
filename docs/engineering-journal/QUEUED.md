@@ -60,22 +60,19 @@ instead of burying them in prose.
 
 ## P2 - Important
 
-### Align time and warp speed (shipped 2026-09-07; cap-stable still open)
+### Cap injectors and reloads in the cap simulation (remaining capSim parity)
 
 **Author.** Qwen Code
-**Priority.** P2 (was blocking, now mostly resolved)
-**Effort.** Cap-stable: one to two days, needs pyfa's capSim cycle simulation
-(staggered module cycles, reloads) plus per-module duration (attribute 73,
-present in the regenerated asset).
-**Worth it when.** Users compare cap stability against pyfa or EFT.
-**Context.** Align time and warp speed shipped using pyfa's closed forms
-(align = -ln(0.25) * agility * mass / 1e6; warp = warpSpeedMultiplier, since
-baseWarpSpeed is absent from current SDE/ESI data — attribute ids 6950-6962 do
-not exist). Prerequisite fixed: scripts/sde/generate_dogma_sde.py now copies
-the invTypes mass column into dogma attribute 4, and assets/sde/dogma.json was
-regenerated from the current fuzzwork dump. Cap-stable remains dashed: it
-needs the full cycle simulator, not a closed form.
-**Refs.** LEARNINGS 2026-09-07 operator-semantics entry.
+**Priority.** P3
+**Effort.** One day.
+**Worth it when.** Users fit cap boosters or ammo-consuming cap modules and
+compare stability against pyfa.
+**Context.** The shipped CapSimulator ports pyfa's event loop for repeating
+drains only; injectors (deferred usage, top-up logic) and clip reloads are
+omitted and documented as such. Align/warp/cap-stable all shipped 2026-09-07;
+the only stats row still dashed is DPS, pending ship weapon bonuses from
+expression trees.
+**Refs.** LEARNINGS 2026-09-07 cap-simulation entry.
 
 ### Model dogma expression trees for bonuses ESI hides (propulsion speed first)
 

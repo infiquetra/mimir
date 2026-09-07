@@ -63,7 +63,7 @@ class StatsPanel extends ConsumerWidget {
             _buildStatRow(
               'Stable',
               stats.isCapStable
-                  ? 'Yes'
+                  ? '${stats.capacitorStable.toStringAsFixed(0)}%'
                   : _dashIfUnmodelled(
                       stats.capacitorStable,
                       '${stats.capacitorStable.toStringAsFixed(0)}s',

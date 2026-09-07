@@ -4,6 +4,8 @@ class DogmaAttributes {
   static const int powerOutput = 11;
   static const int capacitorCapacity = 482;
   static const int capacitorRechargeTime = 55;
+  static const int capacitorNeed = 6;
+  static const int duration = 73; // module cycle time, milliseconds
 
   static const int shieldCapacity = 263;
   static const int shieldRechargeTime = 479;

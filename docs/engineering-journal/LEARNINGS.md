@@ -29,6 +29,30 @@
 
 ---
 
+### Capacitor stability is an event simulation, not a formula (pyfa eos/capSim.py port)
+
+**Author.** Qwen Code
+**Context.** The stats panel's "Stable" row needed cap stability, which has no
+closed form once module cycles repeat against the recharge curve.
+**Evidence.** pyfa's `eos/capSim.py` (fetched 2026-09-07): recharge between
+events is `cap = ((1 + (sqrt(cap/C) - 1) * exp(-dt/tau))^2) * C` with
+`tau = rechargeTime / 5`; identical modules are staggered as one activation
+every duration/count; stability is detected when the cap at a whole LCM period
+is no lower than at the previous one; negative cap ends the sim as unstable
+with time-to-empty.
+**Mechanism.** The recharge curve is nonlinear, so average-rate maths cannot
+answer "does this fit hold cap"; only stepping through activations can.
+**Fix.** `lib/features/fitting/domain/cap_simulator.dart` ports that algorithm
+(repeating drains only: no cap injectors, no reloads — documented in the
+class); DogmaEngine feeds it per-module capacitorNeed (6) and duration (73,
+milliseconds) and reports stable percent or seconds-to-empty; the panel shows
+percent when stable, seconds when not, dash when unmodelled.
+**Validation.** Five simulator tests (empty, light, overwhelming, stagger
+equivalence, monotonic stability) plus two engine-level tests.
+**Generalizable rule.** When a reference implementation exists (pyfa), port
+its algorithm and pin behaviour with tests rather than re-deriving approximations.
+**Refs.** QUEUED 2026-09-07 cap-stable entry (now shipped).
+
 ### Dogma operator semantics come from live ESI; some bonuses hide in expression trees
 
 **Author.** Qwen Code
