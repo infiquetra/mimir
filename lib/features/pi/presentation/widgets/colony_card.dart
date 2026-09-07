@@ -87,9 +87,8 @@ class ColonyCard extends ConsumerWidget {
                             colony.planetType,
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withValues(alpha: 0.7),
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.7),
                                 ),
                           ),
                         ],
@@ -352,12 +351,18 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: EveColors.evePrimary.withValues(alpha: 0.7)),
+        Icon(
+          icon,
+          size: 16,
+          color: EveColors.evePrimary.withValues(alpha: 0.7),
+        ),
         const SizedBox(width: 8),
         Text(
           '$label: ',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
         Text(

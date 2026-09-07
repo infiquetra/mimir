@@ -16,18 +16,21 @@ void main() {
       expect(chance, closeTo(0.4125, 0.0001));
     });
 
-    test('calculates base probability with max skills and symmetry decryptor', () {
-      final chance = InventionCalculator.calculateProbability(
-        baseProbability: 0.30,
-        encryptionSkillLevel: 5,
-        datacoreSkill1Level: 5,
-        datacoreSkill2Level: 5,
-        decryptorMultiplier: 1.1, // Symmetry adds +10% 
-      );
+    test(
+      'calculates base probability with max skills and symmetry decryptor',
+      () {
+        final chance = InventionCalculator.calculateProbability(
+          baseProbability: 0.30,
+          encryptionSkillLevel: 5,
+          datacoreSkill1Level: 5,
+          datacoreSkill2Level: 5,
+          decryptorMultiplier: 1.1, // Symmetry adds +10%
+        );
 
-      // 0.4125 * 1.1 = 0.45375
-      expect(chance, closeTo(0.45375, 0.0001));
-    });
+        // 0.4125 * 1.1 = 0.45375
+        expect(chance, closeTo(0.45375, 0.0001));
+      },
+    );
 
     test('calculates base probability with optimized decryptor', () {
       final chance = InventionCalculator.calculateProbability(

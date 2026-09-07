@@ -143,7 +143,7 @@ class SdeIndustryActivities extends Table {
   IntColumn get typeId => integer()();
   IntColumn get activityId => integer()();
   IntColumn get time => integer()();
-  
+
   @override
   Set<Column> get primaryKey => {typeId, activityId};
 }
@@ -154,7 +154,7 @@ class SdeIndustryActivityMaterials extends Table {
   IntColumn get activityId => integer()();
   IntColumn get materialTypeId => integer()();
   IntColumn get quantity => integer()();
-  
+
   @override
   Set<Column> get primaryKey => {typeId, activityId, materialTypeId};
 }
@@ -165,7 +165,7 @@ class SdeIndustryActivityProbabilities extends Table {
   IntColumn get activityId => integer()();
   IntColumn get productTypeId => integer()();
   RealColumn get probability => real()();
-  
+
   @override
   Set<Column> get primaryKey => {typeId, activityId, productTypeId};
 }
@@ -176,7 +176,7 @@ class SdeIndustryActivityProducts extends Table {
   IntColumn get activityId => integer()();
   IntColumn get productTypeId => integer()();
   IntColumn get quantity => integer()();
-  
+
   @override
   Set<Column> get primaryKey => {typeId, activityId, productTypeId};
 }
@@ -187,7 +187,7 @@ class SdeIndustryActivitySkills extends Table {
   IntColumn get activityId => integer()();
   IntColumn get skillId => integer()();
   IntColumn get level => integer()();
-  
+
   @override
   Set<Column> get primaryKey => {typeId, activityId, skillId};
 }
@@ -489,13 +489,14 @@ class SdeDatabase extends _$SdeDatabase {
     required List<int> skillTypeIds,
   }) async {
     if (skillGroupIds.isNotEmpty) {
-      await (delete(sdeTypes)..where((t) => t.groupId.isIn(skillGroupIds)))
-          .go();
+      await (delete(
+        sdeTypes,
+      )..where((t) => t.groupId.isIn(skillGroupIds))).go();
     }
     if (skillTypeIds.isNotEmpty) {
-      await (delete(sdeSkillRequirements)
-            ..where((r) => r.skillId.isIn(skillTypeIds)))
-          .go();
+      await (delete(
+        sdeSkillRequirements,
+      )..where((r) => r.skillId.isIn(skillTypeIds))).go();
     }
   }
 
@@ -605,53 +606,91 @@ class SdeDatabase extends _$SdeDatabase {
 
   // Industry operations
 
-  Future<void> upsertIndustryActivities(List<SdeIndustryActivitiesCompanion> acts) async {
-    await batch((b) => b.insertAllOnConflictUpdate(sdeIndustryActivities, acts));
-  }
-  
-  Future<void> upsertIndustryMaterials(List<SdeIndustryActivityMaterialsCompanion> mats) async {
-    await batch((b) => b.insertAllOnConflictUpdate(sdeIndustryActivityMaterials, mats));
-  }
-
-  Future<void> upsertIndustryProbabilities(List<SdeIndustryActivityProbabilitiesCompanion> probs) async {
-    await batch((b) => b.insertAllOnConflictUpdate(sdeIndustryActivityProbabilities, probs));
+  Future<void> upsertIndustryActivities(
+    List<SdeIndustryActivitiesCompanion> acts,
+  ) async {
+    await batch(
+      (b) => b.insertAllOnConflictUpdate(sdeIndustryActivities, acts),
+    );
   }
 
-  Future<void> upsertIndustryProducts(List<SdeIndustryActivityProductsCompanion> prods) async {
-    await batch((b) => b.insertAllOnConflictUpdate(sdeIndustryActivityProducts, prods));
+  Future<void> upsertIndustryMaterials(
+    List<SdeIndustryActivityMaterialsCompanion> mats,
+  ) async {
+    await batch(
+      (b) => b.insertAllOnConflictUpdate(sdeIndustryActivityMaterials, mats),
+    );
   }
 
-  Future<void> upsertIndustrySkills(List<SdeIndustryActivitySkillsCompanion> skills) async {
-    await batch((b) => b.insertAllOnConflictUpdate(sdeIndustryActivitySkills, skills));
+  Future<void> upsertIndustryProbabilities(
+    List<SdeIndustryActivityProbabilitiesCompanion> probs,
+  ) async {
+    await batch(
+      (b) =>
+          b.insertAllOnConflictUpdate(sdeIndustryActivityProbabilities, probs),
+    );
   }
 
-  Future<List<SdeIndustryActivityMaterial>> getIndustryMaterials(int typeId, int activityId) {
-    return (select(sdeIndustryActivityMaterials)
-          ..where((m) => m.typeId.equals(typeId) & m.activityId.equals(activityId)))
+  Future<void> upsertIndustryProducts(
+    List<SdeIndustryActivityProductsCompanion> prods,
+  ) async {
+    await batch(
+      (b) => b.insertAllOnConflictUpdate(sdeIndustryActivityProducts, prods),
+    );
+  }
+
+  Future<void> upsertIndustrySkills(
+    List<SdeIndustryActivitySkillsCompanion> skills,
+  ) async {
+    await batch(
+      (b) => b.insertAllOnConflictUpdate(sdeIndustryActivitySkills, skills),
+    );
+  }
+
+  Future<List<SdeIndustryActivityMaterial>> getIndustryMaterials(
+    int typeId,
+    int activityId,
+  ) {
+    return (select(sdeIndustryActivityMaterials)..where(
+          (m) => m.typeId.equals(typeId) & m.activityId.equals(activityId),
+        ))
         .get();
   }
 
-  Future<List<SdeIndustryActivityProduct>> getIndustryProducts(int typeId, int activityId) {
-    return (select(sdeIndustryActivityProducts)
-          ..where((p) => p.typeId.equals(typeId) & p.activityId.equals(activityId)))
+  Future<List<SdeIndustryActivityProduct>> getIndustryProducts(
+    int typeId,
+    int activityId,
+  ) {
+    return (select(sdeIndustryActivityProducts)..where(
+          (p) => p.typeId.equals(typeId) & p.activityId.equals(activityId),
+        ))
         .get();
   }
 
-  Future<List<SdeIndustryActivityProbability>> getIndustryProbabilities(int typeId, int activityId) {
-    return (select(sdeIndustryActivityProbabilities)
-          ..where((p) => p.typeId.equals(typeId) & p.activityId.equals(activityId)))
+  Future<List<SdeIndustryActivityProbability>> getIndustryProbabilities(
+    int typeId,
+    int activityId,
+  ) {
+    return (select(sdeIndustryActivityProbabilities)..where(
+          (p) => p.typeId.equals(typeId) & p.activityId.equals(activityId),
+        ))
         .get();
   }
 
-  Future<List<SdeIndustryActivitySkill>> getIndustrySkills(int typeId, int activityId) {
-    return (select(sdeIndustryActivitySkills)
-          ..where((s) => s.typeId.equals(typeId) & s.activityId.equals(activityId)))
+  Future<List<SdeIndustryActivitySkill>> getIndustrySkills(
+    int typeId,
+    int activityId,
+  ) {
+    return (select(sdeIndustryActivitySkills)..where(
+          (s) => s.typeId.equals(typeId) & s.activityId.equals(activityId),
+        ))
         .get();
   }
-  
+
   Future<SdeIndustryActivity?> getIndustryActivity(int typeId, int activityId) {
-    return (select(sdeIndustryActivities)
-          ..where((a) => a.typeId.equals(typeId) & a.activityId.equals(activityId)))
+    return (select(sdeIndustryActivities)..where(
+          (a) => a.typeId.equals(typeId) & a.activityId.equals(activityId),
+        ))
         .getSingleOrNull();
   }
 }

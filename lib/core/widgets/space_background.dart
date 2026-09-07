@@ -110,8 +110,12 @@ class _StarfieldPainter extends CustomPainter {
     final starPaint = Paint()..style = PaintingStyle.fill;
 
     for (int i = 0; i < starCount; i++) {
-      final x = random.nextDouble() * size.width;
-      final y = random.nextDouble() * size.height;
+      // Snap positions to whole pixels. The painted size can vary by a
+      // fraction of a pixel between layouts, and a sub-pixel star centre
+      // changes antialiasing coverage — which showed up as intermittent
+      // 1-3px golden-test diffs on otherwise identical screens.
+      final x = (random.nextDouble() * size.width).roundToDouble();
+      final y = (random.nextDouble() * size.height).roundToDouble();
 
       // Random star properties
       final brightness = 0.2 + random.nextDouble() * 0.6; // 20-80% brightness

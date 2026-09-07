@@ -41,7 +41,9 @@ class CharacterNavRail extends ConsumerWidget {
       decoration: BoxDecoration(
         color: EveColors.surfaceDefault,
         border: Border(
-          right: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+          right: BorderSide(
+            color: theme.colorScheme.outline.withValues(alpha: 0.2),
+          ),
         ),
       ),
       child: charactersAsync.when(

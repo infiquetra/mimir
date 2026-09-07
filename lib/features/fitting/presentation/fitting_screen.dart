@@ -17,16 +17,12 @@ class FittingScreen extends ConsumerStatefulWidget {
 
 class _FittingScreenState extends ConsumerState<FittingScreen> {
   Future<void> _saveCurrentFitting() async {
-    final saved = await ref
-        .read(activeFittingProvider.notifier)
-        .saveCurrent();
+    final saved = await ref.read(activeFittingProvider.notifier).saveCurrent();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          saved
-              ? 'Fitting saved'
-              : 'Nothing to save - pick a ship first',
+          saved ? 'Fitting saved' : 'Nothing to save - pick a ship first',
         ),
       ),
     );

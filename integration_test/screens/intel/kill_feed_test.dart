@@ -169,51 +169,52 @@ void main() {
       }
     }
 
-    testWidgets('empty feed shows the waiting state and the watch-list banner', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        TestApp(
-          providerOverrides: [
-            zkillboardClientProvider.overrideWithValue(mockClient),
-          ],
-          setupDatabase: (db) async {
-            await _seedNames(db);
-            await db
-                .into(db.watchList)
-                .insert(
-                  WatchListCompanion.insert(
-                    id: 'system_$jitaSystemId',
-                    watchType: 'system',
-                    entityId: jitaSystemId,
-                    targetName: 'Jita',
-                    reason: 'Trade hub',
-                    addedAt: DateTime.now(),
-                  ),
-                );
-          },
-          home: const KillFeedScreen(),
-        ),
-      );
+    testWidgets(
+      'empty feed shows the waiting state and the watch-list banner',
+      (tester) async {
+        await tester.pumpWidget(
+          TestApp(
+            providerOverrides: [
+              zkillboardClientProvider.overrideWithValue(mockClient),
+            ],
+            setupDatabase: (db) async {
+              await _seedNames(db);
+              await db
+                  .into(db.watchList)
+                  .insert(
+                    WatchListCompanion.insert(
+                      id: 'system_$jitaSystemId',
+                      watchType: 'system',
+                      entityId: jitaSystemId,
+                      targetName: 'Jita',
+                      reason: 'Trade hub',
+                      addedAt: DateTime.now(),
+                    ),
+                  );
+            },
+            home: const KillFeedScreen(),
+          ),
+        );
 
-      for (var i = 0; i < 10; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
 
-      expect(
-        find.text('Waiting for killmails...'),
-        findsOneWidget,
-        reason: 'An empty feed must render its waiting state',
-      );
+        expect(
+          find.text('Waiting for killmails...'),
+          findsOneWidget,
+          reason: 'An empty feed must render its waiting state',
+        );
 
-      // The banner must name the watched entity, never show its raw ID.
-      expect(find.textContaining('Watching 1 entities'), findsOneWidget);
-      expect(
-        find.textContaining('$jitaSystemId'),
-        findsNothing,
-        reason: 'Raw EVE IDs must never be surfaced to the user',
-      );
-    });
+        // The banner must name the watched entity, never show its raw ID.
+        expect(find.textContaining('Watching 1 entities'), findsOneWidget);
+        expect(
+          find.textContaining('$jitaSystemId'),
+          findsNothing,
+          reason: 'Raw EVE IDs must never be surfaced to the user',
+        );
+      },
+    );
 
     testWidgets('connects to feed, caches killmails, and renders them', (
       tester,

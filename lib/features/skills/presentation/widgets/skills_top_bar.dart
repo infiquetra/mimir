@@ -30,7 +30,9 @@ class SkillsTopBar extends ConsumerWidget {
       decoration: BoxDecoration(
         color: EveColors.surfaceDefault,
         border: Border(
-          bottom: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
+          bottom: BorderSide(
+            color: theme.colorScheme.outline.withValues(alpha: 0.3),
+          ),
         ),
       ),
       child: Row(
@@ -86,7 +88,9 @@ class SkillsTopBar extends ConsumerWidget {
       decoration: BoxDecoration(
         color: EveColors.surfaceElevated,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.3),
+        ),
       ),
       child: DropdownButton<SkillFilterMode>(
         value: filterMode,

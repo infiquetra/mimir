@@ -513,7 +513,9 @@ class _RingPainter extends CustomPainter {
     if (shipType.highSlots > 0) {
       drawArc(-125, -55, const Color(0xFF6CB4EE).withValues(alpha: 0.6));
     }
-    if (shipType.medSlots > 0) drawArc(-45, 45, Colors.orange.withValues(alpha: 0.6));
+    if (shipType.medSlots > 0) {
+      drawArc(-45, 45, Colors.orange.withValues(alpha: 0.6));
+    }
     if (shipType.rigSlots > 0) {
       drawArc(55, 115, const Color(0xFF9E9E9E).withValues(alpha: 0.6));
     }

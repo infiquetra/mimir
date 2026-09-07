@@ -135,7 +135,10 @@ class _StandaloneCharactersScreenState
             child: Column(
               children: [
                 const TabBar(
-                  tabs: [Tab(text: 'Overview'), Tab(text: 'Details')],
+                  tabs: [
+                    Tab(text: 'Overview'),
+                    Tab(text: 'Details'),
+                  ],
                 ),
                 const Expanded(
                   child: TabBarView(

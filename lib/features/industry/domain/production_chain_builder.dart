@@ -5,11 +5,11 @@ class ProductionNode {
   final int typeId;
   final String name;
   final int quantityRequired;
-  
+
   /// The activity ID used to produce this node (e.g., 1 for Manufacturing, 11 for Reactions).
   /// Null if it's a raw material (e.g., Tritanium).
   final int? productionActivityId;
-  
+
   /// Children nodes (the materials required to build this node).
   final List<ProductionNode> dependencies;
 
@@ -32,14 +32,23 @@ class ProductionChainBuilder {
   ProductionChainBuilder(this._sdeService);
 
   /// Recursively builds a production chain for the given [typeId].
-  /// 
+  ///
   /// [quantity] - The amount of the final product to build.
   /// [activityId] - The starting activity (usually 1 for Manufacturing).
-  Future<ProductionNode> buildChain(int typeId, int quantity, {int activityId = 1}) async {
-    final name = await _sdeService.getSkillName(typeId) ?? await _sdeService.getShipTypeName(typeId);
+  Future<ProductionNode> buildChain(
+    int typeId,
+    int quantity, {
+    int activityId = 1,
+  }) async {
+    final name =
+        await _sdeService.getSkillName(typeId) ??
+        await _sdeService.getShipTypeName(typeId);
 
     // Look up the materials required for this activity.
-    final materials = await _sdeService.getIndustryMaterials(typeId, activityId);
+    final materials = await _sdeService.getIndustryMaterials(
+      typeId,
+      activityId,
+    );
 
     if (materials.isEmpty) {
       // It's a raw material or an item without a blueprint in the SDE for this activity.
@@ -54,26 +63,38 @@ class ProductionChainBuilder {
 
     for (final mat in materials) {
       final matQty = mat.quantity * quantity;
-      
+
       // Check if this material itself can be manufactured (activity 1) or reacted (activity 11).
       // We check if it has any materials required for activity 1 or 11 to determine if it's craftable.
       int? nextActivityId;
-      final mfgMats = await _sdeService.getIndustryMaterials(mat.materialTypeId, 1);
+      final mfgMats = await _sdeService.getIndustryMaterials(
+        mat.materialTypeId,
+        1,
+      );
       if (mfgMats.isNotEmpty) {
         nextActivityId = 1;
       } else {
-        final rxMats = await _sdeService.getIndustryMaterials(mat.materialTypeId, 11);
+        final rxMats = await _sdeService.getIndustryMaterials(
+          mat.materialTypeId,
+          11,
+        );
         if (rxMats.isNotEmpty) {
           nextActivityId = 11;
         }
       }
 
       if (nextActivityId != null) {
-        final childNode = await buildChain(mat.materialTypeId, matQty, activityId: nextActivityId);
+        final childNode = await buildChain(
+          mat.materialTypeId,
+          matQty,
+          activityId: nextActivityId,
+        );
         dependencies.add(childNode);
       } else {
         // Raw material
-        final childName = await _sdeService.getSkillName(mat.materialTypeId) ?? await _sdeService.getShipTypeName(mat.materialTypeId);
+        final childName =
+            await _sdeService.getSkillName(mat.materialTypeId) ??
+            await _sdeService.getShipTypeName(mat.materialTypeId);
         dependencies.add(
           ProductionNode(
             typeId: mat.materialTypeId,

@@ -47,21 +47,20 @@ final theraConnectionsProvider =
 /// The watch list used to accept only raw numeric system IDs and display them
 /// verbatim — unusable, and against the project rule that EVE IDs are never
 /// shown to users.
-final solarSystemByNameProvider = FutureProvider.family<EsiUniverseName?, String>((
-  ref,
-  name,
-) async {
-  final db = ref.watch(databaseProvider);
-  final cached = await (db.select(db.universeNames)
-        ..where((u) => u.category.equals('solar_system'))
-        ..where((u) => u.name.lower().equals(name.toLowerCase())))
-      .get();
-  if (cached.isNotEmpty) {
-    return EsiUniverseName(
-      id: cached.first.id,
-      name: cached.first.name,
-      category: 'solar_system',
-    );
-  }
-  return ref.watch(esiClientProvider).resolveSolarSystemByName(name);
-});
+final solarSystemByNameProvider =
+    FutureProvider.family<EsiUniverseName?, String>((ref, name) async {
+      final db = ref.watch(databaseProvider);
+      final cached =
+          await (db.select(db.universeNames)
+                ..where((u) => u.category.equals('solar_system'))
+                ..where((u) => u.name.lower().equals(name.toLowerCase())))
+              .get();
+      if (cached.isNotEmpty) {
+        return EsiUniverseName(
+          id: cached.first.id,
+          name: cached.first.name,
+          category: 'solar_system',
+        );
+      }
+      return ref.watch(esiClientProvider).resolveSolarSystemByName(name);
+    });

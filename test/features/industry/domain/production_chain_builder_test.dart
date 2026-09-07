@@ -16,8 +16,12 @@ void main() {
 
   group('ProductionChainBuilder', () {
     test('builds single raw material chain if no materials required', () async {
-      when(() => mockSdeService.getSkillName(34)).thenAnswer((_) async => 'Tritanium');
-      when(() => mockSdeService.getIndustryMaterials(34, 1)).thenAnswer((_) async => []);
+      when(
+        () => mockSdeService.getSkillName(34),
+      ).thenAnswer((_) async => 'Tritanium');
+      when(
+        () => mockSdeService.getIndustryMaterials(34, 1),
+      ).thenAnswer((_) async => []);
 
       final node = await builder.buildChain(34, 1);
 

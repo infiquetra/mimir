@@ -10,12 +10,14 @@ class InventionCalculatorPanel extends ConsumerStatefulWidget {
   const InventionCalculatorPanel({super.key});
 
   @override
-  ConsumerState<InventionCalculatorPanel> createState() => _InventionCalculatorPanelState();
+  ConsumerState<InventionCalculatorPanel> createState() =>
+      _InventionCalculatorPanelState();
 }
 
-class _InventionCalculatorPanelState extends ConsumerState<InventionCalculatorPanel> {
-  // Hardcoded for now. In a full implementation, these would auto-populate 
-  // from the SdeService based on the selected Blueprint, and the skill levels 
+class _InventionCalculatorPanelState
+    extends ConsumerState<InventionCalculatorPanel> {
+  // Hardcoded for now. In a full implementation, these would auto-populate
+  // from the SdeService based on the selected Blueprint, and the skill levels
   // would auto-populate from activeCharacterProvider's trained skills.
   double _baseProbability = 0.30;
   int _encryptionSkill = 4;
@@ -76,7 +78,11 @@ class _InventionCalculatorPanelState extends ConsumerState<InventionCalculatorPa
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.school, color: EveColors.evePrimary, size: 20),
+                    const Icon(
+                      Icons.school,
+                      color: EveColors.evePrimary,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'CHARACTER SKILLS',
@@ -90,9 +96,21 @@ class _InventionCalculatorPanelState extends ConsumerState<InventionCalculatorPa
                 ),
                 const Divider(color: EveColors.borderSubtle),
                 const SizedBox(height: 8),
-                _buildSkillSlider('Encryption Skill', _encryptionSkill, (v) => setState(() => _encryptionSkill = v.toInt())),
-                _buildSkillSlider('Datacore Skill 1', _datacore1Skill, (v) => setState(() => _datacore1Skill = v.toInt())),
-                _buildSkillSlider('Datacore Skill 2', _datacore2Skill, (v) => setState(() => _datacore2Skill = v.toInt())),
+                _buildSkillSlider(
+                  'Encryption Skill',
+                  _encryptionSkill,
+                  (v) => setState(() => _encryptionSkill = v.toInt()),
+                ),
+                _buildSkillSlider(
+                  'Datacore Skill 1',
+                  _datacore1Skill,
+                  (v) => setState(() => _datacore1Skill = v.toInt()),
+                ),
+                _buildSkillSlider(
+                  'Datacore Skill 2',
+                  _datacore2Skill,
+                  (v) => setState(() => _datacore2Skill = v.toInt()),
+                ),
               ],
             ),
           ),
@@ -106,7 +124,11 @@ class _InventionCalculatorPanelState extends ConsumerState<InventionCalculatorPa
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.settings, color: EveColors.evePrimary, size: 20),
+                    const Icon(
+                      Icons.settings,
+                      color: EveColors.evePrimary,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'MODIFIERS',
@@ -123,8 +145,11 @@ class _InventionCalculatorPanelState extends ConsumerState<InventionCalculatorPa
                 Row(
                   children: [
                     SizedBox(
-                      width: 150, 
-                      child: Text('Base Probability:', style: Theme.of(context).textTheme.bodyMedium),
+                      width: 150,
+                      child: Text(
+                        'Base Probability:',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
                     ),
                     Expanded(
                       child: Slider(
@@ -149,8 +174,11 @@ class _InventionCalculatorPanelState extends ConsumerState<InventionCalculatorPa
                 Row(
                   children: [
                     SizedBox(
-                      width: 150, 
-                      child: Text('Decryptor:', style: Theme.of(context).textTheme.bodyMedium),
+                      width: 150,
+                      child: Text(
+                        'Decryptor:',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
                     ),
                     Expanded(
                       child: DropdownButtonFormField<double>(
@@ -158,17 +186,37 @@ class _InventionCalculatorPanelState extends ConsumerState<InventionCalculatorPa
                         initialValue: _decryptorMultiplier,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 1.0, child: Text('None (x1.0)')),
-                          DropdownMenuItem(value: 1.1, child: Text('Symmetry Decryptor (x1.1)')),
-                          DropdownMenuItem(value: 1.2, child: Text('Process Decryptor (x1.2)')),
-                          DropdownMenuItem(value: 1.8, child: Text('Parity Decryptor (x1.8)')),
-                          DropdownMenuItem(value: 0.6, child: Text('Optimized Decryptor (x0.6)')),
+                          DropdownMenuItem(
+                            value: 1.0,
+                            child: Text('None (x1.0)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 1.1,
+                            child: Text('Symmetry Decryptor (x1.1)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 1.2,
+                            child: Text('Process Decryptor (x1.2)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 1.8,
+                            child: Text('Parity Decryptor (x1.8)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 0.6,
+                            child: Text('Optimized Decryptor (x0.6)'),
+                          ),
                         ],
                         onChanged: (v) {
-                          if (v != null) setState(() => _decryptorMultiplier = v);
+                          if (v != null) {
+                            setState(() => _decryptorMultiplier = v);
+                          }
                         },
                       ),
                     ),
@@ -182,13 +230,17 @@ class _InventionCalculatorPanelState extends ConsumerState<InventionCalculatorPa
     );
   }
 
-  Widget _buildSkillSlider(String label, int value, ValueChanged<double> onChanged) {
+  Widget _buildSkillSlider(
+    String label,
+    int value,
+    ValueChanged<double> onChanged,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         children: [
           SizedBox(
-            width: 150, 
+            width: 150,
             child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
           ),
           Expanded(

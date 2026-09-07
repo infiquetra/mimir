@@ -51,7 +51,7 @@ class SdeService {
     if (!hasDogmaData) {
       await _loadBundledDogma();
     }
-    
+
     final hasIndustryData = await database.hasIndustryData();
     if (!hasIndustryData) {
       await _loadBundledIndustry();
@@ -487,59 +487,69 @@ class SdeService {
   Future<void> _importIndustryData(Map<String, dynamic> data) async {
     if (data.containsKey('activities')) {
       final acts = (data['activities'] as List)
-          .map((a) => SdeIndustryActivitiesCompanion.insert(
-                typeId: a['typeId'] as int,
-                activityId: a['activityId'] as int,
-                time: a['time'] as int,
-              ))
+          .map(
+            (a) => SdeIndustryActivitiesCompanion.insert(
+              typeId: a['typeId'] as int,
+              activityId: a['activityId'] as int,
+              time: a['time'] as int,
+            ),
+          )
           .toList();
       await database.upsertIndustryActivities(acts);
     }
-    
+
     if (data.containsKey('materials')) {
       final mats = (data['materials'] as List)
-          .map((m) => SdeIndustryActivityMaterialsCompanion.insert(
-                typeId: m['typeId'] as int,
-                activityId: m['activityId'] as int,
-                materialTypeId: m['materialTypeId'] as int,
-                quantity: m['quantity'] as int,
-              ))
+          .map(
+            (m) => SdeIndustryActivityMaterialsCompanion.insert(
+              typeId: m['typeId'] as int,
+              activityId: m['activityId'] as int,
+              materialTypeId: m['materialTypeId'] as int,
+              quantity: m['quantity'] as int,
+            ),
+          )
           .toList();
       await database.upsertIndustryMaterials(mats);
     }
-    
+
     if (data.containsKey('probabilities')) {
       final probs = (data['probabilities'] as List)
-          .map((p) => SdeIndustryActivityProbabilitiesCompanion.insert(
-                typeId: p['typeId'] as int,
-                activityId: p['activityId'] as int,
-                productTypeId: p['productTypeId'] as int,
-                probability: (p['probability'] as num).toDouble(),
-              ))
+          .map(
+            (p) => SdeIndustryActivityProbabilitiesCompanion.insert(
+              typeId: p['typeId'] as int,
+              activityId: p['activityId'] as int,
+              productTypeId: p['productTypeId'] as int,
+              probability: (p['probability'] as num).toDouble(),
+            ),
+          )
           .toList();
       await database.upsertIndustryProbabilities(probs);
     }
-    
+
     if (data.containsKey('products')) {
       final prods = (data['products'] as List)
-          .map((p) => SdeIndustryActivityProductsCompanion.insert(
-                typeId: p['typeId'] as int,
-                activityId: p['activityId'] as int,
-                productTypeId: p['productTypeId'] as int,
-                quantity: p['quantity'] as int,
-              ))
+          .map(
+            (p) => SdeIndustryActivityProductsCompanion.insert(
+              typeId: p['typeId'] as int,
+              activityId: p['activityId'] as int,
+              productTypeId: p['productTypeId'] as int,
+              quantity: p['quantity'] as int,
+            ),
+          )
           .toList();
       await database.upsertIndustryProducts(prods);
     }
-    
+
     if (data.containsKey('skills')) {
       final skills = (data['skills'] as List)
-          .map((s) => SdeIndustryActivitySkillsCompanion.insert(
-                typeId: s['typeId'] as int,
-                activityId: s['activityId'] as int,
-                skillId: s['skillId'] as int,
-                level: s['level'] as int,
-              ))
+          .map(
+            (s) => SdeIndustryActivitySkillsCompanion.insert(
+              typeId: s['typeId'] as int,
+              activityId: s['activityId'] as int,
+              skillId: s['skillId'] as int,
+              level: s['level'] as int,
+            ),
+          )
           .toList();
       await database.upsertIndustrySkills(skills);
     }
@@ -859,19 +869,31 @@ class SdeService {
     return database.getIndustryActivity(typeId, activityId);
   }
 
-  Future<List<SdeIndustryActivityMaterial>> getIndustryMaterials(int typeId, int activityId) {
+  Future<List<SdeIndustryActivityMaterial>> getIndustryMaterials(
+    int typeId,
+    int activityId,
+  ) {
     return database.getIndustryMaterials(typeId, activityId);
   }
 
-  Future<List<SdeIndustryActivityProduct>> getIndustryProducts(int typeId, int activityId) {
+  Future<List<SdeIndustryActivityProduct>> getIndustryProducts(
+    int typeId,
+    int activityId,
+  ) {
     return database.getIndustryProducts(typeId, activityId);
   }
 
-  Future<List<SdeIndustryActivityProbability>> getIndustryProbabilities(int typeId, int activityId) {
+  Future<List<SdeIndustryActivityProbability>> getIndustryProbabilities(
+    int typeId,
+    int activityId,
+  ) {
     return database.getIndustryProbabilities(typeId, activityId);
   }
 
-  Future<List<SdeIndustryActivitySkill>> getIndustrySkills(int typeId, int activityId) {
+  Future<List<SdeIndustryActivitySkill>> getIndustrySkills(
+    int typeId,
+    int activityId,
+  ) {
     return database.getIndustrySkills(typeId, activityId);
   }
 

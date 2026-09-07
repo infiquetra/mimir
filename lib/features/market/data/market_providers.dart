@@ -149,9 +149,7 @@ final searchItemsProvider = FutureProvider.autoDispose
 
       Log.i('MARKET', 'searchItems("$trimmed") - ${byId.length} results');
       return byId.values.toList()
-        ..sort(
-          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-        );
+        ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     });
 
 /// Simple holder for a selected market item (typeId + name).

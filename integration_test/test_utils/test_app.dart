@@ -153,9 +153,7 @@ class _TestAppState extends State<TestApp> {
     if (!_isInitialized) {
       return MaterialApp(
         theme: AppTheme.darkTheme(),
-        home: const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        ),
+        home: const Scaffold(body: Center(child: CircularProgressIndicator())),
       );
     }
 

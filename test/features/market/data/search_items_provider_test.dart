@@ -65,30 +65,32 @@ void main() {
   });
 
   group('searchItemsProvider', () {
-    test('returns bundled SDE substring matches when ESI is unavailable', () async {
-      when(
-        () => mockEsiClient.resolveInventoryTypesByName(any()),
-      ).thenThrow(Exception('offline'));
+    test(
+      'returns bundled SDE substring matches when ESI is unavailable',
+      () async {
+        when(
+          () => mockEsiClient.resolveInventoryTypesByName(any()),
+        ).thenThrow(Exception('offline'));
 
-      final results = await container.read(
-        searchItemsProvider('mer').future,
-      );
+        final results = await container.read(searchItemsProvider('mer').future);
 
-      expect(results.map((i) => i.name), ['Merlin', 'Merlin Prime']);
-      expect(results.map((i) => i.typeId), [603, 1150]);
-    });
+        expect(results.map((i) => i.name), ['Merlin', 'Merlin Prime']);
+        expect(results.map((i) => i.typeId), [603, 1150]);
+      },
+    );
 
     test('merges an exact ESI hit the bundled SDE does not contain', () async {
-      when(() => mockEsiClient.resolveInventoryTypesByName(['Tritanium']))
-          .thenAnswer(
-            (_) async => [
-              esi.EsiUniverseName(
-                id: 34,
-                name: 'Tritanium',
-                category: 'inventory_type',
-              ),
-            ],
-          );
+      when(
+        () => mockEsiClient.resolveInventoryTypesByName(['Tritanium']),
+      ).thenAnswer(
+        (_) async => [
+          esi.EsiUniverseName(
+            id: 34,
+            name: 'Tritanium',
+            category: 'inventory_type',
+          ),
+        ],
+      );
 
       final results = await container.read(
         searchItemsProvider('Tritanium').future,
@@ -100,16 +102,17 @@ void main() {
     });
 
     test('deduplicates when the SDE and ESI agree', () async {
-      when(() => mockEsiClient.resolveInventoryTypesByName(['Merlin']))
-          .thenAnswer(
-            (_) async => [
-              esi.EsiUniverseName(
-                id: 603,
-                name: 'Merlin',
-                category: 'inventory_type',
-              ),
-            ],
-          );
+      when(
+        () => mockEsiClient.resolveInventoryTypesByName(['Merlin']),
+      ).thenAnswer(
+        (_) async => [
+          esi.EsiUniverseName(
+            id: 603,
+            name: 'Merlin',
+            category: 'inventory_type',
+          ),
+        ],
+      );
 
       final results = await container.read(
         searchItemsProvider('Merlin').future,

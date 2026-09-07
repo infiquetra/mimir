@@ -30,24 +30,21 @@ import '../../integration_test/test_utils/fixtures/skill_fixtures.dart';
 import '../../integration_test/test_utils/fixtures/wallet_fixtures.dart';
 import '../../integration_test/test_utils/test_app.dart';
 
-
 /// Pins every async value the Skills screen renders so the capture cannot
 /// race a provider resolving. Unpinned, these resolved at different pump
 /// phases depending on which tests ran earlier in the process, producing
 /// intermittent ~3px golden diffs.
 List<dynamic> _pinnedSkillProviders() => [
-      unallocatedSpProvider.overrideWithValue(const AsyncValue.data(150000)),
-      totalSkillPointsProvider.overrideWithValue(
-        const AsyncValue.data(5000000),
-      ),
-      queueStatsProvider.overrideWithValue(
-        QueueStats(
-          totalTrainingTime: const Duration(days: 3, hours: 11),
-          totalSkillPoints: 308353,
-          queueSize: 3,
-        ),
-      ),
-    ];
+  unallocatedSpProvider.overrideWithValue(const AsyncValue.data(150000)),
+  totalSkillPointsProvider.overrideWithValue(const AsyncValue.data(5000000)),
+  queueStatsProvider.overrideWithValue(
+    QueueStats(
+      totalTrainingTime: const Duration(days: 3, hours: 11),
+      totalSkillPoints: 308353,
+      queueSize: 3,
+    ),
+  ),
+];
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

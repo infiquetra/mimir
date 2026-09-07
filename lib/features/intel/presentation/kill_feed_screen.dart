@@ -40,7 +40,11 @@ class KillFeedScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  const Icon(Icons.radar, size: 20, color: EveColors.photonBlue),
+                  const Icon(
+                    Icons.radar,
+                    size: 20,
+                    color: EveColors.photonBlue,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: configAsync.when(
@@ -48,21 +52,22 @@ class KillFeedScreen extends ConsumerWidget {
                         if (config.isEmpty) {
                           return Text(
                             'No entities being watched. Click settings to add.',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: EveColors.textSecondary,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: EveColors.textSecondary),
                           );
                         }
                         return Text(
                           'Watching ${config.length} entities for activity.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: EveColors.photonBlue,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: EveColors.photonBlue,
+                                fontWeight: FontWeight.w500,
+                              ),
                         );
                       },
                       loading: () => const Text('Loading config...'),
-                      error: (error, stack) => const Text('Error loading config'),
+                      error: (error, stack) =>
+                          const Text('Error loading config'),
                     ),
                   ),
                 ],
@@ -76,7 +81,10 @@ class KillFeedScreen extends ConsumerWidget {
                     sliver: SliverToBoxAdapter(child: TheraConnectionsCard()),
                   ),
                   SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
+                    ),
                     sliver: SliverToBoxAdapter(
                       child: Text(
                         'Live Kill Feed',
@@ -98,7 +106,9 @@ class KillFeedScreen extends ConsumerWidget {
                                 SizedBox(height: 16),
                                 Text(
                                   'Waiting for killmails...',
-                                  style: TextStyle(color: EveColors.textSecondary),
+                                  style: TextStyle(
+                                    color: EveColors.textSecondary,
+                                  ),
                                 ),
                               ],
                             ),
@@ -109,7 +119,10 @@ class KillFeedScreen extends ConsumerWidget {
                       return SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
                         sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate((context, index) {
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
                             final kill = kills[index];
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 8.0),

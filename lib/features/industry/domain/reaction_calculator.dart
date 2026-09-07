@@ -1,7 +1,7 @@
 /// Calculates reaction yields and requirements.
 class ReactionCalculator {
   /// Calculates the required input materials for a reaction job.
-  /// 
+  ///
   /// [baseInputs] - Map of typeId to base quantity required per run.
   /// [runs] - Number of runs for the job.
   /// [facilityMaterialBonus] - Material efficiency bonus of the structure (e.g., 0.02 for a 2% reduction).
@@ -22,7 +22,7 @@ class ReactionCalculator {
       final totalBaseQty = runs * baseQty;
       final actualQty = (totalBaseQty * (1.0 - facilityMaterialBonus)).round();
 
-      // You can never use less than 1 if it requires it, unless mathematically it rounds down to 0, 
+      // You can never use less than 1 if it requires it, unless mathematically it rounds down to 0,
       // but in Eve it usually has a minimum of 1 per run or rounds appropriately.
       inputs[typeId] = actualQty > 0 ? actualQty : 1;
     }
@@ -30,10 +30,7 @@ class ReactionCalculator {
   }
 
   /// Calculates the output products for a reaction job.
-  static Map<int, int> calculateOutputs(
-    Map<int, int> baseOutputs,
-    int runs,
-  ) {
+  static Map<int, int> calculateOutputs(Map<int, int> baseOutputs, int runs) {
     final outputs = <int, int>{};
     for (final entry in baseOutputs.entries) {
       outputs[entry.key] = entry.value * runs;

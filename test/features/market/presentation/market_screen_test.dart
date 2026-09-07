@@ -142,13 +142,15 @@ void main() {
         // try to import the shipped assets under fake async.
         final sdeDatabase = SdeDatabase.forTesting(NativeDatabase.memory());
         addTearDown(sdeDatabase.close);
-        await sdeDatabase.into(sdeDatabase.sdeTypes).insert(
-          SdeTypesCompanion.insert(
-            typeId: const Value(34),
-            typeName: 'Tritanium',
-            groupId: 18,
-          ),
-        );
+        await sdeDatabase
+            .into(sdeDatabase.sdeTypes)
+            .insert(
+              SdeTypesCompanion.insert(
+                typeId: const Value(34),
+                typeName: 'Tritanium',
+                groupId: 18,
+              ),
+            );
 
         final mockSde = MockSdeService();
         when(() => mockSde.database).thenReturn(sdeDatabase);
@@ -157,9 +159,7 @@ void main() {
         await tester.pumpWidget(
           TestApp(
             initialCharacter: CharacterFixtures.testCharacter(),
-            providerOverrides: [
-              sdeServiceProvider.overrideWithValue(mockSde),
-            ],
+            providerOverrides: [sdeServiceProvider.overrideWithValue(mockSde)],
             setupDatabase: (db) async {
               await db
                   .into(db.marketPrices)

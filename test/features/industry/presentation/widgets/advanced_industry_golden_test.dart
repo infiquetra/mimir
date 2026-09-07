@@ -13,9 +13,13 @@ void main() {
 
   testGoldens('InventionCalculatorPanel golden', (tester) async {
     final builder = DeviceBuilder()
-      ..overrideDevicesForAllScenarios(devices: [Device.phone, Device.iphone11, Device.tabletPortrait])
+      ..overrideDevicesForAllScenarios(
+        devices: [Device.phone, Device.iphone11, Device.tabletPortrait],
+      )
       ..addScenario(
-        widget: const ProviderScope(child: Scaffold(body: InventionCalculatorPanel())),
+        widget: const ProviderScope(
+          child: Scaffold(body: InventionCalculatorPanel()),
+        ),
         name: 'default',
       );
 
@@ -25,9 +29,13 @@ void main() {
 
   testGoldens('ReactionCalculatorPanel golden', (tester) async {
     final builder = DeviceBuilder()
-      ..overrideDevicesForAllScenarios(devices: [Device.phone, Device.iphone11, Device.tabletPortrait])
+      ..overrideDevicesForAllScenarios(
+        devices: [Device.phone, Device.iphone11, Device.tabletPortrait],
+      )
       ..addScenario(
-        widget: const ProviderScope(child: Scaffold(body: ReactionCalculatorPanel())),
+        widget: const ProviderScope(
+          child: Scaffold(body: ReactionCalculatorPanel()),
+        ),
         name: 'default',
       );
 
@@ -37,9 +45,13 @@ void main() {
 
   testGoldens('ProductionChainVisualizer golden', (tester) async {
     final builder = DeviceBuilder()
-      ..overrideDevicesForAllScenarios(devices: [Device.phone, Device.iphone11, Device.tabletPortrait])
+      ..overrideDevicesForAllScenarios(
+        devices: [Device.phone, Device.iphone11, Device.tabletPortrait],
+      )
       ..addScenario(
-        widget: const ProviderScope(child: Scaffold(body: ProductionChainVisualizer())),
+        widget: const ProviderScope(
+          child: Scaffold(body: ProductionChainVisualizer()),
+        ),
         name: 'default',
       );
 

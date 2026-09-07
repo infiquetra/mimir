@@ -209,8 +209,10 @@ final trainedSkillLevelProvider = FutureProvider.family<int, (int, int)>((
 /// directly meant a character whose skills had never been synced rendered as
 /// completely untrained — every group at 0%, every plan 0% complete — which
 /// reads as broken rather than as "not loaded yet".
-final trainedSkillsProvider =
-    FutureProvider.family<List<CharacterSkill>, int>((ref, characterId) async {
+final trainedSkillsProvider = FutureProvider.family<List<CharacterSkill>, int>((
+  ref,
+  characterId,
+) async {
   final repository = ref.watch(skillRepositoryProvider);
   final cached = await repository.getCharacterSkills(characterId);
   if (cached.isNotEmpty) return cached;

@@ -19,7 +19,8 @@ class SavedFittingsDialog extends ConsumerStatefulWidget {
   const SavedFittingsDialog({super.key});
 
   @override
-  ConsumerState<SavedFittingsDialog> createState() => _SavedFittingsDialogState();
+  ConsumerState<SavedFittingsDialog> createState() =>
+      _SavedFittingsDialogState();
 
   static Future<void> show(BuildContext context) {
     return showDialog<void>(
@@ -109,9 +110,8 @@ class _SavedFittingsDialogState extends ConsumerState<SavedFittingsDialog> {
               ),
             Expanded(
               child: characterAsync.when(
-                data: (character) => _SavedFittingsList(
-                  characterId: character?.characterId,
-                ),
+                data: (character) =>
+                    _SavedFittingsList(characterId: character?.characterId),
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Center(
                   child: Text(
@@ -147,9 +147,7 @@ class _SavedFittingsList extends ConsumerWidget {
                 'No saved fittings yet.\nBuild a fit and press the save icon, '
                 'or paste an EFT block above.',
                 textAlign: TextAlign.center,
-                style: EveTypography.bodySmall(
-                  color: EveColors.textSecondary,
-                ),
+                style: EveTypography.bodySmall(color: EveColors.textSecondary),
               ),
             ),
           );
@@ -166,9 +164,7 @@ class _SavedFittingsList extends ConsumerWidget {
               ),
               subtitle: Text(
                 '${fitting.shipName} • ${fitting.allModules.length} modules',
-                style: EveTypography.bodySmall(
-                  color: EveColors.textSecondary,
-                ),
+                style: EveTypography.bodySmall(color: EveColors.textSecondary),
               ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,

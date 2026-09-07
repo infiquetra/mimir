@@ -526,5 +526,4 @@ class OverviewTab extends ConsumerWidget {
       ),
     );
   }
-
 }

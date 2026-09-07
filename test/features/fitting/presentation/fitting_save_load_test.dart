@@ -70,9 +70,9 @@ void main() {
 
   group('saved fittings', () {
     test('saveCurrent persists and savedFittingsProvider emits it', () async {
-      container.read(activeFittingProvider.notifier).loadFitting(
-        sampleFitting(),
-      );
+      container
+          .read(activeFittingProvider.notifier)
+          .loadFitting(sampleFitting());
 
       final saved = await container
           .read(activeFittingProvider.notifier)
@@ -88,42 +88,51 @@ void main() {
       expect(fittings.single.lowSlots, hasLength(1));
     });
 
-    test('saveCurrent reports false when there is no working fitting', () async {
-      final saved = await container
-          .read(activeFittingProvider.notifier)
-          .saveCurrent();
-      expect(saved, isFalse);
-    });
+    test(
+      'saveCurrent reports false when there is no working fitting',
+      () async {
+        final saved = await container
+            .read(activeFittingProvider.notifier)
+            .saveCurrent();
+        expect(saved, isFalse);
+      },
+    );
 
-    test('loadFitting restores a saved fitting into the working session', () async {
-      final fitting = sampleFitting();
-      container.read(activeFittingProvider.notifier).loadFitting(fitting);
-      await container.read(activeFittingProvider.notifier).saveCurrent();
+    test(
+      'loadFitting restores a saved fitting into the working session',
+      () async {
+        final fitting = sampleFitting();
+        container.read(activeFittingProvider.notifier).loadFitting(fitting);
+        await container.read(activeFittingProvider.notifier).saveCurrent();
 
-      // Wipe the working session, then reload from storage.
-      container.read(activeFittingProvider.notifier).loadFitting(
-        Fitting(
-          id: 'other',
-          name: 'Empty',
-          shipTypeId: 603,
-          shipName: 'Merlin',
-        ),
-      );
+        // Wipe the working session, then reload from storage.
+        container
+            .read(activeFittingProvider.notifier)
+            .loadFitting(
+              Fitting(
+                id: 'other',
+                name: 'Empty',
+                shipTypeId: 603,
+                shipName: 'Merlin',
+              ),
+            );
 
-      final stored = (await container
-          .read(fittingRepositoryProvider)
-          .getFittings(characterId: null))
-          .single;
-      container.read(activeFittingProvider.notifier).loadFitting(stored);
+        final stored =
+            (await container
+                    .read(fittingRepositoryProvider)
+                    .getFittings(characterId: null))
+                .single;
+        container.read(activeFittingProvider.notifier).loadFitting(stored);
 
-      expect(container.read(activeFittingProvider)?.id, 'fit-1');
-      expect(container.read(activeFittingProvider)?.lowSlots, hasLength(1));
-    });
+        expect(container.read(activeFittingProvider)?.id, 'fit-1');
+        expect(container.read(activeFittingProvider)?.lowSlots, hasLength(1));
+      },
+    );
 
     test('deleteFitting removes it from the stream', () async {
-      container.read(activeFittingProvider.notifier).loadFitting(
-        sampleFitting(),
-      );
+      container
+          .read(activeFittingProvider.notifier)
+          .loadFitting(sampleFitting());
       await container.read(activeFittingProvider.notifier).saveCurrent();
       await container.read(fittingRepositoryProvider).deleteFitting('fit-1');
 
@@ -133,15 +142,18 @@ void main() {
       expect(fittings, isEmpty);
     });
 
-    test('importFromText parses an EFT block into the working fitting', () async {
-      final imported = await container
-          .read(activeFittingProvider.notifier)
-          .importFromText('[Rifter, Imported]\nDamage Control II\n');
+    test(
+      'importFromText parses an EFT block into the working fitting',
+      () async {
+        final imported = await container
+            .read(activeFittingProvider.notifier)
+            .importFromText('[Rifter, Imported]\nDamage Control II\n');
 
-      expect(imported, isNotNull);
-      expect(container.read(activeFittingProvider)?.shipTypeId, 587);
-      expect(container.read(activeFittingProvider)?.lowSlots, hasLength(1));
-    });
+        expect(imported, isNotNull);
+        expect(container.read(activeFittingProvider)?.shipTypeId, 587);
+        expect(container.read(activeFittingProvider)?.lowSlots, hasLength(1));
+      },
+    );
 
     test('importFromText returns null for unparseable text', () async {
       final imported = await container

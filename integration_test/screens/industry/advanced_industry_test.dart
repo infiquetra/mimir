@@ -9,33 +9,36 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('Advanced Industry Integration Tests', () {
-    testWidgets('TC-IND-001: Renders all advanced industry tabs without errors', (tester) async {
-      await tester.pumpWidget(
-        TestApp(
-          initialCharacter: CharacterFixtures.testCharacter(),
-          home: const IndustryOverviewScreen(),
-        ),
-      );
+    testWidgets(
+      'TC-IND-001: Renders all advanced industry tabs without errors',
+      (tester) async {
+        await tester.pumpWidget(
+          TestApp(
+            initialCharacter: CharacterFixtures.testCharacter(),
+            home: const IndustryOverviewScreen(),
+          ),
+        );
 
-      await tester.pumpAndSettle();
-      
-      // We start on Industry Jobs tab
-      expect(find.text('Industry Jobs'), findsWidgets);
-      
-      // Tap Invention tab
-      await tester.tap(find.text('Invention'));
-      await tester.pumpAndSettle();
-      expect(find.text('INVENTION CHANCE'), findsOneWidget);
+        await tester.pumpAndSettle();
 
-      // Tap Reactions tab
-      await tester.tap(find.text('Reactions'));
-      await tester.pumpAndSettle();
-      expect(find.text('INPUT MATERIALS'), findsOneWidget);
+        // We start on Industry Jobs tab
+        expect(find.text('Industry Jobs'), findsWidgets);
 
-      // Tap Production Chains tab
-      await tester.tap(find.text('Production Chains'));
-      await tester.pumpAndSettle();
-      expect(find.text('2D Canvas'), findsOneWidget);
-    });
+        // Tap Invention tab
+        await tester.tap(find.text('Invention'));
+        await tester.pumpAndSettle();
+        expect(find.text('INVENTION CHANCE'), findsOneWidget);
+
+        // Tap Reactions tab
+        await tester.tap(find.text('Reactions'));
+        await tester.pumpAndSettle();
+        expect(find.text('INPUT MATERIALS'), findsOneWidget);
+
+        // Tap Production Chains tab
+        await tester.tap(find.text('Production Chains'));
+        await tester.pumpAndSettle();
+        expect(find.text('2D Canvas'), findsOneWidget);
+      },
+    );
   });
 }

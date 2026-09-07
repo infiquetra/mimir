@@ -249,10 +249,7 @@ class FittingFormatParser {
           highSlots.length +
           rigSlots.length +
           subsystemSlots.length;
-      Log.i(
-        'FITTING',
-        'parseDna - ship $shipTypeId with $moduleCount modules',
-      );
+      Log.i('FITTING', 'parseDna - ship $shipTypeId with $moduleCount modules');
 
       return Fitting(
         id: DateTime.now().millisecondsSinceEpoch.toString(),

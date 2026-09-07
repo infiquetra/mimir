@@ -46,7 +46,9 @@ class QueueFooter extends ConsumerWidget {
       decoration: BoxDecoration(
         color: EveColors.surfaceDefault,
         border: Border(
-          top: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
+          top: BorderSide(
+            color: theme.colorScheme.outline.withValues(alpha: 0.3),
+          ),
         ),
       ),
       child: Column(
@@ -66,7 +68,9 @@ class QueueFooter extends ConsumerWidget {
                 child: Text(
                   'QUEUE STATS',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.7,
+                    ),
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.5,
                   ),

@@ -1,4 +1,3 @@
-
 void main() {
   final lines = [
     '---------------------------------------------------------------',
@@ -19,7 +18,7 @@ void main() {
   String? lastMsg;
   int count = 1;
   String? lastTime;
-  
+
   void flush() {
     if (lastMsg != null) {
       if (count > 1) {
@@ -31,33 +30,33 @@ void main() {
   }
 
   final timestampRegex = RegExp(r'\[\s*(.*?)\s*\]\s*\(combat\)\s*(.*)');
-  
+
   for (var line in lines) {
     if (line.trim().isEmpty || line.startsWith('-----')) continue;
-    
+
     if (line.startsWith('Listener:') || line.startsWith('Session Started:')) {
       filtered.add(line.trim());
       continue;
     }
-    
+
     final match = timestampRegex.firstMatch(line);
     if (match != null) {
-       final timeFull = match.group(1)!;
-       final timeOnly = timeFull.split(' ').last;
-       final msg = match.group(2)!;
-       
-       if (msg == lastMsg) {
-         count++;
-       } else {
-         flush();
-         lastMsg = msg;
-         count = 1;
-         lastTime = timeOnly;
-       }
+      final timeFull = match.group(1)!;
+      final timeOnly = timeFull.split(' ').last;
+      final msg = match.group(2)!;
+
+      if (msg == lastMsg) {
+        count++;
+      } else {
+        flush();
+        lastMsg = msg;
+        count = 1;
+        lastTime = timeOnly;
+      }
     } else {
-       flush();
-       lastMsg = null;
-       filtered.add(line.trim());
+      flush();
+      lastMsg = null;
+      filtered.add(line.trim());
     }
   }
   flush();

@@ -19,14 +19,16 @@ void main() {
     database = AppDatabase.forTesting(NativeDatabase.memory());
     mockEsiClient = MockEsiClient();
 
-    await database.into(database.universeNames).insert(
-      UniverseNamesCompanion.insert(
-        id: const drift.Value(30000142),
-        name: 'Jita',
-        category: 'solar_system',
-        lastUpdated: DateTime.now().millisecondsSinceEpoch,
-      ),
-    );
+    await database
+        .into(database.universeNames)
+        .insert(
+          UniverseNamesCompanion.insert(
+            id: const drift.Value(30000142),
+            name: 'Jita',
+            category: 'solar_system',
+            lastUpdated: DateTime.now().millisecondsSinceEpoch,
+          ),
+        );
 
     container = ProviderContainer(
       overrides: [
@@ -69,16 +71,19 @@ void main() {
       verify(() => mockEsiClient.resolveSolarSystemByName('Amarr')).called(1);
     });
 
-    test('returns null when neither the cache nor ESI knows the name', () async {
-      when(
-        () => mockEsiClient.resolveSolarSystemByName(any()),
-      ).thenAnswer((_) async => null);
+    test(
+      'returns null when neither the cache nor ESI knows the name',
+      () async {
+        when(
+          () => mockEsiClient.resolveSolarSystemByName(any()),
+        ).thenAnswer((_) async => null);
 
-      final resolved = await container.read(
-        solarSystemByNameProvider('Not A System').future,
-      );
+        final resolved = await container.read(
+          solarSystemByNameProvider('Not A System').future,
+        );
 
-      expect(resolved, isNull);
-    });
+        expect(resolved, isNull);
+      },
+    );
   });
 }

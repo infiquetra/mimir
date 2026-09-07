@@ -32,13 +32,15 @@ void main() {
     // a small in-memory SDE instead.
     final sdeDatabase = SdeDatabase.forTesting(NativeDatabase.memory());
     addTearDown(sdeDatabase.close);
-    await sdeDatabase.into(sdeDatabase.sdeTypes).insert(
-      SdeTypesCompanion.insert(
-        typeId: const Value(34),
-        typeName: 'Tritanium',
-        groupId: 18,
-      ),
-    );
+    await sdeDatabase
+        .into(sdeDatabase.sdeTypes)
+        .insert(
+          SdeTypesCompanion.insert(
+            typeId: const Value(34),
+            typeName: 'Tritanium',
+            groupId: 18,
+          ),
+        );
     final mockSde = MockSdeService();
     when(() => mockSde.database).thenReturn(sdeDatabase);
     when(() => mockSde.initialize()).thenAnswer((_) async {});

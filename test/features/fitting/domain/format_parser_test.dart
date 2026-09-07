@@ -202,36 +202,40 @@ Small Projectile Burst Aerator I
       expect(parser.generateDna(parsed), dna);
     });
 
-    test('parseDna expands quantities into the module\'s real slot type', () async {
-      when(
-        () => mockSdeService.getShipTypeName(587),
-      ).thenAnswer((_) async => 'Rifter');
-      when(() => mockSdeService.getModuleType(2048)).thenAnswer(
-        (_) async => _moduleType(2048, 'Damage Control II', SlotType.low),
-      );
-      when(() => mockSdeService.getModuleType(5973)).thenAnswer(
-        (_) async => _moduleType(5973, '1MN Afterburner II', SlotType.med),
-      );
-      when(() => mockSdeService.getModuleType(484)).thenAnswer(
-        (_) async => _moduleType(484, '125mm Gatling AutoCannon II', SlotType.high),
-      );
+    test(
+      'parseDna expands quantities into the module\'s real slot type',
+      () async {
+        when(
+          () => mockSdeService.getShipTypeName(587),
+        ).thenAnswer((_) async => 'Rifter');
+        when(() => mockSdeService.getModuleType(2048)).thenAnswer(
+          (_) async => _moduleType(2048, 'Damage Control II', SlotType.low),
+        );
+        when(() => mockSdeService.getModuleType(5973)).thenAnswer(
+          (_) async => _moduleType(5973, '1MN Afterburner II', SlotType.med),
+        );
+        when(() => mockSdeService.getModuleType(484)).thenAnswer(
+          (_) async =>
+              _moduleType(484, '125mm Gatling AutoCannon II', SlotType.high),
+        );
 
-      final parsed = await parser.parseDna('587:2048;2:5973;1:484;3::');
+        final parsed = await parser.parseDna('587:2048;2:5973;1:484;3::');
 
-      expect(parsed, isNotNull);
-      expect(parsed!.lowSlots, hasLength(2));
-      expect(parsed.medSlots, hasLength(1));
-      expect(parsed.highSlots, hasLength(3));
-      expect(parsed.highSlots.every((m) => m.typeId == 484), isTrue);
-    });
+        expect(parsed, isNotNull);
+        expect(parsed!.lowSlots, hasLength(2));
+        expect(parsed.medSlots, hasLength(1));
+        expect(parsed.highSlots, hasLength(3));
+        expect(parsed.highSlots.every((m) => m.typeId == 484), isTrue);
+      },
+    );
 
     test('parseDna skips module IDs the SDE does not know', () async {
       when(
         () => mockSdeService.getShipTypeName(587),
       ).thenAnswer((_) async => 'Rifter');
-      when(() => mockSdeService.getModuleType(999999)).thenAnswer(
-        (_) async => null,
-      );
+      when(
+        () => mockSdeService.getModuleType(999999),
+      ).thenAnswer((_) async => null);
 
       final parsed = await parser.parseDna('587:999999;1::');
 

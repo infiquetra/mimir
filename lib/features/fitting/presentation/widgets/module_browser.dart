@@ -132,7 +132,9 @@ class _ModuleBrowserState extends ConsumerState<ModuleBrowser> {
           padding: const EdgeInsets.symmetric(vertical: 6),
           margin: const EdgeInsets.symmetric(horizontal: 2),
           decoration: BoxDecoration(
-            color: isSelected ? color.withValues(alpha: 0.2) : Colors.transparent,
+            color: isSelected
+                ? color.withValues(alpha: 0.2)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
             border: Border.all(
               color: isSelected ? color : Colors.transparent,

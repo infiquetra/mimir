@@ -227,7 +227,8 @@ class JumpClonesSubTab extends ConsumerWidget {
                 ...locationNames.when(
                   data: (nameMap) => cloneData.jumpClones.map((clone) {
                     final locationId = clone.locationId;
-                    final locationName = nameMap[locationId] ?? 'Location $locationId';
+                    final locationName =
+                        nameMap[locationId] ?? 'Location $locationId';
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: CloneCard(

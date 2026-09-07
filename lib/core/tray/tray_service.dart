@@ -226,7 +226,8 @@ class TrayService extends TrayListener {
     );
     Log.d('TRAY', 'Added menu item: $intelLabel (key=intel)');
 
-    final combatAnalyzerLabel = windowService.isWindowOpen(WindowType.combatAnalyzer)
+    final combatAnalyzerLabel =
+        windowService.isWindowOpen(WindowType.combatAnalyzer)
         ? '◆ Combat Analyzer'
         : 'Combat Analyzer';
     menuItems.add(
@@ -236,7 +237,10 @@ class TrayService extends TrayListener {
         icon: 'assets/icons/tray/intel.png', // shares the intel glyph
       ),
     );
-    Log.d('TRAY', 'Added menu item: $combatAnalyzerLabel (key=combat_analyzer)');
+    Log.d(
+      'TRAY',
+      'Added menu item: $combatAnalyzerLabel (key=combat_analyzer)',
+    );
 
     menuItems.add(MenuItem.separator());
     Log.d('TRAY', 'Added separator');

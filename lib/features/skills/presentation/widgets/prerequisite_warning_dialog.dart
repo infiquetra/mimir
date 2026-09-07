@@ -78,7 +78,9 @@ class PrerequisiteWarningDialog extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: EveColors.warning.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: EveColors.warning.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: EveColors.warning.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,

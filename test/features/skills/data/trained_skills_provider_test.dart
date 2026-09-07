@@ -53,64 +53,67 @@ void main() {
   });
 
   group('trainedSkillsProvider', () {
-    test('serves the cache without touching ESI when skills are cached', () async {
-      await database.replaceCharacterSkills(characterId, [
-        CharacterSkillsCompanion.insert(
-          characterId: characterId,
-          skillId: 3301,
-          trainedSkillLevel: 3,
-          activeSkillLevel: 3,
-          skillpointsInSkill: 24000,
-          lastUpdated: DateTime.now(),
-        ),
-      ]);
-
-      final result = await container.read(
-        trainedSkillsProvider(characterId).future,
-      );
-
-      expect(result, hasLength(1));
-      expect(result.single.trainedSkillLevel, 3);
-      verifyNever(() => mockEsiClient.getSkills(any()));
-    });
-
     test(
-      'fetches from ESI and persists when the cache is empty, so the '
-      'catalogue never renders a character as fully untrained',
+      'serves the cache without touching ESI when skills are cached',
       () async {
-        when(
-          () => mockEsiClient.getSkills(characterId),
-        ).thenAnswer((_) async => esiSkills());
+        await database.replaceCharacterSkills(characterId, [
+          CharacterSkillsCompanion.insert(
+            characterId: characterId,
+            skillId: 3301,
+            trainedSkillLevel: 3,
+            activeSkillLevel: 3,
+            skillpointsInSkill: 24000,
+            lastUpdated: DateTime.now(),
+          ),
+        ]);
 
         final result = await container.read(
           trainedSkillsProvider(characterId).future,
         );
 
-        expect(result, hasLength(2));
-        expect(
-          result.map((s) => s.trainedSkillLevel).toList(),
-          containsAll([4, 5]),
-        );
-        verify(() => mockEsiClient.getSkills(characterId)).called(1);
-
-        // The fetch must land in Drift: every catalogue/plan surface joins
-        // against the CharacterSkills table, not against this provider.
-        final persisted = await database.getCharacterSkills(characterId);
-        expect(persisted, hasLength(2));
+        expect(result, hasLength(1));
+        expect(result.single.trainedSkillLevel, 3);
+        verifyNever(() => mockEsiClient.getSkills(any()));
       },
     );
 
-    test('returns empty and does not throw when ESI fails on a cold cache', () async {
+    test('fetches from ESI and persists when the cache is empty, so the '
+        'catalogue never renders a character as fully untrained', () async {
       when(
         () => mockEsiClient.getSkills(characterId),
-      ).thenThrow(Exception('ESI 503'));
+      ).thenAnswer((_) async => esiSkills());
 
       final result = await container.read(
         trainedSkillsProvider(characterId).future,
       );
 
-      expect(result, isEmpty);
+      expect(result, hasLength(2));
+      expect(
+        result.map((s) => s.trainedSkillLevel).toList(),
+        containsAll([4, 5]),
+      );
+      verify(() => mockEsiClient.getSkills(characterId)).called(1);
+
+      // The fetch must land in Drift: every catalogue/plan surface joins
+      // against the CharacterSkills table, not against this provider.
+      final persisted = await database.getCharacterSkills(characterId);
+      expect(persisted, hasLength(2));
     });
+
+    test(
+      'returns empty and does not throw when ESI fails on a cold cache',
+      () async {
+        when(
+          () => mockEsiClient.getSkills(characterId),
+        ).thenThrow(Exception('ESI 503'));
+
+        final result = await container.read(
+          trainedSkillsProvider(characterId).future,
+        );
+
+        expect(result, isEmpty);
+      },
+    );
   });
 
   group('refreshCharacterSkillsProvider', () {
@@ -133,7 +136,7 @@ void main() {
 
       when(
         () => mockEsiClient.getSkills(characterId),
-        ).thenAnswer((_) async => esiSkills());
+      ).thenAnswer((_) async => esiSkills());
 
       await container.read(refreshCharacterSkillsProvider(characterId).future);
 
