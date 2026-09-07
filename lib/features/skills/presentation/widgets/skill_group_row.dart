@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/sde/sde_database.dart';
-import '../../../../core/widgets/eve_type_icon.dart';
 
 /// Row displaying a skill group in the 3-column catalogue layout.
 ///
@@ -58,7 +57,7 @@ class SkillGroupRow extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: theme.colorScheme.outline.withOpacity(0.1),
+              color: theme.colorScheme.outline.withValues(alpha: 0.1),
               width: 1,
             ),
           ),

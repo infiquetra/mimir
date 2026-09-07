@@ -43,7 +43,7 @@ class TrainingTimelineCard extends ConsumerWidget {
       child: queuesAsync.when(
         data: (queuesMap) => _buildContent(context, ref, queuesMap),
         loading: () => const SizedBox.shrink(),
-        error: (_, __) => const SizedBox.shrink(),
+        error: (_, _) => const SizedBox.shrink(),
       ),
     );
   }
@@ -238,7 +238,7 @@ class TrainingTimelineCard extends ConsumerWidget {
         height: 32,
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 
@@ -394,7 +394,7 @@ class TrainingTimelineCard extends ConsumerWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          error: (_, __) => Text(
+          error: (_, _) => Text(
             'Skill #${skill.skillId}',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: Colors.white.withAlpha(128),
@@ -416,8 +416,9 @@ class TrainingTimelineCard extends ConsumerWidget {
     TimelineData timeline,
   ) {
     if (timestamp.isBefore(now)) return 0.0;
-    if (timestamp.isAfter(timeline.endTime))
+    if (timestamp.isAfter(timeline.endTime)) {
       return 300.0; // Approximate max width
+    }
 
     final elapsed = timestamp.difference(now);
     final ratio =

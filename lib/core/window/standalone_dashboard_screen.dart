@@ -13,7 +13,6 @@ import '../../features/dashboard/presentation/widgets/cards/quick_actions_card.d
 import '../../features/dashboard/presentation/widgets/cards/training_overview_card.dart';
 import '../../features/dashboard/presentation/widgets/cards/training_timeline_card.dart';
 import '../../features/dashboard/presentation/widgets/cards/wallet_trends_card.dart';
-import '../../features/pi/data/pi_providers.dart';
 import '../../features/pi/data/planetary_sync_service.dart';
 import '../../features/skills/data/skill_repository.dart';
 import '../../features/wallet/data/wallet_repository.dart';

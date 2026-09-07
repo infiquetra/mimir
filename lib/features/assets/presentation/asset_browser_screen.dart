@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/theme/eve_colors.dart';
-import '../../../core/theme/eve_spacing.dart';
 import '../../../core/theme/eve_typography.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/refresh_app_bar_action.dart';
@@ -205,7 +204,7 @@ class _LocationExpansionTile extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: summary.assets.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
+            separatorBuilder: (_, _) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final asset = summary.assets[index];
               return _AssetListTile(asset: asset);

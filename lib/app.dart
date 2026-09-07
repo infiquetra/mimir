@@ -5,12 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/auth/auth_providers.dart';
 import 'core/auth/deep_link_handler.dart';
-import 'core/di/providers.dart';
 import 'core/sde/sde_providers.dart';
 import 'core/sde/sde_update_providers.dart';
 import 'core/settings/app_settings.dart';
 import 'core/settings/settings_providers.dart';
-import 'core/theme/app_theme.dart';
 import 'core/window/window_service.dart';
 import 'core/window/window_types.dart';
 import 'features/intel/domain/intel_alert_service.dart';

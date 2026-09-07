@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/features/market/data/market_sync_service.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../../../integration_test/test_utils/fixtures/market_fixtures.dart';
 import '../../../../integration_test/test_utils/mocks/mock_esi_client.dart';
 import 'package:mimir/features/market/data/market_repository.dart';
 import 'package:mimir/core/database/app_database.dart';

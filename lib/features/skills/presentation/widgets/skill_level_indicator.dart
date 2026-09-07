@@ -108,7 +108,7 @@ class _SkillLevelIndicatorState extends State<SkillLevelIndicator>
             border: Border.all(
               color: isTrained
                   ? colorScheme.primary
-                  : colorScheme.outline.withOpacity(0.8),
+                  : colorScheme.outline.withValues(alpha: 0.8),
               width: 1.0,
             ),
             borderRadius: BorderRadius.circular(2.0),
@@ -139,7 +139,7 @@ class _SkillLevelIndicatorState extends State<SkillLevelIndicator>
                   width: widget.size,
                   height: widget.size,
                   decoration: BoxDecoration(
-                    color: colorScheme.secondary.withOpacity(0.3),
+                    color: colorScheme.secondary.withValues(alpha: 0.3),
                     border: Border.all(
                       color: colorScheme.secondary,
                       width: 2.0,

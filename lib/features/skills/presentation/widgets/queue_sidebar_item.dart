@@ -5,7 +5,6 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/logging/logger.dart';
 import '../../../../core/sde/sde_providers.dart';
 import '../../../../core/theme/eve_colors.dart';
-import '../../data/skill_providers.dart';
 
 /// A compact queue entry item for the training queue sidebar.
 ///
@@ -41,7 +40,7 @@ class QueueSidebarItem extends ConsumerWidget {
 
     // Background color for currently training
     final backgroundColor = isCurrentlyTraining
-        ? EveColors.photonBlue.withOpacity(0.15)
+        ? EveColors.photonBlue.withValues(alpha: 0.15)
         : Colors.transparent;
 
     return Container(
@@ -52,8 +51,8 @@ class QueueSidebarItem extends ConsumerWidget {
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
           color: isCurrentlyTraining
-              ? EveColors.photonBlue.withOpacity(0.5)
-              : theme.colorScheme.outline.withOpacity(0.2),
+              ? EveColors.photonBlue.withValues(alpha: 0.5)
+              : theme.colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       child: Column(
@@ -94,8 +93,8 @@ class QueueSidebarItem extends ConsumerWidget {
                     Text(
                       'Paused',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant.withOpacity(
-                          0.7,
+                        color: theme.colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.7,
                         ),
                       ),
                     ),
@@ -116,7 +115,7 @@ class QueueSidebarItem extends ConsumerWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            error: (_, __) => Text(
+            error: (_, _) => Text(
               'Skill #${entry.skillId} ${_toRomanNumeral(entry.finishedLevel)}',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,

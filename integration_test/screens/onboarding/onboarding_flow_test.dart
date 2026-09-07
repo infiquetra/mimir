@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:mimir/features/onboarding/presentation/onboarding_screen.dart';
 
-import '../../test_utils/pump_helpers.dart';
 import '../../test_utils/test_app.dart';
 
 /// Integration tests for the Onboarding flow.

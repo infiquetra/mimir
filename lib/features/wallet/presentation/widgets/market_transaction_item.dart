@@ -124,7 +124,7 @@ class MarketTransactionItem extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
-                        error: (_, __) => Text(
+                        error: (_, _) => Text(
                           'Item #${transaction.typeId}',
                           style: TextStyle(
                             fontSize: 13,
@@ -173,7 +173,7 @@ class MarketTransactionItem extends ConsumerWidget {
           locationNameAsync.when(
             data: (locationName) => _buildInfoRow('Location', locationName),
             loading: () => _buildInfoRow('Location', 'Loading...'),
-            error: (_, __) =>
+            error: (_, _) =>
                 _buildInfoRow('Location', 'Location ${transaction.locationId}'),
           ),
         ],

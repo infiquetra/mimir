@@ -9,9 +9,7 @@ import 'package:mimir/core/sde/sde_database.dart';
 import 'package:mimir/core/sde/sde_providers.dart'
     hide skillGroupsProvider, skillsByGroupProvider;
 import 'package:mimir/core/sde/sde_service.dart';
-import 'package:mimir/features/characters/data/character_providers.dart';
 import 'package:mimir/features/skills/data/skill_catalogue_providers.dart';
-import 'package:mimir/features/skills/data/skill_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockEsiClient extends Mock implements EsiClient {}
@@ -64,7 +62,7 @@ void main() {
       ).thenAnswer((_) async => testGroups);
 
       final List<SdeGroup> result =
-          await container.read(skillGroupsProvider.future) as List<SdeGroup>;
+          await container.read(skillGroupsProvider.future);
 
       expect(result, hasLength(3));
       expect(result[0].groupName, 'Gunnery');
@@ -144,8 +142,7 @@ void main() {
 
         await Future<void>.delayed(const Duration(milliseconds: 100));
         final List<SkillWithLevel> result =
-            await container.read(skillsByGroupProvider(groupId).future)
-                as List<SkillWithLevel>;
+            await container.read(skillsByGroupProvider(groupId).future);
 
         expect(result, hasLength(3));
 
@@ -216,8 +213,7 @@ void main() {
 
         await Future<void>.delayed(const Duration(milliseconds: 100));
         final List<SkillWithLevel> result =
-            await container.read(skillsByGroupProvider(groupId).future)
-                as List<SkillWithLevel>;
+            await container.read(skillsByGroupProvider(groupId).future);
 
         expect(result, hasLength(1));
         expect(result[0].skill.typeName, 'Mechanics');
@@ -239,8 +235,7 @@ void main() {
 
       await Future<void>.delayed(const Duration(milliseconds: 100));
       final List<SkillWithLevel> result =
-          await container.read(skillsByGroupProvider(groupId).future)
-              as List<SkillWithLevel>;
+          await container.read(skillsByGroupProvider(groupId).future);
 
       expect(result, hasLength(2));
       expect(result[0].trainedLevel, 0);
@@ -312,8 +307,7 @@ void main() {
 
         await Future<void>.delayed(const Duration(milliseconds: 100));
         final List<SkillGroupWithProgress> result =
-            await container.read(skillGroupsWithProgressProvider.future)
-                as List<SkillGroupWithProgress>;
+            await container.read(skillGroupsWithProgressProvider.future);
 
         expect(result, hasLength(1));
         expect(result[0].group.groupName, 'Gunnery');
@@ -341,8 +335,7 @@ void main() {
 
       await Future<void>.delayed(const Duration(milliseconds: 100));
       final List<SkillGroupWithProgress> result =
-          await container.read(skillGroupsWithProgressProvider.future)
-              as List<SkillGroupWithProgress>;
+          await container.read(skillGroupsWithProgressProvider.future);
 
       expect(result, hasLength(1));
       expect(result[0].trainedCount, 0);
@@ -392,16 +385,14 @@ void main() {
       // Search for "ship" (should match "Spaceship Command")
       await Future<void>.delayed(const Duration(milliseconds: 100));
       final List<SkillWithLevel> result =
-          await container.read(searchSkillsProvider('ship').future)
-              as List<SkillWithLevel>;
+          await container.read(searchSkillsProvider('ship').future);
 
       expect(result, hasLength(1));
       expect(result[0].skill.typeName, 'Spaceship Command');
 
       // Search with different case
       final List<SkillWithLevel> result2 =
-          await container.read(searchSkillsProvider('SHIP').future)
-              as List<SkillWithLevel>;
+          await container.read(searchSkillsProvider('SHIP').future);
       expect(result2, hasLength(1));
       expect(result2[0].skill.typeName, 'Spaceship Command');
     });
@@ -424,8 +415,7 @@ void main() {
       // Search for "turret"
       await Future<void>.delayed(const Duration(milliseconds: 100));
       final List<SkillWithLevel> result =
-          await container.read(searchSkillsProvider('turret').future)
-              as List<SkillWithLevel>;
+          await container.read(searchSkillsProvider('turret').future);
 
       expect(result, hasLength(3));
       expect(

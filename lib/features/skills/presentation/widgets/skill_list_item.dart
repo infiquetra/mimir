@@ -35,7 +35,7 @@ class SkillListItem extends StatelessWidget {
     // Dimmed text for untrainable skills
     final textColor = canTrain
         ? theme.colorScheme.onSurface
-        : theme.colorScheme.onSurface.withOpacity(0.6);
+        : theme.colorScheme.onSurface.withValues(alpha: 0.6);
 
     return InkWell(
       onTap: canTrain
@@ -85,7 +85,7 @@ class SkillListItem extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: EveColors.photonCyan.withOpacity(0.2),
+                  color: EveColors.photonCyan.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(3),
                 ),
                 child: Row(
@@ -119,7 +119,7 @@ class SkillListItem extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: EveColors.photonBlue.withOpacity(0.2),
+                  color: EveColors.photonBlue.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Icon(
@@ -133,7 +133,7 @@ class SkillListItem extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: EveColors.error.withOpacity(0.3),
+                  color: EveColors.error.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Icon(Icons.book, size: 16, color: EveColors.error),
@@ -160,7 +160,7 @@ class SkillListItem extends StatelessWidget {
                   Icons.add_circle_outline,
                   color: canTrain
                       ? EveColors.photonBlue
-                      : theme.colorScheme.onSurface.withOpacity(0.3),
+                      : theme.colorScheme.onSurface.withValues(alpha: 0.3),
                 ),
                 tooltip: canTrain
                     ? 'Add to Skill Plan'

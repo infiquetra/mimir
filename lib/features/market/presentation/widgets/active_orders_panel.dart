@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../core/theme/eve_colors.dart';
 import '../../../../core/utils/formatters.dart';
@@ -120,7 +119,7 @@ class _OrderListItem extends ConsumerWidget {
                                     color: EveColors.textSecondary,
                                   ),
                                 ),
-                                error: (_, __) => Text(
+                                error: (_, _) => Text(
                                   'Item #${order.typeId}',
                                   style: theme.textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.bold,

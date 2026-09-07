@@ -29,12 +29,12 @@ class SkillHeaderCard extends ConsumerWidget {
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.2),
+          color: theme.colorScheme.outline.withValues(alpha: 0.2),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: EveColors.evePrimary.withOpacity(0.1),
+            color: EveColors.evePrimary.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -79,7 +79,7 @@ class SkillHeaderCard extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  error: (_, __) => Text(
+                  error: (_, _) => Text(
                     '—',
                     style: theme.textTheme.headlineMedium?.copyWith(
                       color: theme.colorScheme.error,
@@ -95,7 +95,7 @@ class SkillHeaderCard extends ConsumerWidget {
             height: 48,
             width: 1,
             margin: const EdgeInsets.symmetric(horizontal: 20),
-            color: theme.colorScheme.outline.withOpacity(0.2),
+            color: theme.colorScheme.outline.withValues(alpha: 0.2),
           ),
 
           // Unallocated SP (secondary display)
@@ -135,7 +135,7 @@ class SkillHeaderCard extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  error: (_, __) => Text(
+                  error: (_, _) => Text(
                     '—',
                     style: theme.textTheme.titleLarge?.copyWith(
                       color: theme.colorScheme.error,

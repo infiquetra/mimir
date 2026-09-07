@@ -118,7 +118,7 @@ class _PriceCheckerPanelState extends ConsumerState<PriceCheckerPanel> {
                           style: Theme.of(context).textTheme.headlineSmall
                               ?.copyWith(color: EveColors.textSecondary),
                         ),
-                        error: (_, __) => Text(
+                        error: (_, _) => Text(
                           'Item #$typeId',
                           style: Theme.of(context).textTheme.headlineSmall,
                         ),

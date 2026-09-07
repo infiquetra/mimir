@@ -368,8 +368,8 @@ class _FittingSlot extends ConsumerWidget {
         final borderColor = isHovered
             ? color
             : isRejected
-            ? EveColors.error.withOpacity(0.5)
-            : color.withOpacity(0.5);
+            ? EveColors.error.withValues(alpha: 0.5)
+            : color.withValues(alpha: 0.5);
 
         return Container(
           width: size,
@@ -378,14 +378,14 @@ class _FittingSlot extends ConsumerWidget {
             borderRadius: BorderRadius.circular(4),
             border: Border.all(color: borderColor, width: isHovered ? 2 : 1),
             color: isHovered
-                ? color.withOpacity(0.15)
-                : const Color(0xFF0D1117).withOpacity(0.7),
+                ? color.withValues(alpha: 0.15)
+                : const Color(0xFF0D1117).withValues(alpha: 0.7),
           ),
           child: Center(
             child: Icon(
               Icons.add,
               size: 16,
-              color: color.withOpacity(isHovered ? 0.9 : 0.4),
+              color: color.withValues(alpha: isHovered ? 0.9 : 0.4),
             ),
           ),
         );
@@ -425,7 +425,7 @@ class _ResourceDisplay extends ConsumerWidget {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 }
@@ -510,13 +510,16 @@ class _RingPainter extends CustomPainter {
       );
     }
 
-    if (shipType.highSlots > 0)
-      drawArc(-125, -55, const Color(0xFF6CB4EE).withOpacity(0.6));
-    if (shipType.medSlots > 0) drawArc(-45, 45, Colors.orange.withOpacity(0.6));
-    if (shipType.rigSlots > 0)
-      drawArc(55, 115, const Color(0xFF9E9E9E).withOpacity(0.6));
-    if (shipType.lowSlots > 0)
-      drawArc(135, 225, const Color(0xFF50C878).withOpacity(0.6));
+    if (shipType.highSlots > 0) {
+      drawArc(-125, -55, const Color(0xFF6CB4EE).withValues(alpha: 0.6));
+    }
+    if (shipType.medSlots > 0) drawArc(-45, 45, Colors.orange.withValues(alpha: 0.6));
+    if (shipType.rigSlots > 0) {
+      drawArc(55, 115, const Color(0xFF9E9E9E).withValues(alpha: 0.6));
+    }
+    if (shipType.lowSlots > 0) {
+      drawArc(135, 225, const Color(0xFF50C878).withValues(alpha: 0.6));
+    }
 
     // Radial tick marks from inner edge to slots
     final tickPaint = Paint()

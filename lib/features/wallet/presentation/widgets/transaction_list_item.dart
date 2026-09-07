@@ -5,7 +5,6 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/theme/eve_colors.dart';
 import '../../../../core/theme/eve_spacing.dart';
 import '../../../../core/theme/eve_typography.dart';
-import '../../../../core/utils/formatters.dart';
 
 /// Compact transaction row for wallet journal (28px height).
 ///

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/database/app_database.dart';
-import '../../../../../core/logging/logger.dart';
 import '../../../../../core/theme/eve_colors.dart';
 import '../../../../../core/theme/eve_spacing.dart';
 import '../../../../../core/theme/eve_typography.dart';
@@ -30,7 +29,7 @@ class PiSummaryCard extends ConsumerWidget {
       child: coloniesAsync.when(
         data: (colonies) => _buildContent(context, ref, colonies),
         loading: () => const SizedBox.shrink(),
-        error: (_, __) => const SizedBox.shrink(),
+        error: (_, _) => const SizedBox.shrink(),
       ),
     );
   }
@@ -106,7 +105,7 @@ class _ColonySummaryRow extends ConsumerWidget {
     return pinsAsync.when(
       data: (pins) => _buildWithPins(context, pins),
       loading: () => _buildSkeleton(context),
-      error: (_, __) => _buildError(context),
+      error: (_, _) => _buildError(context),
     );
   }
 

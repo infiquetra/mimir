@@ -95,7 +95,7 @@ class SkillQueueItemWidget extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(EveSpacing.xs),
                 ),
               ),
-              error: (_, __) => Text(
+              error: (_, _) => Text(
                 'Skill #${entry.skillId}',
                 style: EveTypography.bodySmall(color: EveColors.textSecondary),
                 maxLines: 1,

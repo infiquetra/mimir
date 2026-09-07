@@ -60,7 +60,7 @@ class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
             return Text(plan.name);
           },
           loading: () => const Text('Loading...'),
-          error: (_, __) => const Text('Error'),
+          error: (_, _) => const Text('Error'),
         ),
         backgroundColor: EveColors.backgroundDeep,
         actions: [
@@ -84,7 +84,7 @@ class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
           progressAsync.when(
             data: (progress) => _buildProgressHeader(progress),
             loading: () => const SizedBox(height: 80),
-            error: (_, __) => const SizedBox(height: 80),
+            error: (_, _) => const SizedBox(height: 80),
           ),
 
           // Skills list
@@ -106,7 +106,7 @@ class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showSkillBrowserDialog(context),
+        onPressed: _showSkillBrowserDialog,
         backgroundColor: EveColors.photonBlue,
         icon: const Icon(Icons.add, color: Colors.white),
         label: Text(
@@ -182,7 +182,7 @@ class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
     return ReorderableListView.builder(
       padding: const EdgeInsets.only(bottom: 80), // Space for FAB
       itemCount: entries.length,
-      onReorder: (oldIndex, newIndex) =>
+      onReorderItem: (oldIndex, newIndex) =>
           _handleReorder(entries, oldIndex, newIndex),
       itemBuilder: (context, index) {
         final entry = entries[index];
@@ -249,6 +249,13 @@ class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
     );
   }
 
+  /// Reorders the plan's skills.
+  ///
+  /// [newIndex] arrives already adjusted for the removal of the item at
+  /// [oldIndex] — `ReorderableListView.onReorderItem` does that shortening
+  /// itself — so it must be used as-is. Applying the historical
+  /// `if (newIndex > oldIndex) newIndex -= 1` correction here would shift
+  /// every downward drag one slot early.
   Future<void> _handleReorder(
     List<SkillPlanEntry> entries,
     int oldIndex,
@@ -258,11 +265,6 @@ class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
       'SKILLS.PLAN_DETAIL',
       '_handleReorder - moving skill from $oldIndex to $newIndex',
     );
-
-    // Adjust newIndex if moving down the list
-    if (newIndex > oldIndex) {
-      newIndex -= 1;
-    }
 
     // Create new order with skill IDs
     final reorderedSkills = List<SkillPlanEntry>.from(entries);
@@ -288,7 +290,7 @@ class _SkillPlanDetailScreenState extends ConsumerState<SkillPlanDetailScreen> {
     }
   }
 
-  Future<void> _showSkillBrowserDialog(BuildContext context) async {
+  Future<void> _showSkillBrowserDialog() async {
     Log.d('SKILLS.PLAN_DETAIL', '_showSkillBrowserDialog - START');
 
     final selectedSkills = await Navigator.of(context).push<Map<int, int>>(
@@ -490,7 +492,7 @@ class _SkillPlanEntryTile extends ConsumerWidget {
                           color: EveColors.textSecondary,
                         ),
                       ),
-                      error: (_, __) => Text(
+                      error: (_, _) => Text(
                         'Skill #${entry.skillId}',
                         style: EveTypography.bodyMedium(color: EveColors.error),
                       ),

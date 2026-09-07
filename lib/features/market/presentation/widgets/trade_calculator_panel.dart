@@ -211,8 +211,8 @@ class _TradeCalculatorPanelState extends State<TradeCalculatorPanel> {
             data: SliderThemeData(
               activeTrackColor: color,
               thumbColor: color,
-              inactiveTrackColor: color.withOpacity(0.2),
-              overlayColor: color.withOpacity(0.1),
+              inactiveTrackColor: color.withValues(alpha: 0.2),
+              overlayColor: color.withValues(alpha: 0.1),
               trackHeight: 3,
             ),
             child: Slider(

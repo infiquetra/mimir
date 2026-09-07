@@ -30,7 +30,7 @@ class SkillsTopBar extends ConsumerWidget {
       decoration: BoxDecoration(
         color: EveColors.surfaceDefault,
         border: Border(
-          bottom: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3)),
+          bottom: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
         ),
       ),
       child: Row(
@@ -86,7 +86,7 @@ class SkillsTopBar extends ConsumerWidget {
       decoration: BoxDecoration(
         color: EveColors.surfaceElevated,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
+        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
       ),
       child: DropdownButton<SkillFilterMode>(
         value: filterMode,
@@ -157,7 +157,7 @@ class SkillsTopBar extends ConsumerWidget {
       decoration: InputDecoration(
         hintText: 'Search...',
         hintStyle: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
         ),
         prefixIcon: const Icon(Icons.search, size: 18),
         suffixIcon: searchQuery.isNotEmpty
@@ -172,7 +172,7 @@ class SkillsTopBar extends ConsumerWidget {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
           borderSide: BorderSide(
-            color: theme.colorScheme.outline.withOpacity(0.3),
+            color: theme.colorScheme.outline.withValues(alpha: 0.3),
           ),
         ),
         contentPadding: const EdgeInsets.symmetric(

@@ -155,7 +155,7 @@ class _InventionCalculatorPanelState extends ConsumerState<InventionCalculatorPa
                     Expanded(
                       child: DropdownButtonFormField<double>(
                         isExpanded: true,
-                        value: _decryptorMultiplier,
+                        initialValue: _decryptorMultiplier,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),

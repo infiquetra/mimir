@@ -5,7 +5,6 @@ import '../../../core/logging/logger.dart';
 import '../../../core/sde/sde_database.dart';
 import '../../../core/sde/sde_providers.dart';
 import '../../characters/data/character_providers.dart';
-import '../domain/skill_prerequisite_service.dart';
 import 'skill_providers.dart';
 import 'skill_repository.dart';
 
@@ -172,8 +171,9 @@ final skillGroupsWithProgressProvider = FutureProvider<List<SkillGroupWithProgre
     int count = 0;
     for (final group in groups) {
       count++;
-      if (count % 10 == 0)
+      if (count % 10 == 0) {
         Log.d('SKILLS.CATALOGUE', 'Processed $count groups...');
+      }
       final groupSkills = await sde.getSkillsByGroup(group.groupId);
       result.add(
         SkillGroupWithProgress(
@@ -464,9 +464,6 @@ final filteredSkillsByGroupProvider =
             'filteredSkillsByGroup - havePrereqs: ${result.length} skills',
           );
           return result;
-
-        default:
-          return allSkills; // Fallback for any new filter modes
       }
     });
 
@@ -559,7 +556,7 @@ final queueStatsProvider = Provider<QueueStats>((ref) {
       totalSkillPoints: 0,
       queueSize: 0,
     ),
-    error: (_, __) => QueueStats(
+    error: (_, _) => QueueStats(
       totalTrainingTime: Duration.zero,
       totalSkillPoints: 0,
       queueSize: 0,

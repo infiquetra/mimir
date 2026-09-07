@@ -61,8 +61,9 @@ class FittingController extends Notifier<Fitting?> {
       if (existing.length >= maxSlots) return existing; // Full
       // Check if slot index is already occupied
       final existingIndices = existing.map((m) => m.slotIndex).toSet();
-      if (existingIndices.contains(mod.slotIndex))
+      if (existingIndices.contains(mod.slotIndex)) {
         return existing; // Already filled
+      }
       return [...existing, mod];
     }
 

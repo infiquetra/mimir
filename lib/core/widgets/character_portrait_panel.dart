@@ -261,7 +261,7 @@ class _StatsGrid extends StatelessWidget {
                 ? '${NumberFormat('#,##0.00').format(balance)} ISK'
                 : 'No data',
             loading: () => 'Loading...',
-            error: (_, __) => 'Error',
+            error: (_, _) => 'Error',
           ),
         ),
         const SizedBox(height: 6),
@@ -284,7 +284,7 @@ class _StatsGrid extends StatelessWidget {
           value: totalSp.when(
             data: (sp) => NumberFormat('#,###').format(sp),
             loading: () => 'Loading...',
-            error: (_, __) => 'Error',
+            error: (_, _) => 'Error',
           ),
         ),
       ],
@@ -304,11 +304,11 @@ class _StatsGrid extends StatelessWidget {
         return locationNames.when(
           data: (nameMap) => nameMap[locationId] ?? 'Unknown',
           loading: () => 'Loading...',
-          error: (_, __) => 'Unknown',
+          error: (_, _) => 'Unknown',
         );
       },
       loading: () => 'Loading...',
-      error: (_, __) => 'Unknown',
+      error: (_, _) => 'Unknown',
     );
   }
 }

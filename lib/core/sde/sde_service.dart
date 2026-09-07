@@ -815,16 +815,17 @@ class SdeService {
 
     final effectIds = await database.getTypeEffects(typeId);
     SlotType slotType = SlotType.high;
-    if (effectIds.contains(12))
+    if (effectIds.contains(12)) {
       slotType = SlotType.high;
-    else if (effectIds.contains(13))
+    } else if (effectIds.contains(13)) {
       slotType = SlotType.med;
-    else if (effectIds.contains(11))
+    } else if (effectIds.contains(11)) {
       slotType = SlotType.low;
-    else if (effectIds.contains(2663))
+    } else if (effectIds.contains(2663)) {
       slotType = SlotType.rig;
-    else if (effectIds.contains(3772))
+    } else if (effectIds.contains(3772)) {
       slotType = SlotType.subsystem;
+    }
 
     return ModuleType(
       typeId: type.typeId,

@@ -6,7 +6,6 @@ import 'package:mimir/core/database/app_database.dart';
 import 'package:mimir/features/skills/presentation/skill_plan_detail_screen.dart';
 
 import '../../test_utils/fixtures/character_fixtures.dart';
-import '../../test_utils/fixtures/skill_plan_fixtures.dart';
 import '../../test_utils/pump_helpers.dart';
 import '../../test_utils/test_app.dart';
 

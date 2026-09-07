@@ -189,10 +189,10 @@ class WalletFixtures {
   /// Insert full wallet data for a character (all tables).
   ///
   /// Returns a map of companion lists for batch insertion:
-  /// - 'journal': List<WalletJournalEntriesCompanion>
-  /// - 'transactions': List<WalletTransactionsCompanion>
-  /// - 'loyaltyPoints': List<LoyaltyPointsCompanion>
-  /// - 'assets': List<AssetCacheCompanion>
+  /// - 'journal': `List<WalletJournalEntriesCompanion>`
+  /// - 'transactions': `List<WalletTransactionsCompanion>`
+  /// - 'loyaltyPoints': `List<LoyaltyPointsCompanion>`
+  /// - 'assets': `List<AssetCacheCompanion>`
   static Map<String, List<Object>> fullWalletData({required int characterId}) {
     return {
       'journal': allJournalEntries(characterId: characterId),

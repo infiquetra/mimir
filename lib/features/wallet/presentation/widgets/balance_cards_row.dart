@@ -34,13 +34,13 @@ class BalanceCardsRow extends ConsumerWidget {
             );
           },
           loading: _buildLoading,
-          error: (_, __) => _buildError(),
+          error: (_, _) => _buildError(),
         ),
         loading: _buildLoading,
-        error: (_, __) => _buildError(),
+        error: (_, _) => _buildError(),
       ),
       loading: _buildLoading,
-      error: (_, __) => _buildError(),
+      error: (_, _) => _buildError(),
     );
   }
 

@@ -38,7 +38,7 @@ class StatsPanel extends ConsumerWidget {
             _buildSectionHeader('DEFENSE'),
             _buildStatRow(
               'EHP',
-              '${stats.defenses.totalEhp.toStringAsFixed(0)}',
+              stats.defenses.totalEhp.toStringAsFixed(0),
             ),
             _buildStatRow(
               'Shield',
@@ -98,8 +98,8 @@ class StatsPanel extends ConsumerWidget {
             if (stats.dpsTotal > 0) ...[
               const SizedBox(height: 16),
               _buildSectionHeader('OFFENSE'),
-              _buildStatRow('DPS', '${stats.dpsTotal.toStringAsFixed(1)}'),
-              _buildStatRow('Volley', '${stats.volley.toStringAsFixed(0)}'),
+              _buildStatRow('DPS', stats.dpsTotal.toStringAsFixed(1)),
+              _buildStatRow('Volley', stats.volley.toStringAsFixed(0)),
               if (stats.optimalRange > 0)
                 _buildStatRow(
                   'Optimal',

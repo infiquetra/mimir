@@ -36,7 +36,7 @@ class FleetStatusCard extends ConsumerWidget {
       child: fleetStatusAsync.when(
         data: (status) => _buildContent(context, ref, status),
         loading: () => const SizedBox.shrink(),
-        error: (_, __) => const SizedBox.shrink(),
+        error: (_, _) => const SizedBox.shrink(),
       ),
     );
   }

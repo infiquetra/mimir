@@ -83,7 +83,7 @@ class _ReactionCalculatorPanelState extends ConsumerState<ReactionCalculatorPane
                     Expanded(
                       child: DropdownButtonFormField<double>(
                         isExpanded: true,
-                        value: _facilityMaterialBonus,
+                        initialValue: _facilityMaterialBonus,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),

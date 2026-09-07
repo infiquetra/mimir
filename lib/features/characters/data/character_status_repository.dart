@@ -259,16 +259,14 @@ class CharacterStatusRepository {
       final sdeNames = await _sdeService.getSkillNames(sdeFallbackIds);
 
       for (final entry in sdeNames.entries) {
-        if (entry.value != null) {
-          companions.add(
-            db.UniverseNamesCompanion.insert(
-              id: Value(entry.key),
-              name: entry.value!,
-              category: 'inventory_type',
-              lastUpdated: now,
-            ),
-          );
-        }
+        companions.add(
+          db.UniverseNamesCompanion.insert(
+            id: Value(entry.key),
+            name: entry.value,
+            category: 'inventory_type',
+            lastUpdated: now,
+          ),
+        );
       }
     }
 

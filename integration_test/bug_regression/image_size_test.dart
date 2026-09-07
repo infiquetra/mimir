@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:mimir/core/widgets/eve_skill_icon.dart';
 
 /// Bug regression tests for EVE image size normalization.
 ///

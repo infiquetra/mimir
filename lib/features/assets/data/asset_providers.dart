@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
-import '../../../core/logging/logger.dart';
 import '../../characters/data/character_providers.dart';
 import 'asset_repository.dart';
 import 'asset_sync_service.dart';

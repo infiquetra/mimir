@@ -227,9 +227,7 @@ class JumpClonesSubTab extends ConsumerWidget {
                 ...locationNames.when(
                   data: (nameMap) => cloneData.jumpClones.map((clone) {
                     final locationId = clone.locationId;
-                    final locationName = locationId != null
-                        ? nameMap[locationId] ?? 'Location $locationId'
-                        : 'Unknown Location';
+                    final locationName = nameMap[locationId] ?? 'Location $locationId';
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: CloneCard(
@@ -249,7 +247,7 @@ class JumpClonesSubTab extends ConsumerWidget {
                       ),
                     ),
                   ],
-                  error: (_, __) => cloneData.jumpClones.map((clone) {
+                  error: (_, _) => cloneData.jumpClones.map((clone) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: CloneCard(

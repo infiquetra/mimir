@@ -49,11 +49,7 @@ class _SkillCataloguePanelState extends ConsumerState<SkillCataloguePanel> {
     });
   }
 
-  Future<void> _showAddToPlanDialog(
-    BuildContext context,
-    SdeType skill,
-    int trainedLevel,
-  ) async {
+  Future<void> _showAddToPlanDialog(SdeType skill, int trainedLevel) async {
     Log.d(
       'SKILLS.CATALOGUE',
       '_showAddToPlanDialog - skill: ${skill.typeName}, trained: $trainedLevel',
@@ -209,7 +205,6 @@ class _SkillCataloguePanelState extends ConsumerState<SkillCataloguePanel> {
               trainedLevel: skillWithLevel.trainedLevel,
               isTraining: skillWithLevel.isTraining,
               onTap: () => _showAddToPlanDialog(
-                context,
                 skillWithLevel.skill,
                 skillWithLevel.trainedLevel,
               ),
@@ -291,7 +286,6 @@ class _SkillCataloguePanelState extends ConsumerState<SkillCataloguePanel> {
               trainedLevel: skillWithLevel.trainedLevel,
               isTraining: skillWithLevel.isTraining,
               onTap: () => _showAddToPlanDialog(
-                context,
                 skillWithLevel.skill,
                 skillWithLevel.trainedLevel,
               ),

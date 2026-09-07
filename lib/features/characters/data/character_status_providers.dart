@@ -102,21 +102,17 @@ Future<Map<int, String>> characterCloneLocationNames(
   final stationIds = <int>{};
   final structureIds = <int>{};
 
-  if (clones.homeLocation?.locationId != null) {
-    if (clones.homeLocation!.locationType == 'station') {
-      stationIds.add(clones.homeLocation!.locationId!);
-    } else {
-      structureIds.add(clones.homeLocation!.locationId!);
-    }
+  if (clones.homeLocation.locationType == 'station') {
+    stationIds.add(clones.homeLocation.locationId);
+  } else {
+    structureIds.add(clones.homeLocation.locationId);
   }
 
   for (final clone in clones.jumpClones) {
-    if (clone.locationId != null) {
-      if (clone.locationType == 'station') {
-        stationIds.add(clone.locationId!);
-      } else {
-        structureIds.add(clone.locationId!);
-      }
+    if (clone.locationType == 'station') {
+      stationIds.add(clone.locationId);
+    } else {
+      structureIds.add(clone.locationId);
     }
   }
 

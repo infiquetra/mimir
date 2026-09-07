@@ -1,11 +1,12 @@
 @Tags(['patrol'])
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol/patrol.dart';
 import 'package:mimir/core/window/standalone_dashboard_screen.dart';
 import 'package:mimir/features/dashboard/presentation/widgets/cards/combat_stats_card.dart';
 import 'package:mimir/features/dashboard/presentation/widgets/cards/combined_wealth_card.dart';
-import 'package:mimir/features/dashboard/presentation/widgets/cards/fleet_status_card.dart';
 import 'package:mimir/features/dashboard/presentation/widgets/cards/quick_actions_card.dart';
 import 'package:mimir/features/dashboard/presentation/widgets/cards/training_overview_card.dart';
 import 'package:mimir/features/dashboard/presentation/widgets/cards/training_timeline_card.dart';

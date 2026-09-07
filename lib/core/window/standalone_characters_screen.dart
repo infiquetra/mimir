@@ -10,7 +10,6 @@ import '../theme/eve_colors.dart';
 import '../widgets/character_portrait_panel.dart';
 import '../widgets/eve_card.dart';
 import '../widgets/space_background.dart';
-import 'window_types.dart';
 
 /// Standalone characters screen for sub-windows.
 ///

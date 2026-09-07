@@ -53,7 +53,7 @@ class PriceHistoryChart extends StatelessWidget {
                 drawVerticalLine: false,
                 horizontalInterval: priceRange > 0 ? priceRange / 4 : 1,
                 getDrawingHorizontalLine: (value) => FlLine(
-                  color: EveColors.textSecondary.withOpacity(0.1),
+                  color: EveColors.textSecondary.withValues(alpha: 0.1),
                   strokeWidth: 1,
                 ),
               ),
@@ -71,8 +71,9 @@ class PriceHistoryChart extends StatelessWidget {
                     interval: (data.length / 4).ceilToDouble().clamp(1, 30),
                     getTitlesWidget: (value, meta) {
                       final index = value.toInt();
-                      if (index < 0 || index >= data.length)
+                      if (index < 0 || index >= data.length) {
                         return const SizedBox.shrink();
+                      }
                       return Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
@@ -169,7 +170,7 @@ class PriceHistoryChart extends StatelessWidget {
                   dotData: const FlDotData(show: false),
                   belowBarData: BarAreaData(
                     show: true,
-                    color: const Color(0xFF4FC3F7).withOpacity(0.08),
+                    color: const Color(0xFF4FC3F7).withValues(alpha: 0.08),
                   ),
                 ),
               ],
@@ -194,7 +195,7 @@ class PriceHistoryChart extends StatelessWidget {
                   barRods: [
                     BarChartRodData(
                       toY: normalizedVol,
-                      color: const Color(0xFF4FC3F7).withOpacity(0.3),
+                      color: const Color(0xFF4FC3F7).withValues(alpha: 0.3),
                       width: (200 / data.length).clamp(1.0, 6.0),
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(1),
@@ -222,7 +223,7 @@ class PriceHistoryChart extends StatelessWidget {
             Container(
               width: 12,
               height: 8,
-              color: const Color(0xFF4FC3F7).withOpacity(0.3),
+              color: const Color(0xFF4FC3F7).withValues(alpha: 0.3),
             ),
             const SizedBox(width: 4),
             const Text(

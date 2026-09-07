@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../core/database/app_database.dart';
-import '../../../core/di/providers.dart';
 import '../../../core/network/esi_client.dart' hide MarketHistoryEntry;
 import '../../characters/data/character_providers.dart';
 import 'market_repository.dart';

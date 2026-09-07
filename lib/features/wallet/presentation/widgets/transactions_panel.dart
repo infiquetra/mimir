@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/database/app_database.dart';
 import '../../../../core/widgets/data_row.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../data/wallet_providers.dart';

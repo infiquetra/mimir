@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/database/app_database.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/theme/eve_colors.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -94,13 +93,13 @@ class _PiOverviewScreenState extends ConsumerState<PiOverviewScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: _showAllCharacters
-            ? EveColors.photonBlue.withOpacity(0.2)
+            ? EveColors.photonBlue.withValues(alpha: 0.2)
             : EveColors.darkSurfaceVariant,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: _showAllCharacters
               ? EveColors.photonBlue
-              : Colors.white.withOpacity(0.1),
+              : Colors.white.withValues(alpha: 0.1),
         ),
       ),
       child: InkWell(

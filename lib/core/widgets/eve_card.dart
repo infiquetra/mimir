@@ -111,17 +111,25 @@ class _EveCardState extends State<EveCard> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(EveSpacing.cardRadius - 1),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (widget.headerGradient != null)
-              Container(
-                height: 4,
-                decoration: BoxDecoration(gradient: widget.headerGradient),
-              ),
-            Padding(padding: effectivePadding, child: widget.child),
-          ],
+        // Descendant ListTiles paint their selectedColor and ink splashes on
+        // the nearest Material ancestor. The card's own opaque fill sits on a
+        // DecoratedBox between them and the Scaffold's Material, which would
+        // hide those effects — Flutter asserts on exactly this. A transparent
+        // Material inside the clip gives them a paint surface of their own.
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (widget.headerGradient != null)
+                Container(
+                  height: 4,
+                  decoration: BoxDecoration(gradient: widget.headerGradient),
+                ),
+              Padding(padding: effectivePadding, child: widget.child),
+            ],
+          ),
         ),
       ),
     );

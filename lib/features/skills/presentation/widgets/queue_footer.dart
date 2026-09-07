@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/logging/logger.dart';
 import '../../../../core/theme/eve_colors.dart';
-import '../../../characters/data/character_providers.dart';
 import '../../data/skill_catalogue_providers.dart';
 import '../../data/skill_providers.dart';
 
@@ -30,7 +29,7 @@ class QueueFooter extends ConsumerWidget {
     final unallocatedSp = unallocatedSpAsync.when(
       data: (sp) => sp ?? 0,
       loading: () => 0,
-      error: (_, __) => 0,
+      error: (_, _) => 0,
     );
     final formattedUnallocatedSp = NumberFormat('#,###').format(unallocatedSp);
 
@@ -47,7 +46,7 @@ class QueueFooter extends ConsumerWidget {
       decoration: BoxDecoration(
         color: EveColors.surfaceDefault,
         border: Border(
-          top: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3)),
+          top: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
         ),
       ),
       child: Column(
@@ -59,7 +58,7 @@ class QueueFooter extends ConsumerWidget {
             children: [
               Expanded(
                 child: Divider(
-                  color: theme.colorScheme.outline.withOpacity(0.2),
+                  color: theme.colorScheme.outline.withValues(alpha: 0.2),
                 ),
               ),
               Padding(
@@ -67,7 +66,7 @@ class QueueFooter extends ConsumerWidget {
                 child: Text(
                   'QUEUE STATS',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.5,
                   ),
@@ -75,7 +74,7 @@ class QueueFooter extends ConsumerWidget {
               ),
               Expanded(
                 child: Divider(
-                  color: theme.colorScheme.outline.withOpacity(0.2),
+                  color: theme.colorScheme.outline.withValues(alpha: 0.2),
                 ),
               ),
             ],
@@ -128,7 +127,7 @@ class QueueFooter extends ConsumerWidget {
         Icon(
           icon,
           size: 14,
-          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
         ),
         const SizedBox(width: 6),
         Expanded(

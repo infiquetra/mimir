@@ -1,4 +1,6 @@
 @Tags(['patrol'])
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol/patrol.dart';
@@ -6,7 +8,6 @@ import 'package:patrol/patrol.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mimir/features/fitting/presentation/fitting_screen.dart';
 import 'package:mimir/features/fitting/presentation/fitting_providers.dart';
-import 'package:mimir/features/fitting/presentation/widgets/ship_browser.dart';
 import 'package:mimir/features/fitting/presentation/widgets/module_browser.dart';
 import 'package:mimir/features/fitting/presentation/widgets/fitting_editor.dart';
 import 'package:mimir/features/fitting/domain/models.dart';
@@ -15,7 +16,7 @@ import '../../integration_test/test_utils/test_app.dart';
 
 import 'package:mimir/core/sde/sde_providers.dart';
 import 'package:mimir/core/sde/sde_service.dart';
-import 'package:mockito/mockito.dart';
+import 'package:mocktail/mocktail.dart';
 
 class MockSdeService extends Mock implements SdeService {
   final ShipType mockShip;

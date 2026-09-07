@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mimir/core/theme/eve_colors.dart';
 import 'package:mimir/features/intel/data/intel_providers.dart';
 
@@ -33,7 +32,7 @@ class _MapperSyncCardState extends ConsumerState<MapperSyncCard> {
             leading: Icon(Icons.map),
             title: Text('Mapper Sync'),
             subtitle: Text('Connected to Pathfinder'),
-            trailing: const Icon(Icons.check_circle, color: EveColors.evePrimary),
+            trailing: Icon(Icons.check_circle, color: EveColors.evePrimary),
           ),
           const Divider(height: 1),
           StreamBuilder<Map<String, dynamic>>(

@@ -132,7 +132,7 @@ class _ModuleBrowserState extends ConsumerState<ModuleBrowser> {
           padding: const EdgeInsets.symmetric(vertical: 6),
           margin: const EdgeInsets.symmetric(horizontal: 2),
           decoration: BoxDecoration(
-            color: isSelected ? color.withOpacity(0.2) : Colors.transparent,
+            color: isSelected ? color.withValues(alpha: 0.2) : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
             border: Border.all(
               color: isSelected ? color : Colors.transparent,
@@ -174,7 +174,7 @@ class _ModuleListItem extends ConsumerWidget {
             border: Border.all(color: EveColors.photonBlue),
             boxShadow: [
               BoxShadow(
-                color: EveColors.photonBlue.withOpacity(0.3),
+                color: EveColors.photonBlue.withValues(alpha: 0.3),
                 blurRadius: 8,
               ),
             ],
@@ -196,7 +196,7 @@ class _ModuleListItem extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(4),
         ),
         child: Row(
@@ -210,7 +210,7 @@ class _ModuleListItem extends ConsumerWidget {
               child: Text(
                 module.name,
                 style: TextStyle(
-                  color: EveColors.textSecondary.withOpacity(0.3),
+                  color: EveColors.textSecondary.withValues(alpha: 0.3),
                   fontSize: 12,
                 ),
                 overflow: TextOverflow.ellipsis,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mimir/core/theme/eve_colors.dart';
 import 'package:mimir/features/intel/data/intel_providers.dart';
 

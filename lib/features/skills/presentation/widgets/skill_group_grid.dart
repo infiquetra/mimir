@@ -62,8 +62,8 @@ class SkillGroupGrid extends ConsumerWidget {
                     Text(
                       'Failed to load skill groups from SDE',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant.withOpacity(
-                          0.7,
+                        color: theme.colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.7,
                         ),
                       ),
                     ),
@@ -170,7 +170,7 @@ class SkillGroupGrid extends ConsumerWidget {
                 Text(
                   error.toString(),
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                   ),
                   textAlign: TextAlign.center,
                 ),

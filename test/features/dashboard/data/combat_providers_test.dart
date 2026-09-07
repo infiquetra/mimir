@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mimir/core/database/app_database.dart';
 import 'package:mimir/core/di/providers.dart';
 import 'package:mimir/core/network/esi_client.dart';
-import 'package:mimir/features/characters/data/character_providers.dart';
 import 'package:mimir/features/dashboard/data/combat_providers.dart';
 import 'package:mimir/features/dashboard/data/zkillboard_client.dart';
 

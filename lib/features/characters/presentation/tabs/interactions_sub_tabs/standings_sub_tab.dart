@@ -449,8 +449,9 @@ class StandingsSubTab extends ConsumerWidget {
   }
 
   Color _getStandingColor(double standing) {
-    if (standing >= 5.0)
+    if (standing >= 5.0) {
       return const Color(0xFF00BFFF); // Excellent (light blue)
+    }
     if (standing >= 0.5) return EveColors.success; // Good (green)
     if (standing > -0.5) return Colors.grey; // Neutral
     if (standing > -5.0) return Colors.orange; // Bad

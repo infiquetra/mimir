@@ -86,7 +86,7 @@ class _ProductionChainVisualizerState extends ConsumerState<ProductionChainVisua
                 ),
                 Switch(
                   value: _useCanvasView,
-                  activeColor: EveColors.evePrimary,
+                  activeThumbColor: EveColors.evePrimary,
                   onChanged: (v) => setState(() => _useCanvasView = v),
                 ),
                 Text(

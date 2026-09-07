@@ -35,7 +35,7 @@ class CombatStatsCard extends ConsumerWidget {
       child: combatStatsAsync.when(
         data: (stats) => _buildContent(context, ref, stats),
         loading: () => const SizedBox.shrink(),
-        error: (_, __) => const SizedBox.shrink(),
+        error: (_, _) => const SizedBox.shrink(),
       ),
     );
   }

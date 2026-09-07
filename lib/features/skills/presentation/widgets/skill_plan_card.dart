@@ -103,7 +103,7 @@ class SkillPlanCard extends ConsumerWidget {
                     child: CircularProgressIndicator(),
                   ),
                 ),
-                error: (_, __) => Text(
+                error: (_, _) => Text(
                   'Failed to load progress',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.error,

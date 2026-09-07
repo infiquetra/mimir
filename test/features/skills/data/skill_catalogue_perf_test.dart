@@ -4,11 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/core/database/app_database.dart';
 import 'package:mimir/core/sde/sde_database.dart';
 import 'package:mimir/core/sde/sde_providers.dart' hide skillGroupsProvider;
-import 'package:mimir/core/sde/sde_service.dart';
 import 'package:mimir/features/characters/data/character_providers.dart';
 import 'package:mimir/features/skills/data/skill_repository.dart';
 import 'package:mimir/features/skills/data/skill_catalogue_providers.dart';
-import 'package:mockito/mockito.dart';
 import 'package:mimir/core/di/providers.dart';
 import 'package:drift/native.dart';
 
@@ -30,7 +28,6 @@ void main() {
     late AppDatabase appDb;
     late SdeDatabase sdeDb;
     late FakeSkillRepository mockRepo;
-    late ProviderContainer container;
 
     setUp(() async {
       appDb = AppDatabase.forTesting(NativeDatabase.memory());
@@ -122,12 +119,12 @@ void main() {
         // Keep providers alive during the test to prevent Riverpod from aborting their futures
         final charSub = testContainer.listen(
           activeCharacterProvider,
-          (_, __) {},
+          (_, _) {},
         );
-        final groupsSub = testContainer.listen(skillGroupsProvider, (_, __) {});
+        final groupsSub = testContainer.listen(skillGroupsProvider, (_, _) {});
         final progressSub = testContainer.listen(
           skillGroupsWithProgressProvider,
-          (_, __) {},
+          (_, _) {},
         );
 
         print('Pre-warming skillGroupsProvider...');

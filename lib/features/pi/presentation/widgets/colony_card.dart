@@ -61,7 +61,7 @@ class ColonyCard extends ConsumerWidget {
 
     return EveCard(
       onTap: onTap,
-      glowColor: statusColor.withOpacity(0.3),
+      glowColor: statusColor.withValues(alpha: 0.3),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -89,7 +89,7 @@ class ColonyCard extends ConsumerWidget {
                                 ?.copyWith(
                                   color: Theme.of(
                                     context,
-                                  ).colorScheme.onSurface.withOpacity(0.7),
+                                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                                 ),
                           ),
                         ],
@@ -230,7 +230,7 @@ class _AnimatedPlanetState extends State<AnimatedPlanet>
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: glowColor.withOpacity(glowOpacity),
+                      color: glowColor.withValues(alpha: glowOpacity),
                       blurRadius: 12,
                       spreadRadius: glowSpread,
                     ),
@@ -275,7 +275,7 @@ class _AnimatedPlanetState extends State<AnimatedPlanet>
                         border: Border.all(color: Colors.white, width: 0.5),
                         boxShadow: [
                           BoxShadow(
-                            color: pinColor.withOpacity(0.8),
+                            color: pinColor.withValues(alpha: 0.8),
                             blurRadius: 3,
                             spreadRadius: 1,
                           ),
@@ -298,8 +298,8 @@ class _AnimatedPlanetState extends State<AnimatedPlanet>
                 radius: 0.8,
                 colors: [
                   Colors.transparent,
-                  Colors.black.withOpacity(0.3),
-                  Colors.black.withOpacity(0.7),
+                  Colors.black.withValues(alpha: 0.3),
+                  Colors.black.withValues(alpha: 0.7),
                 ],
                 stops: const [0.5, 0.8, 1.0],
               ),
@@ -322,8 +322,8 @@ class _StatusIndicator extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        border: Border.all(color: color.withOpacity(0.5)),
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
@@ -352,12 +352,12 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: EveColors.evePrimary.withOpacity(0.7)),
+        Icon(icon, size: 16, color: EveColors.evePrimary.withValues(alpha: 0.7)),
         const SizedBox(width: 8),
         Text(
           '$label: ',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
         Text(

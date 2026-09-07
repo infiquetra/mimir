@@ -268,7 +268,7 @@ class _SearchResultItem extends ConsumerWidget {
                 height: 16,
                 child: CircularProgressIndicator(strokeWidth: 1),
               ),
-              error: (_, __) => const Text(
+              error: (_, _) => const Text(
                 '—',
                 style: TextStyle(color: EveColors.textSecondary),
               ),

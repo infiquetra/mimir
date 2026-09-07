@@ -39,7 +39,7 @@ class SettingsScreen extends ConsumerWidget {
                 child: Center(child: CircularProgressIndicator()),
               ),
             ),
-            error: (_, __) => EveCard(
+            error: (_, _) => EveCard(
               glowColor: EveColors.error,
               child: Text(
                 'Failed to load settings',
@@ -104,17 +104,7 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ),
             SizedBox(height: EveSpacing.lg),
-            RadioListTile<StartupBehavior>(
-              contentPadding: EdgeInsets.zero,
-              title: Text(
-                'Open Dashboard',
-                style: EveTypography.bodyMedium(color: EveColors.textPrimary),
-              ),
-              subtitle: Text(
-                'Show the Dashboard window automatically',
-                style: EveTypography.bodySmall(color: EveColors.textSecondary),
-              ),
-              value: StartupBehavior.openDashboard,
+            RadioGroup<StartupBehavior>(
               groupValue: settings.startupBehavior,
               onChanged: (value) {
                 if (value != null) {
@@ -123,26 +113,42 @@ class SettingsScreen extends ConsumerWidget {
                       .setStartupBehavior(value);
                 }
               },
-            ),
-            RadioListTile<StartupBehavior>(
-              contentPadding: EdgeInsets.zero,
-              title: Text(
-                'Show tray icon only',
-                style: EveTypography.bodyMedium(color: EveColors.textPrimary),
+              child: Column(
+                children: [
+                  RadioListTile<StartupBehavior>(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      'Open Dashboard',
+                      style: EveTypography.bodyMedium(
+                        color: EveColors.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Show the Dashboard window automatically',
+                      style: EveTypography.bodySmall(
+                        color: EveColors.textSecondary,
+                      ),
+                    ),
+                    value: StartupBehavior.openDashboard,
+                  ),
+                  RadioListTile<StartupBehavior>(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      'Show tray icon only',
+                      style: EveTypography.bodyMedium(
+                        color: EveColors.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Launch silently in the menu bar',
+                      style: EveTypography.bodySmall(
+                        color: EveColors.textSecondary,
+                      ),
+                    ),
+                    value: StartupBehavior.trayOnly,
+                  ),
+                ],
               ),
-              subtitle: Text(
-                'Launch silently in the menu bar',
-                style: EveTypography.bodySmall(color: EveColors.textSecondary),
-              ),
-              value: StartupBehavior.trayOnly,
-              groupValue: settings.startupBehavior,
-              onChanged: (value) {
-                if (value != null) {
-                  ref
-                      .read(settingsRepositoryProvider)
-                      .setStartupBehavior(value);
-                }
-              },
             ),
           ],
         ),

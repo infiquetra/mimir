@@ -1,14 +1,14 @@
 @Tags(['patrol'])
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol/patrol.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:mimir/features/market/presentation/market_overview_screen.dart';
 import 'package:mimir/features/market/presentation/widgets/active_orders_panel.dart';
 import 'package:mimir/features/market/presentation/widgets/market_browser_panel.dart';
 import 'package:mimir/features/wallet/data/wallet_providers.dart';
-import 'package:mimir/core/sde/sde_providers.dart';
 
 import '../../integration_test/test_utils/fixtures/character_fixtures.dart';
 import '../../integration_test/test_utils/test_app.dart';

@@ -8,7 +8,6 @@ import 'package:mimir/core/di/providers.dart';
 import 'package:mimir/core/network/esi_client.dart';
 import 'package:mimir/features/characters/data/character_providers.dart';
 import 'package:mimir/features/dashboard/data/dashboard_providers.dart';
-import 'package:mimir/features/skills/data/skill_repository.dart';
 
 class MockEsiClient extends Mock implements EsiClient {}
 

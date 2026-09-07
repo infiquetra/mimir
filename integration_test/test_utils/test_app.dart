@@ -6,8 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/core/database/app_database.dart';
 import 'package:mimir/core/di/providers.dart';
 import 'package:mimir/core/network/esi_client.dart';
+import 'package:mimir/core/theme/app_theme.dart';
 
-import 'fixtures/character_fixtures.dart';
 import 'mocks/mock_esi_client.dart';
 
 /// Test app wrapper for integration tests.
@@ -151,8 +151,11 @@ class _TestAppState extends State<TestApp> {
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized) {
-      return const MaterialApp(
-        home: Scaffold(body: Center(child: CircularProgressIndicator())),
+      return MaterialApp(
+        theme: AppTheme.darkTheme(),
+        home: const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
       );
     }
 
@@ -173,6 +176,11 @@ class _TestAppState extends State<TestApp> {
       overrides: overrides.cast(),
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
+        // Match the theme the production sub-windows actually ship:
+        // sub_window_app.dart hardcodes AppTheme.darkTheme(). Rendering tests
+        // in Flutter's default light theme validated a UI no user ever sees
+        // and hid dark-theme contrast problems.
+        theme: AppTheme.darkTheme(),
         home: widget.home ?? Scaffold(body: widget.child!),
       ),
     );

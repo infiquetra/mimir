@@ -42,7 +42,7 @@ class TrainingOverviewCard extends ConsumerWidget {
       child: nextSkillsAsync.when(
         data: (completions) => _buildContent(context, ref, completions),
         loading: () => const SizedBox.shrink(),
-        error: (_, __) => const SizedBox.shrink(),
+        error: (_, _) => const SizedBox.shrink(),
       ),
     );
   }
@@ -167,7 +167,7 @@ class TrainingOverviewCard extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                error: (_, __) => Text(
+                error: (_, _) => Text(
                   'Skill #${skill.skillId}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w500,
@@ -218,19 +218,11 @@ class TrainingOverviewCard extends ConsumerWidget {
 
     return queuesAsync.when(
       data: (queuesMap) {
-        // Calculate total SP and total skills
-        int totalSp = 0;
+        // Count the skills currently sitting in every character's queue.
         int totalSkills = 0;
 
-        // For each character's queue, sum up the SP and count
         for (final queue in queuesMap.values) {
           totalSkills += queue.length;
-          for (final entry in queue) {
-            // Use levelEndSp as a proxy for total SP (not accurate, but illustrative)
-            if (entry.levelEndSp != null) {
-              totalSp += entry.levelEndSp!;
-            }
-          }
         }
 
         // Only show statistics if we have data
@@ -278,7 +270,7 @@ class TrainingOverviewCard extends ConsumerWidget {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 

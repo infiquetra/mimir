@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/features/fitting/presentation/fitting_screen.dart';
 import 'package:mimir/features/fitting/presentation/widgets/ship_browser.dart';

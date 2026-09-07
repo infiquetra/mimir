@@ -37,7 +37,7 @@ class TrainingQueueSidebar extends ConsumerWidget {
           decoration: BoxDecoration(
             color: EveColors.surfaceElevated,
             border: Border.all(
-              color: theme.colorScheme.outline.withOpacity(0.2),
+              color: theme.colorScheme.outline.withValues(alpha: 0.2),
             ),
           ),
           child: Center(
@@ -49,7 +49,7 @@ class TrainingQueueSidebar extends ConsumerWidget {
                   Icon(
                     Icons.person_off_outlined,
                     size: 48,
-                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -63,8 +63,8 @@ class TrainingQueueSidebar extends ConsumerWidget {
                   Text(
                     'Select a character to view their training queue',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant.withOpacity(
-                        0.7,
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.7,
                       ),
                     ),
                     textAlign: TextAlign.center,
@@ -84,7 +84,7 @@ class TrainingQueueSidebar extends ConsumerWidget {
       child: Container(
         decoration: BoxDecoration(
           color: EveColors.surfaceElevated,
-          border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
+          border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
         ),
         child: queueAsync.when(
           data: (queue) {
@@ -168,7 +168,7 @@ class TrainingQueueSidebar extends ConsumerWidget {
                             error.toString(),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant
-                                  .withOpacity(0.7),
+                                  .withValues(alpha: 0.7),
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -193,7 +193,7 @@ class TrainingQueueSidebar extends ConsumerWidget {
       decoration: BoxDecoration(
         color: EveColors.surfaceDefault,
         border: Border(
-          bottom: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3)),
+          bottom: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
         ),
       ),
       child: Row(
@@ -240,7 +240,7 @@ class TrainingQueueSidebar extends ConsumerWidget {
             Icon(
               Icons.school_outlined,
               size: 48,
-              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Text(
@@ -254,7 +254,7 @@ class TrainingQueueSidebar extends ConsumerWidget {
             Text(
               'No skills currently training.\nAdd skills to your queue to begin.',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),

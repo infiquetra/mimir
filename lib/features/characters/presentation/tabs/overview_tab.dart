@@ -141,7 +141,7 @@ class OverviewTab extends ConsumerWidget {
                       data: (status) =>
                           OnlineIndicator(isOnline: status.online, size: 10),
                       loading: () => SizedBox(width: 10, height: 10),
-                      error: (_, __) => const SizedBox.shrink(),
+                      error: (_, _) => const SizedBox.shrink(),
                     ),
                   ],
                 ),
@@ -212,7 +212,7 @@ class OverviewTab extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  error: (_, __) => const SizedBox.shrink(),
+                  error: (_, _) => const SizedBox.shrink(),
                 ),
               ],
             ),
@@ -306,54 +306,13 @@ class OverviewTab extends ConsumerWidget {
             // Home location
             clones.when(
               data: (cloneData) {
-                if (cloneData.homeLocation != null) {
-                  final home = cloneData.homeLocation!;
-                  final locationId = home.locationId;
+                final home = cloneData.homeLocation;
+                final locationId = home.locationId;
 
-                  return locationNames.when(
-                    data: (nameMap) {
-                      final locationName = locationId != null
-                          ? nameMap[locationId] ?? 'Location $locationId'
-                          : 'Unknown';
-                      return Row(
-                        children: [
-                          Icon(
-                            home.locationType == 'station'
-                                ? Icons.location_city_outlined
-                                : Icons.place_outlined,
-                            size: 16,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Home: $locationName',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                    loading: () => Row(
-                      children: [
-                        Icon(
-                          home.locationType == 'station'
-                              ? Icons.location_city_outlined
-                              : Icons.place_outlined,
-                          size: 16,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 8),
-                        const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ],
-                    ),
-                    error: (_, __) => Row(
+                return locationNames.when(
+                  data: (nameMap) {
+                    final locationName = nameMap[locationId] ?? 'Location $locationId';
+                    return Row(
                       children: [
                         Icon(
                           home.locationType == 'station'
@@ -365,16 +324,53 @@ class OverviewTab extends ConsumerWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Home: Location ${home.locationId}',
+                            'Home: $locationName',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
                       ],
-                    ),
-                  );
-                }
+                    );
+                  },
+                  loading: () => Row(
+                    children: [
+                      Icon(
+                        home.locationType == 'station'
+                            ? Icons.location_city_outlined
+                            : Icons.place_outlined,
+                        size: 16,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ],
+                  ),
+                  error: (_, _) => Row(
+                    children: [
+                      Icon(
+                        home.locationType == 'station'
+                            ? Icons.location_city_outlined
+                            : Icons.place_outlined,
+                        size: 16,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Home: Location ${home.locationId}',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
                 return Text(
                   'No home location set',
                   style: theme.textTheme.bodyMedium?.copyWith(
@@ -393,7 +389,7 @@ class OverviewTab extends ConsumerWidget {
                   ),
                 ),
               ),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
             ),
 
             const SizedBox(height: 12),
@@ -449,7 +445,7 @@ class OverviewTab extends ConsumerWidget {
                   ),
                 ),
               ),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
             ),
           ],
         ),
@@ -535,7 +531,7 @@ class OverviewTab extends ConsumerWidget {
                 height: 60,
                 child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
               ),
-              error: (_, __) => Text(
+              error: (_, _) => Text(
                 'Failed to load standings',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.error,

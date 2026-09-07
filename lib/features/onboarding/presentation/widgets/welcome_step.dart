@@ -114,7 +114,7 @@ class WelcomeStep extends ConsumerWidget {
                     }
                   },
                   loading: () => const CircularProgressIndicator(),
-                  error: (_, __) => Text(
+                  error: (_, _) => Text(
                     'Error loading characters',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.error,

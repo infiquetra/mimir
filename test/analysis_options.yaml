@@ -1,0 +1,15 @@
+# Analyzer overrides for the test tree only.
+#
+# The root `analysis_options.yaml` still applies to `lib/` and
+# `integration_test/`; this file narrows one rule where the test suite has a
+# legitimate reason to differ.
+
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # Benchmark and diagnostic tests (e.g. skill_catalogue_perf_test.dart) report
+    # their measurements to stdout on purpose so the numbers are visible in CI
+    # logs. Routing them through the app logger would bury the results and make
+    # the benchmark unreadable. `avoid_print` stays enabled for lib/.
+    avoid_print: false

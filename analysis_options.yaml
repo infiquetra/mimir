@@ -9,6 +9,19 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    # One-off debugging scripts that were committed at the repo root by
+    # accident. They are not part of the app, are not run by `flutter test`,
+    # and are not imported by anything. They are excluded rather than deleted
+    # so the decision to remove tracked files stays with the repo owner.
+    # TODO(owner): delete these along with the empty `200` file.
+    - parse_test.dart
+    - parse_test2.dart
+    - parse_test3.dart
+    - test_opt.dart
+    - test_regex.dart
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

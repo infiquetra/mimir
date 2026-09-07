@@ -51,7 +51,7 @@ class SkillGroupTile extends ConsumerWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(4),
           color: isSelected
-              ? EveColors.surfaceElevated.withOpacity(0.5)
+              ? EveColors.surfaceElevated.withValues(alpha: 0.5)
               : Colors.transparent,
         ),
         child: Row(
@@ -78,8 +78,8 @@ class SkillGroupTile extends ConsumerWidget {
                       child: Container(
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? EveColors.photonBlue.withOpacity(0.3)
-                              : EveColors.photonCyan.withOpacity(0.2),
+                              ? EveColors.photonBlue.withValues(alpha: 0.3)
+                              : EveColors.photonCyan.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),

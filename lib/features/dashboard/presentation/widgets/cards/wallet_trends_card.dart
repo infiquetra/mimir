@@ -34,7 +34,7 @@ class WalletTrendsCard extends ConsumerWidget {
       child: trendsAsync.when(
         data: (trends) => _buildContent(context, trends),
         loading: () => const SizedBox.shrink(),
-        error: (_, __) => const SizedBox.shrink(),
+        error: (_, _) => const SizedBox.shrink(),
       ),
     );
   }

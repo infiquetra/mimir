@@ -126,7 +126,7 @@ class CharacterRepository {
         allianceId: Value(publicInfo.allianceId),
         allianceName: Value(allianceName),
         factionId: Value(publicInfo.factionId),
-        securityStatus: Value(publicInfo.securityStatus ?? 0.0),
+        securityStatus: Value(publicInfo.securityStatus),
         portraitUrl: Value(_esiClient.getCharacterPortraitUrl(characterId)),
         tokenExpiry: Value(existing.tokenExpiry),
         lastUpdated: Value(DateTime.now()),

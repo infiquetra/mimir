@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:mimir/core/sde/sde_service.dart';
-import 'package:mimir/core/sde/sde_database.dart';
 import 'package:mimir/features/industry/domain/production_chain_builder.dart';
 
 class MockSdeService extends Mock implements SdeService {}

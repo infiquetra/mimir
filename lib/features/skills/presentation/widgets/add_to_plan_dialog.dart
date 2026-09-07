@@ -211,7 +211,7 @@ class _AddToPlanDialogState extends ConsumerState<AddToPlanDialog> {
                       },
                 backgroundColor: EveColors.surfaceDefault,
                 selectedColor: EveColors.photonBlue,
-                disabledColor: EveColors.surfaceDefault.withOpacity(0.5),
+                disabledColor: EveColors.surfaceDefault.withValues(alpha: 0.5),
                 labelStyle: EveTypography.bodyMedium(
                   color: isDisabled
                       ? EveColors.textDisabled

@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/core/network/esi_client.dart';
-import 'package:mimir/core/sde/sde_database.dart';
 import 'package:mimir/core/sde/sde_service.dart';
 import 'package:mimir/features/skills/domain/skill_training_calculator.dart';
 import 'package:mocktail/mocktail.dart';

@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/core/window/window_types.dart';
-import 'package:flutter/material.dart';
 
 void main() {
   group('WindowType Extension Tests', () {

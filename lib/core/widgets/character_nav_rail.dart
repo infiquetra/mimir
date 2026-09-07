@@ -41,7 +41,7 @@ class CharacterNavRail extends ConsumerWidget {
       decoration: BoxDecoration(
         color: EveColors.surfaceDefault,
         border: Border(
-          right: BorderSide(color: theme.colorScheme.outline.withOpacity(0.2)),
+          right: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
         ),
       ),
       child: charactersAsync.when(
@@ -154,7 +154,7 @@ class CharacterNavRail extends ConsumerWidget {
             boxShadow: isActive
                 ? [
                     BoxShadow(
-                      color: EveColors.photonBlue.withOpacity(0.5),
+                      color: EveColors.photonBlue.withValues(alpha: 0.5),
                       blurRadius: 8,
                       spreadRadius: 1,
                     ),
@@ -190,7 +190,7 @@ class CharacterNavRail extends ConsumerWidget {
               shape: BoxShape.circle,
               color: EveColors.surfaceElevated,
               border: Border.all(
-                color: EveColors.photonCyan.withOpacity(0.5),
+                color: EveColors.photonCyan.withValues(alpha: 0.5),
                 width: 2,
               ),
             ),
@@ -225,7 +225,7 @@ class CharacterNavRail extends ConsumerWidget {
               shape: BoxShape.circle,
               color: EveColors.surfaceElevated,
               border: Border.all(
-                color: EveColors.photonBlue.withOpacity(0.5),
+                color: EveColors.photonBlue.withValues(alpha: 0.5),
                 width: 2,
               ),
             ),
@@ -248,7 +248,7 @@ class CharacterNavRail extends ConsumerWidget {
             Icon(
               Icons.person_off_outlined,
               size: 32,
-              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 8),
             _buildAddCharacterButton(context),
