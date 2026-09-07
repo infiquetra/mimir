@@ -203,6 +203,36 @@ final trainedSkillLevelProvider = FutureProvider.family<int, (int, int)>((
   return level;
 });
 
+/// Trained skills for a character, fetching from ESI on first cache miss.
+///
+/// Every skill surface joins against this provider. Reading the Drift cache
+/// directly meant a character whose skills had never been synced rendered as
+/// completely untrained — every group at 0%, every plan 0% complete — which
+/// reads as broken rather than as "not loaded yet".
+final trainedSkillsProvider =
+    FutureProvider.family<List<CharacterSkill>, int>((ref, characterId) async {
+  final repository = ref.watch(skillRepositoryProvider);
+  final cached = await repository.getCharacterSkills(characterId);
+  if (cached.isNotEmpty) return cached;
+
+  Log.i(
+    'SKILLS',
+    'trainedSkillsProvider - cache empty for $characterId, fetching from ESI',
+  );
+  try {
+    await repository.refreshCharacterSkills(characterId);
+  } catch (e, stack) {
+    Log.e(
+      'SKILLS',
+      'trainedSkillsProvider - ESI refresh failed for $characterId',
+      e,
+      stack,
+    );
+    return cached;
+  }
+  return repository.getCharacterSkills(characterId);
+});
+
 /// Provider for refreshing trained skills from ESI.
 final refreshCharacterSkillsProvider = FutureProvider.family<void, int>((
   ref,
@@ -214,4 +244,5 @@ final refreshCharacterSkillsProvider = FutureProvider.family<void, int>((
   );
   final repository = ref.read(skillRepositoryProvider);
   await repository.refreshCharacterSkills(characterId);
+  ref.invalidate(trainedSkillsProvider(characterId));
 });

@@ -6,6 +6,7 @@ import '../../../core/di/providers.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/network/esi_client.dart';
 import '../../characters/data/character_providers.dart';
+import 'skill_providers.dart';
 import 'skill_repository.dart';
 
 part 'skill_plan_providers.g.dart';
@@ -94,9 +95,9 @@ final skillPlanProgressProvider = FutureProvider.family<SkillPlanProgress, int>(
     );
   }
 
-  // Get trained skills
-  final trainedSkills = await database.getCharacterSkills(
-    activeCharacter.characterId,
+  // Get trained skills (self-heals from ESI on first cache miss)
+  final trainedSkills = await ref.watch(
+    trainedSkillsProvider(activeCharacter.characterId).future,
   );
   final trainedSkillsMap = <int, int>{};
   for (final skill in trainedSkills) {

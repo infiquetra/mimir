@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/auth/auth_providers.dart';
 import 'core/auth/deep_link_handler.dart';
+import 'core/logging/logger.dart';
 import 'core/sde/sde_providers.dart';
 import 'core/sde/sde_update_providers.dart';
 import 'core/settings/app_settings.dart';
@@ -38,7 +39,7 @@ final startupRefreshProvider = FutureProvider<void>((ref) async {
   // Initialize SDE first so skill names are available when UI renders.
   try {
     await ref.read(sdeInitializerProvider.future);
-    debugPrint('Startup: SDE initialized');
+    Log.i('STARTUP', 'SDE initialized');
 
     // Check for SDE updates in background (fire-and-forget).
     // This doesn't block startup - it just logs results and updates
@@ -48,8 +49,8 @@ final startupRefreshProvider = FutureProvider<void>((ref) async {
           .read(sdeUpdateControllerProvider.notifier)
           .checkForUpdatesInBackground(),
     );
-  } catch (e) {
-    debugPrint('Startup: SDE initialization failed: $e');
+  } catch (e, stack) {
+    Log.e('STARTUP', 'SDE initialization failed', e, stack);
     // Continue - the app can function without SDE, just shows skill IDs.
   }
 
@@ -59,8 +60,8 @@ final startupRefreshProvider = FutureProvider<void>((ref) async {
   try {
     final tokenManager = ref.read(tokenManagerProvider);
     await tokenManager.migrateFromSecureStorage();
-  } catch (e) {
-    debugPrint('Startup: Token migration failed: $e');
+  } catch (e, stack) {
+    Log.e('STARTUP', 'Token migration failed', e, stack);
     // Continue - migration failures shouldn't block app startup.
   }
 
@@ -74,7 +75,7 @@ final startupRefreshProvider = FutureProvider<void>((ref) async {
 
   final characters = await characterRepo.getAllCharacters();
   if (characters.isEmpty) {
-    debugPrint('Startup refresh: No characters to refresh');
+    Log.i('STARTUP', 'No characters to refresh');
     return;
   }
 
@@ -84,13 +85,15 @@ final startupRefreshProvider = FutureProvider<void>((ref) async {
     orElse: () => characters.first,
   );
 
-  debugPrint('Startup refresh: Refreshing data for ${active.name}');
+  Log.i('STARTUP', 'Refreshing data for ${active.name}');
 
-  // Refresh all data types in parallel.
+  // Refresh all data types in parallel. Trained skills are included: without
+  // them the Skill Catalogue and every Skill Plan render as 0% trained.
   try {
     await Future.wait([
       characterRepo.refreshCharacter(active.characterId),
       skillRepo.refreshSkillQueue(active.characterId),
+      skillRepo.refreshCharacterSkills(active.characterId),
       walletRepo.refreshWalletBalance(active.characterId),
       walletRepo.refreshWalletJournal(active.characterId),
       walletRepo.refreshWalletTransactions(active.characterId),
@@ -103,9 +106,9 @@ final startupRefreshProvider = FutureProvider<void>((ref) async {
       marketSync.syncOrders(active.characterId),
       marketSync.syncPrices(),
     ]);
-    debugPrint('Startup refresh: All data refreshed for ${active.name}');
-  } catch (e) {
-    debugPrint('Startup refresh: Failed to refresh data: $e');
+    Log.i('STARTUP', 'All data refreshed for ${active.name}');
+  } catch (e, stack) {
+    Log.e('STARTUP', 'Failed to refresh data', e, stack);
     // Don't rethrow - startup should continue even if refresh fails.
   }
 
@@ -115,18 +118,18 @@ final startupRefreshProvider = FutureProvider<void>((ref) async {
 
     if (!settings.onboardingComplete) {
       // First launch - show onboarding
-      debugPrint('Startup: Opening onboarding (first launch)');
+      Log.i('STARTUP', 'Opening onboarding (first launch)');
       await WindowService.instance.openWindow(WindowType.onboarding);
     } else if (settings.startupBehavior == StartupBehavior.openDashboard) {
       // Open Dashboard on startup (user preference)
-      debugPrint('Startup: Opening Dashboard (user preference)');
+      Log.i('STARTUP', 'Opening Dashboard (user preference)');
       await WindowService.instance.openWindow(WindowType.dashboard);
     } else {
       // Tray only mode - do nothing
-      debugPrint('Startup: Tray only mode (user preference)');
+      Log.i('STARTUP', 'Tray only mode (user preference)');
     }
-  } catch (e) {
-    debugPrint('Startup: Failed to check settings: $e');
+  } catch (e, stack) {
+    Log.e('STARTUP', 'Failed to check settings', e, stack);
     // Continue - if settings check fails, just stay in tray mode
   }
 });

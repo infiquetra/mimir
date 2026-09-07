@@ -105,8 +105,10 @@ final skillsByGroupProvider = FutureProvider.family<List<SkillWithLevel>, int>((
   final characterId = activeCharacter.characterId;
   final result = <SkillWithLevel>[];
 
-  // Fetch all trained skills once
-  final allCharacterSkills = await repository.getCharacterSkills(characterId);
+  // Fetch all trained skills once (self-heals from ESI on first cache miss)
+  final allCharacterSkills = await ref.watch(
+    trainedSkillsProvider(characterId).future,
+  );
   final skillMap = {for (final s in allCharacterSkills) s.skillId: s};
 
   // Get currently training skill IDs
@@ -192,10 +194,11 @@ final skillGroupsWithProgressProvider = FutureProvider<List<SkillGroupWithProgre
 
   // Calculate trained count per group
   final characterId = activeCharacter.characterId;
-  final repository = ref.watch(skillRepositoryProvider);
 
-  // Fetch trained skills
-  final allCharacterSkills = await repository.getCharacterSkills(characterId);
+  // Fetch trained skills (self-heals from ESI on first cache miss)
+  final allCharacterSkills = await ref.watch(
+    trainedSkillsProvider(characterId).future,
+  );
   final trainedSkillIds = allCharacterSkills
       .where((s) => s.trainedSkillLevel > 0)
       .map((s) => s.skillId)
