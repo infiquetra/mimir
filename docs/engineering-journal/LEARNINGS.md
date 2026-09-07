@@ -29,6 +29,101 @@
 
 ---
 
+## 2026-09-07
+
+### ESI removed GET /search/; POST /universe/ids/ is the supported replacement
+
+**Author.** Qwen Code
+**Context.** The Market Browser's default tab could never return a result, and
+the Intel watch-list dialog had no way to resolve names at all.
+**Evidence.** `curl 'https://esi.evetech.net/latest/search/?categories=inventory_type&search=tritanium'`
+returns 404. `POST /universe/ids/` with `["Jita","Amarr"]` returns
+`{"systems":[{"id":30000142,"name":"Jita"},...]}`; with `["Tritanium"]` it
+returns `inventory_types:[{"id":34,...}]`.
+**Mechanism.** The standalone public search route was withdrawn from ESI.
+`/universe/ids/` is the supported public name-resolution endpoint and returns
+category-keyed maps; it matches whole names, not substrings.
+**Fix.** 6b2e06d (market search: SDE substring first, `/universe/ids/` to
+augment), d903ff9 (watch-list name resolution).
+**Validation.** Provider tests plus live curl against the running endpoint.
+**What surprised.** The solar-system key is `systems`, not `solar_systems`.
+**Generalizable rule.** Verify an EVE endpoint against the live service before
+building on it; a 404 can sit behind a green build for months.
+**Refs.** DECISIONS 2026-09-07 "Dead inferior UI..."; QUEUED P2 mapper entry.
+
+### Golden tests race async providers; pin the providers, do not add a tolerance
+
+**Author.** Qwen Code
+**Context.** The Skills goldens failed roughly half of full-suite runs with
+"Pixel test failed, 0.00%, 3px diff" yet passed every time in isolation.
+**Evidence.** The isolated diff image contained a single speck at the top bar,
+where the unallocated-SP value renders; `unallocatedSpProvider` logs showed it
+resolving during the capture window.
+**Mechanism.** FutureProviders resolve on a pump phase that shifts with the
+tests that ran earlier in the same process, so the capture sometimes caught the
+top bar mid-resolution.
+**Fix.** ce94c20 pins unallocatedSp, totalSkillPoints and queueStats to fixed
+AsyncValues for both Skills goldens.
+**Validation.** Ten consecutive full-suite runs green.
+**What surprised.** A `LocalFileComparator` subclass with a percentage tolerance
+made *every* golden fail with "Could not be compared against non-existent
+file": the wrapper's `getGoldenBytes` threw before its tolerance logic ran.
+That attempt was reverted.
+**Generalizable rule.** Make golden inputs deterministic at the provider level;
+comparison tolerances treat the symptom and can break golden path resolution.
+**Refs.** ce94c20.
+
+### Drift watch() streams do not emit inside bare test() containers here
+
+**Author.** Qwen Code
+**Context.** Provider-level tests for saved fittings awaited
+`savedFittingsProvider(null).future` and timed out at 30s, while the identical
+providers behave under `testWidgets`.
+**Evidence.** TimeoutException plus "StreamProvider ... disposed during loading
+state, yet no value could be emitted" in
+test/features/fitting/presentation/fitting_save_load_test.dart before the fix.
+**Mechanism.** Not fully root-caused; the first stream emission never arrives
+under the plain test zone in this project's setup.
+**Fix.** 959808b asserts persistence through one-shot repository reads
+(`getFittings`), and `saveCurrent` resolves the active character with
+`characterRepository.getActiveCharacter()` instead of the character stream.
+**Validation.** Six fast, stable provider tests.
+**Generalizable rule.** In provider unit tests prefer one-shot reads; keep
+stream assertions in widget tests where a binding drives the loop.
+**Refs.** 959808b.
+
+### ReorderableListView.onReorderItem pre-adjusts newIndex
+
+**Author.** Qwen Code
+**Context.** Migrating off the deprecated `onReorder` looked mechanical.
+**Evidence.** Flutter SDK reorderable_list.dart: the `onReorder` path passes the
+raw drop index while `onReorderItem` passes the index computed after removing
+the dragged item.
+**Mechanism.** Keeping the app's historical `if (newIndex > oldIndex) newIndex -= 1`
+correction on top of the pre-adjusted index shifts every downward drag one slot
+early, silently corrupting plan order.
+**Fix.** 9d221e2 removes the manual correction with a comment saying why.
+**Generalizable rule.** When a deprecation changes a callback's parameter
+semantics, read the SDK call site before migrating.
+**Refs.** 9d221e2.
+
+### TestApp rendered Flutter's default light theme while the app ships dark
+
+**Author.** Qwen Code
+**Context.** Every golden and integration test rendered a theme no user sees.
+**Evidence.** sub_window_app.dart hardcodes `AppTheme.darkTheme()`; the
+regenerated light-theme Industry golden showed a white-on-white "No Industry
+Jobs" empty state.
+**Mechanism.** TestApp's MaterialApp declared no theme, so tests got Flutter's
+light default.
+**Fix.** 9d221e2 sets `AppTheme.darkTheme()` in TestApp and regenerates all
+baselines in the shipped theme.
+**Validation.** Dark baselines reviewed visually; contrast problems became
+visible instead of hidden.
+**Generalizable rule.** A test harness must render the shipped theme, or the
+suite validates a product that does not exist.
+**Refs.** 9d221e2.
+
 ## 2026-05-21
 
 ### macOS Flutter sub-windows need explicit plugin and config boundaries

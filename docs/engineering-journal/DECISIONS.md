@@ -24,6 +24,62 @@
 
 ---
 
+## 2026-09-07
+
+### Fabricated intel data is deleted, not gated (59f031b, d903ff9)
+
+**Author.** Qwen Code
+**Decision.** Remove MapperSyncCard, PathfinderClient and DiscordRpcService
+outright; record the real-integration intent in QUEUED.md instead.
+**Rejected alternatives.** Gating the mock behind a dev flag; keeping the card
+with an honest "not connected" state.
+**Rationale.** In an intel tool a confidently false "Connected to Pathfinder"
+badge is worse than no card. A permanently disabled card is clutter, and a flag
+invites the mock back into production builds.
+**Revisit when.** A maintained public wormhole-mapper API with a understood auth
+model exists (QUEUED.md P2 entry).
+**Refs.** 59f031b; QUEUED.md "Real wormhole-mapper integration".
+
+### SDE updates replace only the skill slice (e6c7837)
+
+**Author.** Qwen Code
+**Decision.** `SdeDatabase.deleteSkillSlice` (skill types by group plus their
+prerequisites) runs inside the update transaction; `clearAll()` is gone from the
+update path, and `sdeServiceProvider` is invalidated on apply.
+**Rejected alternatives.** clearAll + re-import; keeping clearAll and refetching
+dogma/industry from somewhere (no source exists in the payload).
+**Rationale.** The update payload carries skills only. Wiping the dogma and
+industry tables it cannot restore left Ship Fitting at zeros and Industry
+lookups empty until restart.
+**Revisit when.** Update payloads start carrying dogma/industry data.
+**Refs.** e6c7837; test/core/sde/sde_database_skill_slice_test.dart.
+
+### Dead inferior UI is deleted; dead valuable UI is wired (34b0f4c, 8e99f4f)
+
+**Author.** Qwen Code
+**Decision.** Wire OverviewTab into the Characters window as an Overview tab;
+delete PriceCheckerPanel.
+**Rejected alternatives.** Wiring both; deleting both.
+**Rationale.** OverviewTab carries information nowhere else in the app (current
+ship, location, online status, clone summary). PriceCheckerPanel's only unique
+behaviour was asking for a raw numeric Type ID — the anti-pattern the project
+rule forbids — duplicating what MarketBrowserPanel already does by name.
+**Revisit when.** Price checking needs a flow the Browser cannot express.
+**Refs.** 8e99f4f; 34b0f4c.
+
+### Saved fittings resolve the character with a one-shot read (959808b)
+
+**Author.** Qwen Code
+**Decision.** `FittingController.saveCurrent` calls
+`characterRepository.getActiveCharacter()`; the dialog streams
+`savedFittingsProvider(characterId)`, which includes character-null shared fits.
+**Rejected alternatives.** Awaiting `activeCharacterProvider.future` in the
+write path.
+**Rationale.** A write must not hold a stream subscription, and that stream
+never settles outside a widget tree (LEARNINGS 2026-09-07).
+**Revisit when.** Cross-character fit sharing grows a UI of its own.
+**Refs.** 959808b.
+
 ## 2026-05-21
 
 ### Combat analysis is explicit and cache-first; list loading must not call AI (commit: pending)
