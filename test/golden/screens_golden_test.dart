@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:mimir/core/database/app_database.dart';
@@ -18,6 +19,7 @@ import 'package:mimir/features/market/presentation/market_overview_screen.dart';
 import 'package:mimir/features/settings/presentation/settings_screen.dart';
 import 'package:mimir/features/skills/presentation/skills_screen.dart';
 import 'package:mimir/features/skills/data/skill_catalogue_providers.dart';
+import 'package:mimir/features/skills/data/skill_providers.dart';
 import 'package:mimir/features/wallet/data/wallet_providers.dart';
 import 'package:mimir/features/wallet/presentation/wallet_screen.dart';
 import 'package:network_image_mock/network_image_mock.dart';
@@ -27,6 +29,25 @@ import '../../integration_test/test_utils/fixtures/character_fixtures.dart';
 import '../../integration_test/test_utils/fixtures/skill_fixtures.dart';
 import '../../integration_test/test_utils/fixtures/wallet_fixtures.dart';
 import '../../integration_test/test_utils/test_app.dart';
+
+
+/// Pins every async value the Skills screen renders so the capture cannot
+/// race a provider resolving. Unpinned, these resolved at different pump
+/// phases depending on which tests ran earlier in the process, producing
+/// intermittent ~3px golden diffs.
+List<dynamic> _pinnedSkillProviders() => [
+      unallocatedSpProvider.overrideWithValue(const AsyncValue.data(150000)),
+      totalSkillPointsProvider.overrideWithValue(
+        const AsyncValue.data(5000000),
+      ),
+      queueStatsProvider.overrideWithValue(
+        QueueStats(
+          totalTrainingTime: const Duration(days: 3, hours: 11),
+          totalSkillPoints: 308353,
+          queueSize: 3,
+        ),
+      ),
+    ];
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -156,6 +177,7 @@ void main() {
                 );
               });
             },
+            providerOverrides: _pinnedSkillProviders(),
             home: const SkillsScreen(),
           ),
           surfaceSize: skillsDevice.size,
@@ -189,15 +211,7 @@ void main() {
                 );
               });
             },
-            providerOverrides: [
-              queueStatsProvider.overrideWithValue(
-                QueueStats(
-                  totalTrainingTime: const Duration(days: 3, hours: 11),
-                  totalSkillPoints: 308353,
-                  queueSize: 3,
-                ),
-              ),
-            ],
+            providerOverrides: _pinnedSkillProviders(),
             home: const SkillsScreen(),
           ),
           surfaceSize: skillsCompactDevice.size,
