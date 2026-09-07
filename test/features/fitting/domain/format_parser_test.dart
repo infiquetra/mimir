@@ -190,9 +190,74 @@ Small Projectile Burst Aerator I
       final parsed = await parser.parseDna(dna);
       expect(parsed, isNotNull);
       expect(parsed!.shipTypeId, 587);
+
+      // The modules must survive the import: an earlier implementation parsed
+      // the hull and silently dropped every module segment.
+      expect(parsed.lowSlots, hasLength(2));
+      expect(parsed.lowSlots.map((m) => m.typeId), [2048, 2048]);
+      expect(parsed.lowSlots.map((m) => m.slotIndex), [0, 1]);
+      expect(parsed.allModules, hasLength(2));
+
+      // And the round trip must be lossless.
+      expect(parser.generateDna(parsed), dna);
+    });
+
+    test('parseDna expands quantities into the module\'s real slot type', () async {
+      when(
+        () => mockSdeService.getShipTypeName(587),
+      ).thenAnswer((_) async => 'Rifter');
+      when(() => mockSdeService.getModuleType(2048)).thenAnswer(
+        (_) async => _moduleType(2048, 'Damage Control II', SlotType.low),
+      );
+      when(() => mockSdeService.getModuleType(5973)).thenAnswer(
+        (_) async => _moduleType(5973, '1MN Afterburner II', SlotType.med),
+      );
+      when(() => mockSdeService.getModuleType(484)).thenAnswer(
+        (_) async => _moduleType(484, '125mm Gatling AutoCannon II', SlotType.high),
+      );
+
+      final parsed = await parser.parseDna('587:2048;2:5973;1:484;3::');
+
+      expect(parsed, isNotNull);
+      expect(parsed!.lowSlots, hasLength(2));
+      expect(parsed.medSlots, hasLength(1));
+      expect(parsed.highSlots, hasLength(3));
+      expect(parsed.highSlots.every((m) => m.typeId == 484), isTrue);
+    });
+
+    test('parseDna skips module IDs the SDE does not know', () async {
+      when(
+        () => mockSdeService.getShipTypeName(587),
+      ).thenAnswer((_) async => 'Rifter');
+      when(() => mockSdeService.getModuleType(999999)).thenAnswer(
+        (_) async => null,
+      );
+
+      final parsed = await parser.parseDna('587:999999;1::');
+
+      expect(parsed, isNotNull);
+      expect(parsed!.allModules, isEmpty);
     });
   });
 }
+
+ModuleType _moduleType(int typeId, String name, SlotType slotType) =>
+    ModuleType(
+      typeId: typeId,
+      name: name,
+      groupId: 0,
+      groupName: '',
+      slotType: slotType,
+      metaLevel: 5,
+      techLevel: 2,
+      cpu: 30,
+      powergrid: 1,
+      calibration: 0,
+      baseAttributes: {},
+      effects: [],
+      skillRequirements: [],
+      acceptedChargeGroups: [],
+    );
 
 Future<void> _insertType(
   SdeDatabase database,

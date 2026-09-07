@@ -180,6 +180,11 @@ class FittingFormatParser {
   /// Parse a DNA string into a [Fitting].
   ///
   /// Format example: 587:2048;1:3172;2::
+  ///
+  /// Each `typeId;quantity` segment is expanded into that many fitted modules
+  /// and placed by the module's real slot type. Dropping the modules here
+  /// (as an earlier TODO did) made every DNA import a bare hull, and the
+  /// Combat Analyzer then recorded that empty hull as confirmed evidence.
   Future<Fitting?> parseDna(String dnaString) async {
     Log.d('FITTING', 'Parsing DNA string: $dnaString');
     try {
@@ -191,16 +196,11 @@ class FittingFormatParser {
 
       final shipTypeName = await _sdeService.getShipTypeName(shipTypeId);
 
-      final fitting = Fitting(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: 'Imported $shipTypeName',
-        shipTypeId: shipTypeId,
-        shipName: shipTypeName,
-        highSlots: [],
-        medSlots: [],
-        lowSlots: [],
-        rigSlots: [],
-      );
+      final lowSlots = <FittedModule>[];
+      final medSlots = <FittedModule>[];
+      final highSlots = <FittedModule>[];
+      final rigSlots = <FittedModule>[];
+      final subsystemSlots = <FittedModule>[];
 
       // Parse modules...
       // e.g. 2048;1 -> typeId 2048, qty 1
@@ -214,15 +214,57 @@ class FittingFormatParser {
         final typeId = int.tryParse(modParts[0]);
         if (typeId == null) continue;
 
+        final quantity = modParts.length > 1
+            ? (int.tryParse(modParts[1]) ?? 1)
+            : 1;
+
         // Load module type from SDE
         final modType = await _sdeService.getModuleType(typeId);
         if (modType == null) continue;
 
-        // Add to appropriate slot
-        // TODO: Actually add to fitting slots based on modType.slotType
+        for (var copy = 0; copy < quantity; copy++) {
+          final target = switch (modType.slotType) {
+            SlotType.low => lowSlots,
+            SlotType.med => medSlots,
+            SlotType.high => highSlots,
+            SlotType.rig => rigSlots,
+            SlotType.subsystem => subsystemSlots,
+          };
+          target.add(
+            FittedModule(
+              typeId: typeId,
+              typeName: modType.name,
+              slotType: modType.slotType,
+              slotIndex: target.length,
+              state: ModuleState.online,
+              attributes: modType.baseAttributes,
+            ),
+          );
+        }
       }
 
-      return fitting;
+      final moduleCount =
+          lowSlots.length +
+          medSlots.length +
+          highSlots.length +
+          rigSlots.length +
+          subsystemSlots.length;
+      Log.i(
+        'FITTING',
+        'parseDna - ship $shipTypeId with $moduleCount modules',
+      );
+
+      return Fitting(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: 'Imported $shipTypeName',
+        shipTypeId: shipTypeId,
+        shipName: shipTypeName,
+        highSlots: highSlots,
+        medSlots: medSlots,
+        lowSlots: lowSlots,
+        rigSlots: rigSlots,
+        subsystems: subsystemSlots,
+      );
     } catch (e, stack) {
       Log.e('FITTING', 'Error parsing DNA', e, stack);
       return null;
