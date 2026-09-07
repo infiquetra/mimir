@@ -206,13 +206,16 @@ class MockEsiClient extends Mock implements EsiClient {
   // Clone & Implant Test Data
   // =========================================================================
 
+  // Fixed dates, not DateTime.now(): the Clone Activity card renders these
+  // verbatim, so wall-clock values made every golden and screenshot test fail
+  // on the minute they were recorded.
   static final cloneInfo = CharacterClones(
     homeLocation: HomeLocation(
       locationId: 60003760, // Jita
       locationType: 'station',
     ),
-    lastCloneJumpDate: DateTime.now().subtract(const Duration(days: 3)),
-    lastStationChangeDate: DateTime.now().subtract(const Duration(days: 1)),
+    lastCloneJumpDate: DateTime(2026, 1, 15, 12, 0),
+    lastStationChangeDate: DateTime(2026, 1, 17, 12, 0),
     jumpClones: [
       JumpClone(
         jumpCloneId: 101,
