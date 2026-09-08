@@ -189,6 +189,7 @@ abstract class ShipType with _$ShipType {
     @Default(0) int turretSlots,
     @Default(0) int launcherSlots,
     @Default({}) Map<int, double> baseAttributes,
+    @Default([]) List<DogmaEffect> effects,
     @Default([]) List<ShipBonus> bonuses,
     @Default([]) List<SkillRequirement> skillRequirements,
   }) = _ShipType;
@@ -248,7 +249,8 @@ abstract class DogmaEffect with _$DogmaEffect {
 }
 
 /// One dogma modifier of an effect, as published by ESI's
-/// `/dogma/effects/{id}/` and cached in [SdeEffectModifiers].
+/// `/dogma/effects/{id}/`, cached in [SdeEffectModifiers], and bundled in
+/// `assets/sde/effect_modifiers.json` from the SDE's `dgmEffects.modifierInfo`.
 ///
 /// [operator] follows CCP's dogma operator enum as observed live:
 /// 6 = postPercent (`modified *= 1 + value/100`, e.g. shield hardeners) and
@@ -257,6 +259,10 @@ abstract class DogmaEffect with _$DogmaEffect {
 /// units (-55 for EM Shield Hardener II); postMul by elimination, since
 /// postPercent would make a 0.85 resonance bonus a no-op and assignment
 /// would overwrite better base resonances.
+///
+/// [skillTypeId] is set for skill-scaled bonuses (the value is the per-level
+/// bonus times the trained level); [groupId] restricts a modifier to items
+/// of one group (e.g. small turret bonuses).
 @freezed
 abstract class EffectModifier with _$EffectModifier {
   const factory EffectModifier({
@@ -266,6 +272,8 @@ abstract class EffectModifier with _$EffectModifier {
     required int modifiedAttributeId,
     int? modifyingAttributeId,
     @Default('shipID') String domain,
+    int? skillTypeId,
+    int? groupId,
   }) = _EffectModifier;
 }
 

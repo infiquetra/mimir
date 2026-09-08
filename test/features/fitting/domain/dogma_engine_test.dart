@@ -447,6 +447,254 @@ void main() {
       },
     );
   });
+
+  group('DogmaEngine weapon bonuses', () {
+    late DogmaEngine engine;
+
+    setUp(() {
+      engine = DogmaEngine();
+    });
+
+    // Rifter's real traits as CCP resolves them in the SDE: +10% falloff and
+    // -7.5% rate of fire per level of Minmatar Frigate (3302), published as
+    // LocationRequiredSkillModifier modifiers on the ship's own effects.
+    const falloffBonusEffect = 5779;
+    const rofBonusEffect = 7248;
+    const missileDamageEffect = 898;
+    const minmatarFrigate = 3302;
+    const caldariCruiser = 3319;
+
+    ShipType bonusShip({
+      List<DogmaEffect> effects = const [],
+      Map<int, double> extraAttributes = const {},
+    }) => ShipType(
+      typeId: 587,
+      name: 'Rifter',
+      description: 'A Minmatar frigate',
+      groupId: 25,
+      groupName: 'Frigate',
+      highSlots: 4,
+      medSlots: 3,
+      lowSlots: 3,
+      rigSlots: 3,
+      effects: effects,
+      baseAttributes: {..._rifter().baseAttributes, ...extraAttributes},
+    );
+
+    ModuleType weapon({
+      required int typeId,
+      required int groupId,
+      required Map<int, double> baseAttributes,
+    }) => ModuleType(
+      typeId: typeId,
+      name: 'Test weapon $typeId',
+      groupId: groupId,
+      groupName: 'Test weapons',
+      slotType: SlotType.high,
+      baseAttributes: baseAttributes,
+      effects: const [],
+      skillRequirements: const [],
+      acceptedChargeGroups: const [],
+    );
+
+    final turretAttrs = {
+      DogmaAttributes.turretDamageMultiplier: 2.0,
+      DogmaAttributes.rateOfFire: 4000.0,
+      DogmaAttributes.optimalRange: 10000.0,
+      DogmaAttributes.falloff: 5000.0,
+    };
+
+    ModuleType kineticAmmo() => weapon(
+      typeId: 266,
+      groupId: 38,
+      baseAttributes: {DogmaAttributes.kineticDamage: 100.0},
+    );
+
+    Fitting armedFitting(List<int> weaponTypeIds) => Fitting(
+      id: 'armed',
+      name: 'Armed Rifter',
+      shipTypeId: 587,
+      shipName: 'Rifter',
+      highSlots: [
+        for (var i = 0; i < weaponTypeIds.length; i++)
+          FittedModule(
+            typeId: weaponTypeIds[i],
+            typeName: 'Test weapon ${weaponTypeIds[i]}',
+            slotType: SlotType.high,
+            slotIndex: i,
+            chargeTypeId: 266,
+            chargeName: 'Test ammo',
+          ),
+      ],
+    );
+
+    Map<int, List<EffectModifier>> rifterModifiers({int? falloffGroupId}) => {
+      falloffBonusEffect: [
+        EffectModifier(
+          effectId: falloffBonusEffect,
+          func: 'LocationRequiredSkillModifier',
+          operator: 6,
+          modifiedAttributeId: DogmaAttributes.falloff,
+          modifyingAttributeId: 587,
+          skillTypeId: minmatarFrigate,
+          groupId: falloffGroupId,
+        ),
+      ],
+      rofBonusEffect: [
+        EffectModifier(
+          effectId: rofBonusEffect,
+          func: 'LocationRequiredSkillModifier',
+          operator: 6,
+          modifiedAttributeId: DogmaAttributes.rateOfFire,
+          modifyingAttributeId: 460,
+          skillTypeId: minmatarFrigate,
+        ),
+      ],
+    };
+
+    test(
+      'skill-scaled ship bonuses drive turret DPS, volley and ranges',
+      () async {
+        final stats = await engine.calculateStats(
+          armedFitting([561]),
+          bonusShip(
+            effects: const [
+              DogmaEffect(effectId: falloffBonusEffect, name: 'falloff'),
+              DogmaEffect(effectId: rofBonusEffect, name: 'rof'),
+            ],
+            extraAttributes: {587: 10.0, 460: -7.5},
+          ),
+          {
+            '561': weapon(
+              typeId: 561,
+              groupId: 53,
+              baseAttributes: turretAttrs,
+            ),
+            '266': kineticAmmo(),
+          },
+          const [CharacterSkill(skillId: minmatarFrigate, level: 5)],
+          effectModifiers: rifterModifiers(),
+        );
+
+        // Cycle 4000ms * (1 - 7.5*5/100) = 2500ms; volley 100 * 2 = 200.
+        expect(stats.volley, closeTo(200, 0.001));
+        expect(stats.dpsGuns, closeTo(80, 0.001));
+        expect(stats.dpsTotal, closeTo(80, 0.001));
+        expect(stats.dpsMissiles, 0.0);
+        expect(stats.optimalRange, closeTo(10000, 0.001));
+        expect(stats.falloffRange, closeTo(5000 * 1.5, 0.001));
+      },
+    );
+
+    test('untrained bonus skill leaves base weapon stats', () async {
+      final stats = await engine.calculateStats(
+        armedFitting([561]),
+        bonusShip(
+          effects: const [
+            DogmaEffect(effectId: falloffBonusEffect, name: 'falloff'),
+            DogmaEffect(effectId: rofBonusEffect, name: 'rof'),
+          ],
+          extraAttributes: {587: 10.0, 460: -7.5},
+        ),
+        {
+          '561': weapon(typeId: 561, groupId: 53, baseAttributes: turretAttrs),
+          '266': kineticAmmo(),
+        },
+        const [],
+        effectModifiers: rifterModifiers(),
+      );
+
+      expect(stats.dpsGuns, closeTo(200 / 4, 0.001));
+      expect(stats.falloffRange, closeTo(5000, 0.001));
+    });
+
+    test('missile damage bonuses apply to loaded charges', () async {
+      final stats = await engine.calculateStats(
+        armedFitting([1120]),
+        bonusShip(
+          effects: const [
+            DogmaEffect(effectId: missileDamageEffect, name: 'missile dmg'),
+          ],
+          extraAttributes: {463: 10.0},
+        ),
+        {
+          '1120': weapon(
+            typeId: 1120,
+            groupId: 506,
+            baseAttributes: {DogmaAttributes.rateOfFire: 2000.0},
+          ),
+          '266': kineticAmmo(),
+        },
+        const [CharacterSkill(skillId: caldariCruiser, level: 4)],
+        effectModifiers: {
+          missileDamageEffect: [
+            EffectModifier(
+              effectId: missileDamageEffect,
+              func: 'OwnerRequiredSkillModifier',
+              operator: 6,
+              modifiedAttributeId: DogmaAttributes.kineticDamage,
+              modifyingAttributeId: 463,
+              domain: 'charID',
+              skillTypeId: caldariCruiser,
+            ),
+          ],
+        },
+      );
+
+      // Charge kinetic 100 * (1 + 10*4/100) = 140 volley; 140 / 2s = 70 dps.
+      expect(stats.dpsMissiles, closeTo(70, 0.001));
+      expect(stats.dpsGuns, 0.0);
+      expect(stats.volley, closeTo(140, 0.001));
+      expect(stats.optimalRange, 0.0);
+    });
+
+    test('group-restricted bonuses skip weapons of other groups', () async {
+      final stats = await engine.calculateStats(
+        armedFitting([561, 562]),
+        bonusShip(
+          effects: const [
+            DogmaEffect(effectId: falloffBonusEffect, name: 'falloff'),
+          ],
+          extraAttributes: {587: 10.0},
+        ),
+        {
+          '561': weapon(typeId: 561, groupId: 53, baseAttributes: turretAttrs),
+          '562': weapon(typeId: 562, groupId: 54, baseAttributes: turretAttrs),
+          '266': kineticAmmo(),
+        },
+        const [CharacterSkill(skillId: minmatarFrigate, level: 5)],
+        effectModifiers: rifterModifiers(falloffGroupId: 53),
+      );
+
+      // Only the group-53 turret gets +50% falloff: volley-weighted
+      // (7500*200 + 5000*200) / 400.
+      expect(stats.volley, closeTo(400, 0.001));
+      expect(stats.falloffRange, closeTo(6250, 0.001));
+    });
+
+    test('unloaded weapons contribute no damage', () async {
+      final fitting = Fitting(
+        id: 'unloaded',
+        name: 'Unloaded Rifter',
+        shipTypeId: 587,
+        shipName: 'Rifter',
+        highSlots: [
+          FittedModule(
+            typeId: 561,
+            typeName: 'Test weapon 561',
+            slotType: SlotType.high,
+            slotIndex: 0,
+          ),
+        ],
+      );
+      final stats = await engine.calculateStats(fitting, bonusShip(), {
+        '561': weapon(typeId: 561, groupId: 53, baseAttributes: turretAttrs),
+      }, const []);
+
+      expect(stats.dpsTotal, 0.0);
+      expect(stats.volley, 0.0);
+    });
+  });
 }
 
 ShipType _rifter() => ShipType(

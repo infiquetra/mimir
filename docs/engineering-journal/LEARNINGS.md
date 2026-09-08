@@ -29,6 +29,63 @@
 
 ---
 
+### 2026-09-08
+
+### The SDE publishes resolved dogma modifiers; dgmExpressions is retired and fuzzwork moved to csv/
+
+**Author.** Qwen Code
+**Context.** Unlocking DPS/volley/optimal needed ship weapon bonuses, which
+were assumed to live in dogma expression trees (the plan was to bundle
+`dgmExpressions` and evaluate them pyfa-style).
+**Evidence.** fuzzwork `csv/dgmExpressions.csv` is header-only (1 row);
+`csv/dgmEffects.csv` carries a `modifierInfo` column with CCP's resolved
+modifiers, e.g. Rifter effect 5779:
+`{"domain": "shipID", "func": "LocationRequiredSkillModifier", "modifiedAttributeID": 158, "modifyingAttributeID": 587, "operation": 6, "skillTypeID": 3302}`.
+Separately, the old flat `*.csv.bz2` URLs 404 since the dump moved to `csv/`
+plain files (verified 2026-09-08), which would have broken regeneration.
+**Mechanism.** CCP replaced expression-tree publication with pre-resolved
+modifier lists per effect, including skill linkage (`skillTypeID`) and group
+restrictions (`groupID`); func + domain encode the routing: `ItemModifier` +
+`shipID` = owner modifies the ship (hardeners, damage control), `Location*`/
+`Owner*` + `shipID` = owner modifies fitted modules (racial weapon bonuses,
+tracking enhancers), `charID` = owner modifies loaded charges (missile
+damage bonuses), `itemID` = self only.
+**Fix.** `scripts/sde/generate_dogma_sde.py` fetches the new `csv/` layout and
+bundles `assets/sde/effect_modifiers.json` (2090 effects, 1984 with
+modifiers); DogmaEngine routes by func/domain instead of evaluating trees.
+**Validation.** `test/features/fitting/domain/real_sde_weapon_test.dart`
+loads the bundled assets from disk and reproduces Rifter's traits
+(-7.5%/level rof, +10%/level falloff at skill 3302) end to end.
+**What surprised.** The expression-tree port was unnecessary: the retired
+table's replacement is strictly better data (resolved, skill-aware).
+**Generalizable rule.** Re-check the data source before porting an
+evaluation engine; publishers sometimes replace trees with resolved facts.
+**Refs.** DECISIONS 2026-09-08 bundled-modifiers entry; QUEUED drone DPS.
+
+### Production fitting stats silently ignored every module bonus (effects never populated)
+
+**Author.** Qwen Code
+**Context.** While wiring ship bonuses I traced why the engine's module
+modifier loop could never fire in the app although tests passed.
+**Evidence.** `SdeService.getModuleType` built `ModuleType` without `effects`
+(model default `[]`), so `fittingStatsProvider`'s `effectIds` list was always
+empty and `ensureEffectModifiers([])` returned `{}`; only hand-built test
+fixtures had effects.
+**Mechanism.** The Drift table `SdeTypeEffects` was seeded and read for slot
+detection (`getTypeEffects`), but nobody mapped those rows into the model, so
+hardener/damage-control/propulsion bonuses were absent from real stats while
+every unit test constructed modules with effects and stayed green.
+**Fix.** `getModuleType`/`getShipType` now populate `effects` (names from the
+bundled effect metadata); the stats provider also resolves charge types so
+missile/turret damage has its source data.
+**Validation.** `test/core/sde/sde_service_test.dart` asserts seeded effect
+rows surface on `ShipType.effects` with bundled names; full suite 422 green.
+**What surprised.** A test suite can be fully green while a production path
+is dead, when fixtures bypass the very mapping that is missing.
+**Generalizable rule.** Fixture-built tests must be paired with at least one
+test that walks the real repository/service mapping.
+**Refs.** DECISIONS 2026-09-08 bundled-modifiers entry.
+
 ### Capacitor stability is an event simulation, not a formula (pyfa eos/capSim.py port)
 
 **Author.** Qwen Code

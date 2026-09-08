@@ -277,15 +277,24 @@ final fittingStatsProvider = FutureProvider<FittingStats?>((ref) async {
   final sde = ref.read(sdeServiceProvider);
   final engine = ref.read(dogmaEngineProvider);
 
-  // Resolve all module types
+  // Resolve all module types, plus loaded charge types: missile and
+  // turret damage lives on the charge, and racial missile bonuses modify
+  // charge attributes.
   final moduleTypes = <String, ModuleType>{};
+  Future<void> resolveType(int typeId) async {
+    final key = typeId.toString();
+    if (moduleTypes.containsKey(key)) return;
+    final type = await sde.getModuleType(typeId);
+    if (type != null) {
+      moduleTypes[key] = type;
+    }
+  }
+
   for (final module in fitting.allModules) {
-    final typeId = module.typeId;
-    if (!moduleTypes.containsKey(typeId.toString())) {
-      final type = await sde.getModuleType(typeId);
-      if (type != null) {
-        moduleTypes[typeId.toString()] = type;
-      }
+    await resolveType(module.typeId);
+    final chargeTypeId = module.chargeTypeId;
+    if (chargeTypeId != null) {
+      await resolveType(chargeTypeId);
     }
   }
 

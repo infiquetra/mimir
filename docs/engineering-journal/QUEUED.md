@@ -70,24 +70,38 @@ compare stability against pyfa.
 **Context.** The shipped CapSimulator ports pyfa's event loop for repeating
 drains only; injectors (deferred usage, top-up logic) and clip reloads are
 omitted and documented as such. Align/warp/cap-stable all shipped 2026-09-07;
-the only stats row still dashed is DPS, pending ship weapon bonuses from
-expression trees.
+DPS/volley/optimal/falloff shipped 2026-09-08 from bundled resolved modifiers
+(see ARCHIVE SHIPPED 2026-09-08).
 **Refs.** LEARNINGS 2026-09-07 cap-simulation entry.
 
-### Model dogma expression trees for bonuses ESI hides (propulsion speed first)
+### Drone DPS and drone-domain bonuses
 
 **Author.** Qwen Code
 **Priority.** P2
-**Effort.** Two to four days, gated on obtaining an SDE dogma-expression dump.
-**Worth it when.** Users compare Mimir's speed/DPS numbers against pyfa or EFT
-and find them missing.
-**Context.** Afterburner/MWD speed bonuses live in effect expression trees
-that ESI does not publish as modifiers (verified 2026-09-07: effect 6731 has
-an empty modifier list); those two effects are now covered by a curated,
-cross-checked map in DogmaEngine. What remains is the turret/missile DPS
-chain (ship weapon bonuses also live in expression trees) and any other
-expression-tree bonus users compare against pyfa.
-**Refs.** LEARNINGS 2026-09-07 operator-semantics entry.
+**Effort.** One to two days.
+**Worth it when.** Users fit drone boats and compare total DPS against pyfa;
+today `dpsDrones` stays 0 and the OFFENSE section omits it.
+**Context.** The 2026-09-08 offense pass covers turrets and launchers from
+bundled resolved modifiers. Drone damage lives on the drone types themselves
+(real, shippable as base DPS), but drone damage amps and rig bonuses target
+the drone domain, a routing case the engine does not handle yet; showing base
+drone DPS while amps are fitted would understate the fit, so drones wait for
+the domain routing.
+**Refs.** DECISIONS 2026-09-08 bundled-modifiers entry.
+
+### Unsupported dogma operators beyond postPercent/postMul
+
+**Author.** Qwen Code
+**Priority.** P2
+**Effort.** Half a day, gated on knowing which operators matter.
+**Worth it when.** A displayed row is traced to a modifier with operator 2
+(preMul, e.g. missile specialisation's `characterMissileDamageMultiply`) or
+4 (smartbomb damage scaling) and users compare against pyfa.
+**Context.** The bundled modifier data contains six operator codes in the
+wild; the engine applies 6 (postPercent) and 0 (postMul) — both validated
+against live ESI and in-game values — and counts the rest in a debug log
+instead of guessing semantics.
+**Refs.** LEARNINGS 2026-09-08 modifierInfo entry.
 
 ### Real wormhole-mapper integration (replaces the removed Pathfinder mock)
 

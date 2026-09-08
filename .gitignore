@@ -38,6 +38,7 @@ app.*.symbols
 
 # SDE download caches used by scripts/sde generators
 scripts/sde/*.bz2
+scripts/sde/*.csv
 scripts/sde/*.zip
 scripts/sde/*.md5
 

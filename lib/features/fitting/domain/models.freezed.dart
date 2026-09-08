@@ -2192,7 +2192,7 @@ as double,
 /// @nodoc
 mixin _$ShipType {
 
- int get typeId; String get name; String get description; int get groupId; String get groupName; String get raceName; int get highSlots; int get medSlots; int get lowSlots; int get rigSlots; int get turretSlots; int get launcherSlots; Map<int, double> get baseAttributes; List<ShipBonus> get bonuses; List<SkillRequirement> get skillRequirements;
+ int get typeId; String get name; String get description; int get groupId; String get groupName; String get raceName; int get highSlots; int get medSlots; int get lowSlots; int get rigSlots; int get turretSlots; int get launcherSlots; Map<int, double> get baseAttributes; List<DogmaEffect> get effects; List<ShipBonus> get bonuses; List<SkillRequirement> get skillRequirements;
 /// Create a copy of ShipType
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2205,16 +2205,16 @@ $ShipTypeCopyWith<ShipType> get copyWith => _$ShipTypeCopyWithImpl<ShipType>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ShipType&&(identical(other.typeId, typeId) || other.typeId == typeId)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.groupId, groupId) || other.groupId == groupId)&&(identical(other.groupName, groupName) || other.groupName == groupName)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.highSlots, highSlots) || other.highSlots == highSlots)&&(identical(other.medSlots, medSlots) || other.medSlots == medSlots)&&(identical(other.lowSlots, lowSlots) || other.lowSlots == lowSlots)&&(identical(other.rigSlots, rigSlots) || other.rigSlots == rigSlots)&&(identical(other.turretSlots, turretSlots) || other.turretSlots == turretSlots)&&(identical(other.launcherSlots, launcherSlots) || other.launcherSlots == launcherSlots)&&const DeepCollectionEquality().equals(other.baseAttributes, baseAttributes)&&const DeepCollectionEquality().equals(other.bonuses, bonuses)&&const DeepCollectionEquality().equals(other.skillRequirements, skillRequirements));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ShipType&&(identical(other.typeId, typeId) || other.typeId == typeId)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.groupId, groupId) || other.groupId == groupId)&&(identical(other.groupName, groupName) || other.groupName == groupName)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.highSlots, highSlots) || other.highSlots == highSlots)&&(identical(other.medSlots, medSlots) || other.medSlots == medSlots)&&(identical(other.lowSlots, lowSlots) || other.lowSlots == lowSlots)&&(identical(other.rigSlots, rigSlots) || other.rigSlots == rigSlots)&&(identical(other.turretSlots, turretSlots) || other.turretSlots == turretSlots)&&(identical(other.launcherSlots, launcherSlots) || other.launcherSlots == launcherSlots)&&const DeepCollectionEquality().equals(other.baseAttributes, baseAttributes)&&const DeepCollectionEquality().equals(other.effects, effects)&&const DeepCollectionEquality().equals(other.bonuses, bonuses)&&const DeepCollectionEquality().equals(other.skillRequirements, skillRequirements));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,typeId,name,description,groupId,groupName,raceName,highSlots,medSlots,lowSlots,rigSlots,turretSlots,launcherSlots,const DeepCollectionEquality().hash(baseAttributes),const DeepCollectionEquality().hash(bonuses),const DeepCollectionEquality().hash(skillRequirements));
+int get hashCode => Object.hash(runtimeType,typeId,name,description,groupId,groupName,raceName,highSlots,medSlots,lowSlots,rigSlots,turretSlots,launcherSlots,const DeepCollectionEquality().hash(baseAttributes),const DeepCollectionEquality().hash(effects),const DeepCollectionEquality().hash(bonuses),const DeepCollectionEquality().hash(skillRequirements));
 
 @override
 String toString() {
-  return 'ShipType(typeId: $typeId, name: $name, description: $description, groupId: $groupId, groupName: $groupName, raceName: $raceName, highSlots: $highSlots, medSlots: $medSlots, lowSlots: $lowSlots, rigSlots: $rigSlots, turretSlots: $turretSlots, launcherSlots: $launcherSlots, baseAttributes: $baseAttributes, bonuses: $bonuses, skillRequirements: $skillRequirements)';
+  return 'ShipType(typeId: $typeId, name: $name, description: $description, groupId: $groupId, groupName: $groupName, raceName: $raceName, highSlots: $highSlots, medSlots: $medSlots, lowSlots: $lowSlots, rigSlots: $rigSlots, turretSlots: $turretSlots, launcherSlots: $launcherSlots, baseAttributes: $baseAttributes, effects: $effects, bonuses: $bonuses, skillRequirements: $skillRequirements)';
 }
 
 
@@ -2225,7 +2225,7 @@ abstract mixin class $ShipTypeCopyWith<$Res>  {
   factory $ShipTypeCopyWith(ShipType value, $Res Function(ShipType) _then) = _$ShipTypeCopyWithImpl;
 @useResult
 $Res call({
- int typeId, String name, String description, int groupId, String groupName, String raceName, int highSlots, int medSlots, int lowSlots, int rigSlots, int turretSlots, int launcherSlots, Map<int, double> baseAttributes, List<ShipBonus> bonuses, List<SkillRequirement> skillRequirements
+ int typeId, String name, String description, int groupId, String groupName, String raceName, int highSlots, int medSlots, int lowSlots, int rigSlots, int turretSlots, int launcherSlots, Map<int, double> baseAttributes, List<DogmaEffect> effects, List<ShipBonus> bonuses, List<SkillRequirement> skillRequirements
 });
 
 
@@ -2242,7 +2242,7 @@ class _$ShipTypeCopyWithImpl<$Res>
 
 /// Create a copy of ShipType
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? typeId = null,Object? name = null,Object? description = null,Object? groupId = null,Object? groupName = null,Object? raceName = null,Object? highSlots = null,Object? medSlots = null,Object? lowSlots = null,Object? rigSlots = null,Object? turretSlots = null,Object? launcherSlots = null,Object? baseAttributes = null,Object? bonuses = null,Object? skillRequirements = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? typeId = null,Object? name = null,Object? description = null,Object? groupId = null,Object? groupName = null,Object? raceName = null,Object? highSlots = null,Object? medSlots = null,Object? lowSlots = null,Object? rigSlots = null,Object? turretSlots = null,Object? launcherSlots = null,Object? baseAttributes = null,Object? effects = null,Object? bonuses = null,Object? skillRequirements = null,}) {
   return _then(_self.copyWith(
 typeId: null == typeId ? _self.typeId : typeId // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -2257,7 +2257,8 @@ as int,rigSlots: null == rigSlots ? _self.rigSlots : rigSlots // ignore: cast_nu
 as int,turretSlots: null == turretSlots ? _self.turretSlots : turretSlots // ignore: cast_nullable_to_non_nullable
 as int,launcherSlots: null == launcherSlots ? _self.launcherSlots : launcherSlots // ignore: cast_nullable_to_non_nullable
 as int,baseAttributes: null == baseAttributes ? _self.baseAttributes : baseAttributes // ignore: cast_nullable_to_non_nullable
-as Map<int, double>,bonuses: null == bonuses ? _self.bonuses : bonuses // ignore: cast_nullable_to_non_nullable
+as Map<int, double>,effects: null == effects ? _self.effects : effects // ignore: cast_nullable_to_non_nullable
+as List<DogmaEffect>,bonuses: null == bonuses ? _self.bonuses : bonuses // ignore: cast_nullable_to_non_nullable
 as List<ShipBonus>,skillRequirements: null == skillRequirements ? _self.skillRequirements : skillRequirements // ignore: cast_nullable_to_non_nullable
 as List<SkillRequirement>,
   ));
@@ -2344,10 +2345,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int typeId,  String name,  String description,  int groupId,  String groupName,  String raceName,  int highSlots,  int medSlots,  int lowSlots,  int rigSlots,  int turretSlots,  int launcherSlots,  Map<int, double> baseAttributes,  List<ShipBonus> bonuses,  List<SkillRequirement> skillRequirements)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int typeId,  String name,  String description,  int groupId,  String groupName,  String raceName,  int highSlots,  int medSlots,  int lowSlots,  int rigSlots,  int turretSlots,  int launcherSlots,  Map<int, double> baseAttributes,  List<DogmaEffect> effects,  List<ShipBonus> bonuses,  List<SkillRequirement> skillRequirements)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ShipType() when $default != null:
-return $default(_that.typeId,_that.name,_that.description,_that.groupId,_that.groupName,_that.raceName,_that.highSlots,_that.medSlots,_that.lowSlots,_that.rigSlots,_that.turretSlots,_that.launcherSlots,_that.baseAttributes,_that.bonuses,_that.skillRequirements);case _:
+return $default(_that.typeId,_that.name,_that.description,_that.groupId,_that.groupName,_that.raceName,_that.highSlots,_that.medSlots,_that.lowSlots,_that.rigSlots,_that.turretSlots,_that.launcherSlots,_that.baseAttributes,_that.effects,_that.bonuses,_that.skillRequirements);case _:
   return orElse();
 
 }
@@ -2365,10 +2366,10 @@ return $default(_that.typeId,_that.name,_that.description,_that.groupId,_that.gr
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int typeId,  String name,  String description,  int groupId,  String groupName,  String raceName,  int highSlots,  int medSlots,  int lowSlots,  int rigSlots,  int turretSlots,  int launcherSlots,  Map<int, double> baseAttributes,  List<ShipBonus> bonuses,  List<SkillRequirement> skillRequirements)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int typeId,  String name,  String description,  int groupId,  String groupName,  String raceName,  int highSlots,  int medSlots,  int lowSlots,  int rigSlots,  int turretSlots,  int launcherSlots,  Map<int, double> baseAttributes,  List<DogmaEffect> effects,  List<ShipBonus> bonuses,  List<SkillRequirement> skillRequirements)  $default,) {final _that = this;
 switch (_that) {
 case _ShipType():
-return $default(_that.typeId,_that.name,_that.description,_that.groupId,_that.groupName,_that.raceName,_that.highSlots,_that.medSlots,_that.lowSlots,_that.rigSlots,_that.turretSlots,_that.launcherSlots,_that.baseAttributes,_that.bonuses,_that.skillRequirements);case _:
+return $default(_that.typeId,_that.name,_that.description,_that.groupId,_that.groupName,_that.raceName,_that.highSlots,_that.medSlots,_that.lowSlots,_that.rigSlots,_that.turretSlots,_that.launcherSlots,_that.baseAttributes,_that.effects,_that.bonuses,_that.skillRequirements);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2385,10 +2386,10 @@ return $default(_that.typeId,_that.name,_that.description,_that.groupId,_that.gr
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int typeId,  String name,  String description,  int groupId,  String groupName,  String raceName,  int highSlots,  int medSlots,  int lowSlots,  int rigSlots,  int turretSlots,  int launcherSlots,  Map<int, double> baseAttributes,  List<ShipBonus> bonuses,  List<SkillRequirement> skillRequirements)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int typeId,  String name,  String description,  int groupId,  String groupName,  String raceName,  int highSlots,  int medSlots,  int lowSlots,  int rigSlots,  int turretSlots,  int launcherSlots,  Map<int, double> baseAttributes,  List<DogmaEffect> effects,  List<ShipBonus> bonuses,  List<SkillRequirement> skillRequirements)?  $default,) {final _that = this;
 switch (_that) {
 case _ShipType() when $default != null:
-return $default(_that.typeId,_that.name,_that.description,_that.groupId,_that.groupName,_that.raceName,_that.highSlots,_that.medSlots,_that.lowSlots,_that.rigSlots,_that.turretSlots,_that.launcherSlots,_that.baseAttributes,_that.bonuses,_that.skillRequirements);case _:
+return $default(_that.typeId,_that.name,_that.description,_that.groupId,_that.groupName,_that.raceName,_that.highSlots,_that.medSlots,_that.lowSlots,_that.rigSlots,_that.turretSlots,_that.launcherSlots,_that.baseAttributes,_that.effects,_that.bonuses,_that.skillRequirements);case _:
   return null;
 
 }
@@ -2400,7 +2401,7 @@ return $default(_that.typeId,_that.name,_that.description,_that.groupId,_that.gr
 @JsonSerializable()
 
 class _ShipType implements ShipType {
-  const _ShipType({required this.typeId, required this.name, required this.description, required this.groupId, required this.groupName, this.raceName = '', this.highSlots = 0, this.medSlots = 0, this.lowSlots = 0, this.rigSlots = 0, this.turretSlots = 0, this.launcherSlots = 0, final  Map<int, double> baseAttributes = const {}, final  List<ShipBonus> bonuses = const [], final  List<SkillRequirement> skillRequirements = const []}): _baseAttributes = baseAttributes,_bonuses = bonuses,_skillRequirements = skillRequirements;
+  const _ShipType({required this.typeId, required this.name, required this.description, required this.groupId, required this.groupName, this.raceName = '', this.highSlots = 0, this.medSlots = 0, this.lowSlots = 0, this.rigSlots = 0, this.turretSlots = 0, this.launcherSlots = 0, final  Map<int, double> baseAttributes = const {}, final  List<DogmaEffect> effects = const [], final  List<ShipBonus> bonuses = const [], final  List<SkillRequirement> skillRequirements = const []}): _baseAttributes = baseAttributes,_effects = effects,_bonuses = bonuses,_skillRequirements = skillRequirements;
   factory _ShipType.fromJson(Map<String, dynamic> json) => _$ShipTypeFromJson(json);
 
 @override final  int typeId;
@@ -2420,6 +2421,13 @@ class _ShipType implements ShipType {
   if (_baseAttributes is EqualUnmodifiableMapView) return _baseAttributes;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableMapView(_baseAttributes);
+}
+
+ final  List<DogmaEffect> _effects;
+@override@JsonKey() List<DogmaEffect> get effects {
+  if (_effects is EqualUnmodifiableListView) return _effects;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_effects);
 }
 
  final  List<ShipBonus> _bonuses;
@@ -2450,16 +2458,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ShipType&&(identical(other.typeId, typeId) || other.typeId == typeId)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.groupId, groupId) || other.groupId == groupId)&&(identical(other.groupName, groupName) || other.groupName == groupName)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.highSlots, highSlots) || other.highSlots == highSlots)&&(identical(other.medSlots, medSlots) || other.medSlots == medSlots)&&(identical(other.lowSlots, lowSlots) || other.lowSlots == lowSlots)&&(identical(other.rigSlots, rigSlots) || other.rigSlots == rigSlots)&&(identical(other.turretSlots, turretSlots) || other.turretSlots == turretSlots)&&(identical(other.launcherSlots, launcherSlots) || other.launcherSlots == launcherSlots)&&const DeepCollectionEquality().equals(other._baseAttributes, _baseAttributes)&&const DeepCollectionEquality().equals(other._bonuses, _bonuses)&&const DeepCollectionEquality().equals(other._skillRequirements, _skillRequirements));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ShipType&&(identical(other.typeId, typeId) || other.typeId == typeId)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.groupId, groupId) || other.groupId == groupId)&&(identical(other.groupName, groupName) || other.groupName == groupName)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.highSlots, highSlots) || other.highSlots == highSlots)&&(identical(other.medSlots, medSlots) || other.medSlots == medSlots)&&(identical(other.lowSlots, lowSlots) || other.lowSlots == lowSlots)&&(identical(other.rigSlots, rigSlots) || other.rigSlots == rigSlots)&&(identical(other.turretSlots, turretSlots) || other.turretSlots == turretSlots)&&(identical(other.launcherSlots, launcherSlots) || other.launcherSlots == launcherSlots)&&const DeepCollectionEquality().equals(other._baseAttributes, _baseAttributes)&&const DeepCollectionEquality().equals(other._effects, _effects)&&const DeepCollectionEquality().equals(other._bonuses, _bonuses)&&const DeepCollectionEquality().equals(other._skillRequirements, _skillRequirements));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,typeId,name,description,groupId,groupName,raceName,highSlots,medSlots,lowSlots,rigSlots,turretSlots,launcherSlots,const DeepCollectionEquality().hash(_baseAttributes),const DeepCollectionEquality().hash(_bonuses),const DeepCollectionEquality().hash(_skillRequirements));
+int get hashCode => Object.hash(runtimeType,typeId,name,description,groupId,groupName,raceName,highSlots,medSlots,lowSlots,rigSlots,turretSlots,launcherSlots,const DeepCollectionEquality().hash(_baseAttributes),const DeepCollectionEquality().hash(_effects),const DeepCollectionEquality().hash(_bonuses),const DeepCollectionEquality().hash(_skillRequirements));
 
 @override
 String toString() {
-  return 'ShipType(typeId: $typeId, name: $name, description: $description, groupId: $groupId, groupName: $groupName, raceName: $raceName, highSlots: $highSlots, medSlots: $medSlots, lowSlots: $lowSlots, rigSlots: $rigSlots, turretSlots: $turretSlots, launcherSlots: $launcherSlots, baseAttributes: $baseAttributes, bonuses: $bonuses, skillRequirements: $skillRequirements)';
+  return 'ShipType(typeId: $typeId, name: $name, description: $description, groupId: $groupId, groupName: $groupName, raceName: $raceName, highSlots: $highSlots, medSlots: $medSlots, lowSlots: $lowSlots, rigSlots: $rigSlots, turretSlots: $turretSlots, launcherSlots: $launcherSlots, baseAttributes: $baseAttributes, effects: $effects, bonuses: $bonuses, skillRequirements: $skillRequirements)';
 }
 
 
@@ -2470,7 +2478,7 @@ abstract mixin class _$ShipTypeCopyWith<$Res> implements $ShipTypeCopyWith<$Res>
   factory _$ShipTypeCopyWith(_ShipType value, $Res Function(_ShipType) _then) = __$ShipTypeCopyWithImpl;
 @override @useResult
 $Res call({
- int typeId, String name, String description, int groupId, String groupName, String raceName, int highSlots, int medSlots, int lowSlots, int rigSlots, int turretSlots, int launcherSlots, Map<int, double> baseAttributes, List<ShipBonus> bonuses, List<SkillRequirement> skillRequirements
+ int typeId, String name, String description, int groupId, String groupName, String raceName, int highSlots, int medSlots, int lowSlots, int rigSlots, int turretSlots, int launcherSlots, Map<int, double> baseAttributes, List<DogmaEffect> effects, List<ShipBonus> bonuses, List<SkillRequirement> skillRequirements
 });
 
 
@@ -2487,7 +2495,7 @@ class __$ShipTypeCopyWithImpl<$Res>
 
 /// Create a copy of ShipType
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? typeId = null,Object? name = null,Object? description = null,Object? groupId = null,Object? groupName = null,Object? raceName = null,Object? highSlots = null,Object? medSlots = null,Object? lowSlots = null,Object? rigSlots = null,Object? turretSlots = null,Object? launcherSlots = null,Object? baseAttributes = null,Object? bonuses = null,Object? skillRequirements = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? typeId = null,Object? name = null,Object? description = null,Object? groupId = null,Object? groupName = null,Object? raceName = null,Object? highSlots = null,Object? medSlots = null,Object? lowSlots = null,Object? rigSlots = null,Object? turretSlots = null,Object? launcherSlots = null,Object? baseAttributes = null,Object? effects = null,Object? bonuses = null,Object? skillRequirements = null,}) {
   return _then(_ShipType(
 typeId: null == typeId ? _self.typeId : typeId // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -2502,7 +2510,8 @@ as int,rigSlots: null == rigSlots ? _self.rigSlots : rigSlots // ignore: cast_nu
 as int,turretSlots: null == turretSlots ? _self.turretSlots : turretSlots // ignore: cast_nullable_to_non_nullable
 as int,launcherSlots: null == launcherSlots ? _self.launcherSlots : launcherSlots // ignore: cast_nullable_to_non_nullable
 as int,baseAttributes: null == baseAttributes ? _self._baseAttributes : baseAttributes // ignore: cast_nullable_to_non_nullable
-as Map<int, double>,bonuses: null == bonuses ? _self._bonuses : bonuses // ignore: cast_nullable_to_non_nullable
+as Map<int, double>,effects: null == effects ? _self._effects : effects // ignore: cast_nullable_to_non_nullable
+as List<DogmaEffect>,bonuses: null == bonuses ? _self._bonuses : bonuses // ignore: cast_nullable_to_non_nullable
 as List<ShipBonus>,skillRequirements: null == skillRequirements ? _self._skillRequirements : skillRequirements // ignore: cast_nullable_to_non_nullable
 as List<SkillRequirement>,
   ));
@@ -3387,7 +3396,7 @@ as bool,
 /// @nodoc
 mixin _$EffectModifier {
 
- int get effectId; String get func; int get operator; int get modifiedAttributeId; int? get modifyingAttributeId; String get domain;
+ int get effectId; String get func; int get operator; int get modifiedAttributeId; int? get modifyingAttributeId; String get domain; int? get skillTypeId; int? get groupId;
 /// Create a copy of EffectModifier
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3398,16 +3407,16 @@ $EffectModifierCopyWith<EffectModifier> get copyWith => _$EffectModifierCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is EffectModifier&&(identical(other.effectId, effectId) || other.effectId == effectId)&&(identical(other.func, func) || other.func == func)&&(identical(other.operator, operator) || other.operator == operator)&&(identical(other.modifiedAttributeId, modifiedAttributeId) || other.modifiedAttributeId == modifiedAttributeId)&&(identical(other.modifyingAttributeId, modifyingAttributeId) || other.modifyingAttributeId == modifyingAttributeId)&&(identical(other.domain, domain) || other.domain == domain));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is EffectModifier&&(identical(other.effectId, effectId) || other.effectId == effectId)&&(identical(other.func, func) || other.func == func)&&(identical(other.operator, operator) || other.operator == operator)&&(identical(other.modifiedAttributeId, modifiedAttributeId) || other.modifiedAttributeId == modifiedAttributeId)&&(identical(other.modifyingAttributeId, modifyingAttributeId) || other.modifyingAttributeId == modifyingAttributeId)&&(identical(other.domain, domain) || other.domain == domain)&&(identical(other.skillTypeId, skillTypeId) || other.skillTypeId == skillTypeId)&&(identical(other.groupId, groupId) || other.groupId == groupId));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,effectId,func,operator,modifiedAttributeId,modifyingAttributeId,domain);
+int get hashCode => Object.hash(runtimeType,effectId,func,operator,modifiedAttributeId,modifyingAttributeId,domain,skillTypeId,groupId);
 
 @override
 String toString() {
-  return 'EffectModifier(effectId: $effectId, func: $func, operator: $operator, modifiedAttributeId: $modifiedAttributeId, modifyingAttributeId: $modifyingAttributeId, domain: $domain)';
+  return 'EffectModifier(effectId: $effectId, func: $func, operator: $operator, modifiedAttributeId: $modifiedAttributeId, modifyingAttributeId: $modifyingAttributeId, domain: $domain, skillTypeId: $skillTypeId, groupId: $groupId)';
 }
 
 
@@ -3418,7 +3427,7 @@ abstract mixin class $EffectModifierCopyWith<$Res>  {
   factory $EffectModifierCopyWith(EffectModifier value, $Res Function(EffectModifier) _then) = _$EffectModifierCopyWithImpl;
 @useResult
 $Res call({
- int effectId, String func, int operator, int modifiedAttributeId, int? modifyingAttributeId, String domain
+ int effectId, String func, int operator, int modifiedAttributeId, int? modifyingAttributeId, String domain, int? skillTypeId, int? groupId
 });
 
 
@@ -3435,7 +3444,7 @@ class _$EffectModifierCopyWithImpl<$Res>
 
 /// Create a copy of EffectModifier
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? effectId = null,Object? func = null,Object? operator = null,Object? modifiedAttributeId = null,Object? modifyingAttributeId = freezed,Object? domain = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? effectId = null,Object? func = null,Object? operator = null,Object? modifiedAttributeId = null,Object? modifyingAttributeId = freezed,Object? domain = null,Object? skillTypeId = freezed,Object? groupId = freezed,}) {
   return _then(_self.copyWith(
 effectId: null == effectId ? _self.effectId : effectId // ignore: cast_nullable_to_non_nullable
 as int,func: null == func ? _self.func : func // ignore: cast_nullable_to_non_nullable
@@ -3443,7 +3452,9 @@ as String,operator: null == operator ? _self.operator : operator // ignore: cast
 as int,modifiedAttributeId: null == modifiedAttributeId ? _self.modifiedAttributeId : modifiedAttributeId // ignore: cast_nullable_to_non_nullable
 as int,modifyingAttributeId: freezed == modifyingAttributeId ? _self.modifyingAttributeId : modifyingAttributeId // ignore: cast_nullable_to_non_nullable
 as int?,domain: null == domain ? _self.domain : domain // ignore: cast_nullable_to_non_nullable
-as String,
+as String,skillTypeId: freezed == skillTypeId ? _self.skillTypeId : skillTypeId // ignore: cast_nullable_to_non_nullable
+as int?,groupId: freezed == groupId ? _self.groupId : groupId // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -3528,10 +3539,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int effectId,  String func,  int operator,  int modifiedAttributeId,  int? modifyingAttributeId,  String domain)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int effectId,  String func,  int operator,  int modifiedAttributeId,  int? modifyingAttributeId,  String domain,  int? skillTypeId,  int? groupId)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _EffectModifier() when $default != null:
-return $default(_that.effectId,_that.func,_that.operator,_that.modifiedAttributeId,_that.modifyingAttributeId,_that.domain);case _:
+return $default(_that.effectId,_that.func,_that.operator,_that.modifiedAttributeId,_that.modifyingAttributeId,_that.domain,_that.skillTypeId,_that.groupId);case _:
   return orElse();
 
 }
@@ -3549,10 +3560,10 @@ return $default(_that.effectId,_that.func,_that.operator,_that.modifiedAttribute
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int effectId,  String func,  int operator,  int modifiedAttributeId,  int? modifyingAttributeId,  String domain)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int effectId,  String func,  int operator,  int modifiedAttributeId,  int? modifyingAttributeId,  String domain,  int? skillTypeId,  int? groupId)  $default,) {final _that = this;
 switch (_that) {
 case _EffectModifier():
-return $default(_that.effectId,_that.func,_that.operator,_that.modifiedAttributeId,_that.modifyingAttributeId,_that.domain);case _:
+return $default(_that.effectId,_that.func,_that.operator,_that.modifiedAttributeId,_that.modifyingAttributeId,_that.domain,_that.skillTypeId,_that.groupId);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -3569,10 +3580,10 @@ return $default(_that.effectId,_that.func,_that.operator,_that.modifiedAttribute
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int effectId,  String func,  int operator,  int modifiedAttributeId,  int? modifyingAttributeId,  String domain)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int effectId,  String func,  int operator,  int modifiedAttributeId,  int? modifyingAttributeId,  String domain,  int? skillTypeId,  int? groupId)?  $default,) {final _that = this;
 switch (_that) {
 case _EffectModifier() when $default != null:
-return $default(_that.effectId,_that.func,_that.operator,_that.modifiedAttributeId,_that.modifyingAttributeId,_that.domain);case _:
+return $default(_that.effectId,_that.func,_that.operator,_that.modifiedAttributeId,_that.modifyingAttributeId,_that.domain,_that.skillTypeId,_that.groupId);case _:
   return null;
 
 }
@@ -3584,7 +3595,7 @@ return $default(_that.effectId,_that.func,_that.operator,_that.modifiedAttribute
 
 
 class _EffectModifier implements EffectModifier {
-  const _EffectModifier({required this.effectId, required this.func, required this.operator, required this.modifiedAttributeId, this.modifyingAttributeId, this.domain = 'shipID'});
+  const _EffectModifier({required this.effectId, required this.func, required this.operator, required this.modifiedAttributeId, this.modifyingAttributeId, this.domain = 'shipID', this.skillTypeId, this.groupId});
   
 
 @override final  int effectId;
@@ -3593,6 +3604,8 @@ class _EffectModifier implements EffectModifier {
 @override final  int modifiedAttributeId;
 @override final  int? modifyingAttributeId;
 @override@JsonKey() final  String domain;
+@override final  int? skillTypeId;
+@override final  int? groupId;
 
 /// Create a copy of EffectModifier
 /// with the given fields replaced by the non-null parameter values.
@@ -3604,16 +3617,16 @@ _$EffectModifierCopyWith<_EffectModifier> get copyWith => __$EffectModifierCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EffectModifier&&(identical(other.effectId, effectId) || other.effectId == effectId)&&(identical(other.func, func) || other.func == func)&&(identical(other.operator, operator) || other.operator == operator)&&(identical(other.modifiedAttributeId, modifiedAttributeId) || other.modifiedAttributeId == modifiedAttributeId)&&(identical(other.modifyingAttributeId, modifyingAttributeId) || other.modifyingAttributeId == modifyingAttributeId)&&(identical(other.domain, domain) || other.domain == domain));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EffectModifier&&(identical(other.effectId, effectId) || other.effectId == effectId)&&(identical(other.func, func) || other.func == func)&&(identical(other.operator, operator) || other.operator == operator)&&(identical(other.modifiedAttributeId, modifiedAttributeId) || other.modifiedAttributeId == modifiedAttributeId)&&(identical(other.modifyingAttributeId, modifyingAttributeId) || other.modifyingAttributeId == modifyingAttributeId)&&(identical(other.domain, domain) || other.domain == domain)&&(identical(other.skillTypeId, skillTypeId) || other.skillTypeId == skillTypeId)&&(identical(other.groupId, groupId) || other.groupId == groupId));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,effectId,func,operator,modifiedAttributeId,modifyingAttributeId,domain);
+int get hashCode => Object.hash(runtimeType,effectId,func,operator,modifiedAttributeId,modifyingAttributeId,domain,skillTypeId,groupId);
 
 @override
 String toString() {
-  return 'EffectModifier(effectId: $effectId, func: $func, operator: $operator, modifiedAttributeId: $modifiedAttributeId, modifyingAttributeId: $modifyingAttributeId, domain: $domain)';
+  return 'EffectModifier(effectId: $effectId, func: $func, operator: $operator, modifiedAttributeId: $modifiedAttributeId, modifyingAttributeId: $modifyingAttributeId, domain: $domain, skillTypeId: $skillTypeId, groupId: $groupId)';
 }
 
 
@@ -3624,7 +3637,7 @@ abstract mixin class _$EffectModifierCopyWith<$Res> implements $EffectModifierCo
   factory _$EffectModifierCopyWith(_EffectModifier value, $Res Function(_EffectModifier) _then) = __$EffectModifierCopyWithImpl;
 @override @useResult
 $Res call({
- int effectId, String func, int operator, int modifiedAttributeId, int? modifyingAttributeId, String domain
+ int effectId, String func, int operator, int modifiedAttributeId, int? modifyingAttributeId, String domain, int? skillTypeId, int? groupId
 });
 
 
@@ -3641,7 +3654,7 @@ class __$EffectModifierCopyWithImpl<$Res>
 
 /// Create a copy of EffectModifier
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? effectId = null,Object? func = null,Object? operator = null,Object? modifiedAttributeId = null,Object? modifyingAttributeId = freezed,Object? domain = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? effectId = null,Object? func = null,Object? operator = null,Object? modifiedAttributeId = null,Object? modifyingAttributeId = freezed,Object? domain = null,Object? skillTypeId = freezed,Object? groupId = freezed,}) {
   return _then(_EffectModifier(
 effectId: null == effectId ? _self.effectId : effectId // ignore: cast_nullable_to_non_nullable
 as int,func: null == func ? _self.func : func // ignore: cast_nullable_to_non_nullable
@@ -3649,7 +3662,9 @@ as String,operator: null == operator ? _self.operator : operator // ignore: cast
 as int,modifiedAttributeId: null == modifiedAttributeId ? _self.modifiedAttributeId : modifiedAttributeId // ignore: cast_nullable_to_non_nullable
 as int,modifyingAttributeId: freezed == modifyingAttributeId ? _self.modifyingAttributeId : modifyingAttributeId // ignore: cast_nullable_to_non_nullable
 as int?,domain: null == domain ? _self.domain : domain // ignore: cast_nullable_to_non_nullable
-as String,
+as String,skillTypeId: freezed == skillTypeId ? _self.skillTypeId : skillTypeId // ignore: cast_nullable_to_non_nullable
+as int?,groupId: freezed == groupId ? _self.groupId : groupId // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

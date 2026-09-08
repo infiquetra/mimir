@@ -30,6 +30,14 @@ class SdeService {
   /// retry storm of failed ESI calls.
   final Set<int> _modifierFetchAttempted = {};
 
+  /// Resolved dogma modifiers bundled from the SDE's `dgmEffects.modifierInfo`,
+  /// keyed by effect ID. Loaded on every launch (even with a seeded database)
+  /// because the fitting engine needs them to apply any module or ship bonus.
+  final Map<int, List<EffectModifier>> _bundledEffectModifiers = {};
+
+  /// Effect display names from the same bundled asset.
+  final Map<int, String> _effectNames = {};
+
   /// Whether the service has been initialized.
   bool _initialized = false;
 
@@ -37,6 +45,10 @@ class SdeService {
   static const String _bundledSkillsAsset = 'assets/sde/skills.json';
   static const String _bundledDogmaAsset = 'assets/sde/dogma.json';
   static const String _bundledIndustryAsset = 'assets/sde/industry.json';
+
+  /// Bundled resolved dogma modifiers, loaded on every launch.
+  static const String _bundledEffectModifiersAsset =
+      'assets/sde/effect_modifiers.json';
 
   /// Public ESI base URL for dogma reference data.
   static const String _esiBaseUrl = 'https://esi.evetech.net/latest';
@@ -60,6 +72,10 @@ class SdeService {
     if (!hasDogmaData) {
       await _loadBundledDogma();
     }
+
+    // Resolved modifiers are needed on every launch, not only when the
+    // database is seeded for the first time.
+    await _loadBundledEffectModifiers();
 
     final hasIndustryData = await database.hasIndustryData();
     if (!hasIndustryData) {
@@ -106,6 +122,51 @@ class SdeService {
       Log.i('SDE', 'Bundled industry imported successfully');
     } catch (e, stack) {
       Log.e('SDE', 'Bundled industry not found or failed to load', e, stack);
+    }
+  }
+
+  /// Load CCP's resolved dogma modifiers from the bundled asset.
+  ///
+  /// The SDE publishes, per effect, the modifiers it applies (operator,
+  /// modified/modifying attribute, domain, skill and group restrictions).
+  /// This is the same data ESI serves per effect, bundled so fitting stats
+  /// are correct offline and without a per-effect fetch storm.
+  Future<void> _loadBundledEffectModifiers() async {
+    try {
+      final jsonString = await rootBundle.loadString(
+        _bundledEffectModifiersAsset,
+      );
+      final data = json.decode(jsonString) as Map<String, dynamic>;
+      data.forEach((effectId, meta) {
+        final map = meta as Map<String, dynamic>;
+        _effectNames[int.parse(effectId)] = map['name'] as String? ?? '';
+        final modifiers = (map['modifiers'] as List? ?? [])
+            .where(
+              (m) => (m as Map<String, dynamic>)['modifiedAttributeId'] != null,
+            )
+            .map(
+              (m) => EffectModifier(
+                effectId: int.parse(effectId),
+                func: m['func'] as String? ?? '',
+                operator: m['operator'] as int? ?? -1,
+                modifiedAttributeId: m['modifiedAttributeId'] as int,
+                modifyingAttributeId: m['modifyingAttributeId'] as int?,
+                domain: m['domain'] as String? ?? 'shipID',
+                skillTypeId: m['skillTypeId'] as int?,
+                groupId: m['groupId'] as int?,
+              ),
+            )
+            .toList();
+        if (modifiers.isNotEmpty) {
+          _bundledEffectModifiers[int.parse(effectId)] = modifiers;
+        }
+      });
+      Log.i(
+        'SDE',
+        'Bundled effect modifiers loaded: ${_bundledEffectModifiers.length} effects',
+      );
+    } catch (e, stack) {
+      Log.e('SDE', 'Bundled effect modifiers not found or failed', e, stack);
     }
   }
 
@@ -635,12 +696,12 @@ class SdeService {
     return database.getTypesByGroup(groupId);
   }
 
-  /// Returns dogma modifiers for the given effects, fetching any that are
-  /// not cached yet from ESI's public `/dogma/effects/{id}/`.
+  /// Returns dogma modifiers for the given effects.
   ///
-  /// The bundled SDE only stores effect IDs; the modifier list (operator,
-  /// modified/modifying attributes) is what makes module bonuses computable.
-  /// Failures are tolerated: an offline caller gets whatever is cached, and
+  /// The bundled SDE asset (CCP's resolved `modifierInfo`) is authoritative
+  /// and needs no network; effects it does not cover fall back to the Drift
+  /// cache and then to ESI's public `/dogma/effects/{id}/`. Failures are
+  /// tolerated: an offline caller gets whatever is bundled or cached, and
   /// the engine then reports base attributes rather than wrong ones.
   Future<Map<int, List<EffectModifier>>> ensureEffectModifiers(
     List<int> effectIds,
@@ -648,9 +709,18 @@ class SdeService {
     final unique = effectIds.toSet();
     if (unique.isEmpty) return const {};
 
-    final cached = await database.getEffectModifiers(unique.toList());
+    final grouped = <int, List<EffectModifier>>{
+      for (final entry in _bundledEffectModifiers.entries)
+        if (unique.contains(entry.key)) entry.key: entry.value,
+    };
+    final unbundled = unique
+        .where((id) => !_bundledEffectModifiers.containsKey(id))
+        .toList();
+    if (unbundled.isEmpty) return grouped;
+
+    final cached = await database.getEffectModifiers(unbundled);
     final cachedIds = cached.map((m) => m.effectId).toSet();
-    final missing = unique
+    final missing = unbundled
         .where((id) => !cachedIds.contains(id))
         .where((id) => !_modifierFetchAttempted.contains(id))
         .toList();
@@ -690,14 +760,22 @@ class SdeService {
       );
       await database.upsertEffectModifiers(rows);
       if (rows.isNotEmpty) {
-        return _groupModifiers(
-          await database.getEffectModifiers(unique.toList()),
+        grouped.addAll(
+          _groupModifiers(await database.getEffectModifiers(unbundled)),
         );
+        return grouped;
       }
     }
 
-    return _groupModifiers(cached);
+    grouped.addAll(_groupModifiers(cached));
+    return grouped;
   }
+
+  /// Dogma effects of a type, named from the bundled effect metadata.
+  List<DogmaEffect> _effectsFor(List<int> effectIds) => [
+    for (final id in effectIds)
+      DogmaEffect(effectId: id, name: _effectNames[id] ?? 'Effect #$id'),
+  ];
 
   Map<int, List<EffectModifier>> _groupModifiers(List<SdeEffectModifier> rows) {
     final grouped = <int, List<EffectModifier>>{};
@@ -826,6 +904,7 @@ class SdeService {
     final group = await database.getGroup(type.groupId);
     final attributes = await database.getTypeAttributes(typeId);
     final prereqs = await database.getSkillPrerequisites(typeId);
+    final effectIds = await database.getTypeEffects(typeId);
 
     final skillRequirements = <SkillRequirement>[];
     for (final req in prereqs) {
@@ -852,6 +931,7 @@ class SdeService {
       turretSlots: attributes[102]?.toInt() ?? 0,
       launcherSlots: attributes[101]?.toInt() ?? 0,
       baseAttributes: attributes,
+      effects: _effectsFor(effectIds),
       skillRequirements: skillRequirements,
     );
   }
@@ -907,6 +987,7 @@ class SdeService {
       powergrid: attributes[30] ?? 0.0,
       calibration: attributes[1153]?.toInt() ?? 0,
       baseAttributes: attributes,
+      effects: _effectsFor(effectIds),
       skillRequirements: skillRequirements,
     );
   }

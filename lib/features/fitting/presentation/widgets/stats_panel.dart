@@ -117,6 +117,11 @@ class StatsPanel extends ConsumerWidget {
                   'Optimal',
                   '${(stats.optimalRange / 1000).toStringAsFixed(1)} km',
                 ),
+              if (stats.falloffRange > 0)
+                _buildStatRow(
+                  'Falloff',
+                  '${(stats.falloffRange / 1000).toStringAsFixed(1)} km',
+                ),
             ],
           ],
         );

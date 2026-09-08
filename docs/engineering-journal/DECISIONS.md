@@ -24,6 +24,33 @@
 
 ---
 
+### 2026-09-08
+
+### Bundled resolved modifiers are the modifier source of truth; offense rows at pyfa parity (commit: pending)
+
+**Author.** Qwen Code
+**Decision.** `assets/sde/effect_modifiers.json` (generated from the SDE's
+`dgmEffects.modifierInfo`) loads on every launch and answers
+`ensureEffectModifiers` first; Drift cache and public ESI remain fallbacks for
+effects the bundle does not cover. DogmaEngine routes modifiers by func and
+domain (ship / fitted modules / loaded charges) and computes turret and
+missile DPS, volley, optimal and falloff pyfa-style: turret volley = charge
+damage components (114/116/117/118) times damage modifier 64, cycle from
+rate-of-fire 51, launchers contribute charge damage alone, ranges
+volley-weighted across turrets.
+**Rejected alternatives.** Porting a dogma expression-tree evaluator (the
+expression table is retired; resolved modifiers supersede it); keeping ESI as
+primary source (network-dependent, and the same data ships in the SDE);
+showing estimated DPS for unloaded weapons (would fabricate numbers).
+**Rationale.** CCP's resolved modifiers include skill linkage and group
+restrictions, making racial bonuses correct by construction and offline;
+unloaded weapons contributing zero matches an unloaded gun in game.
+**Revisit when.** Drone DPS is needed (drone-domain bonuses are a separate
+routing case), or operators beyond postPercent/postMul (e.g. missile
+specialisation's preMul) matter for a row we display.
+**Refs.** LEARNINGS 2026-09-08 modifierInfo and dead-effects entries;
+QUEUED drone DPS and unsupported-operator entries.
+
 ### Fitting tank math is data-driven from cached ESI modifiers (commit: pending)
 
 **Author.** Qwen Code
@@ -38,6 +65,9 @@ magnitude); a full expression-tree engine (ESI publishes expression IDs only).
 math correct by construction and cacheable for offline use.
 **Revisit when.** ESI publishes effect expressions, or Mimir bundles the full
 SDE dogma expression tables.
+**Update 2026-09-08.** Superseded as primary source: Mimir now bundles the
+SDE's resolved modifiers (`effect_modifiers.json`); ESI is fallback only.
+See DECISIONS 2026-09-08 bundled-modifiers entry above.
 **Refs.** LEARNINGS 2026-09-07 operator-semantics entry.
 
 ### Phase 6 writes: fittings and autopilot, behind confirmation (commit: pending)

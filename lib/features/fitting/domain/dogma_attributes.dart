@@ -43,6 +43,24 @@ class DogmaAttributes {
   static const int turretDamageMultiplier = 64;
   static const int missileDamageMultiplier = 212;
 
+  // Weapon cycle and range attributes (turrets and launchers).
+  static const int rateOfFire = 51; // cycle time in milliseconds
+  static const int optimalRange = 54;
+  static const int falloff = 158;
+  static const int trackingSpeed = 160;
+
+  // Damage components carried by charges (ammo, missiles) and drones.
+  static const int emDamage = 114;
+  static const int explosiveDamage = 116;
+  static const int kineticDamage = 117;
+  static const int thermalDamage = 118;
+  static const List<int> damageComponents = [
+    emDamage,
+    explosiveDamage,
+    kineticDamage,
+    thermalDamage,
+  ];
+
   // Module fitting requirements
   static const int cpuLoad = 50;
   static const int powerLoad = 30;

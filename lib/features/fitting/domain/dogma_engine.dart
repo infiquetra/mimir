@@ -99,16 +99,177 @@ class DogmaEngine {
 
     double attr(int id, [double fallback = 0.0]) => attributes[id] ?? fallback;
 
-    // 2. Resource usage, and collect dogma modifiers from fitted modules.
+    // 2. Resource usage, and collect dogma modifiers from the ship and its
+    //    fitted modules.
     //
-    // Modifier semantics come from ESI's published effect modifiers (cached
-    // in the SDE database), not from guessed constants: operator 6 is
-    // postPercent and operator 0 is postMul. See EffectModifier.
+    // Modifier semantics come from CCP's resolved effect modifiers (bundled
+    // from the SDE's dgmEffects.modifierInfo, ESI-compatible), not from
+    // guessed constants: operator 6 is postPercent and operator 0 is
+    // postMul. See EffectModifier.
+    //
+    // Routing follows the modifier's func and domain, as observed in the
+    // bundled data (2026-09-08):
+    //  - ItemModifier + shipID: the owner modifies the ship itself
+    //    (hardeners, damage control, ship resistance traits).
+    //  - Location*/Owner* + shipID: the owner modifies fitted modules,
+    //    optionally group-restricted (racial weapon bonuses, tracking
+    //    enhancers); also the ship when it carries the modified attribute.
+    //  - Location*/Owner* + charID: the owner modifies loaded charges
+    //    (racial missile damage bonuses).
     double cpuUsed = 0.0;
     double powerUsed = 0.0;
     int calibrationUsed = 0;
     final percentModifiers = <int, List<double>>{};
+    final mulModifiers = <int, List<double>>{};
+    final modulePercent = <int, Map<int, List<double>>>{};
+    final moduleMul = <int, Map<int, List<double>>>{};
+    final chargePercent = <int, Map<int, List<double>>>{};
+    final chargeMul = <int, Map<int, List<double>>>{};
+    var unsupportedOperators = 0;
     final capDrains = <String, CapDrain>{};
+
+    final chargeTypeIds = fitting.allModules
+        .map((module) => module.chargeTypeId)
+        .whereType<int>()
+        .toSet();
+
+    void addTo(Map<int, List<double>> target, int attributeId, double value) =>
+        target.putIfAbsent(attributeId, () => []).add(value);
+
+    void routeLocationModifier(EffectModifier modifier, double value) {
+      if (modifier.operator != _postPercent && modifier.operator != _postMul) {
+        unsupportedOperators++;
+        return;
+      }
+      final percents = modifier.operator == _postPercent;
+      if (modifier.domain == 'charID') {
+        for (final chargeId in chargeTypeIds) {
+          final charge = moduleTypes[chargeId.toString()];
+          if (charge == null) continue;
+          if (modifier.groupId != null && charge.groupId != modifier.groupId) {
+            continue;
+          }
+          if (!charge.baseAttributes.containsKey(
+            modifier.modifiedAttributeId,
+          )) {
+            continue;
+          }
+          addTo(
+            (percents ? chargePercent : chargeMul).putIfAbsent(
+              chargeId,
+              () => {},
+            ),
+            modifier.modifiedAttributeId,
+            value,
+          );
+        }
+        return;
+      }
+      if (modifier.domain != 'shipID') return;
+      if (shipType.baseAttributes.containsKey(modifier.modifiedAttributeId)) {
+        addTo(
+          percents ? percentModifiers : mulModifiers,
+          modifier.modifiedAttributeId,
+          value,
+        );
+      }
+      for (final type in moduleTypes.values) {
+        if (modifier.groupId != null && type.groupId != modifier.groupId) {
+          continue;
+        }
+        if (!type.baseAttributes.containsKey(modifier.modifiedAttributeId)) {
+          continue;
+        }
+        addTo(
+          (percents ? modulePercent : moduleMul).putIfAbsent(
+            type.typeId,
+            () => {},
+          ),
+          modifier.modifiedAttributeId,
+          value,
+        );
+      }
+    }
+
+    void routeOwnerModifiers(
+      List<DogmaEffect> effects,
+      Map<int, double> ownerAttributes, {
+      Map<int, double>? fallbackAttributes,
+    }) {
+      for (final effect in effects) {
+        for (final modifier
+            in effectModifiers[effect.effectId] ?? const <EffectModifier>[]) {
+          if (modifier.func == 'EffectStopper') continue;
+          final modifyingId = modifier.modifyingAttributeId;
+          final base = modifyingId == null
+              ? null
+              : ownerAttributes[modifyingId] ??
+                    fallbackAttributes?[modifyingId];
+          if (base == null) continue;
+          final skillId = modifier.skillTypeId;
+          final value = skillId != null
+              ? base * (skillLevels[skillId] ?? 0)
+              : base;
+          if (value == 0) continue;
+
+          if (modifier.func == 'ItemModifier') {
+            if (modifier.domain != 'shipID') continue;
+            if (modifier.operator == _postMul) {
+              addTo(mulModifiers, modifier.modifiedAttributeId, value);
+            } else if (modifier.operator == _postPercent) {
+              addTo(percentModifiers, modifier.modifiedAttributeId, value);
+            } else {
+              unsupportedOperators++;
+            }
+            continue;
+          }
+          routeLocationModifier(modifier, value);
+        }
+      }
+    }
+
+    // Ship traits (racial bonuses) live on the ship type's own effects.
+    routeOwnerModifiers(shipType.effects, shipType.baseAttributes);
+
+    /// Effective attribute of a fitted module after group/skill bonuses.
+    /// Bonuses from separate sources on one attribute take the dogma
+    /// stacking penalty, strongest first, like in game.
+    double moduleAttr(ModuleType type, int id) {
+      final base = type.baseAttributes[id];
+      if (base == null) return 0.0;
+      var value = base;
+      final percents = modulePercent[type.typeId]?[id];
+      if (percents != null) {
+        final sorted = [...percents]
+          ..sort((a, b) => b.abs().compareTo(a.abs()));
+        for (var i = 0; i < sorted.length; i++) {
+          value *= 1 + (sorted[i] / 100) * getStackingPenalty(i + 1);
+        }
+      }
+      for (final mul in moduleMul[type.typeId]?[id] ?? const <double>[]) {
+        value *= mul;
+      }
+      return value;
+    }
+
+    /// Effective attribute of a loaded charge after character-wide bonuses.
+    double chargeAttr(ModuleType charge, int id) {
+      final base = charge.baseAttributes[id];
+      if (base == null) return 0.0;
+      var value = base;
+      final percents = chargePercent[charge.typeId]?[id];
+      if (percents != null) {
+        final sorted = [...percents]
+          ..sort((a, b) => b.abs().compareTo(a.abs()));
+        for (var i = 0; i < sorted.length; i++) {
+          value *= 1 + (sorted[i] / 100) * getStackingPenalty(i + 1);
+        }
+      }
+      for (final mul in chargeMul[charge.typeId]?[id] ?? const <double>[]) {
+        value *= mul;
+      }
+      return value;
+    }
 
     for (final module in fitting.allModules) {
       if (module.state == ModuleState.offline) continue;
@@ -120,40 +281,37 @@ class DogmaEngine {
       powerUsed += type.powergrid;
       calibrationUsed += type.calibration;
 
-      final capNeed = type.baseAttributes[DogmaAttributes.capacitorNeed];
-      final cycleMs = type.baseAttributes[DogmaAttributes.duration];
-      if (capNeed != null && capNeed > 0 && cycleMs != null && cycleMs > 0) {
-        final key = '${cycleMs.round()}:${capNeed.toStringAsFixed(3)}';
-        capDrains[key] = CapDrain(
-          durationMs: cycleMs,
-          capNeed: capNeed,
-          count: (capDrains[key]?.count ?? 0) + 1,
-        );
+      // Cap cycle costs read the bonus-adjusted values so ship and module
+      // cap-need bonuses change capacitor stability like in game.
+      final hasCapNeed = type.baseAttributes.containsKey(
+        DogmaAttributes.capacitorNeed,
+      );
+      final hasCycle = type.baseAttributes.containsKey(
+        DogmaAttributes.duration,
+      );
+      if (hasCapNeed && hasCycle) {
+        final capNeed = moduleAttr(type, DogmaAttributes.capacitorNeed);
+        final cycleMs = moduleAttr(type, DogmaAttributes.duration);
+        if (capNeed > 0 && cycleMs > 0) {
+          final key = '${cycleMs.round()}:${capNeed.toStringAsFixed(3)}';
+          capDrains[key] = CapDrain(
+            durationMs: cycleMs,
+            capNeed: capNeed,
+            count: (capDrains[key]?.count ?? 0) + 1,
+          );
+        }
       }
 
+      routeOwnerModifiers(
+        type.effects,
+        type.baseAttributes,
+        fallbackAttributes: module.attributes,
+      );
+
       for (final effect in type.effects) {
-        for (final modifier
-            in effectModifiers[effect.effectId] ?? const <EffectModifier>[]) {
-          if (modifier.domain != 'shipID') continue;
-          final modifyingId = modifier.modifyingAttributeId;
-          if (modifyingId == null) continue;
-          final value =
-              type.baseAttributes[modifyingId] ??
-              module.attributes[modifyingId];
-          if (value == null) continue;
-
-          if (modifier.operator == _postMul) {
-            attributes[modifier.modifiedAttributeId] =
-                attr(modifier.modifiedAttributeId, 1.0) * value;
-          } else if (modifier.operator == _postPercent) {
-            percentModifiers
-                .putIfAbsent(modifier.modifiedAttributeId, () => [])
-                .add(value);
-          }
-        }
-
-        // Propulsion bonuses hide in expression trees ESI does not publish;
-        // apply the verified curated mapping for those effects.
+        // Propulsion bonuses hide in expression trees the SDE does not
+        // publish as modifiers; apply the verified curated mapping for
+        // those effects.
         final speedEffect = _expressionTreeSpeedEffects[effect.effectId];
         if (speedEffect != null) {
           final (modifiedId, modifyingId) = speedEffect;
@@ -181,6 +339,21 @@ class DogmaEngine {
       }
       attributes[attributeId] = attr(attributeId, 1.0) * factor;
     });
+
+    mulModifiers.forEach((attributeId, values) {
+      var factor = 1.0;
+      for (final value in values) {
+        factor *= value;
+      }
+      attributes[attributeId] = attr(attributeId, 1.0) * factor;
+    });
+
+    if (unsupportedOperators > 0) {
+      Log.d(
+        'DOGMA',
+        'Ignored $unsupportedOperators modifiers with unsupported operators',
+      );
+    }
 
     final cpuMax = attr(DogmaAttributes.cpuOutput);
     final powerMax = attr(DogmaAttributes.powerOutput);
@@ -275,11 +448,64 @@ class DogmaEngine {
           : capResult.secondsToEmpty;
     }
 
-    // 5. Build Stats Object.
-    //
-    // dps* is left at its zero default on purpose: turret/missile damage
-    // needs ship weapon bonuses, which live in dogma expression trees ESI
-    // does not publish. The panel renders those zeros as dashes.
+    // 5. Offense: volley and DPS of fitted turrets and launchers with their
+    //    loaded charges, after all bonuses. Turrets multiply charge damage
+    //    by their damage modifier (64); launchers contribute the charge
+    //    damage alone (pyfa parity). Unloaded weapons contribute nothing,
+    //    exactly like an unloaded gun in game.
+    var dpsGuns = 0.0;
+    var dpsMissiles = 0.0;
+    var volleyTotal = 0.0;
+    var turretVolley = 0.0;
+    var optimalWeighted = 0.0;
+    var falloffWeighted = 0.0;
+    for (final module in fitting.allModules) {
+      if (module.state == ModuleState.offline) continue;
+      final type = moduleTypes[module.typeId.toString()];
+      if (type == null) continue;
+      if (!type.baseAttributes.containsKey(DogmaAttributes.rateOfFire)) {
+        continue;
+      }
+      final cycleMs = moduleAttr(type, DogmaAttributes.rateOfFire);
+      if (cycleMs <= 0) continue;
+      final charge = module.chargeTypeId == null
+          ? null
+          : moduleTypes[module.chargeTypeId.toString()];
+      if (charge == null) continue;
+      var chargeVolley = 0.0;
+      for (final id in DogmaAttributes.damageComponents) {
+        chargeVolley += chargeAttr(charge, id);
+      }
+      if (chargeVolley <= 0) continue;
+      final isTurret = type.baseAttributes.containsKey(
+        DogmaAttributes.turretDamageMultiplier,
+      );
+      final volley = isTurret
+          ? chargeVolley *
+                moduleAttr(type, DogmaAttributes.turretDamageMultiplier)
+          : chargeVolley;
+      final dps = volley / (cycleMs / 1000);
+      if (isTurret) {
+        dpsGuns += dps;
+        turretVolley += volley;
+        optimalWeighted +=
+            moduleAttr(type, DogmaAttributes.optimalRange) * volley;
+        falloffWeighted += moduleAttr(type, DogmaAttributes.falloff) * volley;
+      } else {
+        dpsMissiles += dps;
+      }
+      volleyTotal += volley;
+    }
+    final dpsTotal = dpsGuns + dpsMissiles;
+    Log.d(
+      'DOGMA',
+      'Offense for ${fitting.name}: dps=${dpsTotal.toStringAsFixed(1)} '
+          'guns=${dpsGuns.toStringAsFixed(1)} '
+          'missiles=${dpsMissiles.toStringAsFixed(1)} '
+          'volley=${volleyTotal.toStringAsFixed(1)}',
+    );
+
+    // 6. Build Stats Object.
     return FittingStats(
       cpuUsed: cpuUsed,
       cpuMax: cpuMax,
@@ -292,6 +518,12 @@ class DogmaEngine {
       capacitorRecharge: capRecharge,
       capacitorStable: capStableValue,
       isCapStable: capIsStable,
+      dpsTotal: dpsTotal,
+      dpsGuns: dpsGuns,
+      dpsMissiles: dpsMissiles,
+      volley: volleyTotal,
+      optimalRange: turretVolley > 0 ? optimalWeighted / turretVolley : 0.0,
+      falloffRange: turretVolley > 0 ? falloffWeighted / turretVolley : 0.0,
       maxVelocity: attr(DogmaAttributes.maxVelocity),
       inertiaModifier: agility,
       massKg: massKg,

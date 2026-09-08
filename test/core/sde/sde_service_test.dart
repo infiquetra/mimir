@@ -170,4 +170,71 @@ void main() {
       expect(laser.powergrid, 2.0);
     });
   });
+
+  group('SdeService bundled effect modifiers', () {
+    test('initialize loads modifiers and types expose their effects', () async {
+      // Seed one row per gated table so initialize() treats the database as
+      // seeded and skips the full asset import, while the per-launch bundled
+      // modifier asset still loads.
+      await database.upsertTypes([
+        SdeTypesCompanion.insert(
+          typeId: const Value(587),
+          typeName: 'Rifter',
+          groupId: 25,
+        ),
+      ]);
+      await database.upsertTypeAttributes([
+        SdeTypeAttributesCompanion.insert(
+          typeId: 587,
+          attributeId: 4,
+          value: 1,
+        ),
+      ]);
+      await database.upsertIndustryActivities([
+        SdeIndustryActivitiesCompanion.insert(
+          typeId: 587,
+          activityId: 1,
+          time: 1,
+        ),
+      ]);
+      await database.upsertTypeEffects([
+        SdeTypeEffectsCompanion.insert(
+          typeId: 587,
+          effectId: 5779,
+          isDefault: const Value(false),
+        ),
+        SdeTypeEffectsCompanion.insert(
+          typeId: 587,
+          effectId: 7248,
+          isDefault: const Value(false),
+        ),
+      ]);
+
+      await sdeService.initialize();
+
+      final ship = await sdeService.getShipType(587);
+      expect(ship, isNotNull);
+      expect(
+        ship!.effects.map((effect) => effect.effectId),
+        containsAll(<int>[5779, 7248]),
+      );
+      expect(
+        ship.effects.firstWhere((effect) => effect.effectId == 5779).name,
+        'shipBonusSPTFalloffMF2',
+      );
+
+      // Bundled modifiers need no network and carry the skill linkage the
+      // engine needs for racial bonuses.
+      final modifiers = await sdeService.ensureEffectModifiers([5779, 7248]);
+      final falloff = modifiers[5779]!.single;
+      expect(falloff.func, 'LocationRequiredSkillModifier');
+      expect(falloff.operator, 6);
+      expect(falloff.modifiedAttributeId, 158);
+      expect(falloff.modifyingAttributeId, 587);
+      expect(falloff.skillTypeId, 3302);
+      final rof = modifiers[7248]!.single;
+      expect(rof.modifiedAttributeId, 51);
+      expect(rof.modifyingAttributeId, 460);
+    });
+  });
 }

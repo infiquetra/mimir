@@ -296,6 +296,11 @@ _ShipType _$ShipTypeFromJson(Map<String, dynamic> json) => _ShipType(
         (k, e) => MapEntry(int.parse(k), (e as num).toDouble()),
       ) ??
       const {},
+  effects:
+      (json['effects'] as List<dynamic>?)
+          ?.map((e) => DogmaEffect.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
   bonuses:
       (json['bonuses'] as List<dynamic>?)
           ?.map((e) => ShipBonus.fromJson(e as Map<String, dynamic>))
@@ -324,6 +329,7 @@ Map<String, dynamic> _$ShipTypeToJson(_ShipType instance) => <String, dynamic>{
   'baseAttributes': instance.baseAttributes.map(
     (k, e) => MapEntry(k.toString(), e),
   ),
+  'effects': instance.effects,
   'bonuses': instance.bonuses,
   'skillRequirements': instance.skillRequirements,
 };

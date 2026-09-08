@@ -9,4 +9,17 @@
 
 ---
 
+### SHIPPED 2026-09-08: Model dogma expression trees for bonuses ESI hides
+
+**Author.** Qwen Code
+**Shipped as.** Propulsion speed bonuses (effects 6730/6731) via a curated,
+cross-checked map (2026-09-07); turret/missile DPS, volley, optimal and
+falloff via the SDE's resolved `dgmEffects.modifierInfo` bundled as
+`assets/sde/effect_modifiers.json` (2026-09-08). The expression-tree evaluator
+itself was never built: `dgmExpressions` is retired in the SDE and the
+resolved modifier list supersedes it, skill linkage and group restrictions
+included.
+**Refs.** LEARNINGS 2026-09-08 modifierInfo entry; DECISIONS 2026-09-08
+bundled-modifiers entry.
+
 <!-- First archived entry goes above this line. Keep newest-first. -->
