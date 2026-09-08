@@ -456,13 +456,17 @@ void main() {
     });
 
     // Rifter's real traits as CCP resolves them in the SDE: +10% falloff and
-    // -7.5% rate of fire per level of Minmatar Frigate (3302), published as
-    // LocationRequiredSkillModifier modifiers on the ship's own effects.
+    // -7.5% rate of fire per level of Minmatar Frigate (3329, the ship's
+    // required skill), filtered to weapons requiring Small Projectile
+    // Turret (3302) — modifierInfo's skillTypeID is the filter, not the
+    // scaling skill.
     const falloffBonusEffect = 5779;
     const rofBonusEffect = 7248;
     const missileDamageEffect = 898;
-    const minmatarFrigate = 3302;
-    const caldariCruiser = 3319;
+    const minmatarFrigate = 3329;
+    const smallProjectileTurret = 3302;
+    const missileLauncherOperation = 3319;
+    const caldariFrigate = 3328;
 
     ShipType bonusShip({
       List<DogmaEffect> effects = const [],
@@ -478,7 +482,11 @@ void main() {
       lowSlots: 3,
       rigSlots: 3,
       effects: effects,
-      baseAttributes: {..._rifter().baseAttributes, ...extraAttributes},
+      baseAttributes: {
+        ..._rifter().baseAttributes,
+        182: minmatarFrigate.toDouble(),
+        ...extraAttributes,
+      },
     );
 
     ModuleType weapon({
@@ -502,12 +510,16 @@ void main() {
       DogmaAttributes.rateOfFire: 4000.0,
       DogmaAttributes.optimalRange: 10000.0,
       DogmaAttributes.falloff: 5000.0,
+      182: smallProjectileTurret.toDouble(),
     };
 
     ModuleType kineticAmmo() => weapon(
       typeId: 266,
       groupId: 38,
-      baseAttributes: {DogmaAttributes.kineticDamage: 100.0},
+      baseAttributes: {
+        DogmaAttributes.kineticDamage: 100.0,
+        182: missileLauncherOperation.toDouble(),
+      },
     );
 
     Fitting armedFitting(List<int> weaponTypeIds) => Fitting(
@@ -536,7 +548,7 @@ void main() {
           operator: 6,
           modifiedAttributeId: DogmaAttributes.falloff,
           modifyingAttributeId: 587,
-          skillTypeId: minmatarFrigate,
+          skillTypeId: smallProjectileTurret,
           groupId: falloffGroupId,
         ),
       ],
@@ -547,7 +559,7 @@ void main() {
           operator: 6,
           modifiedAttributeId: DogmaAttributes.rateOfFire,
           modifyingAttributeId: 460,
-          skillTypeId: minmatarFrigate,
+          skillTypeId: smallProjectileTurret,
         ),
       ],
     };
@@ -615,7 +627,7 @@ void main() {
           effects: const [
             DogmaEffect(effectId: missileDamageEffect, name: 'missile dmg'),
           ],
-          extraAttributes: {463: 10.0},
+          extraAttributes: {463: 10.0, 182: caldariFrigate.toDouble()},
         ),
         {
           '1120': weapon(
@@ -625,7 +637,7 @@ void main() {
           ),
           '266': kineticAmmo(),
         },
-        const [CharacterSkill(skillId: caldariCruiser, level: 4)],
+        const [CharacterSkill(skillId: caldariFrigate, level: 4)],
         effectModifiers: {
           missileDamageEffect: [
             EffectModifier(
@@ -635,7 +647,7 @@ void main() {
               modifiedAttributeId: DogmaAttributes.kineticDamage,
               modifyingAttributeId: 463,
               domain: 'charID',
-              skillTypeId: caldariCruiser,
+              skillTypeId: missileLauncherOperation,
             ),
           ],
         },
@@ -694,6 +706,337 @@ void main() {
       expect(stats.dpsTotal, 0.0);
       expect(stats.volley, 0.0);
     });
+  });
+
+  group('DogmaEngine drones and damage modules', () {
+    late DogmaEngine engine;
+
+    setUp(() {
+      engine = DogmaEngine();
+    });
+
+    const heatSinkEffect = 91;
+    const bcsEffect = 763;
+    const ddaEffect = 6556;
+    const dronesSkill = 3436;
+
+    ShipType droneShip({
+      List<DogmaEffect> effects = const [],
+      double bandwidth = 25,
+    }) => ShipType(
+      typeId: 587,
+      name: 'Rifter',
+      description: 'A Minmatar frigate',
+      groupId: 25,
+      groupName: 'Frigate',
+      effects: effects,
+      baseAttributes: {
+        ..._rifter().baseAttributes,
+        DogmaAttributes.droneBandwidth: bandwidth,
+        DogmaAttributes.droneCapacity: 40.0,
+      },
+    );
+
+    ModuleType drone() => ModuleType(
+      typeId: 2488,
+      name: 'Warrior II',
+      groupId: 100,
+      groupName: 'Combat Drone',
+      slotType: SlotType.high,
+      baseAttributes: {
+        DogmaAttributes.explosiveDamage: 10.0,
+        DogmaAttributes.turretDamageMultiplier: 2.0,
+        DogmaAttributes.rateOfFire: 4000.0,
+        DogmaAttributes.bandwidthNeeded: 5.0,
+        DogmaAttributes.volume: 5.0,
+        184: dronesSkill.toDouble(),
+      },
+      effects: const [],
+      skillRequirements: const [],
+      acceptedChargeGroups: const [],
+    );
+
+    Fitting droneFitting({
+      int quantity = 5,
+      int inSpace = 0,
+      bool amp = false,
+    }) => Fitting(
+      id: 'drones',
+      name: 'Drone Rifter',
+      shipTypeId: 587,
+      shipName: 'Rifter',
+      lowSlots: amp
+          ? [
+              FittedModule(
+                typeId: 4405,
+                typeName: 'Drone Damage Amplifier II',
+                slotType: SlotType.low,
+                slotIndex: 0,
+              ),
+            ]
+          : const [],
+      drones: [
+        DroneGroup(
+          typeId: 2488,
+          typeName: 'Warrior II',
+          quantity: quantity,
+          inSpace: inSpace,
+        ),
+      ],
+    );
+
+    ShipType plainShip() => ShipType(
+      typeId: 587,
+      name: 'Rifter',
+      description: 'A Minmatar frigate',
+      groupId: 25,
+      groupName: 'Frigate',
+      baseAttributes: _rifter().baseAttributes,
+    );
+
+    ModuleType item({
+      required int typeId,
+      required int groupId,
+      required Map<int, double> baseAttributes,
+      List<DogmaEffect> effects = const [],
+    }) => ModuleType(
+      typeId: typeId,
+      name: 'Test item $typeId',
+      groupId: groupId,
+      groupName: 'Test items',
+      slotType: SlotType.high,
+      baseAttributes: baseAttributes,
+      effects: effects,
+      skillRequirements: const [],
+      acceptedChargeGroups: const [],
+    );
+
+    test('drone DPS follows damage components, modifier and cycle', () async {
+      final stats = await engine.calculateStats(
+        droneFitting(quantity: 5),
+        droneShip(),
+        {'2488': drone()},
+        const [],
+      );
+
+      // volley 10 * 2 = 20 per drone, 4s cycle => 5 dps each, 5 active.
+      expect(stats.dpsDrones, closeTo(25, 0.001));
+      expect(stats.dpsTotal, closeTo(25, 0.001));
+      expect(stats.droneBandwidthUsed, 25.0);
+      expect(stats.droneBayUsed, 25.0);
+    });
+
+    test('drone bandwidth caps active drones', () async {
+      final stats = await engine.calculateStats(
+        droneFitting(quantity: 5),
+        droneShip(bandwidth: 12),
+        {'2488': drone()},
+        const [],
+      );
+
+      expect(stats.droneBandwidthUsed, 10.0);
+      expect(stats.dpsDrones, closeTo(10, 0.001));
+    });
+
+    test('drones recorded in space limit the active count', () async {
+      final stats = await engine.calculateStats(
+        droneFitting(quantity: 5, inSpace: 2),
+        droneShip(),
+        {'2488': drone()},
+        const [],
+      );
+
+      expect(stats.droneBandwidthUsed, 10.0);
+      expect(stats.dpsDrones, closeTo(10, 0.001));
+      expect(stats.droneBayUsed, 25.0);
+    });
+
+    test(
+      'damage amps apply raw to drones that require the linked skill',
+      () async {
+        final stats = await engine.calculateStats(
+          droneFitting(quantity: 1, amp: true),
+          droneShip(),
+          {
+            '2488': drone(),
+            '4405': ModuleType(
+              typeId: 4405,
+              name: 'Drone Damage Amplifier II',
+              groupId: 645,
+              groupName: 'Drone Damage Modules',
+              slotType: SlotType.low,
+              baseAttributes: {1255: 20.5},
+              effects: const [DogmaEffect(effectId: ddaEffect, name: 'dda')],
+              skillRequirements: const [],
+              acceptedChargeGroups: const [],
+            ),
+          },
+          const [], // untrained: amps filter by the drone's own skill,
+          // they do not scale with a character skill level.
+          effectModifiers: {
+            ddaEffect: [
+              EffectModifier(
+                effectId: ddaEffect,
+                func: 'OwnerRequiredSkillModifier',
+                operator: 6,
+                modifiedAttributeId: DogmaAttributes.turretDamageMultiplier,
+                modifyingAttributeId: 1255,
+                domain: 'charID',
+                skillTypeId: dronesSkill,
+              ),
+            ],
+          },
+        );
+
+        // volley 10 * (2 * 1.205) = 24.1, 4s cycle.
+        expect(stats.dpsDrones, closeTo(24.1 / 4, 0.001));
+      },
+    );
+
+    test('heat sinks multiply turret damage with operator 4', () async {
+      final stats = await engine.calculateStats(
+        Fitting(
+          id: 'hs',
+          name: 'Heat Sink Rifter',
+          shipTypeId: 587,
+          shipName: 'Rifter',
+          highSlots: [
+            FittedModule(
+              typeId: 561,
+              typeName: 'Test weapon 561',
+              slotType: SlotType.high,
+              slotIndex: 0,
+              chargeTypeId: 266,
+              chargeName: 'Test ammo',
+            ),
+          ],
+          lowSlots: [
+            FittedModule(
+              typeId: 2048,
+              typeName: 'Heat Sink II',
+              slotType: SlotType.low,
+              slotIndex: 0,
+            ),
+          ],
+        ),
+        plainShip(),
+        {
+          '561': item(
+            typeId: 561,
+            groupId: 53,
+            baseAttributes: {
+              DogmaAttributes.turretDamageMultiplier: 2.0,
+              DogmaAttributes.rateOfFire: 4000.0,
+            },
+          ),
+          '266': item(
+            typeId: 266,
+            groupId: 38,
+            baseAttributes: {DogmaAttributes.kineticDamage: 100.0},
+          ),
+          '2048': ModuleType(
+            typeId: 2048,
+            name: 'Heat Sink II',
+            groupId: 53,
+            groupName: 'Heat Sink',
+            slotType: SlotType.low,
+            baseAttributes: {DogmaAttributes.turretDamageMultiplier: 1.1},
+            effects: const [DogmaEffect(effectId: heatSinkEffect, name: 'hs')],
+            skillRequirements: const [],
+            acceptedChargeGroups: const [],
+          ),
+        },
+        const [],
+        effectModifiers: {
+          heatSinkEffect: [
+            EffectModifier(
+              effectId: heatSinkEffect,
+              func: 'LocationGroupModifier',
+              operator: 4,
+              modifiedAttributeId: DogmaAttributes.turretDamageMultiplier,
+              modifyingAttributeId: DogmaAttributes.turretDamageMultiplier,
+              groupId: 53,
+            ),
+          ],
+        },
+      );
+
+      // 2.0 * 1.1 = 2.2 damage modifier => volley 220, 4s cycle.
+      expect(stats.volley, closeTo(220, 0.001));
+      expect(stats.dpsGuns, closeTo(55, 0.001));
+    });
+
+    test(
+      'ballistic control systems multiply missile damage components',
+      () async {
+        final stats = await engine.calculateStats(
+          Fitting(
+            id: 'bcs',
+            name: 'BCS Rifter',
+            shipTypeId: 587,
+            shipName: 'Rifter',
+            highSlots: [
+              FittedModule(
+                typeId: 1120,
+                typeName: 'Test launcher',
+                slotType: SlotType.high,
+                slotIndex: 0,
+                chargeTypeId: 266,
+                chargeName: 'Test missile',
+              ),
+            ],
+            lowSlots: [
+              FittedModule(
+                typeId: 22291,
+                typeName: 'Ballistic Control System II',
+                slotType: SlotType.low,
+                slotIndex: 0,
+              ),
+            ],
+          ),
+          plainShip(),
+          {
+            '1120': item(
+              typeId: 1120,
+              groupId: 506,
+              baseAttributes: {DogmaAttributes.rateOfFire: 2000.0},
+            ),
+            '266': item(
+              typeId: 266,
+              groupId: 38,
+              baseAttributes: {DogmaAttributes.kineticDamage: 100.0},
+            ),
+            '22291': ModuleType(
+              typeId: 22291,
+              name: 'Ballistic Control System II',
+              groupId: 51,
+              groupName: 'Ballistic Control System',
+              slotType: SlotType.low,
+              baseAttributes: {213: 1.1},
+              effects: const [DogmaEffect(effectId: bcsEffect, name: 'bcs')],
+              skillRequirements: const [],
+              acceptedChargeGroups: const [],
+            ),
+          },
+          const [],
+          effectModifiers: {
+            bcsEffect: [
+              EffectModifier(
+                effectId: bcsEffect,
+                func: 'ItemModifier',
+                operator: 0,
+                modifiedAttributeId: 212,
+                modifyingAttributeId: 213,
+                domain: 'charID',
+              ),
+            ],
+          },
+        );
+
+        expect(stats.volley, closeTo(110, 0.001));
+        expect(stats.dpsMissiles, closeTo(55, 0.001));
+      },
+    );
   });
 }
 

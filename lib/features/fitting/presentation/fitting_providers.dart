@@ -297,6 +297,9 @@ final fittingStatsProvider = FutureProvider<FittingStats?>((ref) async {
       await resolveType(chargeTypeId);
     }
   }
+  for (final drone in fitting.drones) {
+    await resolveType(drone.typeId);
+  }
 
   // Stats must reflect the character who will actually fly the ship: skill
   // modifiers change CPU/power output, speed, tank and capacitor.

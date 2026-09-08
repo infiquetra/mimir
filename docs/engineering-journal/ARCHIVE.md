@@ -9,6 +9,18 @@
 
 ---
 
+### SHIPPED 2026-09-08: Drone DPS and drone-domain bonuses
+
+**Author.** Qwen Code
+**Shipped as.** Drone pass in DogmaEngine: active drones = in-space count or
+fitted count (pyfa-style), capped by ship drone bandwidth (attribute 1272 per
+drone); volley = damage components times the drone's damage modifier after
+charID-domain bonuses; bay usage from the newly bundled volume attribute 38.
+Drone damage amplifiers apply raw, filtered to drones requiring the linked
+skill (pyfa Effect6556). Panel gained DRONES bandwidth/bay rows and a Drones
+DPS row. Fighters remain queued (P3).
+**Refs.** LEARNINGS 2026-09-08 skill-filter entry; QUEUED fighter support.
+
 ### SHIPPED 2026-09-08: Model dogma expression trees for bonuses ESI hides
 
 **Author.** Qwen Code

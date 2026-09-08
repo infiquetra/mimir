@@ -48,6 +48,13 @@ unloaded weapons contributing zero matches an unloaded gun in game.
 **Revisit when.** Drone DPS is needed (drone-domain bonuses are a separate
 routing case), or operators beyond postPercent/postMul (e.g. missile
 specialisation's preMul) matter for a row we display.
+**Update 2026-09-08 (same day).** Drone DPS shipped: charID modifiers also
+reach fitted drones; drone damage amps apply raw, filtered by the target's
+required skill, while ship-owned racial bonuses scale with the ship's
+required skill (modifierInfo's skillTypeID is a filter, per pyfa). Operator 4
+joined 0 as postMul (damage-module family), and BCS-style charID modifiers on
+212 multiply loaded missile damage components. See LEARNINGS 2026-09-08
+skill-filter entry.
 **Refs.** LEARNINGS 2026-09-08 modifierInfo and dead-effects entries;
 QUEUED drone DPS and unsupported-operator entries.
 

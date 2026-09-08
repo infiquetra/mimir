@@ -74,34 +74,32 @@ DPS/volley/optimal/falloff shipped 2026-09-08 from bundled resolved modifiers
 (see ARCHIVE SHIPPED 2026-09-08).
 **Refs.** LEARNINGS 2026-09-07 cap-simulation entry.
 
-### Drone DPS and drone-domain bonuses
-
-**Author.** Qwen Code
-**Priority.** P2
-**Effort.** One to two days.
-**Worth it when.** Users fit drone boats and compare total DPS against pyfa;
-today `dpsDrones` stays 0 and the OFFENSE section omits it.
-**Context.** The 2026-09-08 offense pass covers turrets and launchers from
-bundled resolved modifiers. Drone damage lives on the drone types themselves
-(real, shippable as base DPS), but drone damage amps and rig bonuses target
-the drone domain, a routing case the engine does not handle yet; showing base
-drone DPS while amps are fitted would understate the fit, so drones wait for
-the domain routing.
-**Refs.** DECISIONS 2026-09-08 bundled-modifiers entry.
-
 ### Unsupported dogma operators beyond postPercent/postMul
 
 **Author.** Qwen Code
 **Priority.** P2
 **Effort.** Half a day, gated on knowing which operators matter.
 **Worth it when.** A displayed row is traced to a modifier with operator 2
-(preMul, e.g. missile specialisation's `characterMissileDamageMultiply`) or
-4 (smartbomb damage scaling) and users compare against pyfa.
-**Context.** The bundled modifier data contains six operator codes in the
-wild; the engine applies 6 (postPercent) and 0 (postMul) — both validated
-against live ESI and in-game values — and counts the rest in a debug log
-instead of guessing semantics.
-**Refs.** LEARNINGS 2026-09-08 modifierInfo entry.
+(preMul family, e.g. missile specialisation's
+`characterMissileDamageMultiply`) and users compare against pyfa.
+**Context.** Operator 4 shipped 2026-09-08 as a second postMul (heat sinks,
+magnetic field stabilizers, ballistic control systems; pyfa Effect91/763).
+The engine applies 6 (postPercent), 0 and 4 (postMul), and counts the rest
+in a debug log instead of guessing semantics.
+**Refs.** LEARNINGS 2026-09-08 modifierInfo and skill-filter entries.
+
+### Fighter support (fighter bay, abilities, fighter-domain bonuses)
+
+**Author.** Qwen Code
+**Priority.** P3
+**Effort.** Two to three days.
+**Worth it when.** Users fit capital/supercapital or fighter-bonus ships and
+ask why the drone section ignores their fighters.
+**Context.** The 2026-09-08 drone pass covers combat drones (bandwidth,
+bay volume, damage amps via charID modifiers filtered by the Drones skill).
+Fighters use separate ability multipliers (attributes 2226/2178/2130 in the
+DDA modifier list) and fighter bay bandwidth, a distinct model.
+**Refs.** ARCHIVE SHIPPED 2026-09-08 drone DPS entry.
 
 ### Real wormhole-mapper integration (replaces the removed Pathfinder mock)
 

@@ -39,6 +39,8 @@ class DogmaAttributes {
 
   static const int droneBandwidth = 1271;
   static const int droneCapacity = 283;
+  static const int bandwidthNeeded = 1272; // per-drone bandwidth cost
+  static const int volume = 38; // item volume in m3 (invTypes column)
 
   static const int turretDamageMultiplier = 64;
   static const int missileDamageMultiplier = 212;

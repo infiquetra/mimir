@@ -14,6 +14,22 @@ class DogmaEngine {
   static const int _postMul = 0;
   static const int _postPercent = 6;
 
+  /// Second postMul code in the SDE, used by the damage-module family
+  /// (heat sinks, magnetic field stabilizers, ballistic control systems);
+  /// pyfa implements these as filtered multiply handlers (Effect91/763).
+  static const int _postMulAlt = 4;
+
+  /// Attribute holding a missile damage multiplier bonus (BCS family).
+  static const int _missileDamageBonus = 212;
+
+  /// Attributes listing the skills an item requires (primary/secondary/
+  /// tertiary). Used to tell "bonus scales with a ship command skill" from
+  /// "bonus applies raw to items that operate on this skill" (damage amps).
+  static const Set<int> _requiredSkillAttributes = {182, 183, 184};
+
+  static bool _isMul(int operator) =>
+      operator == _postMul || operator == _postMulAlt;
+
   /// Damage resonances are non-stackable: multiple modifiers on the same
   /// resonance take the stacking penalty. Everything else ESI points at
   /// (cpu, powergrid, velocity, ...) is stackable.
@@ -128,22 +144,84 @@ class DogmaEngine {
     var unsupportedOperators = 0;
     final capDrains = <String, CapDrain>{};
 
-    final chargeTypeIds = fitting.allModules
-        .map((module) => module.chargeTypeId)
-        .whereType<int>()
-        .toSet();
+    // charID-domain modifiers (racial missile damage, drone damage
+    // amplifiers) reach loaded charges and fitted drones — never fitted
+    // modules, or a damage amp would boost turrets.
+    final droneTypeIds = fitting.drones.map((drone) => drone.typeId).toSet();
+    final charTargetIds = {
+      ...fitting.allModules
+          .map((module) => module.chargeTypeId)
+          .whereType<int>(),
+      ...droneTypeIds,
+    };
 
     void addTo(Map<int, List<double>> target, int attributeId, double value) =>
         target.putIfAbsent(attributeId, () => []).add(value);
 
-    void routeLocationModifier(EffectModifier modifier, double value) {
-      if (modifier.operator != _postPercent && modifier.operator != _postMul) {
+    // Ship-owned racial bonuses scale with the ship's required skill
+    // (pyfa passes skill= in ship handlers); module-owned bonuses are raw.
+    final shipRequiredSkill = _requiredSkillAttributes
+        .map((id) => shipType.baseAttributes[id])
+        .firstWhere((v) => v != null, orElse: () => null);
+    final shipSkillLevel = shipRequiredSkill == null
+        ? 0.0
+        : (skillLevels[shipRequiredSkill.toInt()] ?? 0).toDouble();
+
+    bool requiresSkill(ModuleType type, int skillId) => _requiredSkillAttributes
+        .any((id) => type.baseAttributes[id] == skillId.toDouble());
+
+    void routeLocationModifier(
+      EffectModifier modifier,
+      double base, {
+      required bool ownerIsShip,
+    }) {
+      final percents = modifier.operator == _postPercent;
+      if (!percents && !_isMul(modifier.operator)) {
         unsupportedOperators++;
         return;
       }
-      final percents = modifier.operator == _postPercent;
+      // modifierInfo's skillTypeID is the skill its TARGETS must require
+      // (pyfa's requiresSkill filter). Ship-owned racial bonuses scale with
+      // the ship's own required skill; module-owned bonuses apply raw
+      // (pyfa: boost with skill= only for ship handlers).
+      final filterSkill = modifier.skillTypeId;
+      final scaled = ownerIsShip ? base * shipSkillLevel : base;
+
+      double? valueFor(ModuleType target) {
+        if (filterSkill != null && !requiresSkill(target, filterSkill)) {
+          return null;
+        }
+        if (!ownerIsShip) return base;
+        return scaled == 0.0 ? null : scaled;
+      }
+
       if (modifier.domain == 'charID') {
-        for (final chargeId in chargeTypeIds) {
+        // Ballistic control systems publish modified 212, but pyfa (the
+        // reference implementation) multiplies the loaded missile's damage
+        // components by the module's bonus; do the same.
+        if (modifier.func == 'ItemModifier' &&
+            modifier.modifiedAttributeId == _missileDamageBonus &&
+            _isMul(modifier.operator)) {
+          for (final module in fitting.allModules) {
+            final launcher = moduleTypes[module.typeId.toString()];
+            if (launcher == null) continue;
+            if (launcher.baseAttributes.containsKey(
+              DogmaAttributes.turretDamageMultiplier,
+            )) {
+              continue;
+            }
+            final chargeId = module.chargeTypeId;
+            if (chargeId == null) continue;
+            final charge = moduleTypes[chargeId.toString()];
+            if (charge == null) continue;
+            for (final id in DogmaAttributes.damageComponents) {
+              if (!charge.baseAttributes.containsKey(id)) continue;
+              addTo(chargeMul.putIfAbsent(chargeId, () => {}), id, base);
+            }
+          }
+          return;
+        }
+        for (final chargeId in charTargetIds) {
           final charge = moduleTypes[chargeId.toString()];
           if (charge == null) continue;
           if (modifier.groupId != null && charge.groupId != modifier.groupId) {
@@ -154,6 +232,8 @@ class DogmaEngine {
           )) {
             continue;
           }
+          final value = valueFor(charge);
+          if (value == null) continue;
           addTo(
             (percents ? chargePercent : chargeMul).putIfAbsent(
               chargeId,
@@ -167,19 +247,25 @@ class DogmaEngine {
       }
       if (modifier.domain != 'shipID') return;
       if (shipType.baseAttributes.containsKey(modifier.modifiedAttributeId)) {
-        addTo(
-          percents ? percentModifiers : mulModifiers,
-          modifier.modifiedAttributeId,
-          value,
-        );
+        final value = ownerIsShip ? scaled : base;
+        if (value != 0) {
+          addTo(
+            percents ? percentModifiers : mulModifiers,
+            modifier.modifiedAttributeId,
+            value,
+          );
+        }
       }
       for (final type in moduleTypes.values) {
+        if (droneTypeIds.contains(type.typeId)) continue;
         if (modifier.groupId != null && type.groupId != modifier.groupId) {
           continue;
         }
         if (!type.baseAttributes.containsKey(modifier.modifiedAttributeId)) {
           continue;
         }
+        final value = valueFor(type);
+        if (value == null) continue;
         addTo(
           (percents ? modulePercent : moduleMul).putIfAbsent(
             type.typeId,
@@ -195,6 +281,7 @@ class DogmaEngine {
       List<DogmaEffect> effects,
       Map<int, double> ownerAttributes, {
       Map<int, double>? fallbackAttributes,
+      required bool ownerIsShip,
     }) {
       for (final effect in effects) {
         for (final modifier
@@ -205,31 +292,30 @@ class DogmaEngine {
               ? null
               : ownerAttributes[modifyingId] ??
                     fallbackAttributes?[modifyingId];
-          if (base == null) continue;
-          final skillId = modifier.skillTypeId;
-          final value = skillId != null
-              ? base * (skillLevels[skillId] ?? 0)
-              : base;
-          if (value == 0) continue;
+          if (base == null || base == 0) continue;
 
-          if (modifier.func == 'ItemModifier') {
-            if (modifier.domain != 'shipID') continue;
-            if (modifier.operator == _postMul) {
-              addTo(mulModifiers, modifier.modifiedAttributeId, value);
+          if (modifier.func == 'ItemModifier' && modifier.domain == 'shipID') {
+            if (_isMul(modifier.operator)) {
+              addTo(mulModifiers, modifier.modifiedAttributeId, base);
             } else if (modifier.operator == _postPercent) {
-              addTo(percentModifiers, modifier.modifiedAttributeId, value);
+              addTo(percentModifiers, modifier.modifiedAttributeId, base);
             } else {
               unsupportedOperators++;
             }
             continue;
           }
-          routeLocationModifier(modifier, value);
+          routeLocationModifier(modifier, base, ownerIsShip: ownerIsShip);
         }
       }
     }
 
-    // Ship traits (racial bonuses) live on the ship type's own effects.
-    routeOwnerModifiers(shipType.effects, shipType.baseAttributes);
+    // Ship traits (racial bonuses) live on the ship type's own effects and
+    // scale with the ship's required skill (pyfa passes skill= there).
+    routeOwnerModifiers(
+      shipType.effects,
+      shipType.baseAttributes,
+      ownerIsShip: true,
+    );
 
     /// Effective attribute of a fitted module after group/skill bonuses.
     /// Bonuses from separate sources on one attribute take the dogma
@@ -252,7 +338,8 @@ class DogmaEngine {
       return value;
     }
 
-    /// Effective attribute of a loaded charge after character-wide bonuses.
+    /// Effective attribute of a loaded charge or fitted drone after
+    /// character-wide (charID domain) bonuses.
     double chargeAttr(ModuleType charge, int id) {
       final base = charge.baseAttributes[id];
       if (base == null) return 0.0;
@@ -306,6 +393,7 @@ class DogmaEngine {
         type.effects,
         type.baseAttributes,
         fallbackAttributes: module.attributes,
+        ownerIsShip: false,
       );
 
       for (final effect in type.effects) {
@@ -496,12 +584,53 @@ class DogmaEngine {
       }
       volleyTotal += volley;
     }
-    final dpsTotal = dpsGuns + dpsMissiles;
+
+    // 5b. Drones: like pyfa, every fitted drone counts as active unless the
+    //     fit records drones in space, and the ship's drone bandwidth caps
+    //     how many can fly at once. Damage follows the turret shape: damage
+    //     components times the drone's damage modifier, per cycle.
+    var dpsDrones = 0.0;
+    var bandwidthUsed = 0.0;
+    var bayUsed = 0.0;
+    var bandwidthLeft = attr(DogmaAttributes.droneBandwidth);
+    for (final group in fitting.drones) {
+      final type = moduleTypes[group.typeId.toString()];
+      if (type == null) continue;
+      bayUsed +=
+          group.quantity * (type.baseAttributes[DogmaAttributes.volume] ?? 0);
+      final needed =
+          type.baseAttributes[DogmaAttributes.bandwidthNeeded] ?? 0.0;
+      final fitted = group.inSpace > 0 ? group.inSpace : group.quantity;
+      final active = needed > 0
+          ? min(fitted, (bandwidthLeft / needed).floor())
+          : fitted;
+      if (active <= 0) continue;
+      bandwidthLeft -= active * needed;
+      bandwidthUsed += active * needed;
+
+      final cycleMs =
+          type.baseAttributes.containsKey(DogmaAttributes.rateOfFire)
+          ? chargeAttr(type, DogmaAttributes.rateOfFire)
+          : 0.0;
+      if (cycleMs <= 0) continue;
+      var droneVolley = 0.0;
+      for (final id in DogmaAttributes.damageComponents) {
+        droneVolley += chargeAttr(type, id);
+      }
+      if (type.baseAttributes.containsKey(
+        DogmaAttributes.turretDamageMultiplier,
+      )) {
+        droneVolley *= chargeAttr(type, DogmaAttributes.turretDamageMultiplier);
+      }
+      dpsDrones += active * droneVolley / (cycleMs / 1000);
+    }
+    final dpsTotal = dpsGuns + dpsMissiles + dpsDrones;
     Log.d(
       'DOGMA',
       'Offense for ${fitting.name}: dps=${dpsTotal.toStringAsFixed(1)} '
           'guns=${dpsGuns.toStringAsFixed(1)} '
           'missiles=${dpsMissiles.toStringAsFixed(1)} '
+          'drones=${dpsDrones.toStringAsFixed(1)} '
           'volley=${volleyTotal.toStringAsFixed(1)}',
     );
 
@@ -521,6 +650,7 @@ class DogmaEngine {
       dpsTotal: dpsTotal,
       dpsGuns: dpsGuns,
       dpsMissiles: dpsMissiles,
+      dpsDrones: dpsDrones,
       volley: volleyTotal,
       optimalRange: turretVolley > 0 ? optimalWeighted / turretVolley : 0.0,
       falloffRange: turretVolley > 0 ? falloffWeighted / turretVolley : 0.0,
@@ -533,7 +663,9 @@ class DogmaEngine {
       scanResolution: attr(DogmaAttributes.scanResolution),
       maxLockedTargets: attr(DogmaAttributes.maxLockedTargets).toInt(),
       signatureRadius: attr(DogmaAttributes.signatureRadius),
+      droneBandwidthUsed: bandwidthUsed,
       droneBandwidthMax: attr(DogmaAttributes.droneBandwidth),
+      droneBayUsed: bayUsed,
       droneBayMax: attr(DogmaAttributes.droneCapacity),
     );
   }

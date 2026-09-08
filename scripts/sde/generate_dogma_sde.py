@@ -142,6 +142,14 @@ def main():
                     "attributeId": 4,
                     "value": float(mass)
                 })
+            # volume is likewise an invTypes column; drone bay usage needs
+            # it as attribute 38.
+            volume = row.get('volume')
+            if volume and volume != 'None':
+                types_dict[type_id]["dogmaAttributes"].append({
+                    "attributeId": 38,
+                    "value": float(volume)
+                })
 
     print("Processing Attributes...")
     for row in attributes_raw:

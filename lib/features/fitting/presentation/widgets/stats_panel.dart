@@ -111,6 +111,8 @@ class StatsPanel extends ConsumerWidget {
               const SizedBox(height: 16),
               _buildSectionHeader('OFFENSE'),
               _buildStatRow('DPS', stats.dpsTotal.toStringAsFixed(1)),
+              if (stats.dpsDrones > 0)
+                _buildStatRow('Drones', stats.dpsDrones.toStringAsFixed(1)),
               _buildStatRow('Volley', stats.volley.toStringAsFixed(0)),
               if (stats.optimalRange > 0)
                 _buildStatRow(
@@ -122,6 +124,21 @@ class StatsPanel extends ConsumerWidget {
                   'Falloff',
                   '${(stats.falloffRange / 1000).toStringAsFixed(1)} km',
                 ),
+            ],
+
+            if (stats.droneBayMax > 0 || stats.droneBandwidthUsed > 0) ...[
+              const SizedBox(height: 16),
+              _buildSectionHeader('DRONES'),
+              _buildStatRow(
+                'Bandwidth',
+                '${stats.droneBandwidthUsed.toStringAsFixed(0)}/'
+                    '${stats.droneBandwidthMax.toStringAsFixed(0)} MBit',
+              ),
+              _buildStatRow(
+                'Bay',
+                '${stats.droneBayUsed.toStringAsFixed(0)}/'
+                    '${stats.droneBayMax.toStringAsFixed(0)} m3',
+              ),
             ],
           ],
         );

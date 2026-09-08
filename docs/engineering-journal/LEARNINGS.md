@@ -31,6 +31,41 @@
 
 ### 2026-09-08
 
+### modifierInfo's skillTypeID is a target filter, not the scaling skill
+
+**Author.** Qwen Code
+**Context.** The first drone/amp increment scaled every skill-linked modifier
+by the linked skill's level, which made Rifter's racial bonus scale with
+Small Projectile Turret instead of Minmatar Frigate (a character with SPT V
+and MF 0 would have gotten the full bonus).
+**Evidence.** Bundled data: Rifter effect 7248 carries `skillTypeID: 3302`,
+and 3302 is Small Projectile Turret (skills.json), while the Rifter's own
+required skill (attribute 182) is 3329 = Minmatar Frigate; the turret's
+attribute 182 is 3302. pyfa's handlers confirm the split: `Effect7248`
+filters `requiresSkill('Small Projectile Turret')` and scales with
+`skill='Minmatar Frigate'`, while `Effect6556` (drone damage amp) and
+`Effect3656`/`Effect889` filter by skill and apply the value raw.
+**Mechanism.** CCP's resolved modifiers publish one skill link — the skill
+targets must require (pyfa's filter). Ship-owned racial bonuses scale with
+the ship's own required skill (attributes 182/183/184); module-owned bonuses
+(amps, enhancers, BCS rof) apply raw.
+**Fix.** DogmaEngine routes with `ownerIsShip`: ship-owned modifiers scale
+with `shipSkillLevel` (from the ship's required-skill attributes),
+module-owned apply raw; `skillTypeID` filters targets via their required
+skills. Operator 4 joined 0 as postMul (heat sink/BCS family, pyfa
+Effect91/763 multiply handlers), and BCS-style `charID` modifiers on 212
+multiply loaded missile damage components like pyfa's filteredChargeMultiply.
+**Validation.** `dogma_engine_test.dart` (filter vs scaling, amp raw, heat
+sink op 4, BCS missile multiply) and `real_sde_weapon_test.dart` (Rifter at
+Minmatar Frigate V from bundled data; Warrior II + DDA II = 47 DPS);
+429 tests green.
+**What surprised.** One field serving as filter while the scaling skill lives
+only on the owner ship — the data alone is ambiguous without pyfa.
+**Generalizable rule.** When two publishers disagree in shape, use the
+reference implementation's handlers to disambiguate field semantics.
+**Refs.** DECISIONS 2026-09-08 bundled-modifiers entry; LEARNINGS 2026-09-08
+modifierInfo entry.
+
 ### The SDE publishes resolved dogma modifiers; dgmExpressions is retired and fuzzwork moved to csv/
 
 **Author.** Qwen Code

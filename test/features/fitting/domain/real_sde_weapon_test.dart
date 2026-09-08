@@ -85,7 +85,8 @@ void main() {
     'Rifter racial bonuses and turret DPS come from bundled SDE data',
     () async {
       const rifter = 587;
-      const minmatarFrigate = 3302;
+      const smallProjectileTurret = 3302; // filter skill on the modifiers
+      const minmatarFrigate = 3329; // ship's required skill: scaling
       final turretId = typeIdNamed('125mm Gatling AutoCannon I');
       final ammoId = typeIdNamed('Proton S');
 
@@ -101,7 +102,9 @@ void main() {
       expect(
         effectModifiers.entries
             .where((e) => shipEffectIds.contains(e.key))
-            .where((e) => e.value.any((m) => m.skillTypeId == minmatarFrigate))
+            .where(
+              (e) => e.value.any((m) => m.skillTypeId == smallProjectileTurret),
+            )
             .length,
         2,
       );
@@ -185,4 +188,70 @@ void main() {
       expect(stats.dpsGuns, greaterThan(untrained.dpsGuns));
     },
   );
+
+  test('drone DPS and damage amps come from bundled SDE data', () async {
+    final warriorId = typeIdNamed('Warrior II');
+    final ddaId = typeIdNamed('Drone Damage Amplifier II');
+
+    final droneAttributes = attributesOf(warriorId);
+    final ddaAttributes = attributesOf(ddaId);
+
+    final fitting = Fitting(
+      id: 'drones',
+      name: 'Drone boat',
+      shipTypeId: 587,
+      shipName: 'Rifter',
+      lowSlots: [
+        FittedModule(
+          typeId: ddaId,
+          typeName: 'Drone Damage Amplifier II',
+          slotType: SlotType.low,
+          slotIndex: 0,
+        ),
+      ],
+      drones: [
+        DroneGroup(typeId: warriorId, typeName: 'Warrior II', quantity: 5),
+      ],
+    );
+    final ship = ShipType(
+      typeId: 587,
+      name: 'Rifter',
+      description: '',
+      groupId: 25,
+      groupName: 'Frigate',
+      baseAttributes: {
+        ...attributesOf(587),
+        DogmaAttributes.droneBandwidth: 25,
+        DogmaAttributes.droneCapacity: 40,
+      },
+    );
+
+    final stats = await DogmaEngine().calculateStats(
+      fitting,
+      ship,
+      {
+        warriorId.toString(): moduleTypeOf(warriorId),
+        ddaId.toString(): moduleTypeOf(ddaId),
+      },
+      const [],
+      effectModifiers: effectModifiers,
+    );
+
+    // Amps apply raw (20.5% here): volley = damage * modifier * 1.205.
+    final expectedVolley =
+        DogmaAttributes.damageComponents
+            .map((id) => droneAttributes[id] ?? 0.0)
+            .fold<double>(0, (a, b) => a + b) *
+        droneAttributes[DogmaAttributes.turretDamageMultiplier]! *
+        (1 + ddaAttributes[1255]! / 100);
+    final expectedDps =
+        5 *
+        expectedVolley /
+        (droneAttributes[DogmaAttributes.rateOfFire]! / 1000);
+
+    expect(stats.dpsDrones, closeTo(expectedDps, 0.01));
+    expect(stats.dpsTotal, closeTo(expectedDps, 0.01));
+    expect(stats.droneBandwidthUsed, 25.0);
+    expect(stats.droneBayUsed, 25.0);
+  });
 }
