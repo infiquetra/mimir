@@ -31,6 +31,40 @@
 
 ### 2026-09-08
 
+### modifierInfo stops at item boundaries: skill-to-module bonuses are pyfa-hardcoded
+
+**Author.** Qwen Code
+**Context.** The queued "operator 2 (missile specialisation)" item promised
+the last missile DPS fidelity gap; investigating it before implementing
+showed the premise was wrong and uncovered a different, real gap.
+**Evidence.** Op-2 modifiers on attribute 212 belong to implants/NPCs
+(`characterMissileDamageMultiply` on "Three Dimensional Thinking Bonus",
+`npcBehaviorSiege`), not skills. Missile specialisation skills carry no
+damage modifiers at all in the current SDE; their bonus is cycle time
+(attribute 293 `rofBonus`, e.g. -4 Rapid Firing, -2 MLO/specialisations),
+published only as skill-internal `itemID` modifiers (effects 163/1851) that
+resolve nothing cross-item. pyfa implements the cross-item part with
+hardcoded handlers: Effect582 (Rapid Firing -> modules requiring Gunnery),
+Effect1851 (specialisations -> requiresSkill(skill)), plus MLO-family
+handlers; the SDE gives no field that reproduces those filters, and
+derived rules fail (Rocket Specialization's own 183 = 3320 would boost every
+launcher; HAM Specialization's 182 = 3319 would boost rocket launchers).
+**Mechanism.** CCP's resolved modifiers describe effects whose targets are
+reachable by domain/group; skill aura bonuses encode their target set in the
+effect identity itself, which only a handler table (pyfa) or the client knows.
+**Fix.** None shipped: implementing a guessed filter would silently misapply
+bonuses across weapon classes. Queued as P2 with the evidence and the pyfa
+handler references, gated on an in-game/pyfa-diff cross-check.
+**Validation.** Data probes across invTypes/dgmTypeAttributes/dgmTypeEffects/
+dgmEffects (owners, required skills, modifier payloads) plus pyfa source.
+**What surprised.** A queued item's premise can invert under investigation:
+the "missing operator" was a red herring; the real gap publishes no data.
+**Generalizable rule.** When the reference implementation hardcodes per-effect
+filters, treat the filter as part of the effect's identity — curate and
+cross-check it, never derive it from adjacent attributes.
+**Refs.** QUEUED skill cycle-time bonuses entry; pyfa eos/effects.py
+Effect582/Effect1851.
+
 ### Cap boosters fire on demand, not on a cadence (pyfa capSim injector port)
 
 **Author.** Qwen Code

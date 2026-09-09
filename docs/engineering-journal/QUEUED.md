@@ -72,19 +72,30 @@ fitting stores no charge quantities; pyfa's clip/reload accounting (shot
 counters plus reload time between clips) stays unported.
 **Refs.** ARCHIVE SHIPPED 2026-09-08 cap injectors entry.
 
-### Unsupported dogma operators beyond postPercent/postMul
+### Skill cycle-time bonuses (Rapid Firing, missile specialisations, MLO)
 
 **Author.** Qwen Code
 **Priority.** P2
-**Effort.** Half a day, gated on knowing which operators matter.
-**Worth it when.** A displayed row is traced to a modifier with operator 2
-(preMul family, e.g. missile specialisation's
-`characterMissileDamageMultiply`) and users compare against pyfa.
-**Context.** Operator 4 shipped 2026-09-08 as a second postMul (heat sinks,
-magnetic field stabilizers, ballistic control systems; pyfa Effect91/763).
-The engine applies 6 (postPercent), 0 and 4 (postMul), and counts the rest
-in a debug log instead of guessing semantics.
-**Refs.** LEARNINGS 2026-09-08 modifierInfo and skill-filter entries.
+**Effort.** One to two days, gated on an in-game or pyfa-diff cross-check of
+the target filters.
+**Worth it when.** Users compare turret/missile DPS against pyfa: Rapid
+Firing (-4%/level turret cycle), Missile Launcher Operation (-2%/level
+launcher cycle) and the missile specialisations (-2%/level per class) are
+missing, understating DPS by up to ~25% at level 5.
+**Context.** The 2026-09-08 investigation that queued "operator 2" found the
+premise wrong: op-2 modifiers on 212 belong to implants/NPCs
+(`characterMissileDamageMultiply`, `npcBehaviorSiege`), not skills. The real
+gap is skill-owned cycle bonuses (skill attribute 293 `rofBonus`), which the
+SDE's `modifierInfo` does not publish as resolvable modifiers (effect 163/
+1851 carry only skill-internal itemID modifiers); pyfa hardcodes them per
+effect: Effect582 filters modules requiring Gunnery, Effect1851 filters
+`requiresSkill(skill)`, and launcher-cycle skills filter on Missile Launcher
+Operation. A data-driven filter could not be derived: specialisation skills'
+own required-skill attributes (182/183) point at racial/class skills shared
+across launcher groups, so any intersection rule over- or under-applies
+(e.g. Rocket Specialization 183 = 3320 would boost every launcher).
+**Refs.** LEARNINGS 2026-09-08 skill-rof entry; pyfa `eos/effects.py`
+Effect582/Effect1851; ARCHIVE SHIPPED 2026-09-08 bundled modifiers.
 
 ### Fighter support (fighter bay, abilities, fighter-domain bonuses)
 

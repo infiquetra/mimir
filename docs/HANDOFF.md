@@ -93,7 +93,10 @@ suite once. Do not "fix" it by loosening the comparator (tried, reverted).
 
 ## Remaining queue (details in QUEUED.md)
 
-- P2: operator 2 (missile specialisation preMul) if a displayed row needs it.
+- P2: skill cycle-time bonuses (Rapid Firing / MLO / missile specialisations,
+  attribute 293) — modifierInfo publishes nothing cross-item for them; pyfa
+  hardcodes the filters (Effect582/1851). Gated on a cross-check; do NOT
+  derive filters from skill required-skill attributes (proven to misapply).
 - P3: fighter support (fighter bay, ability multipliers 2226/2178/2130).
 - P3: clip reloads in the cap simulation (cap injectors shipped 2026-09-08
   with infinite clips; reloads need charge quantities in the fitting model).
