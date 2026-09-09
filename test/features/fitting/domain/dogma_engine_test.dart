@@ -1038,6 +1038,111 @@ void main() {
       },
     );
   });
+
+  group('DogmaEngine capacitor boosters', () {
+    late DogmaEngine engine;
+
+    setUp(() {
+      engine = DogmaEngine();
+    });
+
+    ShipType capShip() => ShipType(
+      typeId: 587,
+      name: 'Rifter',
+      description: 'A Minmatar frigate',
+      groupId: 25,
+      groupName: 'Frigate',
+      baseAttributes: {
+        DogmaAttributes.capacitorCapacity: 1000,
+        DogmaAttributes.capacitorRechargeTime: 60000,
+      },
+    );
+
+    Fitting boosterFit({bool loaded = true}) => Fitting(
+      id: 'cap',
+      name: 'Booster fit',
+      shipTypeId: 587,
+      shipName: 'Rifter',
+      highSlots: [
+        FittedModule(
+          typeId: 700,
+          typeName: 'Test drain',
+          slotType: SlotType.high,
+          slotIndex: 0,
+        ),
+      ],
+      medSlots: [
+        FittedModule(
+          typeId: 701,
+          typeName: 'Test booster',
+          slotType: SlotType.med,
+          slotIndex: 0,
+          chargeTypeId: loaded ? 702 : null,
+          chargeName: loaded ? 'Cap Booster 400' : null,
+        ),
+      ],
+    );
+
+    Map<String, ModuleType> boosterTypes() => {
+      '700': ModuleType(
+        typeId: 700,
+        name: 'Test drain',
+        groupId: 1,
+        groupName: 'Test',
+        slotType: SlotType.high,
+        baseAttributes: {
+          DogmaAttributes.capacitorNeed: 45.0,
+          DogmaAttributes.duration: 1000.0,
+        },
+        effects: const [],
+        skillRequirements: const [],
+        acceptedChargeGroups: const [],
+      ),
+      '701': ModuleType(
+        typeId: 701,
+        name: 'Test booster',
+        groupId: 1,
+        groupName: 'Test',
+        slotType: SlotType.med,
+        baseAttributes: {
+          DogmaAttributes.duration: 15000.0,
+          DogmaAttributes.reactivationDelay: 10000.0,
+        },
+        effects: const [],
+        skillRequirements: const [],
+        acceptedChargeGroups: const [],
+      ),
+      '702': ModuleType(
+        typeId: 702,
+        name: 'Cap Booster 400',
+        groupId: 1,
+        groupName: 'Test',
+        slotType: SlotType.high,
+        baseAttributes: {DogmaAttributes.capacitorBonus: 400.0},
+        effects: const [],
+        skillRequirements: const [],
+        acceptedChargeGroups: const [],
+      ),
+    };
+
+    test('a loaded booster stabilizes an otherwise unstable drain', () async {
+      final boosted = await engine.calculateStats(
+        boosterFit(),
+        capShip(),
+        boosterTypes(),
+        const [],
+      );
+      final dry = await engine.calculateStats(
+        boosterFit(loaded: false),
+        capShip(),
+        boosterTypes(),
+        const [],
+      );
+
+      expect(dry.isCapStable, isFalse);
+      expect(boosted.isCapStable, isTrue);
+    });
+  });
 }
 
 ShipType _rifter() => ShipType(

@@ -31,6 +31,33 @@
 
 ### 2026-09-08
 
+### Cap boosters fire on demand, not on a cadence (pyfa capSim injector port)
+
+**Author.** Qwen Code
+**Context.** Cap stability was wrong for booster fits: the simulator ignored
+cap gains, so a fit that stays alive on Cap Booster 400s read as unstable.
+**Evidence.** pyfa `eos/capSim.py`: injector activations are popped like any
+module but postponed into `awaitingInjectors` when `cap - capNeed > capacity`
+(overshoot), fired the moment a drain cannot be paid (`capNeed > cap`), and
+used to top up after spending; gains travel as negative capNeed. The SDE
+keeps the gain on the charge (capacitorBonus 67, e.g. 400 GJ) and the reload
+on the module (reactivation delay 1795, 10s on cap boosters), and pyfa adds
+that delay to every module's cycle time.
+**Mechanism.** Boosters are reserve capacity, not repeating supply: firing
+them on a cadence wastes gains to overshoot and misreports stability.
+**Fix.** CapSimulator gained `injectors` with postpone/fire/top-up logic and
+an awaiting-set signature inside the period-wrap stability check; DogmaEngine
+collects injectors from fitted booster charges and adds 1795 to every cycle.
+Clips stay infinite (fittings carry no charge quantities) — documented.
+**Validation.** cap_simulator_test (60 GJ/s drain unstable alone, stable with
+a 400 GJ/10s booster; boosters alone hold 100%) and dogma_engine_test (a
+loaded booster stabilizes an otherwise unstable drain); 433 tests green.
+**What surprised.** The gain/reload split across charge and module, and that
+reactivation delay joins every module's cycle, not just boosters'.
+**Generalizable rule.** Port reserve-resource semantics (on-demand firing)
+before cadence semantics, and check where each number lives in the SDE.
+**Refs.** ARCHIVE SHIPPED 2026-09-08 cap injectors entry; QUEUED clip reloads.
+
 ### Production-wiring widget tests need runAsync for Drift isolates and a grown test surface
 
 **Author.** Qwen Code

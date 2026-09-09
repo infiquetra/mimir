@@ -12,7 +12,7 @@
   on top of `0e6a9bb` (this handoff) and `87ed959` (drone DPS + damage-module
   parity).
 - Gates green at HEAD: `flutter analyze` no issues, `dart format` clean,
-  `flutter test` 430 passing.
+  `flutter test` 433 passing.
 - Untracked and intentionally not committed: `.hermes/` (local tool state).
 - Working mode agreed with the owner: commit straight to `develop`;
   trust-first strategy ("make what exists actually true"); ESI writes limited
@@ -95,7 +95,8 @@ suite once. Do not "fix" it by loosening the comparator (tried, reverted).
 
 - P2: operator 2 (missile specialisation preMul) if a displayed row needs it.
 - P3: fighter support (fighter bay, ability multipliers 2226/2178/2130).
-- P3: cap injectors + clip reloads in `CapSimulator` (pyfa capSim parity).
+- P3: clip reloads in the cap simulation (cap injectors shipped 2026-09-08
+  with infinite clips; reloads need charge quantities in the fitting model).
 - Owner decision pending: delete repo-root scratch files (`200`,
   `test_opt.dart`, `test_regex.dart`, `parse_test*.dart`; analysis-excluded).
 - Broader top-5 depth: market/industry/intel analytics, UX polish,

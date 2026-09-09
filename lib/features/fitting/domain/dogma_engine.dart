@@ -143,6 +143,7 @@ class DogmaEngine {
     final chargeMul = <int, Map<int, List<double>>>{};
     var unsupportedOperators = 0;
     final capDrains = <String, CapDrain>{};
+    final capInjectors = <CapInjector>[];
 
     // charID-domain modifiers (racial missile damage, drone damage
     // amplifiers) reach loaded charges and fitted drones — never fitted
@@ -369,23 +370,45 @@ class DogmaEngine {
       calibrationUsed += type.calibration;
 
       // Cap cycle costs read the bonus-adjusted values so ship and module
-      // cap-need bonuses change capacitor stability like in game.
+      // cap-need bonuses change capacitor stability like in game. pyfa adds
+      // the reactivation delay (a booster's reload) to the cycle.
       final hasCapNeed = type.baseAttributes.containsKey(
         DogmaAttributes.capacitorNeed,
       );
       final hasCycle = type.baseAttributes.containsKey(
         DogmaAttributes.duration,
       );
-      if (hasCapNeed && hasCycle) {
+      final cycleMs = hasCycle
+          ? moduleAttr(type, DogmaAttributes.duration) +
+                moduleAttr(type, DogmaAttributes.reactivationDelay)
+          : 0.0;
+      if (hasCapNeed && cycleMs > 0) {
         final capNeed = moduleAttr(type, DogmaAttributes.capacitorNeed);
-        final cycleMs = moduleAttr(type, DogmaAttributes.duration);
-        if (capNeed > 0 && cycleMs > 0) {
+        if (capNeed > 0) {
           final key = '${cycleMs.round()}:${capNeed.toStringAsFixed(3)}';
           capDrains[key] = CapDrain(
             durationMs: cycleMs,
             capNeed: capNeed,
             count: (capDrains[key]?.count ?? 0) + 1,
           );
+        }
+      }
+
+      // Capacitor boosters: the gain lives on the charge (capacitorBonus),
+      // the cycle on the module (activation plus reload). pyfa holds them
+      // in reserve and fires them on demand; the simulator does the same.
+      final chargeTypeId = module.chargeTypeId;
+      if (chargeTypeId != null) {
+        final charge = moduleTypes[chargeTypeId.toString()];
+        if (charge != null &&
+            charge.baseAttributes.containsKey(DogmaAttributes.capacitorBonus) &&
+            cycleMs > 0) {
+          final capGain = chargeAttr(charge, DogmaAttributes.capacitorBonus);
+          if (capGain > 0) {
+            capInjectors.add(
+              CapInjector(durationMs: cycleMs, capGain: capGain),
+            );
+          }
         }
       }
 
@@ -529,6 +552,7 @@ class DogmaEngine {
         capacity: capCapacity,
         rechargeMs: capRecharge,
         drains: capDrains.values.toList(),
+        injectors: capInjectors,
       ).run();
       capIsStable = capResult.isStable;
       capStableValue = capResult.isStable

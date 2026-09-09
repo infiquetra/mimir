@@ -60,19 +60,17 @@ instead of burying them in prose.
 
 ## P2 - Important
 
-### Cap injectors and reloads in the cap simulation (remaining capSim parity)
+### Clip reloads in the cap simulation (charge quantities)
 
 **Author.** Qwen Code
 **Priority.** P3
-**Effort.** One day.
-**Worth it when.** Users fit cap boosters or ammo-consuming cap modules and
-compare stability against pyfa.
-**Context.** The shipped CapSimulator ports pyfa's event loop for repeating
-drains only; injectors (deferred usage, top-up logic) and clip reloads are
-omitted and documented as such. Align/warp/cap-stable all shipped 2026-09-07;
-DPS/volley/optimal/falloff shipped 2026-09-08 from bundled resolved modifiers
-(see ARCHIVE SHIPPED 2026-09-08).
-**Refs.** LEARNINGS 2026-09-07 cap-simulation entry.
+**Effort.** Half a day, gated on a fitting-model change.
+**Worth it when.** Fittings carry charge quantities and users compare the
+stability of ammo-limited cap modules against pyfa.
+**Context.** Cap injectors shipped 2026-09-08 with infinite clips because a
+fitting stores no charge quantities; pyfa's clip/reload accounting (shot
+counters plus reload time between clips) stays unported.
+**Refs.** ARCHIVE SHIPPED 2026-09-08 cap injectors entry.
 
 ### Unsupported dogma operators beyond postPercent/postMul
 

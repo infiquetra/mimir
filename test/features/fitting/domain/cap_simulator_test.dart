@@ -70,5 +70,38 @@ void main() {
       expect(light, greaterThan(medium));
       expect(medium, greaterThan(heavy));
     });
+
+    test('cap injectors stabilize an overwhelming drain', () {
+      // 60 GJ/s exceeds the peak recharge (0.5 * 1000 / 12s = 41.7 GJ/s),
+      // so alone the capacitor empties; a 400 GJ booster every 10s adds
+      // 40 GJ/s on demand and closes the gap.
+      const drain = CapDrain(durationMs: 1000, capNeed: 60);
+      final alone = CapSimulator(
+        capacity: 1000,
+        rechargeMs: 60000,
+        drains: const [drain],
+      ).run();
+      final boosted = CapSimulator(
+        capacity: 1000,
+        rechargeMs: 60000,
+        drains: const [drain],
+        injectors: const [CapInjector(durationMs: 10000, capGain: 400)],
+      ).run();
+
+      expect(alone.isStable, isFalse);
+      expect(boosted.isStable, isTrue);
+    });
+
+    test('boosters alone leave the capacitor full', () {
+      final result = CapSimulator(
+        capacity: 1000,
+        rechargeMs: 60000,
+        drains: const [],
+        injectors: const [CapInjector(durationMs: 10000, capGain: 400)],
+      ).run();
+
+      expect(result.isStable, isTrue);
+      expect(result.stablePercent, closeTo(100, 0.001));
+    });
   });
 }

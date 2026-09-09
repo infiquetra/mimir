@@ -27,7 +27,7 @@ class CapDrain {
     this.count = 1,
   });
 
-  /// Cycle time in milliseconds.
+  /// Full cycle time in milliseconds (activation plus reactivation delay).
   final double durationMs;
 
   /// Capacitor energy consumed per activation, in GJ.
@@ -37,28 +37,60 @@ class CapDrain {
   final int count;
 }
 
+/// A capacitor booster: held in reserve and fired on demand when the
+/// capacitor cannot pay a drain, exactly like pyfa's capSim injectors.
+class CapInjector {
+  const CapInjector({required this.durationMs, required this.capGain});
+
+  /// Cycle time in milliseconds (activation plus reload).
+  final double durationMs;
+
+  /// Capacitor energy restored per activation, in GJ.
+  final double capGain;
+}
+
+class _CapEvent {
+  _CapEvent({
+    required this.t,
+    required this.duration,
+    required this.capNeed,
+    required this.isInjector,
+  });
+
+  double t;
+  final double duration;
+
+  /// Positive for drains, negative for injectors.
+  final double capNeed;
+  final bool isInjector;
+}
+
 /// Event-driven capacitor simulator, a faithful port of pyfa's
-/// `eos/capSim.py` (the de-facto reference implementation) restricted to
-/// repeating module drains: no cap injectors, no reloads.
+/// `eos/capSim.py` restricted to repeating module drains and on-demand cap
+/// boosters: no reloads (charge quantities are not part of a fitting, so
+/// clips are treated as infinite — a stocked-boosters assumption).
 ///
 /// Recharge between events uses pyfa's closed form
 /// `cap = ((1 + (sqrt(cap/C) - 1) * exp(-(dt)/tau))^2) * C` with
-/// `tau = rechargeTime / 5`. Identical modules are staggered the way pyfa
-/// does (one activation every duration/count); different modules keep their
-/// own cadence. Stability is detected when the cap at a whole LCM period is
-/// no lower than at the previous one; otherwise the sim ends when cap goes
-/// negative.
+/// `tau = rechargeTime / 5`. Identical drains are staggered the way pyfa
+/// does (one activation every duration/count); injectors are postponed
+/// while their gain would overshoot capacity and fire the moment a drain
+/// cannot be paid. Stability is detected when the cap at a whole LCM period
+/// (with an identical set of postponed injectors) is no lower than at the
+/// previous one; otherwise the sim ends when cap goes negative.
 class CapSimulator {
   CapSimulator({
     required this.capacity,
     required this.rechargeMs,
     required this.drains,
+    this.injectors = const [],
     this.maxSeconds = 3600,
   });
 
   final double capacity;
   final double rechargeMs;
   final List<CapDrain> drains;
+  final List<CapInjector> injectors;
   final double maxSeconds;
 
   CapSimResult run() {
@@ -69,8 +101,11 @@ class CapSimulator {
         secondsToEmpty: 0,
       );
     }
-    final active = drains.where((d) => d.capNeed > 0 && d.durationMs > 0);
-    if (active.isEmpty) {
+    final activeDrains = drains.where((d) => d.capNeed > 0 && d.durationMs > 0);
+    final activeInjectors = injectors.where(
+      (i) => i.capGain > 0 && i.durationMs > 0,
+    );
+    if (activeDrains.isEmpty && activeInjectors.isEmpty) {
       return const CapSimResult(
         isStable: true,
         stablePercent: 100,
@@ -81,18 +116,34 @@ class CapSimulator {
     final tau = rechargeMs / 5.0;
     final maxMs = maxSeconds * 1000.0;
 
-    // pyfa staggering: identical modules fire as one module with the
-    // duration divided by the count; distinct modules keep their cadence.
-    final events = <List<double>>[];
+    final queue = <_CapEvent>[];
     var period = 1.0;
-    for (final drain in active) {
+    for (final drain in activeDrains) {
       final duration = drain.count > 1
           ? (drain.durationMs / drain.count).floorToDouble()
           : drain.durationMs;
-      events.add([0.0, duration, drain.capNeed]);
+      queue.add(
+        _CapEvent(
+          t: 0.0,
+          duration: duration,
+          capNeed: drain.capNeed,
+          isInjector: false,
+        ),
+      );
       period = _lcm(period, duration);
     }
-    events.sort((a, b) => a[0].compareTo(b[0]));
+    for (final injector in activeInjectors) {
+      queue.add(
+        _CapEvent(
+          t: 0.0,
+          duration: injector.durationMs,
+          capNeed: -injector.capGain,
+          isInjector: true,
+        ),
+      );
+      period = _lcm(period, injector.durationMs);
+    }
+    queue.sort((a, b) => a.t.compareTo(b.t));
 
     var cap = capacity;
     var capLowest = capacity;
@@ -100,14 +151,40 @@ class CapSimulator {
     var capWrap = capacity;
     var tLast = 0.0;
     var tWrap = period;
-    var tEnd = 0.0;
+    final awaiting = <_CapEvent>[];
+    var awaitingWrapSignature = '';
 
-    while (events.isNotEmpty) {
-      events.sort((a, b) => a[0].compareTo(b[0]));
-      final event = events.removeAt(0);
-      final tNow = event[0];
+    String awaitingSignature() {
+      final gains = awaiting.map((e) => e.capNeed.toStringAsFixed(3)).toList()
+        ..sort();
+      return gains.join(',');
+    }
+
+    void reschedule(_CapEvent event, double tNow) {
+      // Infinite clips in this model: no reload time to add.
+      event.t = tNow + event.duration;
+      queue.add(event);
+    }
+
+    // Fire a postponed booster right now, pyfa-style: prefer the smallest
+    // gain that covers the shortfall, else the largest gain available.
+    void fireBestInjector(double neededInjection, double tNow) {
+      final good = awaiting
+          .where((i) => -i.capNeed >= neededInjection)
+          .toList();
+      final best = good.isNotEmpty
+          ? good.reduce((a, b) => -a.capNeed <= -b.capNeed ? a : b)
+          : awaiting.reduce((a, b) => -a.capNeed >= -b.capNeed ? a : b);
+      awaiting.remove(best);
+      cap = min(capacity, cap - best.capNeed);
+      reschedule(best, tNow);
+    }
+
+    while (queue.isNotEmpty) {
+      queue.sort((a, b) => a.t.compareTo(b.t));
+      final event = queue.removeAt(0);
+      final tNow = event.t;
       if (tNow >= maxMs) {
-        tEnd = maxMs;
         return CapSimResult(
           isStable: true,
           stablePercent: _stablePercent(capLowest, capLowestPre),
@@ -122,8 +199,9 @@ class CapSimulator {
         if (cap < capLowestPre) capLowestPre = cap;
         if (tNow == tWrap) {
           // History repeats: if we have at least as much cap as last
-          // period, the setup is stable.
-          if (cap >= capWrap) {
+          // period, with the same boosters postponed, the setup is stable.
+          final signature = awaitingSignature();
+          if (cap >= capWrap && signature == awaitingWrapSignature) {
             return CapSimResult(
               isStable: true,
               stablePercent: _stablePercent(capLowest, capLowestPre),
@@ -131,30 +209,60 @@ class CapSimulator {
             );
           }
           capWrap = cap;
+          awaitingWrapSignature = signature;
           tWrap += period;
         }
       }
       tLast = tNow;
 
-      cap -= event[2];
-      if (cap < 0) {
-        return CapSimResult(
-          isStable: false,
-          stablePercent: 0,
-          secondsToEmpty: tLast / 1000.0,
-        );
+      // Injecting would overshoot max cap: postpone the booster.
+      if (event.isInjector && cap - event.capNeed > capacity) {
+        awaiting.add(event);
+        continue;
       }
-      if (cap < capLowest) capLowest = cap;
 
-      event[0] = tNow + event[1];
-      events.add(event);
-      tEnd = tLast;
+      // Cannot pay the drain: top up from postponed boosters first.
+      if (event.capNeed > cap && cap < capacity) {
+        while (awaiting.isNotEmpty && event.capNeed > cap && cap < capacity) {
+          final neededInjection = min(event.capNeed - cap, capacity - cap);
+          fireBestInjector(neededInjection, tNow);
+        }
+      }
+
+      cap -= event.capNeed;
+      if (cap > capacity) cap = capacity;
+      if (cap < capLowest) {
+        if (cap < 0.0) {
+          return CapSimResult(
+            isStable: false,
+            stablePercent: 0,
+            secondsToEmpty: tLast / 1000.0,
+          );
+        }
+        capLowest = cap;
+      }
+
+      // After spending, top up towards full without overshooting.
+      while (awaiting.isNotEmpty && cap < capacity) {
+        final neededInjection = capacity - cap;
+        final good = awaiting
+            .where((i) => -i.capNeed <= neededInjection)
+            .toList();
+        if (good.isEmpty) break;
+        final best = good.reduce((a, b) => -a.capNeed >= -b.capNeed ? a : b);
+        awaiting.remove(best);
+        cap = min(capacity, cap - best.capNeed);
+        reschedule(best, tNow);
+      }
+
+      reschedule(event, tNow);
     }
 
+    // Only postponed boosters left: nothing else ever fires again.
     return CapSimResult(
       isStable: true,
       stablePercent: _stablePercent(capLowest, capLowestPre),
-      secondsToEmpty: tEnd / 1000.0,
+      secondsToEmpty: 0,
     );
   }
 

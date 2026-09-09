@@ -9,6 +9,19 @@
 
 ---
 
+### SHIPPED 2026-09-08: Cap injectors in the cap simulation
+
+**Author.** Qwen Code
+**Shipped as.** CapSimulator injectors ported from pyfa capSim: boosters are
+postponed while their gain would overshoot capacity, fire on demand when a
+drain cannot be paid, and top the capacitor up after spending; the stability
+wrap check now also compares the postponed-injector set. DogmaEngine collects
+injectors from fitted cap booster charges (capacitorBonus 67) and adds the
+reactivation delay (1795) to every module cycle, like pyfa. Clips are
+infinite because fittings carry no charge quantities; reload accounting
+remains queued (P3).
+**Refs.** LEARNINGS 2026-09-08 cap-injector entry; QUEUED clip reloads.
+
 ### SHIPPED 2026-09-08: Drone DPS and drone-domain bonuses
 
 **Author.** Qwen Code

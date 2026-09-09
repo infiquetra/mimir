@@ -6,6 +6,8 @@ class DogmaAttributes {
   static const int capacitorRechargeTime = 55;
   static const int capacitorNeed = 6;
   static const int duration = 73; // module cycle time, milliseconds
+  static const int capacitorBonus = 67; // cap booster charge gain, GJ
+  static const int reactivationDelay = 1795; // added to the cycle, ms
 
   static const int shieldCapacity = 263;
   static const int shieldRechargeTime = 479;
