@@ -31,6 +31,36 @@
 
 ### 2026-09-08
 
+### Production-wiring widget tests need runAsync for Drift isolates and a grown test surface
+
+**Author.** Qwen Code
+**Context.** Locking the fitting-stats chain (SdeService -> providers ->
+engine -> StatsPanel) against the dead-`effects` bug class required a widget
+test that uses the real Drift-backed service instead of fixtures.
+**Evidence.** First attempt hung with no output: `SdeDatabase`'s
+`NativeDatabase.memory()` answers from a background isolate, and port
+replies never reach a future that started inside the widget-test FakeAsync
+zone (provider futures kick off during `pumpWidget`). A later failure showed
+the lazy `ListView` in StatsPanel stopping mid-section: Scaffold bodies give
+tight window-height constraints, so an oversized `SizedBox` is ignored and
+only ~600px of rows build.
+**Mechanism.** FakeAsync pumps virtual time but does not turn the real event
+loop, so isolate/port and sqflite work must run inside `tester.runAsync`;
+and lazy slivers only build children within viewport+cacheExtent of the
+real surface size.
+**Fix.** Resolve the provider chain in a bare `ProviderContainer` inside one
+`runAsync` block, then render StatsPanel against the resolved stats with
+`tester.view.physicalSize` grown (1200x2400) so every row lays out.
+**Validation.** `fitting_stats_production_wiring_test.dart`: Tristan with
+loaded autocannon + Warriors + DDA II yields dps 50.4 (guns 3.4, drones 47.0)
+and renders OFFENSE/DRONES rows; 430 tests green.
+**What surprised.** A fit that looks fine in fixtures can be correctly
+rejected by the engine: Warriors on a Rifter produce 0 drone DPS because the
+Rifter's drone bandwidth is 0 — the test had to move to a Tristan.
+**Generalizable rule.** Widget tests over real services: wrap isolate-backed
+async in runAsync before pumpWidget, and size the surface for lazy lists.
+**Refs.** DECISIONS 2026-09-08 bundled-modifiers entry; HANDOFF next step.
+
 ### modifierInfo's skillTypeID is a target filter, not the scaling skill
 
 **Author.** Qwen Code

@@ -7,9 +7,12 @@
 ## Where things stand
 
 - Branch: `develop`, pushed to `origin` (github.com/infiquetra/mimir).
-- HEAD at write time: `87ed959` (drone DPS + damage-module parity).
+- HEAD at write time: the commit adding
+  `test/features/fitting/presentation/fitting_stats_production_wiring_test.dart`,
+  on top of `0e6a9bb` (this handoff) and `87ed959` (drone DPS + damage-module
+  parity).
 - Gates green at HEAD: `flutter analyze` no issues, `dart format` clean,
-  `flutter test` 429 passing (two consecutive runs).
+  `flutter test` 430 passing.
 - Untracked and intentionally not committed: `.hermes/` (local tool state).
 - Working mode agreed with the owner: commit straight to `develop`;
   trust-first strategy ("make what exists actually true"); ESI writes limited
@@ -100,8 +103,13 @@ suite once. Do not "fix" it by loosening the comparator (tried, reverted).
 
 ## Concrete next step
 
-Launch the macOS app (`flutter run -d macos`), fit a turret/missile/drone
-ship, and screenshot the fitting stats panel to validate the OFFENSE/DRONES
-rows through the production provider wiring end-to-end (the dead-`effects`
-bug class would surface there first). Fix whatever the screenshots show,
-then continue down the queue above.
+The production wiring of the OFFENSE/DRONES rows is now locked by
+`test/features/fitting/presentation/fitting_stats_production_wiring_test.dart`
+(real SdeService + Drift seed + bundled assets -> providers -> engine ->
+StatsPanel; a Tristan fit with loaded autocannon, Warriors and a DDA II
+yields dps 50.4 = guns 3.4 + drones 47.0, and the panel renders the
+OFFENSE/DRONES rows). Widget-test gotchas for this pattern are in LEARNINGS
+2026-09-08 (runAsync for Drift isolates, grown test surface for lazy lists).
+Remaining optional visual check: launch the macOS app (`flutter run -d macos`)
+and screenshot the fitting screen for a human-eye pass, then continue down
+the queue above (operator 2, fighters, cap injectors).
