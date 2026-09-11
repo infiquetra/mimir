@@ -26,7 +26,7 @@
 
 ### 2026-09-11
 
-### AAR fit simulation, derivation layering, tank classification, and shared loader (commit: pending)
+### AAR fit simulation, derivation layering, tank classification, and shared loader (commit: 6be5eb7)
 
 **Author.** Antigravity / Lead Orchestrator
 **Decision.**
