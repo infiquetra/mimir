@@ -26,7 +26,7 @@
 
 ### 2026-09-11
 
-### AAR evidence completeness score, provenance snapshot, and pre-analysis gate (commit: pending)
+### AAR evidence completeness score, provenance snapshot, and pre-analysis gate (commit: 506a371)
 
 **Author.** Antigravity / Lead Orchestrator
 **Decision.**
