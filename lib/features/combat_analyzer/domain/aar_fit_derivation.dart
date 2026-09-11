@@ -174,4 +174,6 @@ class AarDerivationBundle {
   final List<AarUnknown> unknowns;
 
   bool get isEmpty => self == null && opponent == null;
+
+  const AarDerivationBundle.empty() : this();
 }

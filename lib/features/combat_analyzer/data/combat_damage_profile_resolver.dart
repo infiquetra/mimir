@@ -28,6 +28,20 @@ final combatDamageProfileProvider =
       return resolver.resolveOutgoingProfile(encounter);
     });
 
+final combatIncomingDamageProfileProvider =
+    FutureProvider.family<CombatDamageProfile, ParsedCombatEncounter>((
+      ref,
+      encounter,
+    ) async {
+      Log.d(
+        'COMBAT.DAMAGE',
+        'combatIncomingDamageProfileProvider(encounter=${encounter.id}) - START',
+      );
+      await ref.watch(sdeInitializerProvider.future);
+      final resolver = ref.watch(combatDamageProfileResolverProvider);
+      return resolver.resolveIncomingProfile(encounter);
+    });
+
 class CombatDamageProfileResolver {
   CombatDamageProfileResolver({required SdeDatabase database})
     : _database = database;
@@ -121,6 +135,21 @@ class CombatDamageProfileResolver {
       'Resolved ${profile.entries.length} damage types; unknown weapons=${profile.unknownWeapons.length}',
     );
     return profile;
+  }
+
+  /// Incoming damage typed from the log. U3 stub: Devs parameterise `_resolve`.
+  Future<CombatDamageProfile> resolveIncomingProfile(
+    ParsedCombatEncounter encounter,
+  ) async {
+    Log.d(
+      'COMBAT.DAMAGE',
+      'resolveIncomingProfile(encounter=${encounter.id}) stub',
+    );
+    return const CombatDamageProfile(
+      entries: [],
+      unknownWeapons: [],
+      totalProfiledDamage: 0,
+    );
   }
 
   Future<_DamageAttributes?> _lookupDamageAttributes(String weaponName) async {

@@ -8,11 +8,14 @@ import '../../../core/auth/auth_providers.dart';
 import '../../../core/network/esi_client.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/sde/sde_providers.dart';
+import 'combat_damage_profile_resolver.dart';
 import 'combat_enrichment_repository.dart';
 import 'combat_enrichment_service.dart';
+import 'combat_fit_derivation_service.dart';
 import 'combat_killmail_discovery_client.dart';
 import 'log_scanner.dart';
 import 'parsed_encounter_cache.dart';
+import '../domain/aar_fit_derivation.dart';
 import '../domain/combat_enrichment.dart';
 import '../domain/parsed_combat_encounter.dart';
 import '../domain/combat_log_parser.dart';
@@ -51,6 +54,36 @@ final combatEnrichmentServiceProvider = Provider<CombatEnrichmentService>((
     sdeService: ref.watch(sdeServiceProvider),
   );
 });
+
+final aarFitDerivationsProvider =
+    FutureProvider.family<AarDerivationBundle, ParsedCombatEncounter>((
+      ref,
+      encounter,
+    ) async {
+      Log.d(
+        'AAR',
+        'aarFitDerivationsProvider(encounter=${encounter.id}) - START',
+      );
+      await ref.watch(sdeInitializerProvider.future);
+      final enrichment = await ref.watch(
+        combatEnrichmentProvider(encounter.id).future,
+      );
+      if (enrichment == null) return const AarDerivationBundle.empty();
+      final incoming = await ref.watch(
+        combatIncomingDamageProfileProvider(encounter).future,
+      );
+      final outgoing = await ref.watch(
+        combatDamageProfileProvider(encounter).future,
+      );
+      return ref
+          .read(combatFitDerivationServiceProvider)
+          .deriveForEncounter(
+            encounter: encounter,
+            enrichment: enrichment,
+            incoming: incoming,
+            outgoing: outgoing,
+          );
+    });
 
 final combatEnrichmentProvider =
     FutureProvider.family<CombatEnrichment?, String>((ref, parsedEncounterId) {

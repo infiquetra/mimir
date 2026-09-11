@@ -12,6 +12,7 @@ import '../domain/combat_evidence_ledger.dart';
 import '../domain/combat_fit_snapshot_mapper.dart';
 import '../domain/combat_killmail_fit_mapper.dart';
 import '../domain/combat_killmail_matcher.dart';
+import '../domain/aar_fit_derivation.dart';
 import '../domain/parsed_combat_encounter.dart';
 import 'combat_enrichment_repository.dart';
 import 'combat_killmail_discovery_client.dart';
@@ -40,6 +41,19 @@ class CombatEnrichmentService {
   final TokenManager _tokenManager;
   final OAuthService _oauthService;
   final SdeService _sdeService;
+
+  /// Merges derived facts/unknowns into the ledger. U3 stub: identity.
+  Future<CombatEnrichment> attachDerivedEvidence(
+    CombatEnrichment enrichment,
+    AarDerivationBundle bundle, {
+    required String encounterId,
+  }) async {
+    Log.d(
+      'COMBAT.ENRICH',
+      'attachDerivedEvidence(${enrichment.parsedEncounterId}) stub',
+    );
+    return enrichment;
+  }
 
   Future<CombatEnrichment> enrichEncounter(
     ParsedCombatEncounter encounter, {

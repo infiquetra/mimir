@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/logging/logger.dart';
+import '../domain/aar_fit_derivation.dart';
 import '../domain/combat_aar_report.dart';
 import '../domain/combat_enrichment.dart';
 import '../domain/combat_log_parser.dart';
@@ -58,9 +59,14 @@ class CodexAnalysisClient {
     required ParsedCombatEncounter encounter,
     required String model,
     CombatEnrichment? enrichment,
+    AarDerivationBundle? derivation,
   }) async {
     Log.d('COMBAT.AI', 'analyzeEncounter(model=$model) - START');
-    final prompt = _buildPrompt(encounter, enrichment: enrichment);
+    final prompt = buildPrompt(
+      encounter,
+      enrichment: enrichment,
+      derivation: derivation,
+    );
     final text = await _requestAnalysisText(model: model, prompt: prompt);
     try {
       return _parseAnalysisText(text);
@@ -154,6 +160,16 @@ class CodexAnalysisClient {
       }
       throw CodexAnalysisException(await _summarizeDioError(e));
     }
+  }
+
+  /// Public so tests can capture the prompt. U3: still schema v3 until Devs
+  /// emit v4 with derivedFits/damageMatchups.
+  String buildPrompt(
+    ParsedCombatEncounter encounter, {
+    CombatEnrichment? enrichment,
+    AarDerivationBundle? derivation,
+  }) {
+    return _buildPrompt(encounter, enrichment: enrichment);
   }
 
   String _buildPrompt(
