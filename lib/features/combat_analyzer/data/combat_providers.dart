@@ -15,6 +15,8 @@ import 'combat_fit_derivation_service.dart';
 import 'combat_killmail_discovery_client.dart';
 import 'log_scanner.dart';
 import 'parsed_encounter_cache.dart';
+import '../domain/aar_evidence_assessment.dart';
+import '../domain/aar_evidence_scorer.dart';
 import '../domain/aar_fit_derivation.dart';
 import '../domain/combat_enrichment.dart';
 import '../domain/parsed_combat_encounter.dart';
@@ -83,6 +85,38 @@ final aarFitDerivationsProvider =
             incoming: incoming,
             outgoing: outgoing,
           );
+    });
+
+final aarEvidenceAssessmentProvider =
+    FutureProvider.family<AarEvidenceAssessment, ParsedCombatEncounter>((
+      ref,
+      encounter,
+    ) async {
+      Log.d(
+        'AAR.EVIDENCE',
+        'aarEvidenceAssessmentProvider(encounter=${encounter.id}) - START',
+      );
+      final enrichment = await ref.watch(
+        combatEnrichmentProvider(encounter.id).future,
+      );
+      final bundle = await ref.watch(
+        aarFitDerivationsProvider(encounter).future,
+      );
+      final incoming = await ref.watch(
+        combatIncomingDamageProfileProvider(encounter).future,
+      );
+      final outgoing = await ref.watch(
+        combatDamageProfileProvider(encounter).future,
+      );
+      return const AarEvidenceScorer().assess(
+        AarEvidenceInputs(
+          encounter: encounter,
+          enrichment: enrichment,
+          bundle: bundle,
+          incoming: incoming,
+          outgoing: outgoing,
+        ),
+      );
     });
 
 final combatEnrichmentProvider =

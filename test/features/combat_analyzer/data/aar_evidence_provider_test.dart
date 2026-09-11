@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/features/combat_analyzer/data/codex_analysis_client.dart';
 import 'package:mimir/features/combat_analyzer/data/codex_auth_service.dart';
@@ -101,16 +102,16 @@ void main() {
       'E.5 provider error surfaces as AsyncError, not a throw in the scorer',
       () async {
         final failing = ProviderContainer(
-          overrides: [
-            ..._overrides(holder, encounter, codex),
-            combatIncomingDamageProfileProvider.overrideWith(
-              (ref, enc) => throw StateError('incoming profile failed'),
-            ),
-          ],
+          overrides: _overrides(
+            holder,
+            encounter,
+            codex,
+            throwIncoming: true,
+          ),
         );
         addTearDown(failing.dispose);
         final provider = aarEvidenceAssessmentProvider(encounter);
-        failing.listen(provider, (_, __) {});
+        failing.listen(provider, (_, _) {});
 
         await expectLater(
           failing.read(provider.future),
@@ -141,17 +142,21 @@ class _Holder {
   CombatDamageProfile outgoing;
 }
 
-_overrides(
+List<Override> _overrides(
   _Holder holder,
   ParsedCombatEncounter encounter,
-  CountingCodexClient codex,
-) {
+  CountingCodexClient codex, {
+  bool throwIncoming = false,
+}) {
   return [
     combatEnrichmentProvider.overrideWith((ref, id) async => holder.enrichment),
     aarFitDerivationsProvider.overrideWith((ref, enc) async => holder.bundle),
-    combatIncomingDamageProfileProvider.overrideWith(
-      (ref, enc) async => holder.incoming,
-    ),
+    combatIncomingDamageProfileProvider.overrideWith((ref, enc) async {
+      if (throwIncoming) {
+        throw StateError('incoming profile failed');
+      }
+      return holder.incoming;
+    }),
     combatDamageProfileProvider.overrideWith(
       (ref, enc) async => holder.outgoing,
     ),

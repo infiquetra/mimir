@@ -10,6 +10,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/network/esi_client.dart';
 import '../../skills/data/skill_repository.dart';
+import '../domain/aar_evidence_scorer.dart';
 import '../domain/combat_aar_report.dart';
 import '../domain/parsed_combat_encounter.dart';
 import 'codex_analysis_client.dart';
@@ -240,7 +241,8 @@ class CombatAnalysisService {
       emit(
         const CombatAnalysisProgress(
           label: 'Deriving fit statistics',
-          detail: 'Running dogma derivation and damage matchups.',
+          detail:
+              'Running dogma derivation, damage matchups, and evidence scoring.',
           stage: 5,
           stageCount: _stageCount,
           value: 0.46,
@@ -262,6 +264,19 @@ class CombatAnalysisService {
         enrichment,
         derivation,
         encounterId: encounter.id,
+      );
+      final assessment = const AarEvidenceScorer().assess(
+        AarEvidenceInputs(
+          encounter: encounter,
+          enrichment: enrichment,
+          bundle: derivation,
+          incoming: incoming,
+          outgoing: outgoing,
+        ),
+      );
+      Log.i(
+        'AAR.EVIDENCE',
+        'analyzeEncounter(${encounter.id}) recording ${assessment.scoreLabel}',
       );
 
       emit(
@@ -306,7 +321,13 @@ class CombatAnalysisService {
         id: id,
         parsedEncounterId: Value(encounter.id),
         analysisVersion: const Value(CombatAarReport.version),
-        analysisJson: Value(jsonEncode(analysis.report.toJson())),
+        analysisJson: Value(
+          jsonEncode(
+            analysis.report
+                .withEvidenceAtGeneration(assessment.toSnapshot())
+                .toJson(),
+          ),
+        ),
         parseJson: Value(jsonEncode(encounter.toJson())),
         encounterStart: Value(encounter.startTime),
         encounterEnd: Value(encounter.endTime),
