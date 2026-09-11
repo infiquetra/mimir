@@ -3,14 +3,20 @@ import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/auth/oauth_service.dart';
+import '../../../core/auth/token_manager.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/logging/logger.dart';
+import '../../../core/network/esi_client.dart';
+import '../../skills/data/skill_repository.dart';
 import '../domain/combat_aar_report.dart';
 import '../domain/parsed_combat_encounter.dart';
 import 'codex_analysis_client.dart';
 import 'codex_auth_service.dart';
+import 'combat_damage_profile_resolver.dart';
 import 'combat_enrichment_service.dart';
+import 'combat_fit_derivation_service.dart';
 import 'combat_providers.dart';
 
 /// Provider for the CombatAnalysisService
@@ -22,6 +28,8 @@ final combatAnalysisServiceProvider = Provider<CombatAnalysisService>((ref) {
     database: database,
     codexClient: codexClient,
     enrichmentService: enrichmentService,
+    derivationService: ref.watch(combatFitDerivationServiceProvider),
+    damageProfileResolver: ref.watch(combatDamageProfileResolverProvider),
     onAnalysisSaved: () {
       ref.invalidate(combatAarStatusesProvider);
       ref.invalidate(combatEnrichmentProvider);
@@ -51,19 +59,43 @@ class CombatAnalysisProgress {
 }
 
 class CombatAnalysisService {
+  static const int _stageCount = 9;
+
   final AppDatabase _database;
   final CodexAnalysisClient _codexClient;
   final CombatEnrichmentService _enrichmentService;
+  final CombatFitDerivationService _derivationService;
+  final CombatDamageProfileResolver _damageProfileResolver;
   final void Function()? _onAnalysisSaved;
 
   CombatAnalysisService({
     required AppDatabase database,
     required CodexAnalysisClient codexClient,
     required CombatEnrichmentService enrichmentService,
+    CombatFitDerivationService? derivationService,
+    CombatDamageProfileResolver? damageProfileResolver,
     void Function()? onAnalysisSaved,
   }) : _database = database,
        _codexClient = codexClient,
        _enrichmentService = enrichmentService,
+       _derivationService =
+           derivationService ??
+           CombatFitDerivationService(
+             sde: enrichmentService.sdeService,
+             skills: SkillRepository(
+               database: database,
+               esiClient: EsiClient(
+                 tokenManager: TokenManager(database: database),
+                 oauthService: OAuthService(),
+                 database: database,
+               ),
+             ),
+           ),
+       _damageProfileResolver =
+           damageProfileResolver ??
+           CombatDamageProfileResolver(
+             database: enrichmentService.sdeService.database,
+           ),
        _onAnalysisSaved = onAnalysisSaved;
 
   /// Generate a unique ID for an encounter based on its payload
@@ -135,19 +167,18 @@ class CombatAnalysisService {
         label: 'Preparing encounter telemetry',
         detail: 'Normalizing parsed combat events and damage totals.',
         stage: 1,
-        stageCount: 8,
+        stageCount: _stageCount,
         value: 0.08,
       ),
     );
     final id = generateEncounterId(encounter);
 
-    // 1. Check local SQLite cache
     emit(
       const CombatAnalysisProgress(
         label: 'Checking cached AAR',
         detail: 'Looking for an existing After Action Report in SQLite.',
         stage: 2,
-        stageCount: 8,
+        stageCount: _stageCount,
         value: 0.16,
       ),
     );
@@ -157,8 +188,8 @@ class CombatAnalysisService {
         const CombatAnalysisProgress(
           label: 'AAR ready',
           detail: 'Loaded a cached After Action Report.',
-          stage: 8,
-          stageCount: 8,
+          stage: _stageCount,
+          stageCount: _stageCount,
           value: 1,
         ),
       );
@@ -177,13 +208,12 @@ class CombatAnalysisService {
       'No cache found. Requesting new analysis for encounter $id',
     );
 
-    // 2. Fetch non-secret LLM settings
     emit(
       const CombatAnalysisProgress(
         label: 'Loading AI settings',
         detail: 'Reading the configured model and local auth settings.',
         stage: 3,
-        stageCount: 8,
+        stageCount: _stageCount,
         value: 0.26,
       ),
     );
@@ -197,25 +227,51 @@ class CombatAnalysisService {
           detail:
               'Checking cached evidence, ESI recent killmails, and public zKill discovery.',
           stage: 4,
-          stageCount: 8,
+          stageCount: _stageCount,
           value: 0.38,
           isIndeterminate: true,
         ),
       );
-      final enrichment = await _enrichmentService.enrichEncounter(
+      var enrichment = await _enrichmentService.enrichEncounter(
         encounter,
         forceRefresh: forceRefresh,
       );
 
-      // 4. Call the AI backend with Mimir-owned OAuth credentials.
+      emit(
+        const CombatAnalysisProgress(
+          label: 'Deriving fit statistics',
+          detail: 'Running dogma derivation and damage matchups.',
+          stage: 5,
+          stageCount: _stageCount,
+          value: 0.46,
+        ),
+      );
+      final incoming = await _damageProfileResolver.resolveIncomingProfile(
+        encounter,
+      );
+      final outgoing = await _damageProfileResolver.resolveOutgoingProfile(
+        encounter,
+      );
+      final derivation = await _derivationService.deriveForEncounter(
+        encounter: encounter,
+        enrichment: enrichment,
+        incoming: incoming,
+        outgoing: outgoing,
+      );
+      enrichment = await _enrichmentService.attachDerivedEvidence(
+        enrichment,
+        derivation,
+        encounterId: encounter.id,
+      );
+
       emit(
         CombatAnalysisProgress(
           label: 'Waiting for AI',
           detail:
               'Sending structured combat telemetry and evidence to $modelName.',
-          stage: 5,
-          stageCount: 8,
-          value: 0.5,
+          stage: 6,
+          stageCount: _stageCount,
+          value: 0.58,
           isIndeterminate: true,
         ),
       );
@@ -223,26 +279,26 @@ class CombatAnalysisService {
         encounter: encounter,
         model: modelName,
         enrichment: enrichment,
+        derivation: derivation,
       );
       emit(
         const CombatAnalysisProgress(
           label: 'Validating structured AAR',
           detail: 'Checking the JSON report and tactical sections.',
-          stage: 6,
-          stageCount: 8,
+          stage: 7,
+          stageCount: _stageCount,
           value: 0.74,
         ),
       );
 
       final isVictory = encounter.outcome == CombatOutcome.likelyVictory;
 
-      // 6. Save to Database
       emit(
         const CombatAnalysisProgress(
           label: 'Saving AAR',
           detail: 'Persisting the After Action Report and chart data.',
-          stage: 7,
-          stageCount: 8,
+          stage: 8,
+          stageCount: _stageCount,
           value: 0.88,
         ),
       );
@@ -291,12 +347,11 @@ class CombatAnalysisService {
           label: 'AAR ready',
           detail:
               'Completed in ${(stopwatch.elapsedMilliseconds / 1000).toStringAsFixed(1)}s.',
-          stage: 8,
-          stageCount: 8,
+          stage: _stageCount,
+          stageCount: _stageCount,
           value: 1,
         ),
       );
-      // Return the newly inserted row
       return await (_database.select(
         _database.combatEncounters,
       )..where((tbl) => tbl.id.equals(id))).getSingle();

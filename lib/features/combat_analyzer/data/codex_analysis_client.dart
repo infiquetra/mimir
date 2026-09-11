@@ -169,12 +169,17 @@ class CodexAnalysisClient {
     CombatEnrichment? enrichment,
     AarDerivationBundle? derivation,
   }) {
-    return _buildPrompt(encounter, enrichment: enrichment);
+    return _buildPrompt(
+      encounter,
+      enrichment: enrichment,
+      derivation: derivation,
+    );
   }
 
   String _buildPrompt(
     ParsedCombatEncounter encounter, {
     CombatEnrichment? enrichment,
+    AarDerivationBundle? derivation,
   }) {
     Log.d('COMBAT.AI', '_buildPrompt() - START');
     final events = encounter.events
@@ -194,8 +199,18 @@ class CodexAnalysisClient {
           },
         )
         .toList();
+    final derivedFits = [
+      if (derivation?.self != null) derivation!.self!.toPromptJson(),
+      if (derivation?.opponent != null) derivation!.opponent!.toPromptJson(),
+    ];
+    final damageMatchups = <String, dynamic>{
+      if (derivation?.selfMatchup != null)
+        'self': derivation!.selfMatchup!.toJson(),
+      if (derivation?.opponentMatchup != null)
+        'opponent': derivation!.opponentMatchup!.toJson(),
+    };
     final payload = {
-      'schema': 'mimir.combat_aar_input.v3',
+      'schema': 'mimir.combat_aar_input.v4',
       'pilot': encounter.characterName,
       'startTime': encounter.startTime.toUtc().toIso8601String(),
       'endTime': encounter.endTime.toUtc().toIso8601String(),
@@ -214,6 +229,8 @@ class CodexAnalysisClient {
         if (enrichment.victimFitEvidence != null)
           'victimFitEvidence': enrichment.victimFitEvidence!.toPromptJson(),
       },
+      'derivedFits': derivedFits,
+      'damageMatchups': damageMatchups,
       'compactEvidence': encounter.llmPayloadString,
     };
     return const JsonEncoder.withIndent('  ').convert(payload);
@@ -440,6 +457,9 @@ Rules:
 - You may infer tactical meaning from EVE mechanics, but label inferred claims and keep them tied to supplied event evidence.
 - Parser-provided counts, totals, hit rates, and event ids are authoritative.
 - Damage type or resist conclusions must be confidence-labeled. If the log does not prove a defense layer or exact fit, state that limitation.
+- Treat `derivedFits` and `damageMatchups` as computed by Mimir's dogma engine from the supplied fit evidence. They are derived, not observed; cite their `ev-derived-*` ledger ids.
+- Every derived fit carries `skills.basis`. When it is `allFive`, say "assuming All V" wherever you quote its numbers and treat them as an upper bound.
+- Do not restate resist or EHP figures that are not in `derivedFits`; if a fit has no derivation, say the resist profile is unknown.
 - Return JSON only: no markdown, no prose outside the JSON object.
 
 Required schema:

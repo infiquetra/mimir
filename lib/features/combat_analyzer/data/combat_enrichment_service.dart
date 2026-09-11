@@ -12,6 +12,7 @@ import '../domain/combat_evidence_ledger.dart';
 import '../domain/combat_fit_snapshot_mapper.dart';
 import '../domain/combat_killmail_fit_mapper.dart';
 import '../domain/combat_killmail_matcher.dart';
+import '../domain/aar_derived_facts.dart';
 import '../domain/aar_fit_derivation.dart';
 import '../domain/parsed_combat_encounter.dart';
 import 'combat_enrichment_repository.dart';
@@ -42,7 +43,8 @@ class CombatEnrichmentService {
   final OAuthService _oauthService;
   final SdeService _sdeService;
 
-  /// Merges derived facts/unknowns into the ledger. U3 stub: identity.
+  SdeService get sdeService => _sdeService;
+
   Future<CombatEnrichment> attachDerivedEvidence(
     CombatEnrichment enrichment,
     AarDerivationBundle bundle, {
@@ -50,9 +52,33 @@ class CombatEnrichmentService {
   }) async {
     Log.d(
       'COMBAT.ENRICH',
-      'attachDerivedEvidence(${enrichment.parsedEncounterId}) stub',
+      'attachDerivedEvidence(${enrichment.parsedEncounterId}) - START',
     );
-    return enrichment;
+    final facts = <CombatEvidenceFact>[
+      if (bundle.self != null)
+        ...AarDerivedFactsBuilder.facts(
+          bundle.self!,
+          encounterId: encounterId,
+          matchup: bundle.selfMatchup,
+        ),
+      if (bundle.opponent != null)
+        ...AarDerivedFactsBuilder.facts(
+          bundle.opponent!,
+          encounterId: encounterId,
+          matchup: bundle.opponentMatchup,
+        ),
+    ];
+    final merged = _mergeLedgers(
+      enrichment.evidenceLedger,
+      CombatEvidenceLedger(facts: facts, unknowns: bundle.unknowns),
+      removeUnknownCategories: const {AarUnknownCategory.skills},
+    );
+    Log.i(
+      'COMBAT.ENRICH',
+      'attachDerivedEvidence facts=${merged.facts.length} '
+          'unknowns=${merged.unknowns.length}',
+    );
+    return _save(enrichment.copyWith(evidenceLedger: merged));
   }
 
   Future<CombatEnrichment> enrichEncounter(
@@ -564,9 +590,17 @@ class CombatEnrichmentService {
       for (final fact in first.facts) fact.id: fact,
       for (final fact in second.facts) fact.id: fact,
     };
-    final unknowns = [...first.unknowns, ...second.unknowns]
-        .where((unknown) => !removeUnknownCategories.contains(unknown.category))
-        .toList();
+    final unknowns = <AarUnknown>[];
+    final seen = <String>{};
+    for (final unknown in [
+      ...first.unknowns.where(
+        (unknown) => !removeUnknownCategories.contains(unknown.category),
+      ),
+      ...second.unknowns,
+    ]) {
+      final key = '${unknown.category.name}|${unknown.label}';
+      if (seen.add(key)) unknowns.add(unknown);
+    }
     return CombatEvidenceLedger(
       facts: factsById.values.toList(),
       unknowns: unknowns,

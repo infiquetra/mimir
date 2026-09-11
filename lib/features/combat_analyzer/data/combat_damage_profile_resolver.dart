@@ -55,32 +55,42 @@ class CombatDamageProfileResolver {
 
   Future<CombatDamageProfile> resolveOutgoingProfile(
     ParsedCombatEncounter encounter,
-  ) async {
+  ) => _resolve(encounter, incoming: false);
+
+  Future<CombatDamageProfile> resolveIncomingProfile(
+    ParsedCombatEncounter encounter,
+  ) => _resolve(encounter, incoming: true);
+
+  Future<CombatDamageProfile> _resolve(
+    ParsedCombatEncounter encounter, {
+    required bool incoming,
+  }) async {
     Log.d(
       'COMBAT.DAMAGE',
-      'resolveOutgoingProfile(encounter=${encounter.id}) - START',
+      '${incoming ? 'resolveIncomingProfile' : 'resolveOutgoingProfile'}'
+          '(encounter=${encounter.id}) - START',
     );
     final damageByType = <String, double>{};
     final evidenceByType = <String, Set<String>>{};
     final unknownWeapons = <String>{};
 
-    final outgoingByWeapon = <String, int>{};
+    final damageByWeapon = <String, int>{};
     for (final event in encounter.events.where(
-      (event) => event.isOutgoingDamage,
+      (event) => incoming ? event.isIncomingDamage : event.isOutgoingDamage,
     )) {
       final weapon = event.weaponName?.trim();
       if (weapon == null || weapon.isEmpty || weapon == 'Unknown') {
         unknownWeapons.add('Unknown');
         continue;
       }
-      outgoingByWeapon.update(
+      damageByWeapon.update(
         weapon,
         (value) => value + event.amount,
         ifAbsent: () => event.amount,
       );
     }
 
-    for (final entry in outgoingByWeapon.entries) {
+    for (final entry in damageByWeapon.entries) {
       final weaponName = entry.key;
       final damageAmount = entry.value;
       final attributes = await _lookupDamageAttributes(weaponName);
@@ -135,21 +145,6 @@ class CombatDamageProfileResolver {
       'Resolved ${profile.entries.length} damage types; unknown weapons=${profile.unknownWeapons.length}',
     );
     return profile;
-  }
-
-  /// Incoming damage typed from the log. U3 stub: Devs parameterise `_resolve`.
-  Future<CombatDamageProfile> resolveIncomingProfile(
-    ParsedCombatEncounter encounter,
-  ) async {
-    Log.d(
-      'COMBAT.DAMAGE',
-      'resolveIncomingProfile(encounter=${encounter.id}) stub',
-    );
-    return const CombatDamageProfile(
-      entries: [],
-      unknownWeapons: [],
-      totalProfiledDamage: 0,
-    );
   }
 
   Future<_DamageAttributes?> _lookupDamageAttributes(String weaponName) async {
