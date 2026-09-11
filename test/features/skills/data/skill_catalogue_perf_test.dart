@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/core/database/app_database.dart';
 import 'package:mimir/core/sde/sde_database.dart';
+import 'package:mimir/core/sde/sde_service.dart';
 import 'package:mimir/core/sde/sde_providers.dart' hide skillGroupsProvider;
 import 'package:mimir/features/characters/data/character_providers.dart';
 import 'package:mimir/features/skills/data/skill_repository.dart';
@@ -65,6 +66,11 @@ void main() {
           ),
         ]);
       });
+      // Version gate must match or initialize() re-imports bundled dogma.
+      await sdeDb.setMetadata(
+        'dogma_version',
+        '${SdeService.bundledDogmaVersion}',
+      );
     });
 
     tearDown(() async {

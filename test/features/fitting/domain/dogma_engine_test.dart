@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/features/fitting/domain/dogma_engine.dart';
 import 'package:mimir/features/fitting/domain/dogma_attributes.dart';
@@ -2050,6 +2053,1213 @@ void main() {
         expect(stats.volley, closeTo(400, 0.01));
         expect(stats.dpsGuns, closeTo(400 / 2.4, 0.01));
         expect(cycleMs(stats), closeTo(2400, 0.01));
+      },
+    );
+  });
+
+  group('DogmaEngine fighters', () {
+    late DogmaEngine engine;
+
+    setUp(() {
+      engine = DogmaEngine();
+    });
+
+    const fightersSkill = 23069;
+    const dronesSkill = 3436;
+    const capitalShips = 20533;
+    const gallenteCarrier = 24313;
+    const droneInterfacing = 3442;
+    const fhmSkill = 24613;
+    const ddaEffect = 6556;
+    const hullFighterEffect = 6601;
+    const carrierScaleEffect = 6585;
+    const fightersEffect = 6560;
+    const interfacingEffect = 6663;
+    const fhmEffect = 6570;
+    const attackEffect = 6465;
+    const missilesEffect = 6431;
+    const mwdEffect = 6441;
+    const evasiveEffect = 6439;
+    const tackleEffect = 6464;
+    const bombEffect = 6485;
+    const mjdEffect = 6442;
+    const hullBonusAttr = 2367;
+    const ddaBonusAttr = 1255;
+    const damageBonusAttr = 292;
+    const hangarBonusAttr = 2340;
+
+    ShipType carrierShip({
+      double tubes = 4,
+      double light = 3,
+      double support = 2,
+      double heavy = 2,
+      double bay = 75000,
+      Map<int, double> extra = const {},
+      List<DogmaEffect> effects = const [],
+    }) => ShipType(
+      typeId: 23911,
+      name: 'Carrier',
+      description: '',
+      groupId: 547,
+      groupName: 'Carrier',
+      effects: effects,
+      baseAttributes: {
+        ..._rifter().baseAttributes,
+        DogmaAttributes.fighterTubes: tubes,
+        DogmaAttributes.fighterLightSlots: light,
+        DogmaAttributes.fighterSupportSlots: support,
+        DogmaAttributes.fighterHeavySlots: heavy,
+        DogmaAttributes.fighterCapacity: bay,
+        DogmaAttributes.droneBandwidth: 25,
+        DogmaAttributes.droneCapacity: 40,
+        ...extra,
+      },
+    );
+
+    ModuleType fighterType({
+      int typeId = 23059,
+      double size = 6,
+      double em = 0,
+      double thermal = 207,
+      double kinetic = 0,
+      double explosive = 0,
+      double multiplier = 1.0,
+      double durationMs = 5000,
+      bool light = true,
+      bool support = false,
+      bool heavy = false,
+      bool standup = false,
+      double volume = 1000,
+      List<int> effectIds = const [attackEffect],
+      Map<int, double> extra = const {},
+    }) => ModuleType(
+      typeId: typeId,
+      name: 'Fighter $typeId',
+      groupId: light
+          ? 1652
+          : support
+          ? 1537
+          : 1653,
+      groupName: 'Fighter',
+      slotType: SlotType.high,
+      baseAttributes: {
+        DogmaAttributes.fighterSquadronMaxSize: size,
+        if (light) DogmaAttributes.fighterSquadronIsLight: 1.0,
+        if (support) DogmaAttributes.fighterSquadronIsSupport: 1.0,
+        if (heavy) DogmaAttributes.fighterSquadronIsHeavy: 1.0,
+        if (standup) 2740: 1.0,
+        DogmaAttributes.fighterEmDamage: em,
+        DogmaAttributes.fighterThermalDamage: thermal,
+        DogmaAttributes.fighterKineticDamage: kinetic,
+        DogmaAttributes.fighterExplosiveDamage: explosive,
+        DogmaAttributes.fighterDamageMultiplier: multiplier,
+        DogmaAttributes.fighterDurationMs: durationMs,
+        DogmaAttributes.volume: volume,
+        182: fightersSkill.toDouble(),
+        ...extra,
+      },
+      effects: [
+        for (final id in effectIds) DogmaEffect(effectId: id, name: 'e$id'),
+      ],
+    );
+
+    ModuleType droneType() => ModuleType(
+      typeId: 2488,
+      name: 'Warrior II',
+      groupId: 100,
+      groupName: 'Combat Drone',
+      slotType: SlotType.high,
+      baseAttributes: {
+        DogmaAttributes.explosiveDamage: 10.0,
+        DogmaAttributes.turretDamageMultiplier: 2.0,
+        DogmaAttributes.rateOfFire: 4000.0,
+        DogmaAttributes.bandwidthNeeded: 5.0,
+        DogmaAttributes.volume: 5.0,
+        184: dronesSkill.toDouble(),
+      },
+    );
+
+    ModuleType gunType() => ModuleType(
+      typeId: 561,
+      name: 'Gun',
+      groupId: 53,
+      groupName: 'Projectile',
+      slotType: SlotType.high,
+      baseAttributes: {
+        DogmaAttributes.turretDamageMultiplier: 2.0,
+        DogmaAttributes.rateOfFire: 4000.0,
+      },
+    );
+
+    ModuleType ammoType() => ModuleType(
+      typeId: 266,
+      name: 'Ammo',
+      groupId: 38,
+      groupName: 'Ammo',
+      slotType: SlotType.high,
+      baseAttributes: {DogmaAttributes.kineticDamage: 100.0},
+    );
+
+    FighterGroup sq({int typeId = 23059, int quantity = 6, int inSpace = 0}) =>
+        FighterGroup(
+          typeId: typeId,
+          typeName: 'Fighter $typeId',
+          quantity: quantity,
+          inSpace: inSpace,
+        );
+
+    Fitting fit({
+      List<FighterGroup> fighters = const [],
+      List<DroneGroup> drones = const [],
+      List<FittedModule> high = const [],
+      List<FittedModule> low = const [],
+    }) => Fitting(
+      id: 'fighters',
+      name: 'Fighter fit',
+      shipTypeId: 23911,
+      shipName: 'Carrier',
+      highSlots: high,
+      lowSlots: low,
+      drones: drones,
+      fighters: fighters,
+    );
+
+    Future<FittingStats> run({
+      required Map<String, ModuleType> modules,
+      Fitting? fitting,
+      ShipType? ship,
+      List<CharacterSkill> skills = const [],
+      Map<int, ModuleType> skillTypes = const {},
+      Map<int, List<EffectModifier>> modifiers = const {},
+    }) {
+      return engine.calculateStats(
+        fitting ?? fit(fighters: [sq()]),
+        ship ?? carrierShip(),
+        modules,
+        skills,
+        effectModifiers: modifiers,
+        skillTypes: skillTypes,
+      );
+    }
+
+    test(
+      'T2.1 squadron DPS is size x thermal / (duration ms / 1000)',
+      () async {
+        final stats = await run(modules: {'23059': fighterType()});
+        expect(stats.dpsFighters, closeTo(6 * 207 / 5, 0.01));
+        expect(stats.dpsFighters, closeTo(248.4, 0.01));
+      },
+    );
+
+    test('T2.2 squadron size 9 vs 6 scales DPS by 1.5', () async {
+      final six = await run(modules: {'23059': fighterType()});
+      final nine = await run(
+        fitting: fit(fighters: [sq(quantity: 9)]),
+        modules: {'23059': fighterType(size: 9)},
+      );
+      expect(nine.dpsFighters / six.dpsFighters, closeTo(1.5, 0.001));
+    });
+
+    test('T2.3 damage multiplier 1.5 scales DPS by 1.5', () async {
+      final base = await run(modules: {'23059': fighterType()});
+      expect(base.dpsFighters, greaterThan(0));
+      final boosted = await run(
+        modules: {'23059': fighterType(multiplier: 1.5)},
+      );
+      expect(boosted.dpsFighters, closeTo(base.dpsFighters * 1.5, 0.01));
+    });
+
+    test('T2.4 duration 5000 ms divides by 5.0 seconds, not 5000', () async {
+      final stats = await run(modules: {'23059': fighterType()});
+      expect(stats.dpsFighters, closeTo(248.4, 0.01));
+      expect(stats.dpsFighters, isNot(closeTo(6 * 207 / 5000, 0.01)));
+    });
+
+    test(
+      'T2.5 four damage components of 50 sum to volley 200 x size',
+      () async {
+        final stats = await run(
+          modules: {
+            '23059': fighterType(
+              em: 50,
+              thermal: 50,
+              kinetic: 50,
+              explosive: 50,
+            ),
+          },
+        );
+        expect(stats.dpsFighters, closeTo(200 * 6 / 5.0, 0.01));
+      },
+    );
+
+    test('T2.6 tube cap 4 binds five light squadrons', () async {
+      final stats = await run(
+        ship: carrierShip(tubes: 4, light: 8),
+        fitting: fit(fighters: [for (var i = 0; i < 5; i++) sq()]),
+        modules: {'23059': fighterType()},
+      );
+      expect(stats.fighterTubesUsed, 4);
+      expect(stats.fighterTubesMax, 4);
+      expect(stats.dpsFighters, closeTo(4 * 248.4, 0.01));
+    });
+
+    test('T2.7 heavy class cap 2 binds three heavy squadrons', () async {
+      final stats = await run(
+        ship: carrierShip(tubes: 4, heavy: 2),
+        fitting: fit(fighters: [for (var i = 0; i < 3; i++) sq(typeId: 32325)]),
+        modules: {
+          '32325': fighterType(typeId: 32325, light: false, heavy: true),
+        },
+      );
+      expect(stats.fighterHeavyUsed, 2);
+      expect(stats.fighterHeavyMax, 2);
+      expect(stats.dpsFighters, closeTo(2 * 248.4, 0.01));
+    });
+
+    test(
+      'T2.8 Nyx-shaped support cap 0 launches no support squadron',
+      () async {
+        final stats = await run(
+          ship: carrierShip(tubes: 5, light: 3, support: 0, heavy: 4),
+          fitting: fit(fighters: [sq(typeId: 40347, quantity: 3)]),
+          modules: {
+            '40347': fighterType(
+              typeId: 40347,
+              size: 3,
+              light: false,
+              support: true,
+            ),
+          },
+        );
+        expect(stats.fighterSupportUsed, 0);
+        expect(stats.fighterSupportMax, 0);
+        expect(stats.dpsFighters, 0);
+      },
+    );
+
+    test('T2.9 tubes 4 win over light cap 5', () async {
+      final stats = await run(
+        ship: carrierShip(tubes: 4, light: 5),
+        fitting: fit(fighters: [for (var i = 0; i < 5; i++) sq()]),
+        modules: {'23059': fighterType()},
+      );
+      expect(stats.fighterTubesUsed, 4);
+      expect(stats.fighterLightUsed, 4);
+      expect(stats.dpsFighters, closeTo(4 * 248.4, 0.01));
+    });
+
+    test(
+      'T2.10 mixed classes activate in declaration order until tubes empty',
+      () async {
+        final stats = await run(
+          ship: carrierShip(tubes: 4, light: 3, support: 2, heavy: 2),
+          fitting: fit(
+            fighters: [
+              sq(typeId: 1),
+              sq(typeId: 1),
+              sq(typeId: 2),
+              sq(typeId: 2),
+              sq(typeId: 3),
+              sq(typeId: 3),
+            ],
+          ),
+          modules: {
+            '1': fighterType(typeId: 1),
+            '2': fighterType(typeId: 2, light: false, heavy: true),
+            '3': fighterType(typeId: 3, light: false, support: true),
+          },
+        );
+        expect(stats.fighterTubesUsed, 4);
+        expect(stats.fighterLightUsed, 2);
+        expect(stats.fighterHeavyUsed, 2);
+        expect(stats.fighterSupportUsed, 0);
+      },
+    );
+
+    test('T2.6q quantity 14 yields squadrons 6/6/2 all active', () async {
+      final stats = await run(
+        ship: carrierShip(tubes: 3, light: 3),
+        fitting: fit(fighters: [sq(quantity: 14)]),
+        modules: {'23059': fighterType()},
+      );
+      expect(stats.fighterTubesUsed, 3);
+      expect(stats.fighterSquadrons.single.squadrons, 3);
+      expect(stats.fighterSquadrons.single.activeSquadrons, 3);
+      expect(stats.dpsFighters, closeTo(14 / 6 * 248.4, 0.01));
+    });
+
+    test(
+      'T2.6s inSpace 6 of 12 launches one squadron; bay still counts 12',
+      () async {
+        final stats = await run(
+          fitting: fit(fighters: [sq(quantity: 12, inSpace: 6)]),
+          modules: {'23059': fighterType(volume: 1000)},
+        );
+        expect(stats.fighterTubesUsed, 1);
+        expect(stats.dpsFighters, closeTo(248.4, 0.01));
+        expect(stats.fighterBayUsed, closeTo(12000, 0.01));
+      },
+    );
+
+    test('T2.11 bay usage is 3 squadrons x 6 x 1000 m3', () async {
+      final stats = await run(
+        fitting: fit(fighters: [sq(), sq(), sq()]),
+        modules: {'23059': fighterType(volume: 1000)},
+      );
+      expect(stats.fighterBayUsed, closeTo(18000, 0.01));
+    });
+
+    test(
+      'T2.12 bay over-capacity is reported and does not truncate DPS',
+      () async {
+        final stats = await run(
+          ship: carrierShip(bay: 10000),
+          fitting: fit(fighters: [sq(), sq(), sq()]),
+          modules: {'23059': fighterType(volume: 1000)},
+        );
+        expect(stats.fighterBayUsed, closeTo(18000, 0.01));
+        expect(stats.fighterBayMax, closeTo(10000, 0.01));
+        expect(stats.dpsFighters, closeTo(3 * 248.4, 0.01));
+      },
+    );
+
+    test(
+      'T2.13 drones on a fighter hull keep drone stats bit-identical',
+      () async {
+        final dronesOnly = await run(
+          fitting: fit(
+            drones: [
+              const DroneGroup(
+                typeId: 2488,
+                typeName: 'Warrior II',
+                quantity: 5,
+              ),
+            ],
+          ),
+          modules: {'2488': droneType()},
+        );
+        final both = await run(
+          fitting: fit(
+            drones: [
+              const DroneGroup(
+                typeId: 2488,
+                typeName: 'Warrior II',
+                quantity: 5,
+              ),
+            ],
+            fighters: [sq()],
+          ),
+          modules: {'2488': droneType(), '23059': fighterType()},
+        );
+        expect(both.dpsDrones, dronesOnly.dpsDrones);
+        expect(both.droneBandwidthUsed, dronesOnly.droneBandwidthUsed);
+        expect(both.droneBayUsed, dronesOnly.droneBayUsed);
+        expect(both.dpsFighters, closeTo(248.4, 0.01));
+      },
+    );
+
+    test('T2.14 fighters never consume drone bandwidth', () async {
+      final stats = await run(modules: {'23059': fighterType()});
+      expect(stats.droneBandwidthUsed, 0);
+    });
+
+    test('T2.15 dpsTotal sums guns, drones and fighters once', () async {
+      final stats = await run(
+        fitting: fit(
+          high: [
+            const FittedModule(
+              typeId: 561,
+              typeName: 'Gun',
+              slotType: SlotType.high,
+              slotIndex: 0,
+              chargeTypeId: 266,
+              chargeName: 'Ammo',
+            ),
+          ],
+          drones: [
+            const DroneGroup(typeId: 2488, typeName: 'Warrior II', quantity: 5),
+          ],
+          fighters: [sq()],
+        ),
+        modules: {
+          '561': gunType(),
+          '266': ammoType(),
+          '2488': droneType(),
+          '23059': fighterType(),
+        },
+      );
+      expect(
+        stats.dpsTotal,
+        closeTo(
+          stats.dpsGuns +
+              stats.dpsMissiles +
+              stats.dpsDrones +
+              stats.dpsFighters,
+          0.01,
+        ),
+      );
+      expect(stats.dpsGuns, greaterThan(0));
+      expect(stats.dpsDrones, greaterThan(0));
+      expect(stats.dpsFighters, greaterThan(0));
+    });
+
+    test(
+      'T2.16 Rifter plus fighters reports zero fighter fields and does not throw',
+      () async {
+        final stats = await run(
+          ship: _rifter(),
+          fitting: Fitting(
+            id: 'rifter',
+            name: 'Rifter',
+            shipTypeId: 587,
+            shipName: 'Rifter',
+            fighters: [sq()],
+          ),
+          modules: {'23059': fighterType()},
+        );
+        expect(stats.dpsFighters, 0);
+        expect(stats.fighterTubesUsed, 0);
+        expect(stats.fighterTubesMax, 0);
+        expect(stats.fighterBayUsed, 0);
+        expect(stats.fighterBayMax, 0);
+        expect(stats.fighterLightUsed, 0);
+        expect(stats.fighterSupportUsed, 0);
+        expect(stats.fighterHeavyUsed, 0);
+      },
+    );
+
+    test(
+      'T2.17 missing 2215 or 2233 contributes 0 and does not throw',
+      () async {
+        final noSize = fighterType().copyWith(
+          baseAttributes: {...fighterType().baseAttributes}
+            ..remove(DogmaAttributes.fighterSquadronMaxSize),
+        );
+        final noDuration = fighterType(typeId: 99).copyWith(
+          baseAttributes: {...fighterType(typeId: 99).baseAttributes}
+            ..remove(DogmaAttributes.fighterDurationMs),
+        );
+        final stats = await run(
+          fitting: fit(fighters: [sq(), sq(typeId: 99)]),
+          modules: {'23059': noSize, '99': noDuration},
+        );
+        expect(stats.dpsFighters, 0);
+      },
+    );
+
+    test('T2.18 DDA II boosts fighters and drones by x1.205', () async {
+      final dda = ModuleType(
+        typeId: 4405,
+        name: 'DDA II',
+        groupId: 646,
+        groupName: 'Drone Damage Amplifier',
+        slotType: SlotType.low,
+        baseAttributes: {ddaBonusAttr: 20.5},
+        effects: const [DogmaEffect(effectId: ddaEffect, name: 'dda')],
+      );
+      final modifiers = {
+        ddaEffect: [
+          EffectModifier(
+            effectId: ddaEffect,
+            func: 'OwnerRequiredSkillModifier',
+            operator: 6,
+            modifiedAttributeId: DogmaAttributes.fighterDamageMultiplier,
+            modifyingAttributeId: ddaBonusAttr,
+            domain: 'charID',
+            skillTypeId: fightersSkill,
+          ),
+          EffectModifier(
+            effectId: ddaEffect,
+            func: 'OwnerRequiredSkillModifier',
+            operator: 6,
+            modifiedAttributeId: DogmaAttributes.turretDamageMultiplier,
+            modifyingAttributeId: ddaBonusAttr,
+            domain: 'charID',
+            skillTypeId: dronesSkill,
+          ),
+        ],
+      };
+      final stats = await run(
+        fitting: fit(
+          low: [
+            const FittedModule(
+              typeId: 4405,
+              typeName: 'DDA II',
+              slotType: SlotType.low,
+              slotIndex: 0,
+            ),
+          ],
+          drones: [
+            const DroneGroup(typeId: 2488, typeName: 'Warrior II', quantity: 5),
+          ],
+          fighters: [sq()],
+        ),
+        modules: {'23059': fighterType(), '2488': droneType(), '4405': dda},
+        modifiers: modifiers,
+      );
+      expect(stats.dpsFighters, closeTo(248.4 * 1.205, 0.01));
+      expect(stats.dpsDrones, closeTo(25 * 1.205, 0.01));
+    });
+
+    test('T2.18b two DDAs stacking-penalize the second bonus', () async {
+      final dda = ModuleType(
+        typeId: 4405,
+        name: 'DDA II',
+        groupId: 646,
+        groupName: 'Drone Damage Amplifier',
+        slotType: SlotType.low,
+        baseAttributes: {ddaBonusAttr: 20.5},
+        effects: const [DogmaEffect(effectId: ddaEffect, name: 'dda')],
+      );
+      final stats = await run(
+        fitting: fit(
+          low: [
+            const FittedModule(
+              typeId: 4405,
+              typeName: 'DDA II',
+              slotType: SlotType.low,
+              slotIndex: 0,
+            ),
+            const FittedModule(
+              typeId: 4405,
+              typeName: 'DDA II',
+              slotType: SlotType.low,
+              slotIndex: 1,
+            ),
+          ],
+          fighters: [sq()],
+        ),
+        modules: {'23059': fighterType(), '4405': dda},
+        modifiers: {
+          ddaEffect: [
+            EffectModifier(
+              effectId: ddaEffect,
+              func: 'OwnerRequiredSkillModifier',
+              operator: 6,
+              modifiedAttributeId: DogmaAttributes.fighterDamageMultiplier,
+              modifyingAttributeId: ddaBonusAttr,
+              domain: 'charID',
+              skillTypeId: fightersSkill,
+            ),
+          ],
+        },
+      );
+      final second = DogmaEngine.getStackingPenalty(2);
+      final expected = 248.4 * (1 + 0.205) * (1 + 0.205 * second);
+      expect(stats.dpsFighters, closeTo(expected, 0.01));
+    });
+
+    test(
+      'T2.19 Firbolg shape uses attack DPS; missiles and MWD are listed',
+      () async {
+        final stats = await run(
+          modules: {
+            '23059': fighterType(
+              effectIds: const [attackEffect, missilesEffect, mwdEffect],
+              extra: {
+                DogmaAttributes.fighterMissilesThermalDamage: 207.0,
+                DogmaAttributes.fighterMissilesDamageMultiplier: 1.0,
+                DogmaAttributes.fighterMissilesDurationMs: 14000.0,
+              },
+            ),
+          },
+        );
+        expect(stats.dpsFighters, closeTo(248.4, 0.01));
+        final row = stats.fighterSquadrons.single;
+        expect(
+          row.abilities,
+          containsAll([
+            FighterAbilityKind.attack,
+            FighterAbilityKind.missiles,
+            FighterAbilityKind.microWarpDrive,
+          ]),
+        );
+        expect(row.activeAbility, FighterAbilityKind.attack);
+      },
+    );
+
+    test('T2.19g Gram shape (no attack) uses missiles DPS', () async {
+      final stats = await run(
+        fitting: fit(fighters: [sq(typeId: 40361, quantity: 12)]),
+        modules: {
+          '40361': fighterType(
+            typeId: 40361,
+            size: 12,
+            thermal: 0,
+            durationMs: 3500,
+            effectIds: const [missilesEffect, evasiveEffect, tackleEffect],
+            extra: {
+              DogmaAttributes.fighterSquadronRole: 1.0,
+              DogmaAttributes.fighterMissilesExplosiveDamage: 36.0,
+              DogmaAttributes.fighterMissilesDamageMultiplier: 1.0,
+              DogmaAttributes.fighterMissilesDurationMs: 3500.0,
+            },
+          ),
+        },
+      );
+      expect(stats.dpsFighters, closeTo(12 * 36 / 3.5, 0.01));
+      expect(
+        stats.fighterSquadrons.single.activeAbility,
+        FighterAbilityKind.missiles,
+      );
+    });
+
+    test(
+      'T2.19b Ametat shape uses attack; bomb is listed but inactive',
+      () async {
+        final stats = await run(
+          fitting: fit(fighters: [sq(typeId: 40362)]),
+          ship: carrierShip(heavy: 2, light: 0),
+          modules: {
+            '40362': fighterType(
+              typeId: 40362,
+              light: false,
+              heavy: true,
+              em: 253,
+              thermal: 0,
+              durationMs: 8000,
+              effectIds: const [attackEffect, bombEffect, mjdEffect],
+              extra: {
+                DogmaAttributes.fighterBombTypeId: 41549.0,
+                DogmaAttributes.fighterBombDurationMs: 60000.0,
+              },
+            ),
+          },
+        );
+        expect(stats.dpsFighters, closeTo(6 * 253 / 8.0, 0.01));
+        final row = stats.fighterSquadrons.single;
+        expect(row.abilities, contains(FighterAbilityKind.bomb));
+        expect(row.activeAbility, FighterAbilityKind.attack);
+      },
+    );
+
+    test(
+      'T2.20 Templar EM vs Einherji explosive land in the matching component',
+      () async {
+        final templar = await run(
+          fitting: fit(fighters: [sq(typeId: 23055)]),
+          modules: {'23055': fighterType(typeId: 23055, em: 97.5, thermal: 0)},
+        );
+        final einherji = await run(
+          fitting: fit(fighters: [sq(typeId: 23057)]),
+          modules: {
+            '23057': fighterType(
+              typeId: 23057,
+              em: 0,
+              thermal: 0,
+              explosive: 169.5,
+            ),
+          },
+        );
+        expect(templar.dpsFighters, closeTo(6 * 97.5 / 5, 0.01));
+        expect(einherji.dpsFighters, closeTo(6 * 169.5 / 5, 0.01));
+      },
+    );
+
+    test(
+      'T2.21 standup fighters classify but do not launch on a ship',
+      () async {
+        final stats = await run(
+          fitting: fit(fighters: [sq(typeId: 999)]),
+          modules: {
+            '999': fighterType(typeId: 999, light: false, standup: true),
+          },
+        );
+        expect(stats.fighterTubesUsed, 0);
+        expect(stats.dpsFighters, 0);
+      },
+    );
+
+    test(
+      'T2.22 Thanatos-shaped hull with 3 light squadrons is 405 DPS, tubes 3/4, bay 18000/75000',
+      () async {
+        final stats = await run(
+          ship: carrierShip(
+            tubes: 4,
+            light: 3,
+            support: 0,
+            heavy: 0,
+            bay: 75000,
+          ),
+          fitting: fit(
+            fighters: [sq(quantity: 6), sq(quantity: 6), sq(quantity: 6)],
+          ),
+          modules: {'23059': fighterType(thermal: 112.5, volume: 1000)},
+        );
+        expect(stats.dpsFighters, closeTo(405.0, 0.01));
+        expect(stats.fighterTubesUsed, 3);
+        expect(stats.fighterTubesMax, 4);
+        expect(stats.fighterLightUsed, 3);
+        expect(stats.fighterLightMax, 3);
+        expect(stats.fighterBayUsed, closeTo(18000, 0.01));
+        expect(stats.fighterBayMax, closeTo(75000, 0.01));
+      },
+    );
+
+    test(
+      'T2.22s Fighters V x Drone Interfacing V x hull V is x1.25 x1.5 x1.25',
+      () async {
+        final hull = carrierShip(
+          extra: {
+            182: capitalShips.toDouble(),
+            183: gallenteCarrier.toDouble(),
+            hullBonusAttr: 5.0,
+          },
+          effects: const [
+            DogmaEffect(effectId: hullFighterEffect, name: 'hull'),
+          ],
+        );
+        final stats = await run(
+          ship: hull,
+          fitting: fit(fighters: [sq(), sq(), sq()]),
+          modules: {'23059': fighterType(thermal: 112.5)},
+          skills: const [
+            CharacterSkill(skillId: fightersSkill, level: 5),
+            CharacterSkill(skillId: droneInterfacing, level: 5),
+            CharacterSkill(skillId: gallenteCarrier, level: 5),
+            CharacterSkill(skillId: capitalShips, level: 5),
+          ],
+          skillTypes: {
+            fightersSkill: ModuleType(
+              typeId: fightersSkill,
+              name: 'Fighters',
+              groupId: 255,
+              groupName: 'Skill',
+              slotType: SlotType.high,
+              baseAttributes: {damageBonusAttr: 5.0},
+              effects: const [DogmaEffect(effectId: fightersEffect, name: 'f')],
+            ),
+            droneInterfacing: ModuleType(
+              typeId: droneInterfacing,
+              name: 'Drone Interfacing',
+              groupId: 255,
+              groupName: 'Skill',
+              slotType: SlotType.high,
+              baseAttributes: {damageBonusAttr: 10.0},
+              effects: const [
+                DogmaEffect(effectId: interfacingEffect, name: 'di'),
+              ],
+            ),
+            gallenteCarrier: ModuleType(
+              typeId: gallenteCarrier,
+              name: 'Gallente Carrier',
+              groupId: 255,
+              groupName: 'Skill',
+              slotType: SlotType.high,
+              baseAttributes: {DogmaAttributes.skillLevel: 1.0},
+              effects: const [
+                DogmaEffect(effectId: carrierScaleEffect, name: 'scale'),
+              ],
+            ),
+          },
+          modifiers: {
+            fightersEffect: [
+              EffectModifier(
+                effectId: fightersEffect,
+                func: 'OwnerRequiredSkillModifier',
+                operator: 6,
+                modifiedAttributeId: DogmaAttributes.fighterDamageMultiplier,
+                modifyingAttributeId: damageBonusAttr,
+                domain: 'charID',
+                skillTypeId: fightersSkill,
+              ),
+            ],
+            interfacingEffect: [
+              EffectModifier(
+                effectId: interfacingEffect,
+                func: 'OwnerRequiredSkillModifier',
+                operator: 6,
+                modifiedAttributeId: DogmaAttributes.fighterDamageMultiplier,
+                modifyingAttributeId: damageBonusAttr,
+                domain: 'charID',
+                skillTypeId: fightersSkill,
+              ),
+            ],
+            hullFighterEffect: [
+              EffectModifier(
+                effectId: hullFighterEffect,
+                func: 'OwnerRequiredSkillModifier',
+                operator: 6,
+                modifiedAttributeId: DogmaAttributes.fighterDamageMultiplier,
+                modifyingAttributeId: hullBonusAttr,
+                domain: 'charID',
+                skillTypeId: fightersSkill,
+              ),
+            ],
+            carrierScaleEffect: [
+              EffectModifier(
+                effectId: carrierScaleEffect,
+                func: 'ItemModifier',
+                operator: 0,
+                modifiedAttributeId: hullBonusAttr,
+                modifyingAttributeId: DogmaAttributes.skillLevel,
+                domain: 'shipID',
+              ),
+            ],
+          },
+        );
+        expect(stats.dpsFighters, closeTo(405.0 * 1.25 * 1.5 * 1.25, 0.01));
+      },
+    );
+
+    test('T2.23 Nyx support cap 0 vs heavy cap 4', () async {
+      final nyx = carrierShip(
+        tubes: 5,
+        light: 3,
+        support: 0,
+        heavy: 4,
+        bay: 110000,
+      );
+      final support = await run(
+        ship: nyx,
+        fitting: fit(fighters: [sq(typeId: 40347, quantity: 3)]),
+        modules: {
+          '40347': fighterType(
+            typeId: 40347,
+            size: 3,
+            light: false,
+            support: true,
+          ),
+        },
+      );
+      expect(support.dpsFighters, 0);
+      expect(support.fighterSupportUsed, 0);
+
+      final heavy = await run(
+        ship: nyx,
+        fitting: fit(fighters: [sq(typeId: 32325)]),
+        modules: {
+          '32325': fighterType(typeId: 32325, light: false, heavy: true),
+        },
+      );
+      expect(heavy.fighterHeavyUsed, 1);
+      expect(heavy.dpsFighters, closeTo(248.4, 0.01));
+    });
+
+    test(
+      'T2.25 Gallente Carrier III scales hull fighter bonus x1.15, not Capital Ships V',
+      () async {
+        final stats = await run(
+          ship: carrierShip(
+            extra: {
+              182: capitalShips.toDouble(),
+              183: gallenteCarrier.toDouble(),
+              hullBonusAttr: 5.0,
+            },
+            effects: const [
+              DogmaEffect(effectId: hullFighterEffect, name: 'hull'),
+            ],
+          ),
+          modules: {'23059': fighterType()},
+          skills: const [
+            CharacterSkill(skillId: capitalShips, level: 5),
+            CharacterSkill(skillId: gallenteCarrier, level: 3),
+          ],
+          skillTypes: {
+            gallenteCarrier: ModuleType(
+              typeId: gallenteCarrier,
+              name: 'Gallente Carrier',
+              groupId: 255,
+              groupName: 'Skill',
+              slotType: SlotType.high,
+              baseAttributes: {DogmaAttributes.skillLevel: 1.0},
+              effects: const [
+                DogmaEffect(effectId: carrierScaleEffect, name: 'scale'),
+              ],
+            ),
+          },
+          modifiers: {
+            hullFighterEffect: [
+              EffectModifier(
+                effectId: hullFighterEffect,
+                func: 'OwnerRequiredSkillModifier',
+                operator: 6,
+                modifiedAttributeId: DogmaAttributes.fighterDamageMultiplier,
+                modifyingAttributeId: hullBonusAttr,
+                domain: 'charID',
+                skillTypeId: fightersSkill,
+              ),
+            ],
+            carrierScaleEffect: [
+              EffectModifier(
+                effectId: carrierScaleEffect,
+                func: 'ItemModifier',
+                operator: 0,
+                modifiedAttributeId: hullBonusAttr,
+                modifyingAttributeId: DogmaAttributes.skillLevel,
+                domain: 'shipID',
+              ),
+            ],
+          },
+        );
+        expect(stats.dpsFighters, closeTo(248.4 * 1.15, 0.01));
+        expect(stats.dpsFighters, isNot(closeTo(248.4 * 1.25, 0.5)));
+      },
+    );
+
+    test(
+      'T2.26 role bonus not targeted by a required skill applies raw',
+      () async {
+        const roleAttr = 5983;
+        final stats = await run(
+          ship: carrierShip(
+            extra: {roleAttr: 10.0},
+            effects: const [DogmaEffect(effectId: 6984, name: 'role')],
+          ),
+          modules: {'23059': fighterType()},
+          modifiers: {
+            6984: [
+              EffectModifier(
+                effectId: 6984,
+                func: 'OwnerRequiredSkillModifier',
+                operator: 6,
+                modifiedAttributeId: DogmaAttributes.fighterDamageMultiplier,
+                modifyingAttributeId: roleAttr,
+                domain: 'charID',
+                skillTypeId: fightersSkill,
+              ),
+            ],
+          },
+        );
+        expect(stats.dpsFighters, closeTo(248.4 * 1.10, 0.01));
+      },
+    );
+
+    test(
+      'T2.27 hull V + Fighters V + DDA compound x1.25 x1.25 x1.205',
+      () async {
+        final dda = ModuleType(
+          typeId: 4405,
+          name: 'DDA II',
+          groupId: 646,
+          groupName: 'DDA',
+          slotType: SlotType.low,
+          baseAttributes: {ddaBonusAttr: 20.5},
+          effects: const [DogmaEffect(effectId: ddaEffect, name: 'dda')],
+        );
+        final stats = await run(
+          ship: carrierShip(
+            extra: {183: gallenteCarrier.toDouble(), hullBonusAttr: 5.0},
+            effects: const [
+              DogmaEffect(effectId: hullFighterEffect, name: 'hull'),
+            ],
+          ),
+          fitting: fit(
+            low: [
+              const FittedModule(
+                typeId: 4405,
+                typeName: 'DDA II',
+                slotType: SlotType.low,
+                slotIndex: 0,
+              ),
+            ],
+            fighters: [sq()],
+          ),
+          modules: {'23059': fighterType(), '4405': dda},
+          skills: const [
+            CharacterSkill(skillId: fightersSkill, level: 5),
+            CharacterSkill(skillId: gallenteCarrier, level: 5),
+          ],
+          skillTypes: {
+            fightersSkill: ModuleType(
+              typeId: fightersSkill,
+              name: 'Fighters',
+              groupId: 255,
+              groupName: 'Skill',
+              slotType: SlotType.high,
+              baseAttributes: {damageBonusAttr: 5.0},
+              effects: const [DogmaEffect(effectId: fightersEffect, name: 'f')],
+            ),
+            gallenteCarrier: ModuleType(
+              typeId: gallenteCarrier,
+              name: 'Gallente Carrier',
+              groupId: 255,
+              groupName: 'Skill',
+              slotType: SlotType.high,
+              baseAttributes: {DogmaAttributes.skillLevel: 1.0},
+              effects: const [
+                DogmaEffect(effectId: carrierScaleEffect, name: 'scale'),
+              ],
+            ),
+          },
+          modifiers: {
+            fightersEffect: [
+              EffectModifier(
+                effectId: fightersEffect,
+                func: 'OwnerRequiredSkillModifier',
+                operator: 6,
+                modifiedAttributeId: DogmaAttributes.fighterDamageMultiplier,
+                modifyingAttributeId: damageBonusAttr,
+                domain: 'charID',
+                skillTypeId: fightersSkill,
+              ),
+            ],
+            hullFighterEffect: [
+              EffectModifier(
+                effectId: hullFighterEffect,
+                func: 'OwnerRequiredSkillModifier',
+                operator: 6,
+                modifiedAttributeId: DogmaAttributes.fighterDamageMultiplier,
+                modifyingAttributeId: hullBonusAttr,
+                domain: 'charID',
+                skillTypeId: fightersSkill,
+              ),
+            ],
+            carrierScaleEffect: [
+              EffectModifier(
+                effectId: carrierScaleEffect,
+                func: 'ItemModifier',
+                operator: 0,
+                modifiedAttributeId: hullBonusAttr,
+                modifyingAttributeId: DogmaAttributes.skillLevel,
+                domain: 'shipID',
+              ),
+            ],
+            ddaEffect: [
+              EffectModifier(
+                effectId: ddaEffect,
+                func: 'OwnerRequiredSkillModifier',
+                operator: 6,
+                modifiedAttributeId: DogmaAttributes.fighterDamageMultiplier,
+                modifyingAttributeId: ddaBonusAttr,
+                domain: 'charID',
+                skillTypeId: fightersSkill,
+              ),
+            ],
+          },
+        );
+        expect(stats.dpsFighters, closeTo(248.4 * 1.25 * 1.25 * 1.205, 0.01));
+      },
+    );
+
+    test(
+      'T2.28 Fighter Hangar Management V scales bay; hulls without 2055 stay 0',
+      () async {
+        final fhm = ModuleType(
+          typeId: fhmSkill,
+          name: 'Fighter Hangar Management',
+          groupId: 255,
+          groupName: 'Skill',
+          slotType: SlotType.high,
+          baseAttributes: {hangarBonusAttr: 5.0},
+          effects: const [DogmaEffect(effectId: fhmEffect, name: 'fhm')],
+        );
+        final modifiers = {
+          fhmEffect: [
+            EffectModifier(
+              effectId: fhmEffect,
+              func: 'ItemModifier',
+              operator: 6,
+              modifiedAttributeId: DogmaAttributes.fighterCapacity,
+              modifyingAttributeId: hangarBonusAttr,
+              domain: 'shipID',
+            ),
+          ],
+        };
+        final trained = await run(
+          modules: {'23059': fighterType()},
+          skills: const [CharacterSkill(skillId: fhmSkill, level: 5)],
+          skillTypes: {fhmSkill: fhm},
+          modifiers: modifiers,
+        );
+        expect(trained.fighterBayMax, closeTo(75000 * 1.25, 0.01));
+
+        final rifter = await run(
+          ship: _rifter(),
+          fitting: Fitting(
+            id: 'r',
+            name: 'Rifter',
+            shipTypeId: 587,
+            shipName: 'Rifter',
+          ),
+          modules: const {},
+          skills: const [CharacterSkill(skillId: fhmSkill, level: 5)],
+          skillTypes: {fhmSkill: fhm},
+          modifiers: modifiers,
+        );
+        expect(rifter.fighterBayMax, 0);
+      },
+    );
+
+    test(
+      'T2.29 every bundled fighter type classifies and attack carriers have 2226/2233',
+      () async {
+        final dogma =
+            json.decode(File('assets/sde/dogma.json').readAsStringSync())
+                as Map<String, dynamic>;
+        final fighterGroupIds = {
+          for (final g
+              in (dogma['groups'] as List).cast<Map<String, dynamic>>())
+            if (g['categoryId'] == 87) g['groupId'] as int,
+        };
+        expect(fighterGroupIds, isNotEmpty);
+        final fighters = (dogma['types'] as List)
+            .cast<Map<String, dynamic>>()
+            .where((t) => fighterGroupIds.contains(t['groupId'] as int))
+            .toList();
+        expect(fighters.length, greaterThanOrEqualTo(90));
+        for (final raw in fighters) {
+          final attrs = {
+            for (final a
+                in (raw['dogmaAttributes'] as List)
+                    .cast<Map<String, dynamic>>())
+              a['attributeId'] as int: (a['value'] as num).toDouble(),
+          };
+          expect(
+            attrs.containsKey(DogmaAttributes.fighterSquadronMaxSize),
+            isTrue,
+            reason: '${raw['typeName']} must carry 2215',
+          );
+          final effectIds = [
+            for (final e
+                in (raw['dogmaEffects'] as List? ?? const [])
+                    .cast<Map<String, dynamic>>())
+              e['effectId'] as int,
+          ];
+          if (effectIds.contains(attackEffect)) {
+            expect(
+              attrs.containsKey(2226),
+              isTrue,
+              reason: '${raw['typeName']}',
+            );
+            expect(
+              attrs.containsKey(2233),
+              isTrue,
+              reason: '${raw['typeName']}',
+            );
+          }
+          final typeId = raw['typeId'] as int;
+          final type = ModuleType(
+            typeId: typeId,
+            name: raw['typeName'] as String,
+            groupId: raw['groupId'] as int,
+            groupName: 'Fighter',
+            slotType: SlotType.high,
+            baseAttributes: attrs,
+            effects: [
+              for (final id in effectIds)
+                DogmaEffect(effectId: id, name: 'e$id'),
+            ],
+          );
+          final size = attrs[DogmaAttributes.fighterSquadronMaxSize]!.toInt();
+          final stats = await run(
+            fitting: fit(
+              fighters: [
+                FighterGroup(
+                  typeId: typeId,
+                  typeName: type.name,
+                  quantity: size,
+                ),
+              ],
+            ),
+            modules: {typeId.toString(): type},
+          );
+          expect(
+            stats.fighterSquadrons,
+            isNotEmpty,
+            reason: '${raw['typeName']} must classify as a fighter',
+          );
+        }
       },
     );
   });

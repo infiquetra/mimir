@@ -107,12 +107,14 @@ class StatsPanel extends ConsumerWidget {
             ),
             _buildStatRow('Max Targets', '${stats.maxLockedTargets}'),
 
-            if (stats.dpsTotal > 0) ...[
+            if (stats.dpsTotal > 0 || stats.dpsFighters > 0) ...[
               const SizedBox(height: 16),
               _buildSectionHeader('OFFENSE'),
               _buildStatRow('DPS', stats.dpsTotal.toStringAsFixed(1)),
               if (stats.dpsDrones > 0)
                 _buildStatRow('Drones', stats.dpsDrones.toStringAsFixed(1)),
+              if (stats.dpsFighters > 0)
+                _buildStatRow('Fighters', stats.dpsFighters.toStringAsFixed(1)),
               _buildStatRow('Volley', stats.volley.toStringAsFixed(0)),
               if (stats.optimalRange > 0)
                 _buildStatRow(
@@ -139,6 +141,44 @@ class StatsPanel extends ConsumerWidget {
                 '${stats.droneBayUsed.toStringAsFixed(0)}/'
                     '${stats.droneBayMax.toStringAsFixed(0)} m3',
               ),
+            ],
+
+            if (stats.fighterTubesMax > 0 || stats.fighterBayUsed > 0) ...[
+              const SizedBox(height: 16),
+              _buildSectionHeader('FIGHTERS'),
+              _buildStatRow(
+                'Tubes',
+                '${stats.fighterTubesUsed}/${stats.fighterTubesMax}',
+              ),
+              _buildStatRow(
+                'Bay',
+                '${stats.fighterBayUsed.toStringAsFixed(0)}/'
+                    '${stats.fighterBayMax.toStringAsFixed(0)}',
+                valueColor: stats.fighterBayUsed > stats.fighterBayMax
+                    ? EveColors.error
+                    : null,
+              ),
+              if (stats.fighterLightMax > 0 || stats.fighterLightUsed > 0)
+                _buildStatRow(
+                  'Light',
+                  '${stats.fighterLightUsed}/${stats.fighterLightMax}',
+                ),
+              if (stats.fighterSupportMax > 0 || stats.fighterSupportUsed > 0)
+                _buildStatRow(
+                  'Support',
+                  '${stats.fighterSupportUsed}/${stats.fighterSupportMax}',
+                ),
+              if (stats.fighterHeavyMax > 0 || stats.fighterHeavyUsed > 0)
+                _buildStatRow(
+                  'Heavy',
+                  '${stats.fighterHeavyUsed}/${stats.fighterHeavyMax}',
+                ),
+              for (final squadron in stats.fighterSquadrons)
+                _buildStatRow(
+                  squadron.typeName,
+                  '${squadron.activeSquadrons}/${squadron.squadrons}  '
+                  '${squadron.dps.toStringAsFixed(1)}',
+                ),
             ],
           ],
         );
@@ -174,7 +214,7 @@ class StatsPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatRow(String label, String value) {
+  Widget _buildStatRow(String label, String value, {Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
@@ -189,8 +229,8 @@ class StatsPanel extends ConsumerWidget {
           ),
           Text(
             value,
-            style: const TextStyle(
-              color: EveColors.textPrimary,
+            style: TextStyle(
+              color: valueColor ?? EveColors.textPrimary,
               fontSize: 11,
               fontWeight: FontWeight.w500,
             ),

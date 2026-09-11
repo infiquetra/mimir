@@ -133,6 +133,22 @@ class DogmaEngine {
     6731: (DogmaAttributes.maxVelocity, DogmaAttributes.speedFactor),
   };
 
+  static const Map<int, FighterAbilityKind> _fighterAbilityByEffect = {
+    6465: FighterAbilityKind.attack,
+    6431: FighterAbilityKind.missiles,
+    6485: FighterAbilityKind.bomb,
+    6554: FighterAbilityKind.kamikaze,
+    6441: FighterAbilityKind.microWarpDrive,
+    6440: FighterAbilityKind.afterburner,
+    6442: FighterAbilityKind.microJumpDrive,
+    6439: FighterAbilityKind.evasiveManeuvers,
+    6464: FighterAbilityKind.tackle,
+    6435: FighterAbilityKind.stasisWebifier,
+    6436: FighterAbilityKind.warpDisruption,
+    6434: FighterAbilityKind.energyNeutralizer,
+    6437: FighterAbilityKind.ecm,
+  };
+
   /// Calculate stacking penalty for the n-th module affecting an attribute.
   /// Note: n is 1-indexed. The first module (highest bonus) has n=1 and penalty=1.0.
   static double getStackingPenalty(int n) {
@@ -253,11 +269,13 @@ class DogmaEngine {
     // amplifiers) reach loaded charges and fitted drones — never fitted
     // modules, or a damage amp would boost turrets.
     final droneTypeIds = fitting.drones.map((drone) => drone.typeId).toSet();
+    final fighterTypeIds = fitting.fighters.map((f) => f.typeId).toSet();
     final charTargetIds = {
       ...fitting.allModules
           .map((module) => module.chargeTypeId)
           .whereType<int>(),
       ...droneTypeIds,
+      ...fighterTypeIds,
     };
 
     void addTo(Map<int, List<double>> target, int attributeId, double value) =>
@@ -331,11 +349,16 @@ class DogmaEngine {
       // skill-owned bonuses apply raw.
       final filterSkill = modifier.skillTypeId;
       final modifyingId = modifier.modifyingAttributeId;
-      final double scale = !ownerIsShip
-          ? 1.0
-          : skillTypes.isEmpty
-          ? shipSkillLevel
-          : (modifyingId == null ? 1.0 : (bonusScale[modifyingId] ?? 1.0));
+      final double scale;
+      if (!ownerIsShip) {
+        scale = 1.0;
+      } else if (skillTypes.isNotEmpty) {
+        scale = modifyingId == null ? 1.0 : (bonusScale[modifyingId] ?? 1.0);
+      } else if (shipRequiredSkill == null) {
+        scale = 1.0;
+      } else {
+        scale = shipSkillLevel;
+      }
       final scaled = base * scale;
 
       double? valueFor(ModuleType target) {
@@ -425,6 +448,7 @@ class DogmaEngine {
       }
       for (final type in moduleTypes.values) {
         if (droneTypeIds.contains(type.typeId)) continue;
+        if (fighterTypeIds.contains(type.typeId)) continue;
         if (modifier.groupId != null && type.groupId != modifier.groupId) {
           continue;
         }
@@ -884,13 +908,193 @@ class DogmaEngine {
       }
       dpsDrones += active * droneVolley / (cycleMs / 1000);
     }
-    final dpsTotal = dpsGuns + dpsMissiles + dpsDrones;
+
+    int hullCap(int id) {
+      if (!shipType.baseAttributes.containsKey(id)) return 0;
+      return attr(id).toInt();
+    }
+
+    final hasFighterBay = shipType.baseAttributes.containsKey(
+      DogmaAttributes.fighterCapacity,
+    );
+    final fighterTubesMax = hullCap(DogmaAttributes.fighterTubes);
+    final fighterLightMax = hullCap(DogmaAttributes.fighterLightSlots);
+    final fighterSupportMax = hullCap(DogmaAttributes.fighterSupportSlots);
+    final fighterHeavyMax = hullCap(DogmaAttributes.fighterHeavySlots);
+    final fighterBayMax = hasFighterBay
+        ? attr(DogmaAttributes.fighterCapacity)
+        : 0.0;
+
+    var tubesLeft = fighterTubesMax;
+    var lightLeft = fighterLightMax;
+    var supportLeft = fighterSupportMax;
+    var heavyLeft = fighterHeavyMax;
+    var fighterTubesUsed = 0;
+    var fighterLightUsed = 0;
+    var fighterSupportUsed = 0;
+    var fighterHeavyUsed = 0;
+    var fighterBayUsed = 0.0;
+    var dpsFighters = 0.0;
+    final fighterSquadrons = <FighterSquadronStats>[];
+
+    for (final group in fitting.fighters) {
+      final type = moduleTypes[group.typeId.toString()];
+      if (type == null) {
+        Log.d('DOGMA', 'Fighter type ${group.typeId} missing from moduleTypes');
+        continue;
+      }
+      if (!type.baseAttributes.containsKey(
+        DogmaAttributes.fighterSquadronMaxSize,
+      )) {
+        Log.d('DOGMA', 'Fighter ${type.name} missing squadron max size 2215');
+        continue;
+      }
+      final maxSize = type
+          .baseAttributes[DogmaAttributes.fighterSquadronMaxSize]!
+          .toInt();
+      if (maxSize <= 0) continue;
+
+      if (hasFighterBay) {
+        fighterBayUsed +=
+            group.quantity * (type.baseAttributes[DogmaAttributes.volume] ?? 0);
+      }
+
+      final launched = group.inSpace > 0
+          ? min(group.inSpace, group.quantity)
+          : group.quantity;
+      final squadronCount = launched <= 0
+          ? 0
+          : ((launched + maxSize - 1) ~/ maxSize);
+      final sizes = <int>[];
+      var remaining = launched;
+      for (var i = 0; i < squadronCount; i++) {
+        final size = min(maxSize, remaining);
+        sizes.add(size);
+        remaining -= size;
+      }
+
+      final isLight =
+          (type.baseAttributes[DogmaAttributes.fighterSquadronIsLight] ?? 0) >
+          0;
+      final isSupport =
+          (type.baseAttributes[DogmaAttributes.fighterSquadronIsSupport] ?? 0) >
+          0;
+      final isHeavy =
+          (type.baseAttributes[DogmaAttributes.fighterSquadronIsHeavy] ?? 0) >
+          0;
+      final launchable = isLight || isSupport || isHeavy;
+
+      final abilities = [
+        for (final effect in type.effects)
+          if (_fighterAbilityByEffect.containsKey(effect.effectId))
+            _fighterAbilityByEffect[effect.effectId]!,
+      ];
+      FighterAbilityKind? activeAbility;
+      if (abilities.contains(FighterAbilityKind.attack)) {
+        activeAbility = FighterAbilityKind.attack;
+      } else if (abilities.contains(FighterAbilityKind.missiles)) {
+        activeAbility = FighterAbilityKind.missiles;
+      }
+
+      var activeSquadrons = 0;
+      var typeDps = 0.0;
+      for (final size in sizes) {
+        if (!launchable) continue;
+        var classLeft = isLight
+            ? lightLeft
+            : isSupport
+            ? supportLeft
+            : heavyLeft;
+        if (tubesLeft <= 0 || classLeft <= 0) continue;
+        tubesLeft--;
+        fighterTubesUsed++;
+        if (isLight) {
+          lightLeft--;
+          fighterLightUsed++;
+        } else if (isSupport) {
+          supportLeft--;
+          fighterSupportUsed++;
+        } else {
+          heavyLeft--;
+          fighterHeavyUsed++;
+        }
+        activeSquadrons++;
+
+        if (activeAbility == null) continue;
+        final (
+          multAttr,
+          damageAttrs,
+          durationAttr,
+        ) = activeAbility == FighterAbilityKind.attack
+            ? (
+                DogmaAttributes.fighterDamageMultiplier,
+                [
+                  DogmaAttributes.fighterEmDamage,
+                  DogmaAttributes.fighterThermalDamage,
+                  DogmaAttributes.fighterKineticDamage,
+                  DogmaAttributes.fighterExplosiveDamage,
+                ],
+                DogmaAttributes.fighterDurationMs,
+              )
+            : (
+                DogmaAttributes.fighterMissilesDamageMultiplier,
+                [
+                  DogmaAttributes.fighterMissilesEmDamage,
+                  DogmaAttributes.fighterMissilesThermalDamage,
+                  DogmaAttributes.fighterMissilesKineticDamage,
+                  DogmaAttributes.fighterMissilesExplosiveDamage,
+                ],
+                DogmaAttributes.fighterMissilesDurationMs,
+              );
+        if (!type.baseAttributes.containsKey(durationAttr)) {
+          Log.d('DOGMA', 'Fighter ${type.name} missing duration $durationAttr');
+          continue;
+        }
+        var components = 0.0;
+        for (final id in damageAttrs) {
+          components += chargeAttr(type, id);
+        }
+        final mult = type.baseAttributes.containsKey(multAttr)
+            ? chargeAttr(type, multAttr)
+            : 1.0;
+        final durationMs = chargeAttr(type, durationAttr);
+        if (durationMs <= 0) {
+          Log.d('DOGMA', 'Fighter ${type.name} durationMs=$durationMs');
+          continue;
+        }
+        final volley = components * mult * size;
+        typeDps += volley / (durationMs / 1000.0);
+      }
+
+      dpsFighters += typeDps;
+      fighterSquadrons.add(
+        FighterSquadronStats(
+          typeId: group.typeId,
+          typeName: group.typeName,
+          squadronSize: maxSize,
+          squadrons: squadronCount,
+          activeSquadrons: activeSquadrons,
+          abilities: abilities,
+          activeAbility: activeAbility,
+          dps: typeDps,
+        ),
+      );
+      Log.d(
+        'DOGMA',
+        'Fighter ${group.typeName}: launched=$launched '
+            'squadrons=$squadronCount active=$activeSquadrons '
+            'dps=${typeDps.toStringAsFixed(1)} ability=$activeAbility',
+      );
+    }
+
+    final dpsTotal = dpsGuns + dpsMissiles + dpsDrones + dpsFighters;
     Log.d(
       'DOGMA',
       'Offense for ${fitting.name}: dps=${dpsTotal.toStringAsFixed(1)} '
           'guns=${dpsGuns.toStringAsFixed(1)} '
           'missiles=${dpsMissiles.toStringAsFixed(1)} '
           'drones=${dpsDrones.toStringAsFixed(1)} '
+          'fighters=${dpsFighters.toStringAsFixed(1)} '
           'volley=${volleyTotal.toStringAsFixed(1)}',
     );
 
@@ -927,6 +1131,18 @@ class DogmaEngine {
       droneBandwidthMax: attr(DogmaAttributes.droneBandwidth),
       droneBayUsed: bayUsed,
       droneBayMax: attr(DogmaAttributes.droneCapacity),
+      dpsFighters: dpsFighters,
+      fighterBayUsed: fighterBayUsed,
+      fighterBayMax: fighterBayMax,
+      fighterTubesUsed: fighterTubesUsed,
+      fighterTubesMax: fighterTubesMax,
+      fighterLightUsed: fighterLightUsed,
+      fighterLightMax: fighterLightMax,
+      fighterSupportUsed: fighterSupportUsed,
+      fighterSupportMax: fighterSupportMax,
+      fighterHeavyUsed: fighterHeavyUsed,
+      fighterHeavyMax: fighterHeavyMax,
+      fighterSquadrons: fighterSquadrons,
     );
   }
 }

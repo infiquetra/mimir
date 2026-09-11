@@ -8,6 +8,7 @@ import '../../../core/sde/sde_providers.dart';
 import '../../characters/data/character_repository.dart';
 import '../../skills/data/skill_providers.dart';
 import '../data/fitting_repository.dart';
+import '../domain/dogma_attributes.dart';
 import '../domain/dogma_engine.dart';
 import '../domain/esi_fitting_export.dart';
 import '../domain/format_parser.dart';
@@ -336,6 +337,15 @@ final fittingStatsProvider = FutureProvider<FittingStats?>((ref) async {
   }
   for (final drone in fitting.drones) {
     await resolveType(drone.typeId);
+  }
+  for (final fighter in fitting.fighters) {
+    await resolveType(fighter.typeId);
+  }
+  for (final type in List<ModuleType>.from(moduleTypes.values)) {
+    final bombId = type.baseAttributes[DogmaAttributes.fighterBombTypeId];
+    if (bombId != null) {
+      await resolveType(bombId.toInt());
+    }
   }
 
   // Stats must reflect the character who will actually fly the ship: skill
