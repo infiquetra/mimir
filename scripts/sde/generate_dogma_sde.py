@@ -22,10 +22,12 @@ TARGET_CATEGORIES = {
     6,   # Ship
     7,   # Module
     8,   # Charge
+    16,  # Skill
     18,  # Drone
     20,  # Implant
     22,  # Deployable
     32,  # Subsystem
+    87,  # Fighter
 }
 
 def download_csv(filename):

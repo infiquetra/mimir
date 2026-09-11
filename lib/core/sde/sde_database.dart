@@ -596,6 +596,56 @@ class SdeDatabase extends _$SdeDatabase {
     return rows.map((e) => e.effectId).toList();
   }
 
+  static const int _inChunkSize = 500;
+
+  /// Types for the given ids, queried in chunks of 500.
+  Future<List<SdeType>> getTypesByIds(List<int> typeIds) async {
+    if (typeIds.isEmpty) return [];
+    final result = <SdeType>[];
+    for (var i = 0; i < typeIds.length; i += _inChunkSize) {
+      final chunk = typeIds.skip(i).take(_inChunkSize).toList();
+      final rows = await (select(
+        sdeTypes,
+      )..where((t) => t.typeId.isIn(chunk))).get();
+      result.addAll(rows);
+    }
+    return result;
+  }
+
+  /// Attributes for many types in chunks of 500. Missing ids are absent.
+  Future<Map<int, Map<int, double>>> getTypeAttributesForIds(
+    List<int> typeIds,
+  ) async {
+    if (typeIds.isEmpty) return {};
+    final result = <int, Map<int, double>>{};
+    for (var i = 0; i < typeIds.length; i += _inChunkSize) {
+      final chunk = typeIds.skip(i).take(_inChunkSize).toList();
+      final rows = await (select(
+        sdeTypeAttributes,
+      )..where((a) => a.typeId.isIn(chunk))).get();
+      for (final row in rows) {
+        result.putIfAbsent(row.typeId, () => {})[row.attributeId] = row.value;
+      }
+    }
+    return result;
+  }
+
+  /// Effect ids for many types in chunks of 500. Missing ids are absent.
+  Future<Map<int, List<int>>> getTypeEffectsForIds(List<int> typeIds) async {
+    if (typeIds.isEmpty) return {};
+    final result = <int, List<int>>{};
+    for (var i = 0; i < typeIds.length; i += _inChunkSize) {
+      final chunk = typeIds.skip(i).take(_inChunkSize).toList();
+      final rows = await (select(
+        sdeTypeEffects,
+      )..where((e) => e.typeId.isIn(chunk))).get();
+      for (final row in rows) {
+        result.putIfAbsent(row.typeId, () => []).add(row.effectId);
+      }
+    }
+    return result;
+  }
+
   /// Get cached dogma modifiers for the given effects.
   Future<List<SdeEffectModifier>> getEffectModifiers(List<int> effectIds) {
     if (effectIds.isEmpty) return Future.value(const []);

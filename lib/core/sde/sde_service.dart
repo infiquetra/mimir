@@ -50,6 +50,12 @@ class SdeService {
   static const String _bundledEffectModifiersAsset =
       'assets/sde/effect_modifiers.json';
 
+  /// Coverage version of the bundled dogma asset. Bump on every regeneration
+  /// that changes which categories or attributes are imported (skills and
+  /// fighters land at 2). `initialize()` re-imports when the stored
+  /// `dogma_version` metadata does not match this constant.
+  static const int bundledDogmaVersion = 2;
+
   /// Public ESI base URL for dogma reference data.
   static const String _esiBaseUrl = 'https://esi.evetech.net/latest';
 
@@ -63,15 +69,30 @@ class SdeService {
     // Check if database already has data
     final hasSkillData = await database.hasSkillData();
     final hasDogmaData = await database.hasDogmaData();
+    final storedVersion = await database.getMetadata('dogma_version');
+
+    Log.d(
+      'SDE',
+      'initialize hasSkill=$hasSkillData hasDogma=$hasDogmaData '
+          'dogma_version=$storedVersion bundled=$bundledDogmaVersion',
+    );
 
     if (!hasSkillData) {
       // Load from bundled assets
       await _loadBundledSkills();
     }
 
-    if (!hasDogmaData) {
+    if (!hasDogmaData || storedVersion != '$bundledDogmaVersion') {
+      Log.d(
+        'SDE',
+        'Loading bundled dogma version $bundledDogmaVersion '
+            '(hasDogma=$hasDogmaData stored=$storedVersion)',
+      );
       await _loadBundledDogma();
+    } else {
+      Log.d('SDE', 'Skipping dogma import; version $storedVersion matches');
     }
+    await database.setMetadata('dogma_version', '$bundledDogmaVersion');
 
     // Resolved modifiers are needed on every launch, not only when the
     // database is seeded for the first time.
@@ -990,6 +1011,41 @@ class SdeService {
       effects: _effectsFor(effectIds),
       skillRequirements: skillRequirements,
     );
+  }
+
+  /// Types with attributes and effects only (no prerequisite names).
+  ///
+  /// Three queries total (types, attributes, effects, each `WHERE typeId IN`),
+  /// chunked at 500 ids. Missing ids are absent from the result.
+  /// [ModuleType.slotType] defaults to [SlotType.high], cpu/powergrid/
+  /// calibration are 0, and [ModuleType.skillRequirements] is empty.
+  Future<Map<int, ModuleType>> getDogmaTypes(Iterable<int> typeIds) async {
+    final ids = typeIds.toSet().toList();
+    Log.d('SDE', 'getDogmaTypes ids=${ids.length}');
+    if (ids.isEmpty) return {};
+
+    final types = await database.getTypesByIds(ids);
+    final attributes = await database.getTypeAttributesForIds(ids);
+    final effects = await database.getTypeEffectsForIds(ids);
+
+    final result = <int, ModuleType>{};
+    for (final type in types) {
+      result[type.typeId] = ModuleType(
+        typeId: type.typeId,
+        name: type.typeName,
+        groupId: type.groupId,
+        groupName: 'Unknown Group',
+        slotType: SlotType.high,
+        cpu: 0,
+        powergrid: 0,
+        calibration: 0,
+        baseAttributes: attributes[type.typeId] ?? const {},
+        effects: _effectsFor(effects[type.typeId] ?? const []),
+        skillRequirements: const [],
+      );
+    }
+    Log.d('SDE', 'getDogmaTypes returned ${result.length} of ${ids.length}');
+    return result;
   }
 
   // ============================================================================
