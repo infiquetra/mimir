@@ -153,7 +153,7 @@ class StatsPanel extends ConsumerWidget {
               _buildStatRow(
                 'Bay',
                 '${stats.fighterBayUsed.toStringAsFixed(0)}/'
-                    '${stats.fighterBayMax.toStringAsFixed(0)}',
+                    '${stats.fighterBayMax.toStringAsFixed(0)} m3',
                 valueColor: stats.fighterBayUsed > stats.fighterBayMax
                     ? EveColors.error
                     : null,
