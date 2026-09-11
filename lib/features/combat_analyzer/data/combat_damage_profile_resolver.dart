@@ -124,6 +124,9 @@ class CombatDamageProfileResolver {
     final profile = CombatDamageProfile(
       totalProfiledDamage: profiledTotal.round(),
       unknownWeapons: unknownWeapons.toList()..sort(),
+      resolvedWeapons:
+          damageByWeapon.keys.where((k) => !unknownWeapons.contains(k)).toList()
+            ..sort(),
       entries: entries
           .map(
             (entry) => CombatDamageTypeEstimate(

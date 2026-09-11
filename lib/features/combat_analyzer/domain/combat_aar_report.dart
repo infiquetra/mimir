@@ -1,3 +1,5 @@
+import 'aar_evidence_assessment.dart';
+
 class CombatAarReport {
   const CombatAarReport({
     required this.headline,
@@ -12,6 +14,7 @@ class CombatAarReport {
     required this.resourceTopicIds,
     required this.confidence,
     required this.unknowns,
+    this.evidenceAtGeneration,
   });
 
   static const int version = 3;
@@ -38,6 +41,49 @@ class CombatAarReport {
   final List<String> resourceTopicIds;
   final double confidence;
   final List<String> unknowns;
+  final AarEvidenceSnapshot? evidenceAtGeneration;
+
+  CombatAarReport copyWith({
+    String? headline,
+    String? summary,
+    String? outcomeAssessment,
+    List<AarKeyMoment>? keyMoments,
+    List<AarMistake>? rankedMistakes,
+    List<AarRecommendation>? recommendations,
+    List<AarFitAdvice>? fitAdvice,
+    List<AarTrainingDrill>? trainingDrills,
+    AarDamageAnalysis? damageAnalysis,
+    List<String>? resourceTopicIds,
+    double? confidence,
+    List<String>? unknowns,
+    AarEvidenceSnapshot? evidenceAtGeneration,
+    bool clearEvidenceAtGeneration = false,
+  }) {
+    return CombatAarReport(
+      headline: headline ?? this.headline,
+      summary: summary ?? this.summary,
+      outcomeAssessment: outcomeAssessment ?? this.outcomeAssessment,
+      keyMoments: keyMoments ?? this.keyMoments,
+      rankedMistakes: rankedMistakes ?? this.rankedMistakes,
+      recommendations: recommendations ?? this.recommendations,
+      fitAdvice: fitAdvice ?? this.fitAdvice,
+      trainingDrills: trainingDrills ?? this.trainingDrills,
+      damageAnalysis: damageAnalysis ?? this.damageAnalysis,
+      resourceTopicIds: resourceTopicIds ?? this.resourceTopicIds,
+      confidence: confidence ?? this.confidence,
+      unknowns: unknowns ?? this.unknowns,
+      evidenceAtGeneration: clearEvidenceAtGeneration
+          ? null
+          : evidenceAtGeneration ?? this.evidenceAtGeneration,
+    );
+  }
+
+  CombatAarReport withEvidenceAtGeneration(AarEvidenceSnapshot? snapshot) {
+    return copyWith(
+      evidenceAtGeneration: snapshot,
+      clearEvidenceAtGeneration: snapshot == null,
+    );
+  }
 
   String get mistakesText {
     if (rankedMistakes.isEmpty) return 'No combat mistakes were identified.';
@@ -96,6 +142,8 @@ class CombatAarReport {
     'resourceTopicIds': resourceTopicIds,
     'confidence': confidence,
     'unknowns': unknowns,
+    if (evidenceAtGeneration != null)
+      'evidenceAtGeneration': evidenceAtGeneration!.toJson(),
   };
 
   factory CombatAarReport.fromJson(Map<String, dynamic> json) {
@@ -139,6 +187,9 @@ class CombatAarReport {
       resourceTopicIds: resourceTopicIds,
       confidence: _doubleFromJson(json['confidence'], fallback: 0.5),
       unknowns: _stringList(json['unknowns']),
+      evidenceAtGeneration: AarEvidenceSnapshot.fromJson(
+        json['evidenceAtGeneration'],
+      ),
     );
   }
 

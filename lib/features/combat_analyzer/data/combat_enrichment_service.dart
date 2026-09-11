@@ -107,7 +107,7 @@ class CombatEnrichmentService {
             'Killmail matching requires the combat log listener to match an authenticated character.',
           ],
           evidenceLedger: _baselineLedger(encounter),
-        ),
+        ).copyWith(killmailSearchCompleted: true),
       );
     }
 
@@ -115,7 +115,11 @@ class CombatEnrichmentService {
     if (!missingScope) {
       final esiResult = await _tryEsiRecent(encounter, characterId);
       if (esiResult.missingScope) missingScope = true;
-      if (esiResult.enrichment != null) return _save(esiResult.enrichment!);
+      if (esiResult.enrichment != null) {
+        return _save(
+          esiResult.enrichment!.copyWith(killmailSearchCompleted: true),
+        );
+      }
     }
 
     final zkillEnrichment = await _tryZkillDiscovery(
@@ -123,7 +127,9 @@ class CombatEnrichmentService {
       characterId,
       missingScope: missingScope,
     );
-    if (zkillEnrichment != null) return _save(zkillEnrichment);
+    if (zkillEnrichment != null) {
+      return _save(zkillEnrichment.copyWith(killmailSearchCompleted: true));
+    }
 
     return _save(
       CombatEnrichment(
@@ -141,7 +147,7 @@ class CombatEnrichmentService {
           'The AAR is based on combat-log evidence only.',
         ],
         evidenceLedger: _baselineLedger(encounter, missingScope: missingScope),
-      ),
+      ).copyWith(killmailSearchCompleted: true),
     );
   }
 
@@ -480,7 +486,7 @@ class CombatEnrichmentService {
       parsedEncounterId: encounter.id,
       status: CombatEnrichmentStatus.logOnly,
       source: CombatEnrichmentSource.none,
-      matchReason: 'No killmail evidence is cached for this AAR.',
+      matchReason: CombatEnrichment.uncachedMatchReason,
       limitations: const ['This report is based on combat-log evidence only.'],
       evidenceLedger: _baselineLedger(encounter),
     );
