@@ -2,6 +2,7 @@ import 'dart:math';
 
 import '../../../core/logging/logger.dart';
 import 'cap_simulator.dart';
+import 'damage_pattern.dart';
 import 'dogma_attributes.dart';
 import 'models.dart';
 
@@ -23,6 +24,8 @@ class _Bonus {
 class DogmaEngine {
   /// Dogma operator codes as observed from ESI's live effect data.
   static const int _postMul = 0;
+  static const int _modAdd = 2;
+  static const int _modSub = 3;
   static const int _postPercent = 6;
 
   /// Second postMul code in the SDE, used by the damage-module family
@@ -63,6 +66,7 @@ class DogmaEngine {
     12846,
     12847,
     12848,
+    272, // Repair Systems: -5%/lvl repairer duration
   };
 
   static const List<int> _missileSpecSkillIds = [
@@ -156,6 +160,20 @@ class DogmaEngine {
     return exp(-pow((n - 1) / 2.67, 2));
   }
 
+  /// Combined postPercent chain for a ship attribute (stacking on resonances).
+  static double _percentChain(int attributeId, List<double> values) {
+    if (values.isEmpty) return 1.0;
+    final sorted = [...values]..sort((a, b) => b.abs().compareTo(a.abs()));
+    var factor = 1.0;
+    for (var i = 0; i < sorted.length; i++) {
+      final penalty = _nonStackableAttributes.contains(attributeId)
+          ? getStackingPenalty(i + 1)
+          : 1.0;
+      factor *= 1 + (sorted[i] / 100) * penalty;
+    }
+    return factor;
+  }
+
   /// `base * product(unpenalized) * chain(penalized > 1) * chain(penalized < 1)`.
   static double _applyBonuses(double base, Iterable<_Bonus> bonuses) {
     var unpenalized = 1.0;
@@ -190,13 +208,14 @@ class DogmaEngine {
   /// classic +5%/level skill effects; applying them postMul to the ship
   /// attribute reproduces how the game derives the same values.
   static const List<(int, int, double)> _skillModifiers = [
-    (3418, DogmaAttributes.cpuOutput, 0.05), // CPU Management
-    (3402, DogmaAttributes.powerOutput, 0.05), // Engineering
-    (3455, DogmaAttributes.maxVelocity, 0.05), // Navigation
-    (3424, DogmaAttributes.capacitorCapacity, 0.05), // Capacitor Management
-    (3425, DogmaAttributes.shieldCapacity, 0.05), // Shield Management
+    (3426, DogmaAttributes.cpuOutput, 0.05), // CPU Management
+    (3413, DogmaAttributes.powerOutput, 0.05), // Power Grid Management
+    (3449, DogmaAttributes.maxVelocity, 0.05), // Navigation
+    (3418, DogmaAttributes.capacitorCapacity, 0.05), // Capacitor Management
+    (3419, DogmaAttributes.shieldCapacity, 0.05), // Shield Management
     (3394, DogmaAttributes.armorHp, 0.05), // Hull Upgrades
     (3392, DogmaAttributes.hullHp, 0.05), // Mechanics
+    (3416, DogmaAttributes.shieldRechargeTime, -0.05), // Shield Operation
   ];
 
   /// Calculate full statistics for a fitting.
@@ -226,12 +245,6 @@ class DogmaEngine {
     final skillLevels = {
       for (final skill in characterSkills) skill.skillId: skill.level,
     };
-    for (final (skillId, attributeId, perLevel) in _skillModifiers) {
-      final level = skillLevels[skillId] ?? 0;
-      final base = attributes[attributeId];
-      if (level == 0 || base == null) continue;
-      attributes[attributeId] = base * (1 + perLevel * level);
-    }
 
     double attr(int id, [double fallback = 0.0]) => attributes[id] ?? fallback;
 
@@ -257,6 +270,7 @@ class DogmaEngine {
     int calibrationUsed = 0;
     final percentModifiers = <int, List<double>>{};
     final mulModifiers = <int, List<double>>{};
+    final addModifiers = <int, double>{};
     final modulePercent = <int, Map<int, List<_Bonus>>>{};
     final moduleMul = <int, Map<int, List<_Bonus>>>{};
     final chargePercent = <int, Map<int, List<_Bonus>>>{};
@@ -339,7 +353,9 @@ class DogmaEngine {
       required bool penalized,
     }) {
       final percents = modifier.operator == _postPercent;
-      if (!percents && !_isMul(modifier.operator)) {
+      final isAdd =
+          modifier.operator == _modAdd || modifier.operator == _modSub;
+      if (!percents && !_isMul(modifier.operator) && !isAdd) {
         unsupportedOperators++;
         return;
       }
@@ -387,6 +403,10 @@ class DogmaEngine {
       }
 
       if (modifier.domain == 'charID') {
+        if (isAdd) {
+          unsupportedOperators++;
+          return;
+        }
         // Ballistic control systems publish modified 212, but pyfa (the
         // reference implementation) multiplies the loaded missile's damage
         // components by the module's bonus; do the same.
@@ -438,13 +458,23 @@ class DogmaEngine {
       if (modifier.domain != 'shipID') return;
       if (shipType.baseAttributes.containsKey(modifier.modifiedAttributeId)) {
         final value = ownerIsShip ? scaled : base;
-        if (value != 0) {
+        if (isAdd) {
+          if (value != 0) {
+            final signed = modifier.operator == _modSub ? -value : value;
+            addModifiers[modifier.modifiedAttributeId] =
+                (addModifiers[modifier.modifiedAttributeId] ?? 0) + signed;
+          }
+        } else if (value != 0) {
           addTo(
             percents ? percentModifiers : mulModifiers,
             modifier.modifiedAttributeId,
             value,
           );
         }
+      }
+      if (isAdd) {
+        unsupportedOperators++;
+        return;
       }
       for (final type in moduleTypes.values) {
         if (droneTypeIds.contains(type.typeId)) continue;
@@ -491,7 +521,13 @@ class DogmaEngine {
                 ? (bonusScale[modifier.modifyingAttributeId] ?? 1.0)
                 : 1.0;
             final value = base * scale;
-            if (_isMul(modifier.operator)) {
+            if (modifier.operator == _modAdd) {
+              addModifiers[modifier.modifiedAttributeId] =
+                  (addModifiers[modifier.modifiedAttributeId] ?? 0) + value;
+            } else if (modifier.operator == _modSub) {
+              addModifiers[modifier.modifiedAttributeId] =
+                  (addModifiers[modifier.modifiedAttributeId] ?? 0) - value;
+            } else if (_isMul(modifier.operator)) {
               addTo(mulModifiers, modifier.modifiedAttributeId, value);
             } else if (modifier.operator == _postPercent) {
               addTo(percentModifiers, modifier.modifiedAttributeId, value);
@@ -696,28 +732,37 @@ class DogmaEngine {
       }
     }
 
-    // postPercent modifiers combine multiplicatively; on non-stackable
-    // attributes (the damage resonances) the n-th strongest bonus is scaled
-    // by the dogma stacking penalty.
-    percentModifiers.forEach((attributeId, values) {
-      final sorted = [...values]..sort((a, b) => b.abs().compareTo(a.abs()));
-      var factor = 1.0;
-      for (var i = 0; i < sorted.length; i++) {
-        final penalty = _nonStackableAttributes.contains(attributeId)
-            ? getStackingPenalty(i + 1)
-            : 1.0;
-        factor *= 1 + (sorted[i] / 100) * penalty;
+    // Known-skill table applies after module adds (pyfa order: base+adds,
+    // then multipliers, then percents). +5%/lvl becomes +25 at V.
+    for (final (skillId, attributeId, perLevel) in _skillModifiers) {
+      final level = skillLevels[skillId] ?? 0;
+      if (level == 0 || !shipType.baseAttributes.containsKey(attributeId)) {
+        continue;
       }
-      attributes[attributeId] = attr(attributeId, 1.0) * factor;
-    });
+      addTo(percentModifiers, attributeId, perLevel * level * 100);
+    }
 
-    mulModifiers.forEach((attributeId, values) {
-      var factor = 1.0;
-      for (final value in values) {
-        factor *= value;
+    // value = (base + Σ adds) × Π mul × chain(percent).
+    final touched = {
+      ...addModifiers.keys,
+      ...mulModifiers.keys,
+      ...percentModifiers.keys,
+    };
+    for (final id in touched) {
+      final hasBase = attributes.containsKey(id);
+      final base = hasBase
+          ? attributes[id]!
+          : (addModifiers.containsKey(id) ? 0.0 : 1.0);
+      var value = base + (addModifiers[id] ?? 0.0);
+      for (final mul in mulModifiers[id] ?? const <double>[]) {
+        value *= mul;
       }
-      attributes[attributeId] = attr(attributeId, 1.0) * factor;
-    });
+      value *= _percentChain(id, percentModifiers[id] ?? const <double>[]);
+      attributes[id] = value;
+    }
+    if (addModifiers.isNotEmpty) {
+      Log.d('DOGMA', 'Applied ${addModifiers.length} ship add/sub modifiers');
+    }
 
     if (unsupportedOperators > 0) {
       Log.d(
@@ -772,30 +817,21 @@ class DogmaEngine {
       explosive: toResist(attr(DogmaAttributes.hullExplosiveResist, 1.0)),
     );
 
-    // EHP Calculation
-    double calculateEhp(double hp, ResistProfile resists) {
-      final avgResist =
-          (resists.em + resists.thermal + resists.kinetic + resists.explosive) /
-          400.0;
-      return hp / (1.0 - avgResist);
-    }
-
-    final shieldEhp = calculateEhp(shieldHp, shieldResists);
-    final armorEhp = calculateEhp(armorHp, armorResists);
-    final hullEhp = calculateEhp(hullHp, hullResists);
-
-    final defenses = DefenseProfile(
+    final defensesHp = DefenseProfile(
       shieldHp: shieldHp,
       shieldRecharge: attr(DogmaAttributes.shieldRechargeTime),
       shieldResists: shieldResists,
-      shieldEhp: shieldEhp,
       armorHp: armorHp,
       armorResists: armorResists,
-      armorEhp: armorEhp,
       hullHp: hullHp,
       hullResists: hullResists,
-      hullEhp: hullEhp,
-      totalEhp: shieldEhp + armorEhp + hullEhp,
+    );
+    final omniEhp = defensesHp.ehpAgainst(DamagePattern.omni);
+    final defenses = defensesHp.copyWith(
+      shieldEhp: omniEhp.shield,
+      armorEhp: omniEhp.armor,
+      hullEhp: omniEhp.hull,
+      totalEhp: omniEhp.total,
     );
 
     // 4. Calculate Capacitor

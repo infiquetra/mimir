@@ -1,9 +1,7 @@
+import '../../../core/logging/logger.dart';
 import 'models.dart';
 
 /// Incoming damage split. Fractions are normalised to sum to 1.
-///
-/// Stub for U0 tests (design §2.4). Devs own the engine wiring that feeds
-/// [DefenseProfile] EHP fields from `ehpAgainst(DamagePattern.omni)`.
 class DamagePattern {
   const DamagePattern({
     required this.em,
@@ -35,14 +33,26 @@ class DamagePattern {
     String label = 'observed',
   }) {
     final total = em + thermal + kinetic + explosive;
-    if (total == 0) return null;
-    return DamagePattern(
+    if (total <= 0) {
+      Log.d('FITTING', 'DamagePattern.fromAmounts total=$total -> null');
+      return null;
+    }
+    final pattern = DamagePattern(
       em: em / total,
       thermal: thermal / total,
       kinetic: kinetic / total,
       explosive: explosive / total,
       label: label,
     );
+    Log.d(
+      'FITTING',
+      'DamagePattern.fromAmounts $label '
+          'em=${pattern.em.toStringAsFixed(3)} '
+          'th=${pattern.thermal.toStringAsFixed(3)} '
+          'kin=${pattern.kinetic.toStringAsFixed(3)} '
+          'exp=${pattern.explosive.toStringAsFixed(3)}',
+    );
+    return pattern;
   }
 }
 
@@ -64,12 +74,22 @@ class LayeredEhp {
 
 extension DefenseProfileEhp on DefenseProfile {
   /// pyfa `calculateEhp`: hp / Σ_t p_t · resonance_t, per layer.
-  LayeredEhp ehpAgainst(DamagePattern p) => LayeredEhp(
-    pattern: p,
-    shield: _layerEhp(shieldHp, shieldResists, p),
-    armor: _layerEhp(armorHp, armorResists, p),
-    hull: _layerEhp(hullHp, hullResists, p),
-  );
+  LayeredEhp ehpAgainst(DamagePattern p) {
+    final layered = LayeredEhp(
+      pattern: p,
+      shield: _layerEhp(shieldHp, shieldResists, p),
+      armor: _layerEhp(armorHp, armorResists, p),
+      hull: _layerEhp(hullHp, hullResists, p),
+    );
+    Log.d(
+      'FITTING',
+      'ehpAgainst(${p.label}) shield=${layered.shield.toStringAsFixed(1)} '
+          'armor=${layered.armor.toStringAsFixed(1)} '
+          'hull=${layered.hull.toStringAsFixed(1)} '
+          'total=${layered.total.toStringAsFixed(1)}',
+    );
+    return layered;
+  }
 }
 
 double _layerEhp(double hp, ResistProfile r, DamagePattern p) {

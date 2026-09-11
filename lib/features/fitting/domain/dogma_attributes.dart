@@ -23,10 +23,12 @@ class DogmaAttributes {
   static const int armorExplosiveResist = 268;
 
   static const int hullHp = 9;
-  static const int hullEmResist = 974;
-  static const int hullThermalResist = 977;
-  static const int hullKineticResist = 976;
-  static const int hullExplosiveResist = 975;
+  // Hull resonances live on the ship (emDamageResonance family), not on the
+  // Damage Control's own bonus attributes 974-977.
+  static const int hullEmResist = 113;
+  static const int hullThermalResist = 110;
+  static const int hullKineticResist = 109;
+  static const int hullExplosiveResist = 111;
 
   static const int maxVelocity = 37;
   static const int mass = 4;
@@ -103,4 +105,10 @@ class DogmaAttributes {
   static const int fighterMissilesDurationMs = 2182;
   static const int fighterBombTypeId = 2324;
   static const int fighterBombDurationMs = 2349;
+
+  // Ship-attribute adds published by buffer modules (op 2 modAdd).
+  static const int shieldCapacityBonus = 72; // MSE / LSE HP add
+  static const int armorHpBonusAdd = 1159; // armor plate HP add
+  static const int signatureRadiusAdd = 983; // extender signature add
+  static const int massAdd = 796; // plate mass add
 }

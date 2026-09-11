@@ -191,6 +191,10 @@ abstract class FittingStats with _$FittingStats {
       _$FittingStatsFromJson(json);
 }
 
+/// Layer HP, resists, and omni EHP for a fitted ship.
+///
+/// `shieldEhp`/`armorEhp`/`hullEhp`/`totalEhp` are omni (25/25/25/25);
+/// use [DefenseProfileEhp.ehpAgainst] for any other damage pattern.
 @freezed
 abstract class DefenseProfile with _$DefenseProfile {
   const factory DefenseProfile({
