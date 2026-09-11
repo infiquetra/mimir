@@ -8,7 +8,7 @@ import '../../../core/sde/sde_providers.dart';
 import '../../characters/data/character_repository.dart';
 import '../../skills/data/skill_providers.dart';
 import '../data/fitting_repository.dart';
-import '../domain/dogma_attributes.dart';
+import '../data/fitting_stats_inputs.dart';
 import '../domain/dogma_engine.dart';
 import '../domain/esi_fitting_export.dart';
 import '../domain/format_parser.dart';
@@ -268,40 +268,37 @@ final activeShipTypeProvider = FutureProvider<ShipType?>((ref) async {
   return sde.getShipType(fitting.shipTypeId);
 });
 
-/// Trained skills (level > 0) plus the active hull's required skills,
-/// loaded as dogma types for skill-owned modifier routing.
-final fittingSkillTypesProvider = FutureProvider<Map<int, ModuleType>>((
-  ref,
-) async {
-  final shipType = await ref.watch(activeShipTypeProvider.future);
-  final sde = ref.read(sdeServiceProvider);
-  final ids = <int>{};
-
+Future<List<CharacterSkill>> _trainedSkillsForActiveCharacter(Ref ref) async {
   final character = await ref
       .read(characterRepositoryProvider)
       .getActiveCharacter();
-  if (character != null) {
-    final trained = await ref.watch(
-      trainedSkillsProvider(character.characterId).future,
-    );
-    for (final skill in trained) {
-      if (skill.trainedSkillLevel > 0) {
-        ids.add(skill.skillId);
-      }
-    }
-  }
-  if (shipType != null) {
-    for (final attrId in DogmaEngine.requiredSkillAttributeIds) {
-      final value = shipType.baseAttributes[attrId];
-      if (value != null) {
-        ids.add(value.toInt());
-      }
-    }
-  }
+  if (character == null) return const [];
+  return (await ref.watch(trainedSkillsProvider(character.characterId).future))
+      .map(
+        (skill) => CharacterSkill(
+          skillId: skill.skillId,
+          level: skill.trainedSkillLevel,
+        ),
+      )
+      .toList();
+}
 
-  Log.d('FITTING', 'fittingSkillTypesProvider loading ${ids.length} types');
-  if (ids.isEmpty) return {};
-  return sde.getDogmaTypes(ids);
+/// Skill types for the active fit. Delegates to [loadFittingStatsInputs].
+final fittingSkillTypesProvider = FutureProvider<Map<int, ModuleType>>((
+  ref,
+) async {
+  final fitting = ref.watch(activeFittingProvider);
+  if (fitting == null) return {};
+  final shipType = await ref.watch(activeShipTypeProvider.future);
+  final sde = ref.read(sdeServiceProvider);
+  final trainedSkills = await _trainedSkillsForActiveCharacter(ref);
+  final inputs = await loadFittingStatsInputs(
+    sde,
+    fitting,
+    skillTypeIds: trainedSkills.map((s) => s.skillId),
+    shipType: shipType,
+  );
+  return inputs?.skillTypes ?? {};
 });
 
 /// Provider for the calculated stats of the active fitting.
@@ -309,86 +306,33 @@ final fittingStatsProvider = FutureProvider<FittingStats?>((ref) async {
   final shipType = await ref.watch(activeShipTypeProvider.future);
   final fitting = ref.watch(activeFittingProvider);
 
-  if (shipType == null || fitting == null) return null;
+  if (fitting == null) return null;
 
   final sde = ref.read(sdeServiceProvider);
   final engine = ref.read(dogmaEngineProvider);
-  final skillTypes = await ref.watch(fittingSkillTypesProvider.future);
+  final trainedSkills = await _trainedSkillsForActiveCharacter(ref);
 
-  // Resolve all module types, plus loaded charge types: missile and
-  // turret damage lives on the charge, and racial missile bonuses modify
-  // charge attributes.
-  final moduleTypes = <String, ModuleType>{};
-  Future<void> resolveType(int typeId) async {
-    final key = typeId.toString();
-    if (moduleTypes.containsKey(key)) return;
-    final type = await sde.getModuleType(typeId);
-    if (type != null) {
-      moduleTypes[key] = type;
-    }
-  }
+  final inputs = await loadFittingStatsInputs(
+    sde,
+    fitting,
+    skillTypeIds: trainedSkills.map((s) => s.skillId),
+    shipType: shipType,
+  );
+  if (inputs == null) return null;
 
-  for (final module in fitting.allModules) {
-    await resolveType(module.typeId);
-    final chargeTypeId = module.chargeTypeId;
-    if (chargeTypeId != null) {
-      await resolveType(chargeTypeId);
-    }
-  }
-  for (final drone in fitting.drones) {
-    await resolveType(drone.typeId);
-  }
-  for (final fighter in fitting.fighters) {
-    await resolveType(fighter.typeId);
-  }
-  for (final type in List<ModuleType>.from(moduleTypes.values)) {
-    final bombId = type.baseAttributes[DogmaAttributes.fighterBombTypeId];
-    if (bombId != null) {
-      await resolveType(bombId.toInt());
-    }
-  }
-
-  // Stats must reflect the character who will actually fly the ship: skill
-  // modifiers change CPU/power output, speed, tank and capacitor.
-  final character = await ref
-      .read(characterRepositoryProvider)
-      .getActiveCharacter();
-  final trainedSkills = character == null
-      ? const <CharacterSkill>[]
-      : (await ref.watch(trainedSkillsProvider(character.characterId).future))
-            .map(
-              (skill) => CharacterSkill(
-                skillId: skill.skillId,
-                level: skill.trainedSkillLevel,
-              ),
-            )
-            .toList();
-
-  // Module bonuses need the dogma modifiers ESI publishes per effect; the
-  // service caches them in Drift so repeat calculations stay offline-fast.
-  // Skill-owned effects (Gunnery, Rapid Firing, MLO, ...) must be included
-  // or cycle bonuses never resolve.
-  final effectIds = <int>{
-    for (final effect in shipType.effects) effect.effectId,
-    for (final type in moduleTypes.values)
-      for (final effect in type.effects) effect.effectId,
-    for (final type in skillTypes.values)
-      for (final effect in type.effects) effect.effectId,
-  }.toList();
   Log.d(
     'FITTING',
-    'fittingStatsProvider effects=${effectIds.length} '
-        'skills=${skillTypes.length}',
+    'fittingStatsProvider effects=${inputs.effectModifiers.length} '
+        'skills=${inputs.skillTypes.length}',
   );
-  final effectModifiers = await sde.ensureEffectModifiers(effectIds);
 
   return engine.calculateStats(
     fitting,
-    shipType,
-    moduleTypes,
+    inputs.shipType,
+    inputs.moduleTypes,
     trainedSkills,
-    effectModifiers: effectModifiers,
-    skillTypes: skillTypes,
+    effectModifiers: inputs.effectModifiers,
+    skillTypes: inputs.skillTypes,
   );
 });
 

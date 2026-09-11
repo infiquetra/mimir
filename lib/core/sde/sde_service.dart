@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/services.dart';
 
+import '../../features/fitting/domain/dogma_attributes.dart';
 import '../../features/fitting/domain/models.dart';
 import '../logging/logger.dart';
 import 'sde_database.dart';
@@ -961,6 +962,17 @@ class SdeService {
   // Module Type Lookups
   // ============================================================================
 
+  /// Slot from type effects: high=12, med=13, low=11, rig=2663, subsystem=3772.
+  /// Falls back to [SlotType.high] when none of those effects are present.
+  SlotType _slotTypeFor(List<int> effectIds) {
+    if (effectIds.contains(12)) return SlotType.high;
+    if (effectIds.contains(13)) return SlotType.med;
+    if (effectIds.contains(11)) return SlotType.low;
+    if (effectIds.contains(2663)) return SlotType.rig;
+    if (effectIds.contains(3772)) return SlotType.subsystem;
+    return SlotType.high;
+  }
+
   /// Get complete ModuleType with attributes and requirements.
   Future<ModuleType?> getModuleType(int typeId) async {
     final type = await database.getType(typeId);
@@ -983,18 +995,7 @@ class SdeService {
     }
 
     final effectIds = await database.getTypeEffects(typeId);
-    SlotType slotType = SlotType.high;
-    if (effectIds.contains(12)) {
-      slotType = SlotType.high;
-    } else if (effectIds.contains(13)) {
-      slotType = SlotType.med;
-    } else if (effectIds.contains(11)) {
-      slotType = SlotType.low;
-    } else if (effectIds.contains(2663)) {
-      slotType = SlotType.rig;
-    } else if (effectIds.contains(3772)) {
-      slotType = SlotType.subsystem;
-    }
+    final slotType = _slotTypeFor(effectIds);
 
     return ModuleType(
       typeId: type.typeId,
@@ -1017,8 +1018,9 @@ class SdeService {
   ///
   /// Three queries total (types, attributes, effects, each `WHERE typeId IN`),
   /// chunked at 500 ids. Missing ids are absent from the result.
-  /// [ModuleType.slotType] defaults to [SlotType.high], cpu/powergrid/
-  /// calibration are 0, and [ModuleType.skillRequirements] is empty.
+  /// [ModuleType.cpu]/[ModuleType.powergrid]/[ModuleType.calibration] come
+  /// from attrs 50/30/1153, [ModuleType.slotType] from effects 12/13/11/2663/
+  /// 3772, and [ModuleType.skillRequirements] is empty.
   Future<Map<int, ModuleType>> getDogmaTypes(Iterable<int> typeIds) async {
     final ids = typeIds.toSet().toList();
     Log.d('SDE', 'getDogmaTypes ids=${ids.length}');
@@ -1030,17 +1032,19 @@ class SdeService {
 
     final result = <int, ModuleType>{};
     for (final type in types) {
+      final attrs = attributes[type.typeId] ?? const <int, double>{};
+      final effectIds = effects[type.typeId] ?? const <int>[];
       result[type.typeId] = ModuleType(
         typeId: type.typeId,
         name: type.typeName,
         groupId: type.groupId,
         groupName: 'Unknown Group',
-        slotType: SlotType.high,
-        cpu: 0,
-        powergrid: 0,
-        calibration: 0,
-        baseAttributes: attributes[type.typeId] ?? const {},
-        effects: _effectsFor(effects[type.typeId] ?? const []),
+        slotType: _slotTypeFor(effectIds),
+        cpu: attrs[DogmaAttributes.cpuLoad] ?? 0.0,
+        powergrid: attrs[DogmaAttributes.powerLoad] ?? 0.0,
+        calibration: attrs[DogmaAttributes.upgradeLoad]?.toInt() ?? 0,
+        baseAttributes: attrs,
+        effects: _effectsFor(effectIds),
         skillRequirements: const [],
       );
     }
