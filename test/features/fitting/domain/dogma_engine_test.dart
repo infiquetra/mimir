@@ -154,8 +154,8 @@ void main() {
         _rifter(),
         {},
         [
-          const CharacterSkill(skillId: 3418, level: 5), // CPU Management +25%
-          const CharacterSkill(skillId: 3455, level: 4), // Navigation +20%
+          const CharacterSkill(skillId: 3426, level: 5), // CPU Management +25%
+          const CharacterSkill(skillId: 3449, level: 4), // Navigation +20%
         ],
       );
 
@@ -341,7 +341,7 @@ void main() {
         _emptyFitting(),
         _rifter(),
         {},
-        [const CharacterSkill(skillId: 3425, level: 5)], // Shield Management
+        [const CharacterSkill(skillId: 3419, level: 5)], // Shield Management
       );
 
       expect(trained.defenses.shieldHp, closeTo(400 * 1.25, 0.001));
@@ -447,6 +447,669 @@ void main() {
 
         expect(stats.droneBandwidthMax, 50.0);
         expect(stats.droneBayMax, 40.0);
+      },
+    );
+  });
+
+  group('DogmaEngine E0a ship modAdd', () {
+    late DogmaEngine engine;
+
+    setUp(() {
+      engine = DogmaEngine();
+    });
+
+    const mseEffect = 21;
+    const mseSigEffect = 2029;
+    const plateHpEffect = 2837;
+    const plateMassEffect = 1959;
+    const shieldAddAttr = 72;
+    const sigAddAttr = 983;
+    const armorAddAttr = 1159;
+    const massAddAttr = 796;
+    const rigPctEffect = 8899;
+    const rigPctAttr = 1234;
+    const subEffect = 8900;
+    const moduleAddEffect = 8901;
+
+    ShipType rifter() => ShipType(
+      typeId: 587,
+      name: 'Rifter',
+      description: 'A Minmatar frigate',
+      groupId: 25,
+      groupName: 'Frigate',
+      highSlots: 4,
+      medSlots: 3,
+      lowSlots: 3,
+      rigSlots: 3,
+      baseAttributes: {
+        DogmaAttributes.cpuOutput: 125.0,
+        DogmaAttributes.powerOutput: 37.0,
+        DogmaAttributes.maxVelocity: 365.0,
+        DogmaAttributes.mass: 1067000.0,
+        DogmaAttributes.inertiaModifier: 3.2,
+        DogmaAttributes.signatureRadius: 35.0,
+        DogmaAttributes.shieldCapacity: 450.0,
+        DogmaAttributes.armorHp: 450.0,
+        DogmaAttributes.hullHp: 350.0,
+        DogmaAttributes.shieldEmResist: 1.0,
+        DogmaAttributes.shieldThermalResist: 0.8,
+        DogmaAttributes.shieldKineticResist: 0.6,
+        DogmaAttributes.shieldExplosiveResist: 0.5,
+        DogmaAttributes.armorEmResist: 0.4,
+        DogmaAttributes.armorThermalResist: 0.65,
+        DogmaAttributes.armorKineticResist: 0.75,
+        DogmaAttributes.armorExplosiveResist: 0.9,
+        113: 0.67,
+        110: 0.67,
+        109: 0.67,
+        111: 0.67,
+        974: 1.0,
+        975: 1.0,
+        976: 1.0,
+        977: 1.0,
+      },
+    );
+
+    ModuleType mseII() => const ModuleType(
+      typeId: 3831,
+      name: 'Medium Shield Extender II',
+      groupId: 38,
+      groupName: 'Shield Extender',
+      slotType: SlotType.med,
+      baseAttributes: {shieldAddAttr: 1100.0, sigAddAttr: 7.0},
+      effects: [
+        DogmaEffect(effectId: mseEffect, name: 'shieldCapacityBonusOnline'),
+        DogmaEffect(effectId: mseSigEffect, name: 'addToSignatureRadius2'),
+      ],
+    );
+
+    ModuleType plate1600() => const ModuleType(
+      typeId: 20353,
+      name: '1600mm Steel Plates II',
+      groupId: 329,
+      groupName: 'Armor Plate',
+      slotType: SlotType.low,
+      baseAttributes: {armorAddAttr: 4800.0, massAddAttr: 3750000.0},
+      effects: [
+        DogmaEffect(effectId: plateHpEffect, name: 'armorHPBonusAdd'),
+        DogmaEffect(effectId: plateMassEffect, name: 'armorReinforcerMassAdd'),
+      ],
+    );
+
+    Map<int, List<EffectModifier>> mseModifiers() => const {
+      mseEffect: [
+        EffectModifier(
+          effectId: mseEffect,
+          func: 'ItemModifier',
+          operator: 2,
+          modifiedAttributeId: DogmaAttributes.shieldCapacity,
+          modifyingAttributeId: shieldAddAttr,
+          domain: 'shipID',
+        ),
+      ],
+      mseSigEffect: [
+        EffectModifier(
+          effectId: mseSigEffect,
+          func: 'ItemModifier',
+          operator: 2,
+          modifiedAttributeId: DogmaAttributes.signatureRadius,
+          modifyingAttributeId: sigAddAttr,
+          domain: 'shipID',
+        ),
+      ],
+    };
+
+    Map<int, List<EffectModifier>> plateModifiers() => const {
+      plateHpEffect: [
+        EffectModifier(
+          effectId: plateHpEffect,
+          func: 'ItemModifier',
+          operator: 2,
+          modifiedAttributeId: DogmaAttributes.armorHp,
+          modifyingAttributeId: armorAddAttr,
+          domain: 'shipID',
+        ),
+      ],
+      plateMassEffect: [
+        EffectModifier(
+          effectId: plateMassEffect,
+          func: 'ItemModifier',
+          operator: 2,
+          modifiedAttributeId: DogmaAttributes.mass,
+          modifyingAttributeId: massAddAttr,
+          domain: 'shipID',
+        ),
+      ],
+    };
+
+    Fitting mseFit({int count = 1}) => Fitting(
+      id: 'mse',
+      name: 'Rifter MSE',
+      shipTypeId: 587,
+      shipName: 'Rifter',
+      medSlots: [
+        for (var i = 0; i < count; i++)
+          FittedModule(
+            typeId: 3831,
+            typeName: 'Medium Shield Extender II',
+            slotType: SlotType.med,
+            slotIndex: i,
+          ),
+      ],
+    );
+
+    test(
+      'E0a.1 Rifter + MSE II adds 1100 shield HP and 7 m signature',
+      () async {
+        final stats = await engine.calculateStats(
+          mseFit(),
+          rifter(),
+          {'3831': mseII()},
+          const [],
+          effectModifiers: mseModifiers(),
+        );
+
+        expect(stats.defenses.shieldHp, 1550);
+        expect(stats.signatureRadius, 42);
+      },
+    );
+
+    test(
+      'E0a.2 MSE II + Shield Management V is (450+1100)*1.25 = 1937.5, not 1662.5',
+      () async {
+        final stats = await engine.calculateStats(
+          mseFit(),
+          rifter(),
+          {'3831': mseII()},
+          const [CharacterSkill(skillId: 3419, level: 5)],
+          effectModifiers: mseModifiers(),
+        );
+
+        expect(stats.defenses.shieldHp, closeTo(1937.5, 1e-6));
+        expect(
+          stats.defenses.shieldHp,
+          isNot(closeTo(1662.5, 0.5)),
+          reason: 'adds must land before Shield Management percent',
+        );
+      },
+    );
+
+    test('E0a.3 1600mm plates add 4800 armor HP and 3.75e6 kg mass', () async {
+      final stats = await engine.calculateStats(
+        const Fitting(
+          id: 'plate',
+          name: 'Rifter plate',
+          shipTypeId: 587,
+          shipName: 'Rifter',
+          lowSlots: [
+            FittedModule(
+              typeId: 20353,
+              typeName: '1600mm Steel Plates II',
+              slotType: SlotType.low,
+              slotIndex: 0,
+            ),
+          ],
+        ),
+        rifter(),
+        {'20353': plate1600()},
+        const [],
+        effectModifiers: plateModifiers(),
+      );
+
+      expect(stats.defenses.armorHp, 5250);
+      expect(stats.massKg, 4817000);
+      expect(stats.alignTime, closeTo(21.369, 0.01));
+    });
+
+    test(
+      'E0a.4 MSE II then +15% shield rig is (450+1100)*1.15 = 1782.5',
+      () async {
+        final rig = ModuleType(
+          typeId: 31716,
+          name: 'Medium Core Defense Field Extender I',
+          groupId: 781,
+          groupName: 'Rig Shield',
+          slotType: SlotType.rig,
+          baseAttributes: {rigPctAttr: 15.0},
+          effects: const [
+            DogmaEffect(effectId: rigPctEffect, name: 'shieldPct'),
+          ],
+        );
+        final stats = await engine.calculateStats(
+          Fitting(
+            id: 'mse-rig',
+            name: 'Rifter MSE rig',
+            shipTypeId: 587,
+            shipName: 'Rifter',
+            medSlots: mseFit().medSlots,
+            rigSlots: const [
+              FittedModule(
+                typeId: 31716,
+                typeName: 'Medium Core Defense Field Extender I',
+                slotType: SlotType.rig,
+                slotIndex: 0,
+              ),
+            ],
+          ),
+          rifter(),
+          {'3831': mseII(), '31716': rig},
+          const [],
+          effectModifiers: {
+            ...mseModifiers(),
+            rigPctEffect: const [
+              EffectModifier(
+                effectId: rigPctEffect,
+                func: 'ItemModifier',
+                operator: 6,
+                modifiedAttributeId: DogmaAttributes.shieldCapacity,
+                modifyingAttributeId: rigPctAttr,
+                domain: 'shipID',
+              ),
+            ],
+          },
+        );
+
+        expect(stats.defenses.shieldHp, closeTo(1782.5, 1e-6));
+      },
+    );
+
+    test('E0a.5 modSub on a ship attribute is subtracted', () async {
+      final leech = ModuleType(
+        typeId: 1,
+        name: 'Synthetic subtractor',
+        groupId: 1,
+        groupName: 'Test',
+        slotType: SlotType.med,
+        baseAttributes: {shieldAddAttr: 100.0},
+        effects: const [DogmaEffect(effectId: subEffect, name: 'modSub')],
+      );
+      final stats = await engine.calculateStats(
+        const Fitting(
+          id: 'sub',
+          name: 'Rifter sub',
+          shipTypeId: 587,
+          shipName: 'Rifter',
+          medSlots: [
+            FittedModule(
+              typeId: 1,
+              typeName: 'Synthetic subtractor',
+              slotType: SlotType.med,
+              slotIndex: 0,
+            ),
+          ],
+        ),
+        rifter(),
+        {'1': leech},
+        const [],
+        effectModifiers: {
+          subEffect: const [
+            EffectModifier(
+              effectId: subEffect,
+              func: 'ItemModifier',
+              operator: 3,
+              modifiedAttributeId: DogmaAttributes.shieldCapacity,
+              modifyingAttributeId: shieldAddAttr,
+              domain: 'shipID',
+            ),
+          ],
+        },
+      );
+
+      expect(stats.defenses.shieldHp, 350);
+    });
+
+    test('E0a.6 op 2 aimed at a fitted module attribute is ignored', () async {
+      const turret = ModuleType(
+        typeId: 561,
+        name: 'Test turret',
+        groupId: 53,
+        groupName: 'Projectile',
+        slotType: SlotType.high,
+        baseAttributes: {
+          DogmaAttributes.turretDamageMultiplier: 2.0,
+          DogmaAttributes.rateOfFire: 4000.0,
+          182: 3300,
+        },
+      );
+      const ammo = ModuleType(
+        typeId: 266,
+        name: 'Ammo',
+        groupId: 38,
+        groupName: 'Ammo',
+        slotType: SlotType.high,
+        baseAttributes: {DogmaAttributes.kineticDamage: 100.0},
+      );
+      const adder = ModuleType(
+        typeId: 2,
+        name: 'Module add',
+        groupId: 1,
+        groupName: 'Test',
+        slotType: SlotType.low,
+        baseAttributes: {shieldAddAttr: 1000.0},
+        effects: [DogmaEffect(effectId: moduleAddEffect, name: 'modAddModule')],
+      );
+      final fitting = Fitting(
+        id: 'mod-add-module',
+        name: 'Turret',
+        shipTypeId: 587,
+        shipName: 'Rifter',
+        highSlots: const [
+          FittedModule(
+            typeId: 561,
+            typeName: 'Test turret',
+            slotType: SlotType.high,
+            slotIndex: 0,
+            chargeTypeId: 266,
+            chargeName: 'Ammo',
+          ),
+        ],
+        lowSlots: const [
+          FittedModule(
+            typeId: 2,
+            typeName: 'Module add',
+            slotType: SlotType.low,
+            slotIndex: 0,
+          ),
+        ],
+      );
+      final withAdd = await engine.calculateStats(
+        fitting,
+        rifter(),
+        {'561': turret, '266': ammo, '2': adder},
+        const [],
+        effectModifiers: {
+          moduleAddEffect: const [
+            EffectModifier(
+              effectId: moduleAddEffect,
+              func: 'LocationRequiredSkillModifier',
+              operator: 2,
+              modifiedAttributeId: DogmaAttributes.rateOfFire,
+              modifyingAttributeId: shieldAddAttr,
+              domain: 'shipID',
+              skillTypeId: 3300,
+            ),
+          ],
+        },
+      );
+      final baseline = await engine.calculateStats(
+        fitting.copyWith(lowSlots: const []),
+        rifter(),
+        {'561': turret, '266': ammo},
+        const [],
+      );
+
+      expect(withAdd.dpsGuns, baseline.dpsGuns);
+      expect(withAdd.volley, baseline.volley);
+    });
+  });
+
+  group('DogmaEngine E0b hull resonances', () {
+    late DogmaEngine engine;
+
+    setUp(() {
+      engine = DogmaEngine();
+    });
+
+    const hullEm = 113;
+    const hullThermal = 110;
+    const hullKinetic = 109;
+    const hullExplosive = 111;
+    const dcuEffect = 2302;
+
+    ShipType rifter() => ShipType(
+      typeId: 587,
+      name: 'Rifter',
+      description: 'A Minmatar frigate',
+      groupId: 25,
+      groupName: 'Frigate',
+      highSlots: 4,
+      medSlots: 3,
+      lowSlots: 3,
+      rigSlots: 3,
+      baseAttributes: {
+        DogmaAttributes.cpuOutput: 125.0,
+        DogmaAttributes.powerOutput: 37.0,
+        DogmaAttributes.shieldCapacity: 450.0,
+        DogmaAttributes.armorHp: 450.0,
+        DogmaAttributes.hullHp: 350.0,
+        DogmaAttributes.shieldEmResist: 1.0,
+        DogmaAttributes.shieldThermalResist: 0.8,
+        DogmaAttributes.shieldKineticResist: 0.6,
+        DogmaAttributes.shieldExplosiveResist: 0.5,
+        DogmaAttributes.armorEmResist: 0.4,
+        DogmaAttributes.armorThermalResist: 0.65,
+        DogmaAttributes.armorKineticResist: 0.75,
+        DogmaAttributes.armorExplosiveResist: 0.9,
+        hullEm: 0.67,
+        hullThermal: 0.67,
+        hullKinetic: 0.67,
+        hullExplosive: 0.67,
+        974: 1.0,
+        975: 1.0,
+        976: 1.0,
+        977: 1.0,
+      },
+    );
+
+    ModuleType dcuII() => const ModuleType(
+      typeId: 2048,
+      name: 'Damage Control II',
+      groupId: 60,
+      groupName: 'Damage Control',
+      slotType: SlotType.low,
+      baseAttributes: {
+        271: 0.875,
+        272: 0.875,
+        273: 0.875,
+        274: 0.875,
+        267: 0.85,
+        268: 0.85,
+        269: 0.85,
+        270: 0.85,
+        974: 0.6,
+        975: 0.6,
+        976: 0.6,
+        977: 0.6,
+      },
+      effects: [DogmaEffect(effectId: dcuEffect, name: 'damageControl')],
+    );
+
+    Map<int, List<EffectModifier>> dcuModifiers() => const {
+      dcuEffect: [
+        EffectModifier(
+          effectId: dcuEffect,
+          func: 'ItemModifier',
+          operator: 0,
+          modifiedAttributeId: 267,
+          modifyingAttributeId: 267,
+        ),
+        EffectModifier(
+          effectId: dcuEffect,
+          func: 'ItemModifier',
+          operator: 0,
+          modifiedAttributeId: 268,
+          modifyingAttributeId: 268,
+        ),
+        EffectModifier(
+          effectId: dcuEffect,
+          func: 'ItemModifier',
+          operator: 0,
+          modifiedAttributeId: 269,
+          modifyingAttributeId: 269,
+        ),
+        EffectModifier(
+          effectId: dcuEffect,
+          func: 'ItemModifier',
+          operator: 0,
+          modifiedAttributeId: 270,
+          modifyingAttributeId: 270,
+        ),
+        EffectModifier(
+          effectId: dcuEffect,
+          func: 'ItemModifier',
+          operator: 0,
+          modifiedAttributeId: 113,
+          modifyingAttributeId: 974,
+        ),
+        EffectModifier(
+          effectId: dcuEffect,
+          func: 'ItemModifier',
+          operator: 0,
+          modifiedAttributeId: 111,
+          modifyingAttributeId: 975,
+        ),
+        EffectModifier(
+          effectId: dcuEffect,
+          func: 'ItemModifier',
+          operator: 0,
+          modifiedAttributeId: 109,
+          modifyingAttributeId: 976,
+        ),
+        EffectModifier(
+          effectId: dcuEffect,
+          func: 'ItemModifier',
+          operator: 0,
+          modifiedAttributeId: 110,
+          modifyingAttributeId: 977,
+        ),
+        EffectModifier(
+          effectId: dcuEffect,
+          func: 'ItemModifier',
+          operator: 0,
+          modifiedAttributeId: 271,
+          modifyingAttributeId: 271,
+        ),
+        EffectModifier(
+          effectId: dcuEffect,
+          func: 'ItemModifier',
+          operator: 0,
+          modifiedAttributeId: 272,
+          modifyingAttributeId: 272,
+        ),
+        EffectModifier(
+          effectId: dcuEffect,
+          func: 'ItemModifier',
+          operator: 0,
+          modifiedAttributeId: 273,
+          modifyingAttributeId: 273,
+        ),
+        EffectModifier(
+          effectId: dcuEffect,
+          func: 'ItemModifier',
+          operator: 0,
+          modifiedAttributeId: 274,
+          modifyingAttributeId: 274,
+        ),
+      ],
+    };
+
+    test(
+      'E0b.1 bare Rifter hull resonances 113/110/109/111 = 0.67 give 522.39 hull EHP',
+      () async {
+        final stats = await engine.calculateStats(
+          _emptyFitting(),
+          rifter(),
+          {},
+          const [],
+        );
+
+        expect(stats.defenses.hullResists.em, closeTo(33, 1e-6));
+        expect(stats.defenses.hullEhp, closeTo(522.388, 0.01));
+        expect(stats.defenses.totalEhp, closeTo(1809.744, 0.01));
+      },
+    );
+
+    test('E0b.2 Rifter + DCU II hull 59.8% / 870.65 EHP', () async {
+      final stats = await engine.calculateStats(
+        const Fitting(
+          id: 'dcu',
+          name: 'Rifter DCU',
+          shipTypeId: 587,
+          shipName: 'Rifter',
+          lowSlots: [
+            FittedModule(
+              typeId: 2048,
+              typeName: 'Damage Control II',
+              slotType: SlotType.low,
+              slotIndex: 0,
+            ),
+          ],
+        ),
+        rifter(),
+        {'2048': dcuII()},
+        const [],
+        effectModifiers: dcuModifiers(),
+      );
+
+      expect(stats.defenses.hullResists.em, closeTo(59.8, 0.01));
+      expect(stats.defenses.hullEhp, closeTo(870.65, 0.01));
+      expect(stats.defenses.armorEhp, closeTo(784.31, 0.01));
+      expect(stats.defenses.shieldEhp, closeTo(709.36, 0.01));
+    });
+  });
+
+  group('DogmaEngine E0c skill IDs', () {
+    late DogmaEngine engine;
+
+    setUp(() {
+      engine = DogmaEngine();
+    });
+
+    test(
+      'E0c.1 CPU Management 3426, Navigation 3449, Shield Management 3419 apply',
+      () async {
+        final cpuNav = await engine
+            .calculateStats(_emptyFitting(), _rifter(), {}, const [
+              CharacterSkill(skillId: 3426, level: 5),
+              CharacterSkill(skillId: 3449, level: 4),
+            ]);
+        expect(cpuNav.cpuMax, closeTo(125 * 1.25, 0.001));
+        expect(cpuNav.maxVelocity, closeTo(300 * 1.20, 0.001));
+
+        final shield = await engine.calculateStats(
+          _emptyFitting(),
+          _rifter(),
+          {},
+          const [CharacterSkill(skillId: 3419, level: 5)],
+        );
+        expect(shield.defenses.shieldHp, closeTo(400 * 1.25, 0.001));
+      },
+    );
+
+    test('E0c.2 leftover wrong ID 3418 does not raise CPU', () async {
+      final stats = await engine.calculateStats(
+        _emptyFitting(),
+        _rifter(),
+        {},
+        const [CharacterSkill(skillId: 3418, level: 5)],
+      );
+      expect(stats.cpuMax, 125);
+    });
+
+    test(
+      'E0c.3 Shield Operation 3416 shortens shield recharge to x0.75',
+      () async {
+        final ship = _rifter().copyWith(
+          baseAttributes: {
+            ..._rifter().baseAttributes,
+            DogmaAttributes.shieldRechargeTime: 625000.0,
+          },
+        );
+        final untrained = await engine.calculateStats(
+          _emptyFitting(),
+          ship,
+          {},
+          const [],
+        );
+        final trained = await engine.calculateStats(
+          _emptyFitting(),
+          ship,
+          {},
+          const [CharacterSkill(skillId: 3416, level: 5)],
+        );
+
+        expect(untrained.defenses.shieldRecharge, 625000);
+        expect(trained.defenses.shieldRecharge, closeTo(625000 * 0.75, 0.001));
       },
     );
   });
