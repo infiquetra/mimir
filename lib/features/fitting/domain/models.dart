@@ -214,6 +214,8 @@ abstract class DefenseProfile with _$DefenseProfile {
     @Default(0.0) double totalEhp,
     @Default(0.0) double effectiveShieldBoost,
     @Default(0.0) double effectiveArmorRepair,
+    @Default(0.0) double effectiveHullRepair,
+    @Default(0.0) double peakShieldRecharge,
   }) = _DefenseProfile;
 
   factory DefenseProfile.fromJson(Map<String, dynamic> json) =>

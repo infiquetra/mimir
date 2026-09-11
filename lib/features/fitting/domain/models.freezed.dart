@@ -2180,7 +2180,7 @@ $DefenseProfileCopyWith<$Res> get defenses {
 /// @nodoc
 mixin _$DefenseProfile {
 
- double get shieldHp; double get shieldRecharge; ResistProfile get shieldResists; double get shieldEhp; double get armorHp; ResistProfile get armorResists; double get armorEhp; double get hullHp; ResistProfile get hullResists; double get hullEhp; double get totalEhp; double get effectiveShieldBoost; double get effectiveArmorRepair;
+ double get shieldHp; double get shieldRecharge; ResistProfile get shieldResists; double get shieldEhp; double get armorHp; ResistProfile get armorResists; double get armorEhp; double get hullHp; ResistProfile get hullResists; double get hullEhp; double get totalEhp; double get effectiveShieldBoost; double get effectiveArmorRepair; double get effectiveHullRepair; double get peakShieldRecharge;
 /// Create a copy of DefenseProfile
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2193,16 +2193,16 @@ $DefenseProfileCopyWith<DefenseProfile> get copyWith => _$DefenseProfileCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is DefenseProfile&&(identical(other.shieldHp, shieldHp) || other.shieldHp == shieldHp)&&(identical(other.shieldRecharge, shieldRecharge) || other.shieldRecharge == shieldRecharge)&&(identical(other.shieldResists, shieldResists) || other.shieldResists == shieldResists)&&(identical(other.shieldEhp, shieldEhp) || other.shieldEhp == shieldEhp)&&(identical(other.armorHp, armorHp) || other.armorHp == armorHp)&&(identical(other.armorResists, armorResists) || other.armorResists == armorResists)&&(identical(other.armorEhp, armorEhp) || other.armorEhp == armorEhp)&&(identical(other.hullHp, hullHp) || other.hullHp == hullHp)&&(identical(other.hullResists, hullResists) || other.hullResists == hullResists)&&(identical(other.hullEhp, hullEhp) || other.hullEhp == hullEhp)&&(identical(other.totalEhp, totalEhp) || other.totalEhp == totalEhp)&&(identical(other.effectiveShieldBoost, effectiveShieldBoost) || other.effectiveShieldBoost == effectiveShieldBoost)&&(identical(other.effectiveArmorRepair, effectiveArmorRepair) || other.effectiveArmorRepair == effectiveArmorRepair));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DefenseProfile&&(identical(other.shieldHp, shieldHp) || other.shieldHp == shieldHp)&&(identical(other.shieldRecharge, shieldRecharge) || other.shieldRecharge == shieldRecharge)&&(identical(other.shieldResists, shieldResists) || other.shieldResists == shieldResists)&&(identical(other.shieldEhp, shieldEhp) || other.shieldEhp == shieldEhp)&&(identical(other.armorHp, armorHp) || other.armorHp == armorHp)&&(identical(other.armorResists, armorResists) || other.armorResists == armorResists)&&(identical(other.armorEhp, armorEhp) || other.armorEhp == armorEhp)&&(identical(other.hullHp, hullHp) || other.hullHp == hullHp)&&(identical(other.hullResists, hullResists) || other.hullResists == hullResists)&&(identical(other.hullEhp, hullEhp) || other.hullEhp == hullEhp)&&(identical(other.totalEhp, totalEhp) || other.totalEhp == totalEhp)&&(identical(other.effectiveShieldBoost, effectiveShieldBoost) || other.effectiveShieldBoost == effectiveShieldBoost)&&(identical(other.effectiveArmorRepair, effectiveArmorRepair) || other.effectiveArmorRepair == effectiveArmorRepair)&&(identical(other.effectiveHullRepair, effectiveHullRepair) || other.effectiveHullRepair == effectiveHullRepair)&&(identical(other.peakShieldRecharge, peakShieldRecharge) || other.peakShieldRecharge == peakShieldRecharge));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,shieldHp,shieldRecharge,shieldResists,shieldEhp,armorHp,armorResists,armorEhp,hullHp,hullResists,hullEhp,totalEhp,effectiveShieldBoost,effectiveArmorRepair);
+int get hashCode => Object.hash(runtimeType,shieldHp,shieldRecharge,shieldResists,shieldEhp,armorHp,armorResists,armorEhp,hullHp,hullResists,hullEhp,totalEhp,effectiveShieldBoost,effectiveArmorRepair,effectiveHullRepair,peakShieldRecharge);
 
 @override
 String toString() {
-  return 'DefenseProfile(shieldHp: $shieldHp, shieldRecharge: $shieldRecharge, shieldResists: $shieldResists, shieldEhp: $shieldEhp, armorHp: $armorHp, armorResists: $armorResists, armorEhp: $armorEhp, hullHp: $hullHp, hullResists: $hullResists, hullEhp: $hullEhp, totalEhp: $totalEhp, effectiveShieldBoost: $effectiveShieldBoost, effectiveArmorRepair: $effectiveArmorRepair)';
+  return 'DefenseProfile(shieldHp: $shieldHp, shieldRecharge: $shieldRecharge, shieldResists: $shieldResists, shieldEhp: $shieldEhp, armorHp: $armorHp, armorResists: $armorResists, armorEhp: $armorEhp, hullHp: $hullHp, hullResists: $hullResists, hullEhp: $hullEhp, totalEhp: $totalEhp, effectiveShieldBoost: $effectiveShieldBoost, effectiveArmorRepair: $effectiveArmorRepair, effectiveHullRepair: $effectiveHullRepair, peakShieldRecharge: $peakShieldRecharge)';
 }
 
 
@@ -2213,7 +2213,7 @@ abstract mixin class $DefenseProfileCopyWith<$Res>  {
   factory $DefenseProfileCopyWith(DefenseProfile value, $Res Function(DefenseProfile) _then) = _$DefenseProfileCopyWithImpl;
 @useResult
 $Res call({
- double shieldHp, double shieldRecharge, ResistProfile shieldResists, double shieldEhp, double armorHp, ResistProfile armorResists, double armorEhp, double hullHp, ResistProfile hullResists, double hullEhp, double totalEhp, double effectiveShieldBoost, double effectiveArmorRepair
+ double shieldHp, double shieldRecharge, ResistProfile shieldResists, double shieldEhp, double armorHp, ResistProfile armorResists, double armorEhp, double hullHp, ResistProfile hullResists, double hullEhp, double totalEhp, double effectiveShieldBoost, double effectiveArmorRepair, double effectiveHullRepair, double peakShieldRecharge
 });
 
 
@@ -2230,7 +2230,7 @@ class _$DefenseProfileCopyWithImpl<$Res>
 
 /// Create a copy of DefenseProfile
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? shieldHp = null,Object? shieldRecharge = null,Object? shieldResists = null,Object? shieldEhp = null,Object? armorHp = null,Object? armorResists = null,Object? armorEhp = null,Object? hullHp = null,Object? hullResists = null,Object? hullEhp = null,Object? totalEhp = null,Object? effectiveShieldBoost = null,Object? effectiveArmorRepair = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? shieldHp = null,Object? shieldRecharge = null,Object? shieldResists = null,Object? shieldEhp = null,Object? armorHp = null,Object? armorResists = null,Object? armorEhp = null,Object? hullHp = null,Object? hullResists = null,Object? hullEhp = null,Object? totalEhp = null,Object? effectiveShieldBoost = null,Object? effectiveArmorRepair = null,Object? effectiveHullRepair = null,Object? peakShieldRecharge = null,}) {
   return _then(_self.copyWith(
 shieldHp: null == shieldHp ? _self.shieldHp : shieldHp // ignore: cast_nullable_to_non_nullable
 as double,shieldRecharge: null == shieldRecharge ? _self.shieldRecharge : shieldRecharge // ignore: cast_nullable_to_non_nullable
@@ -2245,6 +2245,8 @@ as ResistProfile,hullEhp: null == hullEhp ? _self.hullEhp : hullEhp // ignore: c
 as double,totalEhp: null == totalEhp ? _self.totalEhp : totalEhp // ignore: cast_nullable_to_non_nullable
 as double,effectiveShieldBoost: null == effectiveShieldBoost ? _self.effectiveShieldBoost : effectiveShieldBoost // ignore: cast_nullable_to_non_nullable
 as double,effectiveArmorRepair: null == effectiveArmorRepair ? _self.effectiveArmorRepair : effectiveArmorRepair // ignore: cast_nullable_to_non_nullable
+as double,effectiveHullRepair: null == effectiveHullRepair ? _self.effectiveHullRepair : effectiveHullRepair // ignore: cast_nullable_to_non_nullable
+as double,peakShieldRecharge: null == peakShieldRecharge ? _self.peakShieldRecharge : peakShieldRecharge // ignore: cast_nullable_to_non_nullable
 as double,
   ));
 }
@@ -2357,10 +2359,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( double shieldHp,  double shieldRecharge,  ResistProfile shieldResists,  double shieldEhp,  double armorHp,  ResistProfile armorResists,  double armorEhp,  double hullHp,  ResistProfile hullResists,  double hullEhp,  double totalEhp,  double effectiveShieldBoost,  double effectiveArmorRepair)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( double shieldHp,  double shieldRecharge,  ResistProfile shieldResists,  double shieldEhp,  double armorHp,  ResistProfile armorResists,  double armorEhp,  double hullHp,  ResistProfile hullResists,  double hullEhp,  double totalEhp,  double effectiveShieldBoost,  double effectiveArmorRepair,  double effectiveHullRepair,  double peakShieldRecharge)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DefenseProfile() when $default != null:
-return $default(_that.shieldHp,_that.shieldRecharge,_that.shieldResists,_that.shieldEhp,_that.armorHp,_that.armorResists,_that.armorEhp,_that.hullHp,_that.hullResists,_that.hullEhp,_that.totalEhp,_that.effectiveShieldBoost,_that.effectiveArmorRepair);case _:
+return $default(_that.shieldHp,_that.shieldRecharge,_that.shieldResists,_that.shieldEhp,_that.armorHp,_that.armorResists,_that.armorEhp,_that.hullHp,_that.hullResists,_that.hullEhp,_that.totalEhp,_that.effectiveShieldBoost,_that.effectiveArmorRepair,_that.effectiveHullRepair,_that.peakShieldRecharge);case _:
   return orElse();
 
 }
@@ -2378,10 +2380,10 @@ return $default(_that.shieldHp,_that.shieldRecharge,_that.shieldResists,_that.sh
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( double shieldHp,  double shieldRecharge,  ResistProfile shieldResists,  double shieldEhp,  double armorHp,  ResistProfile armorResists,  double armorEhp,  double hullHp,  ResistProfile hullResists,  double hullEhp,  double totalEhp,  double effectiveShieldBoost,  double effectiveArmorRepair)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( double shieldHp,  double shieldRecharge,  ResistProfile shieldResists,  double shieldEhp,  double armorHp,  ResistProfile armorResists,  double armorEhp,  double hullHp,  ResistProfile hullResists,  double hullEhp,  double totalEhp,  double effectiveShieldBoost,  double effectiveArmorRepair,  double effectiveHullRepair,  double peakShieldRecharge)  $default,) {final _that = this;
 switch (_that) {
 case _DefenseProfile():
-return $default(_that.shieldHp,_that.shieldRecharge,_that.shieldResists,_that.shieldEhp,_that.armorHp,_that.armorResists,_that.armorEhp,_that.hullHp,_that.hullResists,_that.hullEhp,_that.totalEhp,_that.effectiveShieldBoost,_that.effectiveArmorRepair);case _:
+return $default(_that.shieldHp,_that.shieldRecharge,_that.shieldResists,_that.shieldEhp,_that.armorHp,_that.armorResists,_that.armorEhp,_that.hullHp,_that.hullResists,_that.hullEhp,_that.totalEhp,_that.effectiveShieldBoost,_that.effectiveArmorRepair,_that.effectiveHullRepair,_that.peakShieldRecharge);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2398,10 +2400,10 @@ return $default(_that.shieldHp,_that.shieldRecharge,_that.shieldResists,_that.sh
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( double shieldHp,  double shieldRecharge,  ResistProfile shieldResists,  double shieldEhp,  double armorHp,  ResistProfile armorResists,  double armorEhp,  double hullHp,  ResistProfile hullResists,  double hullEhp,  double totalEhp,  double effectiveShieldBoost,  double effectiveArmorRepair)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( double shieldHp,  double shieldRecharge,  ResistProfile shieldResists,  double shieldEhp,  double armorHp,  ResistProfile armorResists,  double armorEhp,  double hullHp,  ResistProfile hullResists,  double hullEhp,  double totalEhp,  double effectiveShieldBoost,  double effectiveArmorRepair,  double effectiveHullRepair,  double peakShieldRecharge)?  $default,) {final _that = this;
 switch (_that) {
 case _DefenseProfile() when $default != null:
-return $default(_that.shieldHp,_that.shieldRecharge,_that.shieldResists,_that.shieldEhp,_that.armorHp,_that.armorResists,_that.armorEhp,_that.hullHp,_that.hullResists,_that.hullEhp,_that.totalEhp,_that.effectiveShieldBoost,_that.effectiveArmorRepair);case _:
+return $default(_that.shieldHp,_that.shieldRecharge,_that.shieldResists,_that.shieldEhp,_that.armorHp,_that.armorResists,_that.armorEhp,_that.hullHp,_that.hullResists,_that.hullEhp,_that.totalEhp,_that.effectiveShieldBoost,_that.effectiveArmorRepair,_that.effectiveHullRepair,_that.peakShieldRecharge);case _:
   return null;
 
 }
@@ -2413,7 +2415,7 @@ return $default(_that.shieldHp,_that.shieldRecharge,_that.shieldResists,_that.sh
 @JsonSerializable()
 
 class _DefenseProfile implements DefenseProfile {
-  const _DefenseProfile({this.shieldHp = 0.0, this.shieldRecharge = 0.0, this.shieldResists = const ResistProfile(), this.shieldEhp = 0.0, this.armorHp = 0.0, this.armorResists = const ResistProfile(), this.armorEhp = 0.0, this.hullHp = 0.0, this.hullResists = const ResistProfile(), this.hullEhp = 0.0, this.totalEhp = 0.0, this.effectiveShieldBoost = 0.0, this.effectiveArmorRepair = 0.0});
+  const _DefenseProfile({this.shieldHp = 0.0, this.shieldRecharge = 0.0, this.shieldResists = const ResistProfile(), this.shieldEhp = 0.0, this.armorHp = 0.0, this.armorResists = const ResistProfile(), this.armorEhp = 0.0, this.hullHp = 0.0, this.hullResists = const ResistProfile(), this.hullEhp = 0.0, this.totalEhp = 0.0, this.effectiveShieldBoost = 0.0, this.effectiveArmorRepair = 0.0, this.effectiveHullRepair = 0.0, this.peakShieldRecharge = 0.0});
   factory _DefenseProfile.fromJson(Map<String, dynamic> json) => _$DefenseProfileFromJson(json);
 
 @override@JsonKey() final  double shieldHp;
@@ -2429,6 +2431,8 @@ class _DefenseProfile implements DefenseProfile {
 @override@JsonKey() final  double totalEhp;
 @override@JsonKey() final  double effectiveShieldBoost;
 @override@JsonKey() final  double effectiveArmorRepair;
+@override@JsonKey() final  double effectiveHullRepair;
+@override@JsonKey() final  double peakShieldRecharge;
 
 /// Create a copy of DefenseProfile
 /// with the given fields replaced by the non-null parameter values.
@@ -2443,16 +2447,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DefenseProfile&&(identical(other.shieldHp, shieldHp) || other.shieldHp == shieldHp)&&(identical(other.shieldRecharge, shieldRecharge) || other.shieldRecharge == shieldRecharge)&&(identical(other.shieldResists, shieldResists) || other.shieldResists == shieldResists)&&(identical(other.shieldEhp, shieldEhp) || other.shieldEhp == shieldEhp)&&(identical(other.armorHp, armorHp) || other.armorHp == armorHp)&&(identical(other.armorResists, armorResists) || other.armorResists == armorResists)&&(identical(other.armorEhp, armorEhp) || other.armorEhp == armorEhp)&&(identical(other.hullHp, hullHp) || other.hullHp == hullHp)&&(identical(other.hullResists, hullResists) || other.hullResists == hullResists)&&(identical(other.hullEhp, hullEhp) || other.hullEhp == hullEhp)&&(identical(other.totalEhp, totalEhp) || other.totalEhp == totalEhp)&&(identical(other.effectiveShieldBoost, effectiveShieldBoost) || other.effectiveShieldBoost == effectiveShieldBoost)&&(identical(other.effectiveArmorRepair, effectiveArmorRepair) || other.effectiveArmorRepair == effectiveArmorRepair));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DefenseProfile&&(identical(other.shieldHp, shieldHp) || other.shieldHp == shieldHp)&&(identical(other.shieldRecharge, shieldRecharge) || other.shieldRecharge == shieldRecharge)&&(identical(other.shieldResists, shieldResists) || other.shieldResists == shieldResists)&&(identical(other.shieldEhp, shieldEhp) || other.shieldEhp == shieldEhp)&&(identical(other.armorHp, armorHp) || other.armorHp == armorHp)&&(identical(other.armorResists, armorResists) || other.armorResists == armorResists)&&(identical(other.armorEhp, armorEhp) || other.armorEhp == armorEhp)&&(identical(other.hullHp, hullHp) || other.hullHp == hullHp)&&(identical(other.hullResists, hullResists) || other.hullResists == hullResists)&&(identical(other.hullEhp, hullEhp) || other.hullEhp == hullEhp)&&(identical(other.totalEhp, totalEhp) || other.totalEhp == totalEhp)&&(identical(other.effectiveShieldBoost, effectiveShieldBoost) || other.effectiveShieldBoost == effectiveShieldBoost)&&(identical(other.effectiveArmorRepair, effectiveArmorRepair) || other.effectiveArmorRepair == effectiveArmorRepair)&&(identical(other.effectiveHullRepair, effectiveHullRepair) || other.effectiveHullRepair == effectiveHullRepair)&&(identical(other.peakShieldRecharge, peakShieldRecharge) || other.peakShieldRecharge == peakShieldRecharge));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,shieldHp,shieldRecharge,shieldResists,shieldEhp,armorHp,armorResists,armorEhp,hullHp,hullResists,hullEhp,totalEhp,effectiveShieldBoost,effectiveArmorRepair);
+int get hashCode => Object.hash(runtimeType,shieldHp,shieldRecharge,shieldResists,shieldEhp,armorHp,armorResists,armorEhp,hullHp,hullResists,hullEhp,totalEhp,effectiveShieldBoost,effectiveArmorRepair,effectiveHullRepair,peakShieldRecharge);
 
 @override
 String toString() {
-  return 'DefenseProfile(shieldHp: $shieldHp, shieldRecharge: $shieldRecharge, shieldResists: $shieldResists, shieldEhp: $shieldEhp, armorHp: $armorHp, armorResists: $armorResists, armorEhp: $armorEhp, hullHp: $hullHp, hullResists: $hullResists, hullEhp: $hullEhp, totalEhp: $totalEhp, effectiveShieldBoost: $effectiveShieldBoost, effectiveArmorRepair: $effectiveArmorRepair)';
+  return 'DefenseProfile(shieldHp: $shieldHp, shieldRecharge: $shieldRecharge, shieldResists: $shieldResists, shieldEhp: $shieldEhp, armorHp: $armorHp, armorResists: $armorResists, armorEhp: $armorEhp, hullHp: $hullHp, hullResists: $hullResists, hullEhp: $hullEhp, totalEhp: $totalEhp, effectiveShieldBoost: $effectiveShieldBoost, effectiveArmorRepair: $effectiveArmorRepair, effectiveHullRepair: $effectiveHullRepair, peakShieldRecharge: $peakShieldRecharge)';
 }
 
 
@@ -2463,7 +2467,7 @@ abstract mixin class _$DefenseProfileCopyWith<$Res> implements $DefenseProfileCo
   factory _$DefenseProfileCopyWith(_DefenseProfile value, $Res Function(_DefenseProfile) _then) = __$DefenseProfileCopyWithImpl;
 @override @useResult
 $Res call({
- double shieldHp, double shieldRecharge, ResistProfile shieldResists, double shieldEhp, double armorHp, ResistProfile armorResists, double armorEhp, double hullHp, ResistProfile hullResists, double hullEhp, double totalEhp, double effectiveShieldBoost, double effectiveArmorRepair
+ double shieldHp, double shieldRecharge, ResistProfile shieldResists, double shieldEhp, double armorHp, ResistProfile armorResists, double armorEhp, double hullHp, ResistProfile hullResists, double hullEhp, double totalEhp, double effectiveShieldBoost, double effectiveArmorRepair, double effectiveHullRepair, double peakShieldRecharge
 });
 
 
@@ -2480,7 +2484,7 @@ class __$DefenseProfileCopyWithImpl<$Res>
 
 /// Create a copy of DefenseProfile
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? shieldHp = null,Object? shieldRecharge = null,Object? shieldResists = null,Object? shieldEhp = null,Object? armorHp = null,Object? armorResists = null,Object? armorEhp = null,Object? hullHp = null,Object? hullResists = null,Object? hullEhp = null,Object? totalEhp = null,Object? effectiveShieldBoost = null,Object? effectiveArmorRepair = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? shieldHp = null,Object? shieldRecharge = null,Object? shieldResists = null,Object? shieldEhp = null,Object? armorHp = null,Object? armorResists = null,Object? armorEhp = null,Object? hullHp = null,Object? hullResists = null,Object? hullEhp = null,Object? totalEhp = null,Object? effectiveShieldBoost = null,Object? effectiveArmorRepair = null,Object? effectiveHullRepair = null,Object? peakShieldRecharge = null,}) {
   return _then(_DefenseProfile(
 shieldHp: null == shieldHp ? _self.shieldHp : shieldHp // ignore: cast_nullable_to_non_nullable
 as double,shieldRecharge: null == shieldRecharge ? _self.shieldRecharge : shieldRecharge // ignore: cast_nullable_to_non_nullable
@@ -2495,6 +2499,8 @@ as ResistProfile,hullEhp: null == hullEhp ? _self.hullEhp : hullEhp // ignore: c
 as double,totalEhp: null == totalEhp ? _self.totalEhp : totalEhp // ignore: cast_nullable_to_non_nullable
 as double,effectiveShieldBoost: null == effectiveShieldBoost ? _self.effectiveShieldBoost : effectiveShieldBoost // ignore: cast_nullable_to_non_nullable
 as double,effectiveArmorRepair: null == effectiveArmorRepair ? _self.effectiveArmorRepair : effectiveArmorRepair // ignore: cast_nullable_to_non_nullable
+as double,effectiveHullRepair: null == effectiveHullRepair ? _self.effectiveHullRepair : effectiveHullRepair // ignore: cast_nullable_to_non_nullable
+as double,peakShieldRecharge: null == peakShieldRecharge ? _self.peakShieldRecharge : peakShieldRecharge // ignore: cast_nullable_to_non_nullable
 as double,
   ));
 }

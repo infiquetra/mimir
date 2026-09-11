@@ -342,6 +342,8 @@ _DefenseProfile _$DefenseProfileFromJson(
       (json['effectiveShieldBoost'] as num?)?.toDouble() ?? 0.0,
   effectiveArmorRepair:
       (json['effectiveArmorRepair'] as num?)?.toDouble() ?? 0.0,
+  effectiveHullRepair: (json['effectiveHullRepair'] as num?)?.toDouble() ?? 0.0,
+  peakShieldRecharge: (json['peakShieldRecharge'] as num?)?.toDouble() ?? 0.0,
 );
 
 Map<String, dynamic> _$DefenseProfileToJson(_DefenseProfile instance) =>
@@ -359,6 +361,8 @@ Map<String, dynamic> _$DefenseProfileToJson(_DefenseProfile instance) =>
       'totalEhp': instance.totalEhp,
       'effectiveShieldBoost': instance.effectiveShieldBoost,
       'effectiveArmorRepair': instance.effectiveArmorRepair,
+      'effectiveHullRepair': instance.effectiveHullRepair,
+      'peakShieldRecharge': instance.peakShieldRecharge,
     };
 
 _ResistProfile _$ResistProfileFromJson(Map<String, dynamic> json) =>

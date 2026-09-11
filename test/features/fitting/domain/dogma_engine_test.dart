@@ -1114,6 +1114,415 @@ void main() {
     );
   });
 
+  group('DogmaEngine E2 active repair', () {
+    late DogmaEngine engine;
+
+    setUp(() {
+      engine = DogmaEngine();
+    });
+
+    const armorRepairAmount = 84;
+    const shieldBoostAmount = 68;
+    const hullRepairAmount = 83;
+    const chargedArmorDamageMultiplier = 1886;
+    const nanitePaste = 28668;
+    const armorRepairEffect = 27;
+    const shieldBoostEffect = 4;
+    const fueledArmorRepairEffect = 5275;
+    const hullRepairEffect = 26;
+    const hullBonusEffect = 5342;
+    const repairSystemsEffect = 272;
+    const repairSystemsSkill = 3393;
+    const gallenteBattlecruiser = 33097;
+    const hullBonusAttr = 746;
+    const durationBonusAttr = 312;
+
+    ShipType rifter() => ShipType(
+      typeId: 587,
+      name: 'Rifter',
+      description: 'A Minmatar frigate',
+      groupId: 25,
+      groupName: 'Frigate',
+      highSlots: 4,
+      medSlots: 3,
+      lowSlots: 3,
+      rigSlots: 3,
+      baseAttributes: {
+        DogmaAttributes.cpuOutput: 125.0,
+        DogmaAttributes.powerOutput: 37.0,
+        DogmaAttributes.shieldCapacity: 450.0,
+        DogmaAttributes.armorHp: 450.0,
+        DogmaAttributes.hullHp: 350.0,
+        DogmaAttributes.shieldRechargeTime: 625000.0,
+        DogmaAttributes.capacitorCapacity: 250.0,
+        DogmaAttributes.capacitorRechargeTime: 125000.0,
+        DogmaAttributes.shieldEmResist: 1.0,
+        DogmaAttributes.shieldThermalResist: 0.8,
+        DogmaAttributes.shieldKineticResist: 0.6,
+        DogmaAttributes.shieldExplosiveResist: 0.5,
+        DogmaAttributes.armorEmResist: 0.4,
+        DogmaAttributes.armorThermalResist: 0.65,
+        DogmaAttributes.armorKineticResist: 0.75,
+        DogmaAttributes.armorExplosiveResist: 0.9,
+        DogmaAttributes.hullEmResist: 0.67,
+        DogmaAttributes.hullThermalResist: 0.67,
+        DogmaAttributes.hullKineticResist: 0.67,
+        DogmaAttributes.hullExplosiveResist: 0.67,
+      },
+    );
+
+    ModuleType larII() => const ModuleType(
+      typeId: 3540,
+      name: 'Large Armor Repairer II',
+      groupId: 62,
+      groupName: 'Armor Repairer',
+      slotType: SlotType.low,
+      baseAttributes: {
+        armorRepairAmount: 920.0,
+        DogmaAttributes.duration: 15000.0,
+        DogmaAttributes.capacitorNeed: 400.0,
+        182: 3393,
+      },
+      effects: [DogmaEffect(effectId: armorRepairEffect, name: 'armorRepair')],
+    );
+
+    ModuleType msbII() => const ModuleType(
+      typeId: 10850,
+      name: 'Medium Shield Booster II',
+      groupId: 40,
+      groupName: 'Shield Booster',
+      slotType: SlotType.med,
+      baseAttributes: {
+        shieldBoostAmount: 104.0,
+        DogmaAttributes.duration: 3000.0,
+        DogmaAttributes.capacitorNeed: 60.0,
+      },
+      effects: [
+        DogmaEffect(effectId: shieldBoostEffect, name: 'shieldBoosting'),
+      ],
+    );
+
+    ModuleType saar() => const ModuleType(
+      typeId: 33076,
+      name: 'Small Ancillary Armor Repairer',
+      groupId: 1199,
+      groupName: 'Ancillary Armor Repairer',
+      slotType: SlotType.low,
+      baseAttributes: {
+        armorRepairAmount: 52.0,
+        chargedArmorDamageMultiplier: 3.0,
+        DogmaAttributes.duration: 6000.0,
+        DogmaAttributes.reactivationDelay: 60000.0,
+        DogmaAttributes.capacitorNeed: 40.0,
+        182: 3393,
+      },
+      effects: [
+        DogmaEffect(
+          effectId: fueledArmorRepairEffect,
+          name: 'fueledArmorRepair',
+        ),
+      ],
+    );
+
+    ModuleType hullRepII() => const ModuleType(
+      typeId: 2355,
+      name: 'Small Hull Repairer II',
+      groupId: 63,
+      groupName: 'Hull Repairer',
+      slotType: SlotType.med,
+      baseAttributes: {
+        hullRepairAmount: 30.0,
+        DogmaAttributes.duration: 24000.0,
+        DogmaAttributes.capacitorNeed: 30.0,
+      },
+      effects: [
+        DogmaEffect(effectId: hullRepairEffect, name: 'structureRepair'),
+      ],
+    );
+
+    Fitting lowFit(
+      int typeId,
+      String name, {
+      ModuleState state = ModuleState.active,
+      int? chargeTypeId,
+    }) => Fitting(
+      id: 'e2',
+      name: name,
+      shipTypeId: 587,
+      shipName: 'Rifter',
+      lowSlots: [
+        FittedModule(
+          typeId: typeId,
+          typeName: name,
+          slotType: SlotType.low,
+          slotIndex: 0,
+          state: state,
+          chargeTypeId: chargeTypeId,
+        ),
+      ],
+    );
+
+    test('E2.1 Rifter + LAR II repairs 61.333 HP/s', () async {
+      final stats = await engine.calculateStats(
+        lowFit(3540, 'Large Armor Repairer II'),
+        rifter(),
+        {'3540': larII()},
+        const [],
+      );
+      expect(stats.defenses.effectiveArmorRepair, closeTo(61.333, 0.001));
+    });
+
+    test('E2.2 Rifter + MSB II boosts 34.667 HP/s', () async {
+      final stats = await engine.calculateStats(
+        Fitting(
+          id: 'msb',
+          name: 'MSB',
+          shipTypeId: 587,
+          shipName: 'Rifter',
+          medSlots: const [
+            FittedModule(
+              typeId: 10850,
+              typeName: 'Medium Shield Booster II',
+              slotType: SlotType.med,
+              slotIndex: 0,
+            ),
+          ],
+        ),
+        rifter(),
+        {'10850': msbII()},
+        const [],
+      );
+      expect(stats.defenses.effectiveShieldBoost, closeTo(34.667, 0.001));
+    });
+
+    test(
+      'E2.3 SAAR is 8.667 unloaded and 26.0 with Nanite Repair Paste',
+      () async {
+        final dry = await engine.calculateStats(
+          lowFit(33076, 'Small Ancillary Armor Repairer'),
+          rifter(),
+          {'33076': saar()},
+          const [],
+        );
+        expect(dry.defenses.effectiveArmorRepair, closeTo(8.667, 0.001));
+
+        final loaded = await engine.calculateStats(
+          lowFit(
+            33076,
+            'Small Ancillary Armor Repairer',
+            chargeTypeId: nanitePaste,
+          ),
+          rifter(),
+          {'33076': saar()},
+          const [],
+        );
+        expect(loaded.defenses.effectiveArmorRepair, closeTo(26.0, 0.001));
+      },
+    );
+
+    test('E2.4 Rifter + Small Hull Repairer II is 1.25 HP/s', () async {
+      final stats = await engine.calculateStats(
+        Fitting(
+          id: 'hr',
+          name: 'Hull rep',
+          shipTypeId: 587,
+          shipName: 'Rifter',
+          medSlots: const [
+            FittedModule(
+              typeId: 2355,
+              typeName: 'Small Hull Repairer II',
+              slotType: SlotType.med,
+              slotIndex: 0,
+            ),
+          ],
+        ),
+        rifter(),
+        {'2355': hullRepII()},
+        const [],
+      );
+      expect(stats.defenses.effectiveHullRepair, closeTo(1.25, 0.001));
+    });
+
+    test('E2.5 offline LAR II contributes no repair', () async {
+      final stats = await engine.calculateStats(
+        lowFit(3540, 'Large Armor Repairer II', state: ModuleState.offline),
+        rifter(),
+        {'3540': larII()},
+        const [],
+      );
+      expect(stats.defenses.effectiveArmorRepair, 0);
+      expect(stats.defenses.effectiveShieldBoost, 0);
+      expect(stats.defenses.effectiveHullRepair, 0);
+    });
+
+    test(
+      'E2.6 Myrmidon + LAR II + Gallente Battlecruiser V is 84.333 HP/s',
+      () async {
+        final ship = ShipType(
+          typeId: 24700,
+          name: 'Myrmidon',
+          description: '',
+          groupId: 419,
+          groupName: 'Combat Battlecruiser',
+          effects: const [
+            DogmaEffect(
+              effectId: hullBonusEffect,
+              name: 'shipArmorRepairing1GBC2',
+            ),
+          ],
+          baseAttributes: {
+            ...rifter().baseAttributes,
+            182: gallenteBattlecruiser.toDouble(),
+            hullBonusAttr: 7.5,
+            DogmaAttributes.shieldCapacity: 3500.0,
+            DogmaAttributes.armorHp: 4500.0,
+          },
+        );
+        final stats = await engine.calculateStats(
+          Fitting(
+            id: 'myrm',
+            name: 'Myrmidon LAR',
+            shipTypeId: 24700,
+            shipName: 'Myrmidon',
+            lowSlots: lowFit(3540, 'Large Armor Repairer II').lowSlots,
+          ),
+          ship,
+          {'3540': larII()},
+          const [CharacterSkill(skillId: gallenteBattlecruiser, level: 5)],
+          effectModifiers: {
+            hullBonusEffect: const [
+              EffectModifier(
+                effectId: hullBonusEffect,
+                func: 'LocationRequiredSkillModifier',
+                operator: 6,
+                modifiedAttributeId: armorRepairAmount,
+                modifyingAttributeId: hullBonusAttr,
+                domain: 'shipID',
+                skillTypeId: repairSystemsSkill,
+              ),
+            ],
+          },
+        );
+        expect(stats.defenses.effectiveArmorRepair, closeTo(84.333, 0.001));
+      },
+    );
+
+    test('E2.7 E2.6 + Repair Systems V is 112.444 HP/s', () async {
+      final ship = ShipType(
+        typeId: 24700,
+        name: 'Myrmidon',
+        description: '',
+        groupId: 419,
+        groupName: 'Combat Battlecruiser',
+        effects: const [
+          DogmaEffect(
+            effectId: hullBonusEffect,
+            name: 'shipArmorRepairing1GBC2',
+          ),
+        ],
+        baseAttributes: {
+          ...rifter().baseAttributes,
+          182: gallenteBattlecruiser.toDouble(),
+          hullBonusAttr: 7.5,
+          DogmaAttributes.shieldCapacity: 3500.0,
+          DogmaAttributes.armorHp: 4500.0,
+        },
+      );
+      final repairSystems = ModuleType(
+        typeId: repairSystemsSkill,
+        name: 'Repair Systems',
+        groupId: 255,
+        groupName: 'Skill',
+        slotType: SlotType.high,
+        baseAttributes: {durationBonusAttr: -5.0},
+        effects: const [
+          DogmaEffect(effectId: repairSystemsEffect, name: 'repairSystems'),
+        ],
+      );
+      final stats = await engine.calculateStats(
+        Fitting(
+          id: 'myrm-rs',
+          name: 'Myrmidon LAR RS',
+          shipTypeId: 24700,
+          shipName: 'Myrmidon',
+          lowSlots: lowFit(3540, 'Large Armor Repairer II').lowSlots,
+        ),
+        ship,
+        {'3540': larII()},
+        const [
+          CharacterSkill(skillId: gallenteBattlecruiser, level: 5),
+          CharacterSkill(skillId: repairSystemsSkill, level: 5),
+        ],
+        skillTypes: {repairSystemsSkill: repairSystems},
+        effectModifiers: {
+          hullBonusEffect: const [
+            EffectModifier(
+              effectId: hullBonusEffect,
+              func: 'LocationRequiredSkillModifier',
+              operator: 6,
+              modifiedAttributeId: armorRepairAmount,
+              modifyingAttributeId: hullBonusAttr,
+              domain: 'shipID',
+              skillTypeId: repairSystemsSkill,
+            ),
+          ],
+          repairSystemsEffect: const [
+            EffectModifier(
+              effectId: repairSystemsEffect,
+              func: 'LocationRequiredSkillModifier',
+              operator: 6,
+              modifiedAttributeId: DogmaAttributes.duration,
+              modifyingAttributeId: durationBonusAttr,
+              domain: 'shipID',
+              skillTypeId: repairSystemsSkill,
+            ),
+          ],
+        },
+      );
+      expect(stats.defenses.effectiveArmorRepair, closeTo(112.444, 0.001));
+    });
+
+    test('E2.8 Rifter passive peak shield recharge is 1.8 HP/s', () async {
+      final stats = await engine.calculateStats(
+        _emptyFitting(),
+        rifter(),
+        {},
+        const [],
+      );
+      expect(stats.defenses.peakShieldRecharge, closeTo(1.8, 1e-6));
+    });
+
+    test(
+      'E2.9 hull without 479/482/55 has zero peak recharge and unmodelled cap',
+      () async {
+        final ship = ShipType(
+          typeId: 1,
+          name: 'Capless',
+          description: '',
+          groupId: 25,
+          groupName: 'Frigate',
+          baseAttributes: {
+            DogmaAttributes.cpuOutput: 125.0,
+            DogmaAttributes.powerOutput: 37.0,
+            DogmaAttributes.shieldCapacity: 450.0,
+            DogmaAttributes.armorHp: 450.0,
+            DogmaAttributes.hullHp: 350.0,
+          },
+        );
+        final stats = await engine.calculateStats(
+          _emptyFitting(),
+          ship,
+          {},
+          const [],
+        );
+        expect(stats.defenses.peakShieldRecharge, 0);
+        expect(stats.capacitorCapacity, 0);
+        expect(stats.capacitorRecharge, 0);
+        expect(stats.isCapStable, isFalse);
+      },
+    );
+  });
+
   group('DogmaEngine weapon bonuses', () {
     late DogmaEngine engine;
 
