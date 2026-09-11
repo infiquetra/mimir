@@ -1,3 +1,4 @@
+import '../../../core/logging/logger.dart';
 import '../../fitting/domain/damage_pattern.dart';
 import 'combat_damage_profile.dart';
 
@@ -15,6 +16,10 @@ extension CombatDamageProfilePattern on CombatDamageProfile {
       return sum;
     }
 
+    Log.d(
+      'COMBAT',
+      'CombatDamageProfile.toDamagePattern entries=${entries.length} label=$label',
+    );
     return DamagePattern.fromAmounts(
       em: amountOf('EM'),
       thermal: amountOf('Thermal'),

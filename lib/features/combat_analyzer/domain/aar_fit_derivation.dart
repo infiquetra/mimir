@@ -61,7 +61,30 @@ class AarFitCoverage {
 
   bool get hasUnresolved => unresolvedTypeIds.isNotEmpty;
 
-  String describe() => '';
+  String describe() {
+    final parts = [
+      'High $highFitted/$highSlots',
+      'Mid $medFitted/$medSlots',
+      'Low $lowFitted/$lowSlots',
+      'Rig $rigFitted/$rigSlots',
+    ];
+    if (subsystemSlots > 0 || subsystemFitted > 0) {
+      parts.add('Sub $subsystemFitted/$subsystemSlots');
+    }
+    var text = parts.join(', ');
+    if (hasUnresolved) {
+      final names = [
+        for (var i = 0; i < unresolvedTypeIds.length; i++)
+          i < unresolvedNames.length && unresolvedNames[i].isNotEmpty
+              ? unresolvedNames[i]
+              : 'Type #${unresolvedTypeIds[i]}',
+      ];
+      text +=
+          '; ${unresolvedTypeIds.length} module${unresolvedTypeIds.length == 1 ? '' : 's'} '
+          'not in the SDE (${names.join(', ')})';
+    }
+    return text;
+  }
 
   static AarFitCoverage of(
     Fitting fitting,
@@ -69,15 +92,15 @@ class AarFitCoverage {
     Map<int, String> unresolved,
   ) {
     return AarFitCoverage(
-      highFitted: 0,
-      highSlots: 0,
-      medFitted: 0,
-      medSlots: 0,
-      lowFitted: 0,
-      lowSlots: 0,
-      rigFitted: 0,
-      rigSlots: 0,
-      subsystemFitted: 0,
+      highFitted: fitting.highSlots.length,
+      highSlots: ship.highSlots,
+      medFitted: fitting.medSlots.length,
+      medSlots: ship.medSlots,
+      lowFitted: fitting.lowSlots.length,
+      lowSlots: ship.lowSlots,
+      rigFitted: fitting.rigSlots.length,
+      rigSlots: ship.rigSlots,
+      subsystemFitted: fitting.subsystems.length,
       subsystemSlots: 0,
       unresolvedTypeIds: unresolved.keys.toList(),
       unresolvedNames: unresolved.values.toList(),

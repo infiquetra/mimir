@@ -1,6 +1,8 @@
+import '../../../core/logging/logger.dart';
 import '../../fitting/domain/damage_pattern.dart';
 import '../../fitting/domain/models.dart';
 import 'combat_damage_profile.dart';
+import 'damage_pattern_x.dart';
 import 'tank_classifier.dart';
 
 enum DamageMatchupAssessment { resistHole, neutral, strongResist, unknown }
@@ -104,29 +106,97 @@ class CombatDamageMatchupAnalyzer {
     TankAssessment? tank,
     required String targetLabel,
   }) {
-    final resolved = defense ?? const DefenseProfile();
-    // U2 stub: [tank] is accepted but not yet used to pick the layer.
-    final layer = _primaryLayer(resolved);
-    final resists = switch (layer) {
-      'shield' => resolved.shieldResists,
-      'armor' => resolved.armorResists,
-      'hull' => resolved.hullResists,
-      _ => const ResistProfile(),
-    };
-    final entries = profile.entries
-        .map((entry) {
-          final resist = _resistForType(resists, entry.type);
-          return CombatDamageMatchupEntry(
+    Log.d(
+      'COMBAT',
+      'CombatDamageMatchupAnalyzer.analyze target=$targetLabel '
+          'entries=${profile.entries.length} defense=${defense != null} '
+          'tank=${tank?.label}',
+    );
+
+    if (defense == null) {
+      final entries = [
+        for (final entry in profile.entries)
+          CombatDamageMatchupEntry(
             type: entry.type,
             amount: entry.amount,
             percent: entry.percent,
-            resistPercent: resist,
-            assessment: _assessmentForResist(resist),
-            evidence:
-                '${entry.source} into $targetLabel $layer resist profile.',
-          );
-        })
-        .toList(growable: false);
+            assessment: DamageMatchupAssessment.unknown,
+            evidence: '${entry.source} into $targetLabel; defense unknown.',
+          ),
+      ];
+      return CombatDamageMatchup(
+        targetLabel: targetLabel,
+        layer: 'unknown',
+        summary: entries.isEmpty
+            ? 'No damage type matchup could be derived for $targetLabel.'
+            : 'Compared ${entries.length} damage types against $targetLabel with no defense profile.',
+        entries: entries,
+      );
+    }
+
+    final layer = tank != null ? tank.layer.name : _primaryLayer(defense);
+    final layerUnknown = layer == 'unknown' || tank?.layer == TankLayer.unknown;
+    final resists = switch (layer) {
+      'shield' => defense.shieldResists,
+      'armor' => defense.armorResists,
+      'hull' => defense.hullResists,
+      _ => const ResistProfile(),
+    };
+    final mean =
+        (resists.em + resists.thermal + resists.kinetic + resists.explosive) /
+        4;
+
+    final weights = <int, double>{};
+    var weightSum = 0.0;
+    for (var i = 0; i < profile.entries.length; i++) {
+      final entry = profile.entries[i];
+      final resist = _resistForType(resists, entry.type);
+      final weight = entry.percent * (1 - resist / 100);
+      weights[i] = weight;
+      weightSum += weight;
+    }
+
+    final entries = <CombatDamageMatchupEntry>[];
+    for (var i = 0; i < profile.entries.length; i++) {
+      final entry = profile.entries[i];
+      final resist = _resistForType(resists, entry.type);
+      final applied = layerUnknown
+          ? null
+          : (weightSum <= 0
+                ? (profile.entries.isEmpty ? 0.0 : 1.0 / profile.entries.length)
+                : weights[i]! / weightSum);
+      entries.add(
+        CombatDamageMatchupEntry(
+          type: entry.type,
+          amount: entry.amount,
+          percent: entry.percent,
+          resistPercent: layerUnknown ? null : resist,
+          appliedPercent: applied,
+          assessment: layerUnknown
+              ? DamageMatchupAssessment.unknown
+              : _assessmentForResist(resist, mean),
+          evidence: '${entry.source} into $targetLabel $layer resist profile.',
+        ),
+      );
+    }
+
+    String? primaryHole;
+    var bestApplied = -1.0;
+    for (final entry in entries) {
+      if (entry.assessment != DamageMatchupAssessment.resistHole) continue;
+      final applied = entry.appliedPercent ?? 0;
+      if (applied > bestApplied) {
+        bestApplied = applied;
+        primaryHole = entry.type;
+      }
+    }
+
+    final pattern = profile.toDamagePattern();
+    final ehpAgainstPattern = pattern == null
+        ? null
+        : defense.ehpAgainst(pattern);
+    final ehpOmni = defense.ehpAgainst(DamagePattern.omni);
+
     return CombatDamageMatchup(
       targetLabel: targetLabel,
       layer: layer,
@@ -134,6 +204,10 @@ class CombatDamageMatchupAnalyzer {
           ? 'No damage type matchup could be derived for $targetLabel.'
           : 'Compared ${entries.length} damage types against $targetLabel $layer resists.',
       entries: entries,
+      pattern: pattern,
+      ehpAgainstPattern: ehpAgainstPattern,
+      ehpOmni: ehpOmni,
+      primaryHole: primaryHole,
     );
   }
 
@@ -158,9 +232,16 @@ class CombatDamageMatchupAnalyzer {
     };
   }
 
-  static DamageMatchupAssessment _assessmentForResist(double resist) {
-    if (resist >= 60) return DamageMatchupAssessment.strongResist;
-    if (resist <= 20) return DamageMatchupAssessment.resistHole;
+  static DamageMatchupAssessment _assessmentForResist(
+    double resist,
+    double mean,
+  ) {
+    if (resist <= 20 || resist <= mean - 5) {
+      return DamageMatchupAssessment.resistHole;
+    }
+    if (resist >= mean + 5) {
+      return DamageMatchupAssessment.strongResist;
+    }
     return DamageMatchupAssessment.neutral;
   }
 }
