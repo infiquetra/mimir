@@ -26,6 +26,25 @@
 
 ### 2026-09-11
 
+### AAR evidence completeness score, provenance snapshot, and pre-analysis gate (commit: pending)
+
+**Author.** Antigravity / Lead Orchestrator
+**Decision.**
+1. **Non-blocking pre-analysis gate (D1):** `AarPreAnalysisGate` renders an enabled `FilledButton` ("Analyze Encounter with AI") regardless of score (0, 30, 75, or 100). If score is in Low band (< 40), it renders a non-blocking warning sibling widget ("Analysis will contain significant unknowns"); in Partial band (< 75), an advisory message. It never modal-blocks or disables AI analysis.
+2. **Evidence snapshot stored on report (D2):** Store `AarEvidenceSnapshot?` directly on `CombatAarReport` (`evidenceAtGeneration`) serialized inside `analysisJson`. This records score, band, capped status, and dimension statuses at time of generation with zero DB schema changes, leaving prompt schema v4 untouched.
+3. **Retire old fit button cluster (D3):** Completely remove the legacy `Wrap` of fit buttons (`Snapshot Current Fit`, `Use Current Fit For Fight`, `Import EFT Fit`, `Re-authenticate with ESI`) from `AnalysisMultiPaneScreen`. Replace them with structured action buttons inside the relevant checklist rows (`AarEvidenceChecklistCard`) wired through `AarEvidenceActionHandlers`.
+4. **User-initiated pre-analysis killmail search (D5):** Do not automatically execute ESI/zKill network requests when opening an encounter. Present an explicit "Search Killmails" CTA in the checklist when `killmailSearchCompleted` is false.
+5. **Retire unconfirmed snapshot button (D6):** Drop the "Snapshot Current Fit" button that created unconfirmed reference fits without binding to the fight. Fits attached to an encounter should be confirmed for that specific fight.
+6. **Invariant I1: Missing ⇔ actionable (D7):** A dimension is marked `Missing` (0% credit, in denominator) if and only if an actionable user CTA exists. Unresolvable gaps (e.g. unknown opponent fit on own loss, unsearched killmail when offline) evaluate to `Unavailable` with an explanatory reason string and are excluded from the score denominator ($\text{earned} / \text{available} \times 100$).
+**Rejected alternatives.**
+- Blocking the analysis button below a score threshold: Rejected because users may intentionally run quick analyses on partial data or offline logs (user autonomy principle).
+- Storing evidence snapshot in a new database table or altering prompt schema: Rejected to avoid database migrations and prompt token bloat.
+- Auto-searching killmails on encounter open: Rejected to prevent unintended network requests and battery/data drain.
+- Marking unfixable gaps as "Missing": Rejected because permanently red checklist rows with no button create learned helplessness.
+**Rationale.** Delivers transparent and actionable pre-analysis evidence guidance, ensures user agency with one-click fixes for true gaps, preserves historical analysis provenance, and avoids degrading the core AI analysis flow.
+**Revisit when.** Settings are introduced for auto-fetching killmails or manual opponent EFT import is built.
+**Refs.** LEARNINGS 2026-09-11; ARCHIVE SHIPPED 2026-09-11; docs/specs/aar-evidence-completeness-score-design.md; .agents/plans/2026-09-11-aar-evidence-completeness-score.md.
+
 ### AAR fit simulation, derivation layering, tank classification, and shared loader (commit: 6be5eb7)
 
 **Author.** Antigravity / Lead Orchestrator

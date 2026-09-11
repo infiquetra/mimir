@@ -9,6 +9,20 @@
 
 ---
 
+### SHIPPED 2026-09-11: AAR evidence completeness score and pre-analysis checklist
+
+**Author.** Antigravity / Lead Orchestrator
+**Shipped as.** Implemented deterministic 0–100 evidence completeness assessment, pre-analysis gate, post-analysis provenance banner, and unified evidence checklist in Combat Analyzer:
+- Pure domain scorer `AarEvidenceScorer` and `AarEvidenceAssessment` evaluating five dimensions: Pilot fit (30), Combat log (20), Opponent identity (15), Opponent fit (20), Damage profile (15).
+- Invariant I1 (`Missing ⇔ actionable`): dimensions only score `Missing` when actionable CTAs exist; unfixable gaps score `Unavailable` and shrink the denominator (`earned / available * 100`).
+- Range is classified as a structural limit (`AarStructuralLimit.range`) because EVE combat logs omit spatial telemetry, keeping it out of the score denominator.
+- `CombatEnrichment.killmailSearchCompleted` distinguishes unexecuted search (`Missing` with "Search Killmails" action) from searched-with-no-match (`Unavailable`).
+- Report provenance via `CombatAarReport.evidenceAtGeneration` snapshot stored in `analysisJson` without touching prompt schema v4.
+- Synchronous `aarEvidenceAssessmentProvider(encounter)` composing enrichment, derivation, and damage profile providers with zero new I/O.
+- Presentation widgets: `AarEvidenceChecklistCard` (progress bar, dimension rows with CTAs, known limits, no reload flash via `skipLoadingOnReload`), `AarPreAnalysisGate` (always-enabled button with non-blocking warning/advisory), and `AarReportProvenanceBanner` (provenance comparison and re-analysis advisory on +10 score delta).
+- Screen integration in `AnalysisMultiPaneScreen`: retired legacy button cluster and reauth button, wired inline actions for fit attachment, killmail search, and re-analysis.
+**Refs.** LEARNINGS 2026-09-11; DECISIONS 2026-09-11; docs/specs/aar-evidence-completeness-score-design.md; .agents/plans/2026-09-11-aar-evidence-completeness-score.md.
+
 ### SHIPPED 2026-09-11: AAR fit simulation and defense profile derivation
 
 **Author.** Antigravity / Lead Orchestrator

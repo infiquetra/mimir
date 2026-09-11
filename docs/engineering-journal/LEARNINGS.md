@@ -31,6 +31,46 @@
 
 ### 2026-09-11
 
+### EVE combat logs carry no engagement range (structural limit vs missing evidence)
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** The combat log parser extracts timestamp, actors, actions, damage amount, and weapon type. During the initial design of the AAR evidence completeness score, engagement range was considered as a scored evidence dimension to support weapon tracking and missile application analysis.
+**Evidence.** Probing raw EVE client combat logs (`CombatLogParser` and sample `.txt` logs) confirmed that CCP logs record only discrete combat events with no 3D spatial coordinates, distance, or range telemetry.
+**Mechanism.** The client log format reflects what is echoed to the combat message window. Position and distance are rendered visually in space but are never written to disk logs. If range were scored as a standard evidence dimension, every encounter would permanently incur a missing/zero score that the user could never fix.
+**Fix (or queued).** Range is modeled as a structural limit (`AarStructuralLimit.range`) rendered in a distinct "Known limits" card section with explanatory text: "EVE combat logs contain no range data; weapon tracking and missile flight are estimated from hull velocity and module ranges." It is strictly excluded from the 0–100 earned/available score denominator.
+**Generalizable rule.** Distinguish structural limits of an underlying data source from missing or uncollected evidence. Structural limits must be stated as known caveats and documented assumptions, never scored as fixable gaps.
+**Refs.** docs/specs/aar-evidence-completeness-score-design.md §0.5, §3.1; `lib/features/combat_analyzer/domain/aar_evidence_assessment.dart`.
+
+### "Missing" must mean "there is a button" (Invariant I1: Missing ⇔ actionable)
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** In completeness scoring, it is tempting to label any absent piece of data as "Missing". In combat encounters, however, many gaps are structurally unresolvable (e.g. opponent fit on an own-loss fight where zKillboard only records the victim's fit, or fights where no killmail was generated on zKill).
+**Evidence.** In scenario S3 (pilot loss), the victim fit is proven from their own loss killmail, but the attacker's fit is completely unknown. Marking opponent fit as "Missing" resulted in a persistent red row in the checklist offering "+20 points", but with no button or user action available to obtain it.
+**Mechanism.** A red "Missing" row with no actionable CTA induces learned helplessness and trains users to ignore the checklist entirely. Furthermore, if unfixable dimensions remain in the denominator, the maximum achievable score is artificially capped, confusing users who did everything right.
+**Fix (or queued).** Established Invariant I1 (`Missing ⇔ actionable`). Any absent dimension with an in-app action (e.g. attach fit, search killmails) is scored as `Missing` (0% credit, counted in denominator). Any gap that is structurally unresolvable in-app evaluates to `Unavailable` with an explicit reason string and is excluded from both the earned score and the available denominator ($\text{score} = \text{earned} / \text{available} \times 100$).
+**Generalizable rule.** Status indicators must strictly correlate with user agency. "Missing" must guarantee an available remediation action. Unfixable conditions must be classified as "Unavailable" and removed from the completion denominator so scores accurately reflect user fulfillment of possible steps.
+**Refs.** docs/specs/aar-evidence-completeness-score-design.md §1.3 (D7), §2.2, §2.3; `lib/features/combat_analyzer/domain/aar_evidence_scorer.dart`.
+
+### Killmail search runs inside analysis, requiring an explicit completion flag for pre-analysis UI
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** In the original combat analyzer pipeline, killmail searching via ESI/zKill was executed exclusively at Stage 4 ("Searching killmails") inside `CombatAnalyzerService.analyzeEncounter()`. When an encounter was first parsed and opened in `AnalysisMultiPaneScreen` prior to running AI analysis, no killmail search had ever been initiated.
+**Evidence.** Prior to analysis, `CombatEnrichment.killmailMatch` was always `null`. The evidence scorer evaluating `opponentIdentity` could not distinguish between "the search has not been run yet" and "the search ran against zKillboard and found no matching killmail".
+**Mechanism.** A nullable match field `killmailMatch == null` conflates unexecuted queries with empty query results. If treated as "not found", the scorer would prematurely mark opponent identity as `Unavailable`. If treated as unsearched without tracking, subsequent searches could not clear the state.
+**Fix (or queued).** Added `CombatEnrichment.killmailSearchCompleted` boolean (defaulting to false, serialized in JSON, and set to true when `enrichEncounter()` runs). When false, opponent identity scores `Missing` with an inline "Search Killmails" action (`AarEvidenceAction.searchKillmails`). When true and `killmailMatch == null`, it scores `Unavailable` ("zKillboard search found no matching killmail").
+**Generalizable rule.** Whenever an asynchronous retrieval step runs late in an analysis pipeline, data models must explicitly persist execution completion separately from result presence. A missing result must never be assumed to mean a negative result before the search has executed.
+**Refs.** docs/specs/aar-evidence-completeness-score-design.md §3.4; `lib/features/combat_analyzer/domain/combat_enrichment.dart`; `lib/features/combat_analyzer/domain/aar_evidence_scorer.dart`.
+
+### Report-output models are safe to extend without touching the LLM prompt schema
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** To display the "Evidence at Generation" provenance banner and evaluate re-analysis advisories (+10 point improvement), the AAR report needs to record the exact evidence assessment score, band, and statuses present when the report was generated.
+**Evidence.** `CombatAarReport.evidenceAtGeneration` was added as an `AarEvidenceSnapshot?` field serialized into `analysisJson`. Prompt schema v4 (`mimir.combat_aar_input.v4`) remained completely unchanged, and `toPromptJson()` tests confirmed zero change in the payload sent to the LLM.
+**Mechanism.** In Mimir's architecture, the LLM prompt builder operates strictly on input models (`CombatAarInputs`), whereas `CombatAarReport` represents parsed output and stored report provenance. Extending output and metadata models does not alter prompt structure, token count, or API contracts as long as input serializers are separate from domain entity persistence.
+**Fix (or queued).** Stored `AarEvidenceSnapshot` inside `analysisJson` on `CombatAarReport`. Guarded by unit test `combat_aar_report_test.dart` verifying all top-level keys in prompt and report serialization.
+**Generalizable rule.** Decouple LLM prompt input builders from saved report persistence entities. Stored report entities can freely accumulate application-level provenance, audit trails, and UI state without impacting LLM token usage or invalidating prompt schemas.
+**Refs.** docs/specs/aar-evidence-completeness-score-design.md §1.3 (D2), §3.3; `lib/features/combat_analyzer/domain/combat_aar_report.dart`; `test/features/combat_analyzer/domain/combat_aar_report_test.dart`.
+
 ### Flat-average EHP hides resist holes; profile-weighted EHP is required for tactical AAR analysis
 
 **Author.** Antigravity / Lead Orchestrator

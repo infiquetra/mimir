@@ -27,19 +27,7 @@
 
 ## P1 - Urgent
 
-### AAR evidence completeness score and pre-analysis checklist
-
-**Author.** Codex
-**Priority.** P1
-**Effort.** Half-day to a day.
-**Worth it when.** As soon as users routinely re-analyze reports after adding
-fits or killmail evidence.
-**Context.** The analyzer should tell the user what evidence is missing before
-spending AI time: pilot fit, killmail match, opponent fit, range telemetry
-limitations, tank profile, and confidence level. This makes unknowns actionable
-instead of burying them in prose.
-**Refs.** `lib/features/combat_analyzer/domain/combat_evidence_ledger.dart`;
-`lib/features/combat_analyzer/presentation/analysis_multipane_screen.dart`.
+<!-- P1 entries go here. -->
 
 ## P2 - Important
 
@@ -116,6 +104,42 @@ bill-of-materials style recommendations.
 `lib/features/fitting/presentation/widgets/fitting_editor.dart`.
 
 ## P3 - Nice To Have
+
+### Weight recalibration from [AAR.EVIDENCE] score distributions
+
+**Author.** Antigravity / Lead Orchestrator
+**Priority.** P3
+**Effort.** Half-day to analyze logs and tune `AarEvidenceRules.weights`.
+**Worth it when.** A sufficient volume of user sessions have emitted `[AAR.EVIDENCE]` score and band distribution logs to evaluate empirical clustering.
+**Context.** The initial 30/20/15/20/15 dimension weights were derived from tactical domain heuristics (pilot fit is most critical for EHP and active tank; combat log gives ground truth events; opponent identity and fit enable matchup derivation; damage profile confirms weapon types). Empirical logs will reveal if the score bands (Complete ≥ 90, Good ≥ 75, Partial ≥ 40, Low < 40) align with real combat data quality.
+**Refs.** `lib/features/combat_analyzer/domain/aar_evidence_scorer.dart`; docs/specs/aar-evidence-completeness-score.md R2; docs/specs/aar-evidence-completeness-score-design.md §9.
+
+### Persisting checklist expand/collapse preference
+
+**Author.** Antigravity / Lead Orchestrator
+**Priority.** P3
+**Effort.** Half-day.
+**Worth it when.** Users report annoyance with default collapse/expansion behavior across repeated encounter views.
+**Context.** Currently `AarEvidenceChecklistCard` determines default expansion based on score (automatically collapsed if score ≥ 90, expanded otherwise) with in-memory toggle state. Persisting user collapse/expand state per encounter or globally via shared preferences will preserve user view state across app restarts.
+**Refs.** `lib/features/combat_analyzer/presentation/widgets/aar_evidence_checklist_card.dart`; docs/specs/aar-evidence-completeness-score.md §4.6; docs/specs/aar-evidence-completeness-score-design.md §9.
+
+### Automatic killmail search on encounter open behind a setting
+
+**Author.** Antigravity / Lead Orchestrator
+**Priority.** P3
+**Effort.** Half-day.
+**Worth it when.** Users find clicking "Search Killmails" in the checklist redundant and request background pre-fetching.
+**Context.** V1 intentionally avoided automatic killmail searching on encounter load (D5) to keep network I/O predictable and prevent unexpected background zKill/ESI calls. Adding an opt-in toggle in Settings ("Automatically search killmails on encounter open") would streamline the workflow for users with persistent internet connectivity.
+**Refs.** `lib/features/combat_analyzer/presentation/analysis_multipane_screen.dart`; docs/specs/aar-evidence-completeness-score-design.md §1.3 D5, §9.
+
+### Opponent-fit manual import
+
+**Author.** Antigravity / Lead Orchestrator
+**Priority.** P3
+**Effort.** One day.
+**Worth it when.** Users obtain opponent EFT fits via chat, d-scan analysis, or corp intel and want to attach them when no killmail exists.
+**Context.** Currently, opponent fit is derived strictly from killmails (victim fit on kill or attacker fit on loss). When no killmail exists or the opponent survived without losses, opponent fit remains `Unavailable`. Supporting manual EFT paste or fit import for opponents would make D4 rows 6–7 actionable and upgrade opponent fit completeness to `Complete`.
+**Refs.** `lib/features/combat_analyzer/domain/aar_evidence_scorer.dart`; docs/specs/aar-evidence-completeness-score-design.md §9.
 
 ### Missile and drone damage curated supplements (effects 660–668 and 1730)
 
