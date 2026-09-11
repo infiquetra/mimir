@@ -30,11 +30,13 @@ class CombatDamageProfile {
     required this.entries,
     required this.unknownWeapons,
     required this.totalProfiledDamage,
+    this.resolvedWeapons = const [],
   });
 
   final List<CombatDamageTypeEstimate> entries;
   final List<String> unknownWeapons;
   final int totalProfiledDamage;
+  final List<String> resolvedWeapons;
 
   bool get hasKnownDamageTypes => entries.isNotEmpty;
 }

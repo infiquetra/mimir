@@ -7,6 +7,9 @@ enum CombatEnrichmentStatus { killmailMatched, ambiguous, logOnly, needsReauth }
 enum CombatEnrichmentSource { none, esiRecent, zkillEsi, cache }
 
 class CombatEnrichment {
+  static const String uncachedMatchReason =
+      'No killmail evidence is cached for this AAR.';
+
   const CombatEnrichment({
     required this.parsedEncounterId,
     required this.status,
@@ -30,6 +33,7 @@ class CombatEnrichment {
     this.matchReason = '',
     this.limitations = const [],
     this.rawKillmail,
+    this.killmailSearchCompleted = false,
   });
 
   final String parsedEncounterId;
@@ -54,6 +58,7 @@ class CombatEnrichment {
   final String matchReason;
   final List<String> limitations;
   final Map<String, dynamic>? rawKillmail;
+  final bool killmailSearchCompleted;
 
   bool get hasMatchedKillmail =>
       status == CombatEnrichmentStatus.killmailMatched;
@@ -103,6 +108,7 @@ class CombatEnrichment {
     'matchReason': matchReason,
     'limitations': limitations,
     if (rawKillmail != null) 'rawKillmail': rawKillmail,
+    'killmailSearchCompleted': killmailSearchCompleted,
   };
 
   Map<String, dynamic> toPromptJson() => {
@@ -189,6 +195,15 @@ class CombatEnrichment {
       rawKillmail: json['rawKillmail'] is Map
           ? Map<String, dynamic>.from(json['rawKillmail'] as Map)
           : null,
+      killmailSearchCompleted: _killmailSearchCompletedFromJson(
+        json,
+        status: _enumFromName(
+          CombatEnrichmentStatus.values,
+          json['status']?.toString(),
+          CombatEnrichmentStatus.logOnly,
+        ),
+        matchReason: json['matchReason']?.toString() ?? '',
+      ),
     );
   }
 
@@ -271,6 +286,7 @@ class CombatEnrichment {
       matchReason: reason,
       limitations: limitations,
       rawKillmail: detail.toJson(),
+      killmailSearchCompleted: true,
     );
   }
 
@@ -296,6 +312,7 @@ class CombatEnrichment {
     String? matchReason,
     List<String>? limitations,
     Map<String, dynamic>? rawKillmail,
+    bool? killmailSearchCompleted,
   }) {
     return CombatEnrichment(
       parsedEncounterId: parsedEncounterId,
@@ -320,6 +337,8 @@ class CombatEnrichment {
       matchReason: matchReason ?? this.matchReason,
       limitations: limitations ?? this.limitations,
       rawKillmail: rawKillmail ?? this.rawKillmail,
+      killmailSearchCompleted:
+          killmailSearchCompleted ?? this.killmailSearchCompleted,
     );
   }
 }
@@ -342,6 +361,17 @@ T _enumFromName<T extends Enum>(List<T> values, String? name, T fallback) {
     if (value.name == name) return value;
   }
   return fallback;
+}
+
+bool _killmailSearchCompletedFromJson(
+  Map<String, dynamic> json, {
+  required CombatEnrichmentStatus status,
+  required String matchReason,
+}) {
+  final value = json['killmailSearchCompleted'];
+  if (value is bool) return value;
+  return status != CombatEnrichmentStatus.logOnly ||
+      matchReason != CombatEnrichment.uncachedMatchReason;
 }
 
 String? _nullableString(Object? value) {

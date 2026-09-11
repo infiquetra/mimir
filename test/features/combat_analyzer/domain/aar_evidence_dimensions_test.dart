@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_evidence_assessment.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_evidence_scorer.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
-import 'package:mimir/features/combat_analyzer/domain/combat_damage_profile.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_evidence_ledger.dart';
 import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.dart';
