@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/core/auth/oauth_service.dart';
@@ -12,6 +13,8 @@ import 'package:mimir/features/combat_analyzer/data/combat_killmail_discovery_cl
 import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_evidence_ledger.dart';
+import 'package:mimir/features/combat_analyzer/domain/combat_log_parser.dart';
+import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.dart';
 import 'package:mimir/features/combat_analyzer/domain/tank_classifier.dart';
 import 'package:mimir/features/fitting/domain/models.dart';
 
@@ -136,4 +139,95 @@ void main() {
       },
     );
   });
+
+  group('Group D — killmailSearchCompleted on enrichEncounter', () {
+    late AppDatabase appDb;
+    late SdeDatabase sdeDb;
+    late CombatEnrichmentService service;
+    late CombatEnrichmentRepository repository;
+
+    setUp(() async {
+      appDb = AppDatabase.forTesting(NativeDatabase.memory());
+      sdeDb = SdeDatabase.forTesting(NativeDatabase.memory());
+      repository = CombatEnrichmentRepository(database: appDb);
+      service = CombatEnrichmentService(
+        repository: repository,
+        esiClient: EsiClient(
+          tokenManager: TokenManager(database: appDb),
+          oauthService: OAuthService(),
+          database: appDb,
+        ),
+        discoveryClient: CombatKillmailDiscoveryClient(),
+        tokenManager: TokenManager(database: appDb),
+        oauthService: OAuthService(),
+        sdeService: SdeService(database: sdeDb),
+      );
+      await sdeDb.upsertCategories([
+        SdeCategoriesCompanion.insert(
+          categoryId: const Value(6),
+          categoryName: 'Ship',
+        ),
+      ]);
+      await sdeDb.upsertGroups([
+        SdeGroupsCompanion.insert(
+          groupId: const Value(25),
+          groupName: 'Frigate',
+          categoryId: 6,
+        ),
+      ]);
+      await sdeDb.upsertTypes([
+        SdeTypesCompanion.insert(
+          typeId: const Value(587),
+          typeName: 'Rifter',
+          groupId: 25,
+        ),
+      ]);
+    });
+
+    tearDown(() async {
+      await appDb.close();
+      await sdeDb.close();
+    });
+
+    test('D.9 enrichEncounter marks killmailSearchCompleted', () async {
+      final searched = await service.enrichEncounter(
+        _encounter(listener: 'SearchPilot'),
+      );
+      expect(searched.status, CombatEnrichmentStatus.logOnly);
+      expect(searched.killmailSearchCompleted, isTrue);
+      final reloaded = await service.loadEnrichment(searched.parsedEncounterId);
+      expect(reloaded, isNotNull);
+      expect(reloaded!.killmailSearchCompleted, isTrue);
+
+      final imported = await service.importPilotFit(
+        _encounter(listener: 'ImportPilot'),
+        '[Rifter, Test]',
+      );
+      expect(imported.killmailSearchCompleted, isFalse);
+      expect(imported.matchReason, CombatEnrichment.uncachedMatchReason);
+
+      final alreadySearched = _encounter(listener: 'PreservePilot');
+      await repository.saveEnrichment(
+        CombatEnrichment(
+          parsedEncounterId: alreadySearched.id,
+          status: CombatEnrichmentStatus.logOnly,
+          source: CombatEnrichmentSource.none,
+          matchReason: 'No ESI or zKill killmail matched this encounter.',
+          killmailSearchCompleted: true,
+        ),
+      );
+      final preserved = await service.importPilotFit(
+        alreadySearched,
+        '[Rifter, Test]',
+      );
+      expect(preserved.killmailSearchCompleted, isTrue);
+    });
+  });
+}
+
+ParsedCombatEncounter _encounter({required String listener}) {
+  return CombatLogParser.parseLines([
+    'Listener: $listener',
+    '[ 2026.05.20 20:00:00 ] (combat) 100 to Enemy - Railgun - Hits',
+  ]).single;
 }
