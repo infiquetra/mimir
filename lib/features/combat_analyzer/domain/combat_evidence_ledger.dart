@@ -7,6 +7,7 @@ enum EvidenceSource {
   sde,
   currentShipSnapshot,
   manualFitImport,
+  dogmaDerivation,
 }
 
 enum EvidenceConfidence { proven, confirmed, derived, reference, unknown }
@@ -19,6 +20,7 @@ enum AarUnknownCategory {
   tankLayer,
   fleetContext,
   telemetry,
+  skills,
 }
 
 enum FitEvidenceRole { pilot, victim, opponent, reference }
@@ -166,6 +168,7 @@ class FitEvidence {
     'rigSlots': _modulesForPrompt(fitting.rigSlots),
     'subsystems': _modulesForPrompt(fitting.subsystems),
     'drones': fitting.drones.map((drone) => drone.toJson()).toList(),
+    'fighters': fitting.fighters.map((fighter) => fighter.toJson()).toList(),
     'cargo': fitting.cargo.map((item) => item.toJson()).toList(),
     if (evidenceTime != null)
       'evidenceTime': evidenceTime!.toUtc().toIso8601String(),

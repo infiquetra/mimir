@@ -1,5 +1,7 @@
+import '../../fitting/domain/damage_pattern.dart';
 import '../../fitting/domain/models.dart';
 import 'combat_damage_profile.dart';
+import 'tank_classifier.dart';
 
 enum DamageMatchupAssessment { resistHole, neutral, strongResist, unknown }
 
@@ -9,18 +11,27 @@ class CombatDamageMatchup {
     required this.layer,
     required this.summary,
     required this.entries,
+    this.pattern,
+    this.ehpAgainstPattern,
+    this.ehpOmni,
+    this.primaryHole,
   });
 
   final String targetLabel;
   final String layer;
   final String summary;
   final List<CombatDamageMatchupEntry> entries;
+  final DamagePattern? pattern;
+  final LayeredEhp? ehpAgainstPattern;
+  final LayeredEhp? ehpOmni;
+  final String? primaryHole;
 
   Map<String, dynamic> toJson() => {
     'targetLabel': targetLabel,
     'layer': layer,
     'summary': summary,
     'entries': entries.map((entry) => entry.toJson()).toList(),
+    'primaryHole': primaryHole,
   };
 
   factory CombatDamageMatchup.fromJson(Map<String, dynamic> json) {
@@ -31,6 +42,7 @@ class CombatDamageMatchup {
       entries: _objectList(
         json['entries'],
       ).map(CombatDamageMatchupEntry.fromJson).toList(),
+      primaryHole: json['primaryHole']?.toString(),
     );
   }
 }
@@ -40,15 +52,17 @@ class CombatDamageMatchupEntry {
     required this.type,
     required this.amount,
     required this.percent,
-    required this.resistPercent,
     required this.assessment,
     required this.evidence,
+    this.resistPercent,
+    this.appliedPercent,
   });
 
   final String type;
   final int amount;
   final double percent;
-  final double resistPercent;
+  final double? resistPercent;
+  final double? appliedPercent;
   final DamageMatchupAssessment assessment;
   final String evidence;
 
@@ -57,6 +71,7 @@ class CombatDamageMatchupEntry {
     'amount': amount,
     'percent': percent,
     'resistPercent': resistPercent,
+    'appliedPercent': appliedPercent,
     'assessment': assessment.name,
     'evidence': evidence,
   };
@@ -66,7 +81,12 @@ class CombatDamageMatchupEntry {
       type: json['type']?.toString() ?? 'unknown',
       amount: _intFromJson(json['amount']),
       percent: _doubleFromJson(json['percent']),
-      resistPercent: _doubleFromJson(json['resistPercent']),
+      resistPercent: json.containsKey('resistPercent')
+          ? _doubleOrNull(json['resistPercent'])
+          : null,
+      appliedPercent: json.containsKey('appliedPercent')
+          ? _doubleOrNull(json['appliedPercent'])
+          : null,
       assessment: _enumFromName(
         DamageMatchupAssessment.values,
         json['assessment']?.toString(),
@@ -80,14 +100,17 @@ class CombatDamageMatchupEntry {
 class CombatDamageMatchupAnalyzer {
   static CombatDamageMatchup analyze({
     required CombatDamageProfile profile,
-    required DefenseProfile defense,
+    required DefenseProfile? defense,
+    TankAssessment? tank,
     required String targetLabel,
   }) {
-    final layer = _primaryLayer(defense);
+    final resolved = defense ?? const DefenseProfile();
+    // U2 stub: [tank] is accepted but not yet used to pick the layer.
+    final layer = _primaryLayer(resolved);
     final resists = switch (layer) {
-      'shield' => defense.shieldResists,
-      'armor' => defense.armorResists,
-      'hull' => defense.hullResists,
+      'shield' => resolved.shieldResists,
+      'armor' => resolved.armorResists,
+      'hull' => resolved.hullResists,
       _ => const ResistProfile(),
     };
     final entries = profile.entries
@@ -160,6 +183,11 @@ double _doubleFromJson(Object? value) {
   if (value is double) return value;
   if (value is num) return value.toDouble();
   return double.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+double? _doubleOrNull(Object? value) {
+  if (value == null) return null;
+  return _doubleFromJson(value);
 }
 
 T _enumFromName<T extends Enum>(List<T> values, String? name, T fallback) {
