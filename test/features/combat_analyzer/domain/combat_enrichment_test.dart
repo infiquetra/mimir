@@ -1,5 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mimir/features/combat_analyzer/domain/combat_attacker_correlation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
+
+import '../fixtures/attacker_correlation_fixtures.dart';
 
 void main() {
   group('Group D — CombatEnrichment killmailSearchCompleted', () {
@@ -110,5 +113,71 @@ void main() {
         isFalse,
       );
     });
+  });
+
+  group('Group E — CombatEnrichment attackerCorrelation', () {
+    CombatEnrichment base({AttackerCorrelation? attackerCorrelation}) {
+      return CombatEnrichment(
+        parsedEncounterId: 'enc-1',
+        status: CombatEnrichmentStatus.killmailMatched,
+        source: CombatEnrichmentSource.esiRecent,
+        attackerCorrelation: attackerCorrelation,
+      );
+    }
+
+    test(
+      'T5.2 attackerCorrelation round-trips through CombatEnrichment JSON',
+      () {
+        final correlation = correlate(s2Loss());
+        final enrichment = base(attackerCorrelation: correlation);
+        expect(enrichment.toJson().containsKey('attackerCorrelation'), isTrue);
+        final decoded = CombatEnrichment.fromJson(enrichment.toJson());
+        expect(decoded.attackerCorrelation, isNotNull);
+        expect(
+          decoded.attackerCorrelation!.toJson(),
+          enrichment.attackerCorrelation!.toJson(),
+        );
+      },
+    );
+
+    test('T5.3 pre-milestone JSON without the field loads with null', () {
+      final decoded = CombatEnrichment.fromJson({
+        'parsedEncounterId': 'enc-1',
+        'status': CombatEnrichmentStatus.logOnly.name,
+        'source': CombatEnrichmentSource.none.name,
+        'matchReason': CombatEnrichment.uncachedMatchReason,
+        'matchConfidence': 0,
+        'limitations': <String>[],
+      });
+      expect(decoded.attackerCorrelation, isNull);
+    });
+
+    test(
+      'attackerCorrelation is included in toPromptJson in compact form when present, omitted when null',
+      () {
+        final correlation = correlate(s2Loss());
+        final withCorrelation = base(attackerCorrelation: correlation);
+        expect(
+          withCorrelation.toPromptJson().containsKey('attackerCorrelation'),
+          isTrue,
+        );
+        final block =
+            withCorrelation.toPromptJson()['attackerCorrelation']
+                as Map<String, dynamic>;
+        expect(block, correlation.toPromptJson());
+        expect(block.keys.toSet(), {
+          'selfIsVictim',
+          'correlated',
+          'unattributedIncomingDamage',
+          'npcIncomingDamage',
+          'uncorrelatedAttackerCount',
+          'uncorrelatedAttackers',
+        });
+        expect(
+          base().toPromptJson().containsKey('attackerCorrelation'),
+          isFalse,
+        );
+      },
+    );
   });
 }

@@ -352,4 +352,83 @@ void main() {
       expect(item.balance, 5000000.0);
     });
   });
+
+  group('Group E — killmail names and faction', () {
+    test('E.9 rawKillmail names survive the round-trip', () {
+      final attacker = EsiKillmailAttacker.fromJson({
+        'character_id': 9001,
+        'character_name': 'Artem S3',
+        'corporation_id': 98000002,
+        'ship_type_id': 24702,
+        'weapon_type_id': 2410,
+        'damage_done': 4200,
+        'final_blow': false,
+        'faction_id': 500020,
+      });
+      expect(attacker.characterName, 'Artem S3');
+      expect(attacker.factionId, 500020);
+      expect(attacker.isPlayer, isTrue);
+      expect(attacker.toJson()['character_name'], 'Artem S3');
+      expect(attacker.toJson()['faction_id'], 500020);
+      final attackerRoundTrip = EsiKillmailAttacker.fromJson(attacker.toJson());
+      expect(attackerRoundTrip.characterName, 'Artem S3');
+      expect(attackerRoundTrip.factionId, 500020);
+
+      final npc = EsiKillmailAttacker.fromJson({
+        'ship_type_id': 30001,
+        'damage_done': 1400,
+        'final_blow': false,
+        'faction_id': 500020,
+      });
+      expect(npc.isPlayer, isFalse);
+      expect(npc.characterId, isNull);
+      expect(npc.factionId, 500020);
+
+      final victim = EsiKillmailVictim.fromJson({
+        'character_id': 7001,
+        'character_name': 'Vex Kalari',
+        'ship_type_id': 587,
+        'damage_taken': 300,
+        'faction_id': 500001,
+        'items': <Map<String, dynamic>>[],
+      });
+      expect(victim.characterName, 'Vex Kalari');
+      expect(victim.factionId, 500001);
+      expect(victim.toJson()['character_name'], 'Vex Kalari');
+      expect(victim.toJson()['faction_id'], 500001);
+      final victimRoundTrip = EsiKillmailVictim.fromJson(victim.toJson());
+      expect(victimRoundTrip.characterName, 'Vex Kalari');
+      expect(victimRoundTrip.factionId, 500001);
+
+      final detail = EsiKillmailDetail.fromJson({
+        'killmail_id': 1234567,
+        'killmail_time': '2026-05-20T20:01:00Z',
+        'solar_system_id': 30000142,
+        'victim': {
+          'character_id': 7001,
+          'character_name': 'Vex Kalari',
+          'ship_type_id': 587,
+          'damage_taken': 300,
+          'items': <Map<String, dynamic>>[],
+        },
+        'attackers': [
+          {
+            'character_id': 9001,
+            'character_name': 'Artem S3',
+            'ship_type_id': 24702,
+            'damage_done': 1000,
+            'final_blow': true,
+            'faction_id': 500020,
+          },
+        ],
+      });
+      expect(detail.attackers.first.characterName, 'Artem S3');
+      expect(detail.victim.characterName, 'Vex Kalari');
+      expect(detail.attackers.first.factionId, 500020);
+      final detailRoundTrip = EsiKillmailDetail.fromJson(detail.toJson());
+      expect(detailRoundTrip.attackers.first.characterName, 'Artem S3');
+      expect(detailRoundTrip.victim.characterName, 'Vex Kalari');
+      expect(detailRoundTrip.attackers.first.factionId, 500020);
+    });
+  });
 }
