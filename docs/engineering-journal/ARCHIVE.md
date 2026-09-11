@@ -9,6 +9,45 @@
 
 ---
 
+### SHIPPED 2026-09-11: Skill cycle-time bonuses (Rapid Firing, Gunnery, MLO, Rapid Launch, XL specs, missile specialisations)
+
+**Author.** Antigravity / Lead Orchestrator
+**Shipped as.** Published skill-owned dogma modifiers routed through DogmaEngine:
+Gunnery (effect 414, attr 441, -2%/lvl), Rapid Firing (effect 582, attr 293, -4%/lvl),
+MLO & Rapid Launch (effect 1763, attr 293, -2% and -3%/lvl), XL Torpedo & Cruise Spec
+(effects 6578/6577, attr 293, -2%/lvl), plus a curated Effect1851 fallback for the
+six sub-capital missile specialisations. Multiplicative, unpenalized (owner is skill),
+volley unchanged, six-slot direct filter `{182, 183, 184, 1285, 1289, 1290}`, and weapon
+cap drain duration falls back to rateOfFire so capacitor stability updates.
+**Refs.** LEARNINGS 2026-09-11; DECISIONS 2026-09-11; `.agents/plans/2026-09-11-fitting-completion-skill-rof-and-fighters.md`.
+
+### SHIPPED 2026-09-11: Fighter support (fighter bay, launch tubes, squadron DPS, ability selection, StatsPanel UI)
+
+**Author.** Antigravity / Lead Orchestrator
+**Shipped as.** Complete fighter modeling across all layers:
+`FighterGroup`, `FighterSquadronStats`, `FighterAbilityKind` Freezed models; EFT parser
+distinguishing category 18 (drones) and 87 (fighters) with quantity summing; combat
+snapshot and killmail mappers for FighterBay (158) and tubes (159..163); ESI export;
+DogmaEngine classification (attr 2215), squadron counts with remainders, launch tube
+and class caps (light/support/heavy) enforced in declaration order; Attack (6465) and
+missile fallback ability DPS calculation normalized from millisecond durations (attr 2233);
+DDA (6556) and FSU (6566) stacking penalties; carrier hull bonus scaling via attribute 280;
+StatsPanel OFFENSE row and dynamic `FIGHTERS` section with bay over-capacity error styling.
+**Refs.** LEARNINGS 2026-09-11; DECISIONS 2026-09-11; `.agents/plans/2026-09-11-fitting-completion-skill-rof-and-fighters.md`.
+
+### SUPERSEDED 2026-09-11: modifierInfo stops at item boundaries: skill-to-module bonuses are pyfa-hardcoded (2026-09-08)
+
+**Author.** Qwen Code (superseded by Antigravity / Architect 2026-09-11)
+**Original premise.** "The SDE's modifierInfo does not publish skill cycle bonuses as
+resolvable modifiers... pyfa implements the cross-item part with hardcoded handlers...
+derived rules fail."
+**Why superseded.** The premise was an artifact of SDE extraction: Category 16 (Skill)
+was simply excluded from `generate_dogma_sde.py`'s `TARGET_CATEGORIES`. Once bundled,
+CCP's published `LocationRequiredSkillModifier` on skill types resolve directly. Only
+effect 1851 (six sub-cap missile specs) and damage effects 660–668/1730 publish empty
+modifier lists; all other skill cycle bonuses resolve natively from data.
+**Refs.** LEARNINGS 2026-09-11; DECISIONS 2026-09-11.
+
 ### SHIPPED 2026-09-08: Cap injectors in the cap simulation
 
 **Author.** Qwen Code

@@ -24,6 +24,28 @@
 
 ---
 
+### 2026-09-11
+
+### Published dogma modifier routing for skills and fighters, curated 1851 fallback, and owner-kind stacking penalties (commit: pending)
+
+**Author.** Antigravity / Lead Orchestrator
+**Decision.**
+1. Bundle category 16 (Skill) and category 87 (Fighter) in `scripts/sde/generate_dogma_sde.py` `TARGET_CATEGORIES`, bumping `SdeService.bundledDogmaVersion = 2` with an `SdeMetadata` table check to trigger an idempotent database reload.
+2. Route published skill-owned dogma modifiers through DogmaEngine via `skillEffectAllowlist` (Gunnery 414, Rapid Firing 582, MLO/Rapid Launch 1763, XL specs 6577/6578, DDA 6556, FSU 6566, fighter skills 6560/6563/6570/6663/12844..12848).
+3. Provide a single curated fallback table for effect 1851 (six sub-capital missile specialisations: Rockets, Light, Heavy, HAM, Torpedoes, Cruise) matching the published 6577/6578 shape, since CCP publishes effect 1851 with an empty `modifierInfo`.
+4. Filter module targets using the six direct required skill attribute slots `{182, 183, 184, 1285, 1289, 1290}`, matching CCP `LocationRequiredSkillModifier` semantics and pyfa `requiresSkill(skill)`.
+5. Gate stacking penalties on modifier owner kind: skill and character bonuses are unpenalized; fitted modules, charges, drones, and fighters are penalized.
+6. Calculate fighter squadron stats using attribute 2215 for squadron capacity, attribute 2233 normalized from milliseconds for attack ability (6465) duration with damage ability (6431) fallback, and enforce launch tube and class caps (light/support/heavy) in declaration order. Over-capacity bay volume is displayed in error styling without truncating DPS.
+**Rejected alternatives.**
+- Transitive required-skill tree closure: Rejected because all 780 weapons directly list Gunnery or MLO in one of their six required skill slots (zero transitive-only).
+- Hardcoding skill cycle bonuses in Dart tables: Rejected because CCP's published SDE already contains resolved modifiers on skill types.
+- Excluding carrier fighter skills / hull bonuses: Rejected because routing them through the standard `charID` path applies naturally and gives exact pyfa parity.
+- `FittingError` exception on bay overflow: Rejected to match CPU/PG pattern (report used/max, style in `EveColors.error`).
+**Rationale.** Leverages published SDE dogma modifiers as the single source of truth, minimizing bespoke Dart logic while achieving 100% pyfa parity for cycle times, fighter DPS, and carrier hull/module bonuses.
+**Revisit when.** CCP publishes `dgmAttributeTypes.csv` `stackable` attribute bundled in Mimir, or when missile/drone damage specialisation effects (660–668, 1730) are curated.
+**Refs.** LEARNINGS 2026-09-11; ARCHIVE SHIPPED 2026-09-11; `docs/specs/fitting-completion-skill-rof-and-fighters-design.md`; `.agents/plans/2026-09-11-fitting-completion-skill-rof-and-fighters.md`.
+
+
 ### 2026-09-08
 
 ### Bundled resolved modifiers are the modifier source of truth; offense rows at pyfa parity (commit: pending)

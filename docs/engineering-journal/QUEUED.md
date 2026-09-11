@@ -72,44 +72,6 @@ fitting stores no charge quantities; pyfa's clip/reload accounting (shot
 counters plus reload time between clips) stays unported.
 **Refs.** ARCHIVE SHIPPED 2026-09-08 cap injectors entry.
 
-### Skill cycle-time bonuses (Rapid Firing, missile specialisations, MLO)
-
-**Author.** Qwen Code
-**Priority.** P2
-**Effort.** One to two days, gated on an in-game or pyfa-diff cross-check of
-the target filters.
-**Worth it when.** Users compare turret/missile DPS against pyfa: Rapid
-Firing (-4%/level turret cycle), Missile Launcher Operation (-2%/level
-launcher cycle) and the missile specialisations (-2%/level per class) are
-missing, understating DPS by up to ~25% at level 5.
-**Context.** The 2026-09-08 investigation that queued "operator 2" found the
-premise wrong: op-2 modifiers on 212 belong to implants/NPCs
-(`characterMissileDamageMultiply`, `npcBehaviorSiege`), not skills. The real
-gap is skill-owned cycle bonuses (skill attribute 293 `rofBonus`), which the
-SDE's `modifierInfo` does not publish as resolvable modifiers (effect 163/
-1851 carry only skill-internal itemID modifiers); pyfa hardcodes them per
-effect: Effect582 filters modules requiring Gunnery, Effect1851 filters
-`requiresSkill(skill)`, and launcher-cycle skills filter on Missile Launcher
-Operation. A data-driven filter could not be derived: specialisation skills'
-own required-skill attributes (182/183) point at racial/class skills shared
-across launcher groups, so any intersection rule over- or under-applies
-(e.g. Rocket Specialization 183 = 3320 would boost every launcher).
-**Refs.** LEARNINGS 2026-09-08 skill-rof entry; pyfa `eos/effects.py`
-Effect582/Effect1851; ARCHIVE SHIPPED 2026-09-08 bundled modifiers.
-
-### Fighter support (fighter bay, abilities, fighter-domain bonuses)
-
-**Author.** Qwen Code
-**Priority.** P3
-**Effort.** Two to three days.
-**Worth it when.** Users fit capital/supercapital or fighter-bonus ships and
-ask why the drone section ignores their fighters.
-**Context.** The 2026-09-08 drone pass covers combat drones (bandwidth,
-bay volume, damage amps via charID modifiers filtered by the Drones skill).
-Fighters use separate ability multipliers (attributes 2226/2178/2130 in the
-DDA modifier list) and fighter bay bandwidth, a distinct model.
-**Refs.** ARCHIVE SHIPPED 2026-09-08 drone DPS entry.
-
 ### Real wormhole-mapper integration (replaces the removed Pathfinder mock)
 
 **Author.** Qwen Code
@@ -172,7 +134,50 @@ bill-of-materials style recommendations.
 
 ## P3 - Nice To Have
 
-<!-- P3 entries go here. -->
+### Missile and drone damage curated supplements (effects 660–668 and 1730)
+
+**Author.** Antigravity / Lead Orchestrator
+**Priority.** P3
+**Effort.** Half-day to a day.
+**Worth it when.** Missile or drone DPS is cross-checked against pyfa for weapon specialisations that publish empty `modifierInfo`.
+**Context.** Like effect 1851 for sub-cap missile cycle time, effects 660–668 (sub-capital missile damage) and 1730 (drone damage specialisations) publish empty modifier lists in the SDE. Curating them following the 1851 pattern will bring 100% parity for missile and drone damage skills.
+**Refs.** LEARNINGS 2026-09-11; design §7.
+
+### Retire legacy _skillModifiers table in favor of published SDE effects (397, 394, etc.)
+
+**Author.** Antigravity / Lead Orchestrator
+**Priority.** P3
+**Effort.** Half-day.
+**Worth it when.** Refactoring DogmaEngine to eliminate hardcoded skill attribute tables.
+**Context.** CPU Management, Power Grid Management, Navigation, etc., are currently hardcoded in `_skillModifiers`. Now that Category 16 (Skill) is bundled, their published dogma effects can be routed natively under an expanded `skillEffectAllowlist`.
+**Refs.** design §2.2, §7.
+
+### Bundle dgmAttributeTypes.stackable to replace owner-kind stacking heuristic
+
+**Author.** Antigravity / Lead Orchestrator
+**Priority.** P3
+**Effort.** Half-day.
+**Worth it when.** Modules with stackable attributes are fitted that should not be penalized despite being module-owned.
+**Context.** Currently, fitted module/charge/drone/fighter owner kinds default to `penalized: true`. Bundling `dgmAttributeTypes.csv` `stackable` column will provide the authoritative CCP attribute flag for stacking penalties.
+**Refs.** design §1.4, §7.
+
+### Fighter ability activation / reload simulation (shot counters & rearm duration)
+
+**Author.** Antigravity / Lead Orchestrator
+**Priority.** P3
+**Effort.** One to two days.
+**Worth it when.** Sustained carrier DPS simulation across burst abilities (bombs, missiles) is needed.
+**Context.** V1 assumes infinite ability charges and cap clips matching pyfa default fit DPS. Porting shot counts and rearm/refueling durations (`fighterRefuelingTime` 2426) will provide sustained DPS timelines.
+**Refs.** design §3.4, §7.
+
+### Fighter and drone editing UI in fitting editor
+
+**Author.** Antigravity / Lead Orchestrator
+**Priority.** P3
+**Effort.** Two to three days.
+**Worth it when.** Users create or edit carrier fits directly in Mimir's fitting editor rather than importing via EFT/ESI/killmail.
+**Context.** Currently fighters and drones are populated via EFT import, clipboard paste, ESI, or killmails. Adding a dedicated interactive bay editor will allow full fit customization in the UI.
+**Refs.** design §3.1, §7.
 
 ## Maybe
 

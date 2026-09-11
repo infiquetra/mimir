@@ -29,9 +29,27 @@
 
 ---
 
+### 2026-09-11
+
+### SDE Categories 16 (Skill) & 87 (Fighter) publish dogma modifiers; version gating prevents stranded installs
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** The 2026-09-08 premise that "modifierInfo stops at item boundaries" proved to be an artifact of SDE extraction filtering: category 16 (Skill) and category 87 (Fighter) were excluded from `TARGET_CATEGORIES` in `generate_dogma_sde.py`. Once bundled, published `LocationRequiredSkillModifier` entries on skill types directly model weapon cycle-time bonuses (Gunnery, Rapid Firing, MLO, Rapid Launch, XL specs) and carrier/fighter interactions.
+**Evidence.**
+- Bundling categories 16 and 87 expanded `dogma.json` by +0.71 MB (+511 skills, +94 fighters) and `effect_modifiers.json` by +139 KB (2,596 effects total).
+- All 780 published weapons with a cycle time directly require Gunnery or MLO via six slots `{182, 183, 184, 1285, 1289, 1290}` (zero transitive-only).
+- Gunnery grants -2%/level turret cycle via attribute 441 (`turretSpeeBonus`), compounding with Rapid Firing (-4%/level via 293) for 0.72x cycle at all-V.
+- Only effect 1851 (six sub-capital missile specialisations) publishes empty `modifierInfo` and requires a single curated fallback.
+- `SdeService.bundledDogmaVersion = 2` coupled with `SdeMetadata` key `dogma_version` triggers idempotent re-import without wiping user data or seeded skill ranks.
+**Mechanism.** CCP's published SDE encodes skill-to-module bonuses as resolved dogma modifiers on the skill types themselves using domain `shipID` and operator 6 (`postPercent`). When consumer category filters omit Skills, those modifiers never reach the bundled JSON.
+**Generalizable rule.** Always check raw SDE source tables across all categories before assuming CCP does not publish cross-item modifiers. Version data migrations deterministically with schema/bundle version metadata keys.
+**Refs.** LEARNINGS 2026-09-08 (corrected inline below); DECISIONS 2026-09-11; ARCHIVE SHIPPED 2026-09-11; `.agents/plans/2026-09-11-fitting-completion-skill-rof-and-fighters.md`.
+
 ### 2026-09-08
 
 ### modifierInfo stops at item boundaries: skill-to-module bonuses are pyfa-hardcoded
+
+> **Correction (2026-09-11).** The premise that "modifierInfo stops at item boundaries" was incorrect; Category 16 (Skills) was simply excluded from the bundled SDE generation (`TARGET_CATEGORIES`). Most skill-to-module bonuses (Rapid Firing 582, Gunnery 414, MLO/Rapid Launch 1763, XL specs 6577/6578, DDA 6556 on fighters) are fully published. Only effect 1851 and drone/missile damage effects (660–668, 1730) publish empty modifier lists. See LEARNINGS 2026-09-11 above and ARCHIVE SUPERSEDED.
 
 **Author.** Qwen Code
 **Context.** The queued "operator 2 (missile specialisation)" item promised
