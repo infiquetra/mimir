@@ -229,6 +229,87 @@ Small Projectile Burst Aerator I
       },
     );
 
+    test(
+      'parseEft classifies Hobgoblin II xN as drones and Templar II xN as fighters',
+      () async {
+        final database = SdeDatabase.forTesting(NativeDatabase.memory());
+        addTearDown(database.close);
+        await _insertCategorizedType(
+          database,
+          typeId: 23911,
+          typeName: 'Thanatos',
+          groupId: 547,
+          categoryId: 6,
+          groupName: 'Carrier',
+        );
+        await _insertCategorizedType(
+          database,
+          typeId: 2456,
+          typeName: 'Hobgoblin II',
+          groupId: 100,
+          categoryId: 18,
+          groupName: 'Combat Drone',
+        );
+        await _insertCategorizedType(
+          database,
+          typeId: 23061,
+          typeName: 'Templar II',
+          groupId: 1652,
+          categoryId: 87,
+          groupName: 'Light Fighter',
+        );
+
+        final parser = FittingFormatParser(SdeService(database: database));
+        final fitting = await parser.parseEft('''
+[Thanatos, Carrier]
+
+Hobgoblin II x5
+
+Templar II x6
+Templar II x6
+''');
+
+        expect(fitting, isNotNull);
+        expect(fitting!.drones, hasLength(1));
+        expect(fitting.drones.single.typeId, 2456);
+        expect(fitting.drones.single.typeName, 'Hobgoblin II');
+        expect(fitting.drones.single.quantity, 5);
+        expect(fitting.fighters, hasLength(1));
+        expect(fitting.fighters.single.typeId, 23061);
+        expect(fitting.fighters.single.typeName, 'Templar II');
+        expect(
+          fitting.fighters.single.quantity,
+          12,
+          reason: 'duplicate Templar II x6 lines must merge',
+        );
+      },
+    );
+
+    test('generateEft emits drones then fighters after rigs', () {
+      final fitting = Fitting(
+        id: '1',
+        name: 'Carrier',
+        shipTypeId: 23911,
+        shipName: 'Thanatos',
+        drones: const [
+          DroneGroup(typeId: 2456, typeName: 'Hobgoblin II', quantity: 5),
+        ],
+        fighters: const [
+          FighterGroup(typeId: 23061, typeName: 'Templar II', quantity: 12),
+        ],
+      );
+
+      final eft = parser.generateEft(fitting);
+      expect(eft, contains('[Thanatos, Carrier]'));
+      expect(eft, contains('Hobgoblin II x5'));
+      expect(eft, contains('Templar II x12'));
+      expect(
+        eft.indexOf('Hobgoblin II x5'),
+        lessThan(eft.indexOf('Templar II x12')),
+        reason: 'pyfa order: drones, blank line, then fighters',
+      );
+    });
+
     test('parseDna skips module IDs the SDE does not know', () async {
       when(
         () => mockSdeService.getShipTypeName(587),
@@ -241,6 +322,19 @@ Small Projectile Burst Aerator I
 
       expect(parsed, isNotNull);
       expect(parsed!.allModules, isEmpty);
+    });
+  });
+
+  group('Fitting JSON persistence', () {
+    test('saved JSON without fighters loads as an empty list', () {
+      final fitting = Fitting.fromJson({
+        'id': 'old',
+        'name': 'Legacy fit',
+        'shipTypeId': 587,
+        'shipName': 'Rifter',
+      });
+
+      expect(fitting.fighters, isEmpty);
     });
   });
 }
@@ -262,6 +356,36 @@ ModuleType _moduleType(int typeId, String name, SlotType slotType) =>
       skillRequirements: [],
       acceptedChargeGroups: [],
     );
+
+Future<void> _insertCategorizedType(
+  SdeDatabase database, {
+  required int typeId,
+  required String typeName,
+  required int groupId,
+  required int categoryId,
+  required String groupName,
+}) async {
+  await database.upsertCategories([
+    SdeCategoriesCompanion.insert(
+      categoryId: Value(categoryId),
+      categoryName: 'Category $categoryId',
+    ),
+  ]);
+  await database.upsertGroups([
+    SdeGroupsCompanion.insert(
+      groupId: Value(groupId),
+      groupName: groupName,
+      categoryId: categoryId,
+    ),
+  ]);
+  await database.upsertTypes([
+    SdeTypesCompanion.insert(
+      typeId: Value(typeId),
+      typeName: typeName,
+      groupId: groupId,
+    ),
+  ]);
+}
 
 Future<void> _insertType(
   SdeDatabase database,

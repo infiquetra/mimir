@@ -57,6 +57,59 @@ class FittingFormatParser {
       final medSlots = <FittedModule>[];
       final highSlots = <FittedModule>[];
       final rigSlots = <FittedModule>[];
+      final drones = <DroneGroup>[];
+      final fighters = <FighterGroup>[];
+
+      Future<bool> absorbStackedLine(String line) async {
+        final match = RegExp(r'^(.+?) x(\d+)$').firstMatch(line);
+        if (match == null) return false;
+        final name = match.group(1)!;
+        final quantity = int.parse(match.group(2)!);
+        final typeId = await _resolveTypeIdByName(name);
+        if (typeId == null) {
+          Log.d('FITTING', 'EFT stacked line unresolved: $line');
+          return true;
+        }
+        final type = await _sdeService.database.getType(typeId);
+        if (type == null) return true;
+        final group = await _sdeService.database.getGroup(type.groupId);
+        final categoryId = group?.categoryId;
+        final typeName = type.typeName;
+        if (categoryId == 18) {
+          final i = drones.indexWhere((d) => d.typeId == typeId);
+          if (i >= 0) {
+            drones[i] = drones[i].copyWith(
+              quantity: drones[i].quantity + quantity,
+            );
+          } else {
+            drones.add(
+              DroneGroup(
+                typeId: typeId,
+                typeName: typeName,
+                quantity: quantity,
+              ),
+            );
+          }
+          Log.d('FITTING', 'EFT drone $typeName x$quantity');
+        } else if (categoryId == 87) {
+          final i = fighters.indexWhere((f) => f.typeId == typeId);
+          if (i >= 0) {
+            fighters[i] = fighters[i].copyWith(
+              quantity: fighters[i].quantity + quantity,
+            );
+          } else {
+            fighters.add(
+              FighterGroup(
+                typeId: typeId,
+                typeName: typeName,
+                quantity: quantity,
+              ),
+            );
+          }
+          Log.d('FITTING', 'EFT fighter $typeName x$quantity');
+        }
+        return true;
+      }
 
       for (
         var sectionIndex = 0;
@@ -71,6 +124,7 @@ class FittingFormatParser {
           _ => SlotType.high,
         };
         for (final line in sections[sectionIndex]) {
+          if (await absorbStackedLine(line)) continue;
           final module = await _moduleFromEftLine(
             line,
             fallbackSlot: fallbackSlot,
@@ -98,6 +152,11 @@ class FittingFormatParser {
         }
       }
 
+      Log.i(
+        'FITTING',
+        'Parsed EFT $fittingName: drones=${drones.length} '
+            'fighters=${fighters.length}',
+      );
       return Fitting(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: fittingName,
@@ -107,6 +166,8 @@ class FittingFormatParser {
         medSlots: medSlots,
         lowSlots: lowSlots,
         rigSlots: rigSlots,
+        drones: drones,
+        fighters: fighters,
       );
     } catch (e, stack) {
       Log.e('FITTING', 'Error parsing EFT', e, stack);
@@ -291,7 +352,22 @@ class FittingFormatParser {
     for (final mod in fitting.rigSlots) {
       buffer.writeln(mod.typeName);
     }
+    buffer.writeln();
 
+    for (final drone in fitting.drones) {
+      buffer.writeln('${drone.typeName} x${drone.quantity}');
+    }
+    buffer.writeln();
+
+    for (final fighter in fitting.fighters) {
+      buffer.writeln('${fighter.typeName} x${fighter.quantity}');
+    }
+
+    Log.d(
+      'FITTING',
+      'generateEft ${fitting.name}: drones=${fitting.drones.length} '
+          'fighters=${fitting.fighters.length}',
+    );
     return buffer.toString().trim();
   }
 

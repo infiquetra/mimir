@@ -56,6 +56,15 @@ class EsiFittingExporter {
       });
     }
 
+    for (final fighter in fitting.fighters) {
+      if (fighter.quantity <= 0) continue;
+      items.add({
+        'type_id': fighter.typeId,
+        'flag': 'FighterBay',
+        'quantity': fighter.quantity,
+      });
+    }
+
     return EsiFittingExport(items: items, droppedModules: dropped);
   }
 }

@@ -42,6 +42,11 @@ _Fitting _$FittingFromJson(Map<String, dynamic> json) => _Fitting(
           ?.map((e) => DroneGroup.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const [],
+  fighters:
+      (json['fighters'] as List<dynamic>?)
+          ?.map((e) => FighterGroup.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
   cargo:
       (json['cargo'] as List<dynamic>?)
           ?.map((e) => CargoItem.fromJson(e as Map<String, dynamic>))
@@ -61,6 +66,7 @@ Map<String, dynamic> _$FittingToJson(_Fitting instance) => <String, dynamic>{
   'rigSlots': instance.rigSlots,
   'subsystems': instance.subsystems,
   'drones': instance.drones,
+  'fighters': instance.fighters,
   'cargo': instance.cargo,
 };
 
@@ -127,6 +133,71 @@ Map<String, dynamic> _$DroneGroupToJson(_DroneGroup instance) =>
       'inSpace': instance.inSpace,
     };
 
+_FighterGroup _$FighterGroupFromJson(Map<String, dynamic> json) =>
+    _FighterGroup(
+      typeId: (json['typeId'] as num).toInt(),
+      typeName: json['typeName'] as String,
+      quantity: (json['quantity'] as num).toInt(),
+      inSpace: (json['inSpace'] as num?)?.toInt() ?? 0,
+    );
+
+Map<String, dynamic> _$FighterGroupToJson(_FighterGroup instance) =>
+    <String, dynamic>{
+      'typeId': instance.typeId,
+      'typeName': instance.typeName,
+      'quantity': instance.quantity,
+      'inSpace': instance.inSpace,
+    };
+
+_FighterSquadronStats _$FighterSquadronStatsFromJson(
+  Map<String, dynamic> json,
+) => _FighterSquadronStats(
+  typeId: (json['typeId'] as num).toInt(),
+  typeName: json['typeName'] as String,
+  squadronSize: (json['squadronSize'] as num).toInt(),
+  squadrons: (json['squadrons'] as num).toInt(),
+  activeSquadrons: (json['activeSquadrons'] as num).toInt(),
+  abilities: (json['abilities'] as List<dynamic>)
+      .map((e) => $enumDecode(_$FighterAbilityKindEnumMap, e))
+      .toList(),
+  activeAbility: $enumDecodeNullable(
+    _$FighterAbilityKindEnumMap,
+    json['activeAbility'],
+  ),
+  dps: (json['dps'] as num?)?.toDouble() ?? 0.0,
+);
+
+Map<String, dynamic> _$FighterSquadronStatsToJson(
+  _FighterSquadronStats instance,
+) => <String, dynamic>{
+  'typeId': instance.typeId,
+  'typeName': instance.typeName,
+  'squadronSize': instance.squadronSize,
+  'squadrons': instance.squadrons,
+  'activeSquadrons': instance.activeSquadrons,
+  'abilities': instance.abilities
+      .map((e) => _$FighterAbilityKindEnumMap[e]!)
+      .toList(),
+  'activeAbility': _$FighterAbilityKindEnumMap[instance.activeAbility],
+  'dps': instance.dps,
+};
+
+const _$FighterAbilityKindEnumMap = {
+  FighterAbilityKind.attack: 'attack',
+  FighterAbilityKind.missiles: 'missiles',
+  FighterAbilityKind.bomb: 'bomb',
+  FighterAbilityKind.kamikaze: 'kamikaze',
+  FighterAbilityKind.microWarpDrive: 'microWarpDrive',
+  FighterAbilityKind.afterburner: 'afterburner',
+  FighterAbilityKind.microJumpDrive: 'microJumpDrive',
+  FighterAbilityKind.evasiveManeuvers: 'evasiveManeuvers',
+  FighterAbilityKind.tackle: 'tackle',
+  FighterAbilityKind.stasisWebifier: 'stasisWebifier',
+  FighterAbilityKind.warpDisruption: 'warpDisruption',
+  FighterAbilityKind.energyNeutralizer: 'energyNeutralizer',
+  FighterAbilityKind.ecm: 'ecm',
+};
+
 _CargoItem _$CargoItemFromJson(Map<String, dynamic> json) => _CargoItem(
   typeId: (json['typeId'] as num).toInt(),
   typeName: json['typeName'] as String,
@@ -140,46 +211,62 @@ Map<String, dynamic> _$CargoItemToJson(_CargoItem instance) =>
       'quantity': instance.quantity,
     };
 
-_FittingStats _$FittingStatsFromJson(Map<String, dynamic> json) =>
-    _FittingStats(
-      cpuUsed: (json['cpuUsed'] as num?)?.toDouble() ?? 0.0,
-      cpuMax: (json['cpuMax'] as num?)?.toDouble() ?? 0.0,
-      powerUsed: (json['powerUsed'] as num?)?.toDouble() ?? 0.0,
-      powerMax: (json['powerMax'] as num?)?.toDouble() ?? 0.0,
-      calibrationUsed: (json['calibrationUsed'] as num?)?.toInt() ?? 0,
-      calibrationMax: (json['calibrationMax'] as num?)?.toInt() ?? 0,
-      capacitorCapacity: (json['capacitorCapacity'] as num?)?.toDouble() ?? 0.0,
-      capacitorRecharge: (json['capacitorRecharge'] as num?)?.toDouble() ?? 0.0,
-      capacitorStable: (json['capacitorStable'] as num?)?.toDouble() ?? 0.0,
-      isCapStable: json['isCapStable'] as bool? ?? false,
-      defenses: json['defenses'] == null
-          ? const DefenseProfile()
-          : DefenseProfile.fromJson(json['defenses'] as Map<String, dynamic>),
-      dpsTotal: (json['dpsTotal'] as num?)?.toDouble() ?? 0.0,
-      dpsGuns: (json['dpsGuns'] as num?)?.toDouble() ?? 0.0,
-      dpsDrones: (json['dpsDrones'] as num?)?.toDouble() ?? 0.0,
-      dpsMissiles: (json['dpsMissiles'] as num?)?.toDouble() ?? 0.0,
-      volley: (json['volley'] as num?)?.toDouble() ?? 0.0,
-      optimalRange: (json['optimalRange'] as num?)?.toDouble() ?? 0.0,
-      falloffRange: (json['falloffRange'] as num?)?.toDouble() ?? 0.0,
-      maxVelocity: (json['maxVelocity'] as num?)?.toDouble() ?? 0.0,
-      inertiaModifier: (json['inertiaModifier'] as num?)?.toDouble() ?? 0.0,
-      alignTime: (json['alignTime'] as num?)?.toDouble() ?? 0.0,
-      warpSpeed: (json['warpSpeed'] as num?)?.toDouble() ?? 0.0,
-      massKg: (json['massKg'] as num?)?.toDouble() ?? 0.0,
-      targetRange: (json['targetRange'] as num?)?.toDouble() ?? 0.0,
-      scanResolution: (json['scanResolution'] as num?)?.toDouble() ?? 0.0,
-      maxLockedTargets: (json['maxLockedTargets'] as num?)?.toInt() ?? 0,
-      signatureRadius: (json['signatureRadius'] as num?)?.toDouble() ?? 0.0,
-      droneBandwidthUsed:
-          (json['droneBandwidthUsed'] as num?)?.toDouble() ?? 0.0,
-      droneBandwidthMax: (json['droneBandwidthMax'] as num?)?.toDouble() ?? 0.0,
-      droneBayUsed: (json['droneBayUsed'] as num?)?.toDouble() ?? 0.0,
-      droneBayMax: (json['droneBayMax'] as num?)?.toDouble() ?? 0.0,
-      shipCost: (json['shipCost'] as num?)?.toDouble() ?? 0.0,
-      moduleCost: (json['moduleCost'] as num?)?.toDouble() ?? 0.0,
-      totalCost: (json['totalCost'] as num?)?.toDouble() ?? 0.0,
-    );
+_FittingStats _$FittingStatsFromJson(
+  Map<String, dynamic> json,
+) => _FittingStats(
+  cpuUsed: (json['cpuUsed'] as num?)?.toDouble() ?? 0.0,
+  cpuMax: (json['cpuMax'] as num?)?.toDouble() ?? 0.0,
+  powerUsed: (json['powerUsed'] as num?)?.toDouble() ?? 0.0,
+  powerMax: (json['powerMax'] as num?)?.toDouble() ?? 0.0,
+  calibrationUsed: (json['calibrationUsed'] as num?)?.toInt() ?? 0,
+  calibrationMax: (json['calibrationMax'] as num?)?.toInt() ?? 0,
+  capacitorCapacity: (json['capacitorCapacity'] as num?)?.toDouble() ?? 0.0,
+  capacitorRecharge: (json['capacitorRecharge'] as num?)?.toDouble() ?? 0.0,
+  capacitorStable: (json['capacitorStable'] as num?)?.toDouble() ?? 0.0,
+  isCapStable: json['isCapStable'] as bool? ?? false,
+  defenses: json['defenses'] == null
+      ? const DefenseProfile()
+      : DefenseProfile.fromJson(json['defenses'] as Map<String, dynamic>),
+  dpsTotal: (json['dpsTotal'] as num?)?.toDouble() ?? 0.0,
+  dpsGuns: (json['dpsGuns'] as num?)?.toDouble() ?? 0.0,
+  dpsDrones: (json['dpsDrones'] as num?)?.toDouble() ?? 0.0,
+  dpsMissiles: (json['dpsMissiles'] as num?)?.toDouble() ?? 0.0,
+  volley: (json['volley'] as num?)?.toDouble() ?? 0.0,
+  optimalRange: (json['optimalRange'] as num?)?.toDouble() ?? 0.0,
+  falloffRange: (json['falloffRange'] as num?)?.toDouble() ?? 0.0,
+  maxVelocity: (json['maxVelocity'] as num?)?.toDouble() ?? 0.0,
+  inertiaModifier: (json['inertiaModifier'] as num?)?.toDouble() ?? 0.0,
+  alignTime: (json['alignTime'] as num?)?.toDouble() ?? 0.0,
+  warpSpeed: (json['warpSpeed'] as num?)?.toDouble() ?? 0.0,
+  massKg: (json['massKg'] as num?)?.toDouble() ?? 0.0,
+  targetRange: (json['targetRange'] as num?)?.toDouble() ?? 0.0,
+  scanResolution: (json['scanResolution'] as num?)?.toDouble() ?? 0.0,
+  maxLockedTargets: (json['maxLockedTargets'] as num?)?.toInt() ?? 0,
+  signatureRadius: (json['signatureRadius'] as num?)?.toDouble() ?? 0.0,
+  droneBandwidthUsed: (json['droneBandwidthUsed'] as num?)?.toDouble() ?? 0.0,
+  droneBandwidthMax: (json['droneBandwidthMax'] as num?)?.toDouble() ?? 0.0,
+  droneBayUsed: (json['droneBayUsed'] as num?)?.toDouble() ?? 0.0,
+  droneBayMax: (json['droneBayMax'] as num?)?.toDouble() ?? 0.0,
+  dpsFighters: (json['dpsFighters'] as num?)?.toDouble() ?? 0.0,
+  fighterBayUsed: (json['fighterBayUsed'] as num?)?.toDouble() ?? 0.0,
+  fighterBayMax: (json['fighterBayMax'] as num?)?.toDouble() ?? 0.0,
+  fighterTubesUsed: (json['fighterTubesUsed'] as num?)?.toInt() ?? 0,
+  fighterTubesMax: (json['fighterTubesMax'] as num?)?.toInt() ?? 0,
+  fighterLightUsed: (json['fighterLightUsed'] as num?)?.toInt() ?? 0,
+  fighterLightMax: (json['fighterLightMax'] as num?)?.toInt() ?? 0,
+  fighterSupportUsed: (json['fighterSupportUsed'] as num?)?.toInt() ?? 0,
+  fighterSupportMax: (json['fighterSupportMax'] as num?)?.toInt() ?? 0,
+  fighterHeavyUsed: (json['fighterHeavyUsed'] as num?)?.toInt() ?? 0,
+  fighterHeavyMax: (json['fighterHeavyMax'] as num?)?.toInt() ?? 0,
+  fighterSquadrons:
+      (json['fighterSquadrons'] as List<dynamic>?)
+          ?.map((e) => FighterSquadronStats.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
+  shipCost: (json['shipCost'] as num?)?.toDouble() ?? 0.0,
+  moduleCost: (json['moduleCost'] as num?)?.toDouble() ?? 0.0,
+  totalCost: (json['totalCost'] as num?)?.toDouble() ?? 0.0,
+);
 
 Map<String, dynamic> _$FittingStatsToJson(_FittingStats instance) =>
     <String, dynamic>{
@@ -214,6 +301,18 @@ Map<String, dynamic> _$FittingStatsToJson(_FittingStats instance) =>
       'droneBandwidthMax': instance.droneBandwidthMax,
       'droneBayUsed': instance.droneBayUsed,
       'droneBayMax': instance.droneBayMax,
+      'dpsFighters': instance.dpsFighters,
+      'fighterBayUsed': instance.fighterBayUsed,
+      'fighterBayMax': instance.fighterBayMax,
+      'fighterTubesUsed': instance.fighterTubesUsed,
+      'fighterTubesMax': instance.fighterTubesMax,
+      'fighterLightUsed': instance.fighterLightUsed,
+      'fighterLightMax': instance.fighterLightMax,
+      'fighterSupportUsed': instance.fighterSupportUsed,
+      'fighterSupportMax': instance.fighterSupportMax,
+      'fighterHeavyUsed': instance.fighterHeavyUsed,
+      'fighterHeavyMax': instance.fighterHeavyMax,
+      'fighterSquadrons': instance.fighterSquadrons,
       'shipCost': instance.shipCost,
       'moduleCost': instance.moduleCost,
       'totalCost': instance.totalCost,

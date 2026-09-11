@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Fitting {
 
- String get id; String get name; String? get description; int get shipTypeId; String get shipName; List<FittedModule> get highSlots; List<FittedModule> get medSlots; List<FittedModule> get lowSlots; List<FittedModule> get rigSlots; List<FittedModule> get subsystems; List<DroneGroup> get drones; List<CargoItem> get cargo;
+ String get id; String get name; String? get description; int get shipTypeId; String get shipName; List<FittedModule> get highSlots; List<FittedModule> get medSlots; List<FittedModule> get lowSlots; List<FittedModule> get rigSlots; List<FittedModule> get subsystems; List<DroneGroup> get drones; List<FighterGroup> get fighters; List<CargoItem> get cargo;
 /// Create a copy of Fitting
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $FittingCopyWith<Fitting> get copyWith => _$FittingCopyWithImpl<Fitting>(this as
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Fitting&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.shipTypeId, shipTypeId) || other.shipTypeId == shipTypeId)&&(identical(other.shipName, shipName) || other.shipName == shipName)&&const DeepCollectionEquality().equals(other.highSlots, highSlots)&&const DeepCollectionEquality().equals(other.medSlots, medSlots)&&const DeepCollectionEquality().equals(other.lowSlots, lowSlots)&&const DeepCollectionEquality().equals(other.rigSlots, rigSlots)&&const DeepCollectionEquality().equals(other.subsystems, subsystems)&&const DeepCollectionEquality().equals(other.drones, drones)&&const DeepCollectionEquality().equals(other.cargo, cargo));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Fitting&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.shipTypeId, shipTypeId) || other.shipTypeId == shipTypeId)&&(identical(other.shipName, shipName) || other.shipName == shipName)&&const DeepCollectionEquality().equals(other.highSlots, highSlots)&&const DeepCollectionEquality().equals(other.medSlots, medSlots)&&const DeepCollectionEquality().equals(other.lowSlots, lowSlots)&&const DeepCollectionEquality().equals(other.rigSlots, rigSlots)&&const DeepCollectionEquality().equals(other.subsystems, subsystems)&&const DeepCollectionEquality().equals(other.drones, drones)&&const DeepCollectionEquality().equals(other.fighters, fighters)&&const DeepCollectionEquality().equals(other.cargo, cargo));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,description,shipTypeId,shipName,const DeepCollectionEquality().hash(highSlots),const DeepCollectionEquality().hash(medSlots),const DeepCollectionEquality().hash(lowSlots),const DeepCollectionEquality().hash(rigSlots),const DeepCollectionEquality().hash(subsystems),const DeepCollectionEquality().hash(drones),const DeepCollectionEquality().hash(cargo));
+int get hashCode => Object.hash(runtimeType,id,name,description,shipTypeId,shipName,const DeepCollectionEquality().hash(highSlots),const DeepCollectionEquality().hash(medSlots),const DeepCollectionEquality().hash(lowSlots),const DeepCollectionEquality().hash(rigSlots),const DeepCollectionEquality().hash(subsystems),const DeepCollectionEquality().hash(drones),const DeepCollectionEquality().hash(fighters),const DeepCollectionEquality().hash(cargo));
 
 @override
 String toString() {
-  return 'Fitting(id: $id, name: $name, description: $description, shipTypeId: $shipTypeId, shipName: $shipName, highSlots: $highSlots, medSlots: $medSlots, lowSlots: $lowSlots, rigSlots: $rigSlots, subsystems: $subsystems, drones: $drones, cargo: $cargo)';
+  return 'Fitting(id: $id, name: $name, description: $description, shipTypeId: $shipTypeId, shipName: $shipName, highSlots: $highSlots, medSlots: $medSlots, lowSlots: $lowSlots, rigSlots: $rigSlots, subsystems: $subsystems, drones: $drones, fighters: $fighters, cargo: $cargo)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $FittingCopyWith<$Res>  {
   factory $FittingCopyWith(Fitting value, $Res Function(Fitting) _then) = _$FittingCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String? description, int shipTypeId, String shipName, List<FittedModule> highSlots, List<FittedModule> medSlots, List<FittedModule> lowSlots, List<FittedModule> rigSlots, List<FittedModule> subsystems, List<DroneGroup> drones, List<CargoItem> cargo
+ String id, String name, String? description, int shipTypeId, String shipName, List<FittedModule> highSlots, List<FittedModule> medSlots, List<FittedModule> lowSlots, List<FittedModule> rigSlots, List<FittedModule> subsystems, List<DroneGroup> drones, List<FighterGroup> fighters, List<CargoItem> cargo
 });
 
 
@@ -65,7 +65,7 @@ class _$FittingCopyWithImpl<$Res>
 
 /// Create a copy of Fitting
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? description = freezed,Object? shipTypeId = null,Object? shipName = null,Object? highSlots = null,Object? medSlots = null,Object? lowSlots = null,Object? rigSlots = null,Object? subsystems = null,Object? drones = null,Object? cargo = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? description = freezed,Object? shipTypeId = null,Object? shipName = null,Object? highSlots = null,Object? medSlots = null,Object? lowSlots = null,Object? rigSlots = null,Object? subsystems = null,Object? drones = null,Object? fighters = null,Object? cargo = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -78,7 +78,8 @@ as List<FittedModule>,lowSlots: null == lowSlots ? _self.lowSlots : lowSlots // 
 as List<FittedModule>,rigSlots: null == rigSlots ? _self.rigSlots : rigSlots // ignore: cast_nullable_to_non_nullable
 as List<FittedModule>,subsystems: null == subsystems ? _self.subsystems : subsystems // ignore: cast_nullable_to_non_nullable
 as List<FittedModule>,drones: null == drones ? _self.drones : drones // ignore: cast_nullable_to_non_nullable
-as List<DroneGroup>,cargo: null == cargo ? _self.cargo : cargo // ignore: cast_nullable_to_non_nullable
+as List<DroneGroup>,fighters: null == fighters ? _self.fighters : fighters // ignore: cast_nullable_to_non_nullable
+as List<FighterGroup>,cargo: null == cargo ? _self.cargo : cargo // ignore: cast_nullable_to_non_nullable
 as List<CargoItem>,
   ));
 }
@@ -164,10 +165,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? description,  int shipTypeId,  String shipName,  List<FittedModule> highSlots,  List<FittedModule> medSlots,  List<FittedModule> lowSlots,  List<FittedModule> rigSlots,  List<FittedModule> subsystems,  List<DroneGroup> drones,  List<CargoItem> cargo)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? description,  int shipTypeId,  String shipName,  List<FittedModule> highSlots,  List<FittedModule> medSlots,  List<FittedModule> lowSlots,  List<FittedModule> rigSlots,  List<FittedModule> subsystems,  List<DroneGroup> drones,  List<FighterGroup> fighters,  List<CargoItem> cargo)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Fitting() when $default != null:
-return $default(_that.id,_that.name,_that.description,_that.shipTypeId,_that.shipName,_that.highSlots,_that.medSlots,_that.lowSlots,_that.rigSlots,_that.subsystems,_that.drones,_that.cargo);case _:
+return $default(_that.id,_that.name,_that.description,_that.shipTypeId,_that.shipName,_that.highSlots,_that.medSlots,_that.lowSlots,_that.rigSlots,_that.subsystems,_that.drones,_that.fighters,_that.cargo);case _:
   return orElse();
 
 }
@@ -185,10 +186,10 @@ return $default(_that.id,_that.name,_that.description,_that.shipTypeId,_that.shi
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? description,  int shipTypeId,  String shipName,  List<FittedModule> highSlots,  List<FittedModule> medSlots,  List<FittedModule> lowSlots,  List<FittedModule> rigSlots,  List<FittedModule> subsystems,  List<DroneGroup> drones,  List<CargoItem> cargo)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? description,  int shipTypeId,  String shipName,  List<FittedModule> highSlots,  List<FittedModule> medSlots,  List<FittedModule> lowSlots,  List<FittedModule> rigSlots,  List<FittedModule> subsystems,  List<DroneGroup> drones,  List<FighterGroup> fighters,  List<CargoItem> cargo)  $default,) {final _that = this;
 switch (_that) {
 case _Fitting():
-return $default(_that.id,_that.name,_that.description,_that.shipTypeId,_that.shipName,_that.highSlots,_that.medSlots,_that.lowSlots,_that.rigSlots,_that.subsystems,_that.drones,_that.cargo);case _:
+return $default(_that.id,_that.name,_that.description,_that.shipTypeId,_that.shipName,_that.highSlots,_that.medSlots,_that.lowSlots,_that.rigSlots,_that.subsystems,_that.drones,_that.fighters,_that.cargo);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -205,10 +206,10 @@ return $default(_that.id,_that.name,_that.description,_that.shipTypeId,_that.shi
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? description,  int shipTypeId,  String shipName,  List<FittedModule> highSlots,  List<FittedModule> medSlots,  List<FittedModule> lowSlots,  List<FittedModule> rigSlots,  List<FittedModule> subsystems,  List<DroneGroup> drones,  List<CargoItem> cargo)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? description,  int shipTypeId,  String shipName,  List<FittedModule> highSlots,  List<FittedModule> medSlots,  List<FittedModule> lowSlots,  List<FittedModule> rigSlots,  List<FittedModule> subsystems,  List<DroneGroup> drones,  List<FighterGroup> fighters,  List<CargoItem> cargo)?  $default,) {final _that = this;
 switch (_that) {
 case _Fitting() when $default != null:
-return $default(_that.id,_that.name,_that.description,_that.shipTypeId,_that.shipName,_that.highSlots,_that.medSlots,_that.lowSlots,_that.rigSlots,_that.subsystems,_that.drones,_that.cargo);case _:
+return $default(_that.id,_that.name,_that.description,_that.shipTypeId,_that.shipName,_that.highSlots,_that.medSlots,_that.lowSlots,_that.rigSlots,_that.subsystems,_that.drones,_that.fighters,_that.cargo);case _:
   return null;
 
 }
@@ -220,7 +221,7 @@ return $default(_that.id,_that.name,_that.description,_that.shipTypeId,_that.shi
 @JsonSerializable()
 
 class _Fitting extends Fitting {
-  const _Fitting({required this.id, required this.name, this.description, required this.shipTypeId, required this.shipName, final  List<FittedModule> highSlots = const [], final  List<FittedModule> medSlots = const [], final  List<FittedModule> lowSlots = const [], final  List<FittedModule> rigSlots = const [], final  List<FittedModule> subsystems = const [], final  List<DroneGroup> drones = const [], final  List<CargoItem> cargo = const []}): _highSlots = highSlots,_medSlots = medSlots,_lowSlots = lowSlots,_rigSlots = rigSlots,_subsystems = subsystems,_drones = drones,_cargo = cargo,super._();
+  const _Fitting({required this.id, required this.name, this.description, required this.shipTypeId, required this.shipName, final  List<FittedModule> highSlots = const [], final  List<FittedModule> medSlots = const [], final  List<FittedModule> lowSlots = const [], final  List<FittedModule> rigSlots = const [], final  List<FittedModule> subsystems = const [], final  List<DroneGroup> drones = const [], final  List<FighterGroup> fighters = const [], final  List<CargoItem> cargo = const []}): _highSlots = highSlots,_medSlots = medSlots,_lowSlots = lowSlots,_rigSlots = rigSlots,_subsystems = subsystems,_drones = drones,_fighters = fighters,_cargo = cargo,super._();
   factory _Fitting.fromJson(Map<String, dynamic> json) => _$FittingFromJson(json);
 
 @override final  String id;
@@ -270,6 +271,13 @@ class _Fitting extends Fitting {
   return EqualUnmodifiableListView(_drones);
 }
 
+ final  List<FighterGroup> _fighters;
+@override@JsonKey() List<FighterGroup> get fighters {
+  if (_fighters is EqualUnmodifiableListView) return _fighters;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_fighters);
+}
+
  final  List<CargoItem> _cargo;
 @override@JsonKey() List<CargoItem> get cargo {
   if (_cargo is EqualUnmodifiableListView) return _cargo;
@@ -291,16 +299,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Fitting&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.shipTypeId, shipTypeId) || other.shipTypeId == shipTypeId)&&(identical(other.shipName, shipName) || other.shipName == shipName)&&const DeepCollectionEquality().equals(other._highSlots, _highSlots)&&const DeepCollectionEquality().equals(other._medSlots, _medSlots)&&const DeepCollectionEquality().equals(other._lowSlots, _lowSlots)&&const DeepCollectionEquality().equals(other._rigSlots, _rigSlots)&&const DeepCollectionEquality().equals(other._subsystems, _subsystems)&&const DeepCollectionEquality().equals(other._drones, _drones)&&const DeepCollectionEquality().equals(other._cargo, _cargo));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Fitting&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.shipTypeId, shipTypeId) || other.shipTypeId == shipTypeId)&&(identical(other.shipName, shipName) || other.shipName == shipName)&&const DeepCollectionEquality().equals(other._highSlots, _highSlots)&&const DeepCollectionEquality().equals(other._medSlots, _medSlots)&&const DeepCollectionEquality().equals(other._lowSlots, _lowSlots)&&const DeepCollectionEquality().equals(other._rigSlots, _rigSlots)&&const DeepCollectionEquality().equals(other._subsystems, _subsystems)&&const DeepCollectionEquality().equals(other._drones, _drones)&&const DeepCollectionEquality().equals(other._fighters, _fighters)&&const DeepCollectionEquality().equals(other._cargo, _cargo));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,description,shipTypeId,shipName,const DeepCollectionEquality().hash(_highSlots),const DeepCollectionEquality().hash(_medSlots),const DeepCollectionEquality().hash(_lowSlots),const DeepCollectionEquality().hash(_rigSlots),const DeepCollectionEquality().hash(_subsystems),const DeepCollectionEquality().hash(_drones),const DeepCollectionEquality().hash(_cargo));
+int get hashCode => Object.hash(runtimeType,id,name,description,shipTypeId,shipName,const DeepCollectionEquality().hash(_highSlots),const DeepCollectionEquality().hash(_medSlots),const DeepCollectionEquality().hash(_lowSlots),const DeepCollectionEquality().hash(_rigSlots),const DeepCollectionEquality().hash(_subsystems),const DeepCollectionEquality().hash(_drones),const DeepCollectionEquality().hash(_fighters),const DeepCollectionEquality().hash(_cargo));
 
 @override
 String toString() {
-  return 'Fitting(id: $id, name: $name, description: $description, shipTypeId: $shipTypeId, shipName: $shipName, highSlots: $highSlots, medSlots: $medSlots, lowSlots: $lowSlots, rigSlots: $rigSlots, subsystems: $subsystems, drones: $drones, cargo: $cargo)';
+  return 'Fitting(id: $id, name: $name, description: $description, shipTypeId: $shipTypeId, shipName: $shipName, highSlots: $highSlots, medSlots: $medSlots, lowSlots: $lowSlots, rigSlots: $rigSlots, subsystems: $subsystems, drones: $drones, fighters: $fighters, cargo: $cargo)';
 }
 
 
@@ -311,7 +319,7 @@ abstract mixin class _$FittingCopyWith<$Res> implements $FittingCopyWith<$Res> {
   factory _$FittingCopyWith(_Fitting value, $Res Function(_Fitting) _then) = __$FittingCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String? description, int shipTypeId, String shipName, List<FittedModule> highSlots, List<FittedModule> medSlots, List<FittedModule> lowSlots, List<FittedModule> rigSlots, List<FittedModule> subsystems, List<DroneGroup> drones, List<CargoItem> cargo
+ String id, String name, String? description, int shipTypeId, String shipName, List<FittedModule> highSlots, List<FittedModule> medSlots, List<FittedModule> lowSlots, List<FittedModule> rigSlots, List<FittedModule> subsystems, List<DroneGroup> drones, List<FighterGroup> fighters, List<CargoItem> cargo
 });
 
 
@@ -328,7 +336,7 @@ class __$FittingCopyWithImpl<$Res>
 
 /// Create a copy of Fitting
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? description = freezed,Object? shipTypeId = null,Object? shipName = null,Object? highSlots = null,Object? medSlots = null,Object? lowSlots = null,Object? rigSlots = null,Object? subsystems = null,Object? drones = null,Object? cargo = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? description = freezed,Object? shipTypeId = null,Object? shipName = null,Object? highSlots = null,Object? medSlots = null,Object? lowSlots = null,Object? rigSlots = null,Object? subsystems = null,Object? drones = null,Object? fighters = null,Object? cargo = null,}) {
   return _then(_Fitting(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -341,7 +349,8 @@ as List<FittedModule>,lowSlots: null == lowSlots ? _self._lowSlots : lowSlots //
 as List<FittedModule>,rigSlots: null == rigSlots ? _self._rigSlots : rigSlots // ignore: cast_nullable_to_non_nullable
 as List<FittedModule>,subsystems: null == subsystems ? _self._subsystems : subsystems // ignore: cast_nullable_to_non_nullable
 as List<FittedModule>,drones: null == drones ? _self._drones : drones // ignore: cast_nullable_to_non_nullable
-as List<DroneGroup>,cargo: null == cargo ? _self._cargo : cargo // ignore: cast_nullable_to_non_nullable
+as List<DroneGroup>,fighters: null == fighters ? _self._fighters : fighters // ignore: cast_nullable_to_non_nullable
+as List<FighterGroup>,cargo: null == cargo ? _self._cargo : cargo // ignore: cast_nullable_to_non_nullable
 as List<CargoItem>,
   ));
 }
@@ -916,6 +925,568 @@ as int,
 
 
 /// @nodoc
+mixin _$FighterGroup {
+
+ int get typeId; String get typeName; int get quantity; int get inSpace;
+/// Create a copy of FighterGroup
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$FighterGroupCopyWith<FighterGroup> get copyWith => _$FighterGroupCopyWithImpl<FighterGroup>(this as FighterGroup, _$identity);
+
+  /// Serializes this FighterGroup to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FighterGroup&&(identical(other.typeId, typeId) || other.typeId == typeId)&&(identical(other.typeName, typeName) || other.typeName == typeName)&&(identical(other.quantity, quantity) || other.quantity == quantity)&&(identical(other.inSpace, inSpace) || other.inSpace == inSpace));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,typeId,typeName,quantity,inSpace);
+
+@override
+String toString() {
+  return 'FighterGroup(typeId: $typeId, typeName: $typeName, quantity: $quantity, inSpace: $inSpace)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $FighterGroupCopyWith<$Res>  {
+  factory $FighterGroupCopyWith(FighterGroup value, $Res Function(FighterGroup) _then) = _$FighterGroupCopyWithImpl;
+@useResult
+$Res call({
+ int typeId, String typeName, int quantity, int inSpace
+});
+
+
+
+
+}
+/// @nodoc
+class _$FighterGroupCopyWithImpl<$Res>
+    implements $FighterGroupCopyWith<$Res> {
+  _$FighterGroupCopyWithImpl(this._self, this._then);
+
+  final FighterGroup _self;
+  final $Res Function(FighterGroup) _then;
+
+/// Create a copy of FighterGroup
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? typeId = null,Object? typeName = null,Object? quantity = null,Object? inSpace = null,}) {
+  return _then(_self.copyWith(
+typeId: null == typeId ? _self.typeId : typeId // ignore: cast_nullable_to_non_nullable
+as int,typeName: null == typeName ? _self.typeName : typeName // ignore: cast_nullable_to_non_nullable
+as String,quantity: null == quantity ? _self.quantity : quantity // ignore: cast_nullable_to_non_nullable
+as int,inSpace: null == inSpace ? _self.inSpace : inSpace // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [FighterGroup].
+extension FighterGroupPatterns on FighterGroup {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _FighterGroup value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _FighterGroup() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _FighterGroup value)  $default,){
+final _that = this;
+switch (_that) {
+case _FighterGroup():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _FighterGroup value)?  $default,){
+final _that = this;
+switch (_that) {
+case _FighterGroup() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int typeId,  String typeName,  int quantity,  int inSpace)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _FighterGroup() when $default != null:
+return $default(_that.typeId,_that.typeName,_that.quantity,_that.inSpace);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int typeId,  String typeName,  int quantity,  int inSpace)  $default,) {final _that = this;
+switch (_that) {
+case _FighterGroup():
+return $default(_that.typeId,_that.typeName,_that.quantity,_that.inSpace);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int typeId,  String typeName,  int quantity,  int inSpace)?  $default,) {final _that = this;
+switch (_that) {
+case _FighterGroup() when $default != null:
+return $default(_that.typeId,_that.typeName,_that.quantity,_that.inSpace);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _FighterGroup implements FighterGroup {
+  const _FighterGroup({required this.typeId, required this.typeName, required this.quantity, this.inSpace = 0});
+  factory _FighterGroup.fromJson(Map<String, dynamic> json) => _$FighterGroupFromJson(json);
+
+@override final  int typeId;
+@override final  String typeName;
+@override final  int quantity;
+@override@JsonKey() final  int inSpace;
+
+/// Create a copy of FighterGroup
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$FighterGroupCopyWith<_FighterGroup> get copyWith => __$FighterGroupCopyWithImpl<_FighterGroup>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$FighterGroupToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FighterGroup&&(identical(other.typeId, typeId) || other.typeId == typeId)&&(identical(other.typeName, typeName) || other.typeName == typeName)&&(identical(other.quantity, quantity) || other.quantity == quantity)&&(identical(other.inSpace, inSpace) || other.inSpace == inSpace));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,typeId,typeName,quantity,inSpace);
+
+@override
+String toString() {
+  return 'FighterGroup(typeId: $typeId, typeName: $typeName, quantity: $quantity, inSpace: $inSpace)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$FighterGroupCopyWith<$Res> implements $FighterGroupCopyWith<$Res> {
+  factory _$FighterGroupCopyWith(_FighterGroup value, $Res Function(_FighterGroup) _then) = __$FighterGroupCopyWithImpl;
+@override @useResult
+$Res call({
+ int typeId, String typeName, int quantity, int inSpace
+});
+
+
+
+
+}
+/// @nodoc
+class __$FighterGroupCopyWithImpl<$Res>
+    implements _$FighterGroupCopyWith<$Res> {
+  __$FighterGroupCopyWithImpl(this._self, this._then);
+
+  final _FighterGroup _self;
+  final $Res Function(_FighterGroup) _then;
+
+/// Create a copy of FighterGroup
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? typeId = null,Object? typeName = null,Object? quantity = null,Object? inSpace = null,}) {
+  return _then(_FighterGroup(
+typeId: null == typeId ? _self.typeId : typeId // ignore: cast_nullable_to_non_nullable
+as int,typeName: null == typeName ? _self.typeName : typeName // ignore: cast_nullable_to_non_nullable
+as String,quantity: null == quantity ? _self.quantity : quantity // ignore: cast_nullable_to_non_nullable
+as int,inSpace: null == inSpace ? _self.inSpace : inSpace // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$FighterSquadronStats {
+
+ int get typeId; String get typeName; int get squadronSize; int get squadrons; int get activeSquadrons; List<FighterAbilityKind> get abilities; FighterAbilityKind? get activeAbility; double get dps;
+/// Create a copy of FighterSquadronStats
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$FighterSquadronStatsCopyWith<FighterSquadronStats> get copyWith => _$FighterSquadronStatsCopyWithImpl<FighterSquadronStats>(this as FighterSquadronStats, _$identity);
+
+  /// Serializes this FighterSquadronStats to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FighterSquadronStats&&(identical(other.typeId, typeId) || other.typeId == typeId)&&(identical(other.typeName, typeName) || other.typeName == typeName)&&(identical(other.squadronSize, squadronSize) || other.squadronSize == squadronSize)&&(identical(other.squadrons, squadrons) || other.squadrons == squadrons)&&(identical(other.activeSquadrons, activeSquadrons) || other.activeSquadrons == activeSquadrons)&&const DeepCollectionEquality().equals(other.abilities, abilities)&&(identical(other.activeAbility, activeAbility) || other.activeAbility == activeAbility)&&(identical(other.dps, dps) || other.dps == dps));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,typeId,typeName,squadronSize,squadrons,activeSquadrons,const DeepCollectionEquality().hash(abilities),activeAbility,dps);
+
+@override
+String toString() {
+  return 'FighterSquadronStats(typeId: $typeId, typeName: $typeName, squadronSize: $squadronSize, squadrons: $squadrons, activeSquadrons: $activeSquadrons, abilities: $abilities, activeAbility: $activeAbility, dps: $dps)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $FighterSquadronStatsCopyWith<$Res>  {
+  factory $FighterSquadronStatsCopyWith(FighterSquadronStats value, $Res Function(FighterSquadronStats) _then) = _$FighterSquadronStatsCopyWithImpl;
+@useResult
+$Res call({
+ int typeId, String typeName, int squadronSize, int squadrons, int activeSquadrons, List<FighterAbilityKind> abilities, FighterAbilityKind? activeAbility, double dps
+});
+
+
+
+
+}
+/// @nodoc
+class _$FighterSquadronStatsCopyWithImpl<$Res>
+    implements $FighterSquadronStatsCopyWith<$Res> {
+  _$FighterSquadronStatsCopyWithImpl(this._self, this._then);
+
+  final FighterSquadronStats _self;
+  final $Res Function(FighterSquadronStats) _then;
+
+/// Create a copy of FighterSquadronStats
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? typeId = null,Object? typeName = null,Object? squadronSize = null,Object? squadrons = null,Object? activeSquadrons = null,Object? abilities = null,Object? activeAbility = freezed,Object? dps = null,}) {
+  return _then(_self.copyWith(
+typeId: null == typeId ? _self.typeId : typeId // ignore: cast_nullable_to_non_nullable
+as int,typeName: null == typeName ? _self.typeName : typeName // ignore: cast_nullable_to_non_nullable
+as String,squadronSize: null == squadronSize ? _self.squadronSize : squadronSize // ignore: cast_nullable_to_non_nullable
+as int,squadrons: null == squadrons ? _self.squadrons : squadrons // ignore: cast_nullable_to_non_nullable
+as int,activeSquadrons: null == activeSquadrons ? _self.activeSquadrons : activeSquadrons // ignore: cast_nullable_to_non_nullable
+as int,abilities: null == abilities ? _self.abilities : abilities // ignore: cast_nullable_to_non_nullable
+as List<FighterAbilityKind>,activeAbility: freezed == activeAbility ? _self.activeAbility : activeAbility // ignore: cast_nullable_to_non_nullable
+as FighterAbilityKind?,dps: null == dps ? _self.dps : dps // ignore: cast_nullable_to_non_nullable
+as double,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [FighterSquadronStats].
+extension FighterSquadronStatsPatterns on FighterSquadronStats {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _FighterSquadronStats value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _FighterSquadronStats() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _FighterSquadronStats value)  $default,){
+final _that = this;
+switch (_that) {
+case _FighterSquadronStats():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _FighterSquadronStats value)?  $default,){
+final _that = this;
+switch (_that) {
+case _FighterSquadronStats() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int typeId,  String typeName,  int squadronSize,  int squadrons,  int activeSquadrons,  List<FighterAbilityKind> abilities,  FighterAbilityKind? activeAbility,  double dps)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _FighterSquadronStats() when $default != null:
+return $default(_that.typeId,_that.typeName,_that.squadronSize,_that.squadrons,_that.activeSquadrons,_that.abilities,_that.activeAbility,_that.dps);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int typeId,  String typeName,  int squadronSize,  int squadrons,  int activeSquadrons,  List<FighterAbilityKind> abilities,  FighterAbilityKind? activeAbility,  double dps)  $default,) {final _that = this;
+switch (_that) {
+case _FighterSquadronStats():
+return $default(_that.typeId,_that.typeName,_that.squadronSize,_that.squadrons,_that.activeSquadrons,_that.abilities,_that.activeAbility,_that.dps);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int typeId,  String typeName,  int squadronSize,  int squadrons,  int activeSquadrons,  List<FighterAbilityKind> abilities,  FighterAbilityKind? activeAbility,  double dps)?  $default,) {final _that = this;
+switch (_that) {
+case _FighterSquadronStats() when $default != null:
+return $default(_that.typeId,_that.typeName,_that.squadronSize,_that.squadrons,_that.activeSquadrons,_that.abilities,_that.activeAbility,_that.dps);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _FighterSquadronStats implements FighterSquadronStats {
+  const _FighterSquadronStats({required this.typeId, required this.typeName, required this.squadronSize, required this.squadrons, required this.activeSquadrons, required final  List<FighterAbilityKind> abilities, this.activeAbility, this.dps = 0.0}): _abilities = abilities;
+  factory _FighterSquadronStats.fromJson(Map<String, dynamic> json) => _$FighterSquadronStatsFromJson(json);
+
+@override final  int typeId;
+@override final  String typeName;
+@override final  int squadronSize;
+@override final  int squadrons;
+@override final  int activeSquadrons;
+ final  List<FighterAbilityKind> _abilities;
+@override List<FighterAbilityKind> get abilities {
+  if (_abilities is EqualUnmodifiableListView) return _abilities;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_abilities);
+}
+
+@override final  FighterAbilityKind? activeAbility;
+@override@JsonKey() final  double dps;
+
+/// Create a copy of FighterSquadronStats
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$FighterSquadronStatsCopyWith<_FighterSquadronStats> get copyWith => __$FighterSquadronStatsCopyWithImpl<_FighterSquadronStats>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$FighterSquadronStatsToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FighterSquadronStats&&(identical(other.typeId, typeId) || other.typeId == typeId)&&(identical(other.typeName, typeName) || other.typeName == typeName)&&(identical(other.squadronSize, squadronSize) || other.squadronSize == squadronSize)&&(identical(other.squadrons, squadrons) || other.squadrons == squadrons)&&(identical(other.activeSquadrons, activeSquadrons) || other.activeSquadrons == activeSquadrons)&&const DeepCollectionEquality().equals(other._abilities, _abilities)&&(identical(other.activeAbility, activeAbility) || other.activeAbility == activeAbility)&&(identical(other.dps, dps) || other.dps == dps));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,typeId,typeName,squadronSize,squadrons,activeSquadrons,const DeepCollectionEquality().hash(_abilities),activeAbility,dps);
+
+@override
+String toString() {
+  return 'FighterSquadronStats(typeId: $typeId, typeName: $typeName, squadronSize: $squadronSize, squadrons: $squadrons, activeSquadrons: $activeSquadrons, abilities: $abilities, activeAbility: $activeAbility, dps: $dps)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$FighterSquadronStatsCopyWith<$Res> implements $FighterSquadronStatsCopyWith<$Res> {
+  factory _$FighterSquadronStatsCopyWith(_FighterSquadronStats value, $Res Function(_FighterSquadronStats) _then) = __$FighterSquadronStatsCopyWithImpl;
+@override @useResult
+$Res call({
+ int typeId, String typeName, int squadronSize, int squadrons, int activeSquadrons, List<FighterAbilityKind> abilities, FighterAbilityKind? activeAbility, double dps
+});
+
+
+
+
+}
+/// @nodoc
+class __$FighterSquadronStatsCopyWithImpl<$Res>
+    implements _$FighterSquadronStatsCopyWith<$Res> {
+  __$FighterSquadronStatsCopyWithImpl(this._self, this._then);
+
+  final _FighterSquadronStats _self;
+  final $Res Function(_FighterSquadronStats) _then;
+
+/// Create a copy of FighterSquadronStats
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? typeId = null,Object? typeName = null,Object? squadronSize = null,Object? squadrons = null,Object? activeSquadrons = null,Object? abilities = null,Object? activeAbility = freezed,Object? dps = null,}) {
+  return _then(_FighterSquadronStats(
+typeId: null == typeId ? _self.typeId : typeId // ignore: cast_nullable_to_non_nullable
+as int,typeName: null == typeName ? _self.typeName : typeName // ignore: cast_nullable_to_non_nullable
+as String,squadronSize: null == squadronSize ? _self.squadronSize : squadronSize // ignore: cast_nullable_to_non_nullable
+as int,squadrons: null == squadrons ? _self.squadrons : squadrons // ignore: cast_nullable_to_non_nullable
+as int,activeSquadrons: null == activeSquadrons ? _self.activeSquadrons : activeSquadrons // ignore: cast_nullable_to_non_nullable
+as int,abilities: null == abilities ? _self._abilities : abilities // ignore: cast_nullable_to_non_nullable
+as List<FighterAbilityKind>,activeAbility: freezed == activeAbility ? _self.activeAbility : activeAbility // ignore: cast_nullable_to_non_nullable
+as FighterAbilityKind?,dps: null == dps ? _self.dps : dps // ignore: cast_nullable_to_non_nullable
+as double,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$CargoItem {
 
  int get typeId; String get typeName; int get quantity;
@@ -1187,7 +1758,7 @@ as int,
 /// @nodoc
 mixin _$FittingStats {
 
- double get cpuUsed; double get cpuMax; double get powerUsed; double get powerMax; int get calibrationUsed; int get calibrationMax; double get capacitorCapacity; double get capacitorRecharge; double get capacitorStable; bool get isCapStable; DefenseProfile get defenses; double get dpsTotal; double get dpsGuns; double get dpsDrones; double get dpsMissiles; double get volley; double get optimalRange; double get falloffRange; double get maxVelocity; double get inertiaModifier; double get alignTime; double get warpSpeed; double get massKg; double get targetRange; double get scanResolution; int get maxLockedTargets; double get signatureRadius; double get droneBandwidthUsed; double get droneBandwidthMax; double get droneBayUsed; double get droneBayMax; double get shipCost; double get moduleCost; double get totalCost;
+ double get cpuUsed; double get cpuMax; double get powerUsed; double get powerMax; int get calibrationUsed; int get calibrationMax; double get capacitorCapacity; double get capacitorRecharge; double get capacitorStable; bool get isCapStable; DefenseProfile get defenses; double get dpsTotal; double get dpsGuns; double get dpsDrones; double get dpsMissiles; double get volley; double get optimalRange; double get falloffRange; double get maxVelocity; double get inertiaModifier; double get alignTime; double get warpSpeed; double get massKg; double get targetRange; double get scanResolution; int get maxLockedTargets; double get signatureRadius; double get droneBandwidthUsed; double get droneBandwidthMax; double get droneBayUsed; double get droneBayMax; double get dpsFighters; double get fighterBayUsed; double get fighterBayMax; int get fighterTubesUsed; int get fighterTubesMax; int get fighterLightUsed; int get fighterLightMax; int get fighterSupportUsed; int get fighterSupportMax; int get fighterHeavyUsed; int get fighterHeavyMax; List<FighterSquadronStats> get fighterSquadrons; double get shipCost; double get moduleCost; double get totalCost;
 /// Create a copy of FittingStats
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1200,16 +1771,16 @@ $FittingStatsCopyWith<FittingStats> get copyWith => _$FittingStatsCopyWithImpl<F
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is FittingStats&&(identical(other.cpuUsed, cpuUsed) || other.cpuUsed == cpuUsed)&&(identical(other.cpuMax, cpuMax) || other.cpuMax == cpuMax)&&(identical(other.powerUsed, powerUsed) || other.powerUsed == powerUsed)&&(identical(other.powerMax, powerMax) || other.powerMax == powerMax)&&(identical(other.calibrationUsed, calibrationUsed) || other.calibrationUsed == calibrationUsed)&&(identical(other.calibrationMax, calibrationMax) || other.calibrationMax == calibrationMax)&&(identical(other.capacitorCapacity, capacitorCapacity) || other.capacitorCapacity == capacitorCapacity)&&(identical(other.capacitorRecharge, capacitorRecharge) || other.capacitorRecharge == capacitorRecharge)&&(identical(other.capacitorStable, capacitorStable) || other.capacitorStable == capacitorStable)&&(identical(other.isCapStable, isCapStable) || other.isCapStable == isCapStable)&&(identical(other.defenses, defenses) || other.defenses == defenses)&&(identical(other.dpsTotal, dpsTotal) || other.dpsTotal == dpsTotal)&&(identical(other.dpsGuns, dpsGuns) || other.dpsGuns == dpsGuns)&&(identical(other.dpsDrones, dpsDrones) || other.dpsDrones == dpsDrones)&&(identical(other.dpsMissiles, dpsMissiles) || other.dpsMissiles == dpsMissiles)&&(identical(other.volley, volley) || other.volley == volley)&&(identical(other.optimalRange, optimalRange) || other.optimalRange == optimalRange)&&(identical(other.falloffRange, falloffRange) || other.falloffRange == falloffRange)&&(identical(other.maxVelocity, maxVelocity) || other.maxVelocity == maxVelocity)&&(identical(other.inertiaModifier, inertiaModifier) || other.inertiaModifier == inertiaModifier)&&(identical(other.alignTime, alignTime) || other.alignTime == alignTime)&&(identical(other.warpSpeed, warpSpeed) || other.warpSpeed == warpSpeed)&&(identical(other.massKg, massKg) || other.massKg == massKg)&&(identical(other.targetRange, targetRange) || other.targetRange == targetRange)&&(identical(other.scanResolution, scanResolution) || other.scanResolution == scanResolution)&&(identical(other.maxLockedTargets, maxLockedTargets) || other.maxLockedTargets == maxLockedTargets)&&(identical(other.signatureRadius, signatureRadius) || other.signatureRadius == signatureRadius)&&(identical(other.droneBandwidthUsed, droneBandwidthUsed) || other.droneBandwidthUsed == droneBandwidthUsed)&&(identical(other.droneBandwidthMax, droneBandwidthMax) || other.droneBandwidthMax == droneBandwidthMax)&&(identical(other.droneBayUsed, droneBayUsed) || other.droneBayUsed == droneBayUsed)&&(identical(other.droneBayMax, droneBayMax) || other.droneBayMax == droneBayMax)&&(identical(other.shipCost, shipCost) || other.shipCost == shipCost)&&(identical(other.moduleCost, moduleCost) || other.moduleCost == moduleCost)&&(identical(other.totalCost, totalCost) || other.totalCost == totalCost));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FittingStats&&(identical(other.cpuUsed, cpuUsed) || other.cpuUsed == cpuUsed)&&(identical(other.cpuMax, cpuMax) || other.cpuMax == cpuMax)&&(identical(other.powerUsed, powerUsed) || other.powerUsed == powerUsed)&&(identical(other.powerMax, powerMax) || other.powerMax == powerMax)&&(identical(other.calibrationUsed, calibrationUsed) || other.calibrationUsed == calibrationUsed)&&(identical(other.calibrationMax, calibrationMax) || other.calibrationMax == calibrationMax)&&(identical(other.capacitorCapacity, capacitorCapacity) || other.capacitorCapacity == capacitorCapacity)&&(identical(other.capacitorRecharge, capacitorRecharge) || other.capacitorRecharge == capacitorRecharge)&&(identical(other.capacitorStable, capacitorStable) || other.capacitorStable == capacitorStable)&&(identical(other.isCapStable, isCapStable) || other.isCapStable == isCapStable)&&(identical(other.defenses, defenses) || other.defenses == defenses)&&(identical(other.dpsTotal, dpsTotal) || other.dpsTotal == dpsTotal)&&(identical(other.dpsGuns, dpsGuns) || other.dpsGuns == dpsGuns)&&(identical(other.dpsDrones, dpsDrones) || other.dpsDrones == dpsDrones)&&(identical(other.dpsMissiles, dpsMissiles) || other.dpsMissiles == dpsMissiles)&&(identical(other.volley, volley) || other.volley == volley)&&(identical(other.optimalRange, optimalRange) || other.optimalRange == optimalRange)&&(identical(other.falloffRange, falloffRange) || other.falloffRange == falloffRange)&&(identical(other.maxVelocity, maxVelocity) || other.maxVelocity == maxVelocity)&&(identical(other.inertiaModifier, inertiaModifier) || other.inertiaModifier == inertiaModifier)&&(identical(other.alignTime, alignTime) || other.alignTime == alignTime)&&(identical(other.warpSpeed, warpSpeed) || other.warpSpeed == warpSpeed)&&(identical(other.massKg, massKg) || other.massKg == massKg)&&(identical(other.targetRange, targetRange) || other.targetRange == targetRange)&&(identical(other.scanResolution, scanResolution) || other.scanResolution == scanResolution)&&(identical(other.maxLockedTargets, maxLockedTargets) || other.maxLockedTargets == maxLockedTargets)&&(identical(other.signatureRadius, signatureRadius) || other.signatureRadius == signatureRadius)&&(identical(other.droneBandwidthUsed, droneBandwidthUsed) || other.droneBandwidthUsed == droneBandwidthUsed)&&(identical(other.droneBandwidthMax, droneBandwidthMax) || other.droneBandwidthMax == droneBandwidthMax)&&(identical(other.droneBayUsed, droneBayUsed) || other.droneBayUsed == droneBayUsed)&&(identical(other.droneBayMax, droneBayMax) || other.droneBayMax == droneBayMax)&&(identical(other.dpsFighters, dpsFighters) || other.dpsFighters == dpsFighters)&&(identical(other.fighterBayUsed, fighterBayUsed) || other.fighterBayUsed == fighterBayUsed)&&(identical(other.fighterBayMax, fighterBayMax) || other.fighterBayMax == fighterBayMax)&&(identical(other.fighterTubesUsed, fighterTubesUsed) || other.fighterTubesUsed == fighterTubesUsed)&&(identical(other.fighterTubesMax, fighterTubesMax) || other.fighterTubesMax == fighterTubesMax)&&(identical(other.fighterLightUsed, fighterLightUsed) || other.fighterLightUsed == fighterLightUsed)&&(identical(other.fighterLightMax, fighterLightMax) || other.fighterLightMax == fighterLightMax)&&(identical(other.fighterSupportUsed, fighterSupportUsed) || other.fighterSupportUsed == fighterSupportUsed)&&(identical(other.fighterSupportMax, fighterSupportMax) || other.fighterSupportMax == fighterSupportMax)&&(identical(other.fighterHeavyUsed, fighterHeavyUsed) || other.fighterHeavyUsed == fighterHeavyUsed)&&(identical(other.fighterHeavyMax, fighterHeavyMax) || other.fighterHeavyMax == fighterHeavyMax)&&const DeepCollectionEquality().equals(other.fighterSquadrons, fighterSquadrons)&&(identical(other.shipCost, shipCost) || other.shipCost == shipCost)&&(identical(other.moduleCost, moduleCost) || other.moduleCost == moduleCost)&&(identical(other.totalCost, totalCost) || other.totalCost == totalCost));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,cpuUsed,cpuMax,powerUsed,powerMax,calibrationUsed,calibrationMax,capacitorCapacity,capacitorRecharge,capacitorStable,isCapStable,defenses,dpsTotal,dpsGuns,dpsDrones,dpsMissiles,volley,optimalRange,falloffRange,maxVelocity,inertiaModifier,alignTime,warpSpeed,massKg,targetRange,scanResolution,maxLockedTargets,signatureRadius,droneBandwidthUsed,droneBandwidthMax,droneBayUsed,droneBayMax,shipCost,moduleCost,totalCost]);
+int get hashCode => Object.hashAll([runtimeType,cpuUsed,cpuMax,powerUsed,powerMax,calibrationUsed,calibrationMax,capacitorCapacity,capacitorRecharge,capacitorStable,isCapStable,defenses,dpsTotal,dpsGuns,dpsDrones,dpsMissiles,volley,optimalRange,falloffRange,maxVelocity,inertiaModifier,alignTime,warpSpeed,massKg,targetRange,scanResolution,maxLockedTargets,signatureRadius,droneBandwidthUsed,droneBandwidthMax,droneBayUsed,droneBayMax,dpsFighters,fighterBayUsed,fighterBayMax,fighterTubesUsed,fighterTubesMax,fighterLightUsed,fighterLightMax,fighterSupportUsed,fighterSupportMax,fighterHeavyUsed,fighterHeavyMax,const DeepCollectionEquality().hash(fighterSquadrons),shipCost,moduleCost,totalCost]);
 
 @override
 String toString() {
-  return 'FittingStats(cpuUsed: $cpuUsed, cpuMax: $cpuMax, powerUsed: $powerUsed, powerMax: $powerMax, calibrationUsed: $calibrationUsed, calibrationMax: $calibrationMax, capacitorCapacity: $capacitorCapacity, capacitorRecharge: $capacitorRecharge, capacitorStable: $capacitorStable, isCapStable: $isCapStable, defenses: $defenses, dpsTotal: $dpsTotal, dpsGuns: $dpsGuns, dpsDrones: $dpsDrones, dpsMissiles: $dpsMissiles, volley: $volley, optimalRange: $optimalRange, falloffRange: $falloffRange, maxVelocity: $maxVelocity, inertiaModifier: $inertiaModifier, alignTime: $alignTime, warpSpeed: $warpSpeed, massKg: $massKg, targetRange: $targetRange, scanResolution: $scanResolution, maxLockedTargets: $maxLockedTargets, signatureRadius: $signatureRadius, droneBandwidthUsed: $droneBandwidthUsed, droneBandwidthMax: $droneBandwidthMax, droneBayUsed: $droneBayUsed, droneBayMax: $droneBayMax, shipCost: $shipCost, moduleCost: $moduleCost, totalCost: $totalCost)';
+  return 'FittingStats(cpuUsed: $cpuUsed, cpuMax: $cpuMax, powerUsed: $powerUsed, powerMax: $powerMax, calibrationUsed: $calibrationUsed, calibrationMax: $calibrationMax, capacitorCapacity: $capacitorCapacity, capacitorRecharge: $capacitorRecharge, capacitorStable: $capacitorStable, isCapStable: $isCapStable, defenses: $defenses, dpsTotal: $dpsTotal, dpsGuns: $dpsGuns, dpsDrones: $dpsDrones, dpsMissiles: $dpsMissiles, volley: $volley, optimalRange: $optimalRange, falloffRange: $falloffRange, maxVelocity: $maxVelocity, inertiaModifier: $inertiaModifier, alignTime: $alignTime, warpSpeed: $warpSpeed, massKg: $massKg, targetRange: $targetRange, scanResolution: $scanResolution, maxLockedTargets: $maxLockedTargets, signatureRadius: $signatureRadius, droneBandwidthUsed: $droneBandwidthUsed, droneBandwidthMax: $droneBandwidthMax, droneBayUsed: $droneBayUsed, droneBayMax: $droneBayMax, dpsFighters: $dpsFighters, fighterBayUsed: $fighterBayUsed, fighterBayMax: $fighterBayMax, fighterTubesUsed: $fighterTubesUsed, fighterTubesMax: $fighterTubesMax, fighterLightUsed: $fighterLightUsed, fighterLightMax: $fighterLightMax, fighterSupportUsed: $fighterSupportUsed, fighterSupportMax: $fighterSupportMax, fighterHeavyUsed: $fighterHeavyUsed, fighterHeavyMax: $fighterHeavyMax, fighterSquadrons: $fighterSquadrons, shipCost: $shipCost, moduleCost: $moduleCost, totalCost: $totalCost)';
 }
 
 
@@ -1220,7 +1791,7 @@ abstract mixin class $FittingStatsCopyWith<$Res>  {
   factory $FittingStatsCopyWith(FittingStats value, $Res Function(FittingStats) _then) = _$FittingStatsCopyWithImpl;
 @useResult
 $Res call({
- double cpuUsed, double cpuMax, double powerUsed, double powerMax, int calibrationUsed, int calibrationMax, double capacitorCapacity, double capacitorRecharge, double capacitorStable, bool isCapStable, DefenseProfile defenses, double dpsTotal, double dpsGuns, double dpsDrones, double dpsMissiles, double volley, double optimalRange, double falloffRange, double maxVelocity, double inertiaModifier, double alignTime, double warpSpeed, double massKg, double targetRange, double scanResolution, int maxLockedTargets, double signatureRadius, double droneBandwidthUsed, double droneBandwidthMax, double droneBayUsed, double droneBayMax, double shipCost, double moduleCost, double totalCost
+ double cpuUsed, double cpuMax, double powerUsed, double powerMax, int calibrationUsed, int calibrationMax, double capacitorCapacity, double capacitorRecharge, double capacitorStable, bool isCapStable, DefenseProfile defenses, double dpsTotal, double dpsGuns, double dpsDrones, double dpsMissiles, double volley, double optimalRange, double falloffRange, double maxVelocity, double inertiaModifier, double alignTime, double warpSpeed, double massKg, double targetRange, double scanResolution, int maxLockedTargets, double signatureRadius, double droneBandwidthUsed, double droneBandwidthMax, double droneBayUsed, double droneBayMax, double dpsFighters, double fighterBayUsed, double fighterBayMax, int fighterTubesUsed, int fighterTubesMax, int fighterLightUsed, int fighterLightMax, int fighterSupportUsed, int fighterSupportMax, int fighterHeavyUsed, int fighterHeavyMax, List<FighterSquadronStats> fighterSquadrons, double shipCost, double moduleCost, double totalCost
 });
 
 
@@ -1237,7 +1808,7 @@ class _$FittingStatsCopyWithImpl<$Res>
 
 /// Create a copy of FittingStats
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? cpuUsed = null,Object? cpuMax = null,Object? powerUsed = null,Object? powerMax = null,Object? calibrationUsed = null,Object? calibrationMax = null,Object? capacitorCapacity = null,Object? capacitorRecharge = null,Object? capacitorStable = null,Object? isCapStable = null,Object? defenses = null,Object? dpsTotal = null,Object? dpsGuns = null,Object? dpsDrones = null,Object? dpsMissiles = null,Object? volley = null,Object? optimalRange = null,Object? falloffRange = null,Object? maxVelocity = null,Object? inertiaModifier = null,Object? alignTime = null,Object? warpSpeed = null,Object? massKg = null,Object? targetRange = null,Object? scanResolution = null,Object? maxLockedTargets = null,Object? signatureRadius = null,Object? droneBandwidthUsed = null,Object? droneBandwidthMax = null,Object? droneBayUsed = null,Object? droneBayMax = null,Object? shipCost = null,Object? moduleCost = null,Object? totalCost = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? cpuUsed = null,Object? cpuMax = null,Object? powerUsed = null,Object? powerMax = null,Object? calibrationUsed = null,Object? calibrationMax = null,Object? capacitorCapacity = null,Object? capacitorRecharge = null,Object? capacitorStable = null,Object? isCapStable = null,Object? defenses = null,Object? dpsTotal = null,Object? dpsGuns = null,Object? dpsDrones = null,Object? dpsMissiles = null,Object? volley = null,Object? optimalRange = null,Object? falloffRange = null,Object? maxVelocity = null,Object? inertiaModifier = null,Object? alignTime = null,Object? warpSpeed = null,Object? massKg = null,Object? targetRange = null,Object? scanResolution = null,Object? maxLockedTargets = null,Object? signatureRadius = null,Object? droneBandwidthUsed = null,Object? droneBandwidthMax = null,Object? droneBayUsed = null,Object? droneBayMax = null,Object? dpsFighters = null,Object? fighterBayUsed = null,Object? fighterBayMax = null,Object? fighterTubesUsed = null,Object? fighterTubesMax = null,Object? fighterLightUsed = null,Object? fighterLightMax = null,Object? fighterSupportUsed = null,Object? fighterSupportMax = null,Object? fighterHeavyUsed = null,Object? fighterHeavyMax = null,Object? fighterSquadrons = null,Object? shipCost = null,Object? moduleCost = null,Object? totalCost = null,}) {
   return _then(_self.copyWith(
 cpuUsed: null == cpuUsed ? _self.cpuUsed : cpuUsed // ignore: cast_nullable_to_non_nullable
 as double,cpuMax: null == cpuMax ? _self.cpuMax : cpuMax // ignore: cast_nullable_to_non_nullable
@@ -1270,7 +1841,19 @@ as double,droneBandwidthUsed: null == droneBandwidthUsed ? _self.droneBandwidthU
 as double,droneBandwidthMax: null == droneBandwidthMax ? _self.droneBandwidthMax : droneBandwidthMax // ignore: cast_nullable_to_non_nullable
 as double,droneBayUsed: null == droneBayUsed ? _self.droneBayUsed : droneBayUsed // ignore: cast_nullable_to_non_nullable
 as double,droneBayMax: null == droneBayMax ? _self.droneBayMax : droneBayMax // ignore: cast_nullable_to_non_nullable
-as double,shipCost: null == shipCost ? _self.shipCost : shipCost // ignore: cast_nullable_to_non_nullable
+as double,dpsFighters: null == dpsFighters ? _self.dpsFighters : dpsFighters // ignore: cast_nullable_to_non_nullable
+as double,fighterBayUsed: null == fighterBayUsed ? _self.fighterBayUsed : fighterBayUsed // ignore: cast_nullable_to_non_nullable
+as double,fighterBayMax: null == fighterBayMax ? _self.fighterBayMax : fighterBayMax // ignore: cast_nullable_to_non_nullable
+as double,fighterTubesUsed: null == fighterTubesUsed ? _self.fighterTubesUsed : fighterTubesUsed // ignore: cast_nullable_to_non_nullable
+as int,fighterTubesMax: null == fighterTubesMax ? _self.fighterTubesMax : fighterTubesMax // ignore: cast_nullable_to_non_nullable
+as int,fighterLightUsed: null == fighterLightUsed ? _self.fighterLightUsed : fighterLightUsed // ignore: cast_nullable_to_non_nullable
+as int,fighterLightMax: null == fighterLightMax ? _self.fighterLightMax : fighterLightMax // ignore: cast_nullable_to_non_nullable
+as int,fighterSupportUsed: null == fighterSupportUsed ? _self.fighterSupportUsed : fighterSupportUsed // ignore: cast_nullable_to_non_nullable
+as int,fighterSupportMax: null == fighterSupportMax ? _self.fighterSupportMax : fighterSupportMax // ignore: cast_nullable_to_non_nullable
+as int,fighterHeavyUsed: null == fighterHeavyUsed ? _self.fighterHeavyUsed : fighterHeavyUsed // ignore: cast_nullable_to_non_nullable
+as int,fighterHeavyMax: null == fighterHeavyMax ? _self.fighterHeavyMax : fighterHeavyMax // ignore: cast_nullable_to_non_nullable
+as int,fighterSquadrons: null == fighterSquadrons ? _self.fighterSquadrons : fighterSquadrons // ignore: cast_nullable_to_non_nullable
+as List<FighterSquadronStats>,shipCost: null == shipCost ? _self.shipCost : shipCost // ignore: cast_nullable_to_non_nullable
 as double,moduleCost: null == moduleCost ? _self.moduleCost : moduleCost // ignore: cast_nullable_to_non_nullable
 as double,totalCost: null == totalCost ? _self.totalCost : totalCost // ignore: cast_nullable_to_non_nullable
 as double,
@@ -1367,10 +1950,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( double cpuUsed,  double cpuMax,  double powerUsed,  double powerMax,  int calibrationUsed,  int calibrationMax,  double capacitorCapacity,  double capacitorRecharge,  double capacitorStable,  bool isCapStable,  DefenseProfile defenses,  double dpsTotal,  double dpsGuns,  double dpsDrones,  double dpsMissiles,  double volley,  double optimalRange,  double falloffRange,  double maxVelocity,  double inertiaModifier,  double alignTime,  double warpSpeed,  double massKg,  double targetRange,  double scanResolution,  int maxLockedTargets,  double signatureRadius,  double droneBandwidthUsed,  double droneBandwidthMax,  double droneBayUsed,  double droneBayMax,  double shipCost,  double moduleCost,  double totalCost)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( double cpuUsed,  double cpuMax,  double powerUsed,  double powerMax,  int calibrationUsed,  int calibrationMax,  double capacitorCapacity,  double capacitorRecharge,  double capacitorStable,  bool isCapStable,  DefenseProfile defenses,  double dpsTotal,  double dpsGuns,  double dpsDrones,  double dpsMissiles,  double volley,  double optimalRange,  double falloffRange,  double maxVelocity,  double inertiaModifier,  double alignTime,  double warpSpeed,  double massKg,  double targetRange,  double scanResolution,  int maxLockedTargets,  double signatureRadius,  double droneBandwidthUsed,  double droneBandwidthMax,  double droneBayUsed,  double droneBayMax,  double dpsFighters,  double fighterBayUsed,  double fighterBayMax,  int fighterTubesUsed,  int fighterTubesMax,  int fighterLightUsed,  int fighterLightMax,  int fighterSupportUsed,  int fighterSupportMax,  int fighterHeavyUsed,  int fighterHeavyMax,  List<FighterSquadronStats> fighterSquadrons,  double shipCost,  double moduleCost,  double totalCost)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _FittingStats() when $default != null:
-return $default(_that.cpuUsed,_that.cpuMax,_that.powerUsed,_that.powerMax,_that.calibrationUsed,_that.calibrationMax,_that.capacitorCapacity,_that.capacitorRecharge,_that.capacitorStable,_that.isCapStable,_that.defenses,_that.dpsTotal,_that.dpsGuns,_that.dpsDrones,_that.dpsMissiles,_that.volley,_that.optimalRange,_that.falloffRange,_that.maxVelocity,_that.inertiaModifier,_that.alignTime,_that.warpSpeed,_that.massKg,_that.targetRange,_that.scanResolution,_that.maxLockedTargets,_that.signatureRadius,_that.droneBandwidthUsed,_that.droneBandwidthMax,_that.droneBayUsed,_that.droneBayMax,_that.shipCost,_that.moduleCost,_that.totalCost);case _:
+return $default(_that.cpuUsed,_that.cpuMax,_that.powerUsed,_that.powerMax,_that.calibrationUsed,_that.calibrationMax,_that.capacitorCapacity,_that.capacitorRecharge,_that.capacitorStable,_that.isCapStable,_that.defenses,_that.dpsTotal,_that.dpsGuns,_that.dpsDrones,_that.dpsMissiles,_that.volley,_that.optimalRange,_that.falloffRange,_that.maxVelocity,_that.inertiaModifier,_that.alignTime,_that.warpSpeed,_that.massKg,_that.targetRange,_that.scanResolution,_that.maxLockedTargets,_that.signatureRadius,_that.droneBandwidthUsed,_that.droneBandwidthMax,_that.droneBayUsed,_that.droneBayMax,_that.dpsFighters,_that.fighterBayUsed,_that.fighterBayMax,_that.fighterTubesUsed,_that.fighterTubesMax,_that.fighterLightUsed,_that.fighterLightMax,_that.fighterSupportUsed,_that.fighterSupportMax,_that.fighterHeavyUsed,_that.fighterHeavyMax,_that.fighterSquadrons,_that.shipCost,_that.moduleCost,_that.totalCost);case _:
   return orElse();
 
 }
@@ -1388,10 +1971,10 @@ return $default(_that.cpuUsed,_that.cpuMax,_that.powerUsed,_that.powerMax,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( double cpuUsed,  double cpuMax,  double powerUsed,  double powerMax,  int calibrationUsed,  int calibrationMax,  double capacitorCapacity,  double capacitorRecharge,  double capacitorStable,  bool isCapStable,  DefenseProfile defenses,  double dpsTotal,  double dpsGuns,  double dpsDrones,  double dpsMissiles,  double volley,  double optimalRange,  double falloffRange,  double maxVelocity,  double inertiaModifier,  double alignTime,  double warpSpeed,  double massKg,  double targetRange,  double scanResolution,  int maxLockedTargets,  double signatureRadius,  double droneBandwidthUsed,  double droneBandwidthMax,  double droneBayUsed,  double droneBayMax,  double shipCost,  double moduleCost,  double totalCost)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( double cpuUsed,  double cpuMax,  double powerUsed,  double powerMax,  int calibrationUsed,  int calibrationMax,  double capacitorCapacity,  double capacitorRecharge,  double capacitorStable,  bool isCapStable,  DefenseProfile defenses,  double dpsTotal,  double dpsGuns,  double dpsDrones,  double dpsMissiles,  double volley,  double optimalRange,  double falloffRange,  double maxVelocity,  double inertiaModifier,  double alignTime,  double warpSpeed,  double massKg,  double targetRange,  double scanResolution,  int maxLockedTargets,  double signatureRadius,  double droneBandwidthUsed,  double droneBandwidthMax,  double droneBayUsed,  double droneBayMax,  double dpsFighters,  double fighterBayUsed,  double fighterBayMax,  int fighterTubesUsed,  int fighterTubesMax,  int fighterLightUsed,  int fighterLightMax,  int fighterSupportUsed,  int fighterSupportMax,  int fighterHeavyUsed,  int fighterHeavyMax,  List<FighterSquadronStats> fighterSquadrons,  double shipCost,  double moduleCost,  double totalCost)  $default,) {final _that = this;
 switch (_that) {
 case _FittingStats():
-return $default(_that.cpuUsed,_that.cpuMax,_that.powerUsed,_that.powerMax,_that.calibrationUsed,_that.calibrationMax,_that.capacitorCapacity,_that.capacitorRecharge,_that.capacitorStable,_that.isCapStable,_that.defenses,_that.dpsTotal,_that.dpsGuns,_that.dpsDrones,_that.dpsMissiles,_that.volley,_that.optimalRange,_that.falloffRange,_that.maxVelocity,_that.inertiaModifier,_that.alignTime,_that.warpSpeed,_that.massKg,_that.targetRange,_that.scanResolution,_that.maxLockedTargets,_that.signatureRadius,_that.droneBandwidthUsed,_that.droneBandwidthMax,_that.droneBayUsed,_that.droneBayMax,_that.shipCost,_that.moduleCost,_that.totalCost);case _:
+return $default(_that.cpuUsed,_that.cpuMax,_that.powerUsed,_that.powerMax,_that.calibrationUsed,_that.calibrationMax,_that.capacitorCapacity,_that.capacitorRecharge,_that.capacitorStable,_that.isCapStable,_that.defenses,_that.dpsTotal,_that.dpsGuns,_that.dpsDrones,_that.dpsMissiles,_that.volley,_that.optimalRange,_that.falloffRange,_that.maxVelocity,_that.inertiaModifier,_that.alignTime,_that.warpSpeed,_that.massKg,_that.targetRange,_that.scanResolution,_that.maxLockedTargets,_that.signatureRadius,_that.droneBandwidthUsed,_that.droneBandwidthMax,_that.droneBayUsed,_that.droneBayMax,_that.dpsFighters,_that.fighterBayUsed,_that.fighterBayMax,_that.fighterTubesUsed,_that.fighterTubesMax,_that.fighterLightUsed,_that.fighterLightMax,_that.fighterSupportUsed,_that.fighterSupportMax,_that.fighterHeavyUsed,_that.fighterHeavyMax,_that.fighterSquadrons,_that.shipCost,_that.moduleCost,_that.totalCost);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1408,10 +1991,10 @@ return $default(_that.cpuUsed,_that.cpuMax,_that.powerUsed,_that.powerMax,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( double cpuUsed,  double cpuMax,  double powerUsed,  double powerMax,  int calibrationUsed,  int calibrationMax,  double capacitorCapacity,  double capacitorRecharge,  double capacitorStable,  bool isCapStable,  DefenseProfile defenses,  double dpsTotal,  double dpsGuns,  double dpsDrones,  double dpsMissiles,  double volley,  double optimalRange,  double falloffRange,  double maxVelocity,  double inertiaModifier,  double alignTime,  double warpSpeed,  double massKg,  double targetRange,  double scanResolution,  int maxLockedTargets,  double signatureRadius,  double droneBandwidthUsed,  double droneBandwidthMax,  double droneBayUsed,  double droneBayMax,  double shipCost,  double moduleCost,  double totalCost)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( double cpuUsed,  double cpuMax,  double powerUsed,  double powerMax,  int calibrationUsed,  int calibrationMax,  double capacitorCapacity,  double capacitorRecharge,  double capacitorStable,  bool isCapStable,  DefenseProfile defenses,  double dpsTotal,  double dpsGuns,  double dpsDrones,  double dpsMissiles,  double volley,  double optimalRange,  double falloffRange,  double maxVelocity,  double inertiaModifier,  double alignTime,  double warpSpeed,  double massKg,  double targetRange,  double scanResolution,  int maxLockedTargets,  double signatureRadius,  double droneBandwidthUsed,  double droneBandwidthMax,  double droneBayUsed,  double droneBayMax,  double dpsFighters,  double fighterBayUsed,  double fighterBayMax,  int fighterTubesUsed,  int fighterTubesMax,  int fighterLightUsed,  int fighterLightMax,  int fighterSupportUsed,  int fighterSupportMax,  int fighterHeavyUsed,  int fighterHeavyMax,  List<FighterSquadronStats> fighterSquadrons,  double shipCost,  double moduleCost,  double totalCost)?  $default,) {final _that = this;
 switch (_that) {
 case _FittingStats() when $default != null:
-return $default(_that.cpuUsed,_that.cpuMax,_that.powerUsed,_that.powerMax,_that.calibrationUsed,_that.calibrationMax,_that.capacitorCapacity,_that.capacitorRecharge,_that.capacitorStable,_that.isCapStable,_that.defenses,_that.dpsTotal,_that.dpsGuns,_that.dpsDrones,_that.dpsMissiles,_that.volley,_that.optimalRange,_that.falloffRange,_that.maxVelocity,_that.inertiaModifier,_that.alignTime,_that.warpSpeed,_that.massKg,_that.targetRange,_that.scanResolution,_that.maxLockedTargets,_that.signatureRadius,_that.droneBandwidthUsed,_that.droneBandwidthMax,_that.droneBayUsed,_that.droneBayMax,_that.shipCost,_that.moduleCost,_that.totalCost);case _:
+return $default(_that.cpuUsed,_that.cpuMax,_that.powerUsed,_that.powerMax,_that.calibrationUsed,_that.calibrationMax,_that.capacitorCapacity,_that.capacitorRecharge,_that.capacitorStable,_that.isCapStable,_that.defenses,_that.dpsTotal,_that.dpsGuns,_that.dpsDrones,_that.dpsMissiles,_that.volley,_that.optimalRange,_that.falloffRange,_that.maxVelocity,_that.inertiaModifier,_that.alignTime,_that.warpSpeed,_that.massKg,_that.targetRange,_that.scanResolution,_that.maxLockedTargets,_that.signatureRadius,_that.droneBandwidthUsed,_that.droneBandwidthMax,_that.droneBayUsed,_that.droneBayMax,_that.dpsFighters,_that.fighterBayUsed,_that.fighterBayMax,_that.fighterTubesUsed,_that.fighterTubesMax,_that.fighterLightUsed,_that.fighterLightMax,_that.fighterSupportUsed,_that.fighterSupportMax,_that.fighterHeavyUsed,_that.fighterHeavyMax,_that.fighterSquadrons,_that.shipCost,_that.moduleCost,_that.totalCost);case _:
   return null;
 
 }
@@ -1423,7 +2006,7 @@ return $default(_that.cpuUsed,_that.cpuMax,_that.powerUsed,_that.powerMax,_that.
 @JsonSerializable()
 
 class _FittingStats implements FittingStats {
-  const _FittingStats({this.cpuUsed = 0.0, this.cpuMax = 0.0, this.powerUsed = 0.0, this.powerMax = 0.0, this.calibrationUsed = 0, this.calibrationMax = 0, this.capacitorCapacity = 0.0, this.capacitorRecharge = 0.0, this.capacitorStable = 0.0, this.isCapStable = false, this.defenses = const DefenseProfile(), this.dpsTotal = 0.0, this.dpsGuns = 0.0, this.dpsDrones = 0.0, this.dpsMissiles = 0.0, this.volley = 0.0, this.optimalRange = 0.0, this.falloffRange = 0.0, this.maxVelocity = 0.0, this.inertiaModifier = 0.0, this.alignTime = 0.0, this.warpSpeed = 0.0, this.massKg = 0.0, this.targetRange = 0.0, this.scanResolution = 0.0, this.maxLockedTargets = 0, this.signatureRadius = 0.0, this.droneBandwidthUsed = 0.0, this.droneBandwidthMax = 0.0, this.droneBayUsed = 0.0, this.droneBayMax = 0.0, this.shipCost = 0.0, this.moduleCost = 0.0, this.totalCost = 0.0});
+  const _FittingStats({this.cpuUsed = 0.0, this.cpuMax = 0.0, this.powerUsed = 0.0, this.powerMax = 0.0, this.calibrationUsed = 0, this.calibrationMax = 0, this.capacitorCapacity = 0.0, this.capacitorRecharge = 0.0, this.capacitorStable = 0.0, this.isCapStable = false, this.defenses = const DefenseProfile(), this.dpsTotal = 0.0, this.dpsGuns = 0.0, this.dpsDrones = 0.0, this.dpsMissiles = 0.0, this.volley = 0.0, this.optimalRange = 0.0, this.falloffRange = 0.0, this.maxVelocity = 0.0, this.inertiaModifier = 0.0, this.alignTime = 0.0, this.warpSpeed = 0.0, this.massKg = 0.0, this.targetRange = 0.0, this.scanResolution = 0.0, this.maxLockedTargets = 0, this.signatureRadius = 0.0, this.droneBandwidthUsed = 0.0, this.droneBandwidthMax = 0.0, this.droneBayUsed = 0.0, this.droneBayMax = 0.0, this.dpsFighters = 0.0, this.fighterBayUsed = 0.0, this.fighterBayMax = 0.0, this.fighterTubesUsed = 0, this.fighterTubesMax = 0, this.fighterLightUsed = 0, this.fighterLightMax = 0, this.fighterSupportUsed = 0, this.fighterSupportMax = 0, this.fighterHeavyUsed = 0, this.fighterHeavyMax = 0, final  List<FighterSquadronStats> fighterSquadrons = const [], this.shipCost = 0.0, this.moduleCost = 0.0, this.totalCost = 0.0}): _fighterSquadrons = fighterSquadrons;
   factory _FittingStats.fromJson(Map<String, dynamic> json) => _$FittingStatsFromJson(json);
 
 @override@JsonKey() final  double cpuUsed;
@@ -1457,6 +2040,24 @@ class _FittingStats implements FittingStats {
 @override@JsonKey() final  double droneBandwidthMax;
 @override@JsonKey() final  double droneBayUsed;
 @override@JsonKey() final  double droneBayMax;
+@override@JsonKey() final  double dpsFighters;
+@override@JsonKey() final  double fighterBayUsed;
+@override@JsonKey() final  double fighterBayMax;
+@override@JsonKey() final  int fighterTubesUsed;
+@override@JsonKey() final  int fighterTubesMax;
+@override@JsonKey() final  int fighterLightUsed;
+@override@JsonKey() final  int fighterLightMax;
+@override@JsonKey() final  int fighterSupportUsed;
+@override@JsonKey() final  int fighterSupportMax;
+@override@JsonKey() final  int fighterHeavyUsed;
+@override@JsonKey() final  int fighterHeavyMax;
+ final  List<FighterSquadronStats> _fighterSquadrons;
+@override@JsonKey() List<FighterSquadronStats> get fighterSquadrons {
+  if (_fighterSquadrons is EqualUnmodifiableListView) return _fighterSquadrons;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_fighterSquadrons);
+}
+
 @override@JsonKey() final  double shipCost;
 @override@JsonKey() final  double moduleCost;
 @override@JsonKey() final  double totalCost;
@@ -1474,16 +2075,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FittingStats&&(identical(other.cpuUsed, cpuUsed) || other.cpuUsed == cpuUsed)&&(identical(other.cpuMax, cpuMax) || other.cpuMax == cpuMax)&&(identical(other.powerUsed, powerUsed) || other.powerUsed == powerUsed)&&(identical(other.powerMax, powerMax) || other.powerMax == powerMax)&&(identical(other.calibrationUsed, calibrationUsed) || other.calibrationUsed == calibrationUsed)&&(identical(other.calibrationMax, calibrationMax) || other.calibrationMax == calibrationMax)&&(identical(other.capacitorCapacity, capacitorCapacity) || other.capacitorCapacity == capacitorCapacity)&&(identical(other.capacitorRecharge, capacitorRecharge) || other.capacitorRecharge == capacitorRecharge)&&(identical(other.capacitorStable, capacitorStable) || other.capacitorStable == capacitorStable)&&(identical(other.isCapStable, isCapStable) || other.isCapStable == isCapStable)&&(identical(other.defenses, defenses) || other.defenses == defenses)&&(identical(other.dpsTotal, dpsTotal) || other.dpsTotal == dpsTotal)&&(identical(other.dpsGuns, dpsGuns) || other.dpsGuns == dpsGuns)&&(identical(other.dpsDrones, dpsDrones) || other.dpsDrones == dpsDrones)&&(identical(other.dpsMissiles, dpsMissiles) || other.dpsMissiles == dpsMissiles)&&(identical(other.volley, volley) || other.volley == volley)&&(identical(other.optimalRange, optimalRange) || other.optimalRange == optimalRange)&&(identical(other.falloffRange, falloffRange) || other.falloffRange == falloffRange)&&(identical(other.maxVelocity, maxVelocity) || other.maxVelocity == maxVelocity)&&(identical(other.inertiaModifier, inertiaModifier) || other.inertiaModifier == inertiaModifier)&&(identical(other.alignTime, alignTime) || other.alignTime == alignTime)&&(identical(other.warpSpeed, warpSpeed) || other.warpSpeed == warpSpeed)&&(identical(other.massKg, massKg) || other.massKg == massKg)&&(identical(other.targetRange, targetRange) || other.targetRange == targetRange)&&(identical(other.scanResolution, scanResolution) || other.scanResolution == scanResolution)&&(identical(other.maxLockedTargets, maxLockedTargets) || other.maxLockedTargets == maxLockedTargets)&&(identical(other.signatureRadius, signatureRadius) || other.signatureRadius == signatureRadius)&&(identical(other.droneBandwidthUsed, droneBandwidthUsed) || other.droneBandwidthUsed == droneBandwidthUsed)&&(identical(other.droneBandwidthMax, droneBandwidthMax) || other.droneBandwidthMax == droneBandwidthMax)&&(identical(other.droneBayUsed, droneBayUsed) || other.droneBayUsed == droneBayUsed)&&(identical(other.droneBayMax, droneBayMax) || other.droneBayMax == droneBayMax)&&(identical(other.shipCost, shipCost) || other.shipCost == shipCost)&&(identical(other.moduleCost, moduleCost) || other.moduleCost == moduleCost)&&(identical(other.totalCost, totalCost) || other.totalCost == totalCost));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FittingStats&&(identical(other.cpuUsed, cpuUsed) || other.cpuUsed == cpuUsed)&&(identical(other.cpuMax, cpuMax) || other.cpuMax == cpuMax)&&(identical(other.powerUsed, powerUsed) || other.powerUsed == powerUsed)&&(identical(other.powerMax, powerMax) || other.powerMax == powerMax)&&(identical(other.calibrationUsed, calibrationUsed) || other.calibrationUsed == calibrationUsed)&&(identical(other.calibrationMax, calibrationMax) || other.calibrationMax == calibrationMax)&&(identical(other.capacitorCapacity, capacitorCapacity) || other.capacitorCapacity == capacitorCapacity)&&(identical(other.capacitorRecharge, capacitorRecharge) || other.capacitorRecharge == capacitorRecharge)&&(identical(other.capacitorStable, capacitorStable) || other.capacitorStable == capacitorStable)&&(identical(other.isCapStable, isCapStable) || other.isCapStable == isCapStable)&&(identical(other.defenses, defenses) || other.defenses == defenses)&&(identical(other.dpsTotal, dpsTotal) || other.dpsTotal == dpsTotal)&&(identical(other.dpsGuns, dpsGuns) || other.dpsGuns == dpsGuns)&&(identical(other.dpsDrones, dpsDrones) || other.dpsDrones == dpsDrones)&&(identical(other.dpsMissiles, dpsMissiles) || other.dpsMissiles == dpsMissiles)&&(identical(other.volley, volley) || other.volley == volley)&&(identical(other.optimalRange, optimalRange) || other.optimalRange == optimalRange)&&(identical(other.falloffRange, falloffRange) || other.falloffRange == falloffRange)&&(identical(other.maxVelocity, maxVelocity) || other.maxVelocity == maxVelocity)&&(identical(other.inertiaModifier, inertiaModifier) || other.inertiaModifier == inertiaModifier)&&(identical(other.alignTime, alignTime) || other.alignTime == alignTime)&&(identical(other.warpSpeed, warpSpeed) || other.warpSpeed == warpSpeed)&&(identical(other.massKg, massKg) || other.massKg == massKg)&&(identical(other.targetRange, targetRange) || other.targetRange == targetRange)&&(identical(other.scanResolution, scanResolution) || other.scanResolution == scanResolution)&&(identical(other.maxLockedTargets, maxLockedTargets) || other.maxLockedTargets == maxLockedTargets)&&(identical(other.signatureRadius, signatureRadius) || other.signatureRadius == signatureRadius)&&(identical(other.droneBandwidthUsed, droneBandwidthUsed) || other.droneBandwidthUsed == droneBandwidthUsed)&&(identical(other.droneBandwidthMax, droneBandwidthMax) || other.droneBandwidthMax == droneBandwidthMax)&&(identical(other.droneBayUsed, droneBayUsed) || other.droneBayUsed == droneBayUsed)&&(identical(other.droneBayMax, droneBayMax) || other.droneBayMax == droneBayMax)&&(identical(other.dpsFighters, dpsFighters) || other.dpsFighters == dpsFighters)&&(identical(other.fighterBayUsed, fighterBayUsed) || other.fighterBayUsed == fighterBayUsed)&&(identical(other.fighterBayMax, fighterBayMax) || other.fighterBayMax == fighterBayMax)&&(identical(other.fighterTubesUsed, fighterTubesUsed) || other.fighterTubesUsed == fighterTubesUsed)&&(identical(other.fighterTubesMax, fighterTubesMax) || other.fighterTubesMax == fighterTubesMax)&&(identical(other.fighterLightUsed, fighterLightUsed) || other.fighterLightUsed == fighterLightUsed)&&(identical(other.fighterLightMax, fighterLightMax) || other.fighterLightMax == fighterLightMax)&&(identical(other.fighterSupportUsed, fighterSupportUsed) || other.fighterSupportUsed == fighterSupportUsed)&&(identical(other.fighterSupportMax, fighterSupportMax) || other.fighterSupportMax == fighterSupportMax)&&(identical(other.fighterHeavyUsed, fighterHeavyUsed) || other.fighterHeavyUsed == fighterHeavyUsed)&&(identical(other.fighterHeavyMax, fighterHeavyMax) || other.fighterHeavyMax == fighterHeavyMax)&&const DeepCollectionEquality().equals(other._fighterSquadrons, _fighterSquadrons)&&(identical(other.shipCost, shipCost) || other.shipCost == shipCost)&&(identical(other.moduleCost, moduleCost) || other.moduleCost == moduleCost)&&(identical(other.totalCost, totalCost) || other.totalCost == totalCost));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,cpuUsed,cpuMax,powerUsed,powerMax,calibrationUsed,calibrationMax,capacitorCapacity,capacitorRecharge,capacitorStable,isCapStable,defenses,dpsTotal,dpsGuns,dpsDrones,dpsMissiles,volley,optimalRange,falloffRange,maxVelocity,inertiaModifier,alignTime,warpSpeed,massKg,targetRange,scanResolution,maxLockedTargets,signatureRadius,droneBandwidthUsed,droneBandwidthMax,droneBayUsed,droneBayMax,shipCost,moduleCost,totalCost]);
+int get hashCode => Object.hashAll([runtimeType,cpuUsed,cpuMax,powerUsed,powerMax,calibrationUsed,calibrationMax,capacitorCapacity,capacitorRecharge,capacitorStable,isCapStable,defenses,dpsTotal,dpsGuns,dpsDrones,dpsMissiles,volley,optimalRange,falloffRange,maxVelocity,inertiaModifier,alignTime,warpSpeed,massKg,targetRange,scanResolution,maxLockedTargets,signatureRadius,droneBandwidthUsed,droneBandwidthMax,droneBayUsed,droneBayMax,dpsFighters,fighterBayUsed,fighterBayMax,fighterTubesUsed,fighterTubesMax,fighterLightUsed,fighterLightMax,fighterSupportUsed,fighterSupportMax,fighterHeavyUsed,fighterHeavyMax,const DeepCollectionEquality().hash(_fighterSquadrons),shipCost,moduleCost,totalCost]);
 
 @override
 String toString() {
-  return 'FittingStats(cpuUsed: $cpuUsed, cpuMax: $cpuMax, powerUsed: $powerUsed, powerMax: $powerMax, calibrationUsed: $calibrationUsed, calibrationMax: $calibrationMax, capacitorCapacity: $capacitorCapacity, capacitorRecharge: $capacitorRecharge, capacitorStable: $capacitorStable, isCapStable: $isCapStable, defenses: $defenses, dpsTotal: $dpsTotal, dpsGuns: $dpsGuns, dpsDrones: $dpsDrones, dpsMissiles: $dpsMissiles, volley: $volley, optimalRange: $optimalRange, falloffRange: $falloffRange, maxVelocity: $maxVelocity, inertiaModifier: $inertiaModifier, alignTime: $alignTime, warpSpeed: $warpSpeed, massKg: $massKg, targetRange: $targetRange, scanResolution: $scanResolution, maxLockedTargets: $maxLockedTargets, signatureRadius: $signatureRadius, droneBandwidthUsed: $droneBandwidthUsed, droneBandwidthMax: $droneBandwidthMax, droneBayUsed: $droneBayUsed, droneBayMax: $droneBayMax, shipCost: $shipCost, moduleCost: $moduleCost, totalCost: $totalCost)';
+  return 'FittingStats(cpuUsed: $cpuUsed, cpuMax: $cpuMax, powerUsed: $powerUsed, powerMax: $powerMax, calibrationUsed: $calibrationUsed, calibrationMax: $calibrationMax, capacitorCapacity: $capacitorCapacity, capacitorRecharge: $capacitorRecharge, capacitorStable: $capacitorStable, isCapStable: $isCapStable, defenses: $defenses, dpsTotal: $dpsTotal, dpsGuns: $dpsGuns, dpsDrones: $dpsDrones, dpsMissiles: $dpsMissiles, volley: $volley, optimalRange: $optimalRange, falloffRange: $falloffRange, maxVelocity: $maxVelocity, inertiaModifier: $inertiaModifier, alignTime: $alignTime, warpSpeed: $warpSpeed, massKg: $massKg, targetRange: $targetRange, scanResolution: $scanResolution, maxLockedTargets: $maxLockedTargets, signatureRadius: $signatureRadius, droneBandwidthUsed: $droneBandwidthUsed, droneBandwidthMax: $droneBandwidthMax, droneBayUsed: $droneBayUsed, droneBayMax: $droneBayMax, dpsFighters: $dpsFighters, fighterBayUsed: $fighterBayUsed, fighterBayMax: $fighterBayMax, fighterTubesUsed: $fighterTubesUsed, fighterTubesMax: $fighterTubesMax, fighterLightUsed: $fighterLightUsed, fighterLightMax: $fighterLightMax, fighterSupportUsed: $fighterSupportUsed, fighterSupportMax: $fighterSupportMax, fighterHeavyUsed: $fighterHeavyUsed, fighterHeavyMax: $fighterHeavyMax, fighterSquadrons: $fighterSquadrons, shipCost: $shipCost, moduleCost: $moduleCost, totalCost: $totalCost)';
 }
 
 
@@ -1494,7 +2095,7 @@ abstract mixin class _$FittingStatsCopyWith<$Res> implements $FittingStatsCopyWi
   factory _$FittingStatsCopyWith(_FittingStats value, $Res Function(_FittingStats) _then) = __$FittingStatsCopyWithImpl;
 @override @useResult
 $Res call({
- double cpuUsed, double cpuMax, double powerUsed, double powerMax, int calibrationUsed, int calibrationMax, double capacitorCapacity, double capacitorRecharge, double capacitorStable, bool isCapStable, DefenseProfile defenses, double dpsTotal, double dpsGuns, double dpsDrones, double dpsMissiles, double volley, double optimalRange, double falloffRange, double maxVelocity, double inertiaModifier, double alignTime, double warpSpeed, double massKg, double targetRange, double scanResolution, int maxLockedTargets, double signatureRadius, double droneBandwidthUsed, double droneBandwidthMax, double droneBayUsed, double droneBayMax, double shipCost, double moduleCost, double totalCost
+ double cpuUsed, double cpuMax, double powerUsed, double powerMax, int calibrationUsed, int calibrationMax, double capacitorCapacity, double capacitorRecharge, double capacitorStable, bool isCapStable, DefenseProfile defenses, double dpsTotal, double dpsGuns, double dpsDrones, double dpsMissiles, double volley, double optimalRange, double falloffRange, double maxVelocity, double inertiaModifier, double alignTime, double warpSpeed, double massKg, double targetRange, double scanResolution, int maxLockedTargets, double signatureRadius, double droneBandwidthUsed, double droneBandwidthMax, double droneBayUsed, double droneBayMax, double dpsFighters, double fighterBayUsed, double fighterBayMax, int fighterTubesUsed, int fighterTubesMax, int fighterLightUsed, int fighterLightMax, int fighterSupportUsed, int fighterSupportMax, int fighterHeavyUsed, int fighterHeavyMax, List<FighterSquadronStats> fighterSquadrons, double shipCost, double moduleCost, double totalCost
 });
 
 
@@ -1511,7 +2112,7 @@ class __$FittingStatsCopyWithImpl<$Res>
 
 /// Create a copy of FittingStats
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? cpuUsed = null,Object? cpuMax = null,Object? powerUsed = null,Object? powerMax = null,Object? calibrationUsed = null,Object? calibrationMax = null,Object? capacitorCapacity = null,Object? capacitorRecharge = null,Object? capacitorStable = null,Object? isCapStable = null,Object? defenses = null,Object? dpsTotal = null,Object? dpsGuns = null,Object? dpsDrones = null,Object? dpsMissiles = null,Object? volley = null,Object? optimalRange = null,Object? falloffRange = null,Object? maxVelocity = null,Object? inertiaModifier = null,Object? alignTime = null,Object? warpSpeed = null,Object? massKg = null,Object? targetRange = null,Object? scanResolution = null,Object? maxLockedTargets = null,Object? signatureRadius = null,Object? droneBandwidthUsed = null,Object? droneBandwidthMax = null,Object? droneBayUsed = null,Object? droneBayMax = null,Object? shipCost = null,Object? moduleCost = null,Object? totalCost = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? cpuUsed = null,Object? cpuMax = null,Object? powerUsed = null,Object? powerMax = null,Object? calibrationUsed = null,Object? calibrationMax = null,Object? capacitorCapacity = null,Object? capacitorRecharge = null,Object? capacitorStable = null,Object? isCapStable = null,Object? defenses = null,Object? dpsTotal = null,Object? dpsGuns = null,Object? dpsDrones = null,Object? dpsMissiles = null,Object? volley = null,Object? optimalRange = null,Object? falloffRange = null,Object? maxVelocity = null,Object? inertiaModifier = null,Object? alignTime = null,Object? warpSpeed = null,Object? massKg = null,Object? targetRange = null,Object? scanResolution = null,Object? maxLockedTargets = null,Object? signatureRadius = null,Object? droneBandwidthUsed = null,Object? droneBandwidthMax = null,Object? droneBayUsed = null,Object? droneBayMax = null,Object? dpsFighters = null,Object? fighterBayUsed = null,Object? fighterBayMax = null,Object? fighterTubesUsed = null,Object? fighterTubesMax = null,Object? fighterLightUsed = null,Object? fighterLightMax = null,Object? fighterSupportUsed = null,Object? fighterSupportMax = null,Object? fighterHeavyUsed = null,Object? fighterHeavyMax = null,Object? fighterSquadrons = null,Object? shipCost = null,Object? moduleCost = null,Object? totalCost = null,}) {
   return _then(_FittingStats(
 cpuUsed: null == cpuUsed ? _self.cpuUsed : cpuUsed // ignore: cast_nullable_to_non_nullable
 as double,cpuMax: null == cpuMax ? _self.cpuMax : cpuMax // ignore: cast_nullable_to_non_nullable
@@ -1544,7 +2145,19 @@ as double,droneBandwidthUsed: null == droneBandwidthUsed ? _self.droneBandwidthU
 as double,droneBandwidthMax: null == droneBandwidthMax ? _self.droneBandwidthMax : droneBandwidthMax // ignore: cast_nullable_to_non_nullable
 as double,droneBayUsed: null == droneBayUsed ? _self.droneBayUsed : droneBayUsed // ignore: cast_nullable_to_non_nullable
 as double,droneBayMax: null == droneBayMax ? _self.droneBayMax : droneBayMax // ignore: cast_nullable_to_non_nullable
-as double,shipCost: null == shipCost ? _self.shipCost : shipCost // ignore: cast_nullable_to_non_nullable
+as double,dpsFighters: null == dpsFighters ? _self.dpsFighters : dpsFighters // ignore: cast_nullable_to_non_nullable
+as double,fighterBayUsed: null == fighterBayUsed ? _self.fighterBayUsed : fighterBayUsed // ignore: cast_nullable_to_non_nullable
+as double,fighterBayMax: null == fighterBayMax ? _self.fighterBayMax : fighterBayMax // ignore: cast_nullable_to_non_nullable
+as double,fighterTubesUsed: null == fighterTubesUsed ? _self.fighterTubesUsed : fighterTubesUsed // ignore: cast_nullable_to_non_nullable
+as int,fighterTubesMax: null == fighterTubesMax ? _self.fighterTubesMax : fighterTubesMax // ignore: cast_nullable_to_non_nullable
+as int,fighterLightUsed: null == fighterLightUsed ? _self.fighterLightUsed : fighterLightUsed // ignore: cast_nullable_to_non_nullable
+as int,fighterLightMax: null == fighterLightMax ? _self.fighterLightMax : fighterLightMax // ignore: cast_nullable_to_non_nullable
+as int,fighterSupportUsed: null == fighterSupportUsed ? _self.fighterSupportUsed : fighterSupportUsed // ignore: cast_nullable_to_non_nullable
+as int,fighterSupportMax: null == fighterSupportMax ? _self.fighterSupportMax : fighterSupportMax // ignore: cast_nullable_to_non_nullable
+as int,fighterHeavyUsed: null == fighterHeavyUsed ? _self.fighterHeavyUsed : fighterHeavyUsed // ignore: cast_nullable_to_non_nullable
+as int,fighterHeavyMax: null == fighterHeavyMax ? _self.fighterHeavyMax : fighterHeavyMax // ignore: cast_nullable_to_non_nullable
+as int,fighterSquadrons: null == fighterSquadrons ? _self._fighterSquadrons : fighterSquadrons // ignore: cast_nullable_to_non_nullable
+as List<FighterSquadronStats>,shipCost: null == shipCost ? _self.shipCost : shipCost // ignore: cast_nullable_to_non_nullable
 as double,moduleCost: null == moduleCost ? _self.moduleCost : moduleCost // ignore: cast_nullable_to_non_nullable
 as double,totalCost: null == totalCost ? _self.totalCost : totalCost // ignore: cast_nullable_to_non_nullable
 as double,

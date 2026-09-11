@@ -7,6 +7,22 @@ enum SlotType { high, med, low, rig, subsystem }
 
 enum ModuleState { offline, online, active, overloaded }
 
+enum FighterAbilityKind {
+  attack,
+  missiles,
+  bomb,
+  kamikaze,
+  microWarpDrive,
+  afterburner,
+  microJumpDrive,
+  evasiveManeuvers,
+  tackle,
+  stasisWebifier,
+  warpDisruption,
+  energyNeutralizer,
+  ecm,
+}
+
 @freezed
 abstract class Fitting with _$Fitting {
   const Fitting._();
@@ -23,6 +39,7 @@ abstract class Fitting with _$Fitting {
     @Default([]) List<FittedModule> rigSlots,
     @Default([]) List<FittedModule> subsystems,
     @Default([]) List<DroneGroup> drones,
+    @Default([]) List<FighterGroup> fighters,
     @Default([]) List<CargoItem> cargo,
   }) = _Fitting;
 
@@ -67,6 +84,36 @@ abstract class DroneGroup with _$DroneGroup {
 
   factory DroneGroup.fromJson(Map<String, dynamic> json) =>
       _$DroneGroupFromJson(json);
+}
+
+@freezed
+abstract class FighterGroup with _$FighterGroup {
+  const factory FighterGroup({
+    required int typeId,
+    required String typeName,
+    required int quantity,
+    @Default(0) int inSpace,
+  }) = _FighterGroup;
+
+  factory FighterGroup.fromJson(Map<String, dynamic> json) =>
+      _$FighterGroupFromJson(json);
+}
+
+@freezed
+abstract class FighterSquadronStats with _$FighterSquadronStats {
+  const factory FighterSquadronStats({
+    required int typeId,
+    required String typeName,
+    required int squadronSize,
+    required int squadrons,
+    required int activeSquadrons,
+    required List<FighterAbilityKind> abilities,
+    FighterAbilityKind? activeAbility,
+    @Default(0.0) double dps,
+  }) = _FighterSquadronStats;
+
+  factory FighterSquadronStats.fromJson(Map<String, dynamic> json) =>
+      _$FighterSquadronStatsFromJson(json);
 }
 
 @freezed
@@ -121,6 +168,19 @@ abstract class FittingStats with _$FittingStats {
     @Default(0.0) double droneBandwidthMax,
     @Default(0.0) double droneBayUsed,
     @Default(0.0) double droneBayMax,
+
+    @Default(0.0) double dpsFighters,
+    @Default(0.0) double fighterBayUsed,
+    @Default(0.0) double fighterBayMax,
+    @Default(0) int fighterTubesUsed,
+    @Default(0) int fighterTubesMax,
+    @Default(0) int fighterLightUsed,
+    @Default(0) int fighterLightMax,
+    @Default(0) int fighterSupportUsed,
+    @Default(0) int fighterSupportMax,
+    @Default(0) int fighterHeavyUsed,
+    @Default(0) int fighterHeavyMax,
+    @Default([]) List<FighterSquadronStats> fighterSquadrons,
 
     @Default(0.0) double shipCost,
     @Default(0.0) double moduleCost,

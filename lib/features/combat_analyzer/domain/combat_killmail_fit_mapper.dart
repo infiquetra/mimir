@@ -14,6 +14,7 @@ class CombatKillmailFitMapper {
     final rigSlots = <FittedModule>[];
     final subsystems = <FittedModule>[];
     final drones = <DroneGroup>[];
+    final fightersByType = <int, FighterGroup>{};
     final cargo = <CargoItem>[];
 
     for (final item in detail.victim.items) {
@@ -41,6 +42,23 @@ class CombatKillmailFitMapper {
             inBay: item.totalQuantity,
           ),
         );
+      } else if (_isFighterBayFlag(item.flag) ||
+          _isFighterTubeFlag(item.flag)) {
+        final existing = fightersByType[item.typeId];
+        final inSpace = _isFighterTubeFlag(item.flag) ? item.totalQuantity : 0;
+        if (existing == null) {
+          fightersByType[item.typeId] = FighterGroup(
+            typeId: item.typeId,
+            typeName: _typeName(item.typeId),
+            quantity: item.totalQuantity,
+            inSpace: inSpace,
+          );
+        } else {
+          fightersByType[item.typeId] = existing.copyWith(
+            quantity: existing.quantity + item.totalQuantity,
+            inSpace: existing.inSpace + inSpace,
+          );
+        }
       } else {
         cargo.add(
           CargoItem(
@@ -52,9 +70,10 @@ class CombatKillmailFitMapper {
       }
     }
 
+    final fighters = fightersByType.values.toList();
     Log.i(
       'COMBAT.ENRICH',
-      'Mapped killmail ${detail.killmailId} victim fit: high=${highSlots.length} med=${medSlots.length} low=${lowSlots.length} rig=${rigSlots.length} drones=${drones.length}',
+      'Mapped killmail ${detail.killmailId} victim fit: high=${highSlots.length} med=${medSlots.length} low=${lowSlots.length} rig=${rigSlots.length} drones=${drones.length} fighters=${fighters.length}',
     );
     return Fitting(
       id: 'killmail-${detail.killmailId}',
@@ -68,6 +87,7 @@ class CombatKillmailFitMapper {
       rigSlots: rigSlots..sort(_moduleSort),
       subsystems: subsystems..sort(_moduleSort),
       drones: drones,
+      fighters: fighters,
       cargo: cargo,
     );
   }
@@ -104,6 +124,12 @@ class CombatKillmailFitMapper {
   }
 
   static bool _isDroneBayFlag(int flag) => flag == 87;
+
+  /// invFlags FighterBay (confirmed from CCP SDE / carrier killmails).
+  static bool _isFighterBayFlag(int flag) => flag == 158;
+
+  /// invFlags FighterTube0..4.
+  static bool _isFighterTubeFlag(int flag) => flag >= 159 && flag <= 163;
 
   static int _moduleSort(FittedModule a, FittedModule b) {
     return a.slotIndex.compareTo(b.slotIndex);

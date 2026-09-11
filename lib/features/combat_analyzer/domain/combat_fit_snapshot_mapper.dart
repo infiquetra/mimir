@@ -25,6 +25,7 @@ class CombatFitSnapshotMapper {
     final rigSlots = <FittedModule>[];
     final subsystems = <FittedModule>[];
     final drones = <DroneGroup>[];
+    final fightersByType = <int, FighterGroup>{};
     final cargo = <CargoItem>[];
 
     for (final asset
@@ -53,6 +54,25 @@ class CombatFitSnapshotMapper {
             inBay: asset.quantity,
           ),
         );
+      } else if (_isFighterBayFlag(asset.locationFlag) ||
+          _isFighterTubeFlag(asset.locationFlag)) {
+        final existing = fightersByType[asset.typeId];
+        final inSpace = _isFighterTubeFlag(asset.locationFlag)
+            ? asset.quantity
+            : 0;
+        if (existing == null) {
+          fightersByType[asset.typeId] = FighterGroup(
+            typeId: asset.typeId,
+            typeName: _typeName(asset.typeId),
+            quantity: asset.quantity,
+            inSpace: inSpace,
+          );
+        } else {
+          fightersByType[asset.typeId] = existing.copyWith(
+            quantity: existing.quantity + asset.quantity,
+            inSpace: existing.inSpace + inSpace,
+          );
+        }
       } else if (_isCargoFlag(asset.locationFlag)) {
         cargo.add(
           CargoItem(
@@ -64,6 +84,11 @@ class CombatFitSnapshotMapper {
       }
     }
 
+    final fighters = fightersByType.values.toList();
+    Log.d(
+      'COMBAT.ENRICH',
+      'Snapshot fighters=${fighters.length} drones=${drones.length}',
+    );
     return Fitting(
       id: 'current-$characterId-${ship.shipItemId}',
       name: ship.shipName?.trim().isNotEmpty == true
@@ -79,6 +104,7 @@ class CombatFitSnapshotMapper {
       rigSlots: rigSlots..sort(_moduleSort),
       subsystems: subsystems..sort(_moduleSort),
       drones: drones,
+      fighters: fighters,
       cargo: cargo,
     );
   }
@@ -118,6 +144,14 @@ class CombatFitSnapshotMapper {
 
   static bool _isDroneBayFlag(String flag) =>
       flag.trim().toLowerCase() == 'dronebay';
+
+  static bool _isFighterBayFlag(String flag) =>
+      flag.trim().toLowerCase() == 'fighterbay';
+
+  static bool _isFighterTubeFlag(String flag) {
+    final normalized = flag.trim().toLowerCase();
+    return RegExp(r'^fightertube[0-4]$').hasMatch(normalized);
+  }
 
   static bool _isCargoFlag(String flag) {
     final normalized = flag.trim().toLowerCase();

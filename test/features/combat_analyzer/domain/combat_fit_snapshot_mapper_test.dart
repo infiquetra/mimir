@@ -74,5 +74,54 @@ void main() {
       expect(fitting.drones.single.quantity, 3);
       expect(fitting.cargo.single.quantity, 100);
     });
+
+    test(
+      'maps FighterBay quantity and FighterTube0..4 inSpace onto one FighterGroup',
+      () {
+        final fitting = CombatFitSnapshotMapper.mapCurrentShipAssets(
+          characterId: 9001,
+          ship: CharacterShip(
+            shipTypeId: 23911,
+            shipItemId: 555,
+            shipName: 'Thanatos',
+            shipTypeName: 'Thanatos',
+          ),
+          assets: const [
+            AssetItem(
+              itemId: 10,
+              typeId: 23061,
+              quantity: 12,
+              locationId: 555,
+              locationFlag: 'FighterBay',
+              isSingleton: false,
+            ),
+            AssetItem(
+              itemId: 11,
+              typeId: 23061,
+              quantity: 6,
+              locationId: 555,
+              locationFlag: 'FighterTube0',
+              isSingleton: false,
+            ),
+            AssetItem(
+              itemId: 12,
+              typeId: 2456,
+              quantity: 5,
+              locationId: 555,
+              locationFlag: 'DroneBay',
+              isSingleton: false,
+            ),
+          ],
+        );
+
+        expect(fitting.fighters, hasLength(1));
+        expect(fitting.fighters.single.typeId, 23061);
+        expect(fitting.fighters.single.quantity, 18);
+        expect(fitting.fighters.single.inSpace, 6);
+        expect(fitting.drones, hasLength(1));
+        expect(fitting.drones.single.typeId, 2456);
+        expect(fitting.drones.single.quantity, 5);
+      },
+    );
   });
 }
