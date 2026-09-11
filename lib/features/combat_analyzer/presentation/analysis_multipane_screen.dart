@@ -16,6 +16,8 @@ import '../domain/combat_enrichment.dart';
 import '../domain/parsed_combat_encounter.dart';
 import '../../fitting/domain/models.dart';
 import '../../wallet/data/wallet_providers.dart';
+import 'widgets/aar_derived_stats_panel.dart';
+import 'widgets/aar_matchup_section.dart';
 import 'widgets/damage_chart_painter.dart';
 
 class AnalysisMultiPaneScreen extends ConsumerStatefulWidget {
@@ -880,6 +882,7 @@ class _AnalysisMultiPaneScreenState
         const SizedBox(height: 16),
         _DamageTypeSection(profile: profile, report: report),
         const SizedBox(height: 16),
+        ..._matchupWidgets(encounter),
         _BreakdownSection(
           title: 'Primary Targets',
           values: encounter.aggregates.damageByTarget,
@@ -962,6 +965,7 @@ class _AnalysisMultiPaneScreenState
           ),
           const SizedBox(height: 12),
         ],
+        ..._derivedFitWidgets(encounter),
         if (observed.isNotEmpty)
           _AarCard(
             leading: Icons.visibility,
@@ -991,6 +995,80 @@ class _AnalysisMultiPaneScreenState
             ),
           ),
       ],
+    );
+  }
+
+  List<Widget> _derivedFitWidgets(ParsedCombatEncounter encounter) {
+    final async = ref.watch(aarFitDerivationsProvider(encounter));
+    return async.when(
+      data: (bundle) {
+        Log.d(
+          'COMBAT.UI',
+          'derived fit panels self=${bundle.self != null} '
+              'opponent=${bundle.opponent != null}',
+        );
+        return [
+          if (bundle.self != null) ...[
+            AarDerivedStatsPanel(
+              derivation: bundle.self!,
+              title: 'Pilot Fit Simulation',
+              matchup: bundle.selfMatchup,
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (bundle.opponent != null) ...[
+            AarDerivedStatsPanel(
+              derivation: bundle.opponent!,
+              title: 'Opponent Fit Simulation',
+              matchup: bundle.opponentMatchup,
+            ),
+            const SizedBox(height: 12),
+          ],
+        ];
+      },
+      loading: () => [const LinearProgressIndicator()],
+      error: (error, stack) {
+        Log.e('COMBAT.UI', 'Failed to load fit derivations', error, stack);
+        return [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text('Failed to load fit derivations: $error'),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ];
+      },
+    );
+  }
+
+  List<Widget> _matchupWidgets(ParsedCombatEncounter encounter) {
+    final async = ref.watch(aarFitDerivationsProvider(encounter));
+    return async.when(
+      data: (bundle) => [
+        if (bundle.selfMatchup != null)
+          AarMatchupSection(matchup: bundle.selfMatchup!),
+        if (bundle.opponentMatchup != null)
+          AarMatchupSection(matchup: bundle.opponentMatchup!),
+        if (bundle.selfMatchup != null || bundle.opponentMatchup != null)
+          const SizedBox(height: 16),
+      ],
+      loading: () => [
+        const LinearProgressIndicator(),
+        const SizedBox(height: 16),
+      ],
+      error: (error, stack) {
+        Log.e('COMBAT.UI', 'Failed to load damage matchups', error, stack);
+        return [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text('Failed to load fit derivations: $error'),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ];
+      },
     );
   }
 
