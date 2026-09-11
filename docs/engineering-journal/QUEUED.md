@@ -27,23 +27,6 @@
 
 ## P1 - Urgent
 
-### AAR fit simulation and defense profile derivation
-
-**Author.** Codex
-**Priority.** P1
-**Effort.** Several days to a week depending on whether the existing dogma
-engine is sufficient or pyfa-grade behavior needs a deeper port.
-**Worth it when.** Before presenting AAR recommendations as mechanically
-trustworthy fit advice rather than AI coaching prose.
-**Context.** The evidence ledger can now carry pilot and victim fits, but Mimir
-still needs deterministic derivation for EHP, resists, tank layer, capacitor,
-range envelope, speed, signature, and damage application. Without this, the AI
-can discuss fits but cannot reliably quantify why one fit wins a matchup.
-**Refs.** [LEARNINGS 2026-05-21](LEARNINGS.md#combat-logs-are-a-primary-source-but-not-a-complete-aar-evidence-source);
-`lib/features/combat_analyzer/domain/combat_damage_matchup.dart`;
-`lib/features/fitting/domain/dogma_engine.dart`;
-`.codex/plans/2026-05-21-combat-analyzer-aar.md`.
-
 ### AAR evidence completeness score and pre-analysis checklist
 
 **Author.** Codex
@@ -143,14 +126,59 @@ bill-of-materials style recommendations.
 **Context.** Like effect 1851 for sub-cap missile cycle time, effects 660–668 (sub-capital missile damage) and 1730 (drone damage specialisations) publish empty modifier lists in the SDE. Curating them following the 1851 pattern will bring 100% parity for missile and drone damage skills.
 **Refs.** LEARNINGS 2026-09-11; design §7.
 
-### Retire legacy _skillModifiers table in favor of published SDE effects (397, 394, etc.)
+### Native dogma routing for basic ship skills (retire _skillModifiers table)
+
+**Author.** Antigravity / Lead Orchestrator
+**Priority.** P2
+**Effort.** Half-day.
+**Worth it when.** Refactoring DogmaEngine to eliminate hardcoded skill attribute tables.
+**Context.** CPU Management, Power Grid Management, Navigation, etc., are currently hardcoded in `_skillModifiers`. Now that Category 16 (Skill) is bundled, their published dogma effects (446, 490, 394, 2432, 397, 271, 392, 486) can be routed natively under an expanded `skillEffectAllowlist`. The hardcoded table is currently an exclusion hazard where skills cannot be added to the allowlist without double-applying.
+**Refs.** docs/specs/aar-fit-simulation-and-defense-profiles-design.md §2.3, §9.
+
+### Turret tracking and missile application in AAR damage matchup
+
+**Author.** Antigravity / Lead Orchestrator
+**Priority.** P2
+**Effort.** One to two days.
+**Worth it when.** Matching weapon systems against fast or small targets where angular velocity, signature radius, or explosion radius/velocity reduce applied damage below nominal profile percentages.
+**Context.** The current matchup uses nominal damage type distributions from logs/parser without factoring in tracking or missile application mechanics. Incorporating target signature radius and velocity vs attacker tracking/explosion velocity will make application analysis physically accurate.
+**Refs.** docs/specs/aar-fit-simulation-and-defense-profiles-design.md §9, §10.
+
+### Second-order module bonuses (compensation skills on passive hardeners)
+
+**Author.** Antigravity / Lead Orchestrator
+**Priority.** P2
+**Effort.** Half-day.
+**Worth it when.** Users fit passive armor or shield resistance platings/amplifiers with compensation skills trained.
+**Context.** Armor and Shield Compensation skills modify a module's *bonus* attributes (984–987), which `routeOwnerModifiers` currently reads raw from baseAttributes. Reading modifying values via `moduleAttr` will allow compensation skill bonuses to flow into fitted modules.
+**Refs.** docs/specs/aar-fit-simulation-and-defense-profiles-design.md §9.
+
+### LLM prompt regression testing and verification (spec R4 follow-up)
+
+**Author.** Antigravity / Lead Orchestrator
+**Priority.** P2
+**Effort.** One day.
+**Worth it when.** Validating that Codex AAR outputs consistently adhere to the derived facts, avoid hallucinating resists/EHP, and correctly treat All V figures as upper bounds.
+**Context.** Prompt schema v4 introduces `derivedFits` and `damageMatchups` with specific system prompt rules. Automated regression evaluations should verify that generated AARs cite `ev-derived-*` IDs and respect the "assumes All V" upper-bound constraints.
+**Refs.** docs/specs/aar-fit-simulation-and-defense-profiles-design.md §4.5, §9.
+
+### Ancillary repairer reload and module overheat in defense profiles
+
+**Author.** Antigravity / Lead Orchestrator
+**Priority.** P3
+**Effort.** One day.
+**Worth it when.** Modeling sustained active tank over extended engagements rather than single-cycle burst HP/s.
+**Context.** Current active tank reflects burst single-cycle HP/s with Nanite Repair Paste loaded, without modeling the 60-second ancillary reload delay or overheat bonuses.
+**Refs.** docs/specs/aar-fit-simulation-and-defense-profiles-design.md §2.5, §9.
+
+### Dogma version stamping on derived facts
 
 **Author.** Antigravity / Lead Orchestrator
 **Priority.** P3
 **Effort.** Half-day.
-**Worth it when.** Refactoring DogmaEngine to eliminate hardcoded skill attribute tables.
-**Context.** CPU Management, Power Grid Management, Navigation, etc., are currently hardcoded in `_skillModifiers`. Now that Category 16 (Skill) is bundled, their published dogma effects can be routed natively under an expanded `skillEffectAllowlist`.
-**Refs.** design §2.2, §7.
+**Worth it when.** SDE dogma version changes require invalidating or distinguishing historical derived facts in the evidence ledger.
+**Context.** Stamping `dogmaVersion` on `ev-derived-*` facts ensures historical ledger entries can be re-evaluated when the underlying dogma engine or SDE bundle updates.
+**Refs.** docs/specs/aar-fit-simulation-and-defense-profiles-design.md §9.
 
 ### Bundle dgmAttributeTypes.stackable to replace owner-kind stacking heuristic
 

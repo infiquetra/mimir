@@ -9,6 +9,20 @@
 
 ---
 
+### SHIPPED 2026-09-11: AAR fit simulation and defense profile derivation
+
+**Author.** Antigravity / Lead Orchestrator
+**Shipped as.** Connected the DogmaEngine to Combat Analyzer for deterministic derivation of EHP, resists, active tank layer, capacitor, speed/sig, and damage matchups for pilot and victim fits:
+- Fixed three engine floor defects: E0a (`modAdd`/`modSub` operator 2/3 routed before multipliers and percents so plates and shield extenders add HP), E0b (hull resonances pointed at 113/110/109/111 so DCU II adds 59.8% hull resist and 870.65 EHP), E0c (corrected five wrong skill IDs in `_skillModifiers` table: 3426 CPU, 3413 PG, 3449 Nav, 3418 Cap, 3419 Shield, plus 3416 Shield Operation).
+- E1 `DamagePattern` and `LayeredEhp`: pyfa `ehpAgainst(pattern) = hp / Σ p_t(1 - r_t)` per layer; collapses to omni flat-average with 25/25/25/25 while accurately modeling holes.
+- E2 active repair and peak shield recharge: modeled burst HP/s across armor ({27, 5275}), shield ({4, 4936}), and hull ({26}) repairers, including Nanite Repair Paste (28668) multiplier (1886) and skill 3393 bonused duration (allowlisted effect 272).
+- U1b shared loader: `FittingStatsInputs` and `loadFittingStatsInputs` extracted for single-engine parity between Fitting screen and AAR; `SdeService.getDogmaTypes` enriched with CPU, powergrid, calibration, and slotType.
+- Pure `CombatFitDeriver` with two engine calls (evidence fit + bare hull baseline) and `TankClassifier` (active HP/s > buffer gain > unfitted raw HP).
+- Relative damage matchup assessment (`resistHole` if resist ≤ 20 or resist ≤ mean − 5; `strongResist` if resist ≥ mean + 5; `appliedPercent` weighted post-resist share; `primaryHole`).
+- Pipeline Stage 5/9 "Deriving fit statistics", prompt schema `mimir.combat_aar_input.v4` with `derivedFits` and `damageMatchups`, and persistent `ev-derived-*` ledger facts + specific unknowns.
+- Presentation: `AarDerivedStatsPanel`, `AarMatchupSection`, and multipane screen wiring using `.when()`.
+**Refs.** LEARNINGS 2026-09-11; DECISIONS 2026-09-11; docs/specs/aar-fit-simulation-and-defense-profiles-design.md; .agents/plans/2026-09-11-aar-fit-simulation-and-defense-profiles.md.
+
 ### SHIPPED 2026-09-11: Skill cycle-time bonuses (Rapid Firing, Gunnery, MLO, Rapid Launch, XL specs, missile specialisations)
 
 **Author.** Antigravity / Lead Orchestrator

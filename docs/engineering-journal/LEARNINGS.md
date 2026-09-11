@@ -31,6 +31,52 @@
 
 ### 2026-09-11
 
+### Flat-average EHP hides resist holes; profile-weighted EHP is required for tactical AAR analysis
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** The dogma engine previously computed layer EHP as `hp / (1 - meanResist)`, which evaluates EHP against a theoretical flat-omni damage profile. When analyzing tactical combat encounters, this flat number completely obscures whether a victim or pilot died because incoming damage concentrated in their primary resist hole.
+**Evidence.**
+- A 1,000 HP shield layer with resists 0% EM, 50% Thermal, 50% Kinetic, 50% Explosive (mean resist 37.5%) reports 1,600 omni EHP. Against pure EM damage, real EHP is exactly 1,000 HP.
+- In S1, a victim with armor resists 52.4% EM / 34.8% Thermal / 63.1% Kinetic / 71.2% Explosive faced 78% Kinetic and 19% Thermal incoming damage. The 34.8% Thermal resist is the relative resist hole by incoming weight even though it is above 20% absolute.
+**Mechanism.** EHP is inherently path-dependent: $\text{Layer EHP} = \frac{\text{hp}}{\sum_t p_t (1 - r_t)}$ where $p_t$ is the normalized incoming damage fraction. With $p_t = 0.25$, it collapses to flat-average $hp / (1 - \text{mean})$, but against any real distribution it measures true survivability.
+**Generalizable rule.** Never use flat arithmetic averages for defense metrics where the incoming distribution is known. Profile-weighted EHP preserves the omni collapse for general stats while accurately computing matchup survivability.
+**Refs.** docs/specs/aar-fit-simulation-and-defense-profiles-design.md §0 C7, §2.4, §9; test/features/fitting/domain/damage_pattern_test.dart.
+
+### Operator 2/3 (modAdd/modSub) was discarded as unsupported; shield extenders and plates contributed 0 HP
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** The DogmaEngine supported operators 0/4 (multiply) and 6 (percent), counting operator 2 (`modAdd`) and operator 3 (`modSub`) as unsupported and dropping them. Consequently, Medium/Large Shield Extenders and 400mm/800mm/1600mm Armor Plates added zero HP, signature radius, or mass to any fitted ship.
+**Evidence.**
+- Medium Shield Extender II publishes `effect 21: ItemModifier / op 2 / 263 <- 72 / shipID` (+1,100 HP) and `effect 2029: 552 <- 983` (+7m sig). 1600mm Steel Plates II publishes `effect 2837: op 2 / 265 <- 1159` (+4,800 HP) and `effect 1959: 4 <- 796` (+3,750,000 kg mass).
+- A 1600mm-plated Rifter reported 450 armor HP instead of 5,250 HP and base align time (4.73s) instead of 21.37s.
+- Pyfa attribute evaluation order is: $\text{value} = (\text{base} + \sum \text{adds}) \times \prod \text{multipliers} \times \text{chain}(\text{percents})$. Pre-multiplying base before adds yields incorrect results (e.g. Shield Management V on MSE II: $(450 + 1100) \times 1.25 = 1,937.5$, whereas pre-add multiply yields $1,662.5$).
+**Mechanism.** Modifier routing engines must support additive operators on base attributes before applying multiplicative and percent chains.
+**Generalizable rule.** A modifier routing engine must count and surface unsupported operators *per attribute* and log them as actionable errors during test discovery, rather than quietly swallowing them under an aggregate debug counter.
+**Refs.** docs/specs/aar-fit-simulation-and-defense-profiles-design.md §0 C1, §2.1, §9; commit cc693c6.
+
+### Hull resonance attribute IDs are 113/110/109/111; 974–977 are Damage Control bonus attributes
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** `DogmaAttributes.hull*Resist` were pointed at 974–977 (`hullEmDamageResonance` etc.). Probing the bundled SDE revealed that ships carry their natural hull resonances at attributes 113 (EM), 110 (Thermal), 109 (Kinetic), and 111 (Explosive), with stackable=0 and base value 0.67 (33% natural resist) on every ship.
+**Evidence.**
+- Attributes 974–977 are the Damage Control's own bonus attributes (`stackable=1`, never present on hull types). Ships publish 974–977 = 1.0 (0% resist).
+- Damage Control II publishes `effect 2302` which modifies 113/110/109/111 on the ship (`op 0, factor 0.60`).
+- Because constants pointed to 974–977, bare hulls reported 0% hull resist (350 EHP for Rifter instead of 522.39 EHP), and DCU II hull resist bonus never applied.
+**Mechanism.** CCP dogma separates a module's modifying attribute from the target item's modified attribute. Damage Control units carry bonus attributes 974–977 to scale effect 2302, but the target attributes on the ship are 113/110/109/111.
+**Generalizable rule.** Verify both sides of a dogma modifier: the modifying attribute on the module and the modified attribute on the target ship. Do not conflate module bonus attributes with ship state attributes.
+**Refs.** docs/specs/aar-fit-simulation-and-defense-profiles-design.md §0 C2, §2.2, §9; commit cc693c6.
+
+### `_skillModifiers` carried five wrong skill IDs because tests copied the table not the SDE
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** DogmaEngine's hardcoded `_skillModifiers` table mapped five of seven skill IDs incorrectly: 3418 was labeled CPU Management (actually Capacitor Management; CPU is 3426), 3402 was labeled Power Grid Management (actually Science; PG is 3413), 3455 was labeled Navigation (actually Warp Drive Operation; Nav is 3449), 3424 was labeled Cap Management (actually Energy Grid Upgrades), and 3425 was labeled Shield Management (actually Shield Upgrades; Shield Mgmt is 3419).
+**Evidence.**
+- All V derivations masked this because All V loaded all skills at level 5. Known-character skill derivations, however, read the wrong skills from the character's ESI cache.
+- Unit tests encoded the exact same wrong IDs (e.g. asserting `CharacterSkill(3418, 5)` gave CPU bonuses). The tests were green because both the engine and tests shared the mistaken ID.
+**Mechanism.** Circular verification: when test fixtures copy constants or IDs from the code under test instead of an independent external authority (the bundled SDE), bugs become self-validating specifications.
+**Generalizable rule.** Fixture IDs and test expected values must be sourced directly from bundle JSON or official data exports, never copied from the implementation under test.
+**Refs.** docs/specs/aar-fit-simulation-and-defense-profiles-design.md §0 C3, §2.3, §9; commit cc693c6.
+
 ### SDE Categories 16 (Skill) & 87 (Fighter) publish dogma modifiers; version gating prevents stranded installs
 
 **Author.** Antigravity / Lead Orchestrator

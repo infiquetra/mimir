@@ -26,6 +26,26 @@
 
 ### 2026-09-11
 
+### AAR fit simulation, derivation layering, tank classification, and shared loader (commit: pending)
+
+**Author.** Antigravity / Lead Orchestrator
+**Decision.**
+1. **Derivation Layering:** Split derivation into pure domain `CombatFitDeriver` (injected with `DogmaEngine`, synchronous-style async, zero I/O, unit-testable without database) and data layer `CombatFitDerivationService` (resolving SDE types, character skills via ESI cache or cached All V, building `AarDerivationBundle`).
+2. **Shared Loader:** Extract `loadFittingStatsInputs` into `lib/features/fitting/data/fitting_stats_inputs.dart` as the single shared loader for both the Fitting screen (`fittingStatsProvider`) and AAR derivation (`CombatFitDerivationService`), guaranteeing identical inputs and 100% parity across both subsystems.
+3. **Tank Classification Rule:** Implement deterministic 4-step hierarchy in `TankClassifier`: (a) if active repair/boost HP/s > 0, pick layer with highest rate (ties: larger layer omni EHP, then armor/shield/hull); (b) else if omni EHP gain vs bare-hull baseline > 0.5, pick layer with largest gain (mode: buffer); (c) else pick layer with largest total EHP (mode: unfitted); (d) if zero HP, unknown/unfitted.
+4. **Relative Damage Matchup Assessment:** Replace absolute ≤20/≥60 threshold with relative rule against layer mean resist: `resistHole` if resist ≤ 20 or resist ≤ mean − 5; `strongResist` if resist ≥ mean + 5; neutral otherwise. Calculate `appliedPercent` post-resist damage fraction $p_t(1 - r_t)/\sum p_u(1 - r_u)$ and identify `primaryHole`.
+5. **Persistence Model:** Persist derived facts and specific unknowns into `CombatEvidenceLedger` (preserving what the LLM analysis saw at analysis time); recompute structured `AarDerivationBundle` live via `aarFitDerivationsProvider` so UI stats reflect current engine math.
+6. **Skill Basis Transparency:** Require explicit `AarSkillContext` (`knownCharacter` with derived confidence vs `allFive` with reference confidence strictly lower). Never silently present All V stats without labeling `assumes All V`.
+**Rejected alternatives.**
+- Single monolithic service with embedded DB queries: Rejected to maintain AC1.5/T1.7 test purity without mocking SQLite.
+- Separate SDE loaders in Fitting and Combat Analyzer: Rejected because differing loader rules would violate the "one engine, one answer" requirement.
+- Raw-HP or role-based tank heuristic: Rejected because active repair must beat buffer, and buffer investment is accurately measured as gain over bare hull.
+- Persisting structured derivation bundle: Rejected to prevent stale serialized state when engine attributes or algorithms evolve.
+**Rationale.** Establishes clean architectural boundaries between pure dogma calculations and data resolution, guarantees cross-feature stat parity, and ensures all AAR metrics are mathematically grounded and transparent about skill assumptions.
+**Revisit when.** Turret tracking or missile application mechanics are ported to the matchup analyzer.
+**Refs.** LEARNINGS 2026-09-11; ARCHIVE SHIPPED 2026-09-11; docs/specs/aar-fit-simulation-and-defense-profiles-design.md; .agents/plans/2026-09-11-aar-fit-simulation-and-defense-profiles.md.
+
+
 ### Published dogma modifier routing for skills and fighters, curated 1851 fallback, and owner-kind stacking penalties (commit: pending)
 
 **Author.** Antigravity / Lead Orchestrator
