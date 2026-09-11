@@ -1,5 +1,6 @@
 import '../../../core/network/esi_client.dart';
 import '../../fitting/domain/models.dart';
+import 'combat_attacker_correlation.dart';
 import 'combat_evidence_ledger.dart';
 
 enum CombatEnrichmentStatus { killmailMatched, ambiguous, logOnly, needsReauth }
@@ -34,6 +35,7 @@ class CombatEnrichment {
     this.limitations = const [],
     this.rawKillmail,
     this.killmailSearchCompleted = false,
+    this.attackerCorrelation,
   });
 
   final String parsedEncounterId;
@@ -59,6 +61,7 @@ class CombatEnrichment {
   final List<String> limitations;
   final Map<String, dynamic>? rawKillmail;
   final bool killmailSearchCompleted;
+  final AttackerCorrelation? attackerCorrelation;
 
   bool get hasMatchedKillmail =>
       status == CombatEnrichmentStatus.killmailMatched;
@@ -109,6 +112,8 @@ class CombatEnrichment {
     'limitations': limitations,
     if (rawKillmail != null) 'rawKillmail': rawKillmail,
     'killmailSearchCompleted': killmailSearchCompleted,
+    if (attackerCorrelation != null)
+      'attackerCorrelation': attackerCorrelation!.toJson(),
   };
 
   Map<String, dynamic> toPromptJson() => {
@@ -203,6 +208,9 @@ class CombatEnrichment {
           CombatEnrichmentStatus.logOnly,
         ),
         matchReason: json['matchReason']?.toString() ?? '',
+      ),
+      attackerCorrelation: AttackerCorrelation.fromJson(
+        json['attackerCorrelation'],
       ),
     );
   }
@@ -313,6 +321,7 @@ class CombatEnrichment {
     List<String>? limitations,
     Map<String, dynamic>? rawKillmail,
     bool? killmailSearchCompleted,
+    AttackerCorrelation? attackerCorrelation,
   }) {
     return CombatEnrichment(
       parsedEncounterId: parsedEncounterId,
@@ -339,6 +348,7 @@ class CombatEnrichment {
       rawKillmail: rawKillmail ?? this.rawKillmail,
       killmailSearchCompleted:
           killmailSearchCompleted ?? this.killmailSearchCompleted,
+      attackerCorrelation: attackerCorrelation ?? this.attackerCorrelation,
     );
   }
 }

@@ -134,7 +134,7 @@ void main() {
     test('T2.7 sole fires for 1 player participant and 1 player actor', () {
       final pair = scorePair(
         actor: actor('Zed'),
-        participant: participant(name: 'Other'),
+        participant: participant(name: 'Other', damageDone: null),
         ctx: context(playerActorCount: 1, playerParticipantCount: 1),
       );
       expect(pair.signals, contains(CorrelationSignal.sole));

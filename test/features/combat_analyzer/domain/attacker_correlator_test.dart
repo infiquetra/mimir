@@ -152,6 +152,11 @@ void main() {
               weaponTypeId: 2410,
               damageDone: 50,
             ),
+            attacker(
+              characterId: 9002,
+              characterName: 'Second',
+              damageDone: 10,
+            ),
           ],
         ),
         typeIndex: typeIndex(),
@@ -241,7 +246,7 @@ void main() {
       final thirdParty = correlate(s4ThirdParty());
       expect(
         thirdParty.reasons['actor:kite mondeo'],
-        UncorrelatedReason.notOnKillmail,
+        UncorrelatedReason.belowThreshold,
       );
       final below = const CombatAttackerCorrelator().correlate(
         encounter: incomingEncounter([('Zed', 1000, 'Heavy Missile', 4)]),
@@ -253,6 +258,11 @@ void main() {
               characterName: 'Other',
               weaponTypeId: 2410,
               damageDone: 50,
+            ),
+            attacker(
+              characterId: 9002,
+              characterName: 'Second',
+              damageDone: 10,
             ),
           ],
         ),

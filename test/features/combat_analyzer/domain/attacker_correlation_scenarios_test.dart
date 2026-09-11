@@ -29,9 +29,10 @@ void main() {
         byName['Artem S3']!.confidence,
         AttackerCorrelationConfidence.confirmed,
       );
-      expect(byName['Artem S3']!.score, 0.95);
+      expect(byName['Artem S3']!.score, 1.0);
       expect(byName['Artem S3']!.signals, [
         CorrelationSignal.name,
+        CorrelationSignal.weapon,
         CorrelationSignal.damage,
       ]);
       expect(
@@ -41,6 +42,7 @@ void main() {
       expect(byName['Kite Mondeo']!.score, 1.0);
       expect(byName['Kite Mondeo']!.signals, [
         CorrelationSignal.name,
+        CorrelationSignal.weapon,
         CorrelationSignal.damage,
         CorrelationSignal.timing,
       ]);
@@ -48,9 +50,10 @@ void main() {
         byName['Sabre']!.confidence,
         AttackerCorrelationConfidence.probable,
       );
-      expect(byName['Sabre']!.score, 0.50);
+      expect(byName['Sabre']!.score, 0.70);
       expect(byName['Sabre']!.signals, [
         CorrelationSignal.ship,
+        CorrelationSignal.weapon,
         CorrelationSignal.damage,
       ]);
       expect(
@@ -98,7 +101,7 @@ void main() {
       final result = correlate(s4ThirdParty());
       expect(
         result.reasons['actor:kite mondeo'],
-        UncorrelatedReason.notOnKillmail,
+        UncorrelatedReason.belowThreshold,
       );
       expect(result.unattributedIncomingDamage, 1100);
       expect(result.correlated.single.actor.displayName, 'Artem S3');
@@ -130,6 +133,7 @@ void main() {
       expect(artem.score, 1.0);
       expect(artem.signals, [
         CorrelationSignal.name,
+        CorrelationSignal.weapon,
         CorrelationSignal.damage,
         CorrelationSignal.sole,
       ]);

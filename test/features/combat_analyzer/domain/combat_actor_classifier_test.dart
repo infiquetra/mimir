@@ -139,7 +139,10 @@ void main() {
           .toSet();
       expect(actors.map((a) => a.key).toSet(), keys);
       expect(actors.length, keys.length);
-      expect(actors.every((a) => a.actorClass != null), isTrue);
+      expect(
+        actors.every((a) => CombatActorClass.values.contains(a.actorClass)),
+        isTrue,
+      );
     });
   });
 }

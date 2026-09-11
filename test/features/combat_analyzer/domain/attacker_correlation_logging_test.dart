@@ -26,7 +26,7 @@ void main() {
         correlate(s2Loss());
         final pair = RegExp(
           r'\[COMBAT\.CORRELATE\].*actor=Sabre.*participant=a2.*'
-          r'score=0\.50.*signals=ship,damage',
+          r'score=0\.70.*signals=ship,weapon,damage',
         );
         expect(
           lines.where(pair.hasMatch),
