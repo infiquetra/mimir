@@ -102,12 +102,7 @@ void main() {
       'E.5 provider error surfaces as AsyncError, not a throw in the scorer',
       () async {
         final failing = ProviderContainer(
-          overrides: _overrides(
-            holder,
-            encounter,
-            codex,
-            throwIncoming: true,
-          ),
+          overrides: _overrides(holder, encounter, codex, throwIncoming: true),
         );
         addTearDown(failing.dispose);
         final provider = aarEvidenceAssessmentProvider(encounter);
