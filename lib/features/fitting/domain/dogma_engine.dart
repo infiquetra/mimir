@@ -5,6 +5,17 @@ import 'cap_simulator.dart';
 import 'dogma_attributes.dart';
 import 'models.dart';
 
+/// One modifier contribution to a module or charge attribute.
+///
+/// [factor] is `1 + pct/100` for postPercent (op 6) and the raw multiplier
+/// for postMul (op 0/4). Ship-owned and skill-owned bonuses are never
+/// penalized; fitted module/charge/drone/fighter owners are.
+class _Bonus {
+  const _Bonus(this.factor, {this.penalized = false});
+  final double factor;
+  final bool penalized;
+}
+
 /// The core calculation engine for EVE Online ship fitting.
 ///
 /// Processes a [Fitting], applies character skills, and calculates
@@ -22,10 +33,70 @@ class DogmaEngine {
   /// Attribute holding a missile damage multiplier bonus (BCS family).
   static const int _missileDamageBonus = 212;
 
-  /// Attributes listing the skills an item requires (primary/secondary/
-  /// tertiary). Used to tell "bonus scales with a ship command skill" from
-  /// "bonus applies raw to items that operate on this skill" (damage amps).
-  static const Set<int> _requiredSkillAttributes = {182, 183, 184};
+  /// Attributes listing the skills an item requires (primary through sixth).
+  /// Matches pyfa's `Item.requiredSkills` and dogma `LocationRequiredSkillModifier`.
+  static const Set<int> requiredSkillAttributeIds = {
+    182,
+    183,
+    184,
+    1285,
+    1289,
+    1290,
+  };
+  static const Set<int> _requiredSkillAttributes = requiredSkillAttributeIds;
+
+  /// Skill effects routed this increment (cycle bonuses + fighter skills).
+  /// Effect 1851 (sub-capital missile specs) is included so a non-empty
+  /// bundled modifier list wins over the curated supplement.
+  static const Set<int> skillEffectAllowlist = {
+    414,
+    582,
+    1763,
+    1851,
+    6577,
+    6578,
+    6560,
+    6563,
+    6570,
+    6663,
+    12844,
+    12846,
+    12847,
+    12848,
+  };
+
+  static const List<int> _missileSpecSkillIds = [
+    20209,
+    20210,
+    20211,
+    25718,
+    20212,
+    20213,
+  ];
+
+  /// Curated Effect1851 (selfRof) — applied only when the bundled list is empty.
+  static final Map<int, List<EffectModifier>> _curatedSkillModifiers = {
+    for (final id in _missileSpecSkillIds)
+      id: [
+        EffectModifier(
+          effectId: 1851,
+          func: 'LocationRequiredSkillModifier',
+          operator: 6,
+          modifiedAttributeId: DogmaAttributes.rateOfFire,
+          modifyingAttributeId: DogmaAttributes.rofBonus,
+          domain: 'shipID',
+          skillTypeId: id,
+        ),
+      ],
+  };
+
+  /// Direct required-skill check over the six dogma slots.
+  static bool requiresSkill(ModuleType type, int skillId) {
+    final asDouble = skillId.toDouble();
+    return _requiredSkillAttributes.any(
+      (id) => type.baseAttributes[id] == asDouble,
+    );
+  }
 
   static bool _isMul(int operator) =>
       operator == _postMul || operator == _postMulAlt;
@@ -69,6 +140,34 @@ class DogmaEngine {
     return exp(-pow((n - 1) / 2.67, 2));
   }
 
+  /// `base * product(unpenalized) * chain(penalized > 1) * chain(penalized < 1)`.
+  static double _applyBonuses(double base, Iterable<_Bonus> bonuses) {
+    var unpenalized = 1.0;
+    final high = <_Bonus>[];
+    final low = <_Bonus>[];
+    for (final bonus in bonuses) {
+      if (!bonus.penalized) {
+        unpenalized *= bonus.factor;
+      } else if (bonus.factor > 1) {
+        high.add(bonus);
+      } else if (bonus.factor < 1) {
+        low.add(bonus);
+      }
+    }
+    return base * unpenalized * _penalizedChain(high) * _penalizedChain(low);
+  }
+
+  static double _penalizedChain(List<_Bonus> bonuses) {
+    if (bonuses.isEmpty) return 1.0;
+    final sorted = [...bonuses]
+      ..sort((a, b) => (b.factor - 1).abs().compareTo((a.factor - 1).abs()));
+    var factor = 1.0;
+    for (var i = 0; i < sorted.length; i++) {
+      factor *= 1 + (sorted[i].factor - 1) * getStackingPenalty(i + 1);
+    }
+    return factor;
+  }
+
   /// Skill-driven postMul modifiers applied to ship attributes.
   ///
   /// Entries are (skillTypeId, attributeId, bonusPerLevel). These are EVE's
@@ -95,8 +194,13 @@ class DogmaEngine {
     Map<String, ModuleType> moduleTypes,
     List<CharacterSkill> characterSkills, {
     Map<int, List<EffectModifier>> effectModifiers = const {},
+    Map<int, ModuleType> skillTypes = const {},
   }) async {
-    Log.d('DOGMA', 'Calculating stats for fitting: ${fitting.name}');
+    Log.d(
+      'DOGMA',
+      'Calculating stats for fitting: ${fitting.name} '
+          'skillTypes=${skillTypes.length}',
+    );
 
     // 1. Attribute pipeline: ship base attributes, then character skills,
     //    then module effects. Everything below reads from this map so a
@@ -137,10 +241,10 @@ class DogmaEngine {
     int calibrationUsed = 0;
     final percentModifiers = <int, List<double>>{};
     final mulModifiers = <int, List<double>>{};
-    final modulePercent = <int, Map<int, List<double>>>{};
-    final moduleMul = <int, Map<int, List<double>>>{};
-    final chargePercent = <int, Map<int, List<double>>>{};
-    final chargeMul = <int, Map<int, List<double>>>{};
+    final modulePercent = <int, Map<int, List<_Bonus>>>{};
+    final moduleMul = <int, Map<int, List<_Bonus>>>{};
+    final chargePercent = <int, Map<int, List<_Bonus>>>{};
+    final chargeMul = <int, Map<int, List<_Bonus>>>{};
     var unsupportedOperators = 0;
     final capDrains = <String, CapDrain>{};
     final capInjectors = <CapInjector>[];
@@ -159,6 +263,19 @@ class DogmaEngine {
     void addTo(Map<int, List<double>> target, int attributeId, double value) =>
         target.putIfAbsent(attributeId, () => []).add(value);
 
+    void addBonus(
+      Map<int, Map<int, List<_Bonus>>> buckets,
+      int typeId,
+      int attributeId,
+      double factor, {
+      required bool penalized,
+    }) {
+      buckets
+          .putIfAbsent(typeId, () => {})
+          .putIfAbsent(attributeId, () => [])
+          .add(_Bonus(factor, penalized: penalized));
+    }
+
     // Ship-owned racial bonuses scale with the ship's required skill
     // (pyfa passes skill= in ship handlers); module-owned bonuses are raw.
     final shipRequiredSkill = _requiredSkillAttributes
@@ -168,13 +285,40 @@ class DogmaEngine {
         ? 0.0
         : (skillLevels[shipRequiredSkill.toInt()] ?? 0).toDouble();
 
-    bool requiresSkill(ModuleType type, int skillId) => _requiredSkillAttributes
-        .any((id) => type.baseAttributes[id] == skillId.toDouble());
+    final bonusScale = <int, double>{};
+    if (skillTypes.isEmpty) {
+      Log.d(
+        'DOGMA',
+        'using legacy shipSkillLevel fallback (skillTypes empty) '
+            'shipSkillLevel=$shipSkillLevel',
+      );
+    } else {
+      for (final attrId in _requiredSkillAttributes) {
+        final skillId = shipType.baseAttributes[attrId]?.toInt();
+        if (skillId == null) continue;
+        final skillType = skillTypes[skillId];
+        if (skillType == null) continue;
+        final level = (skillLevels[skillId] ?? 0).clamp(0, 5).toDouble();
+        for (final effect in skillType.effects) {
+          for (final modifier
+              in effectModifiers[effect.effectId] ?? const <EffectModifier>[]) {
+            if (modifier.domain == 'shipID' &&
+                modifier.func == 'ItemModifier' &&
+                modifier.modifyingAttributeId == DogmaAttributes.skillLevel &&
+                _isMul(modifier.operator)) {
+              bonusScale[modifier.modifiedAttributeId] = level;
+            }
+          }
+        }
+      }
+      Log.d('DOGMA', 'bonusScale=$bonusScale');
+    }
 
     void routeLocationModifier(
       EffectModifier modifier,
       double base, {
       required bool ownerIsShip,
+      required bool penalized,
     }) {
       final percents = modifier.operator == _postPercent;
       if (!percents && !_isMul(modifier.operator)) {
@@ -183,10 +327,16 @@ class DogmaEngine {
       }
       // modifierInfo's skillTypeID is the skill its TARGETS must require
       // (pyfa's requiresSkill filter). Ship-owned racial bonuses scale with
-      // the ship's own required skill; module-owned bonuses apply raw
-      // (pyfa: boost with skill= only for ship handlers).
+      // bonusScale (or the legacy first-slot skill level); module-owned and
+      // skill-owned bonuses apply raw.
       final filterSkill = modifier.skillTypeId;
-      final scaled = ownerIsShip ? base * shipSkillLevel : base;
+      final modifyingId = modifier.modifyingAttributeId;
+      final double scale = !ownerIsShip
+          ? 1.0
+          : skillTypes.isEmpty
+          ? shipSkillLevel
+          : (modifyingId == null ? 1.0 : (bonusScale[modifyingId] ?? 1.0));
+      final scaled = base * scale;
 
       double? valueFor(ModuleType target) {
         if (filterSkill != null && !requiresSkill(target, filterSkill)) {
@@ -194,6 +344,23 @@ class DogmaEngine {
         }
         if (!ownerIsShip) return base;
         return scaled == 0.0 ? null : scaled;
+      }
+
+      void store(
+        Map<int, Map<int, List<_Bonus>>> percentBuckets,
+        Map<int, Map<int, List<_Bonus>>> mulBuckets,
+        int typeId,
+        int attrId,
+        double raw,
+      ) {
+        final factor = percents ? 1 + raw / 100 : raw;
+        addBonus(
+          percents ? percentBuckets : mulBuckets,
+          typeId,
+          attrId,
+          factor,
+          penalized: penalized,
+        );
       }
 
       if (modifier.domain == 'charID') {
@@ -217,7 +384,7 @@ class DogmaEngine {
             if (charge == null) continue;
             for (final id in DogmaAttributes.damageComponents) {
               if (!charge.baseAttributes.containsKey(id)) continue;
-              addTo(chargeMul.putIfAbsent(chargeId, () => {}), id, base);
+              addBonus(chargeMul, chargeId, id, base, penalized: penalized);
             }
           }
           return;
@@ -235,11 +402,10 @@ class DogmaEngine {
           }
           final value = valueFor(charge);
           if (value == null) continue;
-          addTo(
-            (percents ? chargePercent : chargeMul).putIfAbsent(
-              chargeId,
-              () => {},
-            ),
+          store(
+            chargePercent,
+            chargeMul,
+            chargeId,
             modifier.modifiedAttributeId,
             value,
           );
@@ -267,11 +433,10 @@ class DogmaEngine {
         }
         final value = valueFor(type);
         if (value == null) continue;
-        addTo(
-          (percents ? modulePercent : moduleMul).putIfAbsent(
-            type.typeId,
-            () => {},
-          ),
+        store(
+          modulePercent,
+          moduleMul,
+          type.typeId,
           modifier.modifiedAttributeId,
           value,
         );
@@ -283,10 +448,12 @@ class DogmaEngine {
       Map<int, double> ownerAttributes, {
       Map<int, double>? fallbackAttributes,
       required bool ownerIsShip,
+      required bool penalized,
     }) {
       for (final effect in effects) {
-        for (final modifier
-            in effectModifiers[effect.effectId] ?? const <EffectModifier>[]) {
+        final modifiers =
+            effectModifiers[effect.effectId] ?? const <EffectModifier>[];
+        for (final modifier in modifiers) {
           if (modifier.func == 'EffectStopper') continue;
           final modifyingId = modifier.modifyingAttributeId;
           final base = modifyingId == null
@@ -296,16 +463,25 @@ class DogmaEngine {
           if (base == null || base == 0) continue;
 
           if (modifier.func == 'ItemModifier' && modifier.domain == 'shipID') {
+            final scale = ownerIsShip && skillTypes.isNotEmpty
+                ? (bonusScale[modifier.modifyingAttributeId] ?? 1.0)
+                : 1.0;
+            final value = base * scale;
             if (_isMul(modifier.operator)) {
-              addTo(mulModifiers, modifier.modifiedAttributeId, base);
+              addTo(mulModifiers, modifier.modifiedAttributeId, value);
             } else if (modifier.operator == _postPercent) {
-              addTo(percentModifiers, modifier.modifiedAttributeId, base);
+              addTo(percentModifiers, modifier.modifiedAttributeId, value);
             } else {
               unsupportedOperators++;
             }
             continue;
           }
-          routeLocationModifier(modifier, base, ownerIsShip: ownerIsShip);
+          routeLocationModifier(
+            modifier,
+            base,
+            ownerIsShip: ownerIsShip,
+            penalized: penalized,
+          );
         }
       }
     }
@@ -316,27 +492,91 @@ class DogmaEngine {
       shipType.effects,
       shipType.baseAttributes,
       ownerIsShip: true,
+      penalized: false,
     );
 
+    var ignoredSkillEffects = 0;
+    for (final entry in skillTypes.entries) {
+      final skillId = entry.key;
+      final type = entry.value;
+      final level = (skillLevels[skillId] ?? 0).clamp(0, 5).toInt();
+      if (level == 0) continue;
+
+      final ownerAttributes = <int, double>{
+        for (final attr in type.baseAttributes.entries)
+          attr.key: attr.value * level,
+        DogmaAttributes.skillLevel: level.toDouble(),
+      };
+
+      List<EffectModifier> modifiersFor(int effectId) {
+        final bundled = effectModifiers[effectId] ?? const <EffectModifier>[];
+        if (bundled.isNotEmpty) return bundled;
+        return _curatedSkillModifiers[skillId]
+                ?.where((m) => m.effectId == effectId)
+                .toList() ??
+            const [];
+      }
+
+      for (final effect in type.effects) {
+        if (!skillEffectAllowlist.contains(effect.effectId)) {
+          ignoredSkillEffects++;
+          continue;
+        }
+        final modifiers = modifiersFor(effect.effectId);
+        for (final modifier in modifiers) {
+          if (modifier.func == 'EffectStopper') continue;
+          if (modifier.domain == 'itemID') continue;
+          if (modifier.func == 'ItemModifier' &&
+              modifier.domain == 'shipID' &&
+              modifier.modifyingAttributeId == DogmaAttributes.skillLevel &&
+              _isMul(modifier.operator)) {
+            continue;
+          }
+          final modifyingId = modifier.modifyingAttributeId;
+          final base = modifyingId == null
+              ? null
+              : ownerAttributes[modifyingId];
+          if (base == null || base == 0) continue;
+          Log.d(
+            'DOGMA',
+            'Skill $skillId L$level effect ${effect.effectId}: '
+                '${modifier.modifiedAttributeId} op${modifier.operator} '
+                '$base -> modules',
+          );
+          if (modifier.func == 'ItemModifier' && modifier.domain == 'shipID') {
+            if (_isMul(modifier.operator)) {
+              addTo(mulModifiers, modifier.modifiedAttributeId, base);
+            } else if (modifier.operator == _postPercent) {
+              addTo(percentModifiers, modifier.modifiedAttributeId, base);
+            } else {
+              unsupportedOperators++;
+            }
+            continue;
+          }
+          routeLocationModifier(
+            modifier,
+            base,
+            ownerIsShip: false,
+            penalized: false,
+          );
+        }
+      }
+    }
+    if (ignoredSkillEffects > 0) {
+      Log.d(
+        'DOGMA',
+        'Ignored $ignoredSkillEffects skill effects outside the allowlist',
+      );
+    }
+
     /// Effective attribute of a fitted module after group/skill bonuses.
-    /// Bonuses from separate sources on one attribute take the dogma
-    /// stacking penalty, strongest first, like in game.
     double moduleAttr(ModuleType type, int id) {
       final base = type.baseAttributes[id];
       if (base == null) return 0.0;
-      var value = base;
-      final percents = modulePercent[type.typeId]?[id];
-      if (percents != null) {
-        final sorted = [...percents]
-          ..sort((a, b) => b.abs().compareTo(a.abs()));
-        for (var i = 0; i < sorted.length; i++) {
-          value *= 1 + (sorted[i] / 100) * getStackingPenalty(i + 1);
-        }
-      }
-      for (final mul in moduleMul[type.typeId]?[id] ?? const <double>[]) {
-        value *= mul;
-      }
-      return value;
+      return _applyBonuses(base, [
+        ...?modulePercent[type.typeId]?[id],
+        ...?moduleMul[type.typeId]?[id],
+      ]);
     }
 
     /// Effective attribute of a loaded charge or fitted drone after
@@ -344,19 +584,10 @@ class DogmaEngine {
     double chargeAttr(ModuleType charge, int id) {
       final base = charge.baseAttributes[id];
       if (base == null) return 0.0;
-      var value = base;
-      final percents = chargePercent[charge.typeId]?[id];
-      if (percents != null) {
-        final sorted = [...percents]
-          ..sort((a, b) => b.abs().compareTo(a.abs()));
-        for (var i = 0; i < sorted.length; i++) {
-          value *= 1 + (sorted[i] / 100) * getStackingPenalty(i + 1);
-        }
-      }
-      for (final mul in chargeMul[charge.typeId]?[id] ?? const <double>[]) {
-        value *= mul;
-      }
-      return value;
+      return _applyBonuses(base, [
+        ...?chargePercent[charge.typeId]?[id],
+        ...?chargeMul[charge.typeId]?[id],
+      ]);
     }
 
     for (final module in fitting.allModules) {
@@ -371,17 +602,21 @@ class DogmaEngine {
 
       // Cap cycle costs read the bonus-adjusted values so ship and module
       // cap-need bonuses change capacitor stability like in game. pyfa adds
-      // the reactivation delay (a booster's reload) to the cycle.
+      // the reactivation delay (a booster's reload) to the cycle. Weapons
+      // cycle on rateOfFire (51); other modules cycle on duration (73).
       final hasCapNeed = type.baseAttributes.containsKey(
         DogmaAttributes.capacitorNeed,
       );
-      final hasCycle = type.baseAttributes.containsKey(
-        DogmaAttributes.duration,
-      );
-      final cycleMs = hasCycle
-          ? moduleAttr(type, DogmaAttributes.duration) +
-                moduleAttr(type, DogmaAttributes.reactivationDelay)
-          : 0.0;
+      final cycleAttrId =
+          type.baseAttributes.containsKey(DogmaAttributes.duration)
+          ? DogmaAttributes.duration
+          : type.baseAttributes.containsKey(DogmaAttributes.rateOfFire)
+          ? DogmaAttributes.rateOfFire
+          : null;
+      final cycleMs = cycleAttrId == null
+          ? 0.0
+          : moduleAttr(type, cycleAttrId) +
+                moduleAttr(type, DogmaAttributes.reactivationDelay);
       if (hasCapNeed && cycleMs > 0) {
         final capNeed = moduleAttr(type, DogmaAttributes.capacitorNeed);
         if (capNeed > 0) {
@@ -417,6 +652,7 @@ class DogmaEngine {
         type.baseAttributes,
         fallbackAttributes: module.attributes,
         ownerIsShip: false,
+        penalized: true,
       );
 
       for (final effect in type.effects) {

@@ -267,6 +267,42 @@ final activeShipTypeProvider = FutureProvider<ShipType?>((ref) async {
   return sde.getShipType(fitting.shipTypeId);
 });
 
+/// Trained skills (level > 0) plus the active hull's required skills,
+/// loaded as dogma types for skill-owned modifier routing.
+final fittingSkillTypesProvider = FutureProvider<Map<int, ModuleType>>((
+  ref,
+) async {
+  final shipType = await ref.watch(activeShipTypeProvider.future);
+  final sde = ref.read(sdeServiceProvider);
+  final ids = <int>{};
+
+  final character = await ref
+      .read(characterRepositoryProvider)
+      .getActiveCharacter();
+  if (character != null) {
+    final trained = await ref.watch(
+      trainedSkillsProvider(character.characterId).future,
+    );
+    for (final skill in trained) {
+      if (skill.trainedSkillLevel > 0) {
+        ids.add(skill.skillId);
+      }
+    }
+  }
+  if (shipType != null) {
+    for (final attrId in DogmaEngine.requiredSkillAttributeIds) {
+      final value = shipType.baseAttributes[attrId];
+      if (value != null) {
+        ids.add(value.toInt());
+      }
+    }
+  }
+
+  Log.d('FITTING', 'fittingSkillTypesProvider loading ${ids.length} types');
+  if (ids.isEmpty) return {};
+  return sde.getDogmaTypes(ids);
+});
+
 /// Provider for the calculated stats of the active fitting.
 final fittingStatsProvider = FutureProvider<FittingStats?>((ref) async {
   final shipType = await ref.watch(activeShipTypeProvider.future);
@@ -276,6 +312,7 @@ final fittingStatsProvider = FutureProvider<FittingStats?>((ref) async {
 
   final sde = ref.read(sdeServiceProvider);
   final engine = ref.read(dogmaEngineProvider);
+  final skillTypes = await ref.watch(fittingSkillTypesProvider.future);
 
   // Resolve all module types, plus loaded charge types: missile and
   // turret damage lives on the charge, and racial missile bonuses modify
@@ -319,9 +356,19 @@ final fittingStatsProvider = FutureProvider<FittingStats?>((ref) async {
 
   // Module bonuses need the dogma modifiers ESI publishes per effect; the
   // service caches them in Drift so repeat calculations stay offline-fast.
-  final effectIds = moduleTypes.values
-      .expand((type) => type.effects.map((effect) => effect.effectId))
-      .toList();
+  // Skill-owned effects (Gunnery, Rapid Firing, MLO, ...) must be included
+  // or cycle bonuses never resolve.
+  final effectIds = <int>{
+    for (final type in moduleTypes.values)
+      for (final effect in type.effects) effect.effectId,
+    for (final type in skillTypes.values)
+      for (final effect in type.effects) effect.effectId,
+  }.toList();
+  Log.d(
+    'FITTING',
+    'fittingStatsProvider effects=${effectIds.length} '
+        'skills=${skillTypes.length}',
+  );
   final effectModifiers = await sde.ensureEffectModifiers(effectIds);
 
   return engine.calculateStats(
@@ -330,6 +377,7 @@ final fittingStatsProvider = FutureProvider<FittingStats?>((ref) async {
     moduleTypes,
     trainedSkills,
     effectModifiers: effectModifiers,
+    skillTypes: skillTypes,
   );
 });
 

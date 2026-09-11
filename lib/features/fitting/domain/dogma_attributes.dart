@@ -69,4 +69,38 @@ class DogmaAttributes {
   static const int cpuLoad = 50;
   static const int powerLoad = 30;
   static const int upgradeLoad = 1153; // calibration
+
+  // Skill-owned cycle bonuses (design §3.2).
+  static const int skillLevel = 280;
+  static const int turretSpeeBonus = 441;
+  static const int rofBonus = 293;
+
+  // Fighter hull, squadron, and ability attributes (design §3.2).
+  static const int fighterCapacity = 2055;
+  static const int fighterTubes = 2216;
+  static const int fighterLightSlots = 2217;
+  static const int fighterSupportSlots = 2218;
+  static const int fighterHeavySlots = 2219;
+  static const int fighterSquadronMaxSize = 2215;
+  static const int fighterSquadronIsLight = 2212;
+  static const int fighterSquadronIsSupport = 2213;
+  static const int fighterSquadronIsHeavy = 2214;
+  static const int fighterSquadronRole = 2270;
+  static const int fighterDamageMultiplier = 2226;
+  static const int fighterEmDamage = 2227;
+  static const int fighterThermalDamage = 2228;
+  static const int fighterKineticDamage = 2229;
+  static const int fighterExplosiveDamage = 2230;
+  static const int fighterDurationMs = 2233;
+  static const int fighterRefuelingTime = 2426;
+
+  // Fighter missiles ability (effect 6431) and bomb (effect 6485).
+  static const int fighterMissilesDamageMultiplier = 2130;
+  static const int fighterMissilesEmDamage = 2131;
+  static const int fighterMissilesThermalDamage = 2132;
+  static const int fighterMissilesKineticDamage = 2133;
+  static const int fighterMissilesExplosiveDamage = 2134;
+  static const int fighterMissilesDurationMs = 2182;
+  static const int fighterBombTypeId = 2324;
+  static const int fighterBombDurationMs = 2349;
 }

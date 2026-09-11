@@ -1143,6 +1143,916 @@ void main() {
       expect(boosted.isCapStable, isTrue);
     });
   });
+
+  group('DogmaEngine skill cycle bonuses', () {
+    late DogmaEngine engine;
+
+    setUp(() {
+      engine = DogmaEngine();
+    });
+
+    // Published skill / effect / attribute ids from the SDE (design §2.2).
+    const gunnery = 3300;
+    const rapidFiring = 3310;
+    const mlo = 3319;
+    const rapidLaunch = 21071;
+    const rocketSpec = 20209;
+    const lightMissileSpec = 20210;
+    const rocketsSkill = 3320;
+    const minmatarFrigate = 3329;
+
+    const effectGunnery = 414;
+    const effectRapidFiring = 582;
+    const effectMlo = 1763;
+    const effectSelfRof = 1851;
+    const effectShipRof = 7248;
+    const effectShipScale = 453;
+
+    const requiredSkill1 = 182;
+    const requiredSkill2 = 183;
+    const requiredSkill3 = 184;
+    const requiredSkill4 = 1285;
+    const requiredSkill5 = 1289;
+    const requiredSkill6 = 1290;
+
+    const rofBonus = 293;
+    const turretSpeeBonus = 441;
+    const skillLevel = 280;
+    const shipRofAttr = 460;
+
+    const turretTypeId = 561;
+    const launcherTypeId = 1120;
+    const ammoTypeId = 266;
+    const gyroTypeId = 2048;
+    const gyroBonusAttr = 1234;
+
+    ModuleType skillItem({
+      required int typeId,
+      required String name,
+      required int effectId,
+      required Map<int, double> attributes,
+    }) => ModuleType(
+      typeId: typeId,
+      name: name,
+      groupId: 255,
+      groupName: 'Skill',
+      slotType: SlotType.high,
+      baseAttributes: attributes,
+      effects: [DogmaEffect(effectId: effectId, name: name)],
+    );
+
+    ModuleType turret({
+      int typeId = turretTypeId,
+      double cycleMs = 3000,
+      Map<int, int> requiredSkills = const {requiredSkill2: gunnery},
+      Map<int, double> extra = const {},
+    }) => ModuleType(
+      typeId: typeId,
+      name: 'Test turret $typeId',
+      groupId: 53,
+      groupName: 'Projectile Weapon',
+      slotType: SlotType.high,
+      baseAttributes: {
+        DogmaAttributes.turretDamageMultiplier: 2.0,
+        DogmaAttributes.rateOfFire: cycleMs,
+        ...requiredSkills.map((id, skill) => MapEntry(id, skill.toDouble())),
+        ...extra,
+      },
+    );
+
+    ModuleType launcher({
+      int typeId = launcherTypeId,
+      double cycleMs = 4000,
+      Map<int, int> requiredSkills = const {requiredSkill1: mlo},
+    }) => ModuleType(
+      typeId: typeId,
+      name: 'Test launcher $typeId',
+      groupId: 506,
+      groupName: 'Missile Launcher',
+      slotType: SlotType.high,
+      baseAttributes: {
+        DogmaAttributes.rateOfFire: cycleMs,
+        ...requiredSkills.map((id, skill) => MapEntry(id, skill.toDouble())),
+      },
+    );
+
+    ModuleType ammo() => ModuleType(
+      typeId: ammoTypeId,
+      name: 'Test ammo',
+      groupId: 38,
+      groupName: 'Ammo',
+      slotType: SlotType.high,
+      baseAttributes: {DogmaAttributes.kineticDamage: 100.0},
+    );
+
+    EffectModifier locationRof({
+      required int effectId,
+      required int modifyingAttributeId,
+      required int skillTypeId,
+    }) => EffectModifier(
+      effectId: effectId,
+      func: 'LocationRequiredSkillModifier',
+      operator: 6,
+      modifiedAttributeId: DogmaAttributes.rateOfFire,
+      modifyingAttributeId: modifyingAttributeId,
+      domain: 'shipID',
+      skillTypeId: skillTypeId,
+    );
+
+    Map<int, ModuleType> rapidFiringSkill() => {
+      rapidFiring: skillItem(
+        typeId: rapidFiring,
+        name: 'Rapid Firing',
+        effectId: effectRapidFiring,
+        attributes: {rofBonus: -4.0},
+      ),
+    };
+
+    Map<int, ModuleType> gunnerySkill() => {
+      gunnery: skillItem(
+        typeId: gunnery,
+        name: 'Gunnery',
+        effectId: effectGunnery,
+        attributes: {turretSpeeBonus: -2.0},
+      ),
+    };
+
+    Map<int, ModuleType> mloSkill() => {
+      mlo: skillItem(
+        typeId: mlo,
+        name: 'Missile Launcher Operation',
+        effectId: effectMlo,
+        attributes: {rofBonus: -2.0},
+      ),
+    };
+
+    Map<int, ModuleType> rapidLaunchSkill() => {
+      rapidLaunch: skillItem(
+        typeId: rapidLaunch,
+        name: 'Rapid Launch',
+        effectId: effectMlo,
+        attributes: {rofBonus: -3.0},
+      ),
+    };
+
+    Map<int, ModuleType> rocketSpecSkill({double? extraAttr}) => {
+      rocketSpec: skillItem(
+        typeId: rocketSpec,
+        name: 'Rocket Specialization',
+        effectId: effectSelfRof,
+        attributes: {rofBonus: -2.0, 999: ?extraAttr},
+      ),
+    };
+
+    Map<int, ModuleType> lightMissileSpecSkill() => {
+      lightMissileSpec: skillItem(
+        typeId: lightMissileSpec,
+        name: 'Light Missile Specialization',
+        effectId: effectSelfRof,
+        attributes: {rofBonus: -2.0},
+      ),
+    };
+
+    Map<int, List<EffectModifier>> turretSkillModifiers() => {
+      effectRapidFiring: [
+        locationRof(
+          effectId: effectRapidFiring,
+          modifyingAttributeId: rofBonus,
+          skillTypeId: gunnery,
+        ),
+      ],
+      effectGunnery: [
+        locationRof(
+          effectId: effectGunnery,
+          modifyingAttributeId: turretSpeeBonus,
+          skillTypeId: gunnery,
+        ),
+      ],
+    };
+
+    Map<int, List<EffectModifier>> launcherSkillModifiers() => {
+      effectMlo: [
+        locationRof(
+          effectId: effectMlo,
+          modifyingAttributeId: rofBonus,
+          skillTypeId: mlo,
+        ),
+      ],
+    };
+
+    Fitting armed({
+      List<int> highs = const [turretTypeId],
+      List<int> lows = const [],
+      ModuleState state = ModuleState.active,
+    }) => Fitting(
+      id: 'cycle',
+      name: 'Skill cycle fit',
+      shipTypeId: 587,
+      shipName: 'Rifter',
+      highSlots: [
+        for (var i = 0; i < highs.length; i++)
+          FittedModule(
+            typeId: highs[i],
+            typeName: 'High $i',
+            slotType: SlotType.high,
+            slotIndex: i,
+            chargeTypeId: ammoTypeId,
+            chargeName: 'Test ammo',
+            state: state,
+          ),
+      ],
+      lowSlots: [
+        for (var i = 0; i < lows.length; i++)
+          FittedModule(
+            typeId: lows[i],
+            typeName: 'Low $i',
+            slotType: SlotType.low,
+            slotIndex: i,
+          ),
+      ],
+    );
+
+    Future<FittingStats> run({
+      required Map<String, ModuleType> modules,
+      required List<CharacterSkill> skills,
+      required Map<int, ModuleType> skillTypes,
+      Map<int, List<EffectModifier>> modifiers = const {},
+      ShipType? ship,
+      Fitting? fitting,
+    }) {
+      return engine.calculateStats(
+        fitting ?? armed(),
+        ship ?? _rifter(),
+        {ammoTypeId.toString(): ammo(), ...modules},
+        skills,
+        effectModifiers: modifiers,
+        skillTypes: skillTypes,
+      );
+    }
+
+    double cycleMs(FittingStats stats) {
+      final dps = stats.dpsGuns + stats.dpsMissiles;
+      expect(
+        dps,
+        greaterThan(0),
+        reason: 'cannot infer cycle time from zero DPS',
+      );
+      return stats.volley / dps * 1000.0;
+    }
+
+    test(
+      'T1.1 Rapid Firing V shortens turret cycle by 4% per level (x0.80)',
+      () async {
+        final stats = await run(
+          modules: {'$turretTypeId': turret()},
+          skills: const [CharacterSkill(skillId: rapidFiring, level: 5)],
+          skillTypes: rapidFiringSkill(),
+          modifiers: turretSkillModifiers(),
+        );
+
+        expect(cycleMs(stats), closeTo(2400, 0.01));
+        expect(stats.volley, closeTo(200, 0.01));
+        expect(stats.dpsGuns, closeTo(200 / 2.4, 0.01));
+      },
+    );
+
+    test('T1.2 Rapid Firing III scales to x0.88', () async {
+      final stats = await run(
+        modules: {'$turretTypeId': turret()},
+        skills: const [CharacterSkill(skillId: rapidFiring, level: 3)],
+        skillTypes: rapidFiringSkill(),
+        modifiers: turretSkillModifiers(),
+      );
+
+      expect(cycleMs(stats), closeTo(2640, 0.01));
+    });
+
+    test('T1.3 untrained Rapid Firing is a no-op', () async {
+      final stats = await run(
+        modules: {'$turretTypeId': turret()},
+        skills: const [],
+        skillTypes: rapidFiringSkill(),
+        modifiers: turretSkillModifiers(),
+      );
+
+      expect(cycleMs(stats), closeTo(3000, 0.01));
+      expect(stats.dpsGuns, closeTo(200 / 3.0, 0.01));
+    });
+
+    test(
+      'T1.1g Gunnery V reduces turret cycle 2%/level; with Rapid Firing V the product is x0.72',
+      () async {
+        final gunneryOnly = await run(
+          modules: {'$turretTypeId': turret()},
+          skills: const [CharacterSkill(skillId: gunnery, level: 5)],
+          skillTypes: gunnerySkill(),
+          modifiers: turretSkillModifiers(),
+        );
+        expect(cycleMs(gunneryOnly), closeTo(2700, 0.01));
+
+        final both = await run(
+          modules: {'$turretTypeId': turret()},
+          skills: const [
+            CharacterSkill(skillId: gunnery, level: 5),
+            CharacterSkill(skillId: rapidFiring, level: 5),
+          ],
+          skillTypes: {...gunnerySkill(), ...rapidFiringSkill()},
+          modifiers: turretSkillModifiers(),
+        );
+        expect(cycleMs(both), closeTo(3000 * 0.90 * 0.80, 0.01));
+        expect(cycleMs(both), closeTo(2160, 0.01));
+      },
+    );
+
+    test(
+      'T1.4 MLO V shortens launcher cycle by 2% per level (x0.90)',
+      () async {
+        final stats = await run(
+          fitting: armed(highs: [launcherTypeId]),
+          modules: {'$launcherTypeId': launcher()},
+          skills: const [CharacterSkill(skillId: mlo, level: 5)],
+          skillTypes: mloSkill(),
+          modifiers: launcherSkillModifiers(),
+        );
+
+        expect(cycleMs(stats), closeTo(3600, 0.01));
+        expect(stats.dpsMissiles, closeTo(100 / 3.6, 0.01));
+        expect(stats.dpsGuns, 0.0);
+      },
+    );
+
+    test(
+      'T1.4r Rapid Launch V is x0.85 and composes with MLO V to x0.765',
+      () async {
+        final launchOnly = await run(
+          fitting: armed(highs: [launcherTypeId]),
+          modules: {'$launcherTypeId': launcher()},
+          skills: const [CharacterSkill(skillId: rapidLaunch, level: 5)],
+          skillTypes: rapidLaunchSkill(),
+          modifiers: launcherSkillModifiers(),
+        );
+        expect(cycleMs(launchOnly), closeTo(4000 * 0.85, 0.01));
+
+        final both = await run(
+          fitting: armed(highs: [launcherTypeId]),
+          modules: {'$launcherTypeId': launcher()},
+          skills: const [
+            CharacterSkill(skillId: mlo, level: 5),
+            CharacterSkill(skillId: rapidLaunch, level: 5),
+          ],
+          skillTypes: {...mloSkill(), ...rapidLaunchSkill()},
+          modifiers: launcherSkillModifiers(),
+        );
+        expect(cycleMs(both), closeTo(4000 * 0.90 * 0.85, 0.01));
+      },
+    );
+
+    test(
+      'T1.5 Rocket Spec V applies to its T2 launcher when MLO is untrained',
+      () async {
+        final stats = await run(
+          fitting: armed(highs: [launcherTypeId]),
+          modules: {
+            '$launcherTypeId': launcher(
+              requiredSkills: {requiredSkill1: mlo, requiredSkill2: rocketSpec},
+            ),
+          },
+          skills: const [CharacterSkill(skillId: rocketSpec, level: 5)],
+          skillTypes: rocketSpecSkill(),
+        );
+
+        expect(cycleMs(stats), closeTo(3600, 0.01));
+      },
+    );
+
+    test('T1.6 MLO V and Rocket Spec V compose multiplicatively', () async {
+      final stats = await run(
+        fitting: armed(highs: [launcherTypeId]),
+        modules: {
+          '$launcherTypeId': launcher(
+            requiredSkills: {requiredSkill1: mlo, requiredSkill2: rocketSpec},
+          ),
+        },
+        skills: const [
+          CharacterSkill(skillId: mlo, level: 5),
+          CharacterSkill(skillId: rocketSpec, level: 5),
+        ],
+        skillTypes: {...mloSkill(), ...rocketSpecSkill()},
+        modifiers: launcherSkillModifiers(),
+      );
+
+      expect(cycleMs(stats), closeTo(4000 * 0.90 * 0.90, 0.01));
+      expect(cycleMs(stats), isNot(closeTo(4000 * 0.80, 0.01)));
+    });
+
+    test(
+      'T1.7 Rocket Spec does not leak onto a launcher that requires Light Missile Spec',
+      () async {
+        final stats = await run(
+          fitting: armed(highs: [launcherTypeId]),
+          modules: {
+            '$launcherTypeId': launcher(
+              requiredSkills: {requiredSkill1: mlo, requiredSkill2: rocketSpec},
+            ),
+          },
+          skills: const [CharacterSkill(skillId: lightMissileSpec, level: 5)],
+          skillTypes: lightMissileSpecSkill(),
+        );
+
+        expect(cycleMs(stats), closeTo(4000, 0.01));
+      },
+    );
+
+    test(
+      'T1.8 Rocket Spec skips a T1 launcher that does not require it',
+      () async {
+        final stats = await run(
+          fitting: armed(highs: [launcherTypeId]),
+          modules: {
+            '$launcherTypeId': launcher(
+              requiredSkills: {
+                requiredSkill1: mlo,
+                requiredSkill2: rocketsSkill,
+              },
+            ),
+          },
+          skills: const [CharacterSkill(skillId: rocketSpec, level: 5)],
+          skillTypes: rocketSpecSkill(),
+        );
+
+        expect(cycleMs(stats), closeTo(4000, 0.01));
+      },
+    );
+
+    test('T1.9 Rapid Firing does not shorten missile launchers', () async {
+      final stats = await run(
+        fitting: armed(highs: [launcherTypeId]),
+        modules: {'$launcherTypeId': launcher()},
+        skills: const [CharacterSkill(skillId: rapidFiring, level: 5)],
+        skillTypes: rapidFiringSkill(),
+        modifiers: {...turretSkillModifiers(), ...launcherSkillModifiers()},
+      );
+
+      expect(cycleMs(stats), closeTo(4000, 0.01));
+    });
+
+    test('T1.10 MLO does not shorten turrets', () async {
+      final stats = await run(
+        modules: {'$turretTypeId': turret()},
+        skills: const [CharacterSkill(skillId: mlo, level: 5)],
+        skillTypes: mloSkill(),
+        modifiers: {...turretSkillModifiers(), ...launcherSkillModifiers()},
+      );
+
+      expect(cycleMs(stats), closeTo(3000, 0.01));
+    });
+
+    test(
+      'T1.11 Rapid Firing applies when Gunnery is only in requiredSkill4 (1285)',
+      () async {
+        final stats = await run(
+          modules: {
+            '$turretTypeId': turret(requiredSkills: {requiredSkill4: gunnery}),
+          },
+          skills: const [CharacterSkill(skillId: rapidFiring, level: 5)],
+          skillTypes: rapidFiringSkill(),
+          modifiers: turretSkillModifiers(),
+        );
+
+        expect(cycleMs(stats), closeTo(2400, 0.01));
+      },
+    );
+
+    test(
+      'T1.12 Vorton-shaped required skills receive no Rapid Firing bonus',
+      () async {
+        final stats = await run(
+          modules: {
+            '$turretTypeId': turret(
+              requiredSkills: {
+                requiredSkill1: 55033,
+                requiredSkill2: 54826,
+                requiredSkill3: 54829,
+              },
+            ),
+          },
+          skills: const [CharacterSkill(skillId: rapidFiring, level: 5)],
+          skillTypes: rapidFiringSkill(),
+          modifiers: turretSkillModifiers(),
+        );
+
+        expect(cycleMs(stats), closeTo(3000, 0.01));
+      },
+    );
+
+    test('T1.12b probe and bomb launchers receive no cycle bonus', () async {
+      const probeId = 17901;
+      const bombId = 27914;
+      final stats = await run(
+        fitting: armed(highs: [probeId, bombId]),
+        modules: {
+          '$probeId': launcher(
+            typeId: probeId,
+            requiredSkills: {requiredSkill1: 3406},
+          ),
+          '$bombId': launcher(
+            typeId: bombId,
+            requiredSkills: {requiredSkill1: 3409},
+          ),
+        },
+        skills: const [
+          CharacterSkill(skillId: rapidFiring, level: 5),
+          CharacterSkill(skillId: mlo, level: 5),
+          CharacterSkill(skillId: rocketSpec, level: 5),
+        ],
+        skillTypes: {
+          ...rapidFiringSkill(),
+          ...mloSkill(),
+          ...rocketSpecSkill(),
+        },
+        modifiers: {...turretSkillModifiers(), ...launcherSkillModifiers()},
+      );
+
+      expect(cycleMs(stats), closeTo(4000, 0.01));
+      expect(stats.volley, closeTo(200, 0.01));
+    });
+
+    test(
+      'T1.13 ship trait ROF composes with Gunnery V and Rapid Firing V',
+      () async {
+        final ship = _rifter().copyWith(
+          effects: const [
+            DogmaEffect(effectId: effectShipRof, name: 'ship rof'),
+            DogmaEffect(effectId: effectShipScale, name: 'scale'),
+          ],
+          baseAttributes: {
+            ..._rifter().baseAttributes,
+            requiredSkill1: minmatarFrigate.toDouble(),
+            shipRofAttr: -7.5,
+          },
+        );
+        final racial = skillItem(
+          typeId: minmatarFrigate,
+          name: 'Minmatar Frigate',
+          effectId: effectShipScale,
+          attributes: {skillLevel: 1.0},
+        );
+        final stats = await run(
+          ship: ship,
+          modules: {'$turretTypeId': turret()},
+          skills: const [
+            CharacterSkill(skillId: minmatarFrigate, level: 5),
+            CharacterSkill(skillId: gunnery, level: 5),
+            CharacterSkill(skillId: rapidFiring, level: 5),
+          ],
+          skillTypes: {
+            minmatarFrigate: racial,
+            ...gunnerySkill(),
+            ...rapidFiringSkill(),
+          },
+          modifiers: {
+            ...turretSkillModifiers(),
+            effectShipRof: [
+              locationRof(
+                effectId: effectShipRof,
+                modifyingAttributeId: shipRofAttr,
+                skillTypeId: gunnery,
+              ),
+            ],
+            effectShipScale: [
+              EffectModifier(
+                effectId: effectShipScale,
+                func: 'ItemModifier',
+                operator: 0,
+                modifiedAttributeId: shipRofAttr,
+                modifyingAttributeId: skillLevel,
+                domain: 'shipID',
+              ),
+            ],
+          },
+        );
+
+        expect(cycleMs(stats), closeTo(3000 * 0.625 * 0.90 * 0.80, 0.01));
+      },
+    );
+
+    test(
+      'T1.14 ship and skill ROF bonuses are unpenalized: product of factors exactly',
+      () async {
+        final ship = _rifter().copyWith(
+          effects: const [
+            DogmaEffect(effectId: effectShipRof, name: 'ship rof'),
+            DogmaEffect(effectId: effectShipScale, name: 'scale'),
+          ],
+          baseAttributes: {
+            ..._rifter().baseAttributes,
+            requiredSkill1: minmatarFrigate.toDouble(),
+            shipRofAttr: -7.5,
+          },
+        );
+        final stats = await run(
+          ship: ship,
+          modules: {'$turretTypeId': turret()},
+          skills: const [
+            CharacterSkill(skillId: minmatarFrigate, level: 5),
+            CharacterSkill(skillId: gunnery, level: 5),
+            CharacterSkill(skillId: rapidFiring, level: 5),
+          ],
+          skillTypes: {
+            minmatarFrigate: skillItem(
+              typeId: minmatarFrigate,
+              name: 'Minmatar Frigate',
+              effectId: effectShipScale,
+              attributes: {skillLevel: 1.0},
+            ),
+            ...gunnerySkill(),
+            ...rapidFiringSkill(),
+          },
+          modifiers: {
+            ...turretSkillModifiers(),
+            effectShipRof: [
+              locationRof(
+                effectId: effectShipRof,
+                modifyingAttributeId: shipRofAttr,
+                skillTypeId: gunnery,
+              ),
+            ],
+            effectShipScale: [
+              EffectModifier(
+                effectId: effectShipScale,
+                func: 'ItemModifier',
+                operator: 0,
+                modifiedAttributeId: shipRofAttr,
+                modifyingAttributeId: skillLevel,
+                domain: 'shipID',
+              ),
+            ],
+          },
+        );
+
+        final expected = 3000 * 0.625 * 0.90 * 0.80;
+        expect(cycleMs(stats), closeTo(expected, 0.01));
+        expect(
+          cycleMs(stats),
+          isNot(closeTo(expected * DogmaEngine.getStackingPenalty(2), 0.5)),
+          reason: 'a stacking penalty on the second skill/ship bonus is a bug',
+        );
+      },
+    );
+
+    test(
+      'T1.14m two module-owned ROF bonuses are stacking-penalized; skills are not',
+      () async {
+        const gyroEffect = 91;
+        final gyro = ModuleType(
+          typeId: gyroTypeId,
+          name: 'Cycle gyro',
+          groupId: 59,
+          groupName: 'Gyrostabilizer',
+          slotType: SlotType.low,
+          baseAttributes: {gyroBonusAttr: 0.9},
+          effects: const [DogmaEffect(effectId: gyroEffect, name: 'gyro rof')],
+        );
+        final stats = await run(
+          fitting: armed(lows: [gyroTypeId, gyroTypeId]),
+          modules: {'$turretTypeId': turret(), '$gyroTypeId': gyro},
+          skills: const [
+            CharacterSkill(skillId: gunnery, level: 5),
+            CharacterSkill(skillId: rapidFiring, level: 5),
+          ],
+          skillTypes: {...gunnerySkill(), ...rapidFiringSkill()},
+          modifiers: {
+            ...turretSkillModifiers(),
+            gyroEffect: [
+              EffectModifier(
+                effectId: gyroEffect,
+                func: 'LocationRequiredSkillModifier',
+                operator: 4,
+                modifiedAttributeId: DogmaAttributes.rateOfFire,
+                modifyingAttributeId: gyroBonusAttr,
+                domain: 'shipID',
+                skillTypeId: gunnery,
+              ),
+            ],
+          },
+        );
+
+        final secondPenalty = DogmaEngine.getStackingPenalty(2);
+        final moduleChain = 0.9 * (1 + (0.9 - 1) * secondPenalty);
+        final expected = 3000 * moduleChain * 0.90 * 0.80;
+        expect(cycleMs(stats), closeTo(expected, 0.01));
+
+        final unpenalizedModules = 3000 * 0.9 * 0.9 * 0.90 * 0.80;
+        expect(
+          cycleMs(stats),
+          isNot(closeTo(unpenalizedModules, 0.5)),
+          reason: 'the second module-owned bonus must take exp(-(i/2.67)^2)',
+        );
+      },
+    );
+
+    test('T1.15 Rapid Firing leaves volley unchanged', () async {
+      final untrained = await run(
+        modules: {'$turretTypeId': turret()},
+        skills: const [],
+        skillTypes: rapidFiringSkill(),
+        modifiers: turretSkillModifiers(),
+      );
+      final trained = await run(
+        modules: {'$turretTypeId': turret()},
+        skills: const [CharacterSkill(skillId: rapidFiring, level: 5)],
+        skillTypes: rapidFiringSkill(),
+        modifiers: turretSkillModifiers(),
+      );
+
+      expect(trained.volley, closeTo(untrained.volley, 0.01));
+      expect(trained.dpsGuns, greaterThan(untrained.dpsGuns));
+    });
+
+    test('T1.16 cap drain uses the shortened rateOfFire cycle', () async {
+      final ship = _rifter().copyWith(
+        baseAttributes: {
+          ..._rifter().baseAttributes,
+          DogmaAttributes.capacitorCapacity: 500.0,
+          DogmaAttributes.capacitorRechargeTime: 120000.0,
+        },
+      );
+      final hungry = turret(extra: {DogmaAttributes.capacitorNeed: 28.0});
+      final untrained = await run(
+        ship: ship,
+        modules: {'$turretTypeId': hungry},
+        skills: const [],
+        skillTypes: rapidFiringSkill(),
+        modifiers: turretSkillModifiers(),
+      );
+      final trained = await run(
+        ship: ship,
+        modules: {'$turretTypeId': hungry},
+        skills: const [CharacterSkill(skillId: rapidFiring, level: 5)],
+        skillTypes: rapidFiringSkill(),
+        modifiers: turretSkillModifiers(),
+      );
+
+      expect(cycleMs(trained), closeTo(2400, 0.01));
+      expect(untrained.isCapStable, isTrue);
+      expect(trained.isCapStable, isFalse);
+    });
+
+    test(
+      'T1.17 offline turrets receive no skill cycle bonus and no DPS',
+      () async {
+        final stats = await run(
+          fitting: armed(state: ModuleState.offline),
+          modules: {
+            '$turretTypeId': turret(
+              extra: {DogmaAttributes.capacitorNeed: 28.0},
+            ),
+          },
+          skills: const [CharacterSkill(skillId: rapidFiring, level: 5)],
+          skillTypes: rapidFiringSkill(),
+          modifiers: turretSkillModifiers(),
+        );
+
+        expect(stats.dpsGuns, 0.0);
+        expect(stats.dpsTotal, 0.0);
+        expect(stats.volley, 0.0);
+      },
+    );
+
+    test(
+      'T1.18 a skill type without attr 293 applies no bonus and does not throw',
+      () async {
+        final stats = await run(
+          modules: {'$turretTypeId': turret()},
+          skills: const [CharacterSkill(skillId: rapidFiring, level: 5)],
+          skillTypes: {
+            rapidFiring: skillItem(
+              typeId: rapidFiring,
+              name: 'Rapid Firing',
+              effectId: effectRapidFiring,
+              attributes: const {},
+            ),
+          },
+          modifiers: turretSkillModifiers(),
+        );
+
+        expect(cycleMs(stats), closeTo(3000, 0.01));
+      },
+    );
+
+    test('T1.19 recorded level 7 is clamped to 5', () async {
+      final over = await run(
+        modules: {'$turretTypeId': turret()},
+        skills: const [CharacterSkill(skillId: rapidFiring, level: 7)],
+        skillTypes: rapidFiringSkill(),
+        modifiers: turretSkillModifiers(),
+      );
+      final five = await run(
+        modules: {'$turretTypeId': turret()},
+        skills: const [CharacterSkill(skillId: rapidFiring, level: 5)],
+        skillTypes: rapidFiringSkill(),
+        modifiers: turretSkillModifiers(),
+      );
+
+      expect(cycleMs(over), closeTo(2400, 0.01));
+      expect(cycleMs(over), closeTo(cycleMs(five), 0.01));
+      expect(
+        cycleMs(over),
+        isNot(closeTo(3000 * (1 + (-4 * 7) / 100), 0.5)),
+        reason: 'level 7 must not apply as x1.28 of a reduction',
+      );
+    });
+
+    test(
+      'T1.23 curated effect 1851 yields to a non-empty bundled modifier list',
+      () async {
+        final stats = await run(
+          fitting: armed(highs: [launcherTypeId]),
+          modules: {
+            '$launcherTypeId': launcher(
+              requiredSkills: {requiredSkill1: mlo, requiredSkill2: rocketSpec},
+            ),
+          },
+          skills: const [CharacterSkill(skillId: rocketSpec, level: 5)],
+          skillTypes: rocketSpecSkill(extraAttr: -1.0),
+          modifiers: {
+            effectSelfRof: [
+              locationRof(
+                effectId: effectSelfRof,
+                modifyingAttributeId: 999,
+                skillTypeId: rocketSpec,
+              ),
+            ],
+          },
+        );
+
+        // Bundled modifier uses attr 999 = -1 => x0.95 at V.
+        // Curated 1851 would use attr 293 = -2 => x0.90.
+        expect(cycleMs(stats), closeTo(4000 * 0.95, 0.01));
+        expect(cycleMs(stats), isNot(closeTo(3600, 0.5)));
+        expect(cycleMs(stats), isNot(closeTo(4000 * 0.95 * 0.90, 0.5)));
+      },
+    );
+
+    test(
+      'T1.24 a non-allowlisted skill effect is ignored and does not change cycle',
+      () async {
+        const otherSkill = 9999;
+        const otherEffect = 8888;
+        final stats = await run(
+          modules: {'$turretTypeId': turret()},
+          skills: const [CharacterSkill(skillId: otherSkill, level: 5)],
+          skillTypes: {
+            otherSkill: skillItem(
+              typeId: otherSkill,
+              name: 'Not allowlisted',
+              effectId: otherEffect,
+              attributes: {rofBonus: -50.0},
+            ),
+          },
+          modifiers: {
+            otherEffect: [
+              locationRof(
+                effectId: otherEffect,
+                modifyingAttributeId: rofBonus,
+                skillTypeId: gunnery,
+              ),
+            ],
+          },
+        );
+
+        expect(cycleMs(stats), closeTo(3000, 0.01));
+      },
+    );
+
+    test(
+      'T1.25 Rapid Firing honours required-skill slots 1289 and 1290',
+      () async {
+        const slot5Turret = 5611;
+        const slot6Turret = 5612;
+        final stats = await run(
+          fitting: armed(highs: [slot5Turret, slot6Turret]),
+          modules: {
+            '$slot5Turret': turret(
+              typeId: slot5Turret,
+              requiredSkills: {requiredSkill5: gunnery},
+            ),
+            '$slot6Turret': turret(
+              typeId: slot6Turret,
+              requiredSkills: {requiredSkill6: gunnery},
+            ),
+          },
+          skills: const [CharacterSkill(skillId: rapidFiring, level: 5)],
+          skillTypes: rapidFiringSkill(),
+          modifiers: turretSkillModifiers(),
+        );
+
+        expect(stats.volley, closeTo(400, 0.01));
+        expect(stats.dpsGuns, closeTo(400 / 2.4, 0.01));
+        expect(cycleMs(stats), closeTo(2400, 0.01));
+      },
+    );
+  });
 }
 
 ShipType _rifter() => ShipType(
