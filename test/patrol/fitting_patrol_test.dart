@@ -40,6 +40,17 @@ class MockSdeService extends Mock implements SdeService {
   Future<Map<int, List<EffectModifier>>> ensureEffectModifiers(
     List<int> effectIds,
   ) async => const {};
+
+  @override
+  Future<Map<int, ModuleType>> getDogmaTypes(Iterable<int> typeIds) async {
+    final result = <int, ModuleType>{};
+    for (final id in typeIds) {
+      if (id == mockModule.typeId) {
+        result[id] = mockModule;
+      }
+    }
+    return result;
+  }
 }
 
 void main() {
