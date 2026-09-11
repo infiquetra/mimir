@@ -53,9 +53,10 @@ class SdeService {
 
   /// Coverage version of the bundled dogma asset. Bump on every regeneration
   /// that changes which categories or attributes are imported (skills and
-  /// fighters land at 2). `initialize()` re-imports when the stored
-  /// `dogma_version` metadata does not match this constant.
-  static const int bundledDogmaVersion = 2;
+  /// fighters land at 2; category 11 entity names at 3). `initialize()`
+  /// re-imports when the stored `dogma_version` metadata does not match
+  /// this constant.
+  static const int bundledDogmaVersion = 3;
 
   /// Public ESI base URL for dogma reference data.
   static const String _esiBaseUrl = 'https://esi.evetech.net/latest';

@@ -30,6 +30,15 @@ TARGET_CATEGORIES = {
     87,  # Fighter
 }
 
+# Categories shipped as type names only (no dogma attributes/effects).
+# NPC entities are often unpublished in CCP's SDE, so the published==1
+# filter is skipped for these groups.
+NAME_ONLY_CATEGORIES = {
+    11,  # Entity / NPCs
+}
+
+ALL_CATEGORIES = TARGET_CATEGORIES | NAME_ONLY_CATEGORIES
+
 def download_csv(filename):
     url = BASE_URL + filename
     cache_path = os.path.join("scripts/sde", filename)
@@ -99,7 +108,7 @@ def main():
     categories = []
     for row in categories_raw:
         cat_id = int(row['categoryID'])
-        if cat_id in TARGET_CATEGORIES:
+        if cat_id in ALL_CATEGORIES:
             categories.append({
                 "categoryId": cat_id,
                 "categoryName": row['categoryName']
@@ -107,12 +116,15 @@ def main():
 
     print("Processing Groups...")
     target_groups = set()
+    name_only_groups = set()
     groups = []
     for row in groups_raw:
         cat_id = int(row['categoryID'])
-        if cat_id in TARGET_CATEGORIES:
+        if cat_id in ALL_CATEGORIES:
             group_id = int(row['groupID'])
             target_groups.add(group_id)
+            if cat_id in NAME_ONLY_CATEGORIES:
+                name_only_groups.add(group_id)
             groups.append({
                 "groupId": group_id,
                 "groupName": row['groupName'],
@@ -124,34 +136,41 @@ def main():
     types_dict = {}
     for row in types_raw:
         group_id = int(row['groupID'])
+        if group_id not in target_groups:
+            continue
+        name_only = group_id in name_only_groups
         published = row['published'] == '1'
-        if group_id in target_groups and published:
-            type_id = int(row['typeID'])
-            target_types.add(type_id)
-            types_dict[type_id] = {
-                "typeId": type_id,
-                "typeName": row['typeName'],
-                "groupId": group_id,
-                "description": row['description'],
-                "dogmaAttributes": [],
-                "dogmaEffects": []
-            }
-            # mass lives in the invTypes column, not in dgmTypeAttributes,
-            # but dogma consumers (align time) need it as attribute 4.
-            mass = row.get('mass')
-            if mass and mass != 'None':
-                types_dict[type_id]["dogmaAttributes"].append({
-                    "attributeId": 4,
-                    "value": float(mass)
-                })
-            # volume is likewise an invTypes column; drone bay usage needs
-            # it as attribute 38.
-            volume = row.get('volume')
-            if volume and volume != 'None':
-                types_dict[type_id]["dogmaAttributes"].append({
-                    "attributeId": 38,
-                    "value": float(volume)
-                })
+        # NPC entities are often unpublished; name-only categories skip that gate.
+        if not name_only and not published:
+            continue
+        type_id = int(row['typeID'])
+        types_dict[type_id] = {
+            "typeId": type_id,
+            "typeName": row['typeName'],
+            "groupId": group_id,
+            "dogmaAttributes": [],
+            "dogmaEffects": []
+        }
+        if name_only:
+            continue
+        target_types.add(type_id)
+        types_dict[type_id]["description"] = row['description']
+        # mass lives in the invTypes column, not in dgmTypeAttributes,
+        # but dogma consumers (align time) need it as attribute 4.
+        mass = row.get('mass')
+        if mass and mass != 'None':
+            types_dict[type_id]["dogmaAttributes"].append({
+                "attributeId": 4,
+                "value": float(mass)
+            })
+        # volume is likewise an invTypes column; drone bay usage needs
+        # it as attribute 38.
+        volume = row.get('volume')
+        if volume and volume != 'None':
+            types_dict[type_id]["dogmaAttributes"].append({
+                "attributeId": 38,
+                "value": float(volume)
+            })
 
     print("Processing Attributes...")
     for row in attributes_raw:
