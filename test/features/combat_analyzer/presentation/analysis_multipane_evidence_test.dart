@@ -32,7 +32,6 @@ import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.da
 import 'package:mimir/features/combat_analyzer/presentation/analysis_multipane_screen.dart';
 import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_evidence_checklist_card.dart';
 import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_pre_analysis_gate.dart';
-import 'package:mimir/features/fitting/domain/models.dart';
 import 'package:mimir/features/wallet/data/wallet_providers.dart';
 
 import '../fixtures/aar_evidence_fixtures.dart';
@@ -43,7 +42,7 @@ void main() {
   group('Group H — AnalysisMultiPaneScreen evidence integration', () {
     late AppDatabase appDb;
     late SdeDatabase sdeDb;
-    late _Holder holder;
+    late Holder holder;
     late ParsedCombatEncounter encounter;
     late FakeEnrichmentService enrichmentService;
     late FakeAnalysisService analysisService;
@@ -53,7 +52,7 @@ void main() {
       sdeDb = SdeDatabase.forTesting(NativeDatabase.memory());
       final s1 = s1Inputs();
       encounter = s1.encounter;
-      holder = _Holder(s1);
+      holder = Holder(s1);
       enrichmentService = FakeEnrichmentService(
         repository: CombatEnrichmentRepository(database: appDb),
         esiClient: EsiClient(
@@ -392,8 +391,8 @@ AarEvidenceSnapshot _snapshot({
   );
 }
 
-class _Holder {
-  _Holder(AarEvidenceInputs s1)
+class Holder {
+  Holder(AarEvidenceInputs s1)
     : enrichment = s1.enrichment,
       bundle = AarDerivationBundle(
         self: derivation(),
@@ -463,7 +462,7 @@ class FakeEnrichmentService extends CombatEnrichmentService {
     required this.holder,
   });
 
-  _Holder holder;
+  Holder holder;
   final captureCalls = <(String, {bool confirmed})>[];
   final enrichCalls = <String>[];
 

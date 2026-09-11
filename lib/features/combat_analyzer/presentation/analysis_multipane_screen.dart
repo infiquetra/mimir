@@ -10,6 +10,7 @@ import '../../../core/widgets/eve_type_icon.dart';
 import '../data/combat_analysis_service.dart';
 import '../data/combat_damage_profile_resolver.dart';
 import '../data/combat_providers.dart';
+import '../domain/aar_evidence_assessment.dart';
 import '../domain/combat_aar_report.dart';
 import '../domain/combat_damage_profile.dart';
 import '../domain/combat_enrichment.dart';
@@ -17,7 +18,10 @@ import '../domain/parsed_combat_encounter.dart';
 import '../../fitting/domain/models.dart';
 import '../../wallet/data/wallet_providers.dart';
 import 'widgets/aar_derived_stats_panel.dart';
+import 'widgets/aar_evidence_checklist_card.dart';
 import 'widgets/aar_matchup_section.dart';
+import 'widgets/aar_pre_analysis_gate.dart';
+import 'widgets/aar_report_provenance_banner.dart';
 import 'widgets/damage_chart_painter.dart';
 
 class AnalysisMultiPaneScreen extends ConsumerStatefulWidget {
@@ -48,6 +52,57 @@ class _AnalysisMultiPaneScreenState
     return ref
         .read(combatAnalysisServiceProvider)
         .getCachedAnalysis(widget.encounter);
+  }
+
+  AarEvidenceActionHandlers get _evidenceHandlers {
+    return AarEvidenceActionHandlers(
+      onUseCurrentFit: () => _captureCurrentFit(confirmed: true),
+      onImportFit: _showImportFitDialog,
+      onSearchKillmails: _searchKillmails,
+      onReauthorize: () =>
+          ref.read(authControllerProvider.notifier).startAuthFlow(),
+    );
+  }
+
+  AarEvidenceAssessment? _assessmentOrNull() {
+    return ref
+        .watch(aarEvidenceAssessmentProvider(widget.encounter))
+        .when(
+          data: (assessment) => assessment,
+          loading: () => null,
+          error: (error, stack) {
+            Log.e(
+              'COMBAT.UI',
+              'Failed to load evidence assessment',
+              error,
+              stack,
+            );
+            return null;
+          },
+        );
+  }
+
+  Future<void> _searchKillmails() async {
+    Log.i(
+      'COMBAT.UI',
+      'Searching killmails for encounter ${widget.encounter.id}',
+    );
+    try {
+      await ref
+          .read(combatEnrichmentServiceProvider)
+          .enrichEncounter(widget.encounter);
+      ref.invalidate(combatEnrichmentProvider(widget.encounter.id));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Killmail search completed')),
+      );
+    } catch (e, stack) {
+      Log.e('COMBAT.UI', 'Killmail search failed', e, stack);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Killmail search failed: $e')));
+    }
   }
 
   void _startAnalysis({bool forceRefresh = false}) {
@@ -226,56 +281,63 @@ class _AnalysisMultiPaneScreenState
   }
 
   Widget _buildAnalyzePrompt(ThemeData theme) {
+    Log.d('COMBAT.UI', '_buildAnalyzePrompt(${widget.encounter.id})');
     final encounter = widget.encounter;
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 620),
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Icon(
-                Icons.analytics_outlined,
-                size: 64,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Parsed Encounter',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.titleLarge,
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 16,
-                runSpacing: 8,
-                children: [
-                  _StatChip(label: 'Pilot', value: encounter.characterName),
-                  _StatChip(label: 'Outcome', value: encounter.outcomeLabel),
-                  _StatChip(
-                    label: 'Dealt',
-                    value: '${encounter.totalDamageDealt}',
-                  ),
-                  _StatChip(
-                    label: 'Taken',
-                    value: '${encounter.totalDamageReceived}',
-                  ),
-                  _StatChip(
-                    label: 'Duration',
-                    value: '${encounter.durationSeconds}s',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: () => _startAnalysis(),
-                icon: const Icon(Icons.auto_awesome),
-                label: const Text('Analyze With AI'),
-              ),
-            ],
+    return SingleChildScrollView(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Icon(
+                  Icons.analytics_outlined,
+                  size: 64,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Parsed Encounter',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 16,
+                  runSpacing: 8,
+                  children: [
+                    _StatChip(label: 'Pilot', value: encounter.characterName),
+                    _StatChip(label: 'Outcome', value: encounter.outcomeLabel),
+                    _StatChip(
+                      label: 'Dealt',
+                      value: '${encounter.totalDamageDealt}',
+                    ),
+                    _StatChip(
+                      label: 'Taken',
+                      value: '${encounter.totalDamageReceived}',
+                    ),
+                    _StatChip(
+                      label: 'Duration',
+                      value: '${encounter.durationSeconds}s',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                AarEvidenceChecklistCard(
+                  encounter: encounter,
+                  handlers: _evidenceHandlers,
+                ),
+                const SizedBox(height: 16),
+                AarPreAnalysisGate(
+                  assessment: _assessmentOrNull(),
+                  onAnalyze: () => _startAnalysis(),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -382,6 +444,11 @@ class _AnalysisMultiPaneScreenState
         children: [
           _buildCommandStrip(theme, encounter, report, enrichment),
           const SizedBox(height: 16),
+          AarEvidenceChecklistCard(
+            encounter: encounter,
+            handlers: _evidenceHandlers,
+          ),
+          const SizedBox(height: 16),
           enrichment == null
               ? _buildEvidenceLoadingCard(theme)
               : _buildEvidenceCard(theme, enrichment),
@@ -467,6 +534,13 @@ class _AnalysisMultiPaneScreenState
                   label: const Text('Re-analyze'),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            AarReportProvenanceBanner(
+              recorded: report.evidenceAtGeneration,
+              current: _assessmentOrNull(),
+              currentScore: _assessmentOrNull()?.score,
+              onReanalyze: () => _startAnalysis(forceRefresh: true),
             ),
             const SizedBox(height: 12),
             Wrap(
@@ -599,37 +673,6 @@ class _AnalysisMultiPaneScreenState
               const SizedBox(height: 6),
               ...enrichment.limitations.map((item) => Text('- $item')),
             ],
-            if (enrichment.status == CombatEnrichmentStatus.needsReauth) ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () =>
-                    ref.read(authControllerProvider.notifier).startAuthFlow(),
-                icon: const Icon(Icons.login),
-                label: const Text('Reauthorize Character'),
-              ),
-            ],
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: _showImportFitDialog,
-                  icon: const Icon(Icons.upload_file),
-                  label: const Text('Import Pilot Fit'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => _captureCurrentFit(confirmed: false),
-                  icon: const Icon(Icons.camera_alt_outlined),
-                  label: const Text('Snapshot Current Fit'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => _captureCurrentFit(confirmed: true),
-                  icon: const Icon(Icons.check_circle_outline),
-                  label: const Text('Use Current Fit For This Fight'),
-                ),
-              ],
-            ),
             if (enrichment.pilotFitEvidence != null) ...[
               const SizedBox(height: 12),
               _StatChip(
@@ -1077,7 +1120,7 @@ class _AnalysisMultiPaneScreenState
       parsedEncounterId: encounter.id,
       status: CombatEnrichmentStatus.logOnly,
       source: CombatEnrichmentSource.none,
-      matchReason: 'No killmail evidence is cached for this AAR.',
+      matchReason: CombatEnrichment.uncachedMatchReason,
       limitations: const ['This report is based on combat-log evidence only.'],
     );
   }
