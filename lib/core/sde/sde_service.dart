@@ -89,10 +89,10 @@ class SdeService {
             '(hasDogma=$hasDogmaData stored=$storedVersion)',
       );
       await _loadBundledDogma();
+      await database.setMetadata('dogma_version', '$bundledDogmaVersion');
     } else {
       Log.d('SDE', 'Skipping dogma import; version $storedVersion matches');
     }
-    await database.setMetadata('dogma_version', '$bundledDogmaVersion');
 
     // Resolved modifiers are needed on every launch, not only when the
     // database is seeded for the first time.

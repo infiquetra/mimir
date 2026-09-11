@@ -359,6 +359,7 @@ final fittingStatsProvider = FutureProvider<FittingStats?>((ref) async {
   // Skill-owned effects (Gunnery, Rapid Firing, MLO, ...) must be included
   // or cycle bonuses never resolve.
   final effectIds = <int>{
+    for (final effect in shipType.effects) effect.effectId,
     for (final type in moduleTypes.values)
       for (final effect in type.effects) effect.effectId,
     for (final type in skillTypes.values)
