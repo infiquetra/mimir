@@ -106,9 +106,18 @@ class DogmaAttributes {
   static const int fighterBombTypeId = 2324;
   static const int fighterBombDurationMs = 2349;
 
+  // Active repair / boost amounts (HP per cycle).
+  static const int armorRepairAmount = 84;
+  static const int shieldBoostAmount = 68;
+  static const int hullRepairAmount = 83;
+  static const int chargedArmorDamageMultiplier = 1886;
+  static const int naniteRepairPasteTypeId = 28668;
+
   // Ship-attribute adds published by buffer modules (op 2 modAdd).
   static const int shieldCapacityBonus = 72; // MSE / LSE HP add
+  static const int shieldCapacityBonusAdd = shieldCapacityBonus;
   static const int armorHpBonusAdd = 1159; // armor plate HP add
   static const int signatureRadiusAdd = 983; // extender signature add
   static const int massAdd = 796; // plate mass add
+  static const int massAddition = massAdd;
 }

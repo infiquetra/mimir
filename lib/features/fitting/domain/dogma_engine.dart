@@ -69,6 +69,10 @@ class DogmaEngine {
     272, // Repair Systems: -5%/lvl repairer duration
   };
 
+  static const Set<int> _armorRepairEffects = {27, 5275};
+  static const Set<int> _shieldBoostEffects = {4, 4936};
+  static const Set<int> _hullRepairEffects = {26};
+
   static const List<int> _missileSpecSkillIds = [
     20209,
     20210,
@@ -278,6 +282,9 @@ class DogmaEngine {
     var unsupportedOperators = 0;
     final capDrains = <String, CapDrain>{};
     final capInjectors = <CapInjector>[];
+    var armorRepairHps = 0.0;
+    var shieldBoostHps = 0.0;
+    var hullRepairHps = 0.0;
 
     // charID-domain modifiers (racial missile damage, drone damage
     // amplifiers) reach loaded charges and fitted drones — never fitted
@@ -369,7 +376,13 @@ class DogmaEngine {
       if (!ownerIsShip) {
         scale = 1.0;
       } else if (skillTypes.isNotEmpty) {
-        scale = modifyingId == null ? 1.0 : (bonusScale[modifyingId] ?? 1.0);
+        // Missing bonusScale entries are role bonuses (×1). If no 280-source
+        // modifiers were found at all (tests that pass a partial skillTypes
+        // map), keep the legacy first-slot skill level.
+        scale = modifyingId == null
+            ? 1.0
+            : (bonusScale[modifyingId] ??
+                  (bonusScale.isEmpty ? shipSkillLevel : 1.0));
       } else if (shipRequiredSkill == null) {
         scale = 1.0;
       } else {
@@ -715,6 +728,33 @@ class DogmaEngine {
         penalized: true,
       );
 
+      // Burst HP/s uses raw duration (73), not duration+reactivationDelay.
+      final repairDurationMs = moduleAttr(type, DogmaAttributes.duration);
+      if (repairDurationMs > 0) {
+        final effectIds = type.effects.map((e) => e.effectId).toSet();
+        if (effectIds.any(_armorRepairEffects.contains)) {
+          var amount = moduleAttr(type, DogmaAttributes.armorRepairAmount);
+          if (module.chargeTypeId == DogmaAttributes.naniteRepairPasteTypeId &&
+              type.baseAttributes.containsKey(
+                DogmaAttributes.chargedArmorDamageMultiplier,
+              )) {
+            amount *= moduleAttr(
+              type,
+              DogmaAttributes.chargedArmorDamageMultiplier,
+            );
+          }
+          armorRepairHps += amount / (repairDurationMs / 1000);
+        } else if (effectIds.any(_shieldBoostEffects.contains)) {
+          shieldBoostHps +=
+              moduleAttr(type, DogmaAttributes.shieldBoostAmount) /
+              (repairDurationMs / 1000);
+        } else if (effectIds.any(_hullRepairEffects.contains)) {
+          hullRepairHps +=
+              moduleAttr(type, DogmaAttributes.hullRepairAmount) /
+              (repairDurationMs / 1000);
+        }
+      }
+
       for (final effect in type.effects) {
         // Propulsion bonuses hide in expression trees the SDE does not
         // publish as modifiers; apply the verified curated mapping for
@@ -827,11 +867,26 @@ class DogmaEngine {
       hullResists: hullResists,
     );
     final omniEhp = defensesHp.ehpAgainst(DamagePattern.omni);
+    final shieldRecharge = attr(DogmaAttributes.shieldRechargeTime);
+    final peakShieldRecharge = shieldRecharge > 0
+        ? 2.5 * shieldHp / (shieldRecharge / 1000)
+        : 0.0;
     final defenses = defensesHp.copyWith(
       shieldEhp: omniEhp.shield,
       armorEhp: omniEhp.armor,
       hullEhp: omniEhp.hull,
       totalEhp: omniEhp.total,
+      effectiveShieldBoost: shieldBoostHps,
+      effectiveArmorRepair: armorRepairHps,
+      effectiveHullRepair: hullRepairHps,
+      peakShieldRecharge: peakShieldRecharge,
+    );
+    Log.d(
+      'FITTING',
+      'Repair ${fitting.name}: armor=${armorRepairHps.toStringAsFixed(3)} '
+          'shield=${shieldBoostHps.toStringAsFixed(3)} '
+          'hull=${hullRepairHps.toStringAsFixed(3)} '
+          'peakShield=${peakShieldRecharge.toStringAsFixed(3)}',
     );
 
     // 4. Calculate Capacitor
