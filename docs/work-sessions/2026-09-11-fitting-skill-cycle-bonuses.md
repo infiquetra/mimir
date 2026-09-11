@@ -22,6 +22,21 @@ behavior, data
 - `flutter test test/features/fitting/domain/dogma_engine_test.dart` — 52 passed
 - `flutter analyze` — no issues
 
+## U3–U4 (this session)
+
+- **U3** EFT `Name xN` lines classify as drones (cat 18) or fighters (cat 87) and merge by type. `generateEft` emits drones then fighters after rigs. Snapshot `FighterBay`/`FighterTube0..4` and killmail flags 158/159–163 map onto `FighterGroup`. ESI export writes `FighterBay` items.
+- **U4** DogmaEngine classifies on attr 2215, activates squadrons in declaration order under tube/class caps, and sums attack (6465) or missiles (6431) DPS via `charID` bonuses. `dpsTotal` includes `dpsFighters`. StatsPanel shows OFFENSE `Fighters` and a FIGHTERS section (error colour when bay used > max). Hulls without tubes/bay omit the section.
+- Skill catalogue perf test now sets `dogma_version` so dummy dogma still skips bundled re-import.
+
+## Checks run (U3–U4)
+
+- `flutter test test/features/fitting/domain/format_parser_test.dart` — passed
+- `flutter test test/features/combat_analyzer/domain/combat_fit_snapshot_mapper_test.dart` — passed
+- `flutter test test/features/fitting/domain/dogma_engine_test.dart --name "fighters"` — 34 passed
+- `flutter test test/features/fitting/presentation/widgets/stats_panel_test.dart` — 2 passed
+- `flutter test` — 506 passed, 14 skipped
+- `flutter analyze` — no issues
+
 ## Next step
 
-Implement U3 (fighter models, parsers, mappers, export) from the same plan.
+Implement U5 (journal, spec corrections, verification, handoff) from the same plan.
