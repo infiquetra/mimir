@@ -1643,6 +1643,7 @@ class EsiKillmailVictim {
   final String? characterName;
   final int? corporationId;
   final int? allianceId;
+  final int? factionId;
   final int shipTypeId;
   final int damageTaken;
   final List<EsiKillmailItem> items;
@@ -1652,6 +1653,7 @@ class EsiKillmailVictim {
     this.characterName,
     this.corporationId,
     this.allianceId,
+    this.factionId,
     required this.shipTypeId,
     required this.damageTaken,
     required this.items,
@@ -1660,8 +1662,10 @@ class EsiKillmailVictim {
   factory EsiKillmailVictim.fromJson(Map<String, dynamic> json) {
     return EsiKillmailVictim(
       characterId: json['character_id'] as int?,
+      characterName: json['character_name'] as String?,
       corporationId: json['corporation_id'] as int?,
       allianceId: json['alliance_id'] as int?,
+      factionId: json['faction_id'] as int?,
       shipTypeId: json['ship_type_id'] as int,
       damageTaken: (json['damage_taken'] as num?)?.toInt() ?? 0,
       items: ((json['items'] as List<dynamic>?) ?? const [])
@@ -1670,12 +1674,13 @@ class EsiKillmailVictim {
     );
   }
 
-  EsiKillmailVictim copyWith({String? characterName}) {
+  EsiKillmailVictim copyWith({String? characterName, int? factionId}) {
     return EsiKillmailVictim(
       characterId: characterId,
       characterName: characterName ?? this.characterName,
       corporationId: corporationId,
       allianceId: allianceId,
+      factionId: factionId ?? this.factionId,
       shipTypeId: shipTypeId,
       damageTaken: damageTaken,
       items: items,
@@ -1687,6 +1692,7 @@ class EsiKillmailVictim {
     if (characterName != null) 'character_name': characterName,
     if (corporationId != null) 'corporation_id': corporationId,
     if (allianceId != null) 'alliance_id': allianceId,
+    if (factionId != null) 'faction_id': factionId,
     'ship_type_id': shipTypeId,
     'damage_taken': damageTaken,
     'items': items.map((item) => item.toJson()).toList(),
@@ -1698,6 +1704,7 @@ class EsiKillmailAttacker {
   final String? characterName;
   final int? corporationId;
   final int? allianceId;
+  final int? factionId;
   final int? shipTypeId;
   final int? weaponTypeId;
   final int damageDone;
@@ -1708,17 +1715,22 @@ class EsiKillmailAttacker {
     this.characterName,
     this.corporationId,
     this.allianceId,
+    this.factionId,
     this.shipTypeId,
     this.weaponTypeId,
     required this.damageDone,
     required this.finalBlow,
   });
 
+  bool get isPlayer => characterId != null;
+
   factory EsiKillmailAttacker.fromJson(Map<String, dynamic> json) {
     return EsiKillmailAttacker(
       characterId: json['character_id'] as int?,
+      characterName: json['character_name'] as String?,
       corporationId: json['corporation_id'] as int?,
       allianceId: json['alliance_id'] as int?,
+      factionId: json['faction_id'] as int?,
       shipTypeId: json['ship_type_id'] as int?,
       weaponTypeId: json['weapon_type_id'] as int?,
       damageDone: (json['damage_done'] as num?)?.toInt() ?? 0,
@@ -1726,12 +1738,13 @@ class EsiKillmailAttacker {
     );
   }
 
-  EsiKillmailAttacker copyWith({String? characterName}) {
+  EsiKillmailAttacker copyWith({String? characterName, int? factionId}) {
     return EsiKillmailAttacker(
       characterId: characterId,
       characterName: characterName ?? this.characterName,
       corporationId: corporationId,
       allianceId: allianceId,
+      factionId: factionId ?? this.factionId,
       shipTypeId: shipTypeId,
       weaponTypeId: weaponTypeId,
       damageDone: damageDone,
@@ -1744,6 +1757,7 @@ class EsiKillmailAttacker {
     if (characterName != null) 'character_name': characterName,
     if (corporationId != null) 'corporation_id': corporationId,
     if (allianceId != null) 'alliance_id': allianceId,
+    if (factionId != null) 'faction_id': factionId,
     if (shipTypeId != null) 'ship_type_id': shipTypeId,
     if (weaponTypeId != null) 'weapon_type_id': weaponTypeId,
     'damage_done': damageDone,

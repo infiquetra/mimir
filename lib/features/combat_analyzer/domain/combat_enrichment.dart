@@ -147,6 +147,8 @@ class CombatEnrichment {
     if (victimFitEvidence != null)
       'victimFitEvidence': victimFitEvidence!.toPromptJson(),
     if (!evidenceLedger.isEmpty) 'evidenceLedger': evidenceLedger.toJson(),
+    if (attackerCorrelation != null)
+      'attackerCorrelation': attackerCorrelation!.toPromptJson(),
     'limitations': limitations,
   };
 
