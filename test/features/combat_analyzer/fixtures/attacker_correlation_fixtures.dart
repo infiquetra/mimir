@@ -1,4 +1,6 @@
+import 'package:drift/drift.dart';
 import 'package:mimir/core/network/esi_client.dart';
+import 'package:mimir/core/sde/sde_database.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_actor_classifier.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_attacker_correlation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_attacker_correlator.dart';
@@ -366,5 +368,73 @@ CorrelationContext context({
     lastIncomingActor: lastIncomingActor,
     playerActorCount: playerActorCount,
     playerParticipantCount: playerParticipantCount,
+  );
+}
+
+/// Seed the in-memory SDE with the §7.0 type index (ships, Watchman, weapons).
+Future<void> seedAttackerCorrelationSde(SdeDatabase database) async {
+  final refs = typeIndex().byId.values.toList();
+  const categoryNames = {6: 'Ship', 7: 'Module', 8: 'Charge', 11: 'Entity'};
+  const groupNames = {
+    25: 'Frigate',
+    541: 'Interdictor',
+    419: 'Combat Battlecruiser',
+    1305: 'Tactical Destroyer',
+    2001: 'Watchman',
+    385: 'Missile',
+    55: 'Projectile Weapon',
+    384: 'Rocket',
+  };
+  final categories = {for (final ref in refs) ref.categoryId};
+  final groups = <int, CombatTypeRef>{for (final ref in refs) ref.groupId: ref};
+  await database.upsertCategories([
+    for (final id in categories)
+      SdeCategoriesCompanion.insert(
+        categoryId: Value(id),
+        categoryName: categoryNames[id] ?? 'Category $id',
+      ),
+  ]);
+  await database.upsertGroups([
+    for (final group in groups.values)
+      SdeGroupsCompanion.insert(
+        groupId: Value(group.groupId),
+        groupName: groupNames[group.groupId] ?? 'Group ${group.groupId}',
+        categoryId: group.categoryId,
+      ),
+  ]);
+  await database.upsertTypes([
+    for (final ref in refs)
+      SdeTypesCompanion.insert(
+        typeId: Value(ref.typeId),
+        typeName: ref.typeName,
+        groupId: ref.groupId,
+      ),
+  ]);
+}
+
+/// S2 killmail as ESI would return it live: ids and damage, no character names.
+EsiKillmailDetail unnamedS2Detail({String hash = 'hash-s2'}) {
+  final named = s2Loss().detail;
+  return EsiKillmailDetail(
+    killmailId: named.killmailId,
+    killmailHash: hash,
+    killmailTime: named.killmailTime,
+    solarSystemId: named.solarSystemId,
+    victim: EsiKillmailVictim(
+      characterId: named.victim.characterId,
+      shipTypeId: named.victim.shipTypeId,
+      damageTaken: named.victim.damageTaken,
+      items: named.victim.items,
+    ),
+    attackers: [
+      for (final attacker in named.attackers)
+        EsiKillmailAttacker(
+          characterId: attacker.characterId,
+          shipTypeId: attacker.shipTypeId,
+          weaponTypeId: attacker.weaponTypeId,
+          damageDone: attacker.damageDone,
+          finalBlow: attacker.finalBlow,
+        ),
+    ],
   );
 }

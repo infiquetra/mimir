@@ -20,9 +20,12 @@ import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_aar_report.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_evidence_ledger.dart';
+import 'package:mimir/features/combat_analyzer/domain/combat_killmail_fit_mapper.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_log_parser.dart';
 import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.dart';
 import 'package:mimir/features/fitting/domain/models.dart';
+
+import '../fixtures/attacker_correlation_fixtures.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -338,6 +341,159 @@ void main() {
         );
       },
     );
+  });
+
+  test(
+    'E.10 analysis stage 4 ensures correlation on cached enrichment',
+    () async {
+      await seedAttackerCorrelationSde(sdeDb);
+      final s2 = s2Loss();
+      final detail = s2.detail.copyWith(killmailHash: 'hash-s2');
+      final cached = CombatEnrichment.fromKillmail(
+        parsedEncounterId: s2.encounter.id,
+        source: CombatEnrichmentSource.zkillEsi,
+        detail: detail,
+        confidence: 0.80,
+        reason: 'cached pre-milestone row',
+        destroyedFit: CombatKillmailFitMapper.mapVictimFit(detail),
+      );
+      expect(cached.attackerCorrelation, isNull);
+      expect(cached.rawKillmail, isNotNull);
+      await CombatEnrichmentRepository(database: appDb).saveEnrichment(cached);
+
+      final fake = FakeCodexAnalysisClient(
+        authFilePath: '${tempDir.path}/auth.json',
+      );
+      final analysis = CombatAnalysisService(
+        database: appDb,
+        codexClient: fake,
+        enrichmentService: enrichmentService(),
+      );
+      await analysis.analyzeEncounter(s2.encounter);
+
+      final loaded = await enrichmentService().loadEnrichment(s2.encounter.id);
+      expect(loaded, isNotNull);
+      expect(loaded!.attackerCorrelation, isNotNull);
+      expect(fake.capturedPrompt, isNotNull);
+      final payload = jsonDecode(fake.capturedPrompt!) as Map<String, dynamic>;
+      final killmailEvidence =
+          payload['killmailEvidence'] as Map<String, dynamic>?;
+      expect(killmailEvidence, isNotNull);
+      expect(killmailEvidence!.containsKey('attackerCorrelation'), isTrue);
+    },
+  );
+
+  group('Group G — prompt payload attackerCorrelation', () {
+    const allowedPromptKeys = {
+      'schema',
+      'pilot',
+      'startTime',
+      'endTime',
+      'durationSeconds',
+      'outcomeHint',
+      'outcomeEvidence',
+      'aggregates',
+      'events',
+      'eventOmittedCount',
+      'killmailEvidence',
+      'evidenceLedger',
+      'pilotFitEvidence',
+      'victimFitEvidence',
+      'derivedFits',
+      'damageMatchups',
+      'compactEvidence',
+    };
+
+    FakeCodexAnalysisClient fakeClient() {
+      return FakeCodexAnalysisClient(authFilePath: '${tempDir.path}/auth.json');
+    }
+
+    test(
+      'T7.1 existing v4 fields byte-identical with null correlation; additive with correlation',
+      () {
+        final s2 = s2Loss();
+        final detail = s2.detail.copyWith(killmailHash: 'hash-s2');
+        final withoutCorrelation = CombatEnrichment.fromKillmail(
+          parsedEncounterId: s2.encounter.id,
+          source: CombatEnrichmentSource.zkillEsi,
+          detail: detail,
+          confidence: 0.80,
+          reason: 'matched',
+          destroyedFit: CombatKillmailFitMapper.mapVictimFit(detail),
+        );
+        expect(withoutCorrelation.attackerCorrelation, isNull);
+        final withCorrelation = withoutCorrelation.copyWith(
+          attackerCorrelation: correlate(s2),
+        );
+
+        final client = fakeClient();
+        final withoutPrompt = client.buildPrompt(
+          s2.encounter,
+          enrichment: withoutCorrelation,
+        );
+        final withPrompt = client.buildPrompt(
+          s2.encounter,
+          enrichment: withCorrelation,
+        );
+        final withoutPayload =
+            jsonDecode(withoutPrompt) as Map<String, dynamic>;
+        final withPayload = jsonDecode(withPrompt) as Map<String, dynamic>;
+
+        expect(
+          withoutPayload.keys.toSet(),
+          everyElement(isIn(allowedPromptKeys)),
+        );
+        expect(withPayload.keys.toSet(), everyElement(isIn(allowedPromptKeys)));
+        expect(withoutPayload.keys.toSet(), withPayload.keys.toSet());
+
+        final withoutKm = Map<String, dynamic>.from(
+          withoutPayload['killmailEvidence'] as Map,
+        );
+        final withKm = Map<String, dynamic>.from(
+          withPayload['killmailEvidence'] as Map,
+        );
+        expect(withoutKm.containsKey('attackerCorrelation'), isFalse);
+        expect(withKm.containsKey('attackerCorrelation'), isTrue);
+        expect(withKm.keys.toSet().difference(withoutKm.keys.toSet()), {
+          'attackerCorrelation',
+        });
+        final withKmMinusBlock = Map<String, dynamic>.from(withKm)
+          ..remove('attackerCorrelation');
+        expect(withKmMinusBlock, withoutKm);
+      },
+    );
+
+    test('T7.2 correlation block omitted when null', () {
+      final encounter = CombatLogParser.parseLines([
+        'Listener: Pilot',
+        '[ 2026.05.20 20:00:00 ] (combat) 100 to Enemy - Railgun - Hits',
+      ]).single;
+      const enrichment = CombatEnrichment(
+        parsedEncounterId: 'enc-null',
+        status: CombatEnrichmentStatus.logOnly,
+        source: CombatEnrichmentSource.none,
+      );
+      expect(enrichment.attackerCorrelation, isNull);
+      expect(
+        enrichment.toPromptJson().containsKey('attackerCorrelation'),
+        isFalse,
+      );
+      final prompt = fakeClient().buildPrompt(
+        encounter,
+        enrichment: enrichment,
+      );
+      expect(prompt.contains('attackerCorrelation'), isFalse);
+    });
+
+    test('G.3 system prompt contains the attribution rule sentence', () {
+      final source = File(
+        'lib/features/combat_analyzer/data/codex_analysis_client.dart',
+      ).readAsStringSync();
+      expect(
+        source,
+        contains('attackerCorrelation lists which combat-log actors'),
+      );
+    });
   });
 }
 

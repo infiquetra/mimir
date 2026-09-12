@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/core/auth/oauth_service.dart';
 import 'package:mimir/core/auth/token_manager.dart';
@@ -11,12 +12,17 @@ import 'package:mimir/features/combat_analyzer/data/combat_enrichment_repository
 import 'package:mimir/features/combat_analyzer/data/combat_enrichment_service.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_killmail_discovery_client.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
+import 'package:mimir/features/combat_analyzer/domain/combat_actor_classifier.dart';
+import 'package:mimir/features/combat_analyzer/domain/combat_attacker_correlation.dart';
+import 'package:mimir/features/combat_analyzer/domain/combat_attacker_correlator.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_evidence_ledger.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_log_parser.dart';
 import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.dart';
 import 'package:mimir/features/combat_analyzer/domain/tank_classifier.dart';
 import 'package:mimir/features/fitting/domain/models.dart';
+
+import '../fixtures/attacker_correlation_fixtures.dart';
 
 void main() {
   group('CombatEnrichmentService.attachDerivedEvidence', () {
@@ -223,6 +229,229 @@ void main() {
       expect(preserved.killmailSearchCompleted, isTrue);
     });
   });
+
+  group('Group E — attacker correlation on CombatEnrichmentService', () {
+    late AppDatabase appDb;
+    late SdeDatabase sdeDb;
+    late CountingCombatEnrichmentRepository repository;
+    late _FakeEsiClient esi;
+    late CombatEnrichmentService service;
+    late ParsedCombatEncounter encounter;
+
+    setUp(() async {
+      appDb = AppDatabase.forTesting(NativeDatabase.memory());
+      sdeDb = SdeDatabase.forTesting(NativeDatabase.memory());
+      await seedAttackerCorrelationSde(sdeDb);
+      repository = CountingCombatEnrichmentRepository(database: appDb);
+      esi = _FakeEsiClient(
+        tokenManager: TokenManager(database: appDb),
+        oauthService: OAuthService(),
+        database: appDb,
+        detail: unnamedS2Detail(),
+      );
+      service = CombatEnrichmentService(
+        repository: repository,
+        esiClient: esi,
+        discoveryClient: CombatKillmailDiscoveryClient(),
+        tokenManager: TokenManager(database: appDb),
+        oauthService: OAuthService(),
+        sdeService: SdeService(database: sdeDb),
+      );
+      encounter = s2Loss().encounter;
+      await _seedS2ZkillCache(repository);
+    });
+
+    tearDown(() async {
+      await appDb.close();
+      await sdeDb.close();
+    });
+
+    test(
+      'T5.1 enrichEncounter correlates after name resolution and persists',
+      () async {
+        final enriched = await service.enrichEncounter(encounter);
+        expect(enriched.status, CombatEnrichmentStatus.killmailMatched);
+        expect(enriched.attackerCorrelation, isNotNull);
+        final artem = enriched.attackerCorrelation!.correlated.firstWhere(
+          (row) => row.actor.displayName == 'Artem S3',
+        );
+        expect(artem.confidence, AttackerCorrelationConfidence.confirmed);
+        final loaded = await service.loadEnrichment(encounter.id);
+        expect(loaded, isNotNull);
+        expect(loaded!.attackerCorrelation, isNotNull);
+        expect(
+          loaded.attackerCorrelation!.toJson(),
+          enriched.attackerCorrelation!.toJson(),
+        );
+      },
+    );
+
+    test('T5.4 no new network calls during correlation', () async {
+      await service.enrichEncounter(encounter);
+      expect(esi.getKillmailDetailCalls, 1);
+      expect(esi.resolveNamesCalls, 1);
+      expect(esi.otherCalls, 0);
+
+      final loaded = await service.loadEnrichment(encounter.id);
+      expect(loaded, isNotNull);
+      await service.ensureAttackerCorrelation(encounter, loaded!);
+      expect(esi.getKillmailDetailCalls, 1);
+      expect(esi.resolveNamesCalls, 1);
+      expect(esi.otherCalls, 0);
+    });
+
+    test('T5.5 correlation failure leaves enrichment intact', () async {
+      final lines = <String>[];
+      final prior = debugPrint;
+      debugPrint = (message, {wrapWidth}) {
+        lines.add(message ?? '');
+      };
+      addTearDown(() => debugPrint = prior);
+
+      final failing = CombatEnrichmentService(
+        repository: repository,
+        esiClient: esi,
+        discoveryClient: CombatKillmailDiscoveryClient(),
+        tokenManager: TokenManager(database: appDb),
+        oauthService: OAuthService(),
+        sdeService: SdeService(database: sdeDb),
+        correlator: const _ThrowingCorrelator(),
+      );
+      final enriched = await failing.enrichEncounter(encounter);
+      expect(enriched.status, CombatEnrichmentStatus.killmailMatched);
+      expect(enriched.attackerCorrelation, isNull);
+      expect(enriched.victimFitEvidence, isNotNull);
+      expect(
+        lines.where(
+          (line) => line.contains('[COMBAT.CORRELATE]') && line.contains('❌'),
+        ),
+        isNotEmpty,
+        reason: 'logged lines were: $lines',
+      );
+    });
+
+    test('T5.6 evidence facts emitted per correlated attacker', () async {
+      final enriched = await service.enrichEncounter(encounter);
+      expect(
+        _fact(enriched, 'ev-correlated-attacker-1234567-9001').confidence,
+        EvidenceConfidence.proven,
+      );
+      expect(
+        _fact(enriched, 'ev-correlated-attacker-1234567-9002').confidence,
+        EvidenceConfidence.proven,
+      );
+      expect(
+        _fact(enriched, 'ev-correlated-attacker-1234567-9003').confidence,
+        EvidenceConfidence.derived,
+      );
+      expect(
+        enriched.evidenceLedger.unknowns.map((unknown) => unknown.label),
+        contains('Attackers absent from combat log'),
+      );
+
+      final again = await service.ensureAttackerCorrelation(
+        encounter,
+        enriched,
+      );
+      expect(
+        again.evidenceLedger.facts
+            .where((fact) => fact.id.startsWith('ev-correlated-attacker-'))
+            .map((fact) => fact.id)
+            .toSet(),
+        {
+          'ev-correlated-attacker-1234567-9001',
+          'ev-correlated-attacker-1234567-9002',
+          'ev-correlated-attacker-1234567-9003',
+        },
+      );
+      expect(
+        again.evidenceLedger.unknowns
+            .where(
+              (unknown) => unknown.label == 'Attackers absent from combat log',
+            )
+            .length,
+        1,
+      );
+    });
+
+    test('E.7 ensureAttackerCorrelation backfills a cached row once', () async {
+      final detail = s2Loss().detail.copyWith(killmailHash: 'hash-s2');
+      final legacy = CombatEnrichment(
+        parsedEncounterId: encounter.id,
+        status: CombatEnrichmentStatus.killmailMatched,
+        source: CombatEnrichmentSource.zkillEsi,
+        rawKillmail: detail.toJson(),
+      );
+      await repository.saveEnrichment(legacy);
+      repository.saveCalls = 0;
+
+      final first = await service.ensureAttackerCorrelation(encounter, legacy);
+      expect(first.attackerCorrelation, isNotNull);
+      expect(
+        first.attackerCorrelation!.correlated.map(
+          (row) => row.actor.displayName,
+        ),
+        contains('Artem S3'),
+      );
+      expect(repository.saveCalls, 1);
+      final loaded = await service.loadEnrichment(encounter.id);
+      expect(loaded!.attackerCorrelation, isNotNull);
+
+      final second = await service.ensureAttackerCorrelation(encounter, first);
+      expect(repository.saveCalls, 1);
+      expect(
+        second.attackerCorrelation!.toJson(),
+        first.attackerCorrelation!.toJson(),
+      );
+    });
+
+    test(
+      'E.8 ensureAttackerCorrelation is a no-op for logOnly and for rows without rawKillmail',
+      () async {
+        repository.saveCalls = 0;
+        final logOnly = CombatEnrichment(
+          parsedEncounterId: encounter.id,
+          status: CombatEnrichmentStatus.logOnly,
+          source: CombatEnrichmentSource.none,
+        );
+        final afterLogOnly = await service.ensureAttackerCorrelation(
+          encounter,
+          logOnly,
+        );
+        expect(afterLogOnly.attackerCorrelation, isNull);
+        expect(afterLogOnly.status, CombatEnrichmentStatus.logOnly);
+        expect(repository.saveCalls, 0);
+
+        final noRaw = CombatEnrichment(
+          parsedEncounterId: encounter.id,
+          status: CombatEnrichmentStatus.killmailMatched,
+          source: CombatEnrichmentSource.zkillEsi,
+        );
+        final afterNoRaw = await service.ensureAttackerCorrelation(
+          encounter,
+          noRaw,
+        );
+        expect(afterNoRaw.attackerCorrelation, isNull);
+        expect(repository.saveCalls, 0);
+      },
+    );
+
+    test('I.2 service logs at info on enrichment', () async {
+      final lines = <String>[];
+      final prior = debugPrint;
+      debugPrint = (message, {wrapWidth}) {
+        lines.add(message ?? '');
+      };
+      addTearDown(() => debugPrint = prior);
+
+      await service.enrichEncounter(encounter);
+      expect(
+        lines.where((line) => line.contains('[COMBAT.CORRELATE] ℹ️')),
+        isNotEmpty,
+        reason: 'logged lines were: $lines',
+      );
+    });
+  });
 }
 
 ParsedCombatEncounter _encounter({required String listener}) {
@@ -230,4 +459,114 @@ ParsedCombatEncounter _encounter({required String listener}) {
     'Listener: $listener',
     '[ 2026.05.20 20:00:00 ] (combat) 100 to Enemy - Railgun - Hits',
   ]).single;
+}
+
+CombatEvidenceFact _fact(CombatEnrichment enrichment, String id) {
+  return enrichment.evidenceLedger.facts.firstWhere((fact) => fact.id == id);
+}
+
+Future<void> _seedS2ZkillCache(CombatEnrichmentRepository repository) async {
+  const ref = CombatZkillKillmailRef(
+    killmailId: 1234567,
+    killmailHash: 'hash-s2',
+  );
+  await repository.saveSearchCache(
+    characterId: 42,
+    year: 2026,
+    month: 5,
+    direction: 'losses',
+    page: 1,
+    response: [ref.toJson()],
+  );
+  await repository.saveSearchCache(
+    characterId: 42,
+    year: 2026,
+    month: 5,
+    direction: 'losses',
+    page: 2,
+    response: const [],
+  );
+  await repository.saveSearchCache(
+    characterId: 42,
+    year: 2026,
+    month: 5,
+    direction: 'kills',
+    page: 1,
+    response: const [],
+  );
+}
+
+class CountingCombatEnrichmentRepository extends CombatEnrichmentRepository {
+  CountingCombatEnrichmentRepository({required super.database});
+
+  int saveCalls = 0;
+
+  @override
+  Future<void> saveEnrichment(CombatEnrichment enrichment) async {
+    saveCalls++;
+    await super.saveEnrichment(enrichment);
+  }
+}
+
+class _FakeEsiClient extends EsiClient {
+  _FakeEsiClient({
+    required super.tokenManager,
+    required super.oauthService,
+    required super.database,
+    required this.detail,
+  });
+
+  final EsiKillmailDetail detail;
+  int getKillmailDetailCalls = 0;
+  int resolveNamesCalls = 0;
+  int otherCalls = 0;
+
+  static const _names = {
+    42: 'Pilot',
+    9001: 'Artem S3',
+    9002: 'Kite Mondeo',
+    9003: 'Dax Rho',
+    9004: 'Pell Ivo',
+  };
+
+  @override
+  Future<EsiKillmailDetail> getKillmailDetail({
+    required int killmailId,
+    required String killmailHash,
+  }) async {
+    getKillmailDetailCalls++;
+    return detail.copyWith(killmailHash: killmailHash);
+  }
+
+  @override
+  Future<List<EsiUniverseName>> resolveNames(List<int> ids) async {
+    resolveNamesCalls++;
+    return [
+      for (final id in ids)
+        if (_names.containsKey(id))
+          EsiUniverseName(id: id, name: _names[id]!, category: 'character'),
+    ];
+  }
+
+  @override
+  Future<List<EsiKillmailRef>> getCharacterRecentKillmailRefs(
+    int characterId,
+  ) async {
+    otherCalls++;
+    return const [];
+  }
+}
+
+class _ThrowingCorrelator extends CombatAttackerCorrelator {
+  const _ThrowingCorrelator();
+
+  @override
+  AttackerCorrelation correlate({
+    required ParsedCombatEncounter encounter,
+    required EsiKillmailDetail detail,
+    required CombatActorTypeIndex typeIndex,
+    required DateTime now,
+  }) {
+    throw StateError('correlation boom');
+  }
 }

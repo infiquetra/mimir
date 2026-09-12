@@ -1,11 +1,21 @@
+import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mimir/core/auth/oauth_service.dart';
+import 'package:mimir/core/auth/token_manager.dart';
+import 'package:mimir/core/database/app_database.dart';
+import 'package:mimir/core/network/esi_client.dart';
+import 'package:mimir/core/sde/sde_database.dart';
+import 'package:mimir/core/sde/sde_service.dart';
 import 'package:mimir/features/combat_analyzer/data/codex_analysis_client.dart';
 import 'package:mimir/features/combat_analyzer/data/codex_auth_service.dart';
 import 'package:mimir/features/combat_analyzer/data/codex_auth_store.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_analysis_service.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_damage_profile_resolver.dart';
+import 'package:mimir/features/combat_analyzer/data/combat_enrichment_repository.dart';
+import 'package:mimir/features/combat_analyzer/data/combat_enrichment_service.dart';
+import 'package:mimir/features/combat_analyzer/data/combat_killmail_discovery_client.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_providers.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_evidence_assessment.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_evidence_scorer.dart';
@@ -15,6 +25,7 @@ import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
 import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.dart';
 
 import '../fixtures/aar_evidence_fixtures.dart';
+import '../fixtures/attacker_correlation_fixtures.dart';
 
 void main() {
   group('Group E — aarEvidenceAssessmentProvider', () {
@@ -115,6 +126,65 @@ void main() {
         expect(
           failing.read(provider),
           isA<AsyncError<AarEvidenceAssessment>>(),
+        );
+      },
+    );
+  });
+
+  group('combatAttackerCorrelationProvider', () {
+    late AppDatabase appDb;
+    late SdeDatabase sdeDb;
+    late ProviderContainer container;
+    late ParsedCombatEncounter encounter;
+
+    setUp(() {
+      appDb = AppDatabase.forTesting(NativeDatabase.memory());
+      sdeDb = SdeDatabase.forTesting(NativeDatabase.memory());
+      final s2 = s2Loss();
+      encounter = s2.encounter;
+      final enrichment = CombatEnrichment(
+        parsedEncounterId: encounter.id,
+        status: CombatEnrichmentStatus.killmailMatched,
+        source: CombatEnrichmentSource.zkillEsi,
+        rawKillmail: s2.detail.toJson(),
+        attackerCorrelation: correlate(s2),
+      );
+      final service = CombatEnrichmentService(
+        repository: CombatEnrichmentRepository(database: appDb),
+        esiClient: EsiClient(
+          tokenManager: TokenManager(database: appDb),
+          oauthService: OAuthService(),
+          database: appDb,
+        ),
+        discoveryClient: CombatKillmailDiscoveryClient(),
+        tokenManager: TokenManager(database: appDb),
+        oauthService: OAuthService(),
+        sdeService: SdeService(database: sdeDb),
+      );
+      container = ProviderContainer(
+        overrides: [
+          combatEnrichmentProvider.overrideWith((ref, id) async => enrichment),
+          combatEnrichmentServiceProvider.overrideWith((ref) => service),
+        ],
+      );
+    });
+
+    tearDown(() async {
+      container.dispose();
+      await appDb.close();
+      await sdeDb.close();
+    });
+
+    test(
+      'combatAttackerCorrelationProvider(encounter) loads correlation from combatEnrichmentProvider',
+      () async {
+        final loaded = await container.read(
+          combatAttackerCorrelationProvider(encounter).future,
+        );
+        expect(loaded, isNotNull);
+        expect(
+          loaded!.correlated.map((row) => row.actor.displayName),
+          contains('Artem S3'),
         );
       },
     );
