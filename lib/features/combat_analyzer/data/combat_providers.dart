@@ -18,6 +18,7 @@ import 'parsed_encounter_cache.dart';
 import '../domain/aar_evidence_assessment.dart';
 import '../domain/aar_evidence_scorer.dart';
 import '../domain/aar_fit_derivation.dart';
+import '../domain/combat_attacker_correlation.dart';
 import '../domain/combat_enrichment.dart';
 import '../domain/parsed_combat_encounter.dart';
 import '../domain/combat_log_parser.dart';
@@ -128,6 +129,25 @@ final combatEnrichmentProvider =
       return ref
           .watch(combatEnrichmentServiceProvider)
           .loadEnrichment(parsedEncounterId);
+    });
+
+final combatAttackerCorrelationProvider =
+    FutureProvider.family<AttackerCorrelation?, ParsedCombatEncounter>((
+      ref,
+      encounter,
+    ) async {
+      Log.d(
+        'COMBAT.CORRELATE',
+        'combatAttackerCorrelationProvider(encounter=${encounter.id}) - START',
+      );
+      final enrichment = await ref.watch(
+        combatEnrichmentProvider(encounter.id).future,
+      );
+      if (enrichment == null) return null;
+      final ensured = await ref
+          .read(combatEnrichmentServiceProvider)
+          .ensureAttackerCorrelation(encounter, enrichment);
+      return ensured.attackerCorrelation;
     });
 
 final rawEncountersProvider = FutureProvider<List<ParsedCombatEncounter>>((

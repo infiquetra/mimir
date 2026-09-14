@@ -7,6 +7,9 @@ import '../../../core/logging/logger.dart';
 import '../../../core/network/esi_client.dart';
 import '../../../core/sde/sde_service.dart';
 import '../../fitting/domain/format_parser.dart';
+import '../domain/combat_actor_classifier.dart';
+import '../domain/combat_attacker_correlation.dart';
+import '../domain/combat_attacker_correlator.dart';
 import '../domain/combat_enrichment.dart';
 import '../domain/combat_evidence_ledger.dart';
 import '../domain/combat_fit_snapshot_mapper.dart';
@@ -26,12 +29,14 @@ class CombatEnrichmentService {
     required TokenManager tokenManager,
     required OAuthService oauthService,
     required SdeService sdeService,
+    CombatAttackerCorrelator? correlator,
   }) : _repository = repository,
        _esiClient = esiClient,
        _discoveryClient = discoveryClient,
        _tokenManager = tokenManager,
        _oauthService = oauthService,
-       _sdeService = sdeService;
+       _sdeService = sdeService,
+       _correlator = correlator;
 
   static const int maxRecentDetails = 80;
   static const int maxZkillPagesPerDirection = 3;
@@ -42,6 +47,7 @@ class CombatEnrichmentService {
   final TokenManager _tokenManager;
   final OAuthService _oauthService;
   final SdeService _sdeService;
+  final CombatAttackerCorrelator? _correlator;
 
   SdeService get sdeService => _sdeService;
 
@@ -241,6 +247,39 @@ class CombatEnrichmentService {
       'CombatEnrichmentService.loadEnrichment($parsedEncounterId) - START',
     );
     return _repository.loadEnrichment(parsedEncounterId);
+  }
+
+  Future<CombatEnrichment> ensureAttackerCorrelation(
+    ParsedCombatEncounter encounter,
+    CombatEnrichment enrichment,
+  ) async {
+    Log.d(
+      'COMBAT.CORRELATE',
+      'ensureAttackerCorrelation(${encounter.id}) - START',
+    );
+    if (enrichment.attackerCorrelation != null ||
+        !enrichment.hasMatchedKillmail ||
+        enrichment.rawKillmail == null) {
+      return enrichment;
+    }
+    final EsiKillmailDetail detail;
+    try {
+      detail = EsiKillmailDetail.fromJson(enrichment.rawKillmail!);
+    } catch (e, stack) {
+      Log.e('COMBAT.CORRELATE', 'Failed to decode raw killmail', e, stack);
+      return enrichment;
+    }
+    final correlation = await _correlateOrNull(encounter, detail);
+    if (correlation == null) return enrichment;
+    return _save(
+      enrichment.copyWith(
+        attackerCorrelation: correlation,
+        evidenceLedger: _mergeLedgers(
+          enrichment.evidenceLedger,
+          _correlationLedger(correlation),
+        ),
+      ),
+    );
   }
 
   Future<CombatEnrichment> _save(CombatEnrichment enrichment) async {
@@ -453,11 +492,16 @@ class CombatEnrichmentService {
           'Killmail proves the destroyed opponent fit; the pilot full fit remains unknown.',
       ],
     );
+    final correlation = await _correlateOrNull(encounter, detail);
+    final ledger = _mergeLedgers(
+      _baselineLedger(encounter),
+      enrichment.evidenceLedger,
+    );
     return enrichment.copyWith(
-      evidenceLedger: _mergeLedgers(
-        _baselineLedger(encounter),
-        enrichment.evidenceLedger,
-      ),
+      attackerCorrelation: correlation,
+      evidenceLedger: correlation == null
+          ? ledger
+          : _mergeLedgers(ledger, _correlationLedger(correlation)),
     );
   }
 
@@ -611,6 +655,246 @@ class CombatEnrichmentService {
       facts: factsById.values.toList(),
       unknowns: unknowns,
     );
+  }
+
+  Future<AttackerCorrelation?> _correlateOrNull(
+    ParsedCombatEncounter encounter,
+    EsiKillmailDetail detail,
+  ) async {
+    try {
+      final typeIndex = await _buildTypeIndex(encounter, detail);
+      final correlation = (_correlator ?? const CombatAttackerCorrelator())
+          .correlate(
+            encounter: encounter,
+            detail: detail,
+            typeIndex: typeIndex,
+            now: DateTime.now().toUtc(),
+          );
+      final people = CombatAttackerCorrelator.participants(
+        detail,
+        selfCharacterId: encounter.characterId,
+        typeIndex: typeIndex,
+      );
+      final actors = CombatActorClassifier.classify(
+        encounter: encounter,
+        participants: people,
+        typeIndex: typeIndex,
+      );
+      final context = CombatAttackerCorrelator.contextFor(
+        encounter,
+        actors,
+        people,
+        selfIsVictim: correlation.selfIsVictim,
+      );
+      for (final actor in actors) {
+        if (!actor.isScorable) continue;
+        for (final participant in people) {
+          if (!participant.isPlayer) continue;
+          final pair = CombatAttackerCorrelator.score(
+            actor: actor,
+            participant: participant,
+            context: context,
+            typeIndex: typeIndex,
+          );
+          Log.i(
+            'COMBAT.CORRELATE',
+            'actor=${actor.displayName} participant=${participant.key} '
+                'score=${pair.score.toStringAsFixed(2)} '
+                'signals=${pair.signals.map((signal) => signal.name).join(',')}',
+          );
+        }
+      }
+      Log.i(
+        'COMBAT.CORRELATE',
+        'correlated=${correlation.correlated.length} '
+            'unattributed=${correlation.unattributedActors.where((actor) => actor.isScorable).length} '
+            'npc=${correlation.npcIncomingDamage} '
+            'uncorrelated=${correlation.uncorrelatedParticipants.length} '
+            'damage=${correlation.correlatedIncomingDamage}/${correlation.unattributedIncomingDamage}/${correlation.npcIncomingDamage} '
+            'total=${correlation.totalIncomingDamage}',
+      );
+      return correlation;
+    } catch (e, stack) {
+      Log.e('COMBAT.CORRELATE', 'Failed to correlate attackers', e, stack);
+      return null;
+    }
+  }
+
+  Future<CombatActorTypeIndex> _buildTypeIndex(
+    ParsedCombatEncounter encounter,
+    EsiKillmailDetail detail,
+  ) async {
+    final byName = <String, CombatTypeRef>{};
+    final byId = <int, CombatTypeRef>{};
+    final nameMemo = <String, CombatTypeRef?>{};
+    final idMemo = <int, CombatTypeRef?>{};
+    final groupMemo = <int, int?>{};
+
+    Future<int?> categoryIdFor(int groupId) async {
+      if (groupMemo.containsKey(groupId)) return groupMemo[groupId];
+      final group = await _sdeService.database.getGroup(groupId);
+      groupMemo[groupId] = group?.categoryId;
+      return group?.categoryId;
+    }
+
+    Future<CombatTypeRef?> refFromType({
+      required int typeId,
+      required String typeName,
+      required int groupId,
+    }) async {
+      final categoryId = await categoryIdFor(groupId);
+      if (categoryId == null) return null;
+      return CombatTypeRef(
+        typeId: typeId,
+        typeName: typeName,
+        groupId: groupId,
+        categoryId: categoryId,
+      );
+    }
+
+    Future<CombatTypeRef?> lookupByName(String name) async {
+      final key = normalizeCombatName(name);
+      if (nameMemo.containsKey(key)) return nameMemo[key];
+      CombatTypeRef? resolved;
+      final matches = await _sdeService.database.searchTypesByName(
+        name,
+        limit: 20,
+      );
+      for (final match in matches) {
+        if (normalizeCombatName(match.typeName) != key) continue;
+        resolved = await refFromType(
+          typeId: match.typeId,
+          typeName: match.typeName,
+          groupId: match.groupId,
+        );
+        break;
+      }
+      nameMemo[key] = resolved;
+      return resolved;
+    }
+
+    Future<CombatTypeRef?> lookupById(int typeId) async {
+      if (idMemo.containsKey(typeId)) return idMemo[typeId];
+      CombatTypeRef? resolved;
+      final type = await _sdeService.database.getType(typeId);
+      if (type != null) {
+        resolved = await refFromType(
+          typeId: type.typeId,
+          typeName: type.typeName,
+          groupId: type.groupId,
+        );
+      }
+      idMemo[typeId] = resolved;
+      return resolved;
+    }
+
+    final names = <String>{};
+    for (final name in encounter.aggregates.incomingBySource.keys) {
+      if (_isUsableTypeName(name)) names.add(name);
+    }
+    for (final event in encounter.events) {
+      if (!event.isIncomingDamage) continue;
+      final weapon = event.weaponName;
+      if (weapon != null && _isUsableTypeName(weapon)) names.add(weapon);
+    }
+    for (final name in names) {
+      final ref = await lookupByName(name);
+      if (ref != null) byName[normalizeCombatName(name)] = ref;
+    }
+
+    final ids = <int>{
+      detail.victim.shipTypeId,
+      for (final attacker in detail.attackers) ...[
+        if (attacker.shipTypeId != null) attacker.shipTypeId!,
+        if (attacker.weaponTypeId != null) attacker.weaponTypeId!,
+      ],
+    };
+    for (final id in ids) {
+      final ref = await lookupById(id);
+      if (ref != null) {
+        byId[id] = ref;
+        byName.putIfAbsent(normalizeCombatName(ref.typeName), () => ref);
+      }
+    }
+
+    return CombatActorTypeIndex(byName: byName, byId: byId);
+  }
+
+  CombatEvidenceLedger _correlationLedger(AttackerCorrelation correlation) {
+    final facts = <CombatEvidenceFact>[
+      for (final row in correlation.correlated)
+        if (row.participant.characterId != null)
+          CombatEvidenceFact(
+            id: row.participant.isVictim
+                ? 'ev-correlated-victim-${correlation.killmailId}-${row.participant.characterId}'
+                : 'ev-correlated-attacker-${correlation.killmailId}-${row.participant.characterId}',
+            label: 'Correlated attacker',
+            value:
+                '${row.actor.displayName} (${_shipLabel(row.participant)}) — '
+                '${row.actor.damageDealt} damage — ${row.signalLabels.join(', ')}',
+            source: EvidenceSource.killmail,
+            confidence: switch (row.confidence) {
+              AttackerCorrelationConfidence.confirmed =>
+                EvidenceConfidence.proven,
+              AttackerCorrelationConfidence.probable =>
+                EvidenceConfidence.derived,
+              AttackerCorrelationConfidence.possible =>
+                EvidenceConfidence.reference,
+            },
+            evidenceTime: correlation.correlatedAt,
+          ),
+    ];
+    final unknowns = <AarUnknown>[];
+    final absent = correlation.uncorrelatedPlayerParticipants;
+    if (absent.isNotEmpty) {
+      final names = [
+        for (final participant in absent) _participantLabel(participant),
+      ].join(', ');
+      unknowns.add(
+        AarUnknown(
+          category: AarUnknownCategory.opponentFit,
+          label: 'Attackers absent from combat log',
+          detail:
+              '${absent.length} killmail attackers dealt no logged damage: $names',
+        ),
+      );
+    }
+    if (correlation.unattributedIncomingDamage > 0) {
+      final actors = [
+        for (final actor in correlation.unattributedActors)
+          if (actor.actorClass != CombatActorClass.npc) actor,
+      ];
+      final names = [for (final actor in actors) actor.displayName].join(', ');
+      unknowns.add(
+        AarUnknown(
+          category: AarUnknownCategory.telemetry,
+          label: 'Unattributed incoming damage',
+          detail:
+              '${correlation.unattributedIncomingDamage} damage from ${actors.length} log actors could not be matched to a killmail attacker ($names)',
+        ),
+      );
+    }
+    return CombatEvidenceLedger(facts: facts, unknowns: unknowns);
+  }
+
+  static bool _isUsableTypeName(String name) {
+    final key = normalizeCombatName(name);
+    return key.isNotEmpty && key != 'unknown';
+  }
+
+  static String _shipLabel(CombatKillmailParticipant participant) {
+    final shipName = participant.shipTypeName?.trim();
+    if (shipName != null && shipName.isNotEmpty) return shipName;
+    if (participant.shipTypeId != null) return 'Type #${participant.shipTypeId}';
+    return 'unknown';
+  }
+
+  static String _participantLabel(CombatKillmailParticipant participant) {
+    final characterName = participant.characterName?.trim();
+    if (characterName != null && characterName.isNotEmpty) {
+      return characterName;
+    }
+    return _shipLabel(participant);
   }
 
   Future<EsiKillmailDetail> _withResolvedNames(EsiKillmailDetail detail) async {

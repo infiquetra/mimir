@@ -454,6 +454,7 @@ Rules:
 - Treat victimFitEvidence from killmail as proven destroyed-victim fit evidence, but do not infer attacker full fits from it.
 - If killmailEvidence.status is killmailMatched, treat the killmail outcome, destroyed victim fit, participants, final blow, and killmail time as supplied evidence.
 - If killmailEvidence.status is ambiguous, needsReauth, or logOnly, do not use killmail or fit conclusions as proven facts.
+- attackerCorrelation lists which combat-log actors map to killmail participants and with what confidence; attribute damage to a named attacker only when it is listed as correlated, and treat unattributed damage as unknown.
 - You may infer tactical meaning from EVE mechanics, but label inferred claims and keep them tied to supplied event evidence.
 - Parser-provided counts, totals, hit rates, and event ids are authoritative.
 - Damage type or resist conclusions must be confidence-labeled. If the log does not prove a defense layer or exact fit, state that limitation.

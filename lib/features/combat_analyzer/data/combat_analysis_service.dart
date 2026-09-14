@@ -237,6 +237,10 @@ class CombatAnalysisService {
         encounter,
         forceRefresh: forceRefresh,
       );
+      enrichment = await _enrichmentService.ensureAttackerCorrelation(
+        encounter,
+        enrichment,
+      );
 
       emit(
         const CombatAnalysisProgress(
