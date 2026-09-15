@@ -15,7 +15,6 @@ import 'package:mimir/core/sde/sde_service.dart';
 import 'package:mimir/features/combat_analyzer/data/codex_analysis_client.dart';
 import 'package:mimir/features/combat_analyzer/data/codex_auth_service.dart';
 import 'package:mimir/features/combat_analyzer/data/codex_auth_store.dart';
-import 'package:mimir/features/combat_analyzer/data/combat_analysis_service.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_enrichment_repository.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_enrichment_service.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_killmail_discovery_client.dart';
