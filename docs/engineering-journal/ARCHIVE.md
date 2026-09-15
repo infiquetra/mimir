@@ -9,6 +9,18 @@
 
 ---
 
+### SHIPPED 2026-09-15: AAR Fit Import and Capture UI Tests and Defect Remediation
+
+**Author.** Antigravity / Lead Orchestrator
+**Shipped as.** Completed comprehensive end-to-end delivery of the AAR fit import and capture UI testing and contract hardening (satisfying AC1–AC24 across all 36 test cases T01–T36 and fixing the three core defects: colon-based EFT/DNA dispatch, silent-loss import validation, and forced-refresh fit eviction):
+- Real test harness (U0): `FitEvidenceHarness` owning real in-memory `AppDatabase` and `SdeDatabase` outside widget scope, scripted Dio ESI client, controlled discovery and Codex AI clients, clean teardown ordering (`disposeWidgets` -> `disposeEsiWatch` -> DB close), and assertion guards against unintended network I/O or background timers.
+- Faithful import adapter (U1): `AarFitImportParser` implementing strict structural validation, exact SDE lookups, bounds enforcement (256 KiB, 4096 modules, int32 quantities), grammar disambiguation distinguishing colon EFT headers `[Hull, Fit: Sub]` from DNA syntax, and additive `FittingFormatParser` seams preserving tolerant behavior elsewhere.
+- Fail-closed capture and typed error taxonomy (U2): Hardened `captureCurrentPilotFit` with multi-page asset pagination (`x-pages` header validation), complete inventory assembly before saving, qualified empty-inventory handling (`pilotFitNoModules` distinct from unconfirmed reference), and truthful user-facing error messages matching direct ESI failures.
+- Atomic enrichment retention and analysis barrier (U3): Introduced `CombatEnrichmentRepository.mutateEnrichment` routing all mutations through SQLite transactions with ledger fact/unknown tracking (`ev-pilot-fit-<id>`); `AarEvidenceOperationCoordinator` double-tap guard and operation serialization; and `AarEvidenceCommitPublisher` publishing commits across provider lifecycles. Ensured manual, captured, and victim fits survive forced re-analysis, AI retry, and scope recreation without stale overwrite or data loss.
+- UI lifecycle and live evidence integration (U4): Extracted `ImportPilotFitDialog` owning its controller with scrollable constraints, autofocus, Escape/barrier dismissal, and cancel no-ops; added generation/route guards (`_screenGeneration`, `_hostRoute`, `_canPublishUi`) preventing stale post-await setState or snackbars across route transitions; disambiguated command strip keys (`aar-command-strip-reanalyze`) and overview chip labels (`Enrichment`); and validated live EHP defense deltas, score thresholds (+10 banner), and 360px/200% responsive layouts without raw numeric IDs.
+- Full verification (U5): All 951 tests passing (`flutter test`), static analysis clean (`flutter analyze`), formatting verified (`dart format`), and cross-agent sign-offs obtained from `reviewer` (Muse) and `tester` (Codex).
+**Refs.** LEARNINGS 2026-09-15; DECISIONS 2026-09-15; docs/specs/aar-fit-import-capture-ui-tests.md; docs/specs/aar-fit-import-capture-ui-tests-design.md; .agents/plans/2026-09-15-aar-fit-import-capture-ui-tests.md.
+
 ### SHIPPED 2026-09-15: Per-Attacker Incoming Damage Profile and Defense Matchup
 
 **Author.** Antigravity / Lead Orchestrator

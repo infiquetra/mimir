@@ -44,8 +44,8 @@ and prompt v4 without a database migration.
 **Revisit when.** Product adds supported import syntax or explicit killmail replacement,
 or durable multi-process operation coordination becomes necessary.
 **Refs.** [Product contract](../specs/aar-fit-import-capture-ui-tests.md);
-[queued implementation](QUEUED.md#aar-fit-import-and-capture-ui-tests).
-This is an architecture decision; implementation and runtime gates remain pending.
+[ARCHIVE entry](ARCHIVE.md#shipped-2026-09-15-aar-fit-import-and-capture-ui-tests-and-defect-remediation).
+Shipped 2026-09-15 across Units U0–U5 with all 36 test cases passing.
 
 ## 2026-09-14
 

@@ -31,6 +31,36 @@
 
 ## 2026-09-15
 
+### Drift stream notifications and SQLite transaction isolation
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** Atomic enrichment mutations in `CombatEnrichmentRepository.mutateEnrichment` and analysis barrier coordination.
+**Evidence.** Unit U3/U4 concurrency and analysis barrier tests in `test/features/combat_analyzer/data/combat_enrichment_service_test.dart` and `test/features/combat_analyzer/presentation/analysis_multipane_fit_evidence_test.dart`.
+**Mechanism.** Drift streams (`watchEnrichment`) emit updates after transactions commit. If asynchronous coordinator gates (`waitForAttachment`) or external locks are awaited inside an active SQLite transaction, listeners attempting to read state or concurrent transactions will block or deadlock.
+**Fix.** Place asynchronous operation gates (`AarEvidenceOperationCoordinator`) and concurrency reservations outside the SQLite transaction boundary, while keeping database reads and writes (`transaction(() async { ... })`) atomic and purely local.
+**Validation.** T30 race tests (double-tap, competing actions, analysis-during-save, stale patches) pass cleanly with zero deadlocks.
+**Generalizable rule.** Never hold SQLite transaction locks open across asynchronous external gates or event completers; synchronization happens before entering the transaction and after commit.
+
+### StatChip widget layout and text finder collision in Flutter widget tests
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** Disambiguating command strip chips and card headers in `analysis_multipane_screen.dart`.
+**Evidence.** T8.1 (`analysis_multipane_evidence_test.dart`) checklist position assertion vs T33 (`analysis_multipane_fit_evidence_test.dart`) stat chip finder.
+**Mechanism.** Flutter's `find.text('...')` matches exact text strings anywhere in the tree. When an overview chip duplicates a string used as a section or card title (`label: 'Evidence'`), positional layout assertions (`expect(dy_A < dy_B)`) match the top command chip instead of the lower card, causing unexpected test failures when chip layouts change.
+**Fix.** Renamed the overview chip to `label: 'Enrichment'` while keeping the Evidence card header as the unique `Text('Evidence')`, and structured `_StatChip` with discrete row children `[Text(label), Text(value)]`.
+**Validation.** Both `analysis_multipane_fit_evidence_test.dart` and `analysis_multipane_evidence_test.dart` pass without assertion shadowing.
+**Generalizable rule.** Disambiguate overview/status labels from structural card headings to keep widget finders resilient to semantic text collisions.
+
+### Fail-closed pagination in ESI asset capture
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** Capturing active ship fits from paginated ESI asset responses in `captureCurrentPilotFit`.
+**Evidence.** T14 (`captureCurrentPilotFit fails on missing middle page`) in `test/features/combat_analyzer/data/combat_enrichment_service_test.dart`.
+**Mechanism.** ESI assets endpoint `/characters/{id}/assets/` returns pages indicated by `x-pages`. If page 1 succeeds but page 2 fails, saving page 1's items records a partial, truncated ship fit as truth, silently losing modules.
+**Fix.** Validate the `x-pages` header, fetch all pages into a memory accumulator, and require complete page retrieval before passing assets to the mapping layer. On any page failure, abort immediately and retain prior enrichment without touching the database.
+**Validation.** Regression test T14 proves old enrichment is retained and no partial inventory is saved on mid-stream pagination failure.
+**Generalizable rule.** Paginated entity reads must fail closed; never commit partial slices of a multi-page resource into authoritative state.
+
 ### Strict imports need structural identity and parser error provenance
 
 **Author.** Technical Architect.

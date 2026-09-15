@@ -61,32 +61,6 @@ and render an explicit disconnected state when there is none.
 **Refs.** commit removing `lib/features/intel/data/mapper_client.dart`;
 `lib/features/intel/presentation/kill_feed_screen.dart`.
 
-### AAR fit import and capture UI tests
-
-**Author.** Codex
-**Priority.** P2
-**Effort.** Half-day to a day.
-**Worth it when.** Before making further AAR UI changes around evidence,
-re-analysis, or fit comparison.
-**Context.** The domain and parser tests cover evidence ledger, snapshot
-mapping, matchup classification, and EFT parsing. The UI controls for manual
-fit import, current fit snapshot, and "use current fit for this fight" still
-need provider-overridden widget coverage that exercises ESI assets, SDE, and
-enrichment storage together.
-**Product handoff.** [UI test contract](../specs/aar-fit-import-capture-ui-tests.md)
-completed 2026-09-14 at baseline `7db3630`: 24 acceptance criteria and 36 cases.
-The live UI exposes confirmed capture only; reference capture needs service/legacy
-coverage. Include regression coverage for fit retention during forced re-analysis and
-faithful import validation. Tests and associated fixes remain pending.
-**Architecture handoff.** [Technical design](../specs/aar-fit-import-capture-ui-tests-design.md)
-completed 2026-09-15 against Product commit `e4821ce`: strict AAR parser adapter,
-atomic retention and coherent analysis snapshot, real screen/ESI/SDE/Drift harness,
-and U0–U5 RED/GREEN ownership mapped to every Product criterion and case. Keep this
-item queued until implementation and independent validation pass.
-**Refs.** `lib/features/combat_analyzer/presentation/analysis_multipane_screen.dart`;
-`test/features/combat_analyzer/domain/combat_fit_snapshot_mapper_test.dart`;
-`.codex/plans/2026-05-21-combat-analyzer-aar.md`.
-
 ### Fit comparison visuals for AAR reports
 
 **Author.** Codex
