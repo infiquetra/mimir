@@ -488,13 +488,32 @@ class AarEvidenceScorer {
   }) {
     final id = enrichment?.killmailId;
     final victim = enrichment?.victimName;
+    final suffix = _correlationSuffix(enrichment);
     if (lowConfidence) {
-      return 'Killmail #$id matched at low confidence ($pct%): ${enrichment?.matchReason ?? ''}';
+      return 'Killmail #$id matched at low confidence ($pct%): ${enrichment?.matchReason ?? ''}$suffix';
     }
     final victimBit = victim == null || victim.isEmpty
         ? ''
         : ', victim $victim';
-    return 'Killmail #$id matched ($pct%)$victimBit';
+    return 'Killmail #$id matched ($pct%)$victimBit$suffix';
+  }
+
+  static String _correlationSuffix(CombatEnrichment? enrichment) {
+    final correlation = enrichment?.attackerCorrelation;
+    if (correlation == null || correlation.correlated.isEmpty) return '';
+    final n = correlation.correlated.length;
+    final scorableUnattributed = correlation.unattributedActors
+        .where((a) => a.isScorable)
+        .length;
+    final m = n + scorableUnattributed;
+    final list = correlation.correlated
+        .map((c) => '${c.actor.displayName} ${c.confidence.name}')
+        .join(', ');
+    final base = '; $n of $m log actors identified on the killmail ($list)';
+    final fitsNote = (correlation.selfIsVictim && n > 0)
+        ? '; attacker hulls known, fits not exposed by killmails'
+        : '';
+    return '$base$fitsNote';
   }
 
   static String _opponentSourceLabel(
