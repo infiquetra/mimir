@@ -28,6 +28,7 @@ See the [mimir-context-library](https://github.com/infiquetra/mimir-context-libr
 
 ### AAR specifications
 
+- [Fit import and capture UI test product contract](docs/specs/aar-fit-import-capture-ui-tests.md) — current controls, user expectations, 24 acceptance criteria, and 36 test scenarios; implementation pending.
 - [Milestone 5: Per-Attacker Incoming Damage Profile and Defense Matchup](docs/specs/aar-per-attacker-matchup.md) — product contract, acceptance criteria, and test matrix; complete.
 - [Milestone 5 technical design](docs/specs/aar-per-attacker-matchup-design.md) — exact damage accounting, model/provider/UI contracts, additive v4 evidence, and TDD units; complete.
 

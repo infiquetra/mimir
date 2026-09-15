@@ -24,6 +24,26 @@
 
 ---
 
+## 2026-09-14
+
+### Fit attachment test contract targets live controls and faithful saved evidence
+
+**Author.** Product.
+**Decision.** Adopt the [UI-test product contract](../specs/aar-fit-import-capture-ui-tests.md).
+Cover Import Fit and confirmed Use Current Fit through the live screen, and unconfirmed
+snapshots through service/legacy fixtures. Require faithful-or-rejected AAR imports,
+qualified empty-inventory capture, save-before-success feedback, coherent local refresh,
+and retention through explicit re-analysis. Tests and narrow fixes are pending.
+**Rejected alternatives.** Restoring a retired snapshot button for coverage; treating
+discarded EFT entries as valid empty slots; asserting a fixed score increase; mocking
+away persistence and the final analysis input.
+**Rationale.** The queued description predates the checklist controls, and source review
+found validation and refresh paths that counter-only widget fakes cannot protect.
+**Revisit when.** The shared fitting parser supports additional syntax, or Product
+introduces a new fit-editing/reference workflow.
+**Refs.** [Queued item](QUEUED.md#aar-fit-import-and-capture-ui-tests);
+[retention finding](LEARNINGS.md#fit-attachment-mocks-do-not-prove-re-analysis-retains-the-fit).
+
 ## 2026-09-15
 
 ### Milestone 5 canonical allocation, per-attacker defense matchup, and UI integration (commits: 699df14, 1554125, 19cc519)

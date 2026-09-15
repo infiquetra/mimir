@@ -29,6 +29,29 @@
 
 ---
 
+## 2026-09-14
+
+### Fit attachment mocks do not prove re-analysis retains the fit
+
+**Author.** Product.
+**Context.** Grounding the next P2 UI-test item after Milestone 5 merged at `7db3630`.
+**Evidence.** [Analysis service](../../lib/features/combat_analyzer/data/combat_analysis_service.dart)
+passes `forceRefresh` to enrichment. The
+[enrichment service](../../lib/features/combat_analyzer/data/combat_enrichment_service.dart)
+skips loading the existing record during a forced refresh, constructs fresh evidence,
+and saves through a full JSON upsert. No previous pilot fit is carried through those
+branches. Existing screen H.7 records a fake re-analysis call only.
+**Mechanism.** A fit can save successfully and refresh the checklist, then be overwritten
+before the explicit re-analysis reaches derivation or the AI client. Dispatch-only tests
+cannot detect loss across that persistence boundary.
+**Fix (queued).** [Product T26/T27](../specs/aar-fit-import-capture-ui-tests.md)
+require a real service/repository refresh flow with a fake AI client, retaining manual
+and captured pilot evidence in storage and the analysis input.
+**Validation.** Independent source review confirmed the overwrite path; runtime
+reproduction and corrective tests remain pending. No application fix shipped here.
+**Generalizable rule.** Verify user-supplied evidence at the final consumer after refresh;
+a successful save or callback assertion alone does not prove lifecycle retention.
+
 ## 2026-09-15
 
 ### The Averaged EHP Fallacy in Fleet Engagements

@@ -1,4 +1,39 @@
-# Project: Mimir — Milestone 5 technical design
+# Project: Mimir — AAR fit import and capture UI test product handoff
+Date: 2026-09-14
+Checkpoint: 2026-09-14-aar-fit-import-capture-ui-tests-product
+
+## Overview
+
+Provide Product's grounded requirements and test scenarios for the next P2 item.
+Milestone 5 is now verified and merged into `develop` at baseline `7db3630`.
+
+## Tasks
+
+- [x] [P1] Inspect the live fit controls, evidence refresh, and re-analysis behavior.
+- [x] [P1] Review service/parser/asset behavior and existing test coverage with an explorer.
+- [x] [SEQ] Write the product contract, scenarios, test matrix, and acceptance criteria.
+- [x] [P2] Independently review the handoff and verify references/messages/traceability.
+- [x] [SEQ] Update README and journal links; keep test implementation queued.
+- [x] [CHECKPOINT] Save completion state and commit documentation.
+
+## Notes
+
+The user's request authorizes this documentation work. [Canonical plan](../.codex/plans/2026-09-14-aar-fit-import-capture-ui-tests-product.md).
+
+## Review
+
+Completed the [product handoff](../docs/specs/aar-fit-import-capture-ui-tests.md) with
+grounded current controls, nine user scenarios, exact/current versus desired snackbar
+messages, 24 acceptance criteria, 36 mapped tests, and guidance for Test-Author/Plan.
+Independent review passed after clarifying screen coverage, no-character combinations,
+and analysis overlapping attachment. Verified links, table structure, message strings,
+score examples, and criterion/test traceability. Journal records the source-evidenced
+fit-retention risk; runtime reproduction, tests, and fixes remain queued. No application
+code changed and no Flutter suites ran for this documentation-only handoff.
+
+---
+
+# Completed: Mimir — Milestone 5 technical design
 Date: 2026-09-14
 Checkpoint: 2026-09-14-aar-per-attacker-matchup-design
 

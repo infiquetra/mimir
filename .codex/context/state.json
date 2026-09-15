@@ -1,20 +1,26 @@
 {
-  "last_updated": "2026-09-15T01:22:18Z",
+  "last_updated": "2026-09-15T03:45:19.624Z",
   "current_work": {
-    "task": "Milestone 5 per-attacker matchup technical architecture",
+    "task": "AAR fit import and capture UI tests: product handoff",
     "phase": "complete",
     "progress": "100%",
-    "baseline": "ed9e1ff",
-    "plan": ".codex/plans/2026-09-14-aar-per-attacker-matchup-design.md",
-    "deliverable": "docs/specs/aar-per-attacker-matchup-design.md",
-    "checkpoint": ".codex/checkpoints/2026-09-14-aar-per-attacker-matchup-design.md",
-    "next_steps": ["Implementation team plans and executes U1-U4 against Product and design; feature remains queued"]
+    "baseline": "7db3630",
+    "plan": ".codex/plans/2026-09-14-aar-fit-import-capture-ui-tests-product.md",
+    "deliverable": "docs/specs/aar-fit-import-capture-ui-tests.md",
+    "checkpoint": ".codex/checkpoints/2026-09-14-aar-fit-import-capture-ui-tests-product.md",
+    "next_steps": [
+      "Test-Author writes mapped tests against real service/provider/storage seams",
+      "Plan scopes required validation, retention, feedback and concurrency fixes",
+      "Keep queued item open until tests and fixes are verified"
+    ]
   },
   "validation": {
-    "independent_review": "domain and integration reviewers confirmed all findings resolved",
-    "structure": "6 sections, 10 inherited contracts, 5 scenarios, 28 AC aliases, 40 traced RED/GREEN cases",
-    "mathematics": "EHP/pressure oracles and 200 exact-rational conservation examples passed; links/tables/fences/JSON sample verified",
-    "runtime_tests": "not run; documentation-only change"
+    "independent_review": "passed; all findings addressed",
+    "structure": "9 scenarios, 24 acceptance criteria, 36 traced test cases",
+    "checks": "source grounding, existing feedback strings, score arithmetic, tables, links, whitespace",
+    "runtime_tests": "not run; documentation-only product handoff"
   },
-  "open_issues": []
+  "open_issues": [
+    "Implementation pending: source-evidenced forced-refresh pilot-fit overwrite and validation gaps require runtime regression tests"
+  ]
 }

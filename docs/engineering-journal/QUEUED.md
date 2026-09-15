@@ -73,6 +73,11 @@ mapping, matchup classification, and EFT parsing. The UI controls for manual
 fit import, current fit snapshot, and "use current fit for this fight" still
 need provider-overridden widget coverage that exercises ESI assets, SDE, and
 enrichment storage together.
+**Product handoff.** [UI test contract](../specs/aar-fit-import-capture-ui-tests.md)
+completed 2026-09-14 at baseline `7db3630`: 24 acceptance criteria and 36 cases.
+The live UI exposes confirmed capture only; reference capture needs service/legacy
+coverage. Include regression coverage for fit retention during forced re-analysis and
+faithful import validation. Tests and associated fixes remain pending.
 **Refs.** `lib/features/combat_analyzer/presentation/analysis_multipane_screen.dart`;
 `test/features/combat_analyzer/domain/combat_fit_snapshot_mapper_test.dart`;
 `.codex/plans/2026-05-21-combat-analyzer-aar.md`.

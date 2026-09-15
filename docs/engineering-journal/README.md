@@ -35,6 +35,7 @@ Keep entries newest-first, concise, and evidence-backed.
 
 ## Quick Navigation By Topic
 
+- AAR fit import/capture UI tests and re-analysis retention -> [Product contract](../specs/aar-fit-import-capture-ui-tests.md), [source finding](LEARNINGS.md#fit-attachment-mocks-do-not-prove-re-analysis-retains-the-fit)
 - Per-attacker incoming profiles and defense matchups (M5 specification, implementation pending) -> [Product spec](../specs/aar-per-attacker-matchup.md), [decision](DECISIONS.md#milestone-5-product-contract-for-per-attacker-incoming-matchups-specification-only)
 - Combat analyzer AAR evidence ledger and fit evidence -> [DECISIONS](DECISIONS.md#combat-aar-v3-uses-evidence-ledger-and-fit-evidence-before-deeper-simulation)
 - Combat logs as incomplete evidence -> [LEARNINGS](LEARNINGS.md#combat-logs-are-a-primary-source-but-not-a-complete-aar-evidence-source)
