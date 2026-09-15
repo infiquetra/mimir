@@ -26,6 +26,7 @@ import 'widgets/aar_matchup_section.dart';
 import 'widgets/aar_pre_analysis_gate.dart';
 import 'widgets/aar_report_provenance_banner.dart';
 import 'widgets/damage_chart_painter.dart';
+import 'widgets/import_pilot_fit_dialog.dart';
 
 class AnalysisMultiPaneScreen extends ConsumerStatefulWidget {
   final ParsedCombatEncounter encounter;
@@ -42,12 +43,49 @@ class _AnalysisMultiPaneScreenState
   Future<CombatEncounter?>? _cachedAnalysisFuture;
   Future<CombatEncounter>? _analysisFuture;
   CombatAnalysisProgress? _analysisProgress;
+  int _screenGeneration = 0;
+  ModalRoute<dynamic>? _hostRoute;
 
   @override
   void initState() {
     super.initState();
     Log.d('COMBAT.UI', 'AnalysisMultiPaneScreen.initState()');
     _cachedAnalysisFuture = _loadCachedAnalysis();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _hostRoute ??= ModalRoute.of(context);
+  }
+
+  @override
+  void didUpdateWidget(AnalysisMultiPaneScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.encounter.id == widget.encounter.id) return;
+    _screenGeneration++;
+    _hostRoute = ModalRoute.of(context);
+    _cachedAnalysisFuture = _loadCachedAnalysis();
+    _analysisFuture = null;
+    _analysisProgress = null;
+    ScaffoldMessenger.maybeOf(context)?.clearSnackBars();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _dismissImportDialog();
+    });
+  }
+
+  bool _canPublishUi(int generation) {
+    if (!mounted || generation != _screenGeneration) return false;
+    final route = ModalRoute.of(context) ?? _hostRoute;
+    return route == null || route.isCurrent;
+  }
+
+  void _dismissImportDialog() {
+    final navigator = Navigator.of(context, rootNavigator: true);
+    navigator.popUntil((route) {
+      return route.settings.name != ImportPilotFitDialog.routeName;
+    });
   }
 
   Future<CombatEncounter?> _loadCachedAnalysis() {
@@ -106,18 +144,22 @@ class _AnalysisMultiPaneScreenState
       'COMBAT.UI',
       'Searching killmails for encounter ${widget.encounter.id}',
     );
+    final generation = _screenGeneration;
+    final encounter = widget.encounter;
     try {
       await ref
           .read(combatEnrichmentServiceProvider)
-          .enrichEncounter(widget.encounter);
-      ref.invalidate(combatEnrichmentProvider(widget.encounter.id));
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+          .enrichEncounter(encounter);
+      if (!_canPublishUi(generation) || !mounted) return;
+      ref.invalidate(combatEnrichmentProvider(encounter.id));
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.clearSnackBars();
+      messenger.showSnackBar(
         const SnackBar(content: Text('Killmail search completed')),
       );
     } catch (e, stack) {
       Log.e('COMBAT.UI', 'Killmail search failed', e, stack);
-      if (!mounted) return;
+      if (!_canPublishUi(generation) || !mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Killmail search failed: $e')));
@@ -131,15 +173,17 @@ class _AnalysisMultiPaneScreenState
           ? 'User requested combat re-analysis'
           : 'User requested combat analysis',
     );
+    final generation = _screenGeneration;
+    final encounter = widget.encounter;
     setState(() => _analysisProgress = null);
     final future = ref
         .read(combatAnalysisServiceProvider)
         .analyzeEncounter(
-          widget.encounter,
+          encounter,
           forceRefresh: forceRefresh,
           onProgress: (progress) {
             Log.d('COMBAT.UI', 'Analysis progress UI: ${progress.label}');
-            if (!mounted) return;
+            if (!_canPublishUi(generation)) return;
             setState(() => _analysisProgress = progress);
           },
         );
@@ -153,12 +197,14 @@ class _AnalysisMultiPaneScreenState
       'COMBAT.UI',
       'User requested current fit capture confirmed=$confirmed',
     );
+    final generation = _screenGeneration;
+    final encounter = widget.encounter;
     try {
       final saved = await ref
           .read(combatEnrichmentServiceProvider)
-          .captureCurrentPilotFit(widget.encounter, confirmed: confirmed);
-      ref.invalidate(combatEnrichmentProvider(widget.encounter.id));
-      if (!mounted) return;
+          .captureCurrentPilotFit(encounter, confirmed: confirmed);
+      if (!_canPublishUi(generation) || !mounted) return;
+      ref.invalidate(combatEnrichmentProvider(encounter.id));
       final messenger = ScaffoldMessenger.of(context);
       messenger.clearSnackBars();
       messenger.showSnackBar(
@@ -174,7 +220,7 @@ class _AnalysisMultiPaneScreenState
       setState(() {});
     } catch (e, stack) {
       Log.e('COMBAT.UI', 'Failed to capture current fit', e, stack);
-      if (!mounted) return;
+      if (!_canPublishUi(generation) || !mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       messenger.clearSnackBars();
       messenger.showSnackBar(
@@ -185,46 +231,26 @@ class _AnalysisMultiPaneScreenState
 
   Future<void> _showImportFitDialog() async {
     Log.i('COMBAT.UI', 'User opened pilot fit import dialog');
-    final controller = TextEditingController();
+    final generation = _screenGeneration;
+    final encounter = widget.encounter;
     final rawFit = await showDialog<String>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Import Pilot Fit'),
-          content: SizedBox(
-            width: 560,
-            child: TextField(
-              controller: controller,
-              minLines: 10,
-              maxLines: 16,
-              decoration: const InputDecoration(
-                hintText: '[Rifter, Fight Fit]\nDamage Control II\n...',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(controller.text),
-              child: const Text('Import'),
-            ),
-          ],
-        );
-      },
+      routeSettings: const RouteSettings(name: ImportPilotFitDialog.routeName),
+      builder: (context) => const ImportPilotFitDialog(),
     );
-    controller.dispose();
+    if (!_canPublishUi(generation) ||
+        !mounted ||
+        widget.encounter.id != encounter.id) {
+      return;
+    }
     if (rawFit == null || rawFit.trim().isEmpty) return;
 
     try {
       await ref
           .read(combatEnrichmentServiceProvider)
-          .importPilotFit(widget.encounter, rawFit);
-      ref.invalidate(combatEnrichmentProvider(widget.encounter.id));
-      if (!mounted) return;
+          .importPilotFit(encounter, rawFit);
+      if (!_canPublishUi(generation) || !mounted) return;
+      ref.invalidate(combatEnrichmentProvider(encounter.id));
       final messenger = ScaffoldMessenger.of(context);
       messenger.clearSnackBars();
       messenger.showSnackBar(
@@ -235,7 +261,7 @@ class _AnalysisMultiPaneScreenState
       setState(() {});
     } catch (e, stack) {
       Log.e('COMBAT.UI', 'Failed to import pilot fit', e, stack);
-      if (!mounted) return;
+      if (!_canPublishUi(generation) || !mounted) return;
       final message = switch (e) {
         AarFitImportException ex => switch (ex.code) {
           AarFitImportFailureCode.malformedFit =>
@@ -566,6 +592,7 @@ class _AnalysisMultiPaneScreenState
                   ),
                 ),
                 OutlinedButton.icon(
+                  key: const Key('aar-command-strip-reanalyze'),
                   onPressed: () => _startAnalysis(forceRefresh: true),
                   icon: const Icon(Icons.refresh),
                   label: const Text('Re-analyze'),
@@ -691,12 +718,12 @@ class _AnalysisMultiPaneScreenState
                 if (enrichment.victimShipTypeId != null)
                   _StatChip(
                     label: 'Victim Ship',
-                    value: 'Type #${enrichment.victimShipTypeId}',
+                    value: _resolvedTypeName(enrichment.victimShipTypeId!),
                   ),
                 if (enrichment.finalBlowShipTypeId != null)
                   _StatChip(
                     label: 'Final Blow Ship',
-                    value: 'Type #${enrichment.finalBlowShipTypeId}',
+                    value: _resolvedTypeName(enrichment.finalBlowShipTypeId!),
                   ),
               ],
             ),
@@ -1155,6 +1182,29 @@ class _AnalysisMultiPaneScreenState
       limitations: const ['This report is based on combat-log evidence only.'],
     );
   }
+
+  String _resolvedTypeName(int typeId) {
+    return ref
+        .watch(itemNameProvider(typeId))
+        .when(
+          data: (name) {
+            if (name.trim().isEmpty || name.contains('Type #')) {
+              return 'Unknown ship';
+            }
+            return name;
+          },
+          loading: () => 'Unknown ship',
+          error: (_, _) => 'Unknown ship',
+        );
+  }
+}
+
+String _displayItemName(String? raw, {String? fallback}) {
+  bool usable(String? value) =>
+      value != null && value.trim().isNotEmpty && !value.contains('Type #');
+  if (usable(raw)) return raw!.trim();
+  if (usable(fallback)) return fallback!.trim();
+  return 'Unknown item';
 }
 
 String _formatAarDateUtc(DateTime value) {
@@ -1335,15 +1385,18 @@ class _FitModuleTile extends ConsumerWidget {
         ? null
         : ref.watch(itemNameProvider(module.chargeTypeId!));
     final moduleName = nameAsync.when(
-      data: (name) => name,
-      loading: () => module.typeName,
-      error: (error, stack) => module.typeName,
+      data: (name) => _displayItemName(name, fallback: module.typeName),
+      loading: () =>
+          _displayItemName(module.typeName, fallback: 'Unknown item'),
+      error: (error, stack) =>
+          _displayItemName(module.typeName, fallback: 'Unknown item'),
     );
     final chargeName = chargeNameAsync?.when(
-      data: (name) => name,
-      loading: () => module.chargeName ?? 'Type #${module.chargeTypeId}',
+      data: (name) => _displayItemName(name, fallback: module.chargeName),
+      loading: () =>
+          _displayItemName(module.chargeName, fallback: 'Unknown item'),
       error: (error, stack) =>
-          module.chargeName ?? 'Type #${module.chargeTypeId}',
+          _displayItemName(module.chargeName, fallback: 'Unknown item'),
     );
     return Row(
       children: [
@@ -1420,9 +1473,9 @@ class _InventoryTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final nameAsync = ref.watch(itemNameProvider(item.typeId));
     final name = nameAsync.when(
-      data: (value) => value,
-      loading: () => 'Type #${item.typeId}',
-      error: (error, stack) => 'Type #${item.typeId}',
+      data: (value) => _displayItemName(value, fallback: 'Unknown item'),
+      loading: () => 'Unknown item',
+      error: (error, stack) => 'Unknown item',
     );
     return Row(
       children: [
@@ -1454,23 +1507,19 @@ class _StatChip extends StatelessWidget {
           color: (color ?? Theme.of(context).colorScheme.primary).withAlpha(70),
         ),
       ),
-      child: RichText(
-        text: TextSpan(
-          style: DefaultTextStyle.of(context).style,
-          children: [
-            TextSpan(
-              text: '$label ',
-              style: TextStyle(
-                color: Colors.white.withAlpha(150),
-                fontSize: 12,
-              ),
-            ),
-            TextSpan(
-              text: value,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-            ),
-          ],
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(color: Colors.white.withAlpha(150), fontSize: 12),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+          ),
+        ],
       ),
     );
   }

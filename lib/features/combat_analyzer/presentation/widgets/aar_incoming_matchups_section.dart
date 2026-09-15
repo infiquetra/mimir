@@ -253,7 +253,7 @@ class _AarIncomingMatchupsSectionState
                   style: const TextStyle(color: EveColors.warning),
                 ),
               ),
-            if (_aggregateExpanded && bundle.aggregateDefense.ehp != null)
+            if (bundle.aggregateDefense.ehp != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(

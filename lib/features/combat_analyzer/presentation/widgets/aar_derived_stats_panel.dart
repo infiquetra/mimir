@@ -57,7 +57,7 @@ class AarDerivedStatsPanel extends ConsumerWidget {
                           ),
                         ),
                         loading: () => const Text('Loading...'),
-                        error: (_, _) => Text('Ship #${derivation.shipTypeId}'),
+                        error: (_, _) => const Text('Unknown ship'),
                       ),
                       Text(
                         title,

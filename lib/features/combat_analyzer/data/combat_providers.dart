@@ -449,6 +449,8 @@ final aarIncomingMatchupsProvider =
       AarFitDerivation? pilotFit;
       FitEvidence? pilotFitEvidence;
       fitAsync.when(
+        skipLoadingOnReload: true,
+        skipLoadingOnRefresh: true,
         data: (value) {
           pilotFit = value.self;
           defenseStatus = AarIncomingDependencyStatus.ready;
@@ -460,6 +462,8 @@ final aarIncomingMatchupsProvider =
         },
       );
       enrichmentAsync.when(
+        skipLoadingOnReload: true,
+        skipLoadingOnRefresh: true,
         data: (value) {
           if (pilotFit?.fitSource == EvidenceSource.killmail) {
             pilotFitEvidence = value?.victimFitEvidence;
