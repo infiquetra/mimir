@@ -93,18 +93,25 @@ class AarFitCoverage {
   ) {
     return AarFitCoverage(
       highFitted: fitting.highSlots.length,
-      highSlots: ship.highSlots,
+      highSlots: _dynamicSlotCapacity(ship.highSlots, fitting.highSlots.length),
       medFitted: fitting.medSlots.length,
-      medSlots: ship.medSlots,
+      medSlots: _dynamicSlotCapacity(ship.medSlots, fitting.medSlots.length),
       lowFitted: fitting.lowSlots.length,
-      lowSlots: ship.lowSlots,
+      lowSlots: _dynamicSlotCapacity(ship.lowSlots, fitting.lowSlots.length),
       rigFitted: fitting.rigSlots.length,
-      rigSlots: ship.rigSlots,
+      rigSlots: _dynamicSlotCapacity(ship.rigSlots, fitting.rigSlots.length),
       subsystemFitted: fitting.subsystems.length,
-      subsystemSlots: 0,
+      subsystemSlots: _dynamicSlotCapacity(0, fitting.subsystems.length),
       unresolvedTypeIds: unresolved.keys.toList(),
       unresolvedNames: unresolved.values.toList(),
     );
+  }
+
+  /// Tengu-like hulls can gain slots from subsystems. A raw base count of
+  /// zero must not treat fitted modules as overflowing an empty hull.
+  static int _dynamicSlotCapacity(int hullSlots, int fitted) {
+    if (hullSlots > 0) return hullSlots;
+    return fitted;
   }
 }
 

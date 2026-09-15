@@ -74,12 +74,12 @@ class AarComparisonFrame {
   final String key;
   final Map<String, CombatFitComputation> columns;
 
-  /// Naive: publishes any result, including late keys.
   bool publish(
     String resultKey,
     String columnId,
     CombatFitComputation computation,
   ) {
+    if (resultKey != key) return false;
     columns[columnId] = computation;
     return true;
   }
@@ -98,25 +98,26 @@ class AarComparisonFrame {
   }
 }
 
-/// Compile stub for W4. GREEN uses shared ehpAgainst, one skill context,
-/// tagged cap comparison, and late-result rejection.
 class AarComparisonMetrics {
-  /// Naive: always projects Omni stored EHP, ignoring [pattern].
   static LayeredEhp ehpFor(DefenseProfile defenses, DamagePattern pattern) {
-    return LayeredEhp(
-      pattern: pattern,
-      shield: defenses.shieldEhp,
-      armor: defenses.armorEhp,
-      hull: defenses.hullEhp,
-    );
+    return defenses.ehpAgainst(pattern);
   }
 
   static AarMetricValue delta(double baseline, double target) {
+    if (!_finite(baseline) || !_finite(target)) {
+      return const AarMetricValue(
+        availability: AarMetricAvailability.unavailable,
+      );
+    }
     return AarMetricValue(value: target - baseline);
   }
 
-  /// Naive: divides even when baseline is 0 / nonfinite.
   static AarMetricValue percentDelta(double baseline, double target) {
+    if (!_finite(baseline) || !_finite(target) || baseline <= 0) {
+      return const AarMetricValue(
+        availability: AarMetricAvailability.unavailable,
+      );
+    }
     return AarMetricValue(value: (target - baseline) / baseline);
   }
 
@@ -124,27 +125,60 @@ class AarComparisonMetrics {
     double baselineFraction,
     double targetFraction,
   ) {
-    return AarMetricValue(value: (targetFraction - baselineFraction) * 100);
+    if (!_finite(baselineFraction) || !_finite(targetFraction)) {
+      return const AarMetricValue(
+        availability: AarMetricAvailability.unavailable,
+      );
+    }
+    return AarMetricValue(
+      value: (targetFraction - baselineFraction) * 100,
+      unit: 'pp',
+    );
   }
 
-  static String formatEhp(double value) => value.toString();
+  static String formatEhp(double value) {
+    final n = value.round();
+    final sign = n < 0 ? '-' : '';
+    final digits = n.abs().toString();
+    final buf = StringBuffer(sign);
+    for (var i = 0; i < digits.length; i++) {
+      if (i > 0 && (digits.length - i) % 3 == 0) buf.write(',');
+      buf.write(digits[i]);
+    }
+    return buf.toString();
+  }
 
-  static String formatPercent(double fraction) => '${fraction * 100}';
+  static String formatPercent(double fraction) {
+    if (!_finite(fraction)) return '—';
+    return '${(fraction * 100).toStringAsFixed(1)}%';
+  }
 
-  static String formatResistPp(double points) => points.toString();
+  static String formatResistPp(double points) {
+    if (!_finite(points)) return '—';
+    final n = points.round();
+    final sign = n > 0 ? '+' : '';
+    return '$sign$n pp';
+  }
 
-  /// Naive: subtracts overloaded capacitorStable scalars.
   static String capTransition({
     required FittingStats baseline,
     required FittingStats target,
   }) {
-    return (target.capacitorStable - baseline.capacitorStable).toString();
+    if (!baseline.isCapStable && target.isCapStable) {
+      return 'Depleting → Modeled stable';
+    }
+    if (baseline.isCapStable && !target.isCapStable) {
+      return 'Modeled stable → Depleting';
+    }
+    if (baseline.isCapStable && target.isCapStable) {
+      return '${baseline.capacitorStable.round()}% → ${target.capacitorStable.round()}%';
+    }
+    return '${baseline.capacitorStable.round()}s → ${target.capacitorStable.round()}s';
   }
 
-  static String sustainedRepairLabel(FittingStats stats) => 'Modeled';
+  static String sustainedRepairLabel(FittingStats stats) => 'Not modeled';
 
-  static double weaponVolley(FittingStats stats) =>
-      stats.volley + stats.dpsDrones + stats.dpsFighters;
+  static double weaponVolley(FittingStats stats) => stats.volley;
 
   static bool constraintsLegal(FittingStats stats) {
     return stats.cpuUsed <= stats.cpuMax &&
@@ -157,11 +191,12 @@ class AarComparisonMetrics {
     required bool opponentColumn,
     int? characterId,
   }) {
-    if (opponentColumn) {
-      return const AarSkillContext(basis: AarSkillBasis.allFive, skills: []);
-    }
     if (cachedPilotSkills.isEmpty) {
-      return const AarSkillContext(basis: AarSkillBasis.allFive, skills: []);
+      return AarSkillContext(
+        basis: AarSkillBasis.allFive,
+        skills: const [],
+        characterId: characterId,
+      );
     }
     return AarSkillContext(
       basis: AarSkillBasis.knownCharacter,
@@ -174,6 +209,9 @@ class AarComparisonMetrics {
     AarSkillContext skills, {
     required bool opponentColumn,
   }) {
+    if (opponentColumn) {
+      return 'Modeled with comparison skills; opponent skills unknown';
+    }
     return skills.label;
   }
 
@@ -182,22 +220,87 @@ class AarComparisonMetrics {
     required CombatFitComputation computation,
     required AarComparisonContext context,
   }) {
-    final cpuExcess = computation.stats.cpuUsed > computation.stats.cpuMax;
+    final unknownCharge = snapshot.knowledge.occurrences.any(
+      (occurrence) => occurrence.charge == ChargeKnowledge.unknown,
+    );
+    final unknownModules = _hasUnknownModules(snapshot);
+    final missingDroneFighter = _missingDroneFighterKnowledge(snapshot);
+    final offenseIncomplete = unknownCharge || missingDroneFighter;
+    final constraintWarning = !constraintsLegal(computation.stats);
+    final qualified = unknownModules || offenseIncomplete;
     return AarComputationQualification(
-      availability: AarMetricAvailability.available,
-      confidentImprovement: true,
-      offenseIncomplete: false,
-      constraintWarning: false,
-      invalid: cpuExcess,
-      limitations: [if (cpuExcess) 'Fitting exceeds CPU and is invalid'],
+      availability: qualified
+          ? AarMetricAvailability.partial
+          : AarMetricAvailability.available,
+      confidentImprovement: !qualified,
+      offenseIncomplete: offenseIncomplete,
+      constraintWarning: constraintWarning,
+      invalid: false,
+      limitations: [
+        if (unknownCharge) 'Loaded charges are unknown',
+        if (unknownModules) 'Unresolved or omitted modules qualify these stats',
+        if (constraintWarning) 'Fitting exceeds CPU/PG/calibration budget',
+      ],
     );
   }
 
   static List<DroneGroup> canonicalDrones(List<DroneGroup> drones) {
-    return List<DroneGroup>.from(drones);
+    final copy = List<DroneGroup>.from(drones);
+    copy.sort((a, b) {
+      final type = a.typeId.compareTo(b.typeId);
+      if (type != 0) return type;
+      final space = a.inSpace.compareTo(b.inSpace);
+      if (space != 0) return space;
+      final bay = a.inBay.compareTo(b.inBay);
+      if (bay != 0) return bay;
+      return a.quantity.compareTo(b.quantity);
+    });
+    return copy;
   }
 
   static List<FighterGroup> canonicalFighters(List<FighterGroup> fighters) {
-    return List<FighterGroup>.from(fighters);
+    final copy = List<FighterGroup>.from(fighters);
+    copy.sort((a, b) {
+      final type = a.typeId.compareTo(b.typeId);
+      if (type != 0) return type;
+      final space = a.inSpace.compareTo(b.inSpace);
+      if (space != 0) return space;
+      return a.quantity.compareTo(b.quantity);
+    });
+    return copy;
+  }
+
+  static bool _finite(double value) => value.isFinite && !value.isNaN;
+
+  static bool _hasUnknownModules(AarFitSnapshot snapshot) {
+    if (snapshot.knowledge.unplacedEntries.isNotEmpty) return true;
+    const moduleGroups = {
+      FitInventoryGroup.high,
+      FitInventoryGroup.mid,
+      FitInventoryGroup.low,
+      FitInventoryGroup.rigs,
+      FitInventoryGroup.subsystems,
+    };
+    for (final group in moduleGroups) {
+      final info = snapshot.knowledge.group(group);
+      if (info.applicability == GroupApplicability.notApplicable) continue;
+      if (info.completeness == InventoryCompleteness.unknown ||
+          info.completeness == InventoryCompleteness.partial) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static bool _missingDroneFighterKnowledge(AarFitSnapshot snapshot) {
+    for (final group in [
+      FitInventoryGroup.drones,
+      FitInventoryGroup.fighters,
+    ]) {
+      final info = snapshot.knowledge.group(group);
+      if (info.applicability == GroupApplicability.notApplicable) continue;
+      if (info.completeness == InventoryCompleteness.unknown) return true;
+    }
+    return false;
   }
 }

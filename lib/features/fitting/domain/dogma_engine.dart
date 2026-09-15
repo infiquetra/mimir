@@ -235,11 +235,32 @@ class DogmaEngine {
     Map<int, List<EffectModifier>> effectModifiers = const {},
     Map<int, ModuleType> skillTypes = const {},
   }) async {
+    final detailed = await calculateDetailedStats(
+      fitting,
+      shipType,
+      moduleTypes,
+      characterSkills,
+      effectModifiers: effectModifiers,
+      skillTypes: skillTypes,
+    );
+    return detailed.stats;
+  }
+
+  /// Stats plus diagnostic facts for comparison and availability.
+  Future<DogmaDetailedStats> calculateDetailedStats(
+    Fitting fitting,
+    ShipType shipType,
+    Map<String, ModuleType> moduleTypes,
+    List<CharacterSkill> characterSkills, {
+    Map<int, List<EffectModifier>> effectModifiers = const {},
+    Map<int, ModuleType> skillTypes = const {},
+  }) async {
     Log.d(
       'DOGMA',
       'Calculating stats for fitting: ${fitting.name} '
           'skillTypes=${skillTypes.length}',
     );
+    final diagnostics = <String>[];
 
     // 1. Attribute pipeline: ship base attributes, then character skills,
     //    then module effects. Everything below reads from this map so a
@@ -1190,7 +1211,19 @@ class DogmaEngine {
     );
 
     // 6. Build Stats Object.
-    return FittingStats(
+    if (cpuUsed > cpuMax) {
+      diagnostics.add('Fitting exceeds CPU budget.');
+    }
+    if (powerUsed > powerMax) {
+      diagnostics.add('Fitting exceeds power budget.');
+    }
+    if (calibrationUsed > calibrationMax) {
+      diagnostics.add('Fitting exceeds calibration budget.');
+    }
+    if (capCapacity > 0 && capRecharge > 0) {
+      diagnostics.add('Capacitor horizon 3600s; injector clips are infinite.');
+    }
+    final stats = FittingStats(
       cpuUsed: cpuUsed,
       cpuMax: cpuMax,
       powerUsed: powerUsed,
@@ -1235,5 +1268,13 @@ class DogmaEngine {
       fighterHeavyMax: fighterHeavyMax,
       fighterSquadrons: fighterSquadrons,
     );
+    return DogmaDetailedStats(stats: stats, diagnostics: diagnostics);
   }
+}
+
+class DogmaDetailedStats {
+  const DogmaDetailedStats({required this.stats, this.diagnostics = const []});
+
+  final FittingStats stats;
+  final List<String> diagnostics;
 }
