@@ -1,6 +1,7 @@
 import 'package:mimir/features/combat_analyzer/domain/aar_evidence_assessment.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_evidence_scorer.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
+import 'package:mimir/features/combat_analyzer/domain/combat_attacker_correlation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_damage_profile.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_evidence_ledger.dart';
@@ -200,6 +201,7 @@ CombatEnrichment enrichment({
   String matchReason = 'ESI recent killmail within the encounter window.',
   String parsedEncounterId = 'enc-1',
   CombatEnrichmentSource source = CombatEnrichmentSource.esiRecent,
+  AttackerCorrelation? attackerCorrelation,
 }) {
   return CombatEnrichment(
     parsedEncounterId: parsedEncounterId,
@@ -213,6 +215,7 @@ CombatEnrichment enrichment({
     killmailSearchCompleted: killmailSearchCompleted,
     pilotFitEvidence: pilotFitEvidence,
     victimFitEvidence: victimFitEvidence,
+    attackerCorrelation: attackerCorrelation,
   );
 }
 

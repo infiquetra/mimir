@@ -2,11 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_evidence_assessment.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_evidence_scorer.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
+import 'package:mimir/features/combat_analyzer/domain/combat_attacker_correlation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_evidence_ledger.dart';
 import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.dart';
 
 import '../fixtures/aar_evidence_fixtures.dart';
+import '../fixtures/attacker_correlation_fixtures.dart';
 
 void main() {
   group('Group B — dimension evaluators', () {
@@ -698,6 +700,125 @@ void main() {
       expect(withS1Bundle.actions, withEmptyBundle.actions);
     });
   });
+
+  group('Group F — opponent identity correlation suffix', () {
+    test(
+      'T6.1 D4 unchanged when user is victim even with confirmed correlations',
+      () {
+        final without = s1bInputs();
+        final withCorrelation = _withCorrelation(without, correlate(s2Loss()));
+        final d4Without = AarEvidenceScorer.opponentFit(without);
+        final d4With = AarEvidenceScorer.opponentFit(withCorrelation);
+        expect(d4With.status, d4Without.status);
+        expect(d4With.detail, d4Without.detail);
+      },
+    );
+
+    test('T6.2 D3 detail enumerates correlated attackers', () {
+      final result = AarEvidenceScorer.opponentIdentity(
+        aarInputs(
+          enrichmentRow: enrichment(attackerCorrelation: correlate(s2Loss())),
+        ),
+      );
+      expect(result.status, AarEvidenceStatus.complete);
+      expect(
+        result.detail,
+        contains(
+          '; 3 of 3 log actors identified on the killmail '
+          '(Artem S3 confirmed, Kite Mondeo confirmed, Sabre probable)',
+        ),
+      );
+      expect(
+        result.detail,
+        contains('; attacker hulls known, fits not exposed by killmails'),
+      );
+    });
+
+    test('T6.3 D3/D4 unchanged when user is attacker', () {
+      final without = s1Inputs();
+      final withCorrelation = _withCorrelation(without, correlate(s1Kill()));
+      final d3Without = AarEvidenceScorer.opponentIdentity(without);
+      final d3With = AarEvidenceScorer.opponentIdentity(withCorrelation);
+      final d4Without = AarEvidenceScorer.opponentFit(without);
+      final d4With = AarEvidenceScorer.opponentFit(withCorrelation);
+      expect(d3With.status, d3Without.status);
+      expect(d4With.status, d4Without.status);
+      expect(d4With.detail, d4Without.detail);
+      expect(
+        d3With.detail,
+        contains(
+          '; 1 of 1 log actors identified on the killmail (Vex Kalari confirmed)',
+        ),
+      );
+      expect(
+        d3With.detail,
+        isNot(contains('attacker hulls known, fits not exposed by killmails')),
+      );
+    });
+
+    test('T6.4 completeness score unchanged by correlation', () {
+      const scorer = AarEvidenceScorer();
+      final s1b = s1bInputs();
+      expect(
+        scorer.assess(_withCorrelation(s1b, correlate(s2Loss()))).score,
+        scorer.assess(s1b).score,
+      );
+      final s1 = s1Inputs();
+      expect(
+        scorer.assess(_withCorrelation(s1, correlate(s1Kill()))).score,
+        scorer.assess(s1).score,
+      );
+      final s7 = s7Inputs();
+      expect(
+        scorer.assess(_withCorrelation(s7, correlate(s2Loss()))).score,
+        scorer.assess(s7).score,
+      );
+    });
+
+    test('T6.5 all Milestone 3 scorer tests still pass unchanged', () {
+      final result = AarEvidenceScorer.opponentIdentity(aarInputs());
+      expect(
+        result.detail,
+        'Killmail #1234567 matched (92%), victim Target Pilot',
+      );
+      expect(result.status, AarEvidenceStatus.complete);
+    });
+
+    test('F.6 no new actions are introduced', () {
+      final cases = [
+        (s1Inputs(), correlate(s1Kill())),
+        (s1bInputs(), correlate(s2Loss())),
+        (s7Inputs(), correlate(s2Loss())),
+      ];
+      for (final (without, correlation) in cases) {
+        final withCorrelation = _withCorrelation(without, correlation);
+        final withoutRows = _evaluateAll(without);
+        final withRows = _evaluateAll(withCorrelation);
+        expect(withRows.length, withoutRows.length);
+        for (var i = 0; i < withoutRows.length; i++) {
+          expect(
+            withRows[i].actions,
+            withoutRows[i].actions,
+            reason:
+                '${withoutRows[i].dimension.name} actions changed by correlation',
+          );
+        }
+      }
+    });
+  });
+}
+
+AarEvidenceInputs _withCorrelation(
+  AarEvidenceInputs inputs,
+  AttackerCorrelation correlation,
+) {
+  return AarEvidenceInputs(
+    encounter: inputs.encounter,
+    enrichment: inputs.enrichment!.copyWith(attackerCorrelation: correlation),
+    bundle: inputs.bundle,
+    incoming: inputs.incoming,
+    outgoing: inputs.outgoing,
+  );
 }
 
 CombatEnrichment _searchedNoKillmail(String reason) {
