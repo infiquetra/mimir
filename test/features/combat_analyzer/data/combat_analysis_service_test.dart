@@ -176,6 +176,7 @@ void main() {
       'derivedFits',
       'damageMatchups',
       'compactEvidence',
+      'fitComparisonInput',
     };
 
     Future<
@@ -404,6 +405,7 @@ void main() {
       'derivedFits',
       'damageMatchups',
       'compactEvidence',
+      'fitComparisonInput',
     };
 
     FakeCodexAnalysisClient fakeClient() {
