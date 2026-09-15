@@ -27,6 +27,26 @@ class WindowService {
 
   /// Map of window type to its controller (if open).
   final Map<WindowType, WindowController> _windows = {};
+  final Set<WindowType> _debugOpen = {};
+
+  /// Test seam: when set, [openWindow] skips native window creation.
+  @visibleForTesting
+  Future<void> Function(WindowType type)? debugCreateHook;
+
+  @visibleForTesting
+  int debugCreateCalls = 0;
+
+  @visibleForTesting
+  int debugShowCalls = 0;
+
+  @visibleForTesting
+  void debugReset() {
+    _windows.clear();
+    _debugOpen.clear();
+    debugCreateHook = null;
+    debugCreateCalls = 0;
+    debugShowCalls = 0;
+  }
 
   /// Initializes the window manager for the main window.
   ///
@@ -60,6 +80,17 @@ class WindowService {
       // Show the main window if hidden
       await windowManager.show();
       await windowManager.focus();
+      return;
+    }
+
+    if (debugCreateHook != null) {
+      debugCreateCalls += 1;
+      await debugCreateHook!(type);
+      if (_debugOpen.contains(type)) {
+        debugShowCalls += 1;
+        return;
+      }
+      _debugOpen.add(type);
       return;
     }
 
@@ -118,6 +149,11 @@ class WindowService {
     }
   }
 
+  /// Hides a window without destroying its controller.
+  ///
+  /// Naive X7: aliases [closeWindow] so reopen recreates the engine.
+  Future<void> hideWindow(WindowType type) => closeWindow(type);
+
   /// Closes a window of the specified type.
   Future<void> closeWindow(WindowType type) async {
     if (type == WindowType.main) {
@@ -125,6 +161,7 @@ class WindowService {
       return;
     }
 
+    _debugOpen.remove(type);
     final controller = _windows.remove(type);
     if (controller != null) {
       try {
@@ -141,7 +178,7 @@ class WindowService {
     if (type == WindowType.main) {
       return true; // Main window is always "open" (running)
     }
-    return _windows.containsKey(type);
+    return _windows.containsKey(type) || _debugOpen.contains(type);
   }
 
   /// Returns all currently open window types.

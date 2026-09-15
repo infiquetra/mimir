@@ -11,18 +11,25 @@ void main() {
       expect(WindowType.characters.defaultSize, (width: 1200.0, height: 800.0));
       expect(WindowType.settings.defaultSize, (width: 500.0, height: 450.0));
       expect(WindowType.onboarding.defaultSize, (width: 800.0, height: 600.0));
+      expect(WindowType.exploration.defaultSize, (
+        width: 1440.0,
+        height: 900.0,
+      ));
+      expect(WindowType.exploration.title, 'Exploration');
     });
 
     test('windowId maps correctly', () {
       expect(WindowType.main.windowId, 0);
       expect(WindowType.dashboard.windowId, 1);
       expect(WindowType.skills.windowId, 2);
+      expect(WindowType.exploration.windowId, 14);
     });
 
     test('fromId reconstructs window type', () {
       expect(WindowTypeExtension.fromId(0), WindowType.main);
       expect(WindowTypeExtension.fromId(1), WindowType.dashboard);
       expect(WindowTypeExtension.fromId(2), WindowType.skills);
+      expect(WindowTypeExtension.fromId(14), WindowType.exploration);
     });
   });
 }

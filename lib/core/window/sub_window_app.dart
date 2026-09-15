@@ -19,6 +19,7 @@ import '../../features/skills/presentation/skills_screen.dart';
 import '../../features/wallet/presentation/wallet_screen.dart';
 import '../../features/intel/presentation/kill_feed_screen.dart';
 import '../../features/combat_analyzer/presentation/encounter_list_screen.dart';
+import '../../features/exploration/presentation/exploration_screen.dart';
 import '../auth/auth_providers.dart';
 import '../sde/sde_providers.dart';
 import '../theme/app_theme.dart';
@@ -50,6 +51,9 @@ class SubWindowApp extends ConsumerStatefulWidget {
   /// Expected format: `{"windowType": 1}` where the number is
   /// the [WindowType.windowId].
   final String windowArgs;
+
+  /// Naive X7: every sub-window waits on the global SDE initializer.
+  static bool waitsForGlobalSde(WindowType type) => true;
 
   @override
   ConsumerState<SubWindowApp> createState() => _SubWindowAppState();
@@ -178,6 +182,17 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
   Widget build(BuildContext context) {
     // Initialize SDE for skill name lookups
     final sdeAsync = ref.watch(sdeInitializerProvider);
+    if (!SubWindowApp.waitsForGlobalSde(_windowType)) {
+      return MaterialApp(
+        title: _windowType.title,
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.darkTheme(),
+        home: _SubWindowScaffold(
+          windowType: _windowType,
+          child: _buildScreen(_windowType),
+        ),
+      );
+    }
 
     return MaterialApp(
       title: _windowType.title,
@@ -240,6 +255,8 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
         return const KillFeedScreen();
       case WindowType.combatAnalyzer:
         return const EncounterListScreen();
+      case WindowType.exploration:
+        return const ExplorationScreen();
     }
   }
 }

@@ -16,6 +16,11 @@ void main() {
       }
     });
 
+    test('exploration window and tray icons are present', () {
+      expect(File(WindowType.exploration.iconAsset).existsSync(), isTrue);
+      expect(File('assets/icons/tray/exploration.png').existsSync(), isTrue);
+    });
+
     test('every tray menu icon referenced in tray_service exists', () {
       final source = File('lib/core/tray/tray_service.dart').readAsStringSync();
       final pattern = RegExp(r"'(assets/icons/tray/[A-Za-z0-9_@.]+\.png)'");

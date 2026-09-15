@@ -50,6 +50,9 @@ enum WindowType {
 
   /// AI Combat/Battle Analyzer for parsing local game logs.
   combatAnalyzer,
+
+  /// Exploration window (wormhole database, highways, notebook, routes).
+  exploration,
 }
 
 /// Extension methods for [WindowType].
@@ -85,6 +88,8 @@ extension WindowTypeExtension on WindowType {
         return 'Live Intel - Mimir';
       case WindowType.combatAnalyzer:
         return 'Combat Analyzer - Mimir';
+      case WindowType.exploration:
+        return 'Explore - Mimir';
     }
   }
 
@@ -121,6 +126,8 @@ extension WindowTypeExtension on WindowType {
         return 12;
       case WindowType.combatAnalyzer:
         return 13;
+      case WindowType.exploration:
+        return 99;
     }
   }
 
@@ -155,6 +162,8 @@ extension WindowTypeExtension on WindowType {
         return WindowType.intel;
       case 13:
         return WindowType.combatAnalyzer;
+      case 99:
+        return WindowType.exploration;
       default:
         return WindowType.dashboard;
     }
@@ -191,6 +200,8 @@ extension WindowTypeExtension on WindowType {
         return (width: 800, height: 900);
       case WindowType.combatAnalyzer:
         return (width: 1200, height: 800);
+      case WindowType.exploration:
+        return (width: 800, height: 600);
     }
   }
 
@@ -228,6 +239,8 @@ extension WindowTypeExtension on WindowType {
         return 'assets/icons/eve/intel.png';
       case WindowType.combatAnalyzer:
         return 'assets/icons/eve/intel.png'; // shares the intel glyph
+      case WindowType.exploration:
+        return 'assets/icons/eve/exploration.png';
     }
   }
 }
