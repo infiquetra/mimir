@@ -37,7 +37,7 @@
 - Unit W4: `CombatFitDeriver.deriveFitting` neutral computation without fake evidence, `DogmaEngine.calculateDetailedStats`, common `AarComparisonContext`, `AarComparisonFrame` with late-result rejection, F3/F4 oracles at domain precision.
 - Unit W5: `MarketRepository` batch methods, `AarPriceEstimate` (averagePrice only, stale quotes >= 24h), `IskEstimateAmount`, `AarCachedAssetMatch` loose hangar stock matching with baseline exclusion, price-only refresh without asset sync.
 - Unit W6: `AarFitComparisonWorkspace`, `AarFitComparisonCard`, `AarFitComparisonTable`, `AarFitBomView`, `AarProposalDialog` wired to `AnalysisMultiPaneScreen` pre-analysis and post-analysis; `LayoutBuilder` on usable content width; zero horizontal overflow at 320px/200%; non-color badges; formula-free UI; exact §8.4 snackbar copy.
-- Unit W7: Full verification across 1,071 unit and widget tests, static analysis clean, formatting clean.
+- Unit W7: Full verification across 1,070 passing (+14 skipped; 1 pre-existing Skills golden failure, also failing on develop), static analysis clean, formatting clean.
 **Rejected alternatives.** In-line widget stat calculations; storing comparison data in the pilot evidence ledger; mutating evidence on comparison views; skipping pagination validation during capture.
 **Rationale.** Strict separation of evidence from comparison, domain-level neutral calculations, and immutable input freezes ensure historical truth, multi-character safety, and resilient desktop and mobile UI rendering.
 **Refs.** LEARNINGS 2026-09-15; ARCHIVE 2026-09-15; docs/specs/aar-fit-comparison-visuals.md; docs/specs/aar-fit-comparison-visuals-design.md; .agents/plans/2026-09-15-aar-fit-comparison-visuals.md.
