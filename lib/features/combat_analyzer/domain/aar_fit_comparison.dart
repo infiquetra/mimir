@@ -1,9 +1,6 @@
-import '../../fitting/domain/models.dart';
 import 'aar_fit_snapshot.dart';
 import 'combat_aar_report.dart';
 
-/// Compile stub for W0 selection/context/generation types.
-/// GREEN implements identity-aware P05 selection and absent-key tolerance.
 enum AarComparisonRole {
   fightFit,
   currentSnapshot,
@@ -44,6 +41,10 @@ class AarComparisonSourceEntry {
   final String label;
   final Set<AarComparisonRole> aliasedRoles;
   final bool isHistoricalFallback;
+
+  bool get aliasesFightFit =>
+      role == AarComparisonRole.victim &&
+      aliasedRoles.contains(AarComparisonRole.fightFit);
 }
 
 class AarComparisonSources {
@@ -80,8 +81,6 @@ class AarComparisonSources {
       fightFit != null &&
       fightFit!.aliasedRoles.contains(AarComparisonRole.victim);
 
-  /// Naive killmail-first selection: victim wins fight-fit, unknown identity
-  /// still falls back, reference is promoted, own-loss is not collapsed.
   factory AarComparisonSources.resolve({
     required int? encounterPilotId,
     bool identityKnown = true,
@@ -93,16 +92,33 @@ class AarComparisonSources {
     AarFitSnapshot? reference,
     List<AarFitSnapshot> proposals = const [],
   }) {
+    final identifiedOwnLoss =
+        identityKnown &&
+        !isVictory &&
+        victim != null &&
+        victim.subject.identityKnown &&
+        (encounterPilotId == null ||
+            victim.subject.characterId == encounterPilotId);
+    final fightSnapshot =
+        generationBaseline ??
+        attachedPilot ??
+        (identifiedOwnLoss ? victim : null);
+    final collapsedOwnLoss =
+        identifiedOwnLoss &&
+        fightSnapshot != null &&
+        fightSnapshot.snapshotId == victim.snapshotId;
+
     final entries = <AarComparisonSourceEntry>[];
-    final fight = victim ?? attachedPilot ?? generationBaseline ?? reference;
-    if (fight != null) {
+    if (fightSnapshot != null) {
       entries.add(
         AarComparisonSourceEntry(
-          id: fight.snapshotId,
+          id: fightSnapshot.snapshotId,
           role: AarComparisonRole.fightFit,
-          snapshot: fight,
+          snapshot: fightSnapshot,
           label: 'Fight fit',
-          isHistoricalFallback: identical(fight, reference),
+          aliasedRoles: collapsedOwnLoss
+              ? const {AarComparisonRole.victim}
+              : const {},
         ),
       );
     }
@@ -116,13 +132,13 @@ class AarComparisonSources {
         ),
       );
     }
-    if (victim != null) {
+    if (victim != null && !collapsedOwnLoss) {
       entries.add(
         AarComparisonSourceEntry(
           id: victim.snapshotId,
           role: AarComparisonRole.victim,
           snapshot: victim,
-          label: 'Victim',
+          label: 'Victim fit',
         ),
       );
     }
@@ -132,7 +148,7 @@ class AarComparisonSources {
           id: reference.snapshotId,
           role: AarComparisonRole.reference,
           snapshot: reference,
-          label: 'Fight fit',
+          label: 'Pilot reference fit',
         ),
       );
     }
@@ -148,8 +164,8 @@ class AarComparisonSources {
     }
     return AarComparisonSources(
       entries: entries,
-      legacyGenerationMissing: false,
-      requiresExplicitBaselineSelection: false,
+      legacyGenerationMissing: generationBaseline == null,
+      requiresExplicitBaselineSelection: fightSnapshot == null,
     );
   }
 }
@@ -177,8 +193,6 @@ class AarComparisonSelection {
   }
 }
 
-/// Naive generation binder. GREEN returns null when the report JSON has no
-/// `fitComparisonAtGeneration` key and never synthesizes type-id-0 content.
 class AarFitGenerationRecord {
   const AarFitGenerationRecord({this.selfBaseline, this.reason});
 
@@ -186,20 +200,15 @@ class AarFitGenerationRecord {
   final String? reason;
 
   static AarFitGenerationRecord? fromReportJson(Map<String, dynamic> json) {
+    if (!json.containsKey('fitComparisonAtGeneration')) {
+      return null;
+    }
+    final raw = json['fitComparisonAtGeneration'];
+    if (raw is! Map) return null;
+    final map = Map<String, dynamic>.from(raw);
     return AarFitGenerationRecord(
-      selfBaseline: AarFitSnapshot(
-        snapshotId: 'mock-generation',
-        encounterId: json['encounterId']?.toString() ?? 'mock',
-        fitting: const Fitting(
-          id: 'mock',
-          name: 'Mock Generation Fit',
-          shipTypeId: 0,
-          shipName: 'Mock',
-        ),
-        source: AarFitSource.evidenceAttachment,
-        subject: const AarFitSubject(relation: AarFitSubjectRelation.pilot),
-      ),
-      reason: 'legacy-inferred',
+      selfBaseline: map.isEmpty ? null : AarFitSnapshot.fromJson(map),
+      reason: map['reason']?.toString(),
     );
   }
 
