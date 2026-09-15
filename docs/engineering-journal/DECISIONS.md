@@ -24,47 +24,21 @@
 
 ---
 
-## 2026-09-14
+## 2026-09-15
 
-### Milestone 5 canonical allocation and local composition (technical design only)
+### Milestone 5 canonical allocation, per-attacker defense matchup, and UI integration (commits: 699df14, 1554125, 19cc519)
 
-**Author.** Technical Architect.
-**Decision.** Use plain immutable combat models and reduced BigInt rational components,
-canonicalized from loaded SDE decimal values. Allocate full incoming events once before
-identity grouping; reuse one pilot-fit snapshot with an explicit local-only effect
-lookup policy. Keep M5 bundles/evidence overlays in memory and serialize exact quantities
-plus explicit defense results under optional v4 `damageMatchups.perAttackerIncoming`.
-Expose local Damage content before AI. Implementation remains queued.
-**Rejected alternatives.** Rounded integer components as calculation inputs; separate
-aggregate/source resolvers; per-card fitting derivation; persisted live M5 bundles;
-network fallback during quantitative local views.
-**Rationale.** These boundaries preserve source/type conservation, independent identity
-and coverage confidence, coherent fit provenance and historical AI reports.
-**Revisit when.** Additional telemetry supports attribution, durable derived-result
-caching is justified, or M4 producers stamp original event lineage.
-**Refs.** [Technical contracts and TDD gates](../specs/aar-per-attacker-matchup-design.md);
-[Product contract](../specs/aar-per-attacker-matchup.md);
-[queued implementation](QUEUED.md#per-attacker-incoming-damage-profile-and-matchup).
-
-### Milestone 5 product contract for per-attacker incoming matchups (specification only)
-
-**Author.** Product.
-**Decision.** Adopt the [Milestone 5 specification](../specs/aar-per-attacker-matchup.md):
-derive incoming profiles per source with lossless fractional component accounting;
-show named defense cards for Confirmed/Probable correlations; retain Possible damage
-under Unattributed for matchup without mutating Milestone 4. Keep untyped amounts and
-coverage explicit. Use the pilot's defense, including victim return fire on won fights.
-Supply deterministic results through an optional additive v4 input block while
-preserving historical AI reports. Implementation remains queued.
-**Rejected alternatives.** Aggregate profiles assigned to named attackers; identity
-confidence used as proof of damage-type accuracy; integer-rounded components fed back
-into EHP; automatic report regeneration.
-**Rationale.** Each named comparison needs its own observed weapon mix and inspectable
-assumptions. Rounding must not invent a damage profile for small logged amounts.
-**Revisit when.** Technical design finds a conflict with the numbered product rules,
-or new telemetry supports stronger damage-type or actor ownership evidence.
-**Refs.** [Specification §§3, 5, 8](../specs/aar-per-attacker-matchup.md);
-[queued implementation](QUEUED.md#per-attacker-incoming-damage-profile-and-matchup).
+**Author.** Antigravity / Lead Orchestrator
+**Decision.**
+1. **Exact rational allocation & pure deriver:** Plain immutable Dart domain models using `DamageQuantity` reduced BigInt rational components canonicalized from SDE decimal values without floating-point drift. Strict conservation: `C_a + C_X + C_N == C_aggregate` and `sum(C) + U == T`.
+2. **Attacker eligibility & partition:** Confirmed and Probable sources receive individual matchup cards; `shipType` actors capped at Probable; Possible matches placed in Unattributed (X) without mutating M4 correlation; NPC actors placed in NPC (N); unobserved killmail participants retained in footer.
+3. **Defense derivation & anti-average:** Pilot fit defense snapshot (`AarDerivationBundle.self`) compared against each attacker's incoming profile. Rejects the averaged EHP fallacy.
+4. **Local-only composition & additive prompt:** Local SDE and database queries only via `EffectLookupPolicy.localOnly` on fitting loader; single-write concurrency guard on `ensureAttackerCorrelation`. Optional additive `damageMatchups.perAttackerIncoming` in prompt schema v4 without output schema mutation.
+5. **Unified UI & report-optional Damage tab:** `AarIncomingMatchupsSection` replaces standalone correlation ranking as the single incoming source ranking; Damage tab available pre-analysis; overview with aggregate reference and positiveSources > 1 blend advisory; 2-column responsive layout >=720px; zero raw EVE IDs.
+**Rejected alternatives.** Rounded integer components as calculation inputs; separate aggregate/source resolvers; per-card fitting derivation; persisted live M5 bundles; network fallback during quantitative local views; assigning aggregate blend profiles to named attackers.
+**Rationale.** Preserves exact conservation, independent identity and coverage confidence, coherent fit provenance, and historical AI reports.
+**Revisit when.** Additional telemetry supports attribution or durable derived-result caching is justified.
+**Refs.** [Technical contracts and TDD gates](../specs/aar-per-attacker-matchup-design.md); [Product contract](../specs/aar-per-attacker-matchup.md); [Implementation plan](../../.agents/plans/2026-09-14-aar-per-attacker-matchup.md); ARCHIVE SHIPPED 2026-09-15.
 
 ### 2026-09-14
 

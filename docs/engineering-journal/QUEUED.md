@@ -77,17 +77,6 @@ enrichment storage together.
 `test/features/combat_analyzer/domain/combat_fit_snapshot_mapper_test.dart`;
 `.codex/plans/2026-05-21-combat-analyzer-aar.md`.
 
-### Per-attacker incoming damage profile and matchup
-
-**Author.** Antigravity / Lead Orchestrator
-**Priority.** P2
-**Effort.** Two to three days.
-**Worth it when.** Users want to see individual weapon profiles, hole pressure, and EHP calculations against specific fleet attackers rather than solely the aggregate blend.
-**Context.** Shipped Milestone 4 correlates each combat-log actor with their killmail participant and warns when the aggregate incoming profile is a blend across multiple attackers (`aar-matchup-blend-advisory`). De-aggregating the combat log into per-attacker damage profiles will enable discrete matchup cards per confirmed/probable attacker.
-**Specification.** [Milestone 5 product contract](../specs/aar-per-attacker-matchup.md) completed 2026-09-14; implementation remains queued. Defines fractional damage conservation, Confirmed/Probable cards, explicit residual/coverage accounting, and additive v4 evidence.
-**Technical design.** [Milestone 5 architecture](../specs/aar-per-attacker-matchup-design.md) defines reduced-rational allocation, validated identity partition, shared local pilot defense, report-optional Damage cards, and U1–U4 with all 28 criteria mapped. Design completion does not mark the feature shipped.
-**Refs.** docs/specs/aar-zkill-attacker-correlation.md D4; docs/specs/aar-zkill-attacker-correlation-design.md §10; `lib/features/combat_analyzer/domain/combat_attacker_correlation.dart`.
-
 ### Fit comparison visuals for AAR reports
 
 **Author.** Codex

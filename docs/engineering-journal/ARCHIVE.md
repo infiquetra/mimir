@@ -9,6 +9,18 @@
 
 ---
 
+### SHIPPED 2026-09-15: Per-Attacker Incoming Damage Profile and Defense Matchup
+
+**Author.** Antigravity / Lead Orchestrator
+**Shipped as.** Split the aggregate incoming damage profile into per-attacker damage profiles and defense matchups using Milestone 4's attacker correlation in Combat Analyzer:
+- Exact rational allocation: `DamageQuantity` reduced BigInt rationals (GCD in factory, lossless fraction arithmetic, SDE decimal parsing without float inaccuracy), `IncomingDamageVector`, and `IncomingDamageAllocator` guaranteeing exact damage conservation (`C_a + C_X + C_N == C_aggregate` and `sum(C) + U == T`).
+- Pure domain partition and deriver: `AarAttackerMatchupDeriver`, `IncomingDamageMatchup`, and `AarIncomingMatchupBundle`. Only Confirmed and Probable attackers receive discrete matchup cards; shipType actors capped at Probable; Possible matches placed in Unattributed (X) residual bucket without mutating Milestone 4 correlation; NPC actors placed in NPC (N) residual bucket; unobserved killmail participants retained in dedicated footer.
+- Defense matchup derivation: each card compares the specific attacker's incoming profile against the pilot's fit defense snapshot (`AarDerivationBundle.self`), calculating layered EHP, omni reference, and primary resist hole. Rejected the averaged EHP fallacy (weighted average of attacker EHPs is mathematically distinct from aggregate EHP).
+- Local-only data pipeline: `CombatDamageProfileResolver.resolveIncomingAllocation` with per-distinct-weapon memoization; `CombatFitDerivationService.deriveFitsForEncounter` and `composeMatchups` decoupling fit derivation from damage profile loading; `EffectLookupPolicy.localOnly` on fitting input loading preventing network I/O during snapshot evaluation; single-write concurrency guard in `ensureAttackerCorrelation`.
+- Additive prompt v4: `CodexAnalysisClient` adds optional `damageMatchups.perAttackerIncoming` JSON block with rational string numerators/denominators, finite doubles for derived EHP, and updated system instructions recognizing M5 fields without output schema mutations.
+- Presentation: `AarIncomingMatchupsSection` and `AarAttackerMatchupCard` providing one unified incoming ranking with stable encounter-scoped expansion state; overview panel with total incoming T, coverage K/T, attributed share, and global U; collapsed aggregate defense reference with blend advisory when positive sources > 1; report-optional Damage tab pre-analysis; responsive 2-column layout for >=720px; zero raw EVE numeric IDs.
+**Refs.** LEARNINGS 2026-09-15; DECISIONS 2026-09-15; QUEUED.md; docs/specs/aar-per-attacker-matchup.md; docs/specs/aar-per-attacker-matchup-design.md; .agents/plans/2026-09-14-aar-per-attacker-matchup.md.
+
 ### SHIPPED 2026-09-14: Correlate zKill Attackers with Combat-Log Actors
 
 **Author.** Antigravity / Lead Orchestrator

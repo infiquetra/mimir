@@ -29,6 +29,29 @@
 
 ---
 
+## 2026-09-15
+
+### The Averaged EHP Fallacy in Fleet Engagements
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** In multi-attacker encounters where attackers use different weapon damage types (e.g. Jackdaw EM/Kinetic missiles and Hurricane Explosive/Kinetic projectiles), an intuitive but mathematically false heuristic is to calculate a damage-share weighted average of the individual attacker EHPs: `share_1 * EHP_1 + share_2 * EHP_2`.
+**Evidence.** Fixture A in `test/features/combat_analyzer/fixtures/attacker_matchup_fixtures.dart`: Kite deals 6,000 damage (60%) at 75/0/25/0 (EHP = 1,176.47), Artem deals 4,000 damage (40%) at 0/0/25/75 (EHP = 1,428.57). The damage-share weighted average is `0.6 * 1176.470588 + 0.4 * 1428.571429 = 1277.31`. However, true aggregate EHP against the combined 45/0/25/30 profile is `1000 / (0.45*1.0 + 0*0.8 + 0.25*0.4 + 0.30*0.8) = 1000 / 0.79 = 1265.82`.
+**Mechanism.** EHP is a harmonic/nonlinear function: `hp / Σ p_t(1 - r_t)`. The harmonic mean of fractions does not equal the arithmetic mean of the results. Weighted averages of EHP numbers underestimate damage taken and overestimate survivability against concentrated hole pressure.
+**Fix.** Shipped in Milestone 5: every attacker card computes EHP independently against that attacker's specific weapon profile. The aggregate reference computes true harmonic EHP against the combined profile. Unit 1 test `D15 Fixture A oracle rejects share-weighted average EHP` explicitly asserts that the aggregate EHP is not equal to the share-weighted average.
+**Generalizable rule.** Never compute arithmetic averages or interpolations of EHP across multiple profiles; always sum the underlying damage vectors or calculate harmonic EHP directly from the composite pattern.
+**Refs.** docs/specs/aar-per-attacker-matchup-design.md §5.2; `lib/features/combat_analyzer/domain/aar_attacker_matchup_deriver.dart`.
+
+### Exact Rational Accounting Eliminates Multi-Weapon Epsilon Drift
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** Combat encounters frequently contain events with small damage quantities (e.g. 1 damage from an autocannon hit or drone shot) distributed across up to four damage types by SDE decimal proportions.
+**Evidence.** In `test/features/combat_analyzer/domain/incoming_damage_allocation_test.dart`, dividing 1 damage evenly across 4 types yields repeating fractions (0.25). Scaling across hundreds of events with standard IEEE-754 `double` causes fractional cents to drift, causing `sum(components) == total` to fail on exact integer checks.
+**Mechanism.** Floating-point arithmetic cannot represent base-10 decimals or fractions like 1/3, 1/6, or 1/7 without truncation error. Repeated addition of rounded floats causes cumulative drift that breaks strict accounting invariants (`C_a + C_X + C_N == C_aggregate`).
+**Fix.** Implemented `DamageQuantity` as a canonical reduced BigInt rational `(numerator, denominator)` with GCD reduction on construction. All vector additions, multiplications, and distributions in `IncomingDamageAllocator` operate strictly in rational space. Floating-point conversions only occur at the final display boundary (`toFiniteDouble`).
+**Validation.** Unit 1 tests verify exact rational equality without epsilon tolerances across all multi-weapon scenarios, scale factors, and residual partitions.
+**Generalizable rule.** Use rational representation for proportional multi-attribute accounting where subcomponents must sum exactly to the parent whole.
+**Refs.** `lib/features/combat_analyzer/domain/incoming_damage_allocation.dart`.
+
 ## 2026-09-14
 
 ### Local AAR fitting composition has a hidden effect lookup dependency
