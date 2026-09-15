@@ -61,31 +61,6 @@ and render an explicit disconnected state when there is none.
 **Refs.** commit removing `lib/features/intel/data/mapper_client.dart`;
 `lib/features/intel/presentation/kill_feed_screen.dart`.
 
-### Fit comparison visuals for AAR reports
-
-**Author.** Codex
-**Priority.** P2
-**Effort.** Re-estimate against the Product specification; the earlier one-to-three-day
-estimate predates the required snapshot/proposal data contracts.
-**Worth it when.** Fit evidence and derived fit stats are available enough to
-make visual deltas more accurate than prose.
-**Context.** The user wants AARs to show current fit, fight-time fit, killmail
-victim fit, and recommended changes side by side with module icons, stats, and
-bill-of-materials style recommendations.
-**Status.** Product specification complete; implementation and verification pending.
-The contract separates current/proposed snapshots from fight evidence, binds new
-reports to their original fit, defines common-context stats and qualified BOMs,
-and supplies 30 acceptance criteria with 46 concrete test cases.
-**Architecture handoff.** [Technical design](../specs/aar-fit-comparison-visuals-design.md)
-completed 2026-09-15 against Product commit `2fe995c`. Defines snapshot/completeness
-models, separate owned JSON slots and evidence projection, actual generation-input
-binding, neutral calculations, deterministic diffs/BOM, provider/UI seams and W0–W7
-RED/GREEN/reviewer/tester ownership. Independent architecture reviews passed;
-implementation and runtime acceptance remain queued.
-**Refs.** [Product specification](../specs/aar-fit-comparison-visuals.md);
-`lib/features/combat_analyzer/presentation/analysis_multipane_screen.dart`;
-`lib/features/fitting/presentation/widgets/fitting_editor.dart`.
-
 ## P3 - Nice To Have
 
 ### Reference fits for correlated hulls

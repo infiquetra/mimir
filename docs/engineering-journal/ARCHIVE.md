@@ -9,6 +9,21 @@
 
 ---
 
+### SHIPPED 2026-09-15: Fit Comparison Visuals for AAR Reports
+
+**Author.** Antigravity / Lead Orchestrator
+**Shipped as.** Complete end-to-end delivery of the fit comparison visuals feature in Combat Analyzer across all units W0–W7, satisfying AC1–AC30 with full verification across 46 test cases (D01–D16, P01–P14, U01–U16, oracles F1–F5):
+- Contracts & fixture harness (W0): `AarFitSnapshot`, `AarFitProposal`, `AarComparisonContext`, `FitGroupKnowledge`, canonical content/calculation fingerprints (`AarFitFingerprint`), deep copying, and F1–F5 fixture baseline.
+- Owned storage & source acquisition (W1): `CombatEnrichment.fitComparison` owned slot with field-scoped CAS (`compareAndSetFitComparison`), anti-ABA replacement, SQLite busy retry, `CurrentShipFitReader` with strict pagination, `AarFitComparisonService`, and evidence-isolation invariants (`evidencePacketPresent` prevents score corruption).
+- Generation & proposal contract (W2): `CombatAarReport.fitComparisonAtGeneration` + `fitCandidates`, `PreparedAarComparisonInput` frozen before AI await (protects historical truth from concurrent F-new capture), and local candidate structural validation.
+- Deterministic diff & BOM (W3): `FitInventoryDiff` and `FitBillOfMaterials` implementing §5.2 matching (exact multiset cancel -> same-type canonical pairing -> equal recorded physical slot replacement on same hull -> Added/Removed, with zero synthetic replacements across hulls), global physical counts, cross-group netting (cargo-to-slot A buys 0 A), and incomplete baseline warnings.
+- Neutral calculation & metrics (W4): `CombatFitDeriver.deriveFitting` neutral computation without fake evidence; `DogmaEngine.calculateDetailedStats`; `AarComparisonContext` (single frozen skill basis for all columns); `AarComparisonFrame` with late-result rejection; F3/F4 oracles at domain precision (EM/Omni/M5 EHP, cap transition labeled 'Depleting → Modeled stable', raw HP/s burst/peak tank, sustained Not modeled); and canonical deployment sorting.
+- Prices & cached spares (W5): `MarketRepository` batch read/watch by type-ID set; `AarPriceEstimate` (averagePrice only, stale quotes >= 24h); `IskEstimateAmount` decimal math; `AarCachedAssetMatch` loose hangar stock matching scoped strictly to encounter character with baseline exclusion; and price-only refresh retaining cache on failure without asset sync.
+- Read-only workspace & dialogs (W6): `AarFitComparisonWorkspace`, `AarFitComparisonCard`, `AarFitComparisonTable`, `AarFitBomView`, and `AarProposalDialog` wired into `AnalysisMultiPaneScreen` pre-analysis ('Compare fits' button) and post-analysis ('Fits' tab); `LayoutBuilder` on usable content width (≥1440, 1000–1439, 720–999, <720) with text-scale derating; zero horizontal overflow at 320px/200%; non-color badges; formula-free UI; exact §8.4 snackbar copy; and unmounted lifecycle safety.
+- Full verification & closeout (W7): All 1,071 unit and widget tests passing, static analysis clean (0 issues), formatting clean (0 modified), and full gate approvals from `reviewer` (Muse) and `tester` (Codex).
+**Refs.** LEARNINGS 2026-09-15; DECISIONS 2026-09-15; QUEUED.md; docs/specs/aar-fit-comparison-visuals.md; docs/specs/aar-fit-comparison-visuals-design.md; .agents/plans/2026-09-15-aar-fit-comparison-visuals.md.
+
+
 ### SHIPPED 2026-09-15: AAR Fit Import and Capture UI Tests and Defect Remediation
 
 **Author.** Antigravity / Lead Orchestrator

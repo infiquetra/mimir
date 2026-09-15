@@ -26,6 +26,23 @@
 
 ## 2026-09-15
 
+### Implementation and delivery of fit comparison visuals (Units W0–W7)
+
+**Author.** Antigravity / Lead Orchestrator
+**Decision.** Complete and verify the implementation of all seven units W0–W7 for the fit comparison visuals feature:
+- Unit W0: snapshot and proposal contracts, content and calculation fingerprints (`AarFitFingerprint`), immutable deep copying, F1–F5 fixtures.
+- Unit W1: owned storage on `CombatEnrichment.fitComparison` with field-scoped CAS, `CurrentShipFitReader` with strict pagination, `AarFitComparisonService`, and evidence isolation (`evidencePacketPresent` prevents score corruption).
+- Unit W2: `CombatAarReport.fitComparisonAtGeneration` + `fitCandidates`, `PreparedAarComparisonInput` frozen before AI await, local structural candidate validation.
+- Unit W3: `FitInventoryDiff` and `FitBillOfMaterials`, §5.2 matching algorithm, cross-group netting, physical counts, unquantified advice list, H/H2 oracles.
+- Unit W4: `CombatFitDeriver.deriveFitting` neutral computation without fake evidence, `DogmaEngine.calculateDetailedStats`, common `AarComparisonContext`, `AarComparisonFrame` with late-result rejection, F3/F4 oracles at domain precision.
+- Unit W5: `MarketRepository` batch methods, `AarPriceEstimate` (averagePrice only, stale quotes >= 24h), `IskEstimateAmount`, `AarCachedAssetMatch` loose hangar stock matching with baseline exclusion, price-only refresh without asset sync.
+- Unit W6: `AarFitComparisonWorkspace`, `AarFitComparisonCard`, `AarFitComparisonTable`, `AarFitBomView`, `AarProposalDialog` wired to `AnalysisMultiPaneScreen` pre-analysis and post-analysis; `LayoutBuilder` on usable content width; zero horizontal overflow at 320px/200%; non-color badges; formula-free UI; exact §8.4 snackbar copy.
+- Unit W7: Full verification across 1,071 unit and widget tests, static analysis clean, formatting clean.
+**Rejected alternatives.** In-line widget stat calculations; storing comparison data in the pilot evidence ledger; mutating evidence on comparison views; skipping pagination validation during capture.
+**Rationale.** Strict separation of evidence from comparison, domain-level neutral calculations, and immutable input freezes ensure historical truth, multi-character safety, and resilient desktop and mobile UI rendering.
+**Refs.** LEARNINGS 2026-09-15; ARCHIVE 2026-09-15; docs/specs/aar-fit-comparison-visuals.md; docs/specs/aar-fit-comparison-visuals-design.md; .agents/plans/2026-09-15-aar-fit-comparison-visuals.md.
+
+
 ### Fit comparison architecture separates source storage, evidence projection and computation
 
 **Author.** Technical Architect.

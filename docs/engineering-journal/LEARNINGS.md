@@ -31,6 +31,27 @@
 
 ## 2026-09-15
 
+### Subagent prompt-wait race conditions require explicit working-state gating
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** During orchestrator waits for `test-author` and `dev-3` using Herdr CLI.
+**Evidence.** `herdr agent wait <agent>` exited in 0ms with status `done`/`idle` because the agent was in `done` or `idle` status from its previous task, before the agent process could transition to `working`.
+**Mechanism.** `herdr agent wait <target>` without `--until` matches `idle`, `done`, or `blocked`. When called immediately after `herdr agent prompt`, the subagent's status in Herdr's detection loop is still `idle` or `done` from the prior completed turn for a brief window (~100–500ms). The waiter immediately succeeds against the pre-existing state and returns 0 before the agent begins executing the new prompt.
+**Fix.** Wrap in a two-stage waiter: `sh -c 'herdr agent wait <target> --until working --timeout 15000 || true; herdr agent wait <target>'`. The first command waits for the agent to actively enter the `working` state (or times out gracefully if already done), and the second waits for the transition to `done`/`idle`/`blocked`.
+**Validation.** Tested across Units W3, W4, W5, and W6 without a single premature wait exit or race condition.
+**Generalizable rule.** Waiters against event-driven state machines must never match the initial/resting state without first asserting a transition away from it.
+
+### Exact multiset cancellation eliminates order-dependent replacement illusions
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** Unit W3 inventory diff implementation in `AarFitInventoryDiff`.
+**Evidence.** Shuffled high slot modules `[A(X), A(Y)]` vs `[A(Y), A(X)]` in `aar_fit_diff_bom_test.dart` D01–D03.
+**Mechanism.** Compact EFT slot indices (0..N-1) convey only order within a slot group, not physical slot identity. Zip-by-index creates false slot replacements (`replaced`) and fictitious purchase recommendations.
+**Fix.** Follow §5.2: first cancel identical `(type, charge, state)` multisets one-for-one regardless of position. Only remaining same-type entries pair by recorded physical slot (if recorded) or canonical total order (charge knowledge/ID, state enum, slot, ordinal). Different-type pairing requires equal recorded physical slots on the same hull; different hulls never synthesize slot replacements.
+**Validation.** All D01–D07 permutation suites and extended total-order tests passed.
+**Generalizable rule.** Logical inventories without hardware slot guarantees must be diffed as multisets, not ordered sequences.
+
+
 ### Comparison isolation includes first writes and read-triggered backfill
 
 **Author.** Technical Architect.
