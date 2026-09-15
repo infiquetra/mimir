@@ -1,4 +1,42 @@
-# Project: Mimir — AAR fit comparison visuals Product specification
+# Project: Mimir — AAR fit comparison visuals technical design
+Date: 2026-09-15
+Checkpoint: 2026-09-15-aar-fit-comparison-visuals-design
+
+## Overview
+
+Analyze Product and current code, write the complete technical design, and commit
+as requested. Application implementation remains out of this documentation task.
+
+## Tasks
+
+- [x] [P1] Ground source/history, calculation/diff and UI/storage seams.
+- [x] [SEQ] Write models, algorithms, provider/persistence and UI contracts.
+- [x] [SEQ] Map TDD ownership to all Product ACs and test scenarios.
+- [x] [P2] Independently review and verify arithmetic, messages, links and traceability.
+- [x] [SEQ] Update README/journal while retaining queued implementation status.
+- [x] [CHECKPOINT] Save completion state and commit documentation.
+
+## Notes
+
+[Canonical plan](../.codex/plans/2026-09-15-aar-fit-comparison-visuals-design.md).
+The user's request explicitly authorizes writing and committing this design.
+
+## Review
+
+Completed the [technical design](../docs/specs/aar-fit-comparison-visuals-design.md)
+against `2fe995c`: immutable source/knowledge models, independent comparison storage
+and evidence projection, generation history, additive proposals, shared neutral
+Dogma computation, exact diff/BOM contracts, real provider/UI seams and W0–W7 gates.
+Two independent reviews passed after clarifying knowledge qualification, fallback
+history, observer races, cache-only profile choices, cancellation and asset overlap
+proof. Verified both directions of all 30 AC mappings, all 46 cases, six scenarios,
+12 feedback strings, F2/F3 arithmetic, JSON examples, links and table structure.
+README/journal retain pending implementation status. No application code changed
+and no Flutter runtime suites ran for this architecture delivery.
+
+---
+
+# Completed: Mimir — AAR fit comparison visuals Product specification
 Date: 2026-09-15
 Checkpoint: 2026-09-15-aar-fit-comparison-visuals-product
 

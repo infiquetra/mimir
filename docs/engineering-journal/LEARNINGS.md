@@ -31,6 +31,27 @@
 
 ## 2026-09-15
 
+### Comparison isolation includes first writes and read-triggered backfill
+
+**Author.** Technical Architect.
+**Context.** Source review for the fit comparison architecture at `2fe995c`.
+**Evidence.** `AarEvidenceScorer._identityKind` distinguishes null/no-character from
+a log-only row; `combatAttackerCorrelationProvider` can call a writing backfill;
+the enrichment service's optional commit callback is not injected by its production
+provider. Independent windows open separate SQLite connections.
+**Mechanism.** Saving only comparison data can still change the checklist if a new
+row is mistaken for evidence. Watching an apparently read-only M5 dependency can
+write correlation/ledger data, and local provider invalidation cannot notify another
+window. These are separate from the shipped attachment workflow's local tests.
+**Fix (queued).** [Design §§3 and 6](../specs/aar-fit-comparison-visuals-design.md)
+specifies explicit evidence projection/content distinctness, cache-only profile choices,
+stable commit publication, and race-safe local external-change observation. W1/W6
+tests cover first-row/no-character isolation, legacy backfill and two connections.
+**Validation.** Independent source/design reviews passed; document mappings and
+fixtures checked. No application changes or runtime tests in this delivery.
+**Generalizable rule.** Read-only feature isolation depends on provider side effects
+and row-presence semantics, not just which visible field the new code writes.
+
 ### AAR fit visual seams do not yet preserve independent source inventories
 
 **Author.** Product.

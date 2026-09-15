@@ -76,6 +76,12 @@ bill-of-materials style recommendations.
 The contract separates current/proposed snapshots from fight evidence, binds new
 reports to their original fit, defines common-context stats and qualified BOMs,
 and supplies 30 acceptance criteria with 46 concrete test cases.
+**Architecture handoff.** [Technical design](../specs/aar-fit-comparison-visuals-design.md)
+completed 2026-09-15 against Product commit `2fe995c`. Defines snapshot/completeness
+models, separate owned JSON slots and evidence projection, actual generation-input
+binding, neutral calculations, deterministic diffs/BOM, provider/UI seams and W0–W7
+RED/GREEN/reviewer/tester ownership. Independent architecture reviews passed;
+implementation and runtime acceptance remain queued.
 **Refs.** [Product specification](../specs/aar-fit-comparison-visuals.md);
 `lib/features/combat_analyzer/presentation/analysis_multipane_screen.dart`;
 `lib/features/fitting/presentation/widgets/fitting_editor.dart`.

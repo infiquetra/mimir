@@ -26,6 +26,28 @@
 
 ## 2026-09-15
 
+### Fit comparison architecture separates source storage, evidence projection and computation
+
+**Author.** Technical Architect.
+**Decision.** Adopt the [technical design](../specs/aar-fit-comparison-visuals-design.md):
+owned comparison JSON slots with field-scoped CAS; explicit evidence projection for
+comparison-only rows; immutable report input records and locally validated optional
+candidates; neutral Dogma computation qualified by source knowledge; pure multiset
+diffs and physical BOMs with separate cached-price/asset annotations. Wire stable
+commit publication and local cross-window observation; profile selection stays read-only.
+**Rejected alternatives.** Reusing pilot evidence for current/reference snapshots;
+deriving source completeness from empty Freezed lists or default stats; attributing
+proposal calculations as evidence; treating service-local locks as cross-window
+storage protection; using different asset IDs alone as proof of disjoint spare stock.
+**Rationale.** Source history, deterministic values and availability claims have
+different authorities. Preserve report v3/input v4 without a Drift migration while
+preventing comparison-only writes from changing evidence or scoring.
+**Revisit when.** Historical numerical replay, authoritative inventory provenance,
+new parser syntax or independent durable comparison history becomes required.
+**Refs.** [Product contract](../specs/aar-fit-comparison-visuals.md);
+[queued initiative](QUEUED.md#fit-comparison-visuals-for-aar-reports).
+Architecture delivery only; W0–W7 and runtime verification remain pending.
+
 ### AAR fit comparisons preserve source snapshots and shared calculation assumptions
 
 **Author.** Product.
