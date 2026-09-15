@@ -22,7 +22,10 @@ import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.da
 import 'package:mimir/features/combat_analyzer/domain/tank_classifier.dart';
 import 'package:mimir/features/fitting/domain/models.dart';
 
+import '../fixtures/aar_evidence_fixtures.dart';
+import '../fixtures/aar_fit_import_fixtures.dart';
 import '../fixtures/attacker_correlation_fixtures.dart';
+import '../fixtures/fit_evidence_harness.dart';
 
 void main() {
   group('CombatEnrichmentService.attachDerivedEvidence', () {
@@ -450,6 +453,100 @@ void main() {
         isNotEmpty,
         reason: 'logged lines were: $lines',
       );
+    });
+  });
+
+  group('T13–T20 captureCurrentPilotFit storage', () {
+    late FitEvidenceHarness harness;
+
+    setUp(() async {
+      harness = FitEvidenceHarness();
+      await harness.setUp();
+    });
+
+    tearDown(() async {
+      await harness.tearDown();
+    });
+
+    test('T15 invalid x-pages does not keep page-one inventory', () async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      harness.scriptCharacterShip();
+      harness.scriptAssetPage(
+        characterId: FitEvidenceHarness.characterAId,
+        page: 1,
+        body: aarFittedPage1(),
+        xPages: 'nope',
+      );
+      await expectLater(
+        harness.enrichmentService.captureCurrentPilotFit(
+          encounter,
+          confirmed: true,
+        ),
+        throwsA(isA<Object>()),
+      );
+      expect(await harness.repository.loadEnrichment(encounter.id), isNull);
+    });
+
+    test(
+      'T18 confirmed empty inventory persists the no-modules limitation',
+      () async {
+        final encounter = encounterWith(
+          characterId: FitEvidenceHarness.characterAId,
+        );
+        harness.scriptFittedCapture(emptyInventory: true);
+        final saved = await harness.enrichmentService.captureCurrentPilotFit(
+          encounter,
+          confirmed: true,
+        );
+        expect(saved.pilotFitEvidence!.fitting.allModules, isEmpty);
+        expect(
+          saved.pilotFitEvidence!.limitations,
+          contains(kAarEmptyModulesLimitation),
+        );
+      },
+    );
+
+    test('T17 ship HTTP 401 collapses to no-ship, not reauthorize', () async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      harness.scriptCharacterShip(statusCode: 401);
+      await expectLater(
+        harness.enrichmentService.captureCurrentPilotFit(
+          encounter,
+          confirmed: true,
+        ),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            'ESI did not return a current ship.',
+          ),
+        ),
+      );
+      expect(
+        harness.esiAdapter.requests.where(
+          (r) => r.uri.path.contains('/assets'),
+        ),
+        isEmpty,
+      );
+    });
+
+    test('T17 missing token is an explicit 401 before HTTP', () async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      await harness.tokenManager.deleteTokens(FitEvidenceHarness.characterAId);
+      await expectLater(
+        harness.enrichmentService.captureCurrentPilotFit(
+          encounter,
+          confirmed: true,
+        ),
+        throwsA(isA<EsiException>().having((e) => e.statusCode, 'status', 401)),
+      );
+      expect(harness.esiAdapter.requests, isEmpty);
     });
   });
 }

@@ -85,6 +85,102 @@ const kAarLocalDataUiMessage =
 const kAarDirectHullMessage =
     'Unable to resolve the pasted fit. Paste an EFT fit with a known ship and modules.';
 
+const kAarCaptureSuccessMessage =
+    'Current fit confirmed for this AAR. Re-analyze to include it.';
+
+const kAarCaptureEmptySuccessMessage =
+    'Current fit confirmed for this AAR. No fitted modules were returned. Re-analyze to include it.';
+
+const kAarCaptureReferenceMessage =
+    'Current fit snapshot saved as reference evidence.';
+
+const kAarCaptureNoCharacterUi =
+    'Unable to capture fit: This log is not linked to an authenticated character.';
+
+const kAarCaptureAuthUi =
+    'Unable to capture fit: Reauthorize this character and try again.';
+
+const kAarCaptureNoShipUi =
+    'Unable to capture fit: ESI did not return a current ship. Try again or import a fit.';
+
+const kAarCaptureAssetsUi =
+    'Unable to capture fit: Character assets could not be loaded. Try again or import a fit.';
+
+const kAarCaptureSaveUi =
+    'Unable to capture fit: The snapshot could not be saved. Try again.';
+
+const kAarEmptyModulesLimitation =
+    'No fitted modules were returned for the current ship.';
+
+const kAarShipItemId = 100001;
+const kAarModuleItemId = 200001;
+const kAarChargeItemId = 200002;
+const kAarDroneItemId = 200003;
+const kAarOtherShipItemId = 999999;
+const kAarOtherModuleItemId = 300001;
+const kAarShipBTypeId = 9020;
+const kAarShipBItemId = 100002;
+
+Map<String, dynamic> aarAssetJson({
+  required int itemId,
+  required int typeId,
+  required int locationId,
+  required String flag,
+  int quantity = 1,
+  bool singleton = true,
+}) {
+  return {
+    'item_id': itemId,
+    'type_id': typeId,
+    'quantity': quantity,
+    'location_id': locationId,
+    'location_flag': flag,
+    'is_singleton': singleton,
+  };
+}
+
+List<Map<String, dynamic>> aarFittedPage1({int shipItemId = kAarShipItemId}) {
+  return [
+    aarAssetJson(
+      itemId: kAarModuleItemId,
+      typeId: 2048,
+      locationId: shipItemId,
+      flag: 'LoSlot0',
+    ),
+  ];
+}
+
+List<Map<String, dynamic>> aarFittedPage2({
+  int shipItemId = kAarShipItemId,
+  bool unrelated = true,
+}) {
+  return [
+    aarAssetJson(
+      itemId: kAarChargeItemId,
+      typeId: 185,
+      locationId: kAarModuleItemId,
+      flag: 'HiSlot0',
+      quantity: 250,
+      singleton: false,
+    ),
+    aarAssetJson(
+      itemId: kAarDroneItemId,
+      typeId: 2456,
+      locationId: shipItemId,
+      flag: 'DroneBay',
+      quantity: 5,
+      singleton: false,
+    ),
+    if (unrelated)
+      aarAssetJson(
+        itemId: kAarOtherModuleItemId,
+        typeId: 5973,
+        locationId: kAarOtherShipItemId,
+        flag: 'MedSlot0',
+      ),
+  ];
+}
+
 /// Structurally faithful local SDE for AAR import tests.
 Future<void> seedAarImportSde(SdeDatabase sdeDb) async {
   await sdeDb.upsertCategories([

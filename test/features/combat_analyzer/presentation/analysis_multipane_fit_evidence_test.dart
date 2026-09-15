@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_enrichment_repository.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_evidence_ledger.dart';
+import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.dart';
 import 'package:mimir/features/fitting/domain/models.dart';
 import 'package:mimir/features/combat_analyzer/presentation/analysis_multipane_screen.dart';
 import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_evidence_checklist_card.dart';
@@ -381,4 +382,392 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  Future<void> tapUseCurrentFit(WidgetTester tester) async {
+    await harness.waitFor(tester, useCurrentFit);
+    await tester.ensureVisible(useCurrentFit);
+    await tester.tap(useCurrentFit);
+    await tester.pump();
+  }
+
+  Future<void> pumpCaptureScreen(
+    WidgetTester tester,
+    ParsedCombatEncounter encounter, {
+    bool cached = false,
+  }) async {
+    if (cached) await harness.seedCachedReport(encounter);
+    await harness.pumpScreen(tester, encounter: encounter);
+  }
+
+  testWidgets(
+    'T13 confirmed capture from pre-analysis awaits save and exact success',
+    (tester) async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      final releaseShip = Completer<void>();
+      harness.scriptFittedCapture(delayShip: releaseShip.future);
+      await pumpCaptureScreen(tester, encounter);
+      await tapUseCurrentFit(tester);
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(find.text(kAarCaptureSuccessMessage), findsNothing);
+      expect(await harness.repository.loadEnrichment(encounter.id), isNull);
+      releaseShip.complete();
+      await harness.waitFor(tester, find.text(kAarCaptureSuccessMessage));
+      expect(find.text(kAarCaptureSuccessMessage), findsOneWidget);
+      final reloaded = await harness.repository.loadEnrichment(encounter.id);
+      expect(reloaded, isNotNull);
+      expect(reloaded!.pilotFitEvidence, isNotNull);
+      expect(
+        reloaded.pilotFitEvidence!.source,
+        EvidenceSource.currentShipSnapshot,
+      );
+      expect(
+        reloaded.pilotFitEvidence!.confidence,
+        EvidenceConfidence.confirmed,
+      );
+      expect(reloaded.pilotFitEvidence!.role, FitEvidenceRole.pilot);
+      expect(reloaded.pilotFitEvidence!.fitting.shipTypeId, 587);
+      expect(reloaded.pilotFitEvidence!.fitting.lowSlots.single.typeId, 2048);
+      expect(reloaded.pilotFitEvidence!.fitting.highSlots, isEmpty);
+      expect(
+        reloaded.pilotFitEvidence!.fitting.lowSlots.single.chargeTypeId,
+        185,
+      );
+      expect(reloaded.pilotFitEvidence!.fitting.drones.single.quantity, 5);
+      expect(harness.repository.saveCalls, 1);
+      expect(harness.codex.calls, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'T13 confirmed capture from a cached AAR uses the same success copy',
+    (tester) async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      harness.scriptFittedCapture();
+      await pumpCaptureScreen(tester, encounter, cached: true);
+      await tapUseCurrentFit(tester);
+      await harness.waitFor(tester, find.text(kAarCaptureSuccessMessage));
+      expect(find.text(kAarCaptureSuccessMessage), findsOneWidget);
+      final reloaded = await harness.repository.loadEnrichment(encounter.id);
+      expect(reloaded!.pilotFitEvidence!.fitting.shipTypeId, 587);
+      expect(
+        reloaded.pilotFitEvidence!.fitting.lowSlots.single.chargeTypeId,
+        185,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'T14 capture uses encounter A, both asset pages, and keeps the nested charge',
+    (tester) async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      await harness.activateCharacter(FitEvidenceHarness.characterBId);
+      harness.scriptFittedCapture(twoPages: true, unrelated: true);
+      await pumpCaptureScreen(tester, encounter);
+      await tapUseCurrentFit(tester);
+      await harness.waitFor(tester, find.text(kAarCaptureSuccessMessage));
+      final paths = harness.esiAdapter.requests.map((r) => r.uri.path).toList();
+      expect(
+        paths.any(
+          (p) =>
+              p.contains('/characters/${FitEvidenceHarness.characterAId}/ship'),
+        ),
+        isTrue,
+      );
+      expect(
+        paths.where(
+          (p) => p.contains(
+            '/characters/${FitEvidenceHarness.characterAId}/assets',
+          ),
+        ),
+        hasLength(2),
+      );
+      expect(
+        paths.any(
+          (p) => p.contains('/characters/${FitEvidenceHarness.characterBId}/'),
+        ),
+        isFalse,
+      );
+      final pages = harness.esiAdapter.requests
+          .where((r) => r.uri.path.contains('/assets'))
+          .map((r) => r.queryParameters['page'])
+          .toSet();
+      expect(pages, containsAll([1, 2]));
+      final reloaded = await harness.repository.loadEnrichment(encounter.id);
+      expect(reloaded!.pilotFitEvidence!.fitting.lowSlots.single.typeId, 2048);
+      expect(
+        reloaded.pilotFitEvidence!.fitting.lowSlots.single.chargeTypeId,
+        185,
+      );
+      expect(reloaded.pilotFitEvidence!.fitting.drones.single.typeId, 2456);
+      expect(reloaded.pilotFitEvidence!.fitting.medSlots, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('T15 later asset page failure does not save a partial fit', (
+    tester,
+  ) async {
+    final encounter = encounterWith(
+      characterId: FitEvidenceHarness.characterAId,
+    );
+    await harness.repository.saveEnrichment(
+      CombatEnrichment(
+        parsedEncounterId: encounter.id,
+        status: CombatEnrichmentStatus.logOnly,
+        source: CombatEnrichmentSource.none,
+        matchReason: CombatEnrichment.uncachedMatchReason,
+        pilotFitEvidence: FitEvidence(
+          role: FitEvidenceRole.pilot,
+          source: EvidenceSource.manualFitImport,
+          confidence: EvidenceConfidence.reference,
+          fitting: const Fitting(
+            id: 'prior',
+            name: 'Prior',
+            shipTypeId: 587,
+            shipName: 'Rifter',
+          ),
+        ),
+      ),
+    );
+    harness.scriptCharacterShip();
+    harness.scriptAssetPage(
+      characterId: FitEvidenceHarness.characterAId,
+      page: 1,
+      body: aarFittedPage1(),
+      totalPages: 2,
+    );
+    harness.scriptAssetPage(
+      characterId: FitEvidenceHarness.characterAId,
+      page: 2,
+      body: {'error': 'service unavailable'},
+      totalPages: 2,
+      statusCode: 500,
+    );
+    await pumpCaptureScreen(tester, encounter);
+    await tapUseCurrentFit(tester);
+    await harness.waitFor(tester, find.text(kAarCaptureAssetsUi));
+    expect(find.text(kAarCaptureAssetsUi), findsOneWidget);
+    expect(find.text(kAarCaptureSuccessMessage), findsNothing);
+    expect(find.textContaining('DioException'), findsNothing);
+    final reloaded = await harness.repository.loadEnrichment(encounter.id);
+    expect(reloaded!.pilotFitEvidence!.source, EvidenceSource.manualFitImport);
+    expect(reloaded.pilotFitEvidence!.fitting.name, 'Prior');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'T16 null encounter character never calls ESI and still allows import',
+    (tester) async {
+      final encounter = encounterWith(characterId: null);
+      await harness.activateCharacter(FitEvidenceHarness.characterBId);
+      harness.scriptFittedCapture(characterId: FitEvidenceHarness.characterBId);
+      await pumpCaptureScreen(tester, encounter);
+      await tapUseCurrentFit(tester);
+      await harness.waitFor(tester, find.text(kAarCaptureNoCharacterUi));
+      expect(find.text(kAarCaptureNoCharacterUi), findsOneWidget);
+      expect(harness.esiAdapter.requests, isEmpty);
+      expect(find.text(kAarCaptureSuccessMessage), findsNothing);
+
+      await openImportDialog(tester);
+      await submitImportDialog(tester, kAarHeaderOnlyEft);
+      await harness.waitFor(tester, find.text(kAarImportSuccessMessage));
+      final reloaded = await harness.repository.loadEnrichment(encounter.id);
+      expect(
+        reloaded!.pilotFitEvidence!.source,
+        EvidenceSource.manualFitImport,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('T17 collapsed ship transport uses the no-ship copy', (
+    tester,
+  ) async {
+    final encounter = encounterWith(
+      characterId: FitEvidenceHarness.characterAId,
+    );
+    await harness.repository.saveEnrichment(
+      CombatEnrichment(
+        parsedEncounterId: encounter.id,
+        status: CombatEnrichmentStatus.logOnly,
+        source: CombatEnrichmentSource.none,
+        matchReason: CombatEnrichment.uncachedMatchReason,
+        pilotFitEvidence: FitEvidence(
+          role: FitEvidenceRole.pilot,
+          source: EvidenceSource.manualFitImport,
+          confidence: EvidenceConfidence.reference,
+          fitting: const Fitting(
+            id: 'prior',
+            name: 'Prior',
+            shipTypeId: 587,
+            shipName: 'Rifter',
+          ),
+        ),
+      ),
+    );
+    harness.scriptCharacterShip(statusCode: 404);
+    await pumpCaptureScreen(tester, encounter);
+    await tapUseCurrentFit(tester);
+    await harness.waitFor(tester, find.text(kAarCaptureNoShipUi));
+    expect(find.text(kAarCaptureNoShipUi), findsOneWidget);
+    expect(find.textContaining('DioException'), findsNothing);
+    expect(find.textContaining('FormatException'), findsNothing);
+    expect(
+      harness.esiAdapter.requests.where((r) => r.uri.path.contains('/assets')),
+      isEmpty,
+    );
+    final reloaded = await harness.repository.loadEnrichment(encounter.id);
+    expect(reloaded!.pilotFitEvidence!.fitting.name, 'Prior');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('T17 missing token uses the reauthorize copy', (tester) async {
+    final encounter = encounterWith(
+      characterId: FitEvidenceHarness.characterAId,
+    );
+    await harness.tokenManager.deleteTokens(FitEvidenceHarness.characterAId);
+    await pumpCaptureScreen(tester, encounter);
+    await tapUseCurrentFit(tester);
+    await harness.waitFor(tester, find.text(kAarCaptureAuthUi));
+    expect(find.text(kAarCaptureAuthUi), findsOneWidget);
+    expect(find.textContaining('EsiException'), findsNothing);
+    expect(find.textContaining('access-a'), findsNothing);
+    expect(harness.esiAdapter.requests, isEmpty);
+    expect(find.text(kAarCaptureSuccessMessage), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'T18 empty inventory is a hull-only snapshot with qualified success',
+    (tester) async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      harness.scriptFittedCapture(emptyInventory: true);
+      await pumpCaptureScreen(tester, encounter);
+      await tapUseCurrentFit(tester);
+      await harness.waitFor(tester, find.text(kAarCaptureEmptySuccessMessage));
+      expect(find.text(kAarCaptureEmptySuccessMessage), findsOneWidget);
+      expect(find.text(kAarCaptureSuccessMessage), findsNothing);
+      final reloaded = await harness.repository.loadEnrichment(encounter.id);
+      expect(
+        reloaded!.pilotFitEvidence!.confidence,
+        EvidenceConfidence.confirmed,
+      );
+      expect(reloaded.pilotFitEvidence!.fitting.shipTypeId, 587);
+      expect(reloaded.pilotFitEvidence!.fitting.allModules, isEmpty);
+      expect(reloaded.pilotFitEvidence!.fitting.drones, isEmpty);
+      expect(
+        reloaded.pilotFitEvidence!.limitations,
+        contains(kAarEmptyModulesLimitation),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('T19 reference capture reloads as Inferred with both live CTAs', (
+    tester,
+  ) async {
+    final encounter = encounterWith(
+      characterId: FitEvidenceHarness.characterAId,
+    );
+    harness.scriptFittedCapture();
+    await tester.runAsync(() {
+      return harness.enrichmentService.captureCurrentPilotFit(
+        encounter,
+        confirmed: false,
+      );
+    });
+    await pumpCaptureScreen(tester, encounter);
+    await harness.waitFor(tester, importFit);
+    expect(importFit, findsOneWidget);
+    expect(useCurrentFit, findsOneWidget);
+    expect(find.text('Snapshot Current Fit'), findsNothing);
+    expect(find.text('Use Current Fit For This Fight'), findsNothing);
+    final reloaded = await harness.repository.loadEnrichment(encounter.id);
+    expect(
+      reloaded!.pilotFitEvidence!.confidence,
+      EvidenceConfidence.reference,
+    );
+    expect(
+      reloaded.pilotFitEvidence!.source,
+      EvidenceSource.currentShipSnapshot,
+    );
+    expect(find.textContaining('Inferred'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'T20 Use Current Fit fetches ship B instead of relabeling reference A',
+    (tester) async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      harness.scriptFittedCapture();
+      final reference = await tester.runAsync(() {
+        return harness.enrichmentService.captureCurrentPilotFit(
+          encounter,
+          confirmed: false,
+        );
+      });
+      expect(reference, isNotNull);
+      expect(
+        reference!.pilotFitEvidence!.fitting.id,
+        contains('$kAarShipItemId'),
+      );
+      harness.esiAdapter.requests.clear();
+      harness.esiAdapter.clearScripts();
+      harness.scriptFittedCapture(
+        shipTypeId: kAarShipBTypeId,
+        shipItemId: kAarShipBItemId,
+        shipName: 'UniqueShip',
+        shipTypeName: 'UniqueShip',
+      );
+      await pumpCaptureScreen(tester, encounter);
+      await tapUseCurrentFit(tester);
+      await harness.waitFor(tester, find.text(kAarCaptureSuccessMessage));
+      final reloaded = await harness.repository.loadEnrichment(encounter.id);
+      expect(
+        reloaded!.pilotFitEvidence!.confidence,
+        EvidenceConfidence.confirmed,
+      );
+      expect(reloaded.pilotFitEvidence!.fitting.shipTypeId, kAarShipBTypeId);
+      expect(reloaded.pilotFitEvidence!.fitting.shipName, 'UniqueShip');
+      expect(
+        reloaded.pilotFitEvidence!.fitting.id,
+        contains('$kAarShipBItemId'),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('T34 capture errors are categorized and never dump transport', (
+    tester,
+  ) async {
+    final encounter = encounterWith(
+      characterId: FitEvidenceHarness.characterAId,
+    );
+    harness.scriptFittedCapture();
+    harness.repository.failWith = StateError('sqlite boom token=access-a');
+    await pumpCaptureScreen(tester, encounter);
+    await tapUseCurrentFit(tester);
+    await harness.waitFor(tester, find.text(kAarCaptureSaveUi));
+    expect(find.text(kAarCaptureSaveUi), findsOneWidget);
+    expect(find.textContaining('StateError'), findsNothing);
+    expect(find.textContaining('access-a'), findsNothing);
+    expect(find.textContaining('DioException'), findsNothing);
+    expect(find.text(kAarCaptureSuccessMessage), findsNothing);
+    expect(await harness.repository.loadEnrichment(encounter.id), isNull);
+    expect(tester.takeException(), isNull);
+  });
 }

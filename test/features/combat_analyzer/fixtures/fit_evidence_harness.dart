@@ -323,16 +323,137 @@ class FitEvidenceHarness {
     }
     return finder;
   }
+
+  Future<void> activateCharacter(int characterId) {
+    return appDb.setActiveCharacter(characterId);
+  }
+
+  void scriptCharacterShip({
+    int characterId = characterAId,
+    int shipTypeId = 587,
+    int shipItemId = kAarShipItemId,
+    String shipName = 'Manual Rifter',
+    String? shipTypeName = 'Rifter',
+    int statusCode = 200,
+    Future<void>? delay,
+  }) {
+    esiAdapter.script(
+      (options) {
+        return options.uri.path.contains('/characters/$characterId/ship');
+      },
+      (options) async {
+        if (delay != null) await delay;
+        return ResponseBody.fromString(
+          jsonEncode({
+            'ship_type_id': shipTypeId,
+            'ship_item_id': shipItemId,
+            'ship_name': shipName,
+            if (shipTypeName != null) 'ship_type_name': shipTypeName,
+          }),
+          statusCode,
+          headers: {
+            Headers.contentTypeHeader: [Headers.jsonContentType],
+          },
+        );
+      },
+    );
+  }
+
+  void scriptAssetPage({
+    required int characterId,
+    required int page,
+    required Object body,
+    int totalPages = 1,
+    int statusCode = 200,
+    String? xPages,
+  }) {
+    esiAdapter.scriptJson(
+      (options) => _isAssetPage(options, characterId, page),
+      body,
+      statusCode: statusCode,
+      headers: {
+        'x-pages': [xPages ?? '$totalPages'],
+      },
+    );
+  }
+
+  void scriptFittedCapture({
+    int characterId = characterAId,
+    int shipTypeId = 587,
+    int shipItemId = kAarShipItemId,
+    String shipName = 'Manual Rifter',
+    String shipTypeName = 'Rifter',
+    bool twoPages = false,
+    bool unrelated = false,
+    bool emptyInventory = false,
+    Future<void>? delayShip,
+  }) {
+    scriptCharacterShip(
+      characterId: characterId,
+      shipTypeId: shipTypeId,
+      shipItemId: shipItemId,
+      shipName: shipName,
+      shipTypeName: shipTypeName,
+      delay: delayShip,
+    );
+    if (emptyInventory) {
+      scriptAssetPage(
+        characterId: characterId,
+        page: 1,
+        body: const <Map<String, dynamic>>[],
+      );
+      return;
+    }
+    if (twoPages) {
+      scriptAssetPage(
+        characterId: characterId,
+        page: 1,
+        body: aarFittedPage1(shipItemId: shipItemId),
+        totalPages: 2,
+      );
+      scriptAssetPage(
+        characterId: characterId,
+        page: 2,
+        body: aarFittedPage2(shipItemId: shipItemId, unrelated: unrelated),
+        totalPages: 2,
+      );
+      return;
+    }
+    scriptAssetPage(
+      characterId: characterId,
+      page: 1,
+      body: [
+        ...aarFittedPage1(shipItemId: shipItemId),
+        ...aarFittedPage2(shipItemId: shipItemId, unrelated: unrelated),
+      ],
+    );
+  }
+}
+
+bool _isAssetPage(RequestOptions options, int characterId, int page) {
+  if (!options.uri.path.contains('/characters/$characterId/assets')) {
+    return false;
+  }
+  final raw = options.queryParameters['page'];
+  final parsed = raw is int ? raw : int.tryParse('$raw');
+  return parsed == page;
 }
 
 class ScriptedEsiAdapter implements HttpClientAdapter {
   final _scripts =
-      <bool Function(RequestOptions), ResponseBody Function(RequestOptions)>{};
+      <
+        bool Function(RequestOptions),
+        FutureOr<ResponseBody> Function(RequestOptions)
+      >{};
   final requests = <RequestOptions>[];
+
+  void clearScripts() {
+    _scripts.clear();
+  }
 
   void script(
     bool Function(RequestOptions options) match,
-    ResponseBody Function(RequestOptions options) reply,
+    FutureOr<ResponseBody> Function(RequestOptions options) reply,
   ) {
     _scripts[match] = reply;
   }
@@ -364,7 +485,7 @@ class ScriptedEsiAdapter implements HttpClientAdapter {
     requests.add(options);
     for (final entry in _scripts.entries) {
       if (entry.key(options)) {
-        return entry.value(options);
+        return await entry.value(options);
       }
     }
     throw StateError('unexpected ESI HTTP ${options.method} ${options.uri}');
