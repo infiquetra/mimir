@@ -29,8 +29,6 @@ class AarCachedAsset {
   final int? parentItemId;
 }
 
-/// Compile stub for W5. GREEN applies the five eligibility conditions and
-/// never treats cache absence as a verified shortage.
 class AarCachedAssetMatch {
   const AarCachedAssetMatch({
     required this.typeId,
@@ -55,10 +53,12 @@ class AarSpareMatcher {
   const AarSpareMatcher();
 
   static const hangarFlags = {'Hangar'};
+  static const _freshnessUnknown = 'Asset freshness unknown';
+  static const _availabilityUnknown = 'Availability unknown';
 
-  /// Naive: credits every positive-quantity asset at the selected location,
-  /// including other characters, fitted modules, cargo, and nested stacks.
-  /// Changes-mode baseline types still subtract. Empty cache is a shortage.
+  /// Five-condition eligibility. Cache absence is not a verified shortage;
+  /// Changes-mode types also present in the baseline stay unknown without a
+  /// disjointness proof.
   AarCachedAssetMatch match({
     required int typeId,
     required int requiredCount,
@@ -72,37 +72,101 @@ class AarSpareMatcher {
       return AarCachedAssetMatch(
         typeId: typeId,
         observedCount: 0,
-        eligibleLooseCount: 0,
         eligibility: AarAssetEligibility.missingCache,
-        estimatedShortfall: requiredCount,
-        disclosure: 'Not found in cached assets',
+        disclosure: _availabilityUnknown,
       );
     }
 
+    final ofType = [
+      for (final asset in assets)
+        if (asset.typeId == typeId && asset.quantity > 0) asset,
+    ];
     var observed = 0;
-    var eligible = 0;
     final locations = <int>{};
-    for (final asset in assets) {
-      if (asset.typeId != typeId || asset.quantity <= 0) continue;
+    for (final asset in ofType) {
       observed += asset.quantity;
       locations.add(asset.locationId);
-      if (asset.locationId == selectedLocationId) {
-        eligible += asset.quantity;
-      }
     }
 
-    final overlap = changesMode && baselineTypeIds.contains(typeId);
+    if (changesMode && baselineTypeIds.contains(typeId)) {
+      return AarCachedAssetMatch(
+        typeId: typeId,
+        observedCount: observed,
+        eligibility: AarAssetEligibility.baselineOverlap,
+        locationIds: locations.toList(),
+        disclosure: _freshnessUnknown,
+      );
+    }
+
+    var eligible = 0;
+    var otherCharacter = false;
+    var fittedOrContained = false;
+    var unknownLocation = false;
+    for (final asset in ofType) {
+      if (asset.characterId != encounterCharacterId) {
+        otherCharacter = true;
+        continue;
+      }
+      if (asset.locationId != selectedLocationId) {
+        unknownLocation = true;
+        continue;
+      }
+      if (!_isEligibleLoose(asset)) {
+        fittedOrContained = true;
+        continue;
+      }
+      eligible += asset.quantity;
+    }
+
+    if (eligible > 0) {
+      return AarCachedAssetMatch(
+        typeId: typeId,
+        observedCount: observed,
+        eligibleLooseCount: eligible,
+        eligibility: AarAssetEligibility.eligibleLoose,
+        locationIds: locations.toList(),
+        estimatedShortfall: _max0(requiredCount - eligible),
+        disclosure: _freshnessUnknown,
+      );
+    }
+
+    final eligibility = otherCharacter && !_hasOwn(ofType, encounterCharacterId)
+        ? AarAssetEligibility.otherCharacter
+        : fittedOrContained
+        ? AarAssetEligibility.fittedOrContained
+        : unknownLocation
+        ? AarAssetEligibility.unknownLocation
+        : AarAssetEligibility.missingCache;
+
+    final typeMissingFromCache = ofType.isEmpty;
     return AarCachedAssetMatch(
       typeId: typeId,
       observedCount: observed,
-      eligibleLooseCount: eligible,
-      eligibility: overlap
-          ? AarAssetEligibility.baselineOverlap
-          : AarAssetEligibility.eligibleLoose,
+      eligibleLooseCount: typeMissingFromCache ? null : 0,
+      eligibility: eligibility,
       locationIds: locations.toList(),
-      estimatedShortfall: overlap ? 0 : _max0(requiredCount - eligible),
-      disclosure: assets.isEmpty ? 'Not found in cached assets' : null,
+      estimatedShortfall: typeMissingFromCache ? null : _max0(requiredCount),
+      disclosure: typeMissingFromCache
+          ? 'Not found in cached assets'
+          : _freshnessUnknown,
     );
+  }
+
+  static bool _hasOwn(List<AarCachedAsset> ofType, int characterId) {
+    for (final asset in ofType) {
+      if (asset.characterId == characterId) return true;
+    }
+    return false;
+  }
+
+  /// Loose hangar at the selected location, with no parent/container signal.
+  /// `containedInId == null` is not itself proof of being uncontained.
+  static bool _isEligibleLoose(AarCachedAsset asset) {
+    if (asset.quantity <= 0) return false;
+    if (!hangarFlags.contains(asset.locationFlag)) return false;
+    if (asset.parentItemId != null) return false;
+    if (asset.containedInId != null) return false;
+    return true;
   }
 
   static int _max0(int value) => value < 0 ? 0 : value;

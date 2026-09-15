@@ -1,8 +1,6 @@
 import '../../../core/utils/formatters.dart';
 import 'aar_fit_bom.dart';
 
-/// Compile stub for W5. GREEN uses averagePrice only, coefficient/scale
-/// arithmetic, inclusive 24h stale, and priced-subtotal coverage.
 class AarMarketQuote {
   const AarMarketQuote({
     required this.typeId,
@@ -19,30 +17,88 @@ class AarMarketQuote {
   final DateTime? lastUpdated;
 }
 
+/// Exact decimal ISK amount as [coefficient] × 10^-[scale].
+///
+/// Multiply by integer quantity in this representation; round only at
+/// [formatIsk] presentation.
 class IskEstimateAmount {
   const IskEstimateAmount({required this.coefficient, this.scale = 0});
 
   final int coefficient;
   final int scale;
 
-  /// Naive: stores a rounded double instead of exact decimal scale.
   factory IskEstimateAmount.fromAverage(double average) {
-    return IskEstimateAmount(coefficient: (average * 100).round(), scale: 2);
+    if (!average.isFinite || average < 0) {
+      throw ArgumentError.value(
+        average,
+        'average',
+        'must be nonnegative and finite',
+      );
+    }
+    if (average == 0) {
+      return const IskEstimateAmount(coefficient: 0);
+    }
+    final text = average.toString();
+    if (text.contains('e') || text.contains('E')) {
+      return _fromScaledDouble(average);
+    }
+    final unsigned = text.startsWith('-') ? text.substring(1) : text;
+    final parts = unsigned.split('.');
+    final whole = parts[0];
+    var frac = parts.length > 1 ? parts[1] : '';
+    frac = frac.replaceFirst(RegExp(r'0+$'), '');
+    final parsedScale = frac.length;
+    final digits = parsedScale == 0 ? whole : '$whole$frac';
+    return IskEstimateAmount(
+      coefficient: int.parse(digits),
+      scale: parsedScale,
+    );
   }
 
-  /// Naive: rounds after converting through double.
+  static IskEstimateAmount _fromScaledDouble(double average) {
+    var scale = 0;
+    var value = average;
+    while (scale < 15) {
+      final nearest = value.round();
+      if ((value - nearest).abs() < 1e-9) {
+        return IskEstimateAmount(coefficient: nearest, scale: scale);
+      }
+      value *= 10;
+      scale += 1;
+    }
+    return IskEstimateAmount(coefficient: value.round(), scale: scale);
+  }
+
   IskEstimateAmount times(int quantity) {
-    final value = (coefficient / _pow10(scale)) * quantity;
-    return IskEstimateAmount(coefficient: (value * 100).round(), scale: 2);
+    if (quantity < 0) {
+      throw ArgumentError.value(quantity, 'quantity', 'must be non-negative');
+    }
+    return IskEstimateAmount(coefficient: coefficient * quantity, scale: scale);
+  }
+
+  IskEstimateAmount plus(IskEstimateAmount other) {
+    if (scale == other.scale) {
+      return IskEstimateAmount(
+        coefficient: coefficient + other.coefficient,
+        scale: scale,
+      );
+    }
+    final aligned = scale > other.scale ? scale : other.scale;
+    return IskEstimateAmount(
+      coefficient:
+          coefficient * _pow10(aligned - scale) +
+          other.coefficient * _pow10(aligned - other.scale),
+      scale: aligned,
+    );
   }
 
   double get asDouble => coefficient / _pow10(scale);
 
   String format() => formatIsk(asDouble);
 
-  static int _pow10(int scale) {
+  static int _pow10(int exponent) {
     var n = 1;
-    for (var i = 0; i < scale; i++) {
+    for (var i = 0; i < exponent; i++) {
       n *= 10;
     }
     return n;
@@ -56,9 +112,12 @@ class AarPriceEstimate {
     this.lastUpdated,
     this.isStale = false,
     this.uncertain = false,
-    this.sourceLabel = 'market',
+    this.sourceLabel = _esiAverageLabel,
     this.unavailableReason,
   });
+
+  static const _esiAverageLabel = 'ESI average price estimate';
+  static const _staleAfter = Duration(hours: 24);
 
   final int typeId;
   final IskEstimateAmount? unitPrice;
@@ -70,26 +129,49 @@ class AarPriceEstimate {
 
   bool get isPriced => unitPrice != null && unavailableReason == null;
 
-  /// Naive: falls back to adjustedPrice/Dogma cost; exact 24h is fresh;
-  /// future-dated quotes are treated as fresh.
+  /// Average price only. Adjusted price and Dogma cost are never purchase
+  /// prices. Exact 24h age is stale; future-dated quotes are uncertain.
   factory AarPriceEstimate.fromQuote(
     AarMarketQuote quote, {
     required DateTime now,
   }) {
-    final unit = quote.averagePrice ?? quote.adjustedPrice ?? quote.dogmaCost;
-    final hasUnit = unit > 0;
-    final age = quote.lastUpdated == null
-        ? null
-        : now.difference(quote.lastUpdated!);
+    final average = quote.averagePrice;
+    final futureDated =
+        quote.lastUpdated != null && quote.lastUpdated!.isAfter(now);
+    final stale =
+        !futureDated &&
+        quote.lastUpdated != null &&
+        now.difference(quote.lastUpdated!) >= _staleAfter;
+
+    if (average == null || !average.isFinite || average < 0) {
+      return AarPriceEstimate(
+        typeId: quote.typeId,
+        lastUpdated: quote.lastUpdated,
+        isStale: stale,
+        uncertain: futureDated,
+        sourceLabel: _esiAverageLabel,
+        unavailableReason: _unavailableReason(quote, average),
+      );
+    }
+
     return AarPriceEstimate(
       typeId: quote.typeId,
-      unitPrice: hasUnit ? IskEstimateAmount.fromAverage(unit) : null,
+      unitPrice: IskEstimateAmount.fromAverage(average),
       lastUpdated: quote.lastUpdated,
-      isStale: age != null && age > const Duration(hours: 24),
-      uncertain: false,
-      sourceLabel: 'market',
-      unavailableReason: hasUnit ? null : 'missing',
+      isStale: stale,
+      uncertain: futureDated,
+      sourceLabel: _esiAverageLabel,
     );
+  }
+
+  static String _unavailableReason(AarMarketQuote quote, double? average) {
+    if (average != null && (!average.isFinite || average < 0)) {
+      return 'invalid';
+    }
+    if (quote.adjustedPrice != null || quote.dogmaCost != 0) {
+      return 'adjusted_only';
+    }
+    return 'unavailable';
   }
 }
 
@@ -130,42 +212,63 @@ class AarPricedSubtotal {
 class AarBomPricer {
   const AarBomPricer();
 
-  /// Naive: prices missing lines at 0, uses every estimate including
-  /// adjusted fallbacks, and labels the sum Total cost.
+  /// Gross priced-line sum. Unpriced and unknown-quantity lines stay in
+  /// [AarPricedSubtotal.lines] but never enter the subtotal or a "total cost".
   AarPricedSubtotal price({
     required FitBillOfMaterials bom,
     required List<AarPriceEstimate> estimates,
   }) {
-    final byType = {
+    final byType = <int, AarPriceEstimate>{
       for (final estimate in estimates) estimate.typeId: estimate,
     };
     final lines = <AarPricedLine>[];
-    var coefficient = 0;
+    var amount = const IskEstimateAmount(coefficient: 0);
     var priced = 0;
+    var known = 0;
+
     for (final requirement in bom.requirements) {
-      final quantity = requirement.requiredCount ?? 0;
-      if (quantity <= 0 && !requirement.quantityUnknown) continue;
+      final quantity = requirement.requiredCount;
+      if (quantity != null && quantity <= 0 && !requirement.quantityUnknown) {
+        continue;
+      }
+      known += 1;
       final estimate = byType[requirement.typeId];
-      final extension = estimate?.unitPrice?.times(quantity);
-      if (estimate?.isPriced == true) priced += 1;
-      coefficient += extension?.coefficient ?? 0;
+      final countable =
+          quantity != null && quantity > 0 && !requirement.quantityUnknown;
+      final pricedLine = countable && estimate != null && estimate.isPriced;
+      IskEstimateAmount? extension;
+      if (pricedLine) {
+        extension = estimate.unitPrice!.times(quantity);
+        amount = amount.plus(extension);
+        priced += 1;
+      }
       lines.add(
         AarPricedLine(
           typeId: requirement.typeId,
-          quantity: quantity,
+          quantity: quantity ?? 0,
           estimate: estimate,
           extension: extension,
-          label: estimate?.isPriced == true ? null : 'free',
+          label: _lineLabel(estimate: estimate, priced: pricedLine),
         ),
       );
     }
+
     return AarPricedSubtotal(
-      heading: 'Total cost',
-      amount: IskEstimateAmount(coefficient: coefficient, scale: 2),
+      heading: 'Priced subtotal',
+      amount: amount,
       pricedLines: priced,
-      knownLines: bom.requirements.length,
+      knownLines: known,
       lines: lines,
     );
+  }
+
+  static String _lineLabel({
+    required AarPriceEstimate? estimate,
+    required bool priced,
+  }) {
+    if (!priced) return 'Price unavailable';
+    if (estimate!.unitPrice!.asDouble == 0) return '0 ISK estimate';
+    return estimate.unitPrice!.format();
   }
 }
 
@@ -185,18 +288,10 @@ class AarPriceRefreshController {
   int orderSyncs = 0;
   int assetSyncs = 0;
 
-  /// Naive: also syncs orders and assets; failure clears the cache.
+  /// Price-only refresh. Order and asset sync are never invoked. Failure
+  /// retains the previous cached estimates.
   Future<void> refresh() async {
-    try {
-      await syncAssets?.call();
-      assetSyncs += 1;
-      await syncOrders?.call();
-      orderSyncs += 1;
-      priceSyncs += 1;
-      cached = await syncPrices();
-    } catch (_) {
-      cached = [];
-      rethrow;
-    }
+    priceSyncs += 1;
+    cached = await syncPrices();
   }
 }

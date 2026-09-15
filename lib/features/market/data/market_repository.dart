@@ -57,6 +57,26 @@ class MarketRepository {
     )..where((p) => p.typeId.equals(typeId))).getSingleOrNull();
   }
 
+  /// One coherent batch read of cached prices for [typeIds].
+  ///
+  /// Empty sets return an empty map and do not load the whole table.
+  Future<Map<int, MarketPrice>> getPrices(Set<int> typeIds) async {
+    if (typeIds.isEmpty) return {};
+    final rows = await (_database.select(
+      _database.marketPrices,
+    )..where((p) => p.typeId.isIn(typeIds.toList()))).get();
+    return {for (final row in rows) row.typeId: row};
+  }
+
+  /// One coherent batch watch of cached prices for [typeIds].
+  Stream<Map<int, MarketPrice>> watchPrices(Set<int> typeIds) {
+    if (typeIds.isEmpty) return Stream.value({});
+    return (_database.select(_database.marketPrices)
+          ..where((p) => p.typeId.isIn(typeIds.toList())))
+        .watch()
+        .map((rows) => {for (final row in rows) row.typeId: row});
+  }
+
   /// Replace all market prices.
   Future<void> replaceAllPrices(List<MarketPricesCompanion> prices) async {
     Log.d('MARKET', 'replaceAllPrices - saving ${prices.length} prices');
