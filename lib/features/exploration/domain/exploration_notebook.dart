@@ -9,6 +9,15 @@ class NotebookScope {
 
   final int characterId;
   final int systemId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is NotebookScope &&
+      other.characterId == characterId &&
+      other.systemId == systemId;
+
+  @override
+  int get hashCode => Object.hash(characterId, systemId);
 }
 
 class TrackedSignature {

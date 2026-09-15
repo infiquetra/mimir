@@ -677,6 +677,24 @@ class EsiClient {
     }
   }
 
+  /// Naive X6: still swallows failures through [getCharacterLocation].
+  Future<CharacterLocationResult> getCharacterLocationStrict(
+    int characterId,
+  ) async {
+    final loc = await getCharacterLocation(characterId);
+    if (loc == null) {
+      return const CharacterLocationFailed(
+        CharacterLocationFailureKind.network,
+      );
+    }
+    return CharacterLocationObserved(
+      systemId: loc.solarSystemId,
+      observedAt: DateTime.now().toUtc(),
+      stationId: loc.stationId,
+      structureId: loc.structureId,
+    );
+  }
+
   Future<CharacterShip?> getCharacterShip(int characterId) async {
     try {
       final response = await authenticatedGet<Map<String, dynamic>>(
@@ -1310,6 +1328,39 @@ class UniverseName {
       category: json['category'] as String,
     );
   }
+}
+
+enum CharacterLocationFailureKind {
+  auth,
+  network,
+  malformed,
+  noLocation,
+  cancelled,
+}
+
+sealed class CharacterLocationResult {
+  const CharacterLocationResult();
+}
+
+final class CharacterLocationObserved extends CharacterLocationResult {
+  const CharacterLocationObserved({
+    required this.systemId,
+    required this.observedAt,
+    this.stationId,
+    this.structureId,
+  });
+
+  final int systemId;
+  final DateTime observedAt;
+  final int? stationId;
+  final int? structureId;
+}
+
+final class CharacterLocationFailed extends CharacterLocationResult {
+  const CharacterLocationFailed(this.kind, {this.message});
+
+  final CharacterLocationFailureKind kind;
+  final String? message;
 }
 
 class CharacterLocation {
