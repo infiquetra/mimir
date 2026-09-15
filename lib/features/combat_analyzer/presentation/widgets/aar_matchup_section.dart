@@ -37,6 +37,12 @@ class AarMatchupSection extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (correlatedAttackerCount >= 2)
+            Text(
+              'Incoming profile is a blend across $correlatedAttackerCount attackers; the named resist hole is aggregate, not per attacker.',
+              key: const Key('aar-matchup-blend-advisory'),
+              style: const TextStyle(color: EveColors.warning),
+            ),
           Text(
             'EHP vs incoming ${_formatNumber(incoming)} · omni ${_formatNumber(omni)} · layer ${matchup.layer}',
           ),

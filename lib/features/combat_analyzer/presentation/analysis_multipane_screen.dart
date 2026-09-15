@@ -17,6 +17,7 @@ import '../domain/combat_enrichment.dart';
 import '../domain/parsed_combat_encounter.dart';
 import '../../fitting/domain/models.dart';
 import '../../wallet/data/wallet_providers.dart';
+import 'widgets/aar_attacker_correlation_section.dart';
 import 'widgets/aar_derived_stats_panel.dart';
 import 'widgets/aar_evidence_checklist_card.dart';
 import 'widgets/aar_matchup_section.dart';
@@ -926,6 +927,8 @@ class _AnalysisMultiPaneScreenState
         _DamageTypeSection(profile: profile, report: report),
         const SizedBox(height: 16),
         ..._matchupWidgets(encounter),
+        AarAttackerCorrelationSection(encounter: encounter),
+        const SizedBox(height: 16),
         _BreakdownSection(
           title: 'Primary Targets',
           values: encounter.aggregates.damageByTarget,
@@ -936,12 +939,6 @@ class _AnalysisMultiPaneScreenState
           title: 'Weapons And Drones',
           values: encounter.aggregates.damageByWeapon,
           color: Colors.lightBlueAccent,
-        ),
-        const SizedBox(height: 16),
-        _BreakdownSection(
-          title: 'Incoming Sources',
-          values: encounter.aggregates.incomingBySource,
-          color: Colors.redAccent,
         ),
       ],
     );
@@ -1087,10 +1084,20 @@ class _AnalysisMultiPaneScreenState
 
   List<Widget> _matchupWidgets(ParsedCombatEncounter encounter) {
     final async = ref.watch(aarFitDerivationsProvider(encounter));
+    final correlatedAttackerCount = ref
+        .watch(combatAttackerCorrelationProvider(encounter))
+        .when(
+          data: (correlation) => correlation?.correlated.length ?? 0,
+          loading: () => 0,
+          error: (_, _) => 0,
+        );
     return async.when(
       data: (bundle) => [
         if (bundle.selfMatchup != null)
-          AarMatchupSection(matchup: bundle.selfMatchup!),
+          AarMatchupSection(
+            matchup: bundle.selfMatchup!,
+            correlatedAttackerCount: correlatedAttackerCount,
+          ),
         if (bundle.opponentMatchup != null)
           AarMatchupSection(matchup: bundle.opponentMatchup!),
         if (bundle.selfMatchup != null || bundle.opponentMatchup != null)

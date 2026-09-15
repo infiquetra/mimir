@@ -36,10 +36,15 @@ void main() {
       required AttackerCorrelation? correlation,
       required Map<String, int> incomingBySource,
       List extraOverrides = const [],
+      bool useNameOverrides = true,
     }) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [...nameOverrides(), ...extraOverrides],
+          key: UniqueKey(),
+          overrides: [
+            if (useNameOverrides) ...nameOverrides(),
+            ...extraOverrides,
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: AarAttackerCorrelationBody(
@@ -213,7 +218,7 @@ void main() {
         const Key('aar-attackers-unattributed'),
       );
       expect(unattributed, contains('1,100'));
-      expect(unattributed, contains('Kite Mondeo — not on the killmail'));
+      expect(unattributed, contains('Kite Mondeo — below threshold'));
     });
 
     testWidgets(
@@ -249,9 +254,17 @@ void main() {
         tester,
         correlation: correlate(s2),
         incomingBySource: s2.encounter.aggregates.incomingBySource,
+        useNameOverrides: false,
         extraOverrides: [
-          itemNameProvider(24702).overrideWith((ref) async {
-            throw StateError('name lookup failed');
+          itemNameProvider.overrideWith((ref, id) async {
+            if (id == 24702) throw StateError('name lookup failed');
+            return switch (id) {
+              34828 => 'Jackdaw',
+              22456 => 'Sabre',
+              587 => 'Rifter',
+              30001 => 'Serpentis Watchman',
+              _ => 'Type #$id',
+            };
           }),
         ],
       );
@@ -264,6 +277,7 @@ void main() {
       final pending = Completer<AttackerCorrelation?>();
       await tester.pumpWidget(
         ProviderScope(
+          key: UniqueKey(),
           overrides: [
             ...nameOverrides(),
             combatAttackerCorrelationProvider.overrideWith(
@@ -282,6 +296,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
+          key: UniqueKey(),
           overrides: [
             ...nameOverrides(),
             combatAttackerCorrelationProvider.overrideWith((ref, encounter) {

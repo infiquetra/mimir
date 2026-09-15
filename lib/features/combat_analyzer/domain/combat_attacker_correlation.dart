@@ -22,7 +22,18 @@ enum UncorrelatedReason {
   npcAttacker,
   npcActor,
   unnamed,
-  soleAttackerMismatch,
+  soleAttackerMismatch;
+
+  String get label => switch (this) {
+    UncorrelatedReason.noLogPresence => 'not in the combat log',
+    UncorrelatedReason.notOnKillmail => 'not on the killmail',
+    UncorrelatedReason.belowThreshold => 'below threshold',
+    UncorrelatedReason.ambiguous => 'ambiguous',
+    UncorrelatedReason.npcAttacker => 'NPC attacker',
+    UncorrelatedReason.npcActor => 'NPC',
+    UncorrelatedReason.unnamed => 'unnamed',
+    UncorrelatedReason.soleAttackerMismatch => 'sole attacker mismatch',
+  };
 }
 
 enum CorrelationSignal {
