@@ -128,7 +128,6 @@ final aarEvidenceAssessmentProvider =
       final outgoing = await ref.watch(
         combatDamageProfileProvider(encounter).future,
       );
-      ref.watch(aarIncomingMatchupsProvider(encounter));
       return const AarEvidenceScorer().assess(
         AarEvidenceInputs(
           encounter: encounter,

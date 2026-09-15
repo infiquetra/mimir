@@ -42,6 +42,13 @@ class MockSdeService extends Mock implements SdeService {
   ) async => const {};
 
   @override
+  Future<EffectModifierInputs> loadEffectModifierInputs(
+    Iterable<int> effectIds, {
+    required EffectLookupPolicy policy,
+  }) async =>
+      const EffectModifierInputs(modifiers: {}, unavailableEffectIds: {});
+
+  @override
   Future<Map<int, ModuleType>> getDogmaTypes(Iterable<int> typeIds) async {
     final result = <int, ModuleType>{};
     for (final id in typeIds) {
