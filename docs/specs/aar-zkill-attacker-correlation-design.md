@@ -224,7 +224,7 @@ Pair: name 0.75 + sole 0.10 = **0.85 confirmed**, signals `[name, sole]`. Accoun
 **S2 — loss, three attackers, one ship-type actor.** Killmail (user is victim): Artem S3 (9001, Hurricane 24702, 4,200), Kite Mondeo (9002, Jackdaw 34828, 3,100, final blow), Dax Rho (9003, Sabre 22456, 1,250), Pell Ivo (9004, Hurricane, 2,000, engaged before the log). Log: `Artem S3` 4,200, `Kite Mondeo` 3,100 (last incoming hit), `Sabre` 1,100.
 - Artem: name + damage(ratio 1.0) = 0.95 confirmed.
 - Kite: name + damage + timing = 1.00 confirmed.
-- `Sabre` (shipType 22456) ↔ Dax Rho: ship 0.30 + damage (1100/1250 = 0.88) 0.20 = **0.50 probable**; ↔ Pell Ivo (Hurricane): 0. 
+- `Sabre` (shipType 22456) ↔ Dax Rho: ship 0.30 + damage (1100/1250 = 0.88) 0.20 = **0.50 probable**; ↔ Pell Ivo (Hurricane): 0.
 - Pell Ivo → uncorrelated `noLogPresence`. Accounting 8,400 + 0 + 0 = 8,400.
 
 **S3 — fleet.** 12 player attackers, 7 actors: four name matches (confirmed), two ship-type actors with distinct hulls and ratio ≥ 0.6 (probable), one `Sabre` actor facing **two** Sabre attackers with equal signals (ship + damage = 0.50 each) → conflict on the actor within margin → actor `ambiguous`, both attackers remain and end `noLogPresence`. Four attackers never in the log → `noLogPresence` (six uncorrelated including the two Sabres; the spec's "five" does not sum to twelve with one ambiguous actor facing two hulls). Unattributed = the Sabre actor's damage.
