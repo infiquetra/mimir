@@ -24,6 +24,29 @@
 
 ---
 
+## 2026-09-15
+
+### AAR attachment validation and refresh use explicit ownership boundaries
+
+**Author.** Technical Architect.
+**Decision.** Adopt the [technical design](../specs/aar-fit-import-capture-ui-tests-design.md):
+strict AAR-only manifest validation with opt-in shared-parser lookup/error seams;
+atomic, field-owned enrichment mutations; a shared encounter operation coordinator;
+and a stable post-commit publisher. Test the real screen, services, derivation and
+Drift storage, controlling external ESI/discovery/AI and seeded local SDE inputs.
+**Rejected alternatives.** Making the shared tolerant parser globally strict; copying
+a fit read at refresh start; private service locks as storage protection; manufactured
+scores or successful saves in journey tests; disposing publication with a recreatable service.
+**Rationale.** Complete supplied content and the latest committed fit must survive
+into analysis. Victim evidence must retain its owning identity, and stale derived
+facts cannot be attached to a newer fit. Narrow seams preserve other fitting callers
+and prompt v4 without a database migration.
+**Revisit when.** Product adds supported import syntax or explicit killmail replacement,
+or durable multi-process operation coordination becomes necessary.
+**Refs.** [Product contract](../specs/aar-fit-import-capture-ui-tests.md);
+[queued implementation](QUEUED.md#aar-fit-import-and-capture-ui-tests).
+This is an architecture decision; implementation and runtime gates remain pending.
+
 ## 2026-09-14
 
 ### Fit attachment test contract targets live controls and faithful saved evidence

@@ -1,4 +1,39 @@
-# Project: Mimir — AAR fit import and capture UI test product handoff
+# Project: Mimir — AAR fit import and capture UI test technical design
+Date: 2026-09-15
+Checkpoint: 2026-09-15-aar-fit-import-capture-ui-tests-design
+
+## Overview
+
+Write the requested technical architecture and minimal implementation/test designs.
+The explicit request authorizes this documentation plan; implementation remains queued.
+
+## Tasks
+
+- [x] [P1] Ground parser, refresh retention, screen and real storage test seams.
+- [x] [SEQ] Write bug-fix contracts, harness and TDD ownership with AC traceability.
+- [x] [P2] Review independently and verify messages, numbers, links and all test IDs.
+- [x] [SEQ] Update README/journal links and preserve pending implementation status.
+- [x] [CHECKPOINT] Save completion state and commit documentation.
+
+## Notes
+
+[Canonical plan](../.codex/plans/2026-09-14-aar-fit-import-capture-ui-tests-design.md).
+
+## Review
+
+Completed the [technical design](../docs/specs/aar-fit-import-capture-ui-tests-design.md)
+for Product commit `e4821ce`: strict AAR parsing while preserving shared tolerance,
+atomic retention and coherent analysis preparation, stable commit publication, safe
+capture/dialog lifecycle, real screen/ESI/SDE/Drift harness, and U0–U5 role-owned gates.
+Independent reviews identified and resolved parser error propagation, mutation outcome,
+publisher lifetime, and combined test-layer gaps. Verified all 24 AC mappings, 36 cases,
+nine original scenario meanings, 17 exact feedback strings, score arithmetic, local
+links and table structure. README/journal retain implementation-pending status.
+No application code changed and no Flutter runtime suites ran for this documentation.
+
+---
+
+# Completed: Mimir — AAR fit import and capture UI test product handoff
 Date: 2026-09-14
 Checkpoint: 2026-09-14-aar-fit-import-capture-ui-tests-product
 

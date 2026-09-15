@@ -78,6 +78,11 @@ completed 2026-09-14 at baseline `7db3630`: 24 acceptance criteria and 36 cases.
 The live UI exposes confirmed capture only; reference capture needs service/legacy
 coverage. Include regression coverage for fit retention during forced re-analysis and
 faithful import validation. Tests and associated fixes remain pending.
+**Architecture handoff.** [Technical design](../specs/aar-fit-import-capture-ui-tests-design.md)
+completed 2026-09-15 against Product commit `e4821ce`: strict AAR parser adapter,
+atomic retention and coherent analysis snapshot, real screen/ESI/SDE/Drift harness,
+and U0–U5 RED/GREEN ownership mapped to every Product criterion and case. Keep this
+item queued until implementation and independent validation pass.
 **Refs.** `lib/features/combat_analyzer/presentation/analysis_multipane_screen.dart`;
 `test/features/combat_analyzer/domain/combat_fit_snapshot_mapper_test.dart`;
 `.codex/plans/2026-05-21-combat-analyzer-aar.md`.

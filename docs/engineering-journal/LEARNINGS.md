@@ -29,6 +29,29 @@
 
 ---
 
+## 2026-09-15
+
+### Strict imports need structural identity and parser error provenance
+
+**Author.** Technical Architect.
+**Context.** Architecture review of the fit attachment UI-test Product contract.
+**Evidence.** [Shared parser](../../lib/features/fitting/domain/format_parser.dart)
+skips unresolved input and catches lookup failures;
+[SDE service](../../lib/core/sde/sde_service.dart) can construct generic types as
+ships/modules and defaults unidentified module slots to high. Shared parser tests
+intentionally preserve tolerant DNA behavior.
+**Mechanism.** A positive type ID or non-null fitting does not prove the supplied
+inventory survived. Prevalidation alone also cannot distinguish a later parser SDE
+failure from an unresolved item when the parser swallows the cause.
+**Fix (queued).** [Design §3.2](../specs/aar-fit-import-capture-ui-tests-design.md#32-bug-2-strict-aar-fit-acceptance)
+requires category/slot checks, an expected-inventory comparison, authoritative exact
+name lookup, and AAR opt-in error propagation over one local SDE snapshot. Default
+shared-parser tolerance remains unchanged.
+**Validation.** Independent source/design review; no implementation or runtime tests
+were performed for this documentation change. U1 must demonstrate RED/GREEN regressions.
+**Generalizable rule.** Validate faithful content at the evidence boundary and preserve
+dependency failure causes; a tolerant parser's success value is not an acceptance policy.
+
 ## 2026-09-14
 
 ### Fit attachment mocks do not prove re-analysis retains the fit

@@ -1,26 +1,27 @@
 {
-  "last_updated": "2026-09-15T03:45:19.624Z",
+  "last_updated": "2026-09-15T04:07:05Z",
   "current_work": {
-    "task": "AAR fit import and capture UI tests: product handoff",
+    "task": "AAR fit import and capture UI tests: technical architecture and design",
     "phase": "complete",
     "progress": "100%",
-    "baseline": "7db3630",
-    "plan": ".codex/plans/2026-09-14-aar-fit-import-capture-ui-tests-product.md",
-    "deliverable": "docs/specs/aar-fit-import-capture-ui-tests.md",
-    "checkpoint": ".codex/checkpoints/2026-09-14-aar-fit-import-capture-ui-tests-product.md",
+    "baseline": "e4821ce",
+    "plan": ".codex/plans/2026-09-14-aar-fit-import-capture-ui-tests-design.md",
+    "deliverable": "docs/specs/aar-fit-import-capture-ui-tests-design.md",
+    "checkpoint": ".codex/checkpoints/2026-09-15-aar-fit-import-capture-ui-tests-design.md",
     "next_steps": [
-      "Test-Author writes mapped tests against real service/provider/storage seams",
-      "Plan scopes required validation, retention, feedback and concurrency fixes",
+      "Lead/Plan schedule U0-U5 with RED/GREEN/reviewer/tester ownership",
+      "Test-Author builds the real harness and reproduces validation/retention defects",
+      "Developers implement scoped parser, repository, analysis and UI contracts after RED",
       "Keep queued item open until tests and fixes are verified"
     ]
   },
   "validation": {
-    "independent_review": "passed; all findings addressed",
-    "structure": "9 scenarios, 24 acceptance criteria, 36 traced test cases",
-    "checks": "source grounding, existing feedback strings, score arithmetic, tables, links, whitespace",
-    "runtime_tests": "not run; documentation-only product handoff"
+    "independent_review": "parser and integration review; findings resolved",
+    "structure": "U0-U5 with all 24 AC mappings, 36 test cases and 9 original Product scenarios",
+    "checks": "source grounding, 17 exact feedback strings, score arithmetic, tables, local links, whitespace",
+    "runtime_tests": "not run; documentation-only architecture delivery"
   },
   "open_issues": [
-    "Implementation pending: source-evidenced forced-refresh pilot-fit overwrite and validation gaps require runtime regression tests"
+    "Implementation pending: strict AAR import, atomic fit retention, coherent analysis preparation and supporting UI lifecycle/feedback fixes require RED/GREEN runtime evidence"
   ]
 }
