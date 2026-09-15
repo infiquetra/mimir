@@ -885,7 +885,8 @@ class CombatEnrichmentService {
   static String _shipLabel(CombatKillmailParticipant participant) {
     final shipName = participant.shipTypeName?.trim();
     if (shipName != null && shipName.isNotEmpty) return shipName;
-    if (participant.shipTypeId != null) return 'Type #${participant.shipTypeId}';
+    if (participant.shipTypeId != null)
+      return 'Type #${participant.shipTypeId}';
     return 'unknown';
   }
 

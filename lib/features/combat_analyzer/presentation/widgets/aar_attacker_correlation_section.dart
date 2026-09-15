@@ -28,9 +28,8 @@ class AarAttackerCorrelationSection extends ConsumerWidget {
         correlation: correlation,
         incomingBySource: incomingBySource,
       ),
-      loading: () => const LinearProgressIndicator(
-        key: Key('aar-attackers-loading'),
-      ),
+      loading: () =>
+          const LinearProgressIndicator(key: Key('aar-attackers-loading')),
       error: (error, stack) {
         Log.e('COMBAT.UI', 'Attacker correlation unavailable', error, stack);
         return Column(
@@ -308,10 +307,7 @@ class _AarAttackerCorrelationBodyState
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name),
-                _shipName(participant.shipTypeId),
-              ],
+              children: [Text(name), _shipName(participant.shipTypeId)],
             ),
           ),
           if (participant.damageDone != null)
@@ -336,7 +332,8 @@ class _AarAttackerCorrelationBodyState
     if (characterName != null && characterName.isNotEmpty) {
       return characterName;
     }
-    if (participant.shipTypeId != null) return 'Type #${participant.shipTypeId}';
+    if (participant.shipTypeId != null)
+      return 'Type #${participant.shipTypeId}';
     return participant.key;
   }
 
