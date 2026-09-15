@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 import '../../../core/auth/oauth_service.dart';
@@ -6,10 +8,12 @@ import '../../../core/config/eve_config.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/network/esi_client.dart';
 import '../../../core/sde/sde_service.dart';
+import 'aar_evidence_operation_coordinator.dart';
 import 'aar_fit_import_parser.dart';
 import '../domain/combat_actor_classifier.dart';
 import '../domain/combat_attacker_correlation.dart';
 import '../domain/combat_attacker_correlator.dart';
+import '../../fitting/domain/models.dart';
 import '../domain/combat_enrichment.dart';
 import '../domain/combat_evidence_ledger.dart';
 import '../domain/combat_fit_snapshot_mapper.dart';
@@ -22,6 +26,15 @@ import '../domain/parsed_combat_encounter.dart';
 import 'combat_enrichment_repository.dart';
 import 'combat_killmail_discovery_client.dart';
 
+enum DerivedEvidenceCommitStatus { committed, staleInput }
+
+final class DerivedEvidenceCommit {
+  const DerivedEvidenceCommit({required this.status, required this.enrichment});
+
+  final DerivedEvidenceCommitStatus status;
+  final CombatEnrichment enrichment;
+}
+
 class CombatEnrichmentService {
   CombatEnrichmentService({
     required CombatEnrichmentRepository repository,
@@ -31,13 +44,17 @@ class CombatEnrichmentService {
     required OAuthService oauthService,
     required SdeService sdeService,
     CombatAttackerCorrelator? correlator,
+    AarEvidenceOperationCoordinator? coordinator,
+    void Function(String encounterId)? onEnrichmentCommitted,
   }) : _repository = repository,
        _esiClient = esiClient,
        _discoveryClient = discoveryClient,
        _tokenManager = tokenManager,
        _oauthService = oauthService,
        _sdeService = sdeService,
-       _correlator = correlator;
+       _correlator = correlator,
+       _coordinator = coordinator,
+       _onEnrichmentCommitted = onEnrichmentCommitted;
 
   static const int maxRecentDetails = 80;
   static const int maxZkillPagesPerDirection = 3;
@@ -49,12 +66,27 @@ class CombatEnrichmentService {
   final OAuthService _oauthService;
   final SdeService _sdeService;
   final CombatAttackerCorrelator? _correlator;
+  final AarEvidenceOperationCoordinator? _coordinator;
+  final void Function(String encounterId)? _onEnrichmentCommitted;
 
   SdeService get sdeService => _sdeService;
 
   final Map<String, Future<CombatEnrichment>> _ensureLocks = {};
 
   Future<CombatEnrichment> attachDerivedEvidence(
+    CombatEnrichment enrichment,
+    AarDerivationBundle bundle, {
+    required String encounterId,
+  }) async {
+    final commit = await commitDerivedEvidence(
+      enrichment,
+      bundle,
+      encounterId: encounterId,
+    );
+    return commit.enrichment;
+  }
+
+  Future<DerivedEvidenceCommit> commitDerivedEvidence(
     CombatEnrichment enrichment,
     AarDerivationBundle bundle, {
     required String encounterId,
@@ -77,17 +109,39 @@ class CombatEnrichmentService {
           matchup: bundle.opponentMatchup,
         ),
     ];
-    final merged = _mergeLedgers(
-      enrichment.evidenceLedger,
-      CombatEvidenceLedger(facts: facts, unknowns: bundle.unknowns),
-      removeUnknownCategories: const {AarUnknownCategory.skills},
+    final inputKey = derivationInputKey(enrichment);
+    final result = await _commit(
+      encounterId,
+      (current) {
+        final base = current ?? enrichment;
+        final merged = _mergeLedgers(
+          base.evidenceLedger,
+          CombatEvidenceLedger(facts: facts, unknowns: bundle.unknowns),
+          removeUnknownCategories: const {AarUnknownCategory.skills},
+        );
+        Log.i(
+          'COMBAT.ENRICH',
+          'attachDerivedEvidence facts=${merged.facts.length} '
+              'unknowns=${merged.unknowns.length}',
+        );
+        return _copy(base, evidenceLedger: merged);
+      },
+      precondition: (current) {
+        if (current == null) return true;
+        return derivationInputKey(current) == inputKey;
+      },
     );
-    Log.i(
-      'COMBAT.ENRICH',
-      'attachDerivedEvidence facts=${merged.facts.length} '
-          'unknowns=${merged.unknowns.length}',
+    if (result.status == EnrichmentMutationStatus.preconditionFailed) {
+      Log.i('COMBAT.ENRICH', 'derived evidence staleInput $encounterId');
+      return DerivedEvidenceCommit(
+        status: DerivedEvidenceCommitStatus.staleInput,
+        enrichment: result.enrichment,
+      );
+    }
+    return DerivedEvidenceCommit(
+      status: DerivedEvidenceCommitStatus.committed,
+      enrichment: result.enrichment,
     );
-    return _save(enrichment.copyWith(evidenceLedger: merged));
   }
 
   Future<CombatEnrichment> enrichEncounter(
@@ -103,61 +157,63 @@ class CombatEnrichmentService {
       if (cached != null) return cached;
     }
 
+    final CombatEnrichment candidate;
     final characterId = encounter.characterId;
     if (characterId == null) {
-      return _save(
-        CombatEnrichment(
-          parsedEncounterId: encounter.id,
-          status: CombatEnrichmentStatus.logOnly,
-          source: CombatEnrichmentSource.none,
-          matchReason:
-              'No authenticated character ID was associated with this log listener.',
-          limitations: const [
-            'Killmail matching requires the combat log listener to match an authenticated character.',
-          ],
-          evidenceLedger: _baselineLedger(encounter),
-        ).copyWith(killmailSearchCompleted: true),
-      );
-    }
-
-    var missingScope = !await _hasKillmailScope(characterId);
-    if (!missingScope) {
-      final esiResult = await _tryEsiRecent(encounter, characterId);
-      if (esiResult.missingScope) missingScope = true;
-      if (esiResult.enrichment != null) {
-        return _save(
-          esiResult.enrichment!.copyWith(killmailSearchCompleted: true),
-        );
-      }
-    }
-
-    final zkillEnrichment = await _tryZkillDiscovery(
-      encounter,
-      characterId,
-      missingScope: missingScope,
-    );
-    if (zkillEnrichment != null) {
-      return _save(zkillEnrichment.copyWith(killmailSearchCompleted: true));
-    }
-
-    return _save(
-      CombatEnrichment(
+      candidate = CombatEnrichment(
         parsedEncounterId: encounter.id,
-        status: missingScope
-            ? CombatEnrichmentStatus.needsReauth
-            : CombatEnrichmentStatus.logOnly,
+        status: CombatEnrichmentStatus.logOnly,
         source: CombatEnrichmentSource.none,
-        matchReason: missingScope
-            ? 'Killmail scope is missing and no public zKill match was found.'
-            : 'No ESI or zKill killmail matched this encounter.',
-        limitations: [
-          if (missingScope)
-            'Reauthorize this character to enable ESI recent killmail discovery.',
-          'The AAR is based on combat-log evidence only.',
+        matchReason:
+            'No authenticated character ID was associated with this log listener.',
+        limitations: const [
+          'Killmail matching requires the combat log listener to match an authenticated character.',
         ],
-        evidenceLedger: _baselineLedger(encounter, missingScope: missingScope),
-      ).copyWith(killmailSearchCompleted: true),
+        evidenceLedger: _baselineLedger(encounter),
+        killmailSearchCompleted: true,
+      );
+    } else {
+      var missingScope = !await _hasKillmailScope(characterId);
+      CombatEnrichment? discovered;
+      if (!missingScope) {
+        final esiResult = await _tryEsiRecent(encounter, characterId);
+        if (esiResult.missingScope) missingScope = true;
+        discovered = esiResult.enrichment;
+      }
+      discovered ??= await _tryZkillDiscovery(
+        encounter,
+        characterId,
+        missingScope: missingScope,
+      );
+      candidate =
+          (discovered ??
+                  CombatEnrichment(
+                    parsedEncounterId: encounter.id,
+                    status: missingScope
+                        ? CombatEnrichmentStatus.needsReauth
+                        : CombatEnrichmentStatus.logOnly,
+                    source: CombatEnrichmentSource.none,
+                    matchReason: missingScope
+                        ? 'Killmail scope is missing and no public zKill match was found.'
+                        : 'No ESI or zKill killmail matched this encounter.',
+                    limitations: [
+                      if (missingScope)
+                        'Reauthorize this character to enable ESI recent killmail discovery.',
+                      'The AAR is based on combat-log evidence only.',
+                    ],
+                    evidenceLedger: _baselineLedger(
+                      encounter,
+                      missingScope: missingScope,
+                    ),
+                  ))
+              .copyWith(killmailSearchCompleted: true);
+    }
+
+    final result = await _commit(
+      encounter.id,
+      (current) => _mergeRefresh(current, candidate),
     );
+    return result.enrichment;
   }
 
   Future<CombatEnrichment> importPilotFit(
@@ -165,25 +221,29 @@ class CombatEnrichmentService {
     String rawFit,
   ) async {
     Log.d('COMBAT.ENRICH', 'importPilotFit(${encounter.id}) - START');
-    final fitting = await AarFitImportParser(
-      sdeService: _sdeService,
-    ).parse(rawFit);
-    final evidence = FitEvidence(
-      role: FitEvidenceRole.pilot,
-      source: EvidenceSource.manualFitImport,
-      confidence: EvidenceConfidence.confirmed,
-      fitting: fitting,
-      evidenceTime: DateTime.now().toUtc(),
-      limitations: const ['User-confirmed manual fit import.'],
-    );
-    final existing = await _loadOrCreateEnrichment(encounter);
-    final updated = _withPilotFitEvidence(
-      existing,
-      encounter,
-      evidence,
-      'Pilot fit imported by user.',
-    );
-    return _save(updated);
+    return _runAttachment(encounter.id, () async {
+      final fitting = await AarFitImportParser(
+        sdeService: _sdeService,
+      ).parse(rawFit);
+      final evidence = FitEvidence(
+        role: FitEvidenceRole.pilot,
+        source: EvidenceSource.manualFitImport,
+        confidence: EvidenceConfidence.confirmed,
+        fitting: fitting,
+        evidenceTime: DateTime.now().toUtc(),
+        limitations: const ['User-confirmed manual fit import.'],
+      );
+      final result = await _commit(
+        encounter.id,
+        (current) => _withPilotFitEvidence(
+          current ?? _emptyEnrichment(encounter),
+          encounter,
+          evidence,
+          'Pilot fit imported by user.',
+        ),
+      );
+      return result.enrichment;
+    });
   }
 
   Future<CombatEnrichment> captureCurrentPilotFit(
@@ -194,53 +254,57 @@ class CombatEnrichmentService {
       'COMBAT.ENRICH',
       'captureCurrentPilotFit(${encounter.id}, confirmed=$confirmed) - START',
     );
-    final characterId = encounter.characterId;
-    if (characterId == null) {
-      throw const AarCaptureException(
-        'Current fit snapshot requires an authenticated character match.',
-        code: AarCaptureFailureCode.unmatchedCharacter,
-      );
-    }
+    return _runAttachment(encounter.id, () async {
+      final characterId = encounter.characterId;
+      if (characterId == null) {
+        throw const AarCaptureException(
+          'Current fit snapshot requires an authenticated character match.',
+          code: AarCaptureFailureCode.unmatchedCharacter,
+        );
+      }
 
-    final ship = await _esiClient.getCharacterShip(characterId);
-    if (ship == null) {
-      throw const AarCaptureException(
-        'ESI did not return a current ship.',
-        code: AarCaptureFailureCode.noCurrentShip,
+      final ship = await _esiClient.getCharacterShip(characterId);
+      if (ship == null) {
+        throw const AarCaptureException(
+          'ESI did not return a current ship.',
+          code: AarCaptureFailureCode.noCurrentShip,
+        );
+      }
+      final assets = await _fetchAllAssets(characterId);
+      final fitting = CombatFitSnapshotMapper.mapCurrentShipAssets(
+        characterId: characterId,
+        ship: ship,
+        assets: assets,
       );
-    }
-    final assets = await _fetchAllAssets(characterId);
-    final fitting = CombatFitSnapshotMapper.mapCurrentShipAssets(
-      characterId: characterId,
-      ship: ship,
-      assets: assets,
-    );
-    final evidence = FitEvidence(
-      role: FitEvidenceRole.pilot,
-      source: EvidenceSource.currentShipSnapshot,
-      confidence: confirmed
-          ? EvidenceConfidence.confirmed
-          : EvidenceConfidence.reference,
-      fitting: fitting,
-      evidenceTime: DateTime.now().toUtc(),
-      limitations: [
-        if (confirmed)
-          'User confirmed this current ship snapshot was the fight fit.'
-        else
-          'Current ship snapshots are not historical proof until user-confirmed.',
-        if (fitting.allModules.isEmpty) kAarEmptyModulesLimitation,
-      ],
-    );
-    final existing = await _loadOrCreateEnrichment(encounter);
-    final updated = _withPilotFitEvidence(
-      existing,
-      encounter,
-      evidence,
-      confirmed
-          ? 'Pilot confirmed current ship snapshot as the fight fit.'
-          : 'Current ship snapshot captured as reference evidence.',
-    );
-    return _save(updated);
+      final evidence = FitEvidence(
+        role: FitEvidenceRole.pilot,
+        source: EvidenceSource.currentShipSnapshot,
+        confidence: confirmed
+            ? EvidenceConfidence.confirmed
+            : EvidenceConfidence.reference,
+        fitting: fitting,
+        evidenceTime: DateTime.now().toUtc(),
+        limitations: [
+          if (confirmed)
+            'User confirmed this current ship snapshot was the fight fit.'
+          else
+            'Current ship snapshots are not historical proof until user-confirmed.',
+          if (fitting.allModules.isEmpty) kAarEmptyModulesLimitation,
+        ],
+      );
+      final result = await _commit(
+        encounter.id,
+        (current) => _withPilotFitEvidence(
+          current ?? _emptyEnrichment(encounter),
+          encounter,
+          evidence,
+          confirmed
+              ? 'Pilot confirmed current ship snapshot as the fight fit.'
+              : 'Current ship snapshot captured as reference evidence.',
+        ),
+      );
+      return result.enrichment;
+    });
   }
 
   Future<CombatEnrichment?> loadEnrichment(String parsedEncounterId) {
@@ -293,21 +357,39 @@ class CombatEnrichmentService {
       return enrichment;
     }
     final correlation = await _correlateOrNull(encounter, detail);
-    if (correlation == null) return enrichment;
-    return _save(
-      enrichment.copyWith(
-        attackerCorrelation: correlation,
-        evidenceLedger: _mergeLedgers(
-          enrichment.evidenceLedger,
-          _correlationLedger(correlation),
-        ),
-      ),
+    if (correlation == null) {
+      final latest = await _repository.loadEnrichment(encounter.id);
+      return latest ?? enrichment;
+    }
+    final workKillmailId = enrichment.killmailId;
+    final workRaw = jsonEncode(enrichment.rawKillmail);
+    final result = await _commit(
+      encounter.id,
+      (current) {
+        final base = current ?? enrichment;
+        if (base.attackerCorrelation != null) return base;
+        return _copy(
+          base,
+          attackerCorrelation: correlation,
+          evidenceLedger: _mergeLedgers(
+            base.evidenceLedger,
+            _correlationLedger(correlation),
+          ),
+        );
+      },
+      precondition: (current) {
+        if (current == null) return false;
+        if (current.killmailId != workKillmailId) return false;
+        return jsonEncode(current.rawKillmail) == workRaw;
+      },
     );
-  }
-
-  Future<CombatEnrichment> _save(CombatEnrichment enrichment) async {
-    await _repository.saveEnrichment(enrichment);
-    return enrichment;
+    if (result.status == EnrichmentMutationStatus.preconditionFailed) {
+      Log.i(
+        'COMBAT.CORRELATE',
+        'correlation patch skipped stale input ${encounter.id}',
+      );
+    }
+    return result.enrichment;
   }
 
   Future<_EsiRecentResult> _tryEsiRecent(
@@ -583,11 +665,7 @@ class CombatEnrichmentService {
     return parsed;
   }
 
-  Future<CombatEnrichment> _loadOrCreateEnrichment(
-    ParsedCombatEncounter encounter,
-  ) async {
-    final existing = await _repository.loadEnrichment(encounter.id);
-    if (existing != null) return existing;
+  CombatEnrichment _emptyEnrichment(ParsedCombatEncounter encounter) {
     return CombatEnrichment(
       parsedEncounterId: encounter.id,
       status: CombatEnrichmentStatus.logOnly,
@@ -598,41 +676,306 @@ class CombatEnrichmentService {
     );
   }
 
+  Future<T> _runAttachment<T>(String encounterId, Future<T> Function() action) {
+    final coordinator = _coordinator;
+    if (coordinator == null) return action();
+    return coordinator.runAttachment(encounterId, action);
+  }
+
+  Future<EnrichmentMutationResult> _commit(
+    String encounterId,
+    CombatEnrichment Function(CombatEnrichment? current) transform, {
+    bool Function(CombatEnrichment? current)? precondition,
+  }) async {
+    final result = await _repository.mutateEnrichment(
+      encounterId,
+      transform,
+      precondition: precondition,
+    );
+    if (result.status == EnrichmentMutationStatus.written) {
+      try {
+        _onEnrichmentCommitted?.call(encounterId);
+      } catch (e, stack) {
+        Log.e('AAR', 'enrichment commit publication failed', e, stack);
+      }
+    }
+    return result;
+  }
+
+  static String derivationInputKey(CombatEnrichment enrichment) {
+    return jsonEncode({
+      'pilot': enrichment.pilotFitEvidence?.toJson(),
+      'victim': enrichment.victimFitEvidence?.toJson(),
+      'victimCharacterId': enrichment.victimCharacterId,
+      'killmailId': enrichment.killmailId,
+      'status': enrichment.status.name,
+      'source': enrichment.source.name,
+      'correlation': enrichment.attackerCorrelation?.toJson(),
+    });
+  }
+
+  CombatEnrichment _copy(
+    CombatEnrichment base, {
+    CombatEnrichmentStatus? status,
+    CombatEnrichmentSource? source,
+    int? killmailId,
+    String? killmailHash,
+    DateTime? killmailTime,
+    int? solarSystemId,
+    int? victimCharacterId,
+    String? victimName,
+    int? victimShipTypeId,
+    int? finalBlowCharacterId,
+    String? finalBlowName,
+    int? finalBlowShipTypeId,
+    double? totalValue,
+    Fitting? destroyedFit,
+    FitEvidence? pilotFitEvidence,
+    FitEvidence? victimFitEvidence,
+    CombatEvidenceLedger? evidenceLedger,
+    double? matchConfidence,
+    String? matchReason,
+    List<String>? limitations,
+    Map<String, dynamic>? rawKillmail,
+    bool? killmailSearchCompleted,
+    AttackerCorrelation? attackerCorrelation,
+  }) {
+    return CombatEnrichment(
+      parsedEncounterId: base.parsedEncounterId,
+      status: status ?? base.status,
+      source: source ?? base.source,
+      killmailId: killmailId ?? base.killmailId,
+      killmailHash: killmailHash ?? base.killmailHash,
+      killmailTime: killmailTime ?? base.killmailTime,
+      solarSystemId: solarSystemId ?? base.solarSystemId,
+      victimCharacterId: victimCharacterId ?? base.victimCharacterId,
+      victimName: victimName ?? base.victimName,
+      victimShipTypeId: victimShipTypeId ?? base.victimShipTypeId,
+      finalBlowCharacterId: finalBlowCharacterId ?? base.finalBlowCharacterId,
+      finalBlowName: finalBlowName ?? base.finalBlowName,
+      finalBlowShipTypeId: finalBlowShipTypeId ?? base.finalBlowShipTypeId,
+      totalValue: totalValue ?? base.totalValue,
+      destroyedFit: destroyedFit ?? base.destroyedFit,
+      pilotFitEvidence: pilotFitEvidence ?? base.pilotFitEvidence,
+      victimFitEvidence: victimFitEvidence ?? base.victimFitEvidence,
+      evidenceLedger: evidenceLedger ?? base.evidenceLedger,
+      matchConfidence: matchConfidence ?? base.matchConfidence,
+      matchReason: matchReason ?? base.matchReason,
+      limitations: limitations ?? base.limitations,
+      rawKillmail: rawKillmail ?? base.rawKillmail,
+      killmailSearchCompleted:
+          killmailSearchCompleted ?? base.killmailSearchCompleted,
+      attackerCorrelation: attackerCorrelation ?? base.attackerCorrelation,
+    );
+  }
+
+  CombatEnrichment _mergeRefresh(
+    CombatEnrichment? current,
+    CombatEnrichment candidate,
+  ) {
+    if (current == null) return candidate;
+    final retainPacket = _shouldRetainVictimPacket(current, candidate);
+    if (retainPacket) {
+      return CombatEnrichment(
+        parsedEncounterId: current.parsedEncounterId,
+        status: current.status,
+        source: current.source,
+        killmailId: current.killmailId,
+        killmailHash: current.killmailHash,
+        killmailTime: current.killmailTime,
+        solarSystemId: current.solarSystemId,
+        victimCharacterId: current.victimCharacterId,
+        victimName: current.victimName,
+        victimShipTypeId: current.victimShipTypeId,
+        finalBlowCharacterId: current.finalBlowCharacterId,
+        finalBlowName: current.finalBlowName,
+        finalBlowShipTypeId: current.finalBlowShipTypeId,
+        totalValue: current.totalValue,
+        destroyedFit: current.destroyedFit,
+        pilotFitEvidence: current.pilotFitEvidence,
+        victimFitEvidence: current.victimFitEvidence,
+        evidenceLedger: current.evidenceLedger,
+        matchConfidence: current.matchConfidence,
+        matchReason: current.matchReason,
+        limitations: current.limitations,
+        rawKillmail: current.rawKillmail,
+        killmailSearchCompleted: true,
+        attackerCorrelation: current.attackerCorrelation,
+      );
+    }
+    final sameVictim = _sameVictimIdentity(current, candidate);
+    return CombatEnrichment(
+      parsedEncounterId: candidate.parsedEncounterId,
+      status: candidate.status,
+      source: candidate.source,
+      killmailId: candidate.killmailId,
+      killmailHash: candidate.killmailHash,
+      killmailTime: candidate.killmailTime,
+      solarSystemId: candidate.solarSystemId,
+      victimCharacterId: candidate.victimCharacterId,
+      victimName: candidate.victimName,
+      victimShipTypeId: candidate.victimShipTypeId,
+      finalBlowCharacterId: candidate.finalBlowCharacterId,
+      finalBlowName: candidate.finalBlowName,
+      finalBlowShipTypeId: candidate.finalBlowShipTypeId,
+      totalValue: candidate.totalValue,
+      destroyedFit: candidate.destroyedFit,
+      pilotFitEvidence: current.pilotFitEvidence ?? candidate.pilotFitEvidence,
+      victimFitEvidence: sameVictim && current.victimFitEvidence != null
+          ? current.victimFitEvidence
+          : candidate.victimFitEvidence,
+      evidenceLedger: _mergeDiscoveryLedger(current, candidate),
+      matchConfidence: candidate.matchConfidence,
+      matchReason: candidate.matchReason,
+      limitations: _mergeDiscoveryLimitations(current, candidate),
+      rawKillmail: candidate.rawKillmail,
+      killmailSearchCompleted: true,
+      attackerCorrelation: sameVictim
+          ? current.attackerCorrelation ?? candidate.attackerCorrelation
+          : candidate.attackerCorrelation,
+    );
+  }
+
+  bool _shouldRetainVictimPacket(
+    CombatEnrichment current,
+    CombatEnrichment candidate,
+  ) {
+    if (current.victimFitEvidence == null) return false;
+    if (candidate.victimFitEvidence == null) return true;
+    if (candidate.status == CombatEnrichmentStatus.ambiguous) return true;
+    return !_sameVictimIdentity(current, candidate);
+  }
+
+  bool _sameVictimIdentity(CombatEnrichment a, CombatEnrichment b) {
+    return a.killmailId != null &&
+        a.killmailId == b.killmailId &&
+        a.victimCharacterId == b.victimCharacterId;
+  }
+
+  CombatEvidenceLedger _mergeDiscoveryLedger(
+    CombatEnrichment current,
+    CombatEnrichment candidate,
+  ) {
+    final factsById = <String, CombatEvidenceFact>{
+      for (final fact in current.evidenceLedger.facts) fact.id: fact,
+    };
+    for (final fact in candidate.evidenceLedger.facts) {
+      if (fact.id.startsWith('ev-pilot-fit-')) continue;
+      factsById[fact.id] = fact;
+    }
+    final hasPilot = current.pilotFitEvidence != null;
+    final unknowns = <AarUnknown>[];
+    final seen = <String>{};
+    for (final unknown in [
+      ...current.evidenceLedger.unknowns,
+      ...candidate.evidenceLedger.unknowns,
+    ]) {
+      if (hasPilot && unknown.category == AarUnknownCategory.pilotFit) {
+        continue;
+      }
+      final key = '${unknown.category.name}|${unknown.label}';
+      if (seen.add(key)) unknowns.add(unknown);
+    }
+    return CombatEvidenceLedger(
+      facts: factsById.values.toList(),
+      unknowns: unknowns,
+    );
+  }
+
+  List<String> _mergeDiscoveryLimitations(
+    CombatEnrichment current,
+    CombatEnrichment candidate,
+  ) {
+    final seen = <String>{};
+    final merged = <String>[];
+    for (final item in [...current.limitations, ...candidate.limitations]) {
+      if (seen.add(item)) merged.add(item);
+    }
+    return merged;
+  }
+
   CombatEnrichment _withPilotFitEvidence(
     CombatEnrichment existing,
     ParsedCombatEncounter encounter,
     FitEvidence evidence,
     String factValue,
   ) {
-    final ledger = _mergeLedgers(
-      existing.evidenceLedger.isEmpty
-          ? _baselineLedger(encounter)
-          : existing.evidenceLedger,
-      CombatEvidenceLedger(
-        facts: [
-          CombatEvidenceFact(
-            id: 'ev-pilot-fit-${encounter.id}',
-            label: 'Pilot fit',
-            value: factValue,
-            source: evidence.source,
-            confidence: evidence.confidence,
-            evidenceTime: evidence.evidenceTime,
-            limitations: evidence.limitations,
-          ),
-        ],
+    final previousLimitations =
+        existing.pilotFitEvidence?.limitations ?? const [];
+    final facts = <CombatEvidenceFact>[
+      for (final fact in existing.evidenceLedger.facts)
+        if (!fact.id.startsWith('ev-derived-') &&
+            fact.id != 'ev-pilot-fit-${encounter.id}')
+          fact,
+      CombatEvidenceFact(
+        id: 'ev-pilot-fit-${encounter.id}',
+        label: 'Pilot fit',
+        value: factValue,
+        source: evidence.source,
+        confidence: evidence.confidence,
+        evidenceTime: evidence.evidenceTime,
+        limitations: evidence.limitations,
       ),
-      removeUnknownCategories: const {AarUnknownCategory.pilotFit},
-    );
-    return existing.copyWith(
+    ];
+    final unknowns = <AarUnknown>[];
+    final seen = <String>{};
+    for (final unknown in existing.evidenceLedger.unknowns) {
+      if (unknown.category == AarUnknownCategory.pilotFit) continue;
+      final key = '${unknown.category.name}|${unknown.label}';
+      if (seen.add(key)) unknowns.add(unknown);
+    }
+    final baseLedger = existing.evidenceLedger.isEmpty
+        ? _baselineLedger(encounter)
+        : CombatEvidenceLedger(facts: facts, unknowns: unknowns);
+    final ledger = existing.evidenceLedger.isEmpty
+        ? _mergeLedgers(
+            baseLedger,
+            CombatEvidenceLedger(
+              facts: [
+                CombatEvidenceFact(
+                  id: 'ev-pilot-fit-${encounter.id}',
+                  label: 'Pilot fit',
+                  value: factValue,
+                  source: evidence.source,
+                  confidence: evidence.confidence,
+                  evidenceTime: evidence.evidenceTime,
+                  limitations: evidence.limitations,
+                ),
+              ],
+            ),
+            removeUnknownCategories: const {AarUnknownCategory.pilotFit},
+          )
+        : CombatEvidenceLedger(facts: facts, unknowns: unknowns);
+    return CombatEnrichment(
+      parsedEncounterId: existing.parsedEncounterId,
+      status: existing.status,
+      source: existing.source,
+      killmailId: existing.killmailId,
+      killmailHash: existing.killmailHash,
+      killmailTime: existing.killmailTime,
+      solarSystemId: existing.solarSystemId,
+      victimCharacterId: existing.victimCharacterId,
+      victimName: existing.victimName,
+      victimShipTypeId: existing.victimShipTypeId,
+      finalBlowCharacterId: existing.finalBlowCharacterId,
+      finalBlowName: existing.finalBlowName,
+      finalBlowShipTypeId: existing.finalBlowShipTypeId,
+      totalValue: existing.totalValue,
+      destroyedFit: existing.destroyedFit,
       pilotFitEvidence: evidence,
+      victimFitEvidence: existing.victimFitEvidence,
       evidenceLedger: ledger,
+      matchConfidence: existing.matchConfidence,
+      matchReason: existing.matchReason,
       limitations: [
         ...existing.limitations.where(
-          (item) =>
-              !item.toLowerCase().contains('pilot full fit remains unknown'),
+          (item) => !previousLimitations.contains(item),
         ),
         ...evidence.limitations,
       ],
+      rawKillmail: existing.rawKillmail,
+      killmailSearchCompleted: existing.killmailSearchCompleted,
+      attackerCorrelation: existing.attackerCorrelation,
     );
   }
 

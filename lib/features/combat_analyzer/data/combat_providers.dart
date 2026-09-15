@@ -8,6 +8,7 @@ import '../../../core/auth/auth_providers.dart';
 import '../../../core/network/esi_client.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/sde/sde_providers.dart';
+import 'aar_evidence_operation_coordinator.dart';
 import 'combat_damage_profile_resolver.dart';
 import 'combat_enrichment_repository.dart';
 import 'combat_enrichment_service.dart';
@@ -51,6 +52,14 @@ final combatKillmailDiscoveryClientProvider =
       return CombatKillmailDiscoveryClient();
     });
 
+final aarEvidenceOperationCoordinatorProvider =
+    Provider<AarEvidenceOperationCoordinator>((ref) {
+      Log.d('AAR', 'aarEvidenceOperationCoordinatorProvider() - START');
+      final coordinator = AarEvidenceOperationCoordinator();
+      ref.onDispose(coordinator.dispose);
+      return coordinator;
+    });
+
 final combatEnrichmentServiceProvider = Provider<CombatEnrichmentService>((
   ref,
 ) {
@@ -62,6 +71,7 @@ final combatEnrichmentServiceProvider = Provider<CombatEnrichmentService>((
     tokenManager: ref.watch(tokenManagerProvider),
     oauthService: ref.watch(oauthServiceProvider),
     sdeService: ref.watch(sdeServiceProvider),
+    coordinator: ref.watch(aarEvidenceOperationCoordinatorProvider),
   );
 });
 

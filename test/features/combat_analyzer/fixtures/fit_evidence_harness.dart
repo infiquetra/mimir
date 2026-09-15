@@ -18,6 +18,7 @@ import 'package:mimir/core/sde/sde_database.dart';
 import 'package:mimir/core/sde/sde_providers.dart';
 import 'package:mimir/core/sde/sde_service.dart';
 import 'package:mimir/core/theme/app_theme.dart';
+import 'package:mimir/features/combat_analyzer/data/aar_evidence_operation_coordinator.dart';
 import 'package:mimir/features/combat_analyzer/data/codex_analysis_client.dart';
 import 'package:mimir/features/combat_analyzer/data/codex_auth_service.dart';
 import 'package:mimir/features/combat_analyzer/data/codex_auth_store.dart';
@@ -70,6 +71,7 @@ class FitEvidenceHarness {
   late final CombatDamageProfileResolver damageResolver;
   late final CombatAnalysisService analysisService;
   late final SkillRepository skillRepository;
+  late final AarEvidenceOperationCoordinator coordinator;
 
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   final GlobalKey<ScaffoldMessengerState> messengerKey =
@@ -103,6 +105,7 @@ class FitEvidenceHarness {
     repository = GatedEnrichmentRepository(database: appDb);
     discovery = RecordingDiscoveryClient();
     codex = RecordingCodexClient();
+    coordinator = AarEvidenceOperationCoordinator();
     skillRepository = SkillRepository(database: appDb, esiClient: esiClient);
     enrichmentService = CombatEnrichmentService(
       repository: repository,
@@ -111,6 +114,7 @@ class FitEvidenceHarness {
       tokenManager: tokenManager,
       oauthService: oauthService,
       sdeService: sdeService,
+      coordinator: coordinator,
     );
     derivationService = CombatFitDerivationService(
       sde: sdeService,
@@ -123,6 +127,7 @@ class FitEvidenceHarness {
       enrichmentService: enrichmentService,
       derivationService: derivationService,
       damageProfileResolver: damageResolver,
+      coordinator: coordinator,
     );
     await seedMinimalSde();
     await seedCharacters();
@@ -152,6 +157,7 @@ class FitEvidenceHarness {
       allow.complete();
     }
     esiClient.dispose();
+    coordinator.dispose();
     await sdeDb.close();
     await appDb.close();
   }
@@ -248,6 +254,9 @@ class FitEvidenceHarness {
       combatFitDerivationServiceProvider.overrideWithValue(derivationService),
       combatDamageProfileResolverProvider.overrideWithValue(damageResolver),
       combatAnalysisServiceProvider.overrideWithValue(analysisService),
+      aarEvidenceOperationCoordinatorProvider.overrideWith(
+        (ref) => coordinator,
+      ),
       skillRepositoryProvider.overrideWithValue(skillRepository),
       codexAnalysisClientProvider.overrideWithValue(codex),
       aarSdeRevisionProvider.overrideWith(
@@ -810,7 +819,11 @@ class GatedEnrichmentRepository extends CombatEnrichmentRepository {
   Object? failWith;
 
   @override
-  Future<void> saveEnrichment(CombatEnrichment enrichment) async {
+  Future<EnrichmentMutationResult> mutateEnrichment(
+    String parsedEncounterId,
+    CombatEnrichment Function(CombatEnrichment? current) transform, {
+    bool Function(CombatEnrichment? current)? precondition,
+  }) async {
     saveCalls += 1;
     final entered = mutationEntered;
     if (entered != null && !entered.isCompleted) {
@@ -822,6 +835,10 @@ class GatedEnrichmentRepository extends CombatEnrichmentRepository {
     if (failWith != null) {
       throw failWith!;
     }
-    await super.saveEnrichment(enrichment);
+    return super.mutateEnrichment(
+      parsedEncounterId,
+      transform,
+      precondition: precondition,
+    );
   }
 }

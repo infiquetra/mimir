@@ -13,11 +13,15 @@ import '../../skills/data/skill_repository.dart';
 import '../domain/aar_attacker_matchup.dart';
 import '../domain/aar_attacker_matchup_deriver.dart';
 import '../domain/aar_evidence_scorer.dart';
+import '../domain/aar_fit_derivation.dart';
 import '../domain/combat_aar_report.dart';
+import '../domain/combat_damage_profile.dart';
+import '../domain/combat_enrichment.dart';
 import '../domain/combat_actor_classifier.dart';
 import '../domain/combat_evidence_ledger.dart';
 import '../domain/incoming_damage_allocation.dart';
 import '../domain/parsed_combat_encounter.dart';
+import 'aar_evidence_operation_coordinator.dart';
 import 'codex_analysis_client.dart';
 import 'codex_auth_service.dart';
 import 'combat_damage_profile_resolver.dart';
@@ -36,6 +40,7 @@ final combatAnalysisServiceProvider = Provider<CombatAnalysisService>((ref) {
     enrichmentService: enrichmentService,
     derivationService: ref.watch(combatFitDerivationServiceProvider),
     damageProfileResolver: ref.watch(combatDamageProfileResolverProvider),
+    coordinator: ref.watch(aarEvidenceOperationCoordinatorProvider),
     onAnalysisSaved: () {
       ref.invalidate(combatAarStatusesProvider);
       ref.invalidate(combatEnrichmentProvider);
@@ -72,6 +77,7 @@ class CombatAnalysisService {
   final CombatEnrichmentService _enrichmentService;
   final CombatFitDerivationService _derivationService;
   final CombatDamageProfileResolver _damageProfileResolver;
+  final AarEvidenceOperationCoordinator? _coordinator;
   final void Function()? _onAnalysisSaved;
 
   CombatAnalysisService({
@@ -80,6 +86,7 @@ class CombatAnalysisService {
     required CombatEnrichmentService enrichmentService,
     CombatFitDerivationService? derivationService,
     CombatDamageProfileResolver? damageProfileResolver,
+    AarEvidenceOperationCoordinator? coordinator,
     void Function()? onAnalysisSaved,
   }) : _database = database,
        _codexClient = codexClient,
@@ -102,6 +109,7 @@ class CombatAnalysisService {
            CombatDamageProfileResolver(
              database: enrichmentService.sdeService.database,
            ),
+       _coordinator = coordinator,
        _onAnalysisSaved = onAnalysisSaved;
 
   /// Generate a unique ID for an encounter based on its payload
@@ -238,55 +246,82 @@ class CombatAnalysisService {
           isIndeterminate: true,
         ),
       );
-      var enrichment = await _enrichmentService.enrichEncounter(
-        encounter,
-        forceRefresh: forceRefresh,
-      );
-      enrichment = await _enrichmentService.ensureAttackerCorrelation(
-        encounter,
-        enrichment,
-      );
+      await _coordinator?.waitForAttachment(encounter.id);
 
-      emit(
-        const CombatAnalysisProgress(
-          label: 'Deriving fit statistics',
-          detail:
-              'Running dogma derivation, damage matchups, and evidence scoring.',
-          stage: 5,
-          stageCount: _stageCount,
-          value: 0.46,
-        ),
-      );
-      IncomingAllocationResult? incomingResult;
-      try {
-        incomingResult = await _damageProfileResolver.resolveIncomingAllocation(
+      late CombatEnrichment enrichment;
+      late AarDerivationBundle derivation;
+      IncomingDamageAllocation? incomingAllocation;
+      late CombatDamageProfile incoming;
+      late CombatDamageProfile outgoing;
+      var prepared = false;
+      for (var attempt = 1; attempt <= 3; attempt++) {
+        enrichment = await _enrichmentService.enrichEncounter(
           encounter,
-          sdeContentKey: 'sde-decimal-v1',
+          forceRefresh: forceRefresh,
         );
-      } catch (e, stack) {
-        Log.e('AAR.MATCHUP', 'incoming allocation unavailable', e, stack);
+        enrichment = await _enrichmentService.ensureAttackerCorrelation(
+          encounter,
+          enrichment,
+        );
+
+        emit(
+          const CombatAnalysisProgress(
+            label: 'Deriving fit statistics',
+            detail:
+                'Running dogma derivation, damage matchups, and evidence scoring.',
+            stage: 5,
+            stageCount: _stageCount,
+            value: 0.46,
+          ),
+        );
+        IncomingAllocationResult? incomingResult;
+        try {
+          incomingResult = await _damageProfileResolver
+              .resolveIncomingAllocation(
+                encounter,
+                sdeContentKey: 'sde-decimal-v1',
+              );
+        } catch (e, stack) {
+          Log.e('AAR.MATCHUP', 'incoming allocation unavailable', e, stack);
+        }
+        incomingAllocation = incomingResult is IncomingAllocationReady
+            ? incomingResult.allocation
+            : null;
+        incoming = incomingAllocation != null
+            ? incomingAllocation.toLegacyProfile()
+            : await _damageProfileResolver.resolveIncomingProfile(encounter);
+        outgoing = await _damageProfileResolver.resolveOutgoingProfile(
+          encounter,
+        );
+        derivation = await _derivationService.deriveForEncounter(
+          encounter: encounter,
+          enrichment: enrichment,
+          incoming: incoming,
+          outgoing: outgoing,
+          incomingAllocation: incomingAllocation,
+        );
+        final commit = await _enrichmentService.commitDerivedEvidence(
+          enrichment,
+          derivation,
+          encounterId: encounter.id,
+        );
+        enrichment = commit.enrichment;
+        if (commit.status == DerivedEvidenceCommitStatus.staleInput) {
+          Log.w(
+            'AAR',
+            'analyzeEncounter(${encounter.id}) stale derived inputs '
+                'attempt=$attempt',
+          );
+          continue;
+        }
+        prepared = true;
+        break;
       }
-      final incomingAllocation = incomingResult is IncomingAllocationReady
-          ? incomingResult.allocation
-          : null;
-      final incoming = incomingAllocation != null
-          ? incomingAllocation.toLegacyProfile()
-          : await _damageProfileResolver.resolveIncomingProfile(encounter);
-      final outgoing = await _damageProfileResolver.resolveOutgoingProfile(
-        encounter,
-      );
-      final derivation = await _derivationService.deriveForEncounter(
-        encounter: encounter,
-        enrichment: enrichment,
-        incoming: incoming,
-        outgoing: outgoing,
-        incomingAllocation: incomingAllocation,
-      );
-      enrichment = await _enrichmentService.attachDerivedEvidence(
-        enrichment,
-        derivation,
-        encounterId: encounter.id,
-      );
+      if (!prepared) {
+        throw Exception(
+          'Failed to analyze combat log: evidence changed during preparation',
+        );
+      }
       AarIncomingMatchupBundle? perAttackerIncoming;
       if (incomingAllocation != null) {
         perAttackerIncoming = AarAttackerMatchupDeriver.derive(

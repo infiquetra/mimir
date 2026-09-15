@@ -34,10 +34,12 @@ class AarEvidenceChecklistCard extends ConsumerStatefulWidget {
     super.key,
     required this.encounter,
     this.handlers = const AarEvidenceActionHandlers(),
+    this.attachmentBusy = false,
   });
 
   final ParsedCombatEncounter encounter;
   final AarEvidenceActionHandlers handlers;
+  final bool attachmentBusy;
 
   @override
   ConsumerState<AarEvidenceChecklistCard> createState() =>
@@ -64,6 +66,7 @@ class _AarEvidenceChecklistCardState
           assessment: assessment,
           handlers: widget.handlers,
           collapsed: collapsed,
+          attachmentBusy: widget.attachmentBusy,
           onToggle: () => setState(() => _collapsed = !collapsed),
         );
       },
@@ -118,12 +121,14 @@ class AarEvidenceChecklistBody extends StatelessWidget {
     required this.handlers,
     required this.collapsed,
     required this.onToggle,
+    this.attachmentBusy = false,
   });
 
   final AarEvidenceAssessment assessment;
   final AarEvidenceActionHandlers handlers;
   final bool collapsed;
   final VoidCallback onToggle;
+  final bool attachmentBusy;
 
   @override
   Widget build(BuildContext context) {
@@ -184,7 +189,11 @@ class AarEvidenceChecklistBody extends StatelessWidget {
             if (!collapsed) ...[
               const SizedBox(height: 12),
               for (final row in assessment.ordered)
-                AarEvidenceChecklistRow(row: row, handlers: handlers),
+                AarEvidenceChecklistRow(
+                  row: row,
+                  handlers: handlers,
+                  attachmentBusy: attachmentBusy,
+                ),
               AarEvidenceLimitsSection(limits: assessment.structuralLimits),
             ],
           ],
@@ -195,11 +204,15 @@ class AarEvidenceChecklistBody extends StatelessWidget {
 }
 
 class AarEvidenceChecklistRow extends StatelessWidget {
-  AarEvidenceChecklistRow({required this.row, required this.handlers})
-    : super(key: Key('aar-evidence-row-${row.dimension.name}'));
+  AarEvidenceChecklistRow({
+    required this.row,
+    required this.handlers,
+    this.attachmentBusy = false,
+  }) : super(key: Key('aar-evidence-row-${row.dimension.name}'));
 
   final AarEvidenceDimensionResult row;
   final AarEvidenceActionHandlers handlers;
+  final bool attachmentBusy;
 
   @override
   Widget build(BuildContext context) {
@@ -274,7 +287,7 @@ class AarEvidenceChecklistRow extends StatelessWidget {
                         key: Key(
                           'aar-evidence-action-${action.name}-${row.dimension.name}',
                         ),
-                        onPressed: handlers[action],
+                        onPressed: attachmentBusy ? null : handlers[action],
                         icon: Icon(_actionIcon(action), size: 16),
                         label: Text(action.buttonLabel),
                       ),

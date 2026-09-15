@@ -6,11 +6,77 @@ import '../../../core/database/app_database.dart';
 import '../../../core/logging/logger.dart';
 import '../domain/combat_enrichment.dart';
 
+enum EnrichmentMutationStatus { written, unchanged, preconditionFailed }
+
+final class EnrichmentMutationResult {
+  const EnrichmentMutationResult({
+    required this.enrichment,
+    required this.status,
+  });
+
+  final CombatEnrichment enrichment;
+  final EnrichmentMutationStatus status;
+}
+
 class CombatEnrichmentRepository {
   CombatEnrichmentRepository({required AppDatabase database})
     : _database = database;
 
   final AppDatabase _database;
+
+  /// Atomic load → precondition → transform → save.
+  ///
+  /// Parsing, HTTP and provider publication stay outside the transaction.
+  Future<EnrichmentMutationResult> mutateEnrichment(
+    String parsedEncounterId,
+    CombatEnrichment Function(CombatEnrichment? current) transform, {
+    bool Function(CombatEnrichment? current)? precondition,
+  }) {
+    Log.d('COMBAT.ENRICH', 'mutateEnrichment($parsedEncounterId) - START');
+    return _database.transaction(() async {
+      final current = await loadEnrichment(parsedEncounterId);
+      if (precondition != null && !precondition(current)) {
+        Log.i(
+          'COMBAT.ENRICH',
+          'mutateEnrichment($parsedEncounterId) preconditionFailed',
+        );
+        return EnrichmentMutationResult(
+          enrichment:
+              current ??
+              CombatEnrichment(
+                parsedEncounterId: parsedEncounterId,
+                status: CombatEnrichmentStatus.logOnly,
+                source: CombatEnrichmentSource.none,
+              ),
+          status: EnrichmentMutationStatus.preconditionFailed,
+        );
+      }
+      final next = transform(current);
+      if (next.parsedEncounterId != parsedEncounterId) {
+        throw StateError(
+          'mutateEnrichment transform changed encounter key '
+          '${next.parsedEncounterId} != $parsedEncounterId',
+        );
+      }
+      final before = current == null ? null : jsonEncode(current.toJson());
+      final after = jsonEncode(next.toJson());
+      if (before == after) {
+        Log.i(
+          'COMBAT.ENRICH',
+          'mutateEnrichment($parsedEncounterId) unchanged',
+        );
+        return EnrichmentMutationResult(
+          enrichment: current ?? next,
+          status: EnrichmentMutationStatus.unchanged,
+        );
+      }
+      await saveEnrichment(next);
+      return EnrichmentMutationResult(
+        enrichment: next,
+        status: EnrichmentMutationStatus.written,
+      );
+    });
+  }
 
   Future<CombatEnrichment?> loadEnrichment(String parsedEncounterId) async {
     Log.d(

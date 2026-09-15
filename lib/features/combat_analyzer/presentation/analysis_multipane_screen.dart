@@ -67,6 +67,20 @@ class _AnalysisMultiPaneScreenState
     );
   }
 
+  Widget _checklistCard() {
+    final coordinator = ref.watch(aarEvidenceOperationCoordinatorProvider);
+    return ListenableBuilder(
+      listenable: coordinator,
+      builder: (context, _) {
+        return AarEvidenceChecklistCard(
+          encounter: widget.encounter,
+          handlers: _evidenceHandlers,
+          attachmentBusy: coordinator.isBusy(widget.encounter.id),
+        );
+      },
+    );
+  }
+
   AarEvidenceAssessment? _assessmentOrNull() {
     return ref
         .watch(aarEvidenceAssessmentProvider(widget.encounter))
@@ -354,10 +368,7 @@ class _AnalysisMultiPaneScreenState
                   ],
                 ),
                 const SizedBox(height: 24),
-                AarEvidenceChecklistCard(
-                  encounter: encounter,
-                  handlers: _evidenceHandlers,
-                ),
+                _checklistCard(),
                 const SizedBox(height: 16),
                 AarPreAnalysisGate(
                   assessment: _assessmentOrNull(),
@@ -473,10 +484,7 @@ class _AnalysisMultiPaneScreenState
         children: [
           _buildCommandStrip(theme, encounter, report, enrichment),
           const SizedBox(height: 16),
-          AarEvidenceChecklistCard(
-            encounter: encounter,
-            handlers: _evidenceHandlers,
-          ),
+          _checklistCard(),
           const SizedBox(height: 16),
           enrichment == null
               ? _buildEvidenceLoadingCard(theme)
