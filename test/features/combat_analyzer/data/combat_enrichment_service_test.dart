@@ -814,12 +814,22 @@ END;
 
         Object? duplicateError;
         Object? competingError;
-        final duplicate = harness.enrichmentService
-            .importPilotFit(encounter, kAarHeaderOnlyEft)
-            .then<void>((_) {}, onError: (error, _) => duplicateError = error);
-        final competing = harness.enrichmentService
-            .captureCurrentPilotFit(encounter, confirmed: true)
-            .then<void>((_) {}, onError: (error, _) => competingError = error);
+        unawaited(
+          harness.enrichmentService
+              .importPilotFit(encounter, kAarHeaderOnlyEft)
+              .then<void>(
+                (_) {},
+                onError: (error, _) => duplicateError = error,
+              ),
+        );
+        unawaited(
+          harness.enrichmentService
+              .captureCurrentPilotFit(encounter, confirmed: true)
+              .then<void>(
+                (_) {},
+                onError: (error, _) => competingError = error,
+              ),
+        );
         await Future<void>.delayed(const Duration(milliseconds: 80));
         expect(
           harness.repository.saveCalls,
