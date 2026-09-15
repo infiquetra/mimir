@@ -16,6 +16,7 @@ import 'package:mimir/features/combat_analyzer/data/combat_analysis_service.dart
 import 'package:mimir/features/combat_analyzer/data/combat_enrichment_repository.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_enrichment_service.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_killmail_discovery_client.dart';
+import 'package:mimir/features/combat_analyzer/domain/aar_attacker_matchup.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_aar_report.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
@@ -495,6 +496,117 @@ void main() {
       );
     });
   });
+
+  group('P08/P09 additive perAttackerIncoming prompt', () {
+    test(
+      'P08 existing v4 top-level keys stay compatible; M5 is nested under damageMatchups',
+      () {
+        final source = File(
+          'lib/features/combat_analyzer/data/codex_analysis_client.dart',
+        ).readAsStringSync();
+        expect(source, contains('perAttackerIncoming'));
+        expect(source, contains("damageMatchups"));
+        expect(source, contains('damageMatchups.perAttackerIncoming'));
+      },
+    );
+
+    test('P08 EHP instruction recognizes M5 numerical fields', () {
+      final source = File(
+        'lib/features/combat_analyzer/data/codex_analysis_client.dart',
+      ).readAsStringSync();
+      expect(source, contains('damageMatchups.perAttackerIncoming'));
+      expect(
+        source,
+        isNot(
+          contains(
+            'Do not restate resist or EHP figures that are not in `derivedFits`',
+          ),
+        ),
+      );
+      expect(
+        source,
+        contains('M4 Possible does not permit a named defense claim'),
+      );
+    });
+
+    test('P08 null M5 omits the block; no top-level v5 key', () {
+      final encounter = CombatLogParser.parseLines([
+        'Listener: Pilot',
+        '[ 2026.05.20 20:00:00 ] (combat) 100 to Enemy - Railgun - Hits',
+      ]).single;
+      final prompt = FakeCodexAnalysisClient(
+        authFilePath: '${tempDir.path}/auth.json',
+      ).buildPrompt(encounter);
+      final payload = jsonDecode(prompt) as Map<String, dynamic>;
+      expect(payload.containsKey('perAttackerIncoming'), isFalse);
+      expect(payload['schema'], 'mimir.combat_aar_input.v4');
+      final matchups = payload['damageMatchups'];
+      if (matchups is Map) {
+        expect(matchups.containsKey('perAttackerIncoming'), isFalse);
+      }
+    });
+
+    test(
+      'P08/P09 analyzeEncounter captures perAttackerIncoming from complete local events',
+      () async {
+        final encounter = CombatLogParser.parseLines([
+          'Listener: Pilot',
+          '[ 2026.05.20 20:00:00 ] (combat) 100 from Enemy - Railgun - Hits',
+        ]).single;
+        await CombatEnrichmentRepository(database: appDb).saveEnrichment(
+          CombatEnrichment(
+            parsedEncounterId: encounter.id,
+            status: CombatEnrichmentStatus.logOnly,
+            source: CombatEnrichmentSource.none,
+            killmailSearchCompleted: true,
+          ),
+        );
+        final fake = FakeCodexAnalysisClient(
+          authFilePath: '${tempDir.path}/auth.json',
+        );
+        final analysis = CombatAnalysisService(
+          database: appDb,
+          codexClient: fake,
+          enrichmentService: enrichmentService(),
+        );
+        await analysis.analyzeEncounter(encounter);
+        expect(fake.capturedPerAttackerIncoming, isNotNull);
+        expect(
+          fake.capturedPerAttackerIncoming!.allocation.totalIncomingDamage,
+          encounter.totalDamageReceived,
+        );
+      },
+    );
+
+    test('P09 T=0 emits an explicit empty perAttackerIncoming block', () async {
+      final encounter = CombatLogParser.parseLines([
+        'Listener: Pilot',
+        '[ 2026.05.20 20:00:00 ] (combat) 100 to Enemy - Railgun - Hits',
+      ]).single;
+      await CombatEnrichmentRepository(database: appDb).saveEnrichment(
+        CombatEnrichment(
+          parsedEncounterId: encounter.id,
+          status: CombatEnrichmentStatus.logOnly,
+          source: CombatEnrichmentSource.none,
+          killmailSearchCompleted: true,
+        ),
+      );
+      final fake = FakeCodexAnalysisClient(
+        authFilePath: '${tempDir.path}/auth.json',
+      );
+      final analysis = CombatAnalysisService(
+        database: appDb,
+        codexClient: fake,
+        enrichmentService: enrichmentService(),
+      );
+      await analysis.analyzeEncounter(encounter);
+      expect(fake.capturedPerAttackerIncoming, isNotNull);
+      expect(
+        fake.capturedPerAttackerIncoming!.allocation.totalIncomingDamage,
+        0,
+      );
+    });
+  });
 }
 
 class FakeCodexAnalysisClient extends CodexAnalysisClient {
@@ -507,6 +619,7 @@ class FakeCodexAnalysisClient extends CodexAnalysisClient {
 
   String? capturedPrompt;
   CombatEnrichment? capturedEnrichment;
+  AarIncomingMatchupBundle? capturedPerAttackerIncoming;
 
   @override
   Future<CodexAnalysisResult> analyzeEncounter({
@@ -514,8 +627,10 @@ class FakeCodexAnalysisClient extends CodexAnalysisClient {
     required String model,
     CombatEnrichment? enrichment,
     AarDerivationBundle? derivation,
+    AarIncomingMatchupBundle? perAttackerIncoming,
   }) async {
     capturedEnrichment = enrichment;
+    capturedPerAttackerIncoming = perAttackerIncoming;
     capturedPrompt = buildPrompt(
       encounter,
       enrichment: enrichment,

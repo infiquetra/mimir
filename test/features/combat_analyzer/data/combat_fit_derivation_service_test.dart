@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:drift/drift.dart' hide isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/core/auth/oauth_service.dart';
@@ -11,9 +11,18 @@ import 'package:mimir/core/sde/sde_database.dart';
 import 'package:mimir/core/sde/sde_service.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_fit_derivation_service.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
+import 'package:mimir/features/combat_analyzer/domain/combat_damage_profile.dart';
+import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_evidence_ledger.dart';
+import 'package:mimir/features/combat_analyzer/domain/combat_log_parser.dart';
+import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.dart';
+import 'package:mimir/features/combat_analyzer/domain/incoming_damage_allocation.dart';
+import 'package:mimir/features/combat_analyzer/domain/incoming_damage_allocator.dart';
+import 'package:mimir/features/fitting/data/fitting_stats_inputs.dart';
 import 'package:mimir/features/fitting/domain/models.dart';
 import 'package:mimir/features/fitting/presentation/fitting_providers.dart';
+
+import '../fixtures/attacker_matchup_fixtures.dart';
 import 'package:mimir/features/skills/data/skill_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mimir/core/di/providers.dart';
@@ -218,6 +227,193 @@ void main() {
       expect(source, contains('CombatDamageMatchupAnalyzer.analyze('));
     },
   );
+
+  group('P03/P04/P07 fit-only derivation and composeMatchups', () {
+    ParsedCombatEncounter parseEncounter() => CombatLogParser.parseLines([
+      'Listener: Pilot',
+      '[ 2026.05.20 20:00:00 ] (combat) 100 from Enemy - Railgun - Hits',
+    ]).single.copyWith(characterId: 42);
+
+    CombatEnrichment enrichmentWithPilot(ParsedCombatEncounter enc) =>
+        CombatEnrichment(
+          parsedEncounterId: enc.id,
+          status: CombatEnrichmentStatus.logOnly,
+          source: CombatEnrichmentSource.none,
+          pilotFitEvidence: const FitEvidence(
+            role: FitEvidenceRole.pilot,
+            source: EvidenceSource.manualFitImport,
+            confidence: EvidenceConfidence.confirmed,
+            fitting: Fitting(
+              id: 'fit-587',
+              name: 'Rifter',
+              shipTypeId: 587,
+              shipName: 'Rifter',
+            ),
+          ),
+        );
+
+    test('P03 deriveFitsForEncounter leaves matchups null', () async {
+      await seedRifter();
+      final enc = parseEncounter();
+      final fits = await service.deriveFitsForEncounter(
+        encounter: enc,
+        enrichment: enrichmentWithPilot(enc),
+        selfSkills: null,
+        opponentSkills: null,
+      );
+      expect(fits.self, isNotNull);
+      expect(fits.selfMatchup, isNull);
+      expect(fits.opponentMatchup, isNull);
+    });
+
+    test(
+      'P03 composeMatchups refreshes defense without reallocating',
+      () async {
+        await seedRifter();
+        final enc = parseEncounter();
+        final enrichment = enrichmentWithPilot(enc);
+        final fits = await service.deriveFitsForEncounter(
+          encounter: enc,
+          enrichment: enrichment,
+          selfSkills: null,
+          opponentSkills: null,
+        );
+        final allocation =
+            (IncomingDamageAllocator.allocate(
+                      encounter: enc,
+                      weapons: matchupWeaponTable(),
+                      sdeContentKey: matchupSdeContentKey,
+                    )
+                    as IncomingAllocationReady)
+                .allocation;
+        final composed = service.composeMatchups(
+          fits: fits,
+          incoming: allocation,
+          outgoing: const CombatDamageProfile(
+            entries: [],
+            unknownWeapons: [],
+            totalProfiledDamage: 0,
+          ),
+          encounter: enc,
+          enrichment: enrichment,
+        );
+        expect(composed.selfMatchup, isNotNull);
+        expect(composed.self, fits.self);
+      },
+    );
+
+    test(
+      'P03 own-loss fallback is used only when explicit pilot derivation fails',
+      () async {
+        await seedRifter();
+        final enc = parseEncounter();
+        final enrichment = CombatEnrichment(
+          parsedEncounterId: enc.id,
+          status: CombatEnrichmentStatus.killmailMatched,
+          source: CombatEnrichmentSource.zkillEsi,
+          victimCharacterId: 42,
+          victimName: 'Pilot',
+          pilotFitEvidence: const FitEvidence(
+            role: FitEvidenceRole.pilot,
+            source: EvidenceSource.manualFitImport,
+            confidence: EvidenceConfidence.confirmed,
+            fitting: Fitting(
+              id: 'missing',
+              name: 'Unknown',
+              shipTypeId: 1,
+              shipName: 'Unknown',
+            ),
+          ),
+          victimFitEvidence: const FitEvidence(
+            role: FitEvidenceRole.victim,
+            source: EvidenceSource.killmail,
+            confidence: EvidenceConfidence.proven,
+            fitting: Fitting(
+              id: 'fit-587',
+              name: 'Rifter',
+              shipTypeId: 587,
+              shipName: 'Rifter',
+            ),
+          ),
+        );
+        final fits = await service.deriveFitsForEncounter(
+          encounter: enc,
+          enrichment: enrichment,
+          selfSkills: null,
+          opponentSkills: null,
+        );
+        expect(fits.self, isNotNull);
+        expect(fits.self!.fitSource, EvidenceSource.killmail);
+      },
+    );
+
+    test('P07 outgoing failure does not erase incoming self defense', () async {
+      await seedRifter();
+      final enc = parseEncounter();
+      final enrichment = enrichmentWithPilot(enc);
+      final fits = await service.deriveFitsForEncounter(
+        encounter: enc,
+        enrichment: enrichment,
+        selfSkills: null,
+        opponentSkills: null,
+      );
+      final allocation =
+          (IncomingDamageAllocator.allocate(
+                    encounter: enc,
+                    weapons: matchupWeaponTable(),
+                    sdeContentKey: matchupSdeContentKey,
+                  )
+                  as IncomingAllocationReady)
+              .allocation;
+      final composed = service.composeMatchups(
+        fits: fits,
+        incoming: allocation,
+        outgoing: null,
+        encounter: enc,
+        enrichment: enrichment,
+      );
+      expect(composed.self, isNotNull);
+      expect(composed.selfMatchup, isNotNull);
+      expect(composed.opponentMatchup, isNull);
+    });
+
+    test(
+      'P04 empty skills fall back to All V; failed read is unavailable',
+      () async {
+        await seedRifter();
+        final empty = await service.skillContextFor(
+          subject: AarFitSubject.self,
+          characterId: 42,
+        );
+        expect(empty.basis, AarSkillBasis.allFive);
+
+        expect(
+          File(
+            'lib/features/combat_analyzer/data/combat_fit_derivation_service.dart',
+          ).readAsStringSync(),
+          contains('unavailable'),
+        );
+      },
+    );
+
+    test('localOnly effect lookup is required for AAR fit inputs', () async {
+      await seedRifter();
+      final sde = SdeService(database: sdeDb);
+      final inputs = await loadFittingStatsInputs(
+        sde,
+        const Fitting(
+          id: 'fit-587',
+          name: 'Rifter',
+          shipTypeId: 587,
+          shipName: 'Rifter',
+        ),
+        skillTypeIds: const [],
+        effectLookupPolicy: EffectLookupPolicy.localOnly,
+      );
+      expect(inputs, isNotNull);
+      expect(inputs!.unavailableEffectIds, isA<Set<int>>());
+    });
+  });
 }
 
 class _FixedFittingController extends FittingController {

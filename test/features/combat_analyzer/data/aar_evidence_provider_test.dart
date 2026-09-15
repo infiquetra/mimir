@@ -189,6 +189,47 @@ void main() {
       },
     );
   });
+
+  group('P08 M5 evidence overlay does not change scores or actions', () {
+    test(
+      'P08 assessment score and actions are unchanged by M5 overlay',
+      () async {
+        final s1 = s1Inputs();
+        final holder = _Holder(s1);
+        final codex = CountingCodexClient();
+        final container = ProviderContainer(
+          overrides: [
+            ..._overrides(holder, s1.encounter, codex),
+            aarIncomingMatchupsProvider.overrideWith((ref, enc) {
+              return AarIncomingMatchupState(
+                encounterId: enc.id,
+                allocationRequestKey: 'alloc',
+                identityRequestKey: 'id',
+                fitRequestKey: 'fit',
+                bundle: null,
+                allocationStatus: AarIncomingDependencyStatus.ready,
+                correlationStatus: AarIncomingDependencyStatus.ready,
+                classificationStatus: AarIncomingDependencyStatus.ready,
+                defenseStatus: AarIncomingDependencyStatus.ready,
+                issueCodes: const [],
+              );
+            }),
+          ],
+        );
+        addTearDown(container.dispose);
+        final without = const AarEvidenceScorer().assess(s1);
+        final withOverlay = await container.read(
+          aarEvidenceAssessmentProvider(s1.encounter).future,
+        );
+        expect(withOverlay.score, without.score);
+        expect(
+          withOverlay.dimensions.map((r) => r.actions).toList(),
+          without.dimensions.map((r) => r.actions).toList(),
+        );
+        expect(codex.calls, 0);
+      },
+    );
+  });
 }
 
 class _Holder {
