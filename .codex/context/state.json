@@ -1,27 +1,28 @@
 {
-  "last_updated": "2026-09-15T04:07:05Z",
+  "last_updated": "2026-09-15T13:52:27Z",
   "current_work": {
-    "task": "AAR fit import and capture UI tests: technical architecture and design",
+    "task": "AAR fit comparison visuals: Product specification",
     "phase": "complete",
     "progress": "100%",
-    "baseline": "e4821ce",
-    "plan": ".codex/plans/2026-09-14-aar-fit-import-capture-ui-tests-design.md",
-    "deliverable": "docs/specs/aar-fit-import-capture-ui-tests-design.md",
-    "checkpoint": ".codex/checkpoints/2026-09-15-aar-fit-import-capture-ui-tests-design.md",
+    "baseline": "d1114f7",
+    "branch": "chore/aar-fit-comparison-visuals-spec",
+    "plan": ".codex/plans/2026-09-15-aar-fit-comparison-visuals-product.md",
+    "deliverable": "docs/specs/aar-fit-comparison-visuals.md",
+    "checkpoint": ".codex/checkpoints/2026-09-15-aar-fit-comparison-visuals-product.md",
     "next_steps": [
-      "Lead/Plan schedule U0-U5 with RED/GREEN/reviewer/tester ownership",
-      "Test-Author builds the real harness and reproduces validation/retention defects",
-      "Developers implement scoped parser, repository, analysis and UI contracts after RED",
-      "Keep queued item open until tests and fixes are verified"
+      "Plan estimates and designs source snapshots, optional proposal contract, comparison calculations and UI",
+      "Test-Author maps S1-S6 and AC1-AC30 to the 46 D/P/U cases with real persistence and screen boundaries",
+      "Implementation and tester signoff remain pending; retain this P2 item in QUEUED.md"
     ]
   },
   "validation": {
-    "independent_review": "parser and integration review; findings resolved",
-    "structure": "U0-U5 with all 24 AC mappings, 36 test cases and 9 original Product scenarios",
-    "checks": "source grounding, 17 exact feedback strings, score arithmetic, tables, local links, whitespace",
-    "runtime_tests": "not run; documentation-only architecture delivery"
+    "independent_review": "source/history and stats/diff/BOM reviews passed; findings resolved",
+    "structure": "6 workflows, 30 acceptance criteria, 46 test cases: 16 domain, 14 provider/service, 16 UI",
+    "checks": "BOM/EHP fixture arithmetic, full AC traceability, local references, table structure, whitespace",
+    "runtime_tests": "not run; documentation-only delivery"
   },
   "open_issues": [
-    "Implementation pending: strict AAR import, atomic fit retention, coherent analysis preparation and supporting UI lifecycle/feedback fixes require RED/GREEN runtime evidence"
+    "Feature implementation pending; previous 1-3 day queue estimate must be revisited for identified source/proposal contract work",
+    "Sustained repair remains Not modeled; cached inventory and ESI average prices retain explicit limits"
   ]
 }

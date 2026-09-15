@@ -31,6 +31,29 @@
 
 ## 2026-09-15
 
+### AAR fit visual seams do not yet preserve independent source inventories
+
+**Author.** Product.
+**Context.** Grounding the next P2 fit comparison initiative at `d1114f7`.
+**Evidence.** `CombatEnrichment.pilotFitEvidence` is shared by import and current
+capture; `AarDerivationBundle` contains derived values, and no persisted
+`AarFitSnapshot` model exists. `CombatAarReport.evidenceAtGeneration` stores score
+dimensions rather than the fit, while `AarFitAdvice` permits item/class prose.
+**Mechanism.** Existing capture can replace the pilot source, equal evidence scores
+can hide changed equipment, and prose cannot establish exact quantities/slots.
+The fitting editor also uses mutable global state, so direct embedding would make
+comparison inspection affect the active fitting session.
+**Queued.** The [Product specification](../specs/aar-fit-comparison-visuals.md)
+requires independent immutable snapshots, generation-input binding, read-only
+widgets and locally validated optional candidates. Engine burst repair is raw HP/s,
+not sustained tank; price cost defaults and an unqualified asset cache cannot prove
+purchase cost or equipment availability.
+**Validation.** Read-only source inspections and independent source/stat/BOM reviews;
+numeric BOM/EHP fixtures and AC-to-test traceability checked. No runtime feature
+implementation or passing-test claim is made by this documentation delivery.
+**Generalizable rule.** A comparison needs preserved inputs and a common calculation
+context, not only neighboring panels of derived numbers.
+
 ### Drift stream notifications and SQLite transaction isolation
 
 **Author.** Antigravity / Lead Orchestrator

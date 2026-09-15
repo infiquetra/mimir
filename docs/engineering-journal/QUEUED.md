@@ -65,13 +65,19 @@ and render an explicit disconnected state when there is none.
 
 **Author.** Codex
 **Priority.** P2
-**Effort.** One to three days.
+**Effort.** Re-estimate against the Product specification; the earlier one-to-three-day
+estimate predates the required snapshot/proposal data contracts.
 **Worth it when.** Fit evidence and derived fit stats are available enough to
 make visual deltas more accurate than prose.
 **Context.** The user wants AARs to show current fit, fight-time fit, killmail
 victim fit, and recommended changes side by side with module icons, stats, and
 bill-of-materials style recommendations.
-**Refs.** `lib/features/combat_analyzer/presentation/analysis_multipane_screen.dart`;
+**Status.** Product specification complete; implementation and verification pending.
+The contract separates current/proposed snapshots from fight evidence, binds new
+reports to their original fit, defines common-context stats and qualified BOMs,
+and supplies 30 acceptance criteria with 46 concrete test cases.
+**Refs.** [Product specification](../specs/aar-fit-comparison-visuals.md);
+`lib/features/combat_analyzer/presentation/analysis_multipane_screen.dart`;
 `lib/features/fitting/presentation/widgets/fitting_editor.dart`.
 
 ## P3 - Nice To Have

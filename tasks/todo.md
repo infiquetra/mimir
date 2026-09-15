@@ -1,4 +1,44 @@
-# Project: Mimir — AAR fit import and capture UI test technical design
+# Project: Mimir — AAR fit comparison visuals Product specification
+Date: 2026-09-15
+Checkpoint: 2026-09-15-aar-fit-comparison-visuals-product
+
+## Overview
+
+Write and commit the complete product specification for the next P2 AAR initiative,
+grounded in `develop` at `d1114f7` after fit import/capture hardening shipped.
+
+## Tasks
+
+- [x] [P1] Inspect current AAR UI and evidence workflows.
+- [x] [P1] Review recommendation/snapshot models and fitting/pricing capabilities with explorers.
+- [x] [SEQ] Write product workflows, UI, diff/stat/BOM contracts and edge cases.
+- [x] [SEQ] Define acceptance criteria and concrete test scenarios for Plan/Test-Author.
+- [x] [P2] Independently review and validate arithmetic, references and traceability.
+- [x] [SEQ] Update README and journal, preserving queued implementation status.
+- [x] [CHECKPOINT] Record completion and commit documentation.
+
+## Notes
+
+[Canonical plan](../.codex/plans/2026-09-15-aar-fit-comparison-visuals-product.md).
+The user's request explicitly authorizes writing and committing this specification.
+
+## Review
+
+Completed the [Product specification](../docs/specs/aar-fit-comparison-visuals.md)
+with six user workflows, 30 acceptance criteria and 46 concrete verification cases.
+It defines independent source snapshots, generation-fit provenance, read-only
+responsive comparisons, deterministic module diffs, common stat assumptions,
+validated optional proposals, and qualified BOM/pricing/cache behavior.
+Two independent reviews passed after resolving pairing determinism, incomplete
+baseline counts, cross-hull semantics, candidate ownership and structural versus
+capacity validation. Checked fixture arithmetic, local links, table structure and
+full AC traceability. README now also reflects the already shipped attachment work.
+Implementation remains queued and needs re-estimation against the source contracts.
+No application code changed and no Flutter runtime suites ran for this specification.
+
+---
+
+# Completed: Mimir — AAR fit import and capture UI test technical design
 Date: 2026-09-15
 Checkpoint: 2026-09-15-aar-fit-import-capture-ui-tests-design
 

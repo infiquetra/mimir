@@ -26,6 +26,26 @@
 
 ## 2026-09-15
 
+### AAR fit comparisons preserve source snapshots and shared calculation assumptions
+
+**Author.** Product.
+**Decision.** Adopt the [fit comparison Product specification](../specs/aar-fit-comparison-visuals.md):
+independent current/proposal snapshots; immutable generation-fit provenance;
+validated optional structured candidates alongside legacy prose; deterministic
+module diffs and common-context stats. Separate Changes and Full replacement BOMs,
+qualify cached availability/ESI average values, and label sustained repair Not modeled.
+**Rejected alternatives.** Reusing the single pilot evidence field for all sources;
+reconstructing report history from its evidence score; parsing generic advice into
+exact equipment; comparing different skill/damage assumptions; crediting lost fits
+as owned stock or presenting partial prices as a total.
+**Rationale.** Visual precision must preserve source uncertainty and engine limits.
+The existing models need additional source/contract support before these visuals
+can support reliable equipment decisions.
+**Revisit when.** Sustained-tank calculation, authoritative inventory metadata,
+regional market quotes or historical engine/SDE replay become separately supported.
+**Refs.** [Queued initiative](QUEUED.md#fit-comparison-visuals-for-aar-reports).
+Specification delivery only; implementation and the 46 verification cases remain pending.
+
 ### AAR attachment validation and refresh use explicit ownership boundaries
 
 **Author.** Technical Architect.
