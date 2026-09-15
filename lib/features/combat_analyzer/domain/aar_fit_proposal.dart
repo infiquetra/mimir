@@ -90,4 +90,45 @@ class AarFitProposal {
     if (present.isEmpty) return AarProposalValidationStatus.invalid;
     return AarProposalValidationStatus.partial;
   }
+
+  Map<String, dynamic> toJson() => {
+    'schemaVersion': schemaVersion,
+    'proposalId': proposalId,
+    'origin': origin.name,
+    'encounterId': encounterId,
+    if (baselineSnapshotId != null) 'baselineSnapshotId': baselineSnapshotId,
+    if (baselineFingerprint != null) 'baselineFingerprint': baselineFingerprint,
+    if (target != null) 'target': target!.toJson(),
+    'status': status.name,
+    'rationale': rationale,
+    'limitations': limitations,
+  };
+
+  factory AarFitProposal.fromJson(Map<String, dynamic> json) {
+    return AarFitProposal(
+      schemaVersion: json['schemaVersion'] as int? ?? 1,
+      proposalId: json['proposalId']?.toString() ?? '',
+      origin: AarProposalOrigin.values.firstWhere(
+        (value) => value.name == json['origin']?.toString(),
+        orElse: () => AarProposalOrigin.importedReference,
+      ),
+      encounterId: json['encounterId']?.toString() ?? '',
+      baselineSnapshotId: json['baselineSnapshotId']?.toString(),
+      baselineFingerprint: json['baselineFingerprint']?.toString(),
+      target: json['target'] is Map
+          ? AarFitSnapshot.fromJson(
+              Map<String, dynamic>.from(json['target'] as Map),
+            )
+          : null,
+      status: AarProposalValidationStatus.values.firstWhere(
+        (value) => value.name == json['status']?.toString(),
+        orElse: () => AarProposalValidationStatus.invalid,
+      ),
+      rationale: json['rationale']?.toString() ?? '',
+      limitations: [
+        for (final value in json['limitations'] as List? ?? const [])
+          value.toString(),
+      ],
+    );
+  }
 }

@@ -1,5 +1,6 @@
 import '../../../core/network/esi_client.dart';
 import '../../fitting/domain/models.dart';
+import 'aar_fit_comparison.dart';
 import 'combat_attacker_correlation.dart';
 import 'combat_evidence_ledger.dart';
 
@@ -36,6 +37,8 @@ class CombatEnrichment {
     this.rawKillmail,
     this.killmailSearchCompleted = false,
     this.attackerCorrelation,
+    this.fitComparison,
+    this.evidencePacketPresent = true,
   });
 
   final String parsedEncounterId;
@@ -62,6 +65,8 @@ class CombatEnrichment {
   final Map<String, dynamic>? rawKillmail;
   final bool killmailSearchCompleted;
   final AttackerCorrelation? attackerCorrelation;
+  final AarFitComparisonState? fitComparison;
+  final bool evidencePacketPresent;
 
   bool get hasMatchedKillmail =>
       status == CombatEnrichmentStatus.killmailMatched;
@@ -114,6 +119,8 @@ class CombatEnrichment {
     'killmailSearchCompleted': killmailSearchCompleted,
     if (attackerCorrelation != null)
       'attackerCorrelation': attackerCorrelation!.toJson(),
+    if (fitComparison != null) 'fitComparison': fitComparison!.toJson(),
+    if (!evidencePacketPresent) 'evidencePacketPresent': false,
   };
 
   Map<String, dynamic> toPromptJson() => {
@@ -150,6 +157,7 @@ class CombatEnrichment {
     if (attackerCorrelation != null)
       'attackerCorrelation': attackerCorrelation!.toPromptJson(),
     'limitations': limitations,
+    if (fitComparison != null) 'fitComparison': fitComparison!.toJson(),
   };
 
   factory CombatEnrichment.fromJson(Map<String, dynamic> json) {
@@ -214,6 +222,12 @@ class CombatEnrichment {
       attackerCorrelation: AttackerCorrelation.fromJson(
         json['attackerCorrelation'],
       ),
+      fitComparison: json['fitComparison'] is Map
+          ? AarFitComparisonState.fromJson(
+              Map<String, dynamic>.from(json['fitComparison'] as Map),
+            )
+          : null,
+      evidencePacketPresent: json['evidencePacketPresent'] != false,
     );
   }
 
@@ -324,6 +338,8 @@ class CombatEnrichment {
     Map<String, dynamic>? rawKillmail,
     bool? killmailSearchCompleted,
     AttackerCorrelation? attackerCorrelation,
+    AarFitComparisonState? fitComparison,
+    bool? evidencePacketPresent,
   }) {
     return CombatEnrichment(
       parsedEncounterId: parsedEncounterId,
@@ -351,6 +367,9 @@ class CombatEnrichment {
       killmailSearchCompleted:
           killmailSearchCompleted ?? this.killmailSearchCompleted,
       attackerCorrelation: attackerCorrelation ?? this.attackerCorrelation,
+      fitComparison: fitComparison ?? this.fitComparison,
+      evidencePacketPresent:
+          evidencePacketPresent ?? this.evidencePacketPresent,
     );
   }
 }

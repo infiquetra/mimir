@@ -1,3 +1,4 @@
+import 'aar_fit_proposal.dart';
 import 'aar_fit_snapshot.dart';
 import 'combat_aar_report.dart';
 
@@ -214,5 +215,47 @@ class AarFitGenerationRecord {
 
   static AarFitGenerationRecord? fromReport(CombatAarReport report) {
     return fromReportJson(report.toJson());
+  }
+}
+
+/// Owned comparison JSON envelope stored on [CombatEnrichment.fitComparison].
+class AarFitComparisonState {
+  const AarFitComparisonState({
+    this.schemaVersion = 1,
+    this.currentSnapshot,
+    this.userProposal,
+    this.liveSavedFittingId,
+  });
+
+  final int schemaVersion;
+  final AarFitSnapshot? currentSnapshot;
+  final AarFitProposal? userProposal;
+
+  /// Naive live pointer. GREEN persists a copied envelope, never this.
+  final String? liveSavedFittingId;
+
+  Map<String, dynamic> toJson() => {
+    'schemaVersion': schemaVersion,
+    if (currentSnapshot != null) 'currentSnapshot': currentSnapshot!.toJson(),
+    if (liveSavedFittingId != null) 'liveSavedFittingId': liveSavedFittingId,
+    if (liveSavedFittingId == null && userProposal != null)
+      'userProposal': userProposal!.toJson(),
+  };
+
+  factory AarFitComparisonState.fromJson(Map<String, dynamic> json) {
+    return AarFitComparisonState(
+      schemaVersion: json['schemaVersion'] as int? ?? 1,
+      currentSnapshot: json['currentSnapshot'] is Map
+          ? AarFitSnapshot.fromJson(
+              Map<String, dynamic>.from(json['currentSnapshot'] as Map),
+            )
+          : null,
+      userProposal: json['userProposal'] is Map
+          ? AarFitProposal.fromJson(
+              Map<String, dynamic>.from(json['userProposal'] as Map),
+            )
+          : null,
+      liveSavedFittingId: json['liveSavedFittingId']?.toString(),
+    );
   }
 }
