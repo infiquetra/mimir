@@ -125,6 +125,7 @@ class GraphSnapshot {
     this.referenceRevision = 0,
     this.publicRevision = 0,
     this.characterId,
+    this.topologyAvailable = true,
   }) : nodes = Set.unmodifiable(Set.of(nodes)),
        edges = List.unmodifiable(List<DirectedExplorationEdge>.from(edges));
 
@@ -134,6 +135,7 @@ class GraphSnapshot {
   final int referenceRevision;
   final int publicRevision;
   final int? characterId;
+  final bool topologyAvailable;
 }
 
 class RouteRequest {
@@ -160,12 +162,22 @@ class RouteStep {
     required this.toSystemId,
     required this.edgeKey,
     this.kind = 'gate',
+    this.fromSignature,
+    this.toSignature,
+    this.fromTypeCode,
+    this.toTypeCode,
+    this.risk = EdgeRisk.lower,
   });
 
   final int fromSystemId;
   final int toSystemId;
   final String edgeKey;
   final String kind;
+  final String? fromSignature;
+  final String? toSignature;
+  final String? fromTypeCode;
+  final String? toTypeCode;
+  final EdgeRisk risk;
 }
 
 class RouteResult {
