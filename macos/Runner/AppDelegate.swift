@@ -20,6 +20,9 @@ class AppDelegate: FlutterAppDelegate {
       WindowResizePlugin.register(
         with: flutterViewController.registrar(forPlugin: "WindowResizePlugin")
       )
+      WindowVisibilityPlugin.register(
+        with: flutterViewController.registrar(forPlugin: "WindowVisibilityPlugin")
+      )
       print("WindowResizePlugin: *** Sub-window registration complete ***")
     }
 

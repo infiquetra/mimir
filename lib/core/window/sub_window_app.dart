@@ -21,6 +21,7 @@ import '../../features/intel/presentation/kill_feed_screen.dart';
 import '../../features/combat_analyzer/presentation/encounter_list_screen.dart';
 import '../../features/exploration/presentation/exploration_screen.dart';
 import '../auth/auth_providers.dart';
+import '../logging/logger.dart';
 import '../sde/sde_providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/character_nav_rail.dart';
@@ -29,6 +30,7 @@ import 'standalone_characters_screen.dart';
 import 'standalone_dashboard_screen.dart';
 import 'window_resize_service.dart';
 import 'window_types.dart';
+import 'window_visibility_service.dart';
 
 /// Entry point for sub-windows (non-main windows).
 ///
@@ -52,8 +54,9 @@ class SubWindowApp extends ConsumerStatefulWidget {
   /// the [WindowType.windowId].
   final String windowArgs;
 
-  /// Naive X7: every sub-window waits on the global SDE initializer.
-  static bool waitsForGlobalSde(WindowType type) => true;
+  /// Exploration mounts independently of the global SDE barrier.
+  static bool waitsForGlobalSde(WindowType type) =>
+      type != WindowType.exploration;
 
   @override
   ConsumerState<SubWindowApp> createState() => _SubWindowAppState();
@@ -63,12 +66,20 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
   late final WindowType _windowType;
   late final CrossWindowEventService _eventService;
   StreamSubscription<CrossWindowEvent>? _eventSubscription;
+  WindowVisibilityService? _visibility;
 
   @override
   void initState() {
     super.initState();
     _windowType = _parseWindowArgs(widget.windowArgs);
     _eventService = CrossWindowEventService();
+    if (_windowType == WindowType.exploration) {
+      _visibility = WindowVisibilityService(windowKey: 'exploration')..attach();
+      Log.i(
+        'EXPLORATION.WINDOW',
+        'SubWindowApp mounted without global SDE wait',
+      );
+    }
 
     debugPrint('SubWindow: Initializing ${_windowType.title}');
 
@@ -159,6 +170,7 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
   void dispose() {
     _eventSubscription?.cancel();
     _eventService.dispose();
+    _visibility?.dispose();
     super.dispose();
   }
 
@@ -180,8 +192,6 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Initialize SDE for skill name lookups
-    final sdeAsync = ref.watch(sdeInitializerProvider);
     if (!SubWindowApp.waitsForGlobalSde(_windowType)) {
       return MaterialApp(
         title: _windowType.title,
@@ -194,6 +204,7 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
       );
     }
 
+    final sdeAsync = ref.watch(sdeInitializerProvider);
     return MaterialApp(
       title: _windowType.title,
       debugShowCheckedModeBanner: false,
@@ -382,15 +393,18 @@ class _SubWindowScaffold extends StatelessWidget {
               ),
             ),
           // Content with character nav rail on left.
+          // Exploration owns its adaptive character selector.
           Expanded(
-            child: Row(
-              children: [
-                // Character navigation rail (Discord-style, left side).
-                CharacterNavRail(onRefresh: _getRefreshCallback(windowType)),
-                // Screen content (takes remaining space).
-                Expanded(child: child),
-              ],
-            ),
+            child: windowType == WindowType.exploration
+                ? child
+                : Row(
+                    children: [
+                      CharacterNavRail(
+                        onRefresh: _getRefreshCallback(windowType),
+                      ),
+                      Expanded(child: child),
+                    ],
+                  ),
           ),
         ],
       ),

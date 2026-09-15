@@ -13,6 +13,9 @@ class MainFlutterWindow: NSWindow {
 
     // Register custom window resize plugin for the MAIN window
     WindowResizePlugin.register(with: flutterViewController.registrar(forPlugin: "WindowResizePlugin"))
+    WindowVisibilityPlugin.register(
+      with: flutterViewController.registrar(forPlugin: "WindowVisibilityPlugin")
+    )
 
     // Set callback to register WindowResizePlugin for ALL sub-windows
     // This must be done BEFORE any sub-windows are created
@@ -22,6 +25,9 @@ class MainFlutterWindow: NSWindow {
       NSLog("PluginRegistrant: Generated plugin registration complete")
       WindowResizePlugin.register(
         with: subWindowController.registrar(forPlugin: "WindowResizePlugin")
+      )
+      WindowVisibilityPlugin.register(
+        with: subWindowController.registrar(forPlugin: "WindowVisibilityPlugin")
       )
       NSLog("WindowResizePlugin: Sub-window registration complete")
     }

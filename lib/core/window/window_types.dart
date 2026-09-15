@@ -89,7 +89,7 @@ extension WindowTypeExtension on WindowType {
       case WindowType.combatAnalyzer:
         return 'Combat Analyzer - Mimir';
       case WindowType.exploration:
-        return 'Explore - Mimir';
+        return 'Exploration';
     }
   }
 
@@ -127,7 +127,7 @@ extension WindowTypeExtension on WindowType {
       case WindowType.combatAnalyzer:
         return 13;
       case WindowType.exploration:
-        return 99;
+        return 14;
     }
   }
 
@@ -162,7 +162,7 @@ extension WindowTypeExtension on WindowType {
         return WindowType.intel;
       case 13:
         return WindowType.combatAnalyzer;
-      case 99:
+      case 14:
         return WindowType.exploration;
       default:
         return WindowType.dashboard;
@@ -201,7 +201,7 @@ extension WindowTypeExtension on WindowType {
       case WindowType.combatAnalyzer:
         return (width: 1200, height: 800);
       case WindowType.exploration:
-        return (width: 800, height: 600);
+        return (width: 1440.0, height: 900.0);
     }
   }
 

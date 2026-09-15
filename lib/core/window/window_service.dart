@@ -9,8 +9,42 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../database/app_database.dart';
+import '../logging/logger.dart';
 import '../platform/app_paths.dart';
 import 'window_types.dart';
+
+/// Native window operations, injected so tests can run without a host.
+abstract class WindowPlatformAdapter {
+  Future<List<String>> activeWindowIds();
+
+  Future<WindowController> create(String arguments);
+
+  Future<void> show(WindowController controller);
+
+  Future<void> hide(WindowController controller);
+}
+
+/// Production adapter over [desktop_multi_window].
+class DesktopMultiWindowAdapter implements WindowPlatformAdapter {
+  const DesktopMultiWindowAdapter();
+
+  @override
+  Future<List<String>> activeWindowIds() async {
+    final windows = await WindowController.getAll();
+    return windows.map((w) => w.windowId).toList();
+  }
+
+  @override
+  Future<WindowController> create(String arguments) {
+    return WindowController.create(WindowConfiguration(arguments: arguments));
+  }
+
+  @override
+  Future<void> show(WindowController controller) => controller.show();
+
+  @override
+  Future<void> hide(WindowController controller) => controller.hide();
+}
 
 /// Service for managing multiple application windows.
 ///
@@ -28,6 +62,8 @@ class WindowService {
   /// Map of window type to its controller (if open).
   final Map<WindowType, WindowController> _windows = {};
   final Set<WindowType> _debugOpen = {};
+  final Map<WindowType, Future<void>> _openInFlight = {};
+  WindowPlatformAdapter _platform = const DesktopMultiWindowAdapter();
 
   /// Test seam: when set, [openWindow] skips native window creation.
   @visibleForTesting
@@ -39,13 +75,22 @@ class WindowService {
   @visibleForTesting
   int debugShowCalls = 0;
 
+  /// Inject a platform adapter (tests and production-host override).
+  @visibleForTesting
+  set platformAdapter(WindowPlatformAdapter adapter) => _platform = adapter;
+
+  @visibleForTesting
+  WindowPlatformAdapter get platformAdapter => _platform;
+
   @visibleForTesting
   void debugReset() {
     _windows.clear();
     _debugOpen.clear();
+    _openInFlight.clear();
     debugCreateHook = null;
     debugCreateCalls = 0;
     debugShowCalls = 0;
+    _platform = const DesktopMultiWindowAdapter();
   }
 
   /// Initializes the window manager for the main window.
@@ -73,54 +118,62 @@ class WindowService {
 
   /// Opens a window of the specified type.
   ///
-  /// If the window is already open, brings it to the front.
-  /// Otherwise, creates a new window.
-  Future<void> openWindow(WindowType type) async {
+  /// Concurrent calls for the same type join one in-flight create. If the
+  /// window is already open (including hidden), it is shown/focused instead
+  /// of recreated.
+  Future<void> openWindow(WindowType type) {
+    final inFlight = _openInFlight[type];
+    if (inFlight != null) {
+      _log(type, 'join in-flight open');
+      return inFlight;
+    }
+    final future = _openWindow(type);
+    _openInFlight[type] = future;
+    return future.whenComplete(() {
+      if (identical(_openInFlight[type], future)) {
+        _openInFlight.remove(type);
+      }
+    });
+  }
+
+  Future<void> _openWindow(WindowType type) async {
     if (type == WindowType.main) {
-      // Show the main window if hidden
       await windowManager.show();
       await windowManager.focus();
       return;
     }
 
     if (debugCreateHook != null) {
-      debugCreateCalls += 1;
-      await debugCreateHook!(type);
       if (_debugOpen.contains(type)) {
         debugShowCalls += 1;
+        _log(type, 'reopen show without recreate');
         return;
       }
+      debugCreateCalls += 1;
+      await debugCreateHook!(type);
       _debugOpen.add(type);
+      _log(type, 'created via debug hook');
       return;
     }
 
-    // Check if window is already open
     if (_windows.containsKey(type)) {
       final controller = _windows[type]!;
-
-      // Verify the window actually still exists by checking active sub-windows
-      final activeWindows = await WindowController.getAll();
-      final activeWindowIds = activeWindows.map((w) => w.windowId).toList();
+      final activeWindowIds = await _platform.activeWindowIds();
       if (activeWindowIds.contains(controller.windowId)) {
-        // Window is still alive, bring to front
         try {
-          await controller.show();
-          debugPrint('WindowService: Focused existing ${type.name} window');
+          await _platform.show(controller);
+          _log(type, 'focused existing window');
           return;
         } catch (e) {
           debugPrint('WindowService: Error showing ${type.name} window: $e');
         }
       }
 
-      // Window was closed externally, remove stale reference
       _windows.remove(type);
-      debugPrint('WindowService: Removed stale ${type.name} window reference');
+      _log(type, 'removed stale window reference');
     }
 
-    // Create new window
     try {
-      // Get database path to pass to sub-window.
-      // Sub-windows can't use path_provider, so we resolve the path here.
       final dbPath = await getDatabasePath();
       final supportPath = await getMimirApplicationSupportPath();
       final size = type.defaultSize;
@@ -132,17 +185,10 @@ class WindowService {
         'height': size.height,
       });
 
-      final controller = await WindowController.create(
-        WindowConfiguration(arguments: args),
-      );
-
-      // Note: setFrame and setTitle are not available in desktop_multi_window 0.3.0
-      // Windows will use default size and title
-      await controller.show();
-      // Note: show() brings window to front; WindowController doesn't have focus()
-
+      final controller = await _platform.create(args);
+      await _platform.show(controller);
       _windows[type] = controller;
-      debugPrint('WindowService: Created new ${type.name} window');
+      _log(type, 'created new window');
     } catch (e) {
       debugPrint('WindowService: Failed to create ${type.name} window: $e');
       rethrow;
@@ -151,8 +197,32 @@ class WindowService {
 
   /// Hides a window without destroying its controller.
   ///
-  /// Naive X7: aliases [closeWindow] so reopen recreates the engine.
-  Future<void> hideWindow(WindowType type) => closeWindow(type);
+  /// Reopen shows/focuses the retained controller. The controller is removed
+  /// only when the native window is actually destroyed.
+  Future<void> hideWindow(WindowType type) async {
+    if (type == WindowType.main) {
+      await windowManager.hide();
+      return;
+    }
+
+    _log(type, 'hide retaining controller');
+    final controller = _windows[type];
+    if (controller != null) {
+      try {
+        await _platform.hide(controller);
+      } catch (e) {
+        debugPrint('WindowService: Error hiding ${type.name} window: $e');
+      }
+    }
+  }
+
+  void _log(WindowType type, String message) {
+    if (type == WindowType.exploration) {
+      Log.d('EXPLORATION.WINDOW', '$message type=${type.name}');
+    } else {
+      debugPrint('WindowService: $message ${type.name}');
+    }
+  }
 
   /// Closes a window of the specified type.
   Future<void> closeWindow(WindowType type) async {
@@ -165,7 +235,7 @@ class WindowService {
     final controller = _windows.remove(type);
     if (controller != null) {
       try {
-        await controller.hide();
+        await _platform.hide(controller);
         debugPrint('WindowService: Closed ${type.name} window');
       } catch (e) {
         debugPrint('WindowService: Error closing ${type.name} window: $e');
@@ -196,6 +266,7 @@ class WindowService {
   /// This removes the window from tracking.
   void onWindowClosed(WindowType type) {
     _windows.remove(type);
+    _debugOpen.remove(type);
     debugPrint('WindowService: ${type.name} window closed externally');
   }
 

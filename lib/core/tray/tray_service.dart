@@ -242,6 +242,18 @@ class TrayService extends TrayListener {
       'Added menu item: $combatAnalyzerLabel (key=combat_analyzer)',
     );
 
+    final explorationLabel = windowService.isWindowOpen(WindowType.exploration)
+        ? '◆ Exploration'
+        : 'Exploration';
+    menuItems.add(
+      MenuItem(
+        key: 'exploration',
+        label: explorationLabel,
+        icon: 'assets/icons/tray/exploration.png',
+      ),
+    );
+    Log.d('TRAY', 'Added menu item: $explorationLabel (key=exploration)');
+
     menuItems.add(MenuItem.separator());
     Log.d('TRAY', 'Added separator');
 
@@ -364,6 +376,12 @@ class TrayService extends TrayListener {
         case 'combat_analyzer':
           Log.i('TRAY', 'Opening combat analyzer window');
           await windowService.openWindow(WindowType.combatAnalyzer);
+          await refreshMenu();
+          break;
+        case 'exploration':
+          Log.i('TRAY', 'Opening exploration window');
+          Log.i('EXPLORATION.WINDOW', 'tray openWindow');
+          await windowService.openWindow(WindowType.exploration);
           await refreshMenu();
           break;
         case 'onboarding':
