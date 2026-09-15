@@ -493,7 +493,9 @@ class AarFitSnapshot {
     'schemaVersion': schemaVersion,
     'snapshotId': snapshotId,
     'encounterId': encounterId,
-    'fitting': fitting.toJson(),
+    'fitting': Map<String, dynamic>.from(
+      jsonDecode(jsonEncode(fitting.toJson())) as Map,
+    ),
     'source': source.name,
     'subject': subject.toJson(),
     if (sourceRef != null) 'sourceRef': sourceRef!.toJson(),

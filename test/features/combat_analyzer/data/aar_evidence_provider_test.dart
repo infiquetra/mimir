@@ -21,6 +21,7 @@ import 'package:mimir/features/combat_analyzer/domain/aar_attacker_matchup.dart'
 import 'package:mimir/features/combat_analyzer/domain/aar_evidence_assessment.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_evidence_scorer.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
+import 'package:mimir/features/combat_analyzer/domain/aar_fit_generation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_damage_profile.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
 import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.dart';
@@ -293,6 +294,7 @@ class CountingCodexClient extends CodexAnalysisClient {
     CombatEnrichment? enrichment,
     AarDerivationBundle? derivation,
     AarIncomingMatchupBundle? perAttackerIncoming,
+    PreparedAarComparisonInput? fitComparisonInput,
   }) async {
     calls += 1;
     throw StateError('analyzeEncounter must not be called during scoring');

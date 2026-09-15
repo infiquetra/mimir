@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/logging/logger.dart';
 import '../domain/aar_attacker_matchup.dart';
 import '../domain/aar_fit_derivation.dart';
+import '../domain/aar_fit_generation.dart';
 import '../domain/combat_aar_report.dart';
 import '../domain/combat_enrichment.dart';
 import '../domain/combat_log_parser.dart';
@@ -62,6 +63,7 @@ class CodexAnalysisClient {
     CombatEnrichment? enrichment,
     AarDerivationBundle? derivation,
     AarIncomingMatchupBundle? perAttackerIncoming,
+    PreparedAarComparisonInput? fitComparisonInput,
   }) async {
     Log.d('COMBAT.AI', 'analyzeEncounter(model=$model) - START');
     final prompt = buildPrompt(
@@ -69,6 +71,7 @@ class CodexAnalysisClient {
       enrichment: enrichment,
       derivation: derivation,
       perAttackerIncoming: perAttackerIncoming,
+      fitComparisonInput: fitComparisonInput,
     );
     final text = await _requestAnalysisText(model: model, prompt: prompt);
     try {
@@ -172,12 +175,14 @@ class CodexAnalysisClient {
     CombatEnrichment? enrichment,
     AarDerivationBundle? derivation,
     AarIncomingMatchupBundle? perAttackerIncoming,
+    PreparedAarComparisonInput? fitComparisonInput,
   }) {
     return _buildPrompt(
       encounter,
       enrichment: enrichment,
       derivation: derivation,
       perAttackerIncoming: perAttackerIncoming,
+      fitComparisonInput: fitComparisonInput,
     );
   }
 
@@ -186,6 +191,7 @@ class CodexAnalysisClient {
     CombatEnrichment? enrichment,
     AarDerivationBundle? derivation,
     AarIncomingMatchupBundle? perAttackerIncoming,
+    PreparedAarComparisonInput? fitComparisonInput,
   }) {
     Log.d('COMBAT.AI', '_buildPrompt() - START');
     final events = encounter.events
@@ -240,6 +246,8 @@ class CodexAnalysisClient {
       'derivedFits': derivedFits,
       'damageMatchups': damageMatchups,
       'compactEvidence': encounter.llmPayloadString,
+      if (fitComparisonInput != null)
+        'fitComparisonInput': fitComparisonInput.toPromptJson(),
     };
     return const JsonEncoder.withIndent('  ').convert(payload);
   }

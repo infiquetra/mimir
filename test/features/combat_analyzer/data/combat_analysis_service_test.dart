@@ -18,6 +18,7 @@ import 'package:mimir/features/combat_analyzer/data/combat_enrichment_service.da
 import 'package:mimir/features/combat_analyzer/data/combat_killmail_discovery_client.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_attacker_matchup.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
+import 'package:mimir/features/combat_analyzer/domain/aar_fit_generation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_aar_report.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_evidence_ledger.dart';
@@ -628,6 +629,7 @@ class FakeCodexAnalysisClient extends CodexAnalysisClient {
     CombatEnrichment? enrichment,
     AarDerivationBundle? derivation,
     AarIncomingMatchupBundle? perAttackerIncoming,
+    PreparedAarComparisonInput? fitComparisonInput,
   }) async {
     capturedEnrichment = enrichment;
     capturedPerAttackerIncoming = perAttackerIncoming;
@@ -636,6 +638,7 @@ class FakeCodexAnalysisClient extends CodexAnalysisClient {
       enrichment: enrichment,
       derivation: derivation,
       perAttackerIncoming: perAttackerIncoming,
+      fitComparisonInput: fitComparisonInput,
     );
     return CodexAnalysisResult(
       report: CombatAarReport.fromLegacy(

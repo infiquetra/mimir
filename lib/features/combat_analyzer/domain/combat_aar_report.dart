@@ -1,8 +1,6 @@
-import '../../fitting/domain/models.dart';
 import 'aar_evidence_assessment.dart';
 import 'aar_fit_generation.dart';
 import 'aar_fit_proposal.dart';
-import 'aar_fit_snapshot.dart';
 
 class CombatAarReport {
   const CombatAarReport({
@@ -157,6 +155,12 @@ class CombatAarReport {
     'unknowns': unknowns,
     if (evidenceAtGeneration != null)
       'evidenceAtGeneration': evidenceAtGeneration!.toJson(),
+    if (fitComparisonAtGeneration != null)
+      'fitComparisonAtGeneration': fitComparisonAtGeneration!.toJson(),
+    if (fitCandidates.isNotEmpty)
+      'fitCandidates': [
+        for (final candidate in fitCandidates) candidate.toJson(),
+      ],
   };
 
   factory CombatAarReport.fromJson(Map<String, dynamic> json) {
@@ -203,43 +207,37 @@ class CombatAarReport {
       evidenceAtGeneration: AarEvidenceSnapshot.fromJson(
         json['evidenceAtGeneration'],
       ),
-      fitComparisonAtGeneration: json['fitComparisonAtGeneration'] is Map
-          ? AarFitGenerationRecord.fromJson(
-              Map<String, dynamic>.from(
-                json['fitComparisonAtGeneration'] as Map,
-              ),
-            )
-          : AarFitGenerationRecord(
-              generationId: 'fabricated',
-              selfBaseline: AarFitSnapshot(
-                snapshotId: 'fabricated',
-                encounterId: '',
-                fitting: const Fitting(
-                  id: 'mock',
-                  name: 'Mock Generation Fit',
-                  shipTypeId: 0,
-                  shipName: 'Mock',
-                ),
-                source: AarFitSource.evidenceAttachment,
-                subject: const AarFitSubject(
-                  relation: AarFitSubjectRelation.pilot,
-                ),
-              ),
-              reason: 'legacy-inferred',
-            ),
+      fitComparisonAtGeneration: AarFitGenerationRecord.fromReportJson(json),
       fitCandidates: _parseFitCandidates(json['fitCandidates']),
     );
   }
 
   static List<AarFitProposal> _parseFitCandidates(Object? raw) {
-    if (raw == null) return const [];
-    if (raw is! List) {
-      throw FormatException('fitCandidates must be a list');
+    if (raw == null || raw is! List) return const [];
+    final parsed = <AarFitProposal>[];
+    for (final item in raw) {
+      try {
+        if (item is! Map) continue;
+        final map = Map<String, dynamic>.from(item);
+        if (map.containsKey('origin') || map.containsKey('proposalId')) {
+          parsed.add(AarFitProposal.fromJson(map));
+        } else {
+          parsed.add(
+            const AarFitCandidateValidator().validate(
+              map,
+              encounterId: map['encounterId']?.toString() ?? '',
+              proposalId:
+                  map['candidateId']?.toString() ??
+                  map['proposalId']?.toString() ??
+                  'candidate',
+            ),
+          );
+        }
+      } catch (_) {
+        // Isolate optional candidate failures from report repair.
+      }
     }
-    return [
-      for (final item in raw)
-        AarFitProposal.fromJson(Map<String, dynamic>.from(item as Map)),
-    ];
+    return parsed;
   }
 
   factory CombatAarReport.fromLegacy({

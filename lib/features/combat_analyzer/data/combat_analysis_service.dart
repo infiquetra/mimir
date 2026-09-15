@@ -14,6 +14,7 @@ import '../domain/aar_attacker_matchup.dart';
 import '../domain/aar_attacker_matchup_deriver.dart';
 import '../domain/aar_evidence_scorer.dart';
 import '../domain/aar_fit_derivation.dart';
+import '../domain/aar_fit_generation.dart';
 import '../domain/combat_aar_report.dart';
 import '../domain/combat_damage_profile.dart';
 import '../domain/combat_enrichment.dart';
@@ -377,12 +378,27 @@ class CombatAnalysisService {
           isIndeterminate: true,
         ),
       );
+      final preparedAt = DateTime.now().toUtc();
+      final comparisonInput = PreparedAarComparisonInput.fromEvidence(
+        encounterId: encounter.id,
+        pilotFitEvidence: enrichment.pilotFitEvidence,
+        victimFitEvidence: enrichment.victimFitEvidence,
+        preparedAt: preparedAt,
+        selfCharacterId: encounter.characterId,
+        victimCharacterId: enrichment.victimCharacterId,
+        pilotDerivationFailed:
+            derivation.self == null ||
+            derivation.self!.fitSource == EvidenceSource.killmail,
+        calculatorRevision: 'calc-${preparedAt.microsecondsSinceEpoch}',
+        sdeContentKey: 'sde-decimal-v1',
+      );
       final analysis = await _codexClient.analyzeEncounter(
         encounter: encounter,
         model: modelName,
         enrichment: enrichment,
         derivation: derivation,
         perAttackerIncoming: perAttackerIncoming,
+        fitComparisonInput: comparisonInput,
       );
       emit(
         const CombatAnalysisProgress(
@@ -412,6 +428,10 @@ class CombatAnalysisService {
         analysisJson: Value(
           jsonEncode(
             analysis.report
+                .copyWith(
+                  fitComparisonAtGeneration: comparisonInput
+                      .toGenerationRecord(),
+                )
                 .withEvidenceAtGeneration(assessment.toSnapshot())
                 .toJson(),
           ),

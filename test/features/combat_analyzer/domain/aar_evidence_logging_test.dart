@@ -22,6 +22,7 @@ import 'package:mimir/features/combat_analyzer/data/combat_providers.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_attacker_matchup.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_evidence_scorer.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
+import 'package:mimir/features/combat_analyzer/domain/aar_fit_generation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_aar_report.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_evidence_ledger.dart';
@@ -183,6 +184,7 @@ class _LoggingFakeCodex extends CodexAnalysisClient {
     CombatEnrichment? enrichment,
     AarDerivationBundle? derivation,
     AarIncomingMatchupBundle? perAttackerIncoming,
+    PreparedAarComparisonInput? fitComparisonInput,
   }) async {
     return CodexAnalysisResult(
       report: CombatAarReport.fromLegacy(

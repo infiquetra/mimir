@@ -21,6 +21,7 @@ import 'package:mimir/features/combat_analyzer/data/combat_killmail_discovery_cl
 import 'package:mimir/features/combat_analyzer/data/combat_providers.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_attacker_matchup.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
+import 'package:mimir/features/combat_analyzer/domain/aar_fit_generation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_attacker_correlation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
 import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.dart';
@@ -296,6 +297,7 @@ class _CountingCodex extends CodexAnalysisClient {
     CombatEnrichment? enrichment,
     AarDerivationBundle? derivation,
     AarIncomingMatchupBundle? perAttackerIncoming,
+    PreparedAarComparisonInput? fitComparisonInput,
   }) async {
     calls++;
     throw StateError('analyzeEncounter must not run during P01/P10');

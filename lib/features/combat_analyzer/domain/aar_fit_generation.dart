@@ -1,3 +1,4 @@
+import '../../fitting/domain/models.dart';
 import 'aar_fit_proposal.dart';
 import 'aar_fit_snapshot.dart';
 import 'combat_evidence_ledger.dart';
@@ -17,6 +18,7 @@ class AarFitGenerationRecord {
     this.calculatorRevision,
     this.sdeContentKey,
     this.victimSnapshot,
+    this.derivationInputRefs = const {},
   });
 
   final String? generationId;
@@ -30,6 +32,7 @@ class AarFitGenerationRecord {
   final String? calculatorRevision;
   final String? sdeContentKey;
   final AarFitSnapshot? victimSnapshot;
+  final Map<String, String> derivationInputRefs;
 
   Map<String, dynamic> toJson() => {
     if (generationId != null) 'generationId': generationId,
@@ -46,6 +49,8 @@ class AarFitGenerationRecord {
     if (calculatorRevision != null) 'calculatorRevision': calculatorRevision,
     if (sdeContentKey != null) 'sdeContentKey': sdeContentKey,
     if (victimSnapshot != null) 'victimSnapshot': victimSnapshot!.toJson(),
+    if (derivationInputRefs.isNotEmpty)
+      'derivationInputRefs': derivationInputRefs,
   };
 
   factory AarFitGenerationRecord.fromJson(Map<String, dynamic> json) {
@@ -72,6 +77,11 @@ class AarFitGenerationRecord {
               Map<String, dynamic>.from(json['victimSnapshot'] as Map),
             )
           : null,
+      derivationInputRefs: {
+        if (json['derivationInputRefs'] is Map)
+          for (final entry in (json['derivationInputRefs'] as Map).entries)
+            entry.key.toString(): entry.value.toString(),
+      },
     );
   }
 
@@ -111,13 +121,18 @@ class PreparedAarComparisonInput {
   final String calculatorRevision;
   final String sdeContentKey;
 
-  /// Naive: first non-null fit is both supplied pilot and derivation baseline.
   factory PreparedAarComparisonInput.fromEvidence({
     required String encounterId,
     FitEvidence? pilotFitEvidence,
     FitEvidence? victimFitEvidence,
     DateTime? preparedAt,
+    int? selfCharacterId,
+    int? victimCharacterId,
+    bool? pilotDerivationFailed,
+    String calculatorRevision = 'unknown',
+    String sdeContentKey = 'sde-decimal-v1',
   }) {
+    final at = preparedAt ?? DateTime.now().toUtc();
     final supplied = pilotFitEvidence == null
         ? null
         : AarFitSnapshot.fromFitEvidence(
@@ -130,17 +145,27 @@ class PreparedAarComparisonInput {
             encounterId: encounterId,
             evidence: victimFitEvidence,
           );
-    final first = supplied ?? victim;
+    final failed =
+        pilotDerivationFailed ??
+        (pilotFitEvidence != null && _pilotLooksUnderivable(pilotFitEvidence));
+    final ownVictimEligible =
+        victim != null &&
+        (selfCharacterId == null ||
+            (victimCharacterId != null &&
+                selfCharacterId == victimCharacterId));
+    final useVictimBaseline = failed && ownVictimEligible;
     return PreparedAarComparisonInput(
       encounterId: encounterId,
-      generationId: 'gen-$encounterId',
-      preparedAt: preparedAt,
-      suppliedPilot: first,
+      generationId: 'gen-$encounterId-${at.microsecondsSinceEpoch}',
+      preparedAt: at,
+      suppliedPilot: supplied,
       victim: victim,
-      derivationBaseline: first,
-      derivationBaselineReason: first == null
-          ? 'none'
-          : (supplied == null ? 'first-available' : 'pilot'),
+      derivationBaseline: useVictimBaseline ? victim : supplied,
+      derivationBaselineReason: useVictimBaseline
+          ? 'own-victim killmail after failed pilot derivation'
+          : (supplied == null ? 'none' : 'pilot evidence'),
+      calculatorRevision: calculatorRevision,
+      sdeContentKey: sdeContentKey,
     );
   }
 
@@ -157,8 +182,65 @@ class PreparedAarComparisonInput {
       calculatorRevision: calculatorRevision,
       sdeContentKey: sdeContentKey,
       victimSnapshot: victim,
+      derivationInputRefs: {
+        if (suppliedPilot != null) 'suppliedPilot': suppliedPilot!.snapshotId,
+        if (derivationBaseline != null)
+          'derivationBaseline': derivationBaseline!.snapshotId,
+        if (victim != null) 'victim': victim!.snapshotId,
+      },
     );
   }
+
+  Map<String, dynamic> toPromptJson({int vocabularyLimit = 512}) {
+    final typeIds = <int>{};
+    void addFitting(Fitting? fitting) {
+      if (fitting == null) return;
+      if (fitting.shipTypeId > 0) typeIds.add(fitting.shipTypeId);
+      for (final module in fitting.allModules) {
+        if (module.typeId > 0) typeIds.add(module.typeId);
+        final chargeId = module.chargeTypeId;
+        if (chargeId != null && chargeId > 0) typeIds.add(chargeId);
+      }
+      for (final drone in fitting.drones) {
+        if (drone.typeId > 0) typeIds.add(drone.typeId);
+      }
+      for (final fighter in fitting.fighters) {
+        if (fighter.typeId > 0) typeIds.add(fighter.typeId);
+      }
+      for (final cargo in fitting.cargo) {
+        if (cargo.typeId > 0) typeIds.add(cargo.typeId);
+      }
+    }
+
+    addFitting(suppliedPilot?.fitting);
+    addFitting(victim?.fitting);
+    addFitting(derivationBaseline?.fitting);
+    final ordered = typeIds.toList()..sort();
+    final truncated = ordered.length > vocabularyLimit;
+    return {
+      'schemaVersion': 1,
+      'generationId': generationId,
+      'encounterId': encounterId,
+      if (preparedAt != null)
+        'preparedAt': preparedAt!.toUtc().toIso8601String(),
+      if (derivationBaseline != null) ...{
+        'preparedBaselineSnapshotId': derivationBaseline!.snapshotId,
+        'preparedBaselineFingerprint': derivationBaseline!.contentFingerprint,
+      },
+      if (suppliedPilot != null)
+        'suppliedPilotFingerprint': suppliedPilot!.contentFingerprint,
+      if (derivationBaselineReason != null)
+        'derivationBaselineReason': derivationBaselineReason,
+      'typeVocabulary': ordered.take(vocabularyLimit).toList(),
+      'typeVocabularyTruncated': truncated,
+      'typeVocabularyLimit': vocabularyLimit,
+    };
+  }
+}
+
+bool _pilotLooksUnderivable(FitEvidence evidence) {
+  final typeId = evidence.fitting.shipTypeId;
+  return typeId <= 0 || typeId >= 99999;
 }
 
 class AarComparisonAdvice {
@@ -195,6 +277,7 @@ class AarFitCandidateValidator {
     String? preparedBaselineId,
     String? preparedFingerprint,
     String? preparedEncounterId,
+    bool Function(int typeId)? isKnownType,
   }) {
     return AarFitProposal.fromRaw(
       raw: raw,
@@ -203,6 +286,7 @@ class AarFitCandidateValidator {
       origin: AarProposalOrigin.ai,
       baselineSnapshotId: preparedBaselineId,
       baselineFingerprint: preparedFingerprint,
+      isKnownType: isKnownType,
     );
   }
 }
