@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/features/combat_analyzer/data/codex_analysis_client.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_enrichment_repository.dart';
@@ -18,7 +17,6 @@ import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.da
 import 'package:mimir/features/fitting/domain/models.dart';
 import 'package:mimir/features/combat_analyzer/presentation/analysis_multipane_screen.dart';
 import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_evidence_checklist_card.dart';
-import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_incoming_matchups_section.dart';
 import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_pre_analysis_gate.dart';
 
 import '../fixtures/aar_evidence_fixtures.dart';
