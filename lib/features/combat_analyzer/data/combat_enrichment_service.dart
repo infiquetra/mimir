@@ -51,6 +51,8 @@ class CombatEnrichmentService {
 
   SdeService get sdeService => _sdeService;
 
+  final Map<String, Future<CombatEnrichment>> _ensureLocks = {};
+
   Future<CombatEnrichment> attachDerivedEvidence(
     CombatEnrichment enrichment,
     AarDerivationBundle bundle, {
@@ -252,7 +254,7 @@ class CombatEnrichmentService {
   Future<CombatEnrichment> ensureAttackerCorrelation(
     ParsedCombatEncounter encounter,
     CombatEnrichment enrichment,
-  ) async {
+  ) {
     Log.d(
       'COMBAT.CORRELATE',
       'ensureAttackerCorrelation(${encounter.id}) - START',
@@ -260,8 +262,29 @@ class CombatEnrichmentService {
     if (enrichment.attackerCorrelation != null ||
         !enrichment.hasMatchedKillmail ||
         enrichment.rawKillmail == null) {
-      return enrichment;
+      return Future.value(enrichment);
     }
+    final key = '${encounter.id}:${enrichment.killmailId ?? 0}';
+    return _ensureLocks.putIfAbsent(key, () async {
+      try {
+        final latest = await _repository.loadEnrichment(encounter.id);
+        if (latest?.attackerCorrelation != null) {
+          return latest!;
+        }
+        return await _ensureAttackerCorrelationBody(
+          encounter,
+          latest ?? enrichment,
+        );
+      } finally {
+        _ensureLocks.remove(key);
+      }
+    });
+  }
+
+  Future<CombatEnrichment> _ensureAttackerCorrelationBody(
+    ParsedCombatEncounter encounter,
+    CombatEnrichment enrichment,
+  ) async {
     final EsiKillmailDetail detail;
     try {
       detail = EsiKillmailDetail.fromJson(enrichment.rawKillmail!);

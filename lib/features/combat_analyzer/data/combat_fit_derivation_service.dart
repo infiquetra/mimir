@@ -13,6 +13,8 @@ import '../domain/combat_damage_profile.dart';
 import '../domain/combat_enrichment.dart';
 import '../domain/combat_evidence_ledger.dart';
 import '../domain/combat_fit_deriver.dart';
+import '../domain/incoming_damage_allocation.dart';
+import '../domain/incoming_damage_matchup.dart';
 import '../domain/parsed_combat_encounter.dart';
 
 final combatFitDerivationServiceProvider = Provider<CombatFitDerivationService>(
@@ -44,8 +46,91 @@ class CombatFitDerivationService {
     required CombatEnrichment enrichment,
     required CombatDamageProfile incoming,
     required CombatDamageProfile outgoing,
+    IncomingDamageAllocation? incomingAllocation,
   }) async {
     Log.d('AAR', 'deriveForEncounter(${encounter.id}) - START');
+    final fits = await deriveFitsForEncounter(
+      encounter: encounter,
+      enrichment: enrichment,
+      selfSkills: null,
+      opponentSkills: null,
+    );
+    if (incomingAllocation != null) {
+      final composed = composeMatchups(
+        fits: fits,
+        incoming: incomingAllocation,
+        outgoing: outgoing,
+        encounter: encounter,
+        enrichment: enrichment,
+      );
+      return AarDerivationBundle(
+        self: composed.self,
+        opponent: composed.opponent,
+        selfMatchup: composed.selfMatchup,
+        opponentMatchup: composed.opponentMatchup,
+        unknowns: [
+          ...composed.unknowns,
+          ...AarDerivedFactsBuilder.unknownsFor(
+            AarDerivationBundle(
+              self: composed.self,
+              opponent: composed.opponent,
+            ),
+            hasPilotEvidence: enrichment.pilotFitEvidence != null,
+            hasOpponentEvidence:
+                enrichment.victimFitEvidence != null &&
+                enrichment.victimCharacterId != encounter.characterId,
+            incoming: incoming,
+          ),
+        ],
+      );
+    }
+
+    final selfMatchup = CombatDamageMatchupAnalyzer.analyze(
+      profile: incoming,
+      defense: fits.self?.stats.defenses,
+      tank: fits.self?.tank,
+      targetLabel: encounter.characterName,
+    );
+    final opponentMatchup = CombatDamageMatchupAnalyzer.analyze(
+      profile: outgoing,
+      defense: fits.opponent?.stats.defenses,
+      tank: fits.opponent?.tank,
+      targetLabel: enrichment.victimName ?? 'Opponent',
+    );
+    final bundle = AarDerivationBundle(
+      self: fits.self,
+      opponent: fits.opponent,
+      selfMatchup: selfMatchup,
+      opponentMatchup: opponentMatchup,
+      unknowns: [
+        ...fits.unknowns,
+        ...AarDerivedFactsBuilder.unknownsFor(
+          AarDerivationBundle(self: fits.self, opponent: fits.opponent),
+          hasPilotEvidence: enrichment.pilotFitEvidence != null,
+          hasOpponentEvidence:
+              enrichment.victimFitEvidence != null &&
+              enrichment.victimCharacterId != encounter.characterId,
+          incoming: incoming,
+        ),
+      ],
+    );
+    Log.i(
+      'AAR',
+      'deriveForEncounter(${encounter.id}) self=${fits.self != null} '
+          'opponent=${fits.opponent != null} unknowns=${bundle.unknowns.length}',
+    );
+    return bundle;
+  }
+
+  Future<AarDerivationBundle> deriveFitsForEncounter({
+    required ParsedCombatEncounter encounter,
+    required CombatEnrichment enrichment,
+    required AarSkillContext? selfSkills,
+    required AarSkillContext? opponentSkills,
+    List<String> selfInputIssues = const [],
+    List<String> opponentInputIssues = const [],
+  }) async {
+    Log.d('AAR.MATCHUP', 'deriveFitsForEncounter(${encounter.id}) - START');
     if (!_sde.isInitialized) {
       await _sde.initialize();
     }
@@ -60,23 +145,50 @@ class CombatFitDerivationService {
         victimEvidence != null &&
         enrichment.victimCharacterId != null &&
         enrichment.victimCharacterId == encounter.characterId;
-    final hasPilotEvidence = pilotEvidence != null;
-    final hasOpponentEvidence = victimEvidence != null && !victimIsSelf;
+
+    Future<AarSkillContext> skillsFor(
+      AarFitSubject subject,
+      AarSkillContext? override,
+      List<String> issues,
+    ) async {
+      if (issues.isNotEmpty && override == null) {
+        throw StateError('unavailable skill context');
+      }
+      if (override != null) return override;
+      return skillContextFor(
+        subject: subject,
+        characterId: subject == AarFitSubject.self
+            ? encounter.characterId
+            : null,
+      );
+    }
 
     if (pilotEvidence != null) {
-      final skills = await skillContextFor(
-        subject: AarFitSubject.self,
-        characterId: encounter.characterId,
-      );
-      final result = await deriveEvidence(
-        pilotEvidence,
-        subject: AarFitSubject.self,
-        skills: skills,
-      );
-      if (result is AarFitDerived) {
-        self = result.derivation;
-      } else if (result is AarFitDerivationFailed) {
-        failedUnknowns.add(result.unknown);
+      try {
+        final skills = await skillsFor(
+          AarFitSubject.self,
+          selfSkills,
+          selfInputIssues,
+        );
+        final result = await deriveEvidence(
+          pilotEvidence,
+          subject: AarFitSubject.self,
+          skills: skills,
+        );
+        if (result is AarFitDerived) {
+          self = result.derivation;
+        } else if (result is AarFitDerivationFailed) {
+          failedUnknowns.add(result.unknown);
+        }
+      } catch (e, stack) {
+        Log.e('AAR.MATCHUP', 'self fit derivation unavailable', e, stack);
+        failedUnknowns.add(
+          const AarUnknown(
+            category: AarUnknownCategory.pilotFit,
+            label: 'Pilot fit unavailable',
+            detail: 'Self fit derivation was unavailable.',
+          ),
+        );
       }
     }
 
@@ -90,60 +202,133 @@ class CombatFitDerivationService {
         final subject = victimIsSelf
             ? AarFitSubject.self
             : AarFitSubject.opponent;
-        final skills = await skillContextFor(
-          subject: subject,
-          characterId: victimIsSelf ? encounter.characterId : null,
-        );
-        final result = await deriveEvidence(
-          victimEvidence,
-          subject: subject,
-          skills: skills,
-        );
-        if (result is AarFitDerived) {
-          if (subject == AarFitSubject.self) {
-            self = result.derivation;
-          } else {
-            opponent = result.derivation;
+        try {
+          final skills = await skillsFor(
+            subject,
+            subject == AarFitSubject.self ? selfSkills : opponentSkills,
+            subject == AarFitSubject.self
+                ? selfInputIssues
+                : opponentInputIssues,
+          );
+          final result = await deriveEvidence(
+            victimEvidence,
+            subject: subject,
+            skills: skills,
+          );
+          if (result is AarFitDerived) {
+            if (subject == AarFitSubject.self) {
+              self = result.derivation;
+            } else {
+              opponent = result.derivation;
+            }
+          } else if (result is AarFitDerivationFailed) {
+            failedUnknowns.add(result.unknown);
           }
-        } else if (result is AarFitDerivationFailed) {
-          failedUnknowns.add(result.unknown);
+        } catch (e, stack) {
+          Log.e('AAR.MATCHUP', 'victim fit derivation unavailable', e, stack);
+          failedUnknowns.add(
+            AarUnknown(
+              category: victimIsSelf
+                  ? AarUnknownCategory.pilotFit
+                  : AarUnknownCategory.opponentFit,
+              label: 'Fit derivation unavailable',
+              detail: 'Fit derivation was unavailable.',
+            ),
+          );
         }
       }
     }
 
-    final selfMatchup = CombatDamageMatchupAnalyzer.analyze(
-      profile: incoming,
-      defense: self?.stats.defenses,
-      tank: self?.tank,
-      targetLabel: encounter.characterName,
+    Log.i(
+      'AAR.MATCHUP',
+      'deriveFitsForEncounter(${encounter.id}) self=${self != null} '
+          'opponent=${opponent != null}',
     );
-    final opponentMatchup = CombatDamageMatchupAnalyzer.analyze(
-      profile: outgoing,
-      defense: opponent?.stats.defenses,
-      tank: opponent?.tank,
-      targetLabel: enrichment.victimName ?? 'Opponent',
-    );
-    final bundle = AarDerivationBundle(
+    return AarDerivationBundle(
       self: self,
       opponent: opponent,
+      unknowns: failedUnknowns,
+    );
+  }
+
+  AarDerivationBundle composeMatchups({
+    required AarDerivationBundle fits,
+    required IncomingDamageAllocation? incoming,
+    required CombatDamageProfile? outgoing,
+    required ParsedCombatEncounter encounter,
+    required CombatEnrichment enrichment,
+  }) {
+    Log.d(
+      'AAR.MATCHUP',
+      'composeMatchups(${encounter.id}) incoming=${incoming != null} '
+          'outgoing=${outgoing != null}',
+    );
+    CombatDamageMatchup? selfMatchup;
+    if (incoming != null) {
+      final incomingDefense = CombatDamageMatchupAnalyzer.analyzeIncoming(
+        components: incoming.components,
+        defense: fits.self?.stats.defenses,
+        tank: fits.self?.tank,
+        pilotFitKey: fits.self?.shipName,
+      );
+      selfMatchup = _projectIncomingMatchup(
+        incomingDefense,
+        encounter.characterName,
+      );
+    }
+    CombatDamageMatchup? opponentMatchup;
+    if (outgoing != null) {
+      opponentMatchup = CombatDamageMatchupAnalyzer.analyze(
+        profile: outgoing,
+        defense: fits.opponent?.stats.defenses,
+        tank: fits.opponent?.tank,
+        targetLabel: enrichment.victimName ?? 'Opponent',
+      );
+    }
+    return AarDerivationBundle(
+      self: fits.self,
+      opponent: fits.opponent,
       selfMatchup: selfMatchup,
       opponentMatchup: opponentMatchup,
-      unknowns: [
-        ...failedUnknowns,
-        ...AarDerivedFactsBuilder.unknownsFor(
-          AarDerivationBundle(self: self, opponent: opponent),
-          hasPilotEvidence: hasPilotEvidence,
-          hasOpponentEvidence: hasOpponentEvidence,
-          incoming: incoming,
-        ),
+      unknowns: fits.unknowns,
+    );
+  }
+
+  CombatDamageMatchup _projectIncomingMatchup(
+    AarIncomingDefenseMatchup defense,
+    String targetLabel,
+  ) {
+    const labels = {
+      IncomingDamageType.em: 'EM',
+      IncomingDamageType.thermal: 'Thermal',
+      IncomingDamageType.kinetic: 'Kinetic',
+      IncomingDamageType.explosive: 'Explosive',
+    };
+    return CombatDamageMatchup(
+      targetLabel: targetLabel,
+      layer: defense.layer.name,
+      summary: defense.status == IncomingDefenseStatus.available
+          ? 'Incoming defense vs $targetLabel ${defense.layer.name} resists.'
+          : 'Incoming defense unavailable for $targetLabel.',
+      entries: [
+        for (final entry in defense.entries)
+          CombatDamageMatchupEntry(
+            type: labels[entry.type] ?? entry.type.name,
+            amount: 0,
+            percent: entry.profileFraction,
+            assessment: entry.assessment,
+            evidence: 'Canonical incoming allocation vs $targetLabel.',
+            resistPercent: entry.resistPercent,
+            appliedPercent: entry.modeledPressure,
+          ),
       ],
+      pattern: defense.pattern,
+      ehpAgainstPattern: defense.ehp,
+      ehpOmni: defense.omniEhp,
+      primaryHole: defense.primaryHole == null
+          ? null
+          : labels[defense.primaryHole!],
     );
-    Log.i(
-      'AAR',
-      'deriveForEncounter(${encounter.id}) self=${self != null} '
-          'opponent=${opponent != null} unknowns=${bundle.unknowns.length}',
-    );
-    return bundle;
   }
 
   Future<AarFitDerivationResult> deriveEvidence(
@@ -163,6 +348,7 @@ class CombatFitDerivationService {
       _sde,
       evidence.fitting,
       skillTypeIds: skills.skills.map((skill) => skill.skillId),
+      effectLookupPolicy: EffectLookupPolicy.localOnly,
     );
     if (inputs == null) {
       return AarFitDerivationFailed(
@@ -208,19 +394,24 @@ class CombatFitDerivationService {
       'skillContextFor subject=${subject.name} characterId=$characterId',
     );
     if (subject == AarFitSubject.self && characterId != null) {
-      final rows = await _skills.getCharacterSkills(characterId);
-      if (rows.isNotEmpty) {
-        return AarSkillContext(
-          basis: AarSkillBasis.knownCharacter,
-          skills: [
-            for (final row in rows)
-              CharacterSkill(
-                skillId: row.skillId,
-                level: row.trainedSkillLevel,
-              ),
-          ],
-          characterId: characterId,
-        );
+      try {
+        final rows = await _skills.getCharacterSkills(characterId);
+        if (rows.isNotEmpty) {
+          return AarSkillContext(
+            basis: AarSkillBasis.knownCharacter,
+            skills: [
+              for (final row in rows)
+                CharacterSkill(
+                  skillId: row.skillId,
+                  level: row.trainedSkillLevel,
+                ),
+            ],
+            characterId: characterId,
+          );
+        }
+      } catch (e, stack) {
+        Log.e('AAR', 'skillContextFor unavailable', e, stack);
+        rethrow;
       }
     }
     return AarSkillContext(

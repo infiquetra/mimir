@@ -9,6 +9,18 @@ import '../../features/fitting/domain/models.dart';
 import '../logging/logger.dart';
 import 'sde_database.dart';
 
+enum EffectLookupPolicy { localOnly, allowNetwork }
+
+final class EffectModifierInputs {
+  const EffectModifierInputs({
+    required this.modifiers,
+    required this.unavailableEffectIds,
+  });
+
+  final Map<int, List<EffectModifier>> modifiers;
+  final Set<int> unavailableEffectIds;
+}
+
 /// Service for managing Static Data Export (SDE) data.
 ///
 /// Handles loading, caching, and updating EVE Online reference data
@@ -729,30 +741,65 @@ class SdeService {
   Future<Map<int, List<EffectModifier>>> ensureEffectModifiers(
     List<int> effectIds,
   ) async {
+    final inputs = await loadEffectModifierInputs(
+      effectIds,
+      policy: EffectLookupPolicy.allowNetwork,
+    );
+    return inputs.modifiers;
+  }
+
+  Future<EffectModifierInputs> loadEffectModifierInputs(
+    Iterable<int> effectIds, {
+    required EffectLookupPolicy policy,
+  }) async {
     final unique = effectIds.toSet();
-    if (unique.isEmpty) return const {};
+    if (unique.isEmpty) {
+      return const EffectModifierInputs(
+        modifiers: {},
+        unavailableEffectIds: {},
+      );
+    }
 
     final grouped = <int, List<EffectModifier>>{
       for (final entry in _bundledEffectModifiers.entries)
-        if (unique.contains(entry.key)) entry.key: entry.value,
+        if (unique.contains(entry.key)) entry.key: List.of(entry.value),
     };
     final unbundled = unique
         .where((id) => !_bundledEffectModifiers.containsKey(id))
         .toList();
-    if (unbundled.isEmpty) return grouped;
+    if (unbundled.isEmpty) {
+      return EffectModifierInputs(
+        modifiers: grouped,
+        unavailableEffectIds: const {},
+      );
+    }
 
     final cached = await database.getEffectModifiers(unbundled);
+    grouped.addAll(_groupModifiers(cached));
     final cachedIds = cached.map((m) => m.effectId).toSet();
-    final missing = unbundled
-        .where((id) => !cachedIds.contains(id))
+    final missing = unbundled.where((id) => !cachedIds.contains(id)).toList();
+    if (missing.isEmpty) {
+      return EffectModifierInputs(
+        modifiers: grouped,
+        unavailableEffectIds: const {},
+      );
+    }
+
+    if (policy == EffectLookupPolicy.localOnly) {
+      return EffectModifierInputs(
+        modifiers: grouped,
+        unavailableEffectIds: Set<int>.unmodifiable(missing.toSet()),
+      );
+    }
+
+    final toFetch = missing
         .where((id) => !_modifierFetchAttempted.contains(id))
         .toList();
-
-    if (missing.isNotEmpty) {
-      _modifierFetchAttempted.addAll(missing);
+    if (toFetch.isNotEmpty) {
+      _modifierFetchAttempted.addAll(toFetch);
       final rows = <SdeEffectModifiersCompanion>[];
       await Future.wait(
-        missing.map((effectId) async {
+        toFetch.map((effectId) async {
           try {
             final response = await Dio().get<Map<String, dynamic>>(
               '$_esiBaseUrl/dogma/effects/$effectId/',
@@ -786,12 +833,16 @@ class SdeService {
         grouped.addAll(
           _groupModifiers(await database.getEffectModifiers(unbundled)),
         );
-        return grouped;
       }
     }
 
-    grouped.addAll(_groupModifiers(cached));
-    return grouped;
+    final stillMissing = missing
+        .where((id) => !grouped.containsKey(id))
+        .toSet();
+    return EffectModifierInputs(
+      modifiers: grouped,
+      unavailableEffectIds: Set<int>.unmodifiable(stillMissing),
+    );
   }
 
   /// Dogma effects of a type, named from the bundled effect metadata.

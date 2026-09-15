@@ -646,6 +646,21 @@ class SdeDatabase extends _$SdeDatabase {
     return result;
   }
 
+  /// Local SDE revision stream for AAR derivation invalidation.
+  Stream<int> watchDerivationRevision() {
+    return tableUpdates(
+      TableUpdateQuery.onAllTables([
+        sdeTypes,
+        sdeGroups,
+        sdeCategories,
+        sdeTypeAttributes,
+        sdeTypeEffects,
+        sdeEffectModifiers,
+        sdeMetadata,
+      ]),
+    ).map((_) => 1);
+  }
+
   /// Get cached dogma modifiers for the given effects.
   Future<List<SdeEffectModifier>> getEffectModifiers(List<int> effectIds) {
     if (effectIds.isEmpty) return Future.value(const []);

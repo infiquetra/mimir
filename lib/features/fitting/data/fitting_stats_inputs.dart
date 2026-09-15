@@ -12,6 +12,7 @@ class FittingStatsInputs {
   final Map<int, ModuleType> skillTypes;
   final Map<int, List<EffectModifier>> effectModifiers;
   final Map<int, String> unresolved;
+  final Set<int> unavailableEffectIds;
 
   const FittingStatsInputs({
     required this.shipType,
@@ -19,6 +20,7 @@ class FittingStatsInputs {
     required this.skillTypes,
     required this.effectModifiers,
     required this.unresolved,
+    this.unavailableEffectIds = const {},
   });
 }
 
@@ -29,6 +31,7 @@ Future<FittingStatsInputs?> loadFittingStatsInputs(
   Fitting fitting, {
   required Iterable<int> skillTypeIds,
   ShipType? shipType,
+  EffectLookupPolicy effectLookupPolicy = EffectLookupPolicy.allowNetwork,
 }) async {
   final resolvedShip = shipType ?? await sde.getShipType(fitting.shipTypeId);
   if (resolvedShip == null) {
@@ -106,20 +109,27 @@ Future<FittingStatsInputs?> loadFittingStatsInputs(
     for (final type in skillTypes.values)
       for (final effect in type.effects) effect.effectId,
   }.toList();
-  final effectModifiers = await sde.ensureEffectModifiers(effectIds);
+  final effectInputs = await sde.loadEffectModifierInputs(
+    effectIds,
+    policy: effectLookupPolicy,
+  );
 
   Log.d(
     'FITTING',
     'loadFittingStatsInputs ship=${resolvedShip.typeId} '
         'modules=${moduleTypes.length} skills=${skillTypes.length} '
-        'effects=${effectIds.length} unresolved=${unresolved.length}',
+        'effects=${effectIds.length} unresolved=${unresolved.length} '
+        'unavailableEffects=${effectInputs.unavailableEffectIds.length}',
   );
 
   return FittingStatsInputs(
     shipType: resolvedShip,
     moduleTypes: moduleTypes,
     skillTypes: skillTypes,
-    effectModifiers: effectModifiers,
+    effectModifiers: effectInputs.modifiers,
     unresolved: unresolved,
+    unavailableEffectIds: Set<int>.unmodifiable(
+      effectInputs.unavailableEffectIds,
+    ),
   );
 }

@@ -635,6 +635,7 @@ class FakeCodexAnalysisClient extends CodexAnalysisClient {
       encounter,
       enrichment: enrichment,
       derivation: derivation,
+      perAttackerIncoming: perAttackerIncoming,
     );
     return CodexAnalysisResult(
       report: CombatAarReport.fromLegacy(

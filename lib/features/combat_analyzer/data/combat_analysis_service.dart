@@ -10,8 +10,13 @@ import '../../../core/database/app_database.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/network/esi_client.dart';
 import '../../skills/data/skill_repository.dart';
+import '../domain/aar_attacker_matchup.dart';
+import '../domain/aar_attacker_matchup_deriver.dart';
 import '../domain/aar_evidence_scorer.dart';
 import '../domain/combat_aar_report.dart';
+import '../domain/combat_actor_classifier.dart';
+import '../domain/combat_evidence_ledger.dart';
+import '../domain/incoming_damage_allocation.dart';
 import '../domain/parsed_combat_encounter.dart';
 import 'codex_analysis_client.dart';
 import 'codex_auth_service.dart';
@@ -252,9 +257,21 @@ class CombatAnalysisService {
           value: 0.46,
         ),
       );
-      final incoming = await _damageProfileResolver.resolveIncomingProfile(
-        encounter,
-      );
+      IncomingAllocationResult? incomingResult;
+      try {
+        incomingResult = await _damageProfileResolver.resolveIncomingAllocation(
+          encounter,
+          sdeContentKey: 'sde-decimal-v1',
+        );
+      } catch (e, stack) {
+        Log.e('AAR.MATCHUP', 'incoming allocation unavailable', e, stack);
+      }
+      final incomingAllocation = incomingResult is IncomingAllocationReady
+          ? incomingResult.allocation
+          : null;
+      final incoming = incomingAllocation != null
+          ? incomingAllocation.toLegacyProfile()
+          : await _damageProfileResolver.resolveIncomingProfile(encounter);
       final outgoing = await _damageProfileResolver.resolveOutgoingProfile(
         encounter,
       );
@@ -263,12 +280,43 @@ class CombatAnalysisService {
         enrichment: enrichment,
         incoming: incoming,
         outgoing: outgoing,
+        incomingAllocation: incomingAllocation,
       );
       enrichment = await _enrichmentService.attachDerivedEvidence(
         enrichment,
         derivation,
         encounterId: encounter.id,
       );
+      AarIncomingMatchupBundle? perAttackerIncoming;
+      if (incomingAllocation != null) {
+        perAttackerIncoming = AarAttackerMatchupDeriver.derive(
+          allocation: incomingAllocation,
+          correlation: IncomingCorrelationContext(
+            parsedEncounterId: encounter.id,
+            selectedKillmailId:
+                enrichment.attackerCorrelation?.killmailId ??
+                enrichment.killmailId,
+            selfCharacterId: encounter.characterId,
+            selfIsVictim: enrichment.attackerCorrelation?.selfIsVictim,
+            correlation: enrichment.attackerCorrelation,
+            currentParticipants: const [],
+            localActorTypes: const <String, CombatTypeRef>{},
+          ),
+          pilotFit: derivation.self,
+          pilotFitEvidence:
+              derivation.self?.fitSource == EvidenceSource.killmail
+              ? enrichment.victimFitEvidence
+              : enrichment.pilotFitEvidence,
+          pilotFitKey: derivation.self?.shipName,
+          dependencyLimitations: const [],
+        );
+        Log.i(
+          'AAR.MATCHUP',
+          'analyzeEncounter(${encounter.id}) attackers='
+              '${perAttackerIncoming.attackers.length} '
+              'total=${incomingAllocation.totalIncomingDamage}',
+        );
+      }
       final assessment = const AarEvidenceScorer().assess(
         AarEvidenceInputs(
           encounter: encounter,
@@ -299,6 +347,7 @@ class CombatAnalysisService {
         model: modelName,
         enrichment: enrichment,
         derivation: derivation,
+        perAttackerIncoming: perAttackerIncoming,
       );
       emit(
         const CombatAnalysisProgress(

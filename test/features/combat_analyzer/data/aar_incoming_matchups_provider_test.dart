@@ -7,8 +7,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/core/auth/oauth_service.dart';
 import 'package:mimir/core/auth/token_manager.dart';
 import 'package:mimir/core/database/app_database.dart';
+import 'package:mimir/core/di/providers.dart';
 import 'package:mimir/core/network/esi_client.dart';
 import 'package:mimir/core/sde/sde_database.dart';
+import 'package:mimir/core/sde/sde_providers.dart';
 import 'package:mimir/core/sde/sde_service.dart';
 import 'package:mimir/features/combat_analyzer/data/codex_analysis_client.dart';
 import 'package:mimir/features/combat_analyzer/data/codex_auth_service.dart';
@@ -18,6 +20,7 @@ import 'package:mimir/features/combat_analyzer/data/combat_enrichment_repository
 import 'package:mimir/features/combat_analyzer/data/combat_enrichment_service.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_killmail_discovery_client.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_providers.dart';
+import 'package:mimir/features/combat_analyzer/domain/aar_attacker_matchup.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_attacker_correlation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
@@ -68,14 +71,14 @@ void main() {
       await repository.saveEnrichment(s2.enrichment);
       final container = ProviderContainer(
         overrides: [
+          databaseProvider.overrideWithValue(appDb),
+          sdeDatabaseProvider.overrideWithValue(sdeDb),
           combatEnrichmentServiceProvider.overrideWith(
             (ref) => enrichmentService(),
           ),
-          combatEnrichmentProvider.overrideWith(
-            (ref, id) async => s2.enrichment,
-          ),
+          combatEnrichmentProvider.overrideWith((ref, id) => s2.enrichment),
           combatAttackerCorrelationProvider.overrideWith(
-            (ref, enc) async => s2.correlation,
+            (ref, enc) => s2.correlation,
           ),
           codexAnalysisClientProvider.overrideWithValue(codex),
         ],
@@ -110,11 +113,11 @@ void main() {
       final s3 = s3Residuals();
       final container = ProviderContainer(
         overrides: [
-          combatEnrichmentProvider.overrideWith(
-            (ref, id) async => s3.enrichment,
-          ),
+          databaseProvider.overrideWithValue(appDb),
+          sdeDatabaseProvider.overrideWithValue(sdeDb),
+          combatEnrichmentProvider.overrideWith((ref, id) => s3.enrichment),
           combatAttackerCorrelationProvider.overrideWith(
-            (ref, enc) async => s3.correlation,
+            (ref, enc) => s3.correlation,
           ),
         ],
       );
@@ -153,11 +156,11 @@ void main() {
       );
       final next = ProviderContainer(
         overrides: [
-          combatEnrichmentProvider.overrideWith(
-            (ref, id) async => s3.enrichment,
-          ),
+          databaseProvider.overrideWithValue(appDb),
+          sdeDatabaseProvider.overrideWithValue(sdeDb),
+          combatEnrichmentProvider.overrideWith((ref, id) => s3.enrichment),
           combatAttackerCorrelationProvider.overrideWith(
-            (ref, enc) async => regrouped,
+            (ref, enc) => regrouped,
           ),
         ],
       );
@@ -188,11 +191,11 @@ void main() {
         final s2 = s2Fleet();
         final container = ProviderContainer(
           overrides: [
-            combatEnrichmentProvider.overrideWith(
-              (ref, id) async => s2.enrichment,
-            ),
+            databaseProvider.overrideWithValue(appDb),
+            sdeDatabaseProvider.overrideWithValue(sdeDb),
+            combatEnrichmentProvider.overrideWith((ref, id) => s2.enrichment),
             combatAttackerCorrelationProvider.overrideWith(
-              (ref, enc) async => s2.correlation,
+              (ref, enc) => s2.correlation,
             ),
             aarFitSnapshotProvider.overrideWith(
               (ref, request) => throw StateError('fit unavailable'),
@@ -220,11 +223,11 @@ void main() {
         final s2 = s2Fleet();
         final container = ProviderContainer(
           overrides: [
-            combatEnrichmentProvider.overrideWith(
-              (ref, id) async => s2.enrichment,
-            ),
+            databaseProvider.overrideWithValue(appDb),
+            sdeDatabaseProvider.overrideWithValue(sdeDb),
+            combatEnrichmentProvider.overrideWith((ref, id) => s2.enrichment),
             combatAttackerCorrelationProvider.overrideWith(
-              (ref, enc) async => s2.correlation,
+              (ref, enc) => s2.correlation,
             ),
             codexAnalysisClientProvider.overrideWithValue(codex),
           ],
@@ -293,6 +296,7 @@ class _CountingCodex extends CodexAnalysisClient {
     required String model,
     CombatEnrichment? enrichment,
     AarDerivationBundle? derivation,
+    AarIncomingMatchupBundle? perAttackerIncoming,
   }) async {
     calls++;
     throw StateError('analyzeEncounter must not run during P01/P10');

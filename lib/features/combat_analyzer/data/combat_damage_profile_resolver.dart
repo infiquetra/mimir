@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/sde/sde_database.dart';
 import '../../../core/sde/sde_providers.dart';
+import '../domain/combat_attacker_correlation.dart';
 import '../domain/combat_damage_profile.dart';
+import '../domain/incoming_damage_allocation.dart';
+import '../domain/incoming_damage_allocator.dart';
 import '../domain/parsed_combat_encounter.dart';
 
 final combatDamageProfileResolverProvider =
@@ -59,7 +62,134 @@ class CombatDamageProfileResolver {
 
   Future<CombatDamageProfile> resolveIncomingProfile(
     ParsedCombatEncounter encounter,
-  ) => _resolve(encounter, incoming: true);
+  ) async {
+    final result = await resolveIncomingAllocation(
+      encounter,
+      sdeContentKey: 'sde-decimal-v1',
+    );
+    if (result is IncomingAllocationReady) {
+      return result.allocation.toLegacyProfile();
+    }
+    return _resolve(encounter, incoming: true);
+  }
+
+  Future<IncomingAllocationResult> resolveIncomingAllocation(
+    ParsedCombatEncounter encounter, {
+    required String sdeContentKey,
+  }) async {
+    Log.d(
+      'AAR.MATCHUP',
+      'resolveIncomingAllocation(encounter=${encounter.id}) - START',
+    );
+    final names = <String>{};
+    for (final event in encounter.events) {
+      if (!event.isIncomingDamage) continue;
+      final weapon = event.weaponName;
+      if (weapon == null) continue;
+      final key = normalizeCombatName(weapon);
+      if (key.isEmpty || key == 'unknown') continue;
+      names.add(weapon);
+    }
+    final memo = <String, IncomingWeaponResolution>{};
+    for (final name in names) {
+      final key = normalizeCombatName(name);
+      if (memo.containsKey(key)) continue;
+      memo[key] = await _resolveIncomingWeapon(name);
+    }
+    final result = IncomingDamageAllocator.allocate(
+      encounter: encounter,
+      weapons: memo,
+      sdeContentKey: sdeContentKey,
+    );
+    if (result is IncomingAllocationReady) {
+      Log.i(
+        'AAR.MATCHUP',
+        'resolveIncomingAllocation sources=${result.allocation.sources.length} '
+            'resolved=${result.allocation.resolvedDamage} '
+            'untyped=${result.allocation.untypedDamage}',
+      );
+    } else if (result is IncomingAllocationInvalid) {
+      Log.w(
+        'AAR.MATCHUP',
+        'resolveIncomingAllocation invalid ${result.reasonCode}',
+      );
+    }
+    return result;
+  }
+
+  Future<IncomingWeaponResolution> _resolveIncomingWeapon(String name) async {
+    final normalized = normalizeCombatName(name);
+    try {
+      final matches = await _database.searchTypesByName(name, limit: 20);
+      final exact = [
+        for (final match in matches)
+          if (normalizeCombatName(match.typeName) == normalized) match,
+      ];
+      if (exact.length > 1) {
+        return IncomingWeaponResolution(
+          normalizedName: normalized,
+          status: WeaponResolutionStatus.ambiguousType,
+          reasonCode: 'ambiguousType',
+        );
+      }
+      if (exact.isEmpty) {
+        return IncomingWeaponResolution(
+          normalizedName: normalized,
+          status: WeaponResolutionStatus.noExactType,
+          reasonCode: 'noExactType',
+        );
+      }
+      final type = exact.single;
+      try {
+        final attributes = await _database.getTypeAttributes(type.typeId);
+        final vector = IncomingDamageVector(
+          em: DamageQuantity.fromSdeNumber(attributes[emDamageAttribute] ?? 0),
+          thermal: DamageQuantity.fromSdeNumber(
+            attributes[thermalDamageAttribute] ?? 0,
+          ),
+          kinetic: DamageQuantity.fromSdeNumber(
+            attributes[kineticDamageAttribute] ?? 0,
+          ),
+          explosive: DamageQuantity.fromSdeNumber(
+            attributes[explosiveDamageAttribute] ?? 0,
+          ),
+        );
+        if (vector.total.isZero) {
+          return IncomingWeaponResolution(
+            normalizedName: normalized,
+            typeId: type.typeId,
+            typeName: type.typeName,
+            status: WeaponResolutionStatus.noPositiveDamage,
+            reasonCode: 'noPositiveDamage',
+          );
+        }
+        return IncomingWeaponResolution(
+          normalizedName: normalized,
+          typeId: type.typeId,
+          typeName: type.typeName,
+          status: WeaponResolutionStatus.resolved,
+          attributes: vector,
+        );
+      } catch (e, stack) {
+        Log.e(
+          'AAR.MATCHUP',
+          'weapon attribute lookup failed for $name',
+          e,
+          stack,
+        );
+        return IncomingWeaponResolution(
+          normalizedName: normalized,
+          typeId: type.typeId,
+          typeName: type.typeName,
+          status: WeaponResolutionStatus.lookupFailed,
+          reasonCode: 'lookupFailed',
+        );
+      }
+    } catch (e, stack) {
+      Log.e('AAR.MATCHUP', 'weapon type search failed for $name', e, stack);
+      rethrow;
+    }
+  }
 
   Future<CombatDamageProfile> _resolve(
     ParsedCombatEncounter encounter, {

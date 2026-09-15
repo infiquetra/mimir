@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/logging/logger.dart';
+import '../domain/aar_attacker_matchup.dart';
 import '../domain/aar_fit_derivation.dart';
 import '../domain/combat_aar_report.dart';
 import '../domain/combat_enrichment.dart';
@@ -60,12 +61,14 @@ class CodexAnalysisClient {
     required String model,
     CombatEnrichment? enrichment,
     AarDerivationBundle? derivation,
+    AarIncomingMatchupBundle? perAttackerIncoming,
   }) async {
     Log.d('COMBAT.AI', 'analyzeEncounter(model=$model) - START');
     final prompt = buildPrompt(
       encounter,
       enrichment: enrichment,
       derivation: derivation,
+      perAttackerIncoming: perAttackerIncoming,
     );
     final text = await _requestAnalysisText(model: model, prompt: prompt);
     try {
@@ -168,11 +171,13 @@ class CodexAnalysisClient {
     ParsedCombatEncounter encounter, {
     CombatEnrichment? enrichment,
     AarDerivationBundle? derivation,
+    AarIncomingMatchupBundle? perAttackerIncoming,
   }) {
     return _buildPrompt(
       encounter,
       enrichment: enrichment,
       derivation: derivation,
+      perAttackerIncoming: perAttackerIncoming,
     );
   }
 
@@ -180,6 +185,7 @@ class CodexAnalysisClient {
     ParsedCombatEncounter encounter, {
     CombatEnrichment? enrichment,
     AarDerivationBundle? derivation,
+    AarIncomingMatchupBundle? perAttackerIncoming,
   }) {
     Log.d('COMBAT.AI', '_buildPrompt() - START');
     final events = encounter.events
@@ -208,6 +214,8 @@ class CodexAnalysisClient {
         'self': derivation!.selfMatchup!.toJson(),
       if (derivation?.opponentMatchup != null)
         'opponent': derivation!.opponentMatchup!.toJson(),
+      if (perAttackerIncoming != null)
+        'perAttackerIncoming': perAttackerIncoming.toPromptJson(),
     };
     final payload = {
       'schema': 'mimir.combat_aar_input.v4',
@@ -460,7 +468,9 @@ Rules:
 - Damage type or resist conclusions must be confidence-labeled. If the log does not prove a defense layer or exact fit, state that limitation.
 - Treat `derivedFits` and `damageMatchups` as computed by Mimir's dogma engine from the supplied fit evidence. They are derived, not observed; cite their `ev-derived-*` ledger ids.
 - Every derived fit carries `skills.basis`. When it is `allFive`, say "assuming All V" wherever you quote its numbers and treat them as an upper bound.
-- Do not restate resist or EHP figures that are not in `derivedFits`; if a fit has no derivation, say the resist profile is unknown.
+- Use supplied EHP and resist figures from `derivedFits` and from `damageMatchups.perAttackerIncoming`; do not recompute or average them. If neither source has a figure, say the resist profile is unknown.
+- Use only an eligible source's supplied incoming profile for a named attacker claim; qualify Probable and Resolved portion only. M4 Possible does not permit a named defense claim.
+- The existing self matchup is the aggregate incoming reference; outgoing victim defense is a separate comparison. Pressure is modeled, not measured damage taken.
 - Return JSON only: no markdown, no prose outside the JSON object.
 
 Required schema:
