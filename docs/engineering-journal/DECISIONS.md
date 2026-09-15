@@ -26,6 +26,26 @@
 
 ## 2026-09-14
 
+### Milestone 5 canonical allocation and local composition (technical design only)
+
+**Author.** Technical Architect.
+**Decision.** Use plain immutable combat models and reduced BigInt rational components,
+canonicalized from loaded SDE decimal values. Allocate full incoming events once before
+identity grouping; reuse one pilot-fit snapshot with an explicit local-only effect
+lookup policy. Keep M5 bundles/evidence overlays in memory and serialize exact quantities
+plus explicit defense results under optional v4 `damageMatchups.perAttackerIncoming`.
+Expose local Damage content before AI. Implementation remains queued.
+**Rejected alternatives.** Rounded integer components as calculation inputs; separate
+aggregate/source resolvers; per-card fitting derivation; persisted live M5 bundles;
+network fallback during quantitative local views.
+**Rationale.** These boundaries preserve source/type conservation, independent identity
+and coverage confidence, coherent fit provenance and historical AI reports.
+**Revisit when.** Additional telemetry supports attribution, durable derived-result
+caching is justified, or M4 producers stamp original event lineage.
+**Refs.** [Technical contracts and TDD gates](../specs/aar-per-attacker-matchup-design.md);
+[Product contract](../specs/aar-per-attacker-matchup.md);
+[queued implementation](QUEUED.md#per-attacker-incoming-damage-profile-and-matchup).
+
 ### Milestone 5 product contract for per-attacker incoming matchups (specification only)
 
 **Author.** Product.

@@ -31,6 +31,26 @@
 
 ## 2026-09-14
 
+### Local AAR fitting composition has a hidden effect lookup dependency
+
+**Author.** Technical Architect.
+**Context.** Milestone 5 requires quantitative local views before AI and independent
+profile, identity and fit failure states.
+**Evidence.** [Shared fitting loader](../../lib/features/fitting/data/fitting_stats_inputs.dart)
+calls `SdeService.ensureEffectModifiers`, whose bundled/cache miss path calls ESI.
+[Fit derivation service](../../lib/features/combat_analyzer/data/combat_fit_derivation_service.dart)
+currently binds fit selection to incoming/outgoing matchup composition, and its explicit
+pilot-fit attempt can fall back to own-loss victim evidence on derivation failure.
+**Mechanism.** Reusing a nominally local service does not guarantee local-only behavior;
+transitive lookup fallbacks and failure ordering affect the observable contract.
+**Fix (queued).** [M5 design §3](../specs/aar-per-attacker-matchup-design.md) specifies
+an explicit local-only modifier policy, separate fit-only snapshots, per-subject errors,
+and preservation of the current successful-derivation precedence.
+**Validation.** Source inspection and independent architecture review; no runtime fix
+or Flutter test pass is claimed by this documentation change.
+**Generalizable rule.** Audit transitive I/O and fallback semantics before sharing a
+derivation service with a local reactive UI.
+
 ### Incoming type estimates need fractional accounting before per-attacker derivation
 
 **Author.** Product.

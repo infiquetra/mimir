@@ -1,4 +1,38 @@
-# Project: Mimir — Milestone 5 product specification
+# Project: Mimir — Milestone 5 technical design
+Date: 2026-09-14
+Checkpoint: 2026-09-14-aar-per-attacker-matchup-design
+
+## Overview
+
+Write the requested architectural design in
+`docs/specs/aar-per-attacker-matchup-design.md`. Application implementation remains
+pending. The user's request to write the complete artifact authorizes this plan.
+
+## Tasks
+
+- [x] [P1] Ground domain and integration seams with independent codebase explorers.
+- [x] [SEQ] Write exact contracts, provider flow, UI composition, and TDD units.
+- [x] [P2] Review the architecture and map all 28 ACs and 40 Product test cases.
+- [x] [P2] Verify examples, Markdown links, structure, and whitespace.
+- [x] [SEQ] Update README/journal links and preserve queued implementation status.
+- [x] [CHECKPOINT] Record completion and prepare the documentation commit.
+
+## Notes
+
+Canonical plan: [technical design plan](../.codex/plans/2026-09-14-aar-per-attacker-matchup-design.md).
+
+## Review
+
+Completed [the technical design](../docs/specs/aar-per-attacker-matchup-design.md):
+six sections, ten inherited contracts, immutable rational models, allocation and
+matchup algorithms, local resolver/provider graph, explicit v4 serialization, responsive
+pre-analysis UI, U1–U4 and all 28 criteria/40 test cases. Independent reviews and exact
+mathematical/document checks completed; findings resolved. README/journal retain pending
+implementation status. No application code changed and no Flutter runtime suites ran.
+
+---
+
+# Completed: Mimir — Milestone 5 product specification
 Date: 2026-09-14
 Checkpoint: 2026-09-14-aar-per-attacker-matchup
 
