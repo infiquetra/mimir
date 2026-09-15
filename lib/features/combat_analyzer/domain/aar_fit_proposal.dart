@@ -1,5 +1,6 @@
 import '../../fitting/domain/models.dart';
 import 'aar_fit_snapshot.dart';
+import 'combat_evidence_ledger.dart';
 
 enum AarProposalOrigin { ai, savedReference, importedReference }
 
@@ -49,26 +50,135 @@ class AarFitProposal {
         ? Map<String, dynamic>.from(targetJson)
         : const <String, dynamic>{};
     final groups = targetMap['groups'];
-    final fitting = Fitting(
+    final fitting = _fittingFromCandidateGroups(
       id: proposalId,
       name: raw['label']?.toString() ?? proposalId,
       shipTypeId: targetMap['shipTypeId'] as int? ?? 0,
       shipName: targetMap['shipName']?.toString() ?? '',
+      groups: groups,
     );
+    final generatedConfidence = raw['confidence']?.toString();
     return AarFitProposal(
+      schemaVersion: raw['schemaVersion'] as int? ?? 1,
       proposalId: proposalId,
       origin: origin,
-      encounterId: encounterId,
-      baselineSnapshotId: baselineSnapshotId,
-      baselineFingerprint: baselineFingerprint,
-      target: AarFitSnapshot.fromStructuredCandidate(
-        encounterId: encounterId,
-        fitting: fitting,
-        raw: raw,
-      ),
+      encounterId: raw['encounterId']?.toString() ?? encounterId,
+      baselineSnapshotId:
+          raw['baselineSnapshotId']?.toString() ?? baselineSnapshotId,
+      baselineFingerprint:
+          raw['baselineFingerprint']?.toString() ?? baselineFingerprint,
+      target: targetJson == null
+          ? AarFitSnapshot.fromStructuredCandidate(
+              encounterId: encounterId,
+              fitting: fitting,
+              raw: raw,
+              confidence: generatedConfidence == 'confirmed'
+                  ? EvidenceConfidence.confirmed
+                  : null,
+            )
+          : AarFitSnapshot.fromStructuredCandidate(
+              encounterId: encounterId,
+              fitting: fitting,
+              raw: raw,
+              confidence: generatedConfidence == 'confirmed'
+                  ? EvidenceConfidence.confirmed
+                  : null,
+            ),
       status: _statusForGroups(groups),
       rationale: raw['rationale']?.toString() ?? '',
     );
+  }
+
+  static Fitting _fittingFromCandidateGroups({
+    required String id,
+    required String name,
+    required int shipTypeId,
+    required String shipName,
+    required Object? groups,
+  }) {
+    final map = groups is Map
+        ? Map<String, dynamic>.from(groups)
+        : const <String, dynamic>{};
+    return Fitting(
+      id: id,
+      name: name,
+      shipTypeId: shipTypeId,
+      shipName: shipName,
+      highSlots: _modulesFromGroup(map['high'], SlotType.high),
+      medSlots: _modulesFromGroup(map['mid'], SlotType.med),
+      lowSlots: _modulesFromGroup(map['low'], SlotType.low),
+      rigSlots: _modulesFromGroup(map['rigs'], SlotType.rig),
+      subsystems: _modulesFromGroup(map['subsystems'], SlotType.subsystem),
+      drones: _dronesFromGroup(map['drones']),
+      cargo: _cargoFromGroup(map['cargo']),
+    );
+  }
+
+  static List<FittedModule> _modulesFromGroup(Object? group, SlotType slot) {
+    final items = group is Map ? group['items'] : null;
+    if (items is! List) return const [];
+    return [
+      for (var i = 0; i < items.length; i++)
+        if (items[i] is Map)
+          _moduleFromItem(Map<String, dynamic>.from(items[i] as Map), slot, i),
+    ];
+  }
+
+  static FittedModule _moduleFromItem(
+    Map<String, dynamic> item,
+    SlotType slot,
+    int index,
+  ) {
+    final attrs = <int, double>{};
+    final rawAttrs = item['attributes'];
+    if (rawAttrs is Map) {
+      for (final entry in rawAttrs.entries) {
+        final key = int.tryParse(entry.key.toString());
+        final value = (entry.value as num?)?.toDouble();
+        if (key != null && value != null) attrs[key] = value;
+      }
+    }
+    return FittedModule(
+      typeId: item['typeId'] as int? ?? 0,
+      typeName: item['typeName']?.toString() ?? '',
+      slotType: slot,
+      slotIndex: item['slotIndex'] as int? ?? index,
+      state: ModuleState.values.firstWhere(
+        (value) => value.name == item['state']?.toString(),
+        orElse: () => ModuleState.active,
+      ),
+      chargeTypeId: item['chargeTypeId'] as int?,
+      chargeName: item['chargeName']?.toString(),
+      attributes: attrs,
+    );
+  }
+
+  static List<DroneGroup> _dronesFromGroup(Object? group) {
+    final items = group is Map ? group['items'] : null;
+    if (items is! List) return const [];
+    return [
+      for (final item in items)
+        if (item is Map)
+          DroneGroup(
+            typeId: item['typeId'] as int? ?? 0,
+            typeName: item['typeName']?.toString() ?? '',
+            quantity: item['quantity'] as int? ?? 0,
+          ),
+    ];
+  }
+
+  static List<CargoItem> _cargoFromGroup(Object? group) {
+    final items = group is Map ? group['items'] : null;
+    if (items is! List) return const [];
+    return [
+      for (final item in items)
+        if (item is Map)
+          CargoItem(
+            typeId: item['typeId'] as int? ?? 0,
+            typeName: item['typeName']?.toString() ?? '',
+            quantity: item['quantity'] as int? ?? 0,
+          ),
+    ];
   }
 
   static AarProposalValidationStatus _statusForGroups(Object? groups) {

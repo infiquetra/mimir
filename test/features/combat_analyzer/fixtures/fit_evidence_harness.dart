@@ -166,6 +166,10 @@ class FitEvidenceHarness {
     if (allowDerive != null && !allowDerive.isCompleted) {
       allowDerive.complete();
     }
+    final allowAnalyze = codex.allowAnalyze;
+    if (allowAnalyze != null && !allowAnalyze.isCompleted) {
+      allowAnalyze.complete();
+    }
     esiClient.dispose();
     coordinator.dispose();
     await sdeDb.close();
@@ -859,6 +863,7 @@ class RecordingCodexClient extends CodexAnalysisClient {
   AarIncomingMatchupBundle? lastPerAttackerIncoming;
   Object? error;
   CodexAnalysisResult? result;
+  Completer<void>? allowAnalyze;
 
   @override
   Future<CodexAnalysisResult> analyzeEncounter({
@@ -872,6 +877,9 @@ class RecordingCodexClient extends CodexAnalysisClient {
     lastEnrichment = enrichment;
     lastDerivation = derivation;
     lastPerAttackerIncoming = perAttackerIncoming;
+    if (allowAnalyze != null) {
+      await allowAnalyze!.future;
+    }
     if (error != null) {
       throw error!;
     }

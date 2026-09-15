@@ -713,6 +713,7 @@ class AarFitSnapshot {
     required String encounterId,
     required Fitting fitting,
     required Map<String, dynamic> raw,
+    EvidenceConfidence? confidence,
   }) {
     return AarFitSnapshot(
       snapshotId: 'cand-$encounterId',
@@ -720,6 +721,7 @@ class AarFitSnapshot {
       fitting: fitting,
       source: AarFitSource.aiProposal,
       subject: const AarFitSubject(relation: AarFitSubjectRelation.reference),
+      confidence: confidence,
       knowledge: knowledgeFromCandidateRaw(raw),
     );
   }

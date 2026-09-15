@@ -1,6 +1,7 @@
 import 'aar_fit_proposal.dart';
 import 'aar_fit_snapshot.dart';
-import 'combat_aar_report.dart';
+
+export 'aar_fit_generation.dart';
 
 enum AarComparisonRole {
   fightFit,
@@ -191,30 +192,6 @@ class AarComparisonSelection {
         for (final entry in sources.visibleEntries) entry.id,
       ],
     );
-  }
-}
-
-class AarFitGenerationRecord {
-  const AarFitGenerationRecord({this.selfBaseline, this.reason});
-
-  final AarFitSnapshot? selfBaseline;
-  final String? reason;
-
-  static AarFitGenerationRecord? fromReportJson(Map<String, dynamic> json) {
-    if (!json.containsKey('fitComparisonAtGeneration')) {
-      return null;
-    }
-    final raw = json['fitComparisonAtGeneration'];
-    if (raw is! Map) return null;
-    final map = Map<String, dynamic>.from(raw);
-    return AarFitGenerationRecord(
-      selfBaseline: map.isEmpty ? null : AarFitSnapshot.fromJson(map),
-      reason: map['reason']?.toString(),
-    );
-  }
-
-  static AarFitGenerationRecord? fromReport(CombatAarReport report) {
-    return fromReportJson(report.toJson());
   }
 }
 

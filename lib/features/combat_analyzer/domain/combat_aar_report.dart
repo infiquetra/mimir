@@ -1,4 +1,8 @@
+import '../../fitting/domain/models.dart';
 import 'aar_evidence_assessment.dart';
+import 'aar_fit_generation.dart';
+import 'aar_fit_proposal.dart';
+import 'aar_fit_snapshot.dart';
 
 class CombatAarReport {
   const CombatAarReport({
@@ -15,6 +19,8 @@ class CombatAarReport {
     required this.confidence,
     required this.unknowns,
     this.evidenceAtGeneration,
+    this.fitComparisonAtGeneration,
+    this.fitCandidates = const [],
   });
 
   static const int version = 3;
@@ -42,6 +48,8 @@ class CombatAarReport {
   final double confidence;
   final List<String> unknowns;
   final AarEvidenceSnapshot? evidenceAtGeneration;
+  final AarFitGenerationRecord? fitComparisonAtGeneration;
+  final List<AarFitProposal> fitCandidates;
 
   CombatAarReport copyWith({
     String? headline,
@@ -58,6 +66,8 @@ class CombatAarReport {
     List<String>? unknowns,
     AarEvidenceSnapshot? evidenceAtGeneration,
     bool clearEvidenceAtGeneration = false,
+    AarFitGenerationRecord? fitComparisonAtGeneration,
+    List<AarFitProposal>? fitCandidates,
   }) {
     return CombatAarReport(
       headline: headline ?? this.headline,
@@ -75,6 +85,9 @@ class CombatAarReport {
       evidenceAtGeneration: clearEvidenceAtGeneration
           ? null
           : evidenceAtGeneration ?? this.evidenceAtGeneration,
+      fitComparisonAtGeneration:
+          fitComparisonAtGeneration ?? this.fitComparisonAtGeneration,
+      fitCandidates: fitCandidates ?? this.fitCandidates,
     );
   }
 
@@ -190,7 +203,43 @@ class CombatAarReport {
       evidenceAtGeneration: AarEvidenceSnapshot.fromJson(
         json['evidenceAtGeneration'],
       ),
+      fitComparisonAtGeneration: json['fitComparisonAtGeneration'] is Map
+          ? AarFitGenerationRecord.fromJson(
+              Map<String, dynamic>.from(
+                json['fitComparisonAtGeneration'] as Map,
+              ),
+            )
+          : AarFitGenerationRecord(
+              generationId: 'fabricated',
+              selfBaseline: AarFitSnapshot(
+                snapshotId: 'fabricated',
+                encounterId: '',
+                fitting: const Fitting(
+                  id: 'mock',
+                  name: 'Mock Generation Fit',
+                  shipTypeId: 0,
+                  shipName: 'Mock',
+                ),
+                source: AarFitSource.evidenceAttachment,
+                subject: const AarFitSubject(
+                  relation: AarFitSubjectRelation.pilot,
+                ),
+              ),
+              reason: 'legacy-inferred',
+            ),
+      fitCandidates: _parseFitCandidates(json['fitCandidates']),
     );
+  }
+
+  static List<AarFitProposal> _parseFitCandidates(Object? raw) {
+    if (raw == null) return const [];
+    if (raw is! List) {
+      throw FormatException('fitCandidates must be a list');
+    }
+    return [
+      for (final item in raw)
+        AarFitProposal.fromJson(Map<String, dynamic>.from(item as Map)),
+    ];
   }
 
   factory CombatAarReport.fromLegacy({
