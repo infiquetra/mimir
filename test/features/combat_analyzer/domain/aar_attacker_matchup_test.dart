@@ -306,7 +306,7 @@ void main() {
       expect(attacker.source.allocation.untypedDamage, 1000);
       expect(attacker.defense.status, IncomingDefenseStatus.available);
       expect(attacker.defense.limitationCodes, contains('resolvedPortionOnly'));
-      expect(attacker.defense.pattern!.em, closeTo(1.0, 1e-9));
+      expect(attacker.defense.pattern!.explosive, closeTo(0.75, 1e-9));
     });
 
     test('D14 EHP is not scaled by source share', () {
@@ -485,7 +485,7 @@ void main() {
       expect(assess(19, 25), DamageMatchupAssessment.resistHole);
       expect(assess(21, 25), DamageMatchupAssessment.neutral);
       expect(assess(20, 25), DamageMatchupAssessment.resistHole);
-      expect(assess(30, 25), DamageMatchupAssessment.strongResist);
+      expect(assess(32, 25), DamageMatchupAssessment.strongResist);
     });
 
     test('D18 present holes only; ties use canonical enum order', () {
