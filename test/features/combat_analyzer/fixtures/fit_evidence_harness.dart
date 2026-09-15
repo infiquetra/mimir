@@ -31,8 +31,11 @@ import 'package:mimir/features/combat_analyzer/data/combat_providers.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_attacker_matchup.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_aar_report.dart';
+import 'package:mimir/features/combat_analyzer/domain/combat_attacker_correlation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
+import 'package:mimir/features/combat_analyzer/domain/combat_evidence_ledger.dart';
 import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.dart';
+import 'package:mimir/features/fitting/domain/models.dart';
 import 'package:mimir/features/combat_analyzer/presentation/analysis_multipane_screen.dart';
 import 'package:mimir/features/skills/data/skill_repository.dart';
 import 'package:mimir/features/wallet/data/wallet_providers.dart';
@@ -428,6 +431,227 @@ class FitEvidenceHarness {
       ],
     );
   }
+
+  static String killmailAccessToken({int characterId = characterAId}) {
+    String encode(Map<String, Object> json) {
+      return base64Url
+          .encode(utf8.encode(jsonEncode(json)))
+          .replaceAll('=', '');
+    }
+
+    final header = encode({'alg': 'none', 'typ': 'JWT'});
+    final payload = encode({
+      'sub': 'CHARACTER:EVE:$characterId',
+      'name': characterId == characterAId ? characterAName : characterBName,
+      'exp': 2000000000,
+      'scp': ['esi-killmails.read_killmails.v1'],
+    });
+    return '$header.$payload.sig';
+  }
+
+  Future<void> grantKillmailScope({int characterId = characterAId}) async {
+    final expiry = clock().add(const Duration(days: 30));
+    final isA = characterId == characterAId;
+    await appDb.upsertCharacter(
+      CharactersCompanion.insert(
+        characterId: Value(characterId),
+        name: isA ? characterAName : characterBName,
+        corporationId: isA ? 1000001 : 1000002,
+        corporationName: isA ? 'Test Corp' : 'Other Corp',
+        portraitUrl: isA
+            ? 'https://example.test/a.png'
+            : 'https://example.test/b.png',
+        tokenExpiry: expiry,
+        lastUpdated: clock(),
+        accessToken: Value(killmailAccessToken(characterId: characterId)),
+        refreshToken: Value(isA ? 'refresh-a' : 'refresh-b'),
+        isActive: Value(isA),
+      ),
+    );
+  }
+
+  void scriptMatchedKillmail({int characterId = characterAId}) {
+    esiAdapter.scriptJson(
+      (options) => options.uri.path.contains(
+        '/characters/$characterId/killmails/recent',
+      ),
+      [
+        {'killmail_id': kAarKillmailId, 'killmail_hash': kAarKillmailHash},
+      ],
+    );
+    esiAdapter.scriptJson(
+      (options) => options.uri.path.contains(
+        '/killmails/$kAarKillmailId/$kAarKillmailHash',
+      ),
+      aarMatchedKillmailJson(attackerCharacterId: characterId),
+    );
+    discovery.onFetch =
+        ({
+          required int characterId,
+          required int year,
+          required int month,
+          required String direction,
+          required int page,
+        }) {
+          if (page > 1) return const [];
+          return const [
+            CombatZkillKillmailRef(
+              killmailId: kAarKillmailId,
+              killmailHash: kAarKillmailHash,
+            ),
+          ];
+        };
+  }
+
+  void scriptNoMatchKillmails({int characterId = characterAId}) {
+    esiAdapter.scriptJson(
+      (options) => options.uri.path.contains(
+        '/characters/$characterId/killmails/recent',
+      ),
+      const [],
+    );
+    discovery.onFetch =
+        ({
+          required int characterId,
+          required int year,
+          required int month,
+          required String direction,
+          required int page,
+        }) => const [];
+  }
+
+  Future<CombatEnrichment> seedUnrelatedEnrichment(
+    ParsedCombatEncounter encounter, {
+    FitEvidence? pilotFitEvidence,
+  }) async {
+    final pilot =
+        pilotFitEvidence ??
+        const FitEvidence(
+          role: FitEvidenceRole.pilot,
+          source: EvidenceSource.currentShipSnapshot,
+          confidence: EvidenceConfidence.reference,
+          fitting: Fitting(
+            id: 'prior-ref',
+            name: 'Reference',
+            shipTypeId: 587,
+            shipName: 'Rifter',
+          ),
+        );
+    final enrichment = CombatEnrichment(
+      parsedEncounterId: encounter.id,
+      status: CombatEnrichmentStatus.killmailMatched,
+      source: CombatEnrichmentSource.esiRecent,
+      killmailId: kAarKillmailId,
+      killmailHash: kAarKillmailHash,
+      killmailTime: DateTime.utc(2026, 5, 20, 20),
+      victimCharacterId: kAarVictimCharacterId,
+      victimName: kAarVictimName,
+      victimShipTypeId: 587,
+      victimFitEvidence: const FitEvidence(
+        role: FitEvidenceRole.victim,
+        source: EvidenceSource.killmail,
+        confidence: EvidenceConfidence.proven,
+        fitting: Fitting(
+          id: 'victim-fit',
+          name: 'Rifter',
+          shipTypeId: 587,
+          shipName: 'Rifter',
+        ),
+      ),
+      pilotFitEvidence: pilot,
+      attackerCorrelation: AttackerCorrelation(
+        killmailId: kAarKillmailId,
+        selfIsVictim: false,
+        correlated: [
+          CorrelatedAttacker(
+            actor: const CombatLogActor(
+              displayName: kAarVictimName,
+              actorClass: CombatActorClass.player,
+              damageDealt: 1200,
+            ),
+            participant: const CombatKillmailParticipant(
+              key: 'a-7001',
+              characterId: kAarVictimCharacterId,
+              characterName: kAarVictimName,
+              shipTypeId: 587,
+              damageDone: 1200,
+              finalBlow: false,
+              isVictim: false,
+            ),
+            confidence: AttackerCorrelationConfidence.confirmed,
+            score: 0.9,
+            signals: const [CorrelationSignal.name],
+          ),
+        ],
+        unattributedActors: const [],
+        uncorrelatedParticipants: const [],
+        correlatedIncomingDamage: 1200,
+        unattributedIncomingDamage: 0,
+        npcIncomingDamage: 0,
+        totalIncomingDamage: 1200,
+        reasons: const {},
+        correlatedAt: DateTime.utc(2026, 5, 20, 20),
+      ),
+      killmailSearchCompleted: true,
+      matchReason: 'seeded killmail match',
+      evidenceLedger: CombatEvidenceLedger(
+        facts: [
+          CombatEvidenceFact(
+            id: 'ev-killmail-$kAarKillmailId',
+            label: 'Matched killmail',
+            value: '$kAarKillmailId',
+            source: EvidenceSource.killmail,
+            confidence: EvidenceConfidence.proven,
+            evidenceTime: DateTime.utc(2026, 5, 20, 20),
+          ),
+          CombatEvidenceFact(
+            id: 'ev-victim-ship-$kAarKillmailId',
+            label: 'Destroyed victim ship',
+            value: '587',
+            source: EvidenceSource.killmail,
+            confidence: EvidenceConfidence.proven,
+            evidenceTime: DateTime.utc(2026, 5, 20, 20),
+          ),
+          CombatEvidenceFact(
+            id: 'ev-correlated-attacker-$kAarKillmailId-$kAarVictimCharacterId',
+            label: 'Correlated attacker',
+            value: kAarVictimName,
+            source: EvidenceSource.killmail,
+            confidence: EvidenceConfidence.proven,
+            evidenceTime: DateTime.utc(2026, 5, 20, 20),
+          ),
+          CombatEvidenceFact(
+            id: 'ev-custom-note-${encounter.id}',
+            label: 'Custom note',
+            value: 'keep-me',
+            source: EvidenceSource.combatLog,
+            confidence: EvidenceConfidence.proven,
+          ),
+          CombatEvidenceFact(
+            id: 'ev-pilot-fit-${encounter.id}',
+            label: 'Pilot fit',
+            value: 'seeded prior fit',
+            source: pilot.source,
+            confidence: pilot.confidence,
+          ),
+        ],
+        unknowns: const [
+          AarUnknown(
+            category: AarUnknownCategory.opponentFit,
+            label: 'Attacker fits',
+            detail: 'Killmails do not expose full attacker fittings.',
+          ),
+          AarUnknown(
+            category: AarUnknownCategory.range,
+            label: 'Range and transversal',
+            detail: 'EVE combat logs do not include range.',
+          ),
+        ],
+      ),
+    );
+    await repository.saveEnrichment(enrichment);
+    return enrichment;
+  }
 }
 
 bool _isAssetPage(RequestOptions options, int characterId, int page) {
@@ -498,7 +722,7 @@ class ScriptedEsiAdapter implements HttpClientAdapter {
 class RecordingDiscoveryClient extends CombatKillmailDiscoveryClient {
   final fetches =
       <({int characterId, int year, int month, String direction, int page})>[];
-  List<CombatZkillKillmailRef> Function({
+  FutureOr<List<CombatZkillKillmailRef>> Function({
     required int characterId,
     required int year,
     required int month,
@@ -522,7 +746,7 @@ class RecordingDiscoveryClient extends CombatKillmailDiscoveryClient {
       direction: direction,
       page: page,
     ));
-    return onFetch?.call(
+    return await onFetch?.call(
           characterId: characterId,
           year: year,
           month: month,

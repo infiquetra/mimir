@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
@@ -8,10 +10,12 @@ import 'package:mimir/core/database/app_database.dart';
 import 'package:mimir/core/network/esi_client.dart';
 import 'package:mimir/core/sde/sde_database.dart';
 import 'package:mimir/core/sde/sde_service.dart';
+import 'package:mimir/features/combat_analyzer/data/codex_analysis_client.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_enrichment_repository.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_enrichment_service.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_killmail_discovery_client.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
+import 'package:mimir/features/combat_analyzer/domain/combat_aar_report.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_actor_classifier.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_attacker_correlation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_attacker_correlator.dart';
@@ -549,6 +553,457 @@ void main() {
       expect(harness.esiAdapter.requests, isEmpty);
     });
   });
+
+  group('U3 atomic retention and analysis barrier', () {
+    late FitEvidenceHarness harness;
+
+    setUp(() async {
+      harness = FitEvidenceHarness();
+      await harness.setUp();
+    });
+
+    tearDown(() async {
+      await harness.tearDown();
+    });
+
+    test('T11 SQL trigger abort keeps the loadable prior row', () async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      await harness.repository.saveEnrichment(
+        CombatEnrichment(
+          parsedEncounterId: encounter.id,
+          status: CombatEnrichmentStatus.logOnly,
+          source: CombatEnrichmentSource.none,
+          pilotFitEvidence: const FitEvidence(
+            role: FitEvidenceRole.pilot,
+            source: EvidenceSource.currentShipSnapshot,
+            confidence: EvidenceConfidence.reference,
+            fitting: Fitting(
+              id: 'prior-ref',
+              name: 'Reference',
+              shipTypeId: 587,
+              shipName: 'Rifter',
+            ),
+          ),
+        ),
+      );
+      await harness.appDb.customStatement('''
+CREATE TRIGGER abort_t11_update
+BEFORE UPDATE ON combat_encounter_enrichments
+WHEN NEW.parsed_encounter_id = '${encounter.id}'
+BEGIN
+  SELECT RAISE(ABORT, 'sql boom');
+END;
+''');
+      await expectLater(
+        harness.enrichmentService.importPilotFit(encounter, kAarSupportedEft),
+        throwsA(anything),
+      );
+      final reloaded = await CombatEnrichmentRepository(
+        database: harness.appDb,
+      ).loadEnrichment(encounter.id);
+      expect(reloaded, isNotNull);
+      expect(
+        reloaded!.pilotFitEvidence!.confidence,
+        EvidenceConfidence.reference,
+      );
+      expect(reloaded.pilotFitEvidence!.fitting.id, 'prior-ref');
+      await harness.appDb.customStatement(
+        'DROP TRIGGER IF EXISTS abort_t11_update',
+      );
+    });
+
+    test(
+      'T22 service replacement updates one pilot fact and keeps unrelated evidence',
+      () async {
+        final encounter = encounterWith(
+          characterId: FitEvidenceHarness.characterAId,
+        );
+        await harness.seedUnrelatedEnrichment(encounter);
+        final imported = await harness.enrichmentService.importPilotFit(
+          encounter,
+          kAarSupportedEft,
+        );
+        _assertServiceUnrelatedPreserved(imported, encounter.id);
+        expect(
+          imported.pilotFitEvidence!.source,
+          EvidenceSource.manualFitImport,
+        );
+        expect(imported.pilotFitEvidence!.fitting.lowSlots.single.typeId, 2048);
+
+        harness.scriptFittedCapture();
+        final captured = await harness.enrichmentService.captureCurrentPilotFit(
+          encounter,
+          confirmed: true,
+        );
+        _assertServiceUnrelatedPreserved(captured, encounter.id);
+        expect(
+          captured.pilotFitEvidence!.source,
+          EvidenceSource.currentShipSnapshot,
+        );
+        expect(
+          captured.pilotFitEvidence!.confidence,
+          EvidenceConfidence.confirmed,
+        );
+        final reloaded = await harness.repository.loadEnrichment(encounter.id);
+        _assertServiceUnrelatedPreserved(reloaded!, encounter.id);
+      },
+    );
+
+    test(
+      'T26 manual import retains fit through matched killmail refresh',
+      () async {
+        await _attachAndForceAnalyze(
+          harness,
+          attach: _AttachKind.import,
+          refresh: _RefreshKind.matched,
+        );
+      },
+    );
+
+    test('T26 manual import retains fit through no-match refresh', () async {
+      await _attachAndForceAnalyze(
+        harness,
+        attach: _AttachKind.import,
+        refresh: _RefreshKind.noMatch,
+      );
+    });
+
+    test(
+      'T26 manual import retains fit through null-character refresh',
+      () async {
+        await _attachAndForceAnalyze(
+          harness,
+          attach: _AttachKind.import,
+          refresh: _RefreshKind.nullCharacter,
+        );
+      },
+    );
+
+    test(
+      'T26 confirmed capture retains fit through matched killmail refresh',
+      () async {
+        await _attachAndForceAnalyze(
+          harness,
+          attach: _AttachKind.capture,
+          refresh: _RefreshKind.matched,
+        );
+      },
+    );
+
+    test(
+      'T26 confirmed capture retains fit through no-match refresh',
+      () async {
+        await _attachAndForceAnalyze(
+          harness,
+          attach: _AttachKind.capture,
+          refresh: _RefreshKind.noMatch,
+        );
+      },
+    );
+
+    test(
+      'T26 no-match refresh retains attached pilot fit and existing victim evidence',
+      () async {
+        final encounter = encounterWith(
+          characterId: FitEvidenceHarness.characterAId,
+        );
+        await harness.seedCachedReport(encounter);
+        await harness.seedUnrelatedEnrichment(encounter);
+        await harness.enrichmentService.importPilotFit(
+          encounter,
+          kAarSupportedEft,
+        );
+        await harness.grantKillmailScope();
+        harness.scriptNoMatchKillmails();
+        await harness.analysisService.analyzeEncounter(
+          encounter,
+          forceRefresh: true,
+        );
+        final stored = await harness.repository.loadEnrichment(encounter.id);
+        expect(stored!.pilotFitEvidence, isNotNull);
+        expect(stored.victimFitEvidence, isNotNull);
+        expect(stored.victimFitEvidence!.fitting.id, 'victim-fit');
+        expect(harness.codex.lastEnrichment!.pilotFitEvidence, isNotNull);
+        expect(harness.codex.lastEnrichment!.victimFitEvidence, isNotNull);
+      },
+    );
+
+    test(
+      'T27 AI failure preserves fit and cached report; retry uses the fit',
+      () async {
+        final encounter = encounterWith(
+          characterId: FitEvidenceHarness.characterAId,
+        );
+        await harness.seedCachedReport(encounter);
+        await harness.grantKillmailScope();
+        harness.scriptNoMatchKillmails();
+        await harness.enrichmentService.importPilotFit(
+          encounter,
+          kAarSupportedEft,
+        );
+        harness.codex.error = StateError('ai down');
+        await expectLater(
+          harness.analysisService.analyzeEncounter(
+            encounter,
+            forceRefresh: true,
+          ),
+          throwsA(isA<Exception>()),
+        );
+        expect(
+          (await harness.repository.loadEnrichment(
+            encounter.id,
+          ))!.pilotFitEvidence,
+          isNotNull,
+          reason: 'AI failure must not drop the newly attached pilot fit',
+        );
+        final cached = await harness.analysisService.getCachedAnalysis(
+          encounter,
+        );
+        expect(cached, isNotNull);
+        expect(cached!.llmSummary, 'Cached summary');
+        expect(harness.codex.calls, 1);
+
+        harness.codex.error = null;
+        harness.codex.result = CodexAnalysisResult(
+          report: CombatAarReport.fromLegacy(
+            summary: 'Retry summary',
+            mistakes: '',
+            improvements: '',
+            fits: '',
+          ),
+        );
+        await harness.analysisService.analyzeEncounter(
+          encounter,
+          forceRefresh: true,
+        );
+        expect(harness.codex.calls, 2);
+        expect(harness.codex.lastEnrichment!.pilotFitEvidence, isNotNull);
+        expect(
+          harness.codex.lastEnrichment!.pilotFitEvidence!.source,
+          EvidenceSource.manualFitImport,
+        );
+        expect(harness.codex.lastDerivation!.self, isNotNull);
+        expect(
+          harness.codex.lastDerivation!.self!.fitSource,
+          EvidenceSource.manualFitImport,
+        );
+        final retried = await harness.analysisService.getCachedAnalysis(
+          encounter,
+        );
+        expect(retried!.llmSummary, 'Retry summary');
+      },
+    );
+
+    test(
+      'T30 competing attachment is rejected as busy and analysis waits for the new fit',
+      () async {
+        final encounter = encounterWith(
+          characterId: FitEvidenceHarness.characterAId,
+        );
+        harness.scriptFittedCapture();
+        harness.repository.mutationEntered = Completer<void>();
+        harness.repository.allowMutation = Completer<void>();
+        final pending = harness.enrichmentService.importPilotFit(
+          encounter,
+          kAarSupportedEft,
+        );
+        await harness.repository.mutationEntered!.future;
+        expect(harness.repository.saveCalls, 1);
+
+        Object? duplicateError;
+        Object? competingError;
+        final duplicate = harness.enrichmentService
+            .importPilotFit(encounter, kAarHeaderOnlyEft)
+            .then<void>((_) {}, onError: (error, _) => duplicateError = error);
+        final competing = harness.enrichmentService
+            .captureCurrentPilotFit(encounter, confirmed: true)
+            .then<void>((_) {}, onError: (error, _) => competingError = error);
+        await Future<void>.delayed(const Duration(milliseconds: 80));
+        expect(
+          harness.repository.saveCalls,
+          1,
+          reason: 'duplicate/competing attachment must not enter a second save',
+        );
+        expect(duplicateError?.toString().toLowerCase(), contains('busy'));
+        expect(competingError?.toString().toLowerCase(), contains('busy'));
+
+        final analysis = harness.analysisService.analyzeEncounter(encounter);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        expect(harness.codex.calls, 0);
+
+        harness.repository.allowMutation!.complete();
+        await pending;
+        await analysis;
+        expect(harness.codex.calls, 1);
+        expect(
+          harness.codex.lastEnrichment!.pilotFitEvidence!.source,
+          EvidenceSource.manualFitImport,
+        );
+        expect(
+          harness
+              .codex
+              .lastEnrichment!
+              .pilotFitEvidence!
+              .fitting
+              .lowSlots
+              .single
+              .typeId,
+          2048,
+        );
+      },
+    );
+
+    test(
+      'T30 delayed refresh cannot overwrite the attached pilot fit',
+      () async {
+        final encounter = encounterWith(
+          characterId: FitEvidenceHarness.characterAId,
+        );
+        final releaseDiscovery = Completer<void>();
+        harness.discovery.onFetch =
+            ({
+              required int characterId,
+              required int year,
+              required int month,
+              required String direction,
+              required int page,
+            }) async {
+              await releaseDiscovery.future;
+              return const <CombatZkillKillmailRef>[];
+            };
+        final refresh = harness.enrichmentService.enrichEncounter(
+          encounter,
+          forceRefresh: true,
+        );
+        for (var i = 0; i < 50 && harness.discovery.fetches.isEmpty; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+        expect(harness.discovery.fetches, isNotEmpty);
+
+        final ungated = CombatEnrichmentService(
+          repository: CombatEnrichmentRepository(database: harness.appDb),
+          esiClient: harness.esiClient,
+          discoveryClient: harness.discovery,
+          tokenManager: harness.tokenManager,
+          oauthService: harness.oauthService,
+          sdeService: harness.sdeService,
+        );
+        await ungated.importPilotFit(encounter, kAarUniqueBeyond20Eft);
+        expect(
+          (await harness.repository.loadEnrichment(
+            encounter.id,
+          ))!.pilotFitEvidence!.fitting.shipTypeId,
+          9020,
+        );
+
+        releaseDiscovery.complete();
+        await refresh;
+        final loaded = await CombatEnrichmentRepository(
+          database: harness.appDb,
+        ).loadEnrichment(encounter.id);
+        expect(loaded, isNotNull);
+        expect(
+          loaded!.pilotFitEvidence,
+          isNotNull,
+          reason: 'delayed refresh overwrote the attached UniqueShip fit',
+        );
+        expect(loaded.pilotFitEvidence!.fitting.shipTypeId, 9020);
+        expect(loaded.pilotFitEvidence!.source, EvidenceSource.manualFitImport);
+      },
+    );
+  });
+}
+
+enum _AttachKind { import, capture }
+
+enum _RefreshKind { matched, noMatch, nullCharacter }
+
+Future<void> _attachAndForceAnalyze(
+  FitEvidenceHarness harness, {
+  required _AttachKind attach,
+  required _RefreshKind refresh,
+}) async {
+  final encounter = encounterWith(
+    characterId: refresh == _RefreshKind.nullCharacter
+        ? null
+        : FitEvidenceHarness.characterAId,
+  );
+  await harness.seedCachedReport(encounter);
+  if (refresh == _RefreshKind.matched) {
+    if (encounter.characterId != null) {
+      await harness.grantKillmailScope();
+    }
+    harness.scriptMatchedKillmail();
+  } else if (refresh == _RefreshKind.noMatch) {
+    await harness.grantKillmailScope();
+    harness.scriptNoMatchKillmails();
+  }
+
+  late EvidenceSource source;
+  if (attach == _AttachKind.import) {
+    await harness.enrichmentService.importPilotFit(encounter, kAarSupportedEft);
+    source = EvidenceSource.manualFitImport;
+  } else {
+    harness.scriptFittedCapture();
+    await harness.enrichmentService.captureCurrentPilotFit(
+      encounter,
+      confirmed: true,
+    );
+    source = EvidenceSource.currentShipSnapshot;
+  }
+
+  expect(harness.codex.calls, 0);
+  await harness.analysisService.analyzeEncounter(encounter, forceRefresh: true);
+  expect(harness.codex.calls, 1);
+  final stored = await harness.repository.loadEnrichment(encounter.id);
+  expect(stored, isNotNull, reason: 'stored enrichment missing after refresh');
+  expect(
+    stored!.pilotFitEvidence,
+    isNotNull,
+    reason: 'stored pilotFitEvidence was dropped on $refresh after $attach',
+  );
+  expect(stored.pilotFitEvidence!.source, source);
+  expect(stored.pilotFitEvidence!.confidence, EvidenceConfidence.confirmed);
+  expect(stored.pilotFitEvidence!.fitting.shipTypeId, 587);
+  expect(
+    harness.codex.lastEnrichment?.pilotFitEvidence,
+    isNotNull,
+    reason: 'codex.lastEnrichment.pilotFitEvidence dropped on $refresh',
+  );
+  expect(harness.codex.lastEnrichment!.pilotFitEvidence!.source, source);
+  expect(
+    harness.codex.lastDerivation?.self,
+    isNotNull,
+    reason: 'codex.lastDerivation.self missing on $refresh after $attach',
+  );
+  expect(harness.codex.lastDerivation!.self!.shipTypeId, 587);
+  expect(harness.codex.lastDerivation!.self!.fitSource, source);
+}
+
+void _assertServiceUnrelatedPreserved(
+  CombatEnrichment enrichment,
+  String encounterId,
+) {
+  expect(enrichment.killmailId, kAarKillmailId);
+  expect(enrichment.killmailHash, kAarKillmailHash);
+  expect(enrichment.killmailSearchCompleted, isTrue);
+  expect(enrichment.victimFitEvidence, isNotNull);
+  expect(enrichment.attackerCorrelation, isNotNull);
+  final factIds = enrichment.evidenceLedger.facts
+      .map((fact) => fact.id)
+      .toList();
+  expect(factIds.where((id) => id == 'ev-pilot-fit-$encounterId'), [
+    'ev-pilot-fit-$encounterId',
+  ]);
+  expect(factIds, contains('ev-killmail-$kAarKillmailId'));
+  expect(factIds, contains('ev-victim-ship-$kAarKillmailId'));
+  expect(
+    factIds,
+    contains('ev-correlated-attacker-$kAarKillmailId-$kAarVictimCharacterId'),
+  );
+  expect(factIds, contains('ev-custom-note-$encounterId'));
 }
 
 ParsedCombatEncounter _encounter({required String listener}) {

@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mimir/features/combat_analyzer/data/codex_analysis_client.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_enrichment_repository.dart';
+import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
+import 'package:mimir/features/combat_analyzer/domain/combat_aar_report.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_evidence_ledger.dart';
 import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.dart';
@@ -770,4 +773,420 @@ void main() {
     expect(await harness.repository.loadEnrichment(encounter.id), isNull);
     expect(tester.takeException(), isNull);
   });
+
+  Future<void> tapReanalyze(WidgetTester tester) async {
+    final provenance = find.byKey(const Key('aar-provenance-reanalyze'));
+    final strip = find.widgetWithText(OutlinedButton, 'Re-analyze');
+    final target = provenance.evaluate().isNotEmpty ? provenance : strip;
+    await harness.waitFor(tester, target);
+    await tester.ensureVisible(target.first);
+    await tester.tap(target.first);
+    await tester.pump();
+  }
+
+  Future<void> waitForCodexCall(
+    WidgetTester tester, {
+    int pumps = 80,
+    int calls = 1,
+  }) async {
+    for (var i = 0; i < pumps && harness.codex.calls < calls; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+  }
+
+  testWidgets(
+    'T11 valid import with repository save failure keeps prior evidence',
+    (tester) async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      await harness.repository.saveEnrichment(
+        CombatEnrichment(
+          parsedEncounterId: encounter.id,
+          status: CombatEnrichmentStatus.logOnly,
+          source: CombatEnrichmentSource.none,
+          pilotFitEvidence: const FitEvidence(
+            role: FitEvidenceRole.pilot,
+            source: EvidenceSource.currentShipSnapshot,
+            confidence: EvidenceConfidence.reference,
+            fitting: Fitting(
+              id: 'prior-ref',
+              name: 'Reference',
+              shipTypeId: 587,
+              shipName: 'Rifter',
+            ),
+          ),
+        ),
+      );
+      harness.repository.failWith = StateError('boom');
+      await harness.pumpScreen(tester, encounter: encounter);
+      await openImportDialog(tester);
+      await submitImportDialog(tester, kAarSupportedEft);
+      await harness.waitFor(tester, find.text(kAarImportSaveUi));
+      expect(find.text(kAarImportSaveUi), findsOneWidget);
+      expect(find.text(kAarImportSuccessMessage), findsNothing);
+      expect(find.textContaining('boom'), findsNothing);
+      final reloaded = await CombatEnrichmentRepository(
+        database: harness.appDb,
+      ).loadEnrichment(encounter.id);
+      expect(reloaded, isNotNull);
+      expect(
+        reloaded!.pilotFitEvidence!.confidence,
+        EvidenceConfidence.reference,
+      );
+      expect(reloaded.pilotFitEvidence!.fitting.id, 'prior-ref');
+      expect(
+        reloaded.pilotFitEvidence!.source,
+        EvidenceSource.currentShipSnapshot,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'T21 imported fit survives provider dispose/reopen and leaves encounter B unchanged',
+    (tester) async {
+      final encounterA = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      final encounterB = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+        incomingEvents: 3,
+        outgoingEvents: 3,
+      );
+      expect(encounterA.id, isNot(encounterB.id));
+      await harness.repository.saveEnrichment(
+        CombatEnrichment(
+          parsedEncounterId: encounterB.id,
+          status: CombatEnrichmentStatus.logOnly,
+          source: CombatEnrichmentSource.none,
+          matchReason: 'encounter-b-seed',
+        ),
+      );
+      await harness.pumpScreen(tester, encounter: encounterA);
+      await openImportDialog(tester);
+      await submitImportDialog(tester, kAarSupportedEft);
+      await harness.waitFor(tester, find.text(kAarImportSuccessMessage));
+      final aiBefore = harness.codex.calls;
+      final discoveryBefore = harness.discovery.fetches.length;
+      await harness.reopen(tester, encounter: encounterA);
+      final reloadedA = await CombatEnrichmentRepository(
+        database: harness.appDb,
+      ).loadEnrichment(encounterA.id);
+      expect(reloadedA, isNotNull);
+      expect(
+        reloadedA!.pilotFitEvidence!.source,
+        EvidenceSource.manualFitImport,
+      );
+      expect(
+        reloadedA.pilotFitEvidence!.confidence,
+        EvidenceConfidence.confirmed,
+      );
+      expect(reloadedA.pilotFitEvidence!.fitting.shipTypeId, 587);
+      expect(reloadedA.pilotFitEvidence!.fitting.lowSlots.single.typeId, 2048);
+      final reloadedB = await CombatEnrichmentRepository(
+        database: harness.appDb,
+      ).loadEnrichment(encounterB.id);
+      expect(reloadedB, isNotNull);
+      expect(reloadedB!.matchReason, 'encounter-b-seed');
+      expect(reloadedB.pilotFitEvidence, isNull);
+      expect(harness.codex.calls, aiBefore);
+      expect(harness.discovery.fetches.length, discoveryBefore);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'T21 captured fit survives provider dispose/reopen and leaves encounter B unchanged',
+    (tester) async {
+      final encounterA = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      final encounterB = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+        incomingEvents: 3,
+        outgoingEvents: 3,
+      );
+      await harness.repository.saveEnrichment(
+        CombatEnrichment(
+          parsedEncounterId: encounterB.id,
+          status: CombatEnrichmentStatus.logOnly,
+          source: CombatEnrichmentSource.none,
+          matchReason: 'encounter-b-seed',
+        ),
+      );
+      harness.scriptFittedCapture();
+      await pumpCaptureScreen(tester, encounterA);
+      await tapUseCurrentFit(tester);
+      await harness.waitFor(tester, find.text(kAarCaptureSuccessMessage));
+      final aiBefore = harness.codex.calls;
+      final discoveryBefore = harness.discovery.fetches.length;
+      await harness.reopen(tester, encounter: encounterA);
+      final reloadedA = await CombatEnrichmentRepository(
+        database: harness.appDb,
+      ).loadEnrichment(encounterA.id);
+      expect(
+        reloadedA!.pilotFitEvidence!.source,
+        EvidenceSource.currentShipSnapshot,
+      );
+      expect(
+        reloadedA.pilotFitEvidence!.confidence,
+        EvidenceConfidence.confirmed,
+      );
+      expect(reloadedA.pilotFitEvidence!.fitting.shipTypeId, 587);
+      final reloadedB = await CombatEnrichmentRepository(
+        database: harness.appDb,
+      ).loadEnrichment(encounterB.id);
+      expect(reloadedB!.matchReason, 'encounter-b-seed');
+      expect(reloadedB.pilotFitEvidence, isNull);
+      expect(harness.codex.calls, aiBefore);
+      expect(harness.discovery.fetches.length, discoveryBefore);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'T22 import replacement keeps unrelated enrichment and a single pilot fact',
+    (tester) async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      await harness.seedUnrelatedEnrichment(encounter);
+      await harness.pumpScreen(tester, encounter: encounter);
+      await openImportDialog(tester);
+      await submitImportDialog(tester, kAarSupportedEft);
+      await harness.waitFor(tester, find.text(kAarImportSuccessMessage));
+      final reloaded = await harness.repository.loadEnrichment(encounter.id);
+      expect(reloaded, isNotNull);
+      _assertUnrelatedEnrichmentPreserved(reloaded!, encounter.id);
+      expect(reloaded.pilotFitEvidence!.source, EvidenceSource.manualFitImport);
+      expect(
+        reloaded.pilotFitEvidence!.confidence,
+        EvidenceConfidence.confirmed,
+      );
+      expect(reloaded.pilotFitEvidence!.fitting.lowSlots.single.typeId, 2048);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'T22 capture replacement keeps unrelated enrichment and a single pilot fact',
+    (tester) async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      await harness.seedUnrelatedEnrichment(encounter);
+      harness.scriptFittedCapture();
+      await pumpCaptureScreen(tester, encounter);
+      await tapUseCurrentFit(tester);
+      await harness.waitFor(tester, find.text(kAarCaptureSuccessMessage));
+      final reloaded = await harness.repository.loadEnrichment(encounter.id);
+      expect(reloaded, isNotNull);
+      _assertUnrelatedEnrichmentPreserved(reloaded!, encounter.id);
+      expect(
+        reloaded.pilotFitEvidence!.source,
+        EvidenceSource.currentShipSnapshot,
+      );
+      expect(
+        reloaded.pilotFitEvidence!.confidence,
+        EvidenceConfidence.confirmed,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'T26 Re-analyze after manual import retains the attached fit into AI',
+    (tester) async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      await harness.seedCachedReport(encounter);
+      await harness.grantKillmailScope();
+      harness.scriptNoMatchKillmails();
+      await harness.pumpScreen(tester, encounter: encounter);
+      await openImportDialog(tester);
+      await submitImportDialog(tester, kAarSupportedEft);
+      await harness.waitFor(tester, find.text(kAarImportSuccessMessage));
+      await tapReanalyze(tester);
+      await waitForCodexCall(tester);
+      expect(harness.codex.calls, 1);
+      _assertRetainedPilotFit(
+        stored: await harness.repository.loadEnrichment(encounter.id),
+        received: harness.codex.lastEnrichment,
+        derivation: harness.codex.lastDerivation,
+        source: EvidenceSource.manualFitImport,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'T27 AI failure keeps the new fit and cached report; retry uses the fit',
+    (tester) async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      await harness.seedCachedReport(encounter);
+      await harness.grantKillmailScope();
+      harness.scriptNoMatchKillmails();
+      await harness.pumpScreen(tester, encounter: encounter);
+      await openImportDialog(tester);
+      await submitImportDialog(tester, kAarSupportedEft);
+      await harness.waitFor(tester, find.text(kAarImportSuccessMessage));
+      harness.codex.error = StateError('ai down');
+      await tapReanalyze(tester);
+      await harness.waitFor(tester, find.text('Analysis Failed'));
+      expect(find.text('Analysis Failed'), findsOneWidget);
+      expect(
+        (await harness.repository.loadEnrichment(
+          encounter.id,
+        ))!.pilotFitEvidence,
+        isNotNull,
+        reason: 'AI failure must not drop the newly attached pilot fit',
+      );
+      final cached = await harness.analysisService.getCachedAnalysis(encounter);
+      expect(cached, isNotNull);
+      expect(cached!.llmSummary, 'Cached summary');
+      harness.codex.error = null;
+      harness.codex.result = CodexAnalysisResult(
+        report: CombatAarReport.fromLegacy(
+          summary: 'Retry summary',
+          mistakes: '',
+          improvements: '',
+          fits: '',
+        ),
+      );
+      await tester.tap(
+        find.widgetWithText(OutlinedButton, 'Back To Encounter'),
+      );
+      await tester.pump();
+      await tapReanalyze(tester);
+      await waitForCodexCall(tester, calls: 2);
+      _assertRetainedPilotFit(
+        stored: await harness.repository.loadEnrichment(encounter.id),
+        received: harness.codex.lastEnrichment,
+        derivation: harness.codex.lastDerivation,
+        source: EvidenceSource.manualFitImport,
+      );
+      final retried = await harness.analysisService.getCachedAnalysis(
+        encounter,
+      );
+      expect(retried!.llmSummary, 'Retry summary');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'T30 pending import rejects competing capture and queues explicit analysis',
+    (tester) async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      harness.scriptFittedCapture();
+      harness.repository.mutationEntered = Completer<void>();
+      harness.repository.allowMutation = Completer<void>();
+      await harness.pumpScreen(tester, encounter: encounter);
+      await openImportDialog(tester);
+      await submitImportDialog(tester, kAarSupportedEft);
+      for (
+        var i = 0;
+        i < 40 && !harness.repository.mutationEntered!.isCompleted;
+        i++
+      ) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await harness.repository.mutationEntered!.future;
+      expect(harness.repository.saveCalls, 1);
+      expect(find.text(kAarImportSuccessMessage), findsNothing);
+      await tapUseCurrentFit(tester);
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(
+        harness.repository.saveCalls,
+        1,
+        reason: 'competing capture must be rejected while attachment is busy',
+      );
+      await tester.tap(find.byKey(const Key('aar-analyze-button')));
+      await tester.pump();
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(harness.codex.calls, 0);
+      harness.repository.allowMutation!.complete();
+      await harness.waitFor(tester, find.text(kAarImportSuccessMessage));
+      await waitForCodexCall(tester);
+      expect(harness.codex.calls, 1);
+      _assertRetainedPilotFit(
+        stored: await harness.repository.loadEnrichment(encounter.id),
+        received: harness.codex.lastEnrichment,
+        derivation: harness.codex.lastDerivation,
+        source: EvidenceSource.manualFitImport,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+}
+
+void _assertUnrelatedEnrichmentPreserved(
+  CombatEnrichment enrichment,
+  String encounterId,
+) {
+  expect(enrichment.killmailId, kAarKillmailId);
+  expect(enrichment.killmailHash, kAarKillmailHash);
+  expect(enrichment.killmailSearchCompleted, isTrue);
+  expect(enrichment.victimFitEvidence, isNotNull);
+  expect(enrichment.victimFitEvidence!.role, FitEvidenceRole.victim);
+  expect(enrichment.victimFitEvidence!.fitting.shipTypeId, 587);
+  expect(enrichment.attackerCorrelation, isNotNull);
+  expect(enrichment.attackerCorrelation!.killmailId, kAarKillmailId);
+  final factIds = enrichment.evidenceLedger.facts
+      .map((fact) => fact.id)
+      .toList();
+  expect(factIds.where((id) => id == 'ev-pilot-fit-$encounterId'), [
+    'ev-pilot-fit-$encounterId',
+  ]);
+  expect(factIds, contains('ev-killmail-$kAarKillmailId'));
+  expect(factIds, contains('ev-victim-ship-$kAarKillmailId'));
+  expect(
+    factIds,
+    contains('ev-correlated-attacker-$kAarKillmailId-$kAarVictimCharacterId'),
+  );
+  expect(factIds, contains('ev-custom-note-$encounterId'));
+  expect(
+    enrichment.evidenceLedger.unknowns.map((unknown) => unknown.label),
+    containsAll(['Attacker fits', 'Range and transversal']),
+  );
+}
+
+void _assertRetainedPilotFit({
+  required CombatEnrichment? stored,
+  required CombatEnrichment? received,
+  required AarDerivationBundle? derivation,
+  required EvidenceSource source,
+}) {
+  expect(stored, isNotNull, reason: 'stored enrichment missing after refresh');
+  expect(
+    stored!.pilotFitEvidence,
+    isNotNull,
+    reason: 'stored pilotFitEvidence was dropped',
+  );
+  expect(stored.pilotFitEvidence!.source, source);
+  expect(stored.pilotFitEvidence!.confidence, EvidenceConfidence.confirmed);
+  expect(stored.pilotFitEvidence!.fitting.shipTypeId, 587);
+  expect(
+    received?.pilotFitEvidence,
+    isNotNull,
+    reason: 'codex.lastEnrichment.pilotFitEvidence was dropped',
+  );
+  expect(received!.pilotFitEvidence!.source, source);
+  expect(received.pilotFitEvidence!.fitting.shipTypeId, 587);
+  expect(
+    derivation?.self,
+    isNotNull,
+    reason: 'codex.lastDerivation.self was not built from the attached fit',
+  );
+  expect(derivation!.self!.shipTypeId, 587);
+  expect(derivation.self!.fitSource, source);
 }

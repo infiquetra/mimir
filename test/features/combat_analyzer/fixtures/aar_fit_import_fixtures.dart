@@ -109,6 +109,44 @@ const kAarCaptureAssetsUi =
 const kAarCaptureSaveUi =
     'Unable to capture fit: The snapshot could not be saved. Try again.';
 
+const kAarImportSaveUi =
+    'Unable to import fit: The fit could not be saved. Try again.';
+
+const kAarKillmailId = 777001;
+const kAarKillmailHash = 'aar-km-hash';
+const kAarVictimCharacterId = 7001;
+const kAarVictimName = 'Enemy';
+
+Map<String, dynamic> aarMatchedKillmailJson({
+  int killmailId = kAarKillmailId,
+  int attackerCharacterId = 42,
+  int victimCharacterId = kAarVictimCharacterId,
+  String killmailTime = '2026-05-20T20:00:00Z',
+}) {
+  return {
+    'killmail_id': killmailId,
+    'killmail_hash': kAarKillmailHash,
+    'killmail_time': killmailTime,
+    'solar_system_id': 30000142,
+    'victim': {
+      'character_id': victimCharacterId,
+      'character_name': kAarVictimName,
+      'ship_type_id': 587,
+      'damage_taken': 1200,
+      'items': const <Map<String, dynamic>>[],
+    },
+    'attackers': [
+      {
+        'character_id': attackerCharacterId,
+        'character_name': 'Pilot',
+        'ship_type_id': 587,
+        'damage_done': 1200,
+        'final_blow': true,
+      },
+    ],
+  };
+}
+
 const kAarEmptyModulesLimitation =
     'No fitted modules were returned for the current ship.';
 
