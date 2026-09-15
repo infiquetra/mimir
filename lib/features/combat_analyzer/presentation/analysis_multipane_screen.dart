@@ -7,6 +7,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/auth/auth_providers.dart';
 import '../../../core/widgets/eve_type_icon.dart';
+import '../data/aar_fit_import_parser.dart';
 import '../data/combat_analysis_service.dart';
 import '../data/combat_damage_profile_resolver.dart';
 import '../data/combat_providers.dart';
@@ -204,7 +205,9 @@ class _AnalysisMultiPaneScreenState
           .importPilotFit(widget.encounter, rawFit);
       ref.invalidate(combatEnrichmentProvider(widget.encounter.id));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.clearSnackBars();
+      messenger.showSnackBar(
         const SnackBar(
           content: Text('Pilot fit imported. Re-analyze to include it.'),
         ),
@@ -213,9 +216,24 @@ class _AnalysisMultiPaneScreenState
     } catch (e, stack) {
       Log.e('COMBAT.UI', 'Failed to import pilot fit', e, stack);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Unable to import fit: $e')));
+      final message = switch (e) {
+        AarFitImportException ex => switch (ex.code) {
+          AarFitImportFailureCode.malformedFit =>
+            'Unable to import fit: Check the EFT header and item names, then try again.',
+          AarFitImportFailureCode.unresolvedEntries =>
+            'Unable to import fit: Some fit entries could not be resolved. Check the item names.',
+          AarFitImportFailureCode.unsupportedLoadedAmmunition =>
+            'Unable to import fit: Loaded ammunition in EFT is not supported by this import.',
+          AarFitImportFailureCode.localDataUnavailable =>
+            'Unable to import fit: Local fitting data is unavailable. Try again after it loads.',
+        },
+        FormatException _ =>
+          'Unable to import fit: Check the EFT header and item names, then try again.',
+        _ => 'Unable to import fit: The fit could not be saved. Try again.',
+      };
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.clearSnackBars();
+      messenger.showSnackBar(SnackBar(content: Text(message)));
     }
   }
 

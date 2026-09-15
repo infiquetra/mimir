@@ -412,7 +412,7 @@ void main() {
 }
 
 class _HullOnlyParser extends FittingFormatParser {
-  _HullOnlyParser(SdeService sde) : super(sde);
+  _HullOnlyParser(super.sde);
 
   @override
   Future<Fitting?> parseEft(String eftString) async {
