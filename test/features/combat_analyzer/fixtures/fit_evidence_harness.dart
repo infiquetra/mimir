@@ -37,6 +37,8 @@ import 'package:mimir/features/combat_analyzer/presentation/analysis_multipane_s
 import 'package:mimir/features/skills/data/skill_repository.dart';
 import 'package:mimir/features/wallet/data/wallet_providers.dart';
 
+import 'aar_fit_import_fixtures.dart';
+
 /// Real-storage AAR fit-evidence test harness.
 ///
 /// Databases live outside the widget tree so a ProviderScope can be disposed
@@ -152,60 +154,7 @@ class FitEvidenceHarness {
   }
 
   Future<void> seedMinimalSde() async {
-    await sdeDb.upsertCategories([
-      SdeCategoriesCompanion.insert(
-        categoryId: const Value(6),
-        categoryName: 'Ship',
-      ),
-      SdeCategoriesCompanion.insert(
-        categoryId: const Value(7),
-        categoryName: 'Module',
-      ),
-      SdeCategoriesCompanion.insert(
-        categoryId: const Value(16),
-        categoryName: 'Skill',
-      ),
-    ]);
-    await sdeDb.upsertGroups([
-      SdeGroupsCompanion.insert(
-        groupId: const Value(25),
-        groupName: 'Frigate',
-        categoryId: 6,
-      ),
-      SdeGroupsCompanion.insert(
-        groupId: const Value(255),
-        groupName: 'Gunnery',
-        categoryId: 16,
-      ),
-    ]);
-    await sdeDb.upsertTypes([
-      SdeTypesCompanion.insert(
-        typeId: const Value(587),
-        typeName: 'Rifter',
-        groupId: 25,
-      ),
-      SdeTypesCompanion.insert(
-        typeId: const Value(3300),
-        typeName: 'Gunnery',
-        groupId: 255,
-      ),
-    ]);
-    await sdeDb.upsertTypeAttributes([
-      SdeTypeAttributesCompanion.insert(
-        typeId: 587,
-        attributeId: 9,
-        value: 350,
-      ),
-      SdeTypeAttributesCompanion.insert(
-        typeId: 587,
-        attributeId: 263,
-        value: 450,
-      ),
-    ]);
-    await sdeDb.setMetadata(
-      'dogma_version',
-      '${SdeService.bundledDogmaVersion}',
-    );
+    await seedAarImportSde(sdeDb);
   }
 
   Future<void> seedCharacters() async {
@@ -311,6 +260,13 @@ class FitEvidenceHarness {
       itemNameProvider.overrideWith((ref, id) async {
         return switch (id) {
           587 => 'Rifter',
+          2048 => 'Damage Control II',
+          5973 => '1MN Afterburner II',
+          484 => '125mm Gatling AutoCannon II',
+          3117 => 'Small Projectile Burst Aerator I',
+          2456 => 'Hobgoblin II',
+          185 => 'EMP S',
+          9020 => 'UniqueShip',
           _ => 'Unknown Item',
         };
       }),
