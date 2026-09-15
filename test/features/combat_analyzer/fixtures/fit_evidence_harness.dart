@@ -134,7 +134,8 @@ class FitEvidenceHarness {
   /// Cancel the ESI error-limit Drift watch and flush its close timer.
   Future<void> disposeEsiWatch(WidgetTester tester) async {
     esiClient.dispose();
-    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
   }
 
   /// ESI error-limit subscription, then databases. Call [disposeWidgets] first
