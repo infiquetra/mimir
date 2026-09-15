@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/core/auth/oauth_service.dart';
 import 'package:mimir/core/auth/token_manager.dart';
@@ -25,16 +26,20 @@ import 'package:mimir/features/combat_analyzer/domain/aar_evidence_assessment.da
 import 'package:mimir/features/combat_analyzer/domain/aar_evidence_scorer.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_aar_report.dart';
+import 'package:mimir/features/combat_analyzer/domain/combat_damage_matchup.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_damage_profile.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_evidence_ledger.dart';
 import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.dart';
 import 'package:mimir/features/combat_analyzer/presentation/analysis_multipane_screen.dart';
+import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_attacker_correlation_section.dart';
 import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_evidence_checklist_card.dart';
+import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_matchup_section.dart';
 import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_pre_analysis_gate.dart';
 import 'package:mimir/features/wallet/data/wallet_providers.dart';
 
 import '../fixtures/aar_evidence_fixtures.dart';
+import '../fixtures/attacker_correlation_fixtures.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -82,6 +87,7 @@ void main() {
       WidgetTester tester, {
       CombatEncounter? cached,
       AarEvidenceAssessment? assessmentOverride,
+      List<Override> extraOverrides = const [],
     }) async {
       tester.view.physicalSize = const Size(1400, 1000);
       tester.view.devicePixelRatio = 1.0;
@@ -116,10 +122,12 @@ void main() {
             itemNameProvider.overrideWith((ref, id) async {
               return switch (id) {
                 587 => 'Rifter',
+                24702 => 'Hurricane',
                 24700 => 'Myrmidon',
                 _ => 'Type $id',
               };
             }),
+            ...extraOverrides,
           ],
           child: MaterialApp(
             home: AnalysisMultiPaneScreen(encounter: encounter),
@@ -368,6 +376,46 @@ void main() {
           findsOneWidget,
         );
         expect(search, findsNothing);
+      },
+    );
+
+    testWidgets(
+      'H.11 screen: section renders after the matchups and Incoming Sources is gone',
+      (tester) async {
+        final s2 = s2Loss();
+        holder.bundle = AarDerivationBundle(
+          self: holder.bundle.self,
+          opponent: holder.bundle.opponent,
+          selfMatchup: CombatDamageMatchupAnalyzer.analyze(
+            profile: holder.incoming,
+            defense: null,
+            targetLabel: 'Pilot',
+          ),
+        );
+        await pumpScreen(
+          tester,
+          cached: cachedRow(snapshot: _snapshot(score: 49)),
+          extraOverrides: [
+            combatAttackerCorrelationProvider.overrideWith(
+              (ref, enc) async => correlate(s2),
+            ),
+          ],
+        );
+        tester.view.physicalSize = const Size(1400, 2400);
+        await tester.pump();
+        final damageTab = find.text('Damage');
+        await tester.ensureVisible(damageTab);
+        await tester.tap(damageTab);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        expect(find.byType(AarAttackerCorrelationSection), findsOneWidget);
+        expect(find.byType(AarMatchupSection), findsWidgets);
+        expect(
+          tester.getTopLeft(find.byType(AarAttackerCorrelationSection)).dy,
+          greaterThan(tester.getTopLeft(find.byType(AarMatchupSection)).dy),
+        );
+        expect(find.text('Incoming Sources'), findsNothing);
       },
     );
   });

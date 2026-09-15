@@ -6,15 +6,21 @@ import '../../../../core/theme/eve_colors.dart';
 import '../../domain/combat_damage_matchup.dart';
 
 class AarMatchupSection extends ConsumerWidget {
-  const AarMatchupSection({super.key, required this.matchup});
+  const AarMatchupSection({
+    super.key,
+    required this.matchup,
+    this.correlatedAttackerCount = 0,
+  });
 
   final CombatDamageMatchup matchup;
+  final int correlatedAttackerCount;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     Log.d(
       'COMBAT.UI',
-      'AarMatchupSection built for ${matchup.targetLabel} layer=${matchup.layer}',
+      'AarMatchupSection built for ${matchup.targetLabel} '
+          'layer=${matchup.layer} correlatedAttackerCount=$correlatedAttackerCount',
     );
     final unknown = matchup.entries.isEmpty || matchup.layer == 'unknown';
     if (unknown) {
