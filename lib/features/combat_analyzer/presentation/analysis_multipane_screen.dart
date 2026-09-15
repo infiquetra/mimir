@@ -642,7 +642,7 @@ class _AnalysisMultiPaneScreenState
                   value: '${(report.confidence * 100).round()}%',
                 ),
                 _StatChip(
-                  label: 'Evidence',
+                  label: 'Enrichment',
                   value: enrichment?.badgeLabel ?? 'Checking',
                   color: _evidenceColor(enrichment?.status),
                 ),
