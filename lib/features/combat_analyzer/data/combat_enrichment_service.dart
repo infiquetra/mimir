@@ -15,6 +15,7 @@ import '../domain/combat_evidence_ledger.dart';
 import '../domain/combat_fit_snapshot_mapper.dart';
 import '../domain/combat_killmail_fit_mapper.dart';
 import '../domain/combat_killmail_matcher.dart';
+import '../domain/aar_capture_exception.dart';
 import '../domain/aar_derived_facts.dart';
 import '../domain/aar_fit_derivation.dart';
 import '../domain/parsed_combat_encounter.dart';
@@ -195,14 +196,18 @@ class CombatEnrichmentService {
     );
     final characterId = encounter.characterId;
     if (characterId == null) {
-      throw const FormatException(
+      throw const AarCaptureException(
         'Current fit snapshot requires an authenticated character match.',
+        code: AarCaptureFailureCode.unmatchedCharacter,
       );
     }
 
     final ship = await _esiClient.getCharacterShip(characterId);
     if (ship == null) {
-      throw const FormatException('ESI did not return a current ship.');
+      throw const AarCaptureException(
+        'ESI did not return a current ship.',
+        code: AarCaptureFailureCode.noCurrentShip,
+      );
     }
     final assets = await _fetchAllAssets(characterId);
     final fitting = CombatFitSnapshotMapper.mapCurrentShipAssets(
@@ -223,6 +228,7 @@ class CombatEnrichmentService {
           'User confirmed this current ship snapshot was the fight fit.'
         else
           'Current ship snapshots are not historical proof until user-confirmed.',
+        if (fitting.allModules.isEmpty) kAarEmptyModulesLimitation,
       ],
     );
     final existing = await _loadOrCreateEnrichment(encounter);
@@ -523,19 +529,58 @@ class CombatEnrichmentService {
   }
 
   Future<List<AssetItem>> _fetchAllAssets(int characterId) async {
-    final assets = <AssetItem>[];
-    var page = 1;
-    int? totalPages;
-    do {
-      final response = await _esiClient.getCharacterAssets(
-        characterId,
-        page: page,
+    try {
+      final first = await _esiClient.getCharacterAssets(characterId, page: 1);
+      final totalPages = _assetTotalPages(first.headers);
+      final assets = <AssetItem>[...first.data];
+      for (var page = 2; page <= totalPages; page++) {
+        final response = await _esiClient.getCharacterAssets(
+          characterId,
+          page: page,
+        );
+        assets.addAll(response.data);
+      }
+      return assets;
+    } on DioException catch (e, stack) {
+      final status = e.response?.statusCode;
+      final nested = e.error;
+      final authStatus =
+          status == 401 ||
+          status == 403 ||
+          (nested is EsiException &&
+              (nested.statusCode == 401 || nested.statusCode == 403));
+      Error.throwWithStackTrace(
+        AarCaptureException(
+          'Character assets could not be loaded.',
+          code: authStatus
+              ? AarCaptureFailureCode.authFailure
+              : AarCaptureFailureCode.assetLoadFailure,
+          cause: e,
+        ),
+        stack,
       );
-      assets.addAll(response.data);
-      totalPages ??= int.tryParse(response.headers['x-pages']?.first ?? '1');
-      page++;
-    } while (totalPages != null && page <= totalPages);
-    return assets;
+    }
+  }
+
+  int _assetTotalPages(Map<String, List<String>> headers) {
+    if (!headers.containsKey('x-pages')) {
+      return 1;
+    }
+    final values = headers['x-pages']!;
+    if (values.isEmpty) {
+      throw const AarCaptureException(
+        'Character assets could not be loaded.',
+        code: AarCaptureFailureCode.assetLoadFailure,
+      );
+    }
+    final parsed = int.tryParse(values.first);
+    if (parsed == null || parsed < 1) {
+      throw const AarCaptureException(
+        'Character assets could not be loaded.',
+        code: AarCaptureFailureCode.assetLoadFailure,
+      );
+    }
+    return parsed;
   }
 
   Future<CombatEnrichment> _loadOrCreateEnrichment(

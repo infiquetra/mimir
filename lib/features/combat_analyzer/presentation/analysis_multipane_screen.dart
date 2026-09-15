@@ -12,6 +12,7 @@ import '../data/combat_analysis_service.dart';
 import '../data/combat_damage_profile_resolver.dart';
 import '../data/combat_providers.dart';
 import '../domain/aar_evidence_assessment.dart';
+import 'aar_capture_feedback.dart';
 import '../domain/combat_aar_report.dart';
 import '../domain/combat_damage_profile.dart';
 import '../domain/combat_enrichment.dart';
@@ -139,17 +140,20 @@ class _AnalysisMultiPaneScreenState
       'User requested current fit capture confirmed=$confirmed',
     );
     try {
-      await ref
+      final saved = await ref
           .read(combatEnrichmentServiceProvider)
           .captureCurrentPilotFit(widget.encounter, confirmed: confirmed);
       ref.invalidate(combatEnrichmentProvider(widget.encounter.id));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.clearSnackBars();
+      messenger.showSnackBar(
         SnackBar(
           content: Text(
-            confirmed
-                ? 'Current fit confirmed for this AAR. Re-analyze to include it.'
-                : 'Current fit snapshot saved as reference evidence.',
+            aarCaptureSuccessMessage(
+              confirmed: confirmed,
+              evidence: saved.pilotFitEvidence,
+            ),
           ),
         ),
       );
@@ -157,9 +161,11 @@ class _AnalysisMultiPaneScreenState
     } catch (e, stack) {
       Log.e('COMBAT.UI', 'Failed to capture current fit', e, stack);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Unable to capture fit: $e')));
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.clearSnackBars();
+      messenger.showSnackBar(
+        SnackBar(content: Text(aarCaptureFailureMessage(e))),
+      );
     }
   }
 
