@@ -348,7 +348,7 @@ class FitEvidenceHarness {
             'ship_type_id': shipTypeId,
             'ship_item_id': shipItemId,
             'ship_name': shipName,
-            if (shipTypeName != null) 'ship_type_name': shipTypeName,
+            'ship_type_name': ?shipTypeName,
           }),
           statusCode,
           headers: {
