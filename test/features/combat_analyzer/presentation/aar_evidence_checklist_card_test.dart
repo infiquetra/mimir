@@ -406,5 +406,16 @@ List<dynamic> _upstreamOverrides(_Holder holder) {
     combatDamageProfileProvider.overrideWith(
       (ref, enc) async => holder.outgoing,
     ),
+    aarIncomingMatchupsProvider.overrideWith(
+      (ref, enc) => AarIncomingMatchupState(
+        encounterId: enc.id,
+        allocationRequestKey: 'test',
+        identityRequestKey: 'id',
+        allocationStatus: AarIncomingDependencyStatus.ready,
+        correlationStatus: AarIncomingDependencyStatus.ready,
+        classificationStatus: AarIncomingDependencyStatus.ready,
+        defenseStatus: AarIncomingDependencyStatus.ready,
+      ),
+    ),
   ];
 }

@@ -116,6 +116,17 @@ void main() {
             combatDamageProfileProvider.overrideWith(
               (ref, enc) async => holder.outgoing,
             ),
+            aarIncomingMatchupsProvider.overrideWith(
+              (ref, enc) => AarIncomingMatchupState(
+                encounterId: enc.id,
+                allocationRequestKey: 'test',
+                identityRequestKey: 'id',
+                allocationStatus: AarIncomingDependencyStatus.ready,
+                correlationStatus: AarIncomingDependencyStatus.ready,
+                classificationStatus: AarIncomingDependencyStatus.ready,
+                defenseStatus: AarIncomingDependencyStatus.ready,
+              ),
+            ),
             if (assessmentOverride != null)
               aarEvidenceAssessmentProvider.overrideWith(
                 (ref, enc) async => assessmentOverride,
@@ -410,12 +421,8 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 350));
 
-        expect(find.byType(AarAttackerCorrelationSection), findsOneWidget);
-        expect(find.byType(AarMatchupSection), findsWidgets);
-        expect(
-          tester.getTopLeft(find.byType(AarAttackerCorrelationSection)).dy,
-          greaterThan(tester.getTopLeft(find.byType(AarMatchupSection)).dy),
-        );
+        expect(find.byType(AarIncomingMatchupsSection), findsOneWidget);
+        expect(find.byType(AarAttackerCorrelationSection), findsNothing);
         expect(find.text('Incoming Sources'), findsNothing);
       },
     );

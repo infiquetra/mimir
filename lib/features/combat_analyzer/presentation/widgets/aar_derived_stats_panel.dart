@@ -188,7 +188,10 @@ class AarDerivedStatsPanel extends ConsumerWidget {
               Text('- $limitation'),
             if (matchup != null) ...[
               const SizedBox(height: 12),
-              AarMatchupSection(matchup: matchup!),
+              AarMatchupSection(
+                matchup: matchup!,
+                outgoing: derivation.subject == AarFitSubject.opponent,
+              ),
             ],
           ],
         ),

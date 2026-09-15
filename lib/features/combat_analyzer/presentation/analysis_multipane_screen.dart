@@ -17,9 +17,9 @@ import '../domain/combat_enrichment.dart';
 import '../domain/parsed_combat_encounter.dart';
 import '../../fitting/domain/models.dart';
 import '../../wallet/data/wallet_providers.dart';
-import 'widgets/aar_attacker_correlation_section.dart';
 import 'widgets/aar_derived_stats_panel.dart';
 import 'widgets/aar_evidence_checklist_card.dart';
+import 'widgets/aar_incoming_matchups_section.dart';
 import 'widgets/aar_matchup_section.dart';
 import 'widgets/aar_pre_analysis_gate.dart';
 import 'widgets/aar_report_provenance_banner.dart';
@@ -69,6 +69,8 @@ class _AnalysisMultiPaneScreenState
     return ref
         .watch(aarEvidenceAssessmentProvider(widget.encounter))
         .when(
+          skipLoadingOnReload: true,
+          skipLoadingOnRefresh: true,
           data: (assessment) => assessment,
           loading: () => null,
           error: (error, stack) {
@@ -337,6 +339,8 @@ class _AnalysisMultiPaneScreenState
                   assessment: _assessmentOrNull(),
                   onAnalyze: () => _startAnalysis(),
                 ),
+                const SizedBox(height: 16),
+                AarIncomingMatchupsSection(encounter: encounter),
               ],
             ),
           ),
@@ -877,6 +881,10 @@ class _AnalysisMultiPaneScreenState
     final aggregates = encounter.aggregates;
     return ListView(
       children: [
+        AarIncomingMatchupsSection(encounter: encounter),
+        const SizedBox(height: 16),
+        ..._matchupWidgets(encounter),
+        const SizedBox(height: 16),
         if (!report.damageAnalysis.isEmpty)
           _AarCard(
             leading: Icons.analytics,
@@ -925,9 +933,6 @@ class _AnalysisMultiPaneScreenState
         _ApplicationSection(aggregates: aggregates),
         const SizedBox(height: 16),
         _DamageTypeSection(profile: profile, report: report),
-        const SizedBox(height: 16),
-        ..._matchupWidgets(encounter),
-        AarAttackerCorrelationSection(encounter: encounter),
         const SizedBox(height: 16),
         _BreakdownSection(
           title: 'Primary Targets',
@@ -1084,24 +1089,11 @@ class _AnalysisMultiPaneScreenState
 
   List<Widget> _matchupWidgets(ParsedCombatEncounter encounter) {
     final async = ref.watch(aarFitDerivationsProvider(encounter));
-    final correlatedAttackerCount = ref
-        .watch(combatAttackerCorrelationProvider(encounter))
-        .when(
-          data: (correlation) => correlation?.correlated.length ?? 0,
-          loading: () => 0,
-          error: (_, _) => 0,
-        );
     return async.when(
       data: (bundle) => [
-        if (bundle.selfMatchup != null)
-          AarMatchupSection(
-            matchup: bundle.selfMatchup!,
-            correlatedAttackerCount: correlatedAttackerCount,
-          ),
         if (bundle.opponentMatchup != null)
-          AarMatchupSection(matchup: bundle.opponentMatchup!),
-        if (bundle.selfMatchup != null || bundle.opponentMatchup != null)
-          const SizedBox(height: 16),
+          AarMatchupSection(matchup: bundle.opponentMatchup!, outgoing: true),
+        if (bundle.opponentMatchup != null) const SizedBox(height: 16),
       ],
       loading: () => [
         const LinearProgressIndicator(),

@@ -47,6 +47,7 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(
         ProviderScope(
+          key: UniqueKey(),
           overrides: [
             ...nameOverrides(),
             aarIncomingMatchupsProvider.overrideWith((ref, enc) => state),

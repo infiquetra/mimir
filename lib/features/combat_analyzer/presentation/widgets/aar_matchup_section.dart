@@ -10,23 +10,36 @@ class AarMatchupSection extends ConsumerWidget {
     super.key,
     required this.matchup,
     this.correlatedAttackerCount = 0,
+    this.outgoing = false,
   });
 
   final CombatDamageMatchup matchup;
   final int correlatedAttackerCount;
+  final bool outgoing;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     Log.d(
       'COMBAT.UI',
       'AarMatchupSection built for ${matchup.targetLabel} '
-          'layer=${matchup.layer} correlatedAttackerCount=$correlatedAttackerCount',
+          'layer=${matchup.layer} outgoing=$outgoing '
+          'correlatedAttackerCount=$correlatedAttackerCount',
     );
     final unknown = matchup.entries.isEmpty || matchup.layer == 'unknown';
     if (unknown) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 8),
-        child: Text('Resist profile unknown — no fit evidence'),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (outgoing)
+              Text(
+                "Your outgoing damage vs ${matchup.targetLabel}'s defense",
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            const Text('Resist profile unknown — no fit evidence'),
+          ],
+        ),
       );
     }
 
@@ -37,6 +50,11 @@ class AarMatchupSection extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (outgoing)
+            Text(
+              "Your outgoing damage vs ${matchup.targetLabel}'s defense",
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
           if (correlatedAttackerCount >= 2)
             Text(
               'Incoming profile is a blend across $correlatedAttackerCount attackers; the named resist hole is aggregate, not per attacker.',
@@ -44,7 +62,9 @@ class AarMatchupSection extends ConsumerWidget {
               style: const TextStyle(color: EveColors.warning),
             ),
           Text(
-            'EHP vs incoming ${_formatNumber(incoming)} · omni ${_formatNumber(omni)} · layer ${matchup.layer}',
+            outgoing
+                ? 'EHP vs outgoing ${_formatNumber(incoming)} · omni ${_formatNumber(omni)} · layer ${matchup.layer}'
+                : 'EHP vs incoming ${_formatNumber(incoming)} · omni ${_formatNumber(omni)} · layer ${matchup.layer}',
           ),
           for (final entry in matchup.entries)
             Padding(
