@@ -27,15 +27,69 @@ class CombatEnrichmentRepository {
   /// Atomic load → precondition → transform → save.
   ///
   /// Parsing, HTTP and provider publication stay outside the transaction.
+  /// Slot expectations compare only that owned comparison field (snapshot or
+  /// proposal ID). Busy/locked SQLite retries keep the original expectation.
   Future<EnrichmentMutationResult> mutateEnrichment(
     String parsedEncounterId,
     CombatEnrichment Function(CombatEnrichment? current) transform, {
     bool Function(CombatEnrichment? current)? precondition,
-  }) {
+    bool checkCurrentSnapshotId = false,
+    String? expectedCurrentSnapshotId,
+    bool checkUserProposalId = false,
+    String? expectedUserProposalId,
+  }) async {
     Log.d('COMBAT.ENRICH', 'mutateEnrichment($parsedEncounterId) - START');
+    Object? lastError;
+    for (var attempt = 1; attempt <= 3; attempt++) {
+      try {
+        return await _mutateOnce(
+          parsedEncounterId,
+          transform,
+          precondition: precondition,
+          checkCurrentSnapshotId: checkCurrentSnapshotId,
+          expectedCurrentSnapshotId: expectedCurrentSnapshotId,
+          checkUserProposalId: checkUserProposalId,
+          expectedUserProposalId: expectedUserProposalId,
+        );
+      } catch (error, stack) {
+        lastError = error;
+        if (!_isRetryableBusy(error) || attempt == 3) {
+          Error.throwWithStackTrace(error, stack);
+        }
+        Log.w(
+          'COMBAT.ENRICH',
+          'mutateEnrichment($parsedEncounterId) busy attempt=$attempt',
+        );
+        await Future<void>.delayed(Duration(milliseconds: 20 * attempt));
+      }
+    }
+    throw lastError!;
+  }
+
+  Future<EnrichmentMutationResult> _mutateOnce(
+    String parsedEncounterId,
+    CombatEnrichment Function(CombatEnrichment? current) transform, {
+    bool Function(CombatEnrichment? current)? precondition,
+    bool checkCurrentSnapshotId = false,
+    String? expectedCurrentSnapshotId,
+    bool checkUserProposalId = false,
+    String? expectedUserProposalId,
+  }) {
     return _database.transaction(() async {
       final current = await loadEnrichment(parsedEncounterId);
-      if (precondition != null && !precondition(current)) {
+      if (_slotExpectationFailed(
+            check: checkCurrentSnapshotId,
+            expectedId: expectedCurrentSnapshotId,
+            actualId: current?.fitComparison?.currentSnapshot?.snapshotId,
+            slot: 'currentSnapshot',
+          ) ||
+          _slotExpectationFailed(
+            check: checkUserProposalId,
+            expectedId: expectedUserProposalId,
+            actualId: current?.fitComparison?.userProposal?.proposalId,
+            slot: 'userProposal',
+          ) ||
+          (precondition != null && !precondition(current))) {
         Log.i(
           'COMBAT.ENRICH',
           'mutateEnrichment($parsedEncounterId) preconditionFailed',
@@ -76,6 +130,30 @@ class CombatEnrichmentRepository {
         status: EnrichmentMutationStatus.written,
       );
     });
+  }
+
+  bool _slotExpectationFailed({
+    required bool check,
+    required String? expectedId,
+    required String? actualId,
+    required String slot,
+  }) {
+    if (!check) return false;
+    if (actualId == expectedId) return false;
+    Log.i(
+      'COMBAT.ENRICH',
+      'slot CAS conflict slot=$slot expected=$expectedId actual=$actualId',
+    );
+    return true;
+  }
+
+  bool _isRetryableBusy(Object error) {
+    final text = error.toString().toLowerCase();
+    return text.contains('sqlite_busy') ||
+        text.contains('database is locked') ||
+        text.contains('error 5') ||
+        text.contains('error 6') ||
+        (text.contains('busy') && text.contains('sqlite'));
   }
 
   Future<CombatEnrichment?> loadEnrichment(String parsedEncounterId) async {

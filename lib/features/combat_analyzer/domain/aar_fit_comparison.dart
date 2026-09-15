@@ -224,22 +224,32 @@ class AarFitComparisonState {
     this.schemaVersion = 1,
     this.currentSnapshot,
     this.userProposal,
-    this.liveSavedFittingId,
   });
 
   final int schemaVersion;
   final AarFitSnapshot? currentSnapshot;
   final AarFitProposal? userProposal;
 
-  /// Naive live pointer. GREEN persists a copied envelope, never this.
-  final String? liveSavedFittingId;
+  AarFitComparisonState withCurrentSnapshot(AarFitSnapshot? snapshot) {
+    return AarFitComparisonState(
+      schemaVersion: schemaVersion,
+      currentSnapshot: snapshot,
+      userProposal: userProposal,
+    );
+  }
+
+  AarFitComparisonState withUserProposal(AarFitProposal? proposal) {
+    return AarFitComparisonState(
+      schemaVersion: schemaVersion,
+      currentSnapshot: currentSnapshot,
+      userProposal: proposal,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'schemaVersion': schemaVersion,
     if (currentSnapshot != null) 'currentSnapshot': currentSnapshot!.toJson(),
-    if (liveSavedFittingId != null) 'liveSavedFittingId': liveSavedFittingId,
-    if (liveSavedFittingId == null && userProposal != null)
-      'userProposal': userProposal!.toJson(),
+    if (userProposal != null) 'userProposal': userProposal!.toJson(),
   };
 
   factory AarFitComparisonState.fromJson(Map<String, dynamic> json) {
@@ -255,7 +265,6 @@ class AarFitComparisonState {
               Map<String, dynamic>.from(json['userProposal'] as Map),
             )
           : null,
-      liveSavedFittingId: json['liveSavedFittingId']?.toString(),
     );
   }
 }

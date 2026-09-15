@@ -258,9 +258,7 @@ class FitInventoryKnowledge {
              completeness: entry.value.completeness,
              applicability: entry.value.applicability,
              positions: entry.value.positions,
-             recordedEmptySlots: List<int>.from(
-               entry.value.recordedEmptySlots,
-             ),
+             recordedEmptySlots: List<int>.from(entry.value.recordedEmptySlots),
              unresolvedOccupied: List<UnresolvedOccupant>.from(
                entry.value.unresolvedOccupied,
              ),
@@ -559,9 +557,17 @@ class AarFitSnapshot {
     required int characterId,
     DateTime? recordedAt,
     List<int> sourceItemIds = const [],
+    String? snapshotId,
+    FitInventoryKnowledge? knowledge,
+    List<String> limitations = const [],
   }) {
+    final emptyInventory =
+        fitting.allModules.isEmpty &&
+        fitting.drones.isEmpty &&
+        fitting.fighters.isEmpty &&
+        fitting.cargo.isEmpty;
     return AarFitSnapshot(
-      snapshotId: 'cap-$encounterId',
+      snapshotId: snapshotId ?? 'cap-$encounterId',
       encounterId: encounterId,
       fitting: fitting,
       source: AarFitSource.comparisonCapture,
@@ -571,10 +577,25 @@ class AarFitSnapshot {
       ),
       recordedAt: recordedAt,
       sourceItemIds: sourceItemIds,
-      knowledge: FitInventoryKnowledge.recordedComplete(
-        positions: SlotPositionMeaning.recorded,
-        moduleState: StateKnowledge.assumed,
-      ),
+      knowledge:
+          knowledge ??
+          (emptyInventory
+              ? FitInventoryKnowledge(
+                  groups: {
+                    for (final group in FitInventoryGroup.values)
+                      group: FitGroupKnowledge(
+                        completeness: InventoryCompleteness.unknown,
+                        applicability: GroupApplicability.applicable,
+                        positions: SlotPositionMeaning.recorded,
+                      ),
+                  },
+                  moduleState: StateKnowledge.assumed,
+                )
+              : FitInventoryKnowledge.recordedComplete(
+                  positions: SlotPositionMeaning.recorded,
+                  moduleState: StateKnowledge.assumed,
+                )),
+      limitations: limitations,
     );
   }
 
@@ -606,26 +627,32 @@ class AarFitSnapshot {
     required String encounterId,
     required Fitting fitting,
     DateTime? recordedAt,
+    String? snapshotId,
+    FitInventoryKnowledge? knowledge,
   }) {
     return AarFitSnapshot(
-      snapshotId: 'eft-$encounterId',
+      snapshotId: snapshotId ?? 'eft-$encounterId',
       encounterId: encounterId,
       fitting: fitting,
       source: AarFitSource.importedProposal,
       subject: const AarFitSubject(relation: AarFitSubjectRelation.reference),
       recordedAt: recordedAt,
-      knowledge: FitInventoryKnowledge(
-        groups: {
-          for (final group in FitInventoryGroup.values)
-            if (_groupHasItems(fitting, group))
-              group: FitGroupKnowledge(
-                completeness: InventoryCompleteness.recordedComplete,
-                applicability: GroupApplicability.applicable,
-                positions: SlotPositionMeaning.orderOnly,
-              ),
-        },
-        moduleState: StateKnowledge.assumed,
-      ),
+      knowledge: knowledge ?? knowledgeForEftImport(fitting),
+    );
+  }
+
+  static FitInventoryKnowledge knowledgeForEftImport(Fitting fitting) {
+    return FitInventoryKnowledge(
+      groups: {
+        for (final group in FitInventoryGroup.values)
+          if (_groupHasItems(fitting, group))
+            group: FitGroupKnowledge(
+              completeness: InventoryCompleteness.recordedComplete,
+              applicability: GroupApplicability.applicable,
+              positions: SlotPositionMeaning.orderOnly,
+            ),
+      },
+      moduleState: StateKnowledge.assumed,
     );
   }
 

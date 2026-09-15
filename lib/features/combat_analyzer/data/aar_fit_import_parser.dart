@@ -5,6 +5,7 @@ import '../../../core/sde/sde_database.dart';
 import '../../../core/sde/sde_service.dart';
 import '../../fitting/domain/format_parser.dart';
 import '../../fitting/domain/models.dart';
+import '../domain/aar_fit_snapshot.dart';
 
 /// Shared-parser factory used by AAR import. GREEN supplies the exact-name
 /// resolver and `rethrowFailures`; the default constructs today's parser.
@@ -31,6 +32,16 @@ final class AarFitImportException extends FormatException {
 
   final AarFitImportFailureCode code;
   final List<int> sourceLines;
+}
+
+final class AarFitImportParseResult {
+  const AarFitImportParseResult({
+    required this.fitting,
+    required this.knowledge,
+  });
+
+  final Fitting fitting;
+  final FitInventoryKnowledge knowledge;
 }
 
 /// Strict AAR fit-import adapter.
@@ -104,6 +115,16 @@ final class AarFitImportParser {
         code: AarFitImportFailureCode.localDataUnavailable,
       );
     }
+  }
+
+  /// Strict parse plus EFT/DNA inventory knowledge. [parse] stays the fitting
+  /// projection of this result.
+  Future<AarFitImportParseResult> parseWithKnowledge(String rawFit) async {
+    final fitting = await parse(rawFit);
+    return AarFitImportParseResult(
+      fitting: fitting,
+      knowledge: AarFitSnapshot.knowledgeForEftImport(fitting),
+    );
   }
 
   bool _firstNonemptyStartsWithBracket(String text) {

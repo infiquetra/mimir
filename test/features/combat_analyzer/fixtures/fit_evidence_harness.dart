@@ -935,6 +935,10 @@ class GatedEnrichmentRepository extends CombatEnrichmentRepository {
     String parsedEncounterId,
     CombatEnrichment Function(CombatEnrichment? current) transform, {
     bool Function(CombatEnrichment? current)? precondition,
+    bool checkCurrentSnapshotId = false,
+    String? expectedCurrentSnapshotId,
+    bool checkUserProposalId = false,
+    String? expectedUserProposalId,
   }) async {
     saveCalls += 1;
     final entered = mutationEntered;
@@ -951,6 +955,10 @@ class GatedEnrichmentRepository extends CombatEnrichmentRepository {
       parsedEncounterId,
       transform,
       precondition: precondition,
+      checkCurrentSnapshotId: checkCurrentSnapshotId,
+      expectedCurrentSnapshotId: expectedCurrentSnapshotId,
+      checkUserProposalId: checkUserProposalId,
+      expectedUserProposalId: expectedUserProposalId,
     );
   }
 }

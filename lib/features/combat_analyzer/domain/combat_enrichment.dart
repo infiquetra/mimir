@@ -157,7 +157,6 @@ class CombatEnrichment {
     if (attackerCorrelation != null)
       'attackerCorrelation': attackerCorrelation!.toPromptJson(),
     'limitations': limitations,
-    if (fitComparison != null) 'fitComparison': fitComparison!.toJson(),
   };
 
   factory CombatEnrichment.fromJson(Map<String, dynamic> json) {

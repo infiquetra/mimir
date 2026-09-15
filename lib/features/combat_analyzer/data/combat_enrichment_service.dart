@@ -20,6 +20,7 @@ import '../domain/combat_fit_snapshot_mapper.dart';
 import '../domain/combat_killmail_fit_mapper.dart';
 import '../domain/combat_killmail_matcher.dart';
 import '../domain/aar_capture_exception.dart';
+import '../domain/aar_fit_comparison.dart';
 import '../domain/aar_derived_facts.dart';
 import '../domain/aar_fit_derivation.dart';
 import '../domain/parsed_combat_encounter.dart';
@@ -739,6 +740,8 @@ class CombatEnrichmentService {
     Map<String, dynamic>? rawKillmail,
     bool? killmailSearchCompleted,
     AttackerCorrelation? attackerCorrelation,
+    AarFitComparisonState? fitComparison,
+    bool? evidencePacketPresent,
   }) {
     return CombatEnrichment(
       parsedEncounterId: base.parsedEncounterId,
@@ -766,6 +769,9 @@ class CombatEnrichmentService {
       killmailSearchCompleted:
           killmailSearchCompleted ?? base.killmailSearchCompleted,
       attackerCorrelation: attackerCorrelation ?? base.attackerCorrelation,
+      fitComparison: fitComparison ?? base.fitComparison,
+      evidencePacketPresent:
+          evidencePacketPresent ?? base.evidencePacketPresent,
     );
   }
 
@@ -801,6 +807,8 @@ class CombatEnrichmentService {
         rawKillmail: current.rawKillmail,
         killmailSearchCompleted: true,
         attackerCorrelation: current.attackerCorrelation,
+        fitComparison: current.fitComparison,
+        evidencePacketPresent: current.evidencePacketPresent,
       );
     }
     final sameVictim = _sameVictimIdentity(current, candidate);
@@ -833,6 +841,8 @@ class CombatEnrichmentService {
       attackerCorrelation: sameVictim
           ? current.attackerCorrelation ?? candidate.attackerCorrelation
           : candidate.attackerCorrelation,
+      fitComparison: current.fitComparison,
+      evidencePacketPresent: current.evidencePacketPresent,
     );
   }
 
@@ -976,6 +986,8 @@ class CombatEnrichmentService {
       rawKillmail: existing.rawKillmail,
       killmailSearchCompleted: existing.killmailSearchCompleted,
       attackerCorrelation: existing.attackerCorrelation,
+      fitComparison: existing.fitComparison,
+      evidencePacketPresent: existing.evidencePacketPresent,
     );
   }
 

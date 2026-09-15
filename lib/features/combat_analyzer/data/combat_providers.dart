@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/providers.dart';
@@ -60,10 +61,27 @@ final aarEvidenceOperationCoordinatorProvider =
       return coordinator;
     });
 
+/// Application-scope commit publisher. Comparison/evidence observers listen
+/// here; this must not invalidate [combatEnrichmentProvider].
+class CombatEnrichmentCommitPublisher extends ChangeNotifier {
+  void notifyCommitted(String encounterId) {
+    Log.d('COMBAT.ENRICH', 'commit published encounter=$encounterId');
+    notifyListeners();
+  }
+}
+
+final combatEnrichmentCommitPublisherProvider =
+    Provider<CombatEnrichmentCommitPublisher>((ref) {
+      final publisher = CombatEnrichmentCommitPublisher();
+      ref.onDispose(publisher.dispose);
+      return publisher;
+    });
+
 final combatEnrichmentServiceProvider = Provider<CombatEnrichmentService>((
   ref,
 ) {
   Log.d('COMBAT.ENRICH', 'combatEnrichmentServiceProvider() - START');
+  final publisher = ref.watch(combatEnrichmentCommitPublisherProvider);
   return CombatEnrichmentService(
     repository: ref.watch(combatEnrichmentRepositoryProvider),
     esiClient: ref.watch(esiClientProvider),
@@ -72,6 +90,7 @@ final combatEnrichmentServiceProvider = Provider<CombatEnrichmentService>((
     oauthService: ref.watch(oauthServiceProvider),
     sdeService: ref.watch(sdeServiceProvider),
     coordinator: ref.watch(aarEvidenceOperationCoordinatorProvider),
+    onEnrichmentCommitted: publisher.notifyCommitted,
   );
 });
 

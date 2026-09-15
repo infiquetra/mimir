@@ -689,6 +689,37 @@ class EsiClient {
     }
   }
 
+  /// Comparison capture needs status codes; evidence callers keep [getCharacterShip].
+  Future<CharacterShip> getCharacterShipStrict(int characterId) async {
+    try {
+      final response = await authenticatedGet<Map<String, dynamic>>(
+        '/characters/$characterId/ship/',
+        characterId: characterId,
+      );
+      final data = response.data;
+      if (data == null) {
+        throw const EsiException(
+          'ESI did not return a current ship.',
+          statusCode: 404,
+        );
+      }
+      return CharacterShip.fromJson(data);
+    } on DioException catch (error, stack) {
+      final nested = error.error;
+      if (nested is EsiException) {
+        Error.throwWithStackTrace(nested, stack);
+      }
+      final status = error.response?.statusCode;
+      Error.throwWithStackTrace(
+        EsiException(
+          error.message ?? 'ESI ship lookup failed',
+          statusCode: status,
+        ),
+        stack,
+      );
+    }
+  }
+
   Future<CharacterOnline> getCharacterOnline(int characterId) async {
     final response = await authenticatedGet<Map<String, dynamic>>(
       '/characters/$characterId/online/',
