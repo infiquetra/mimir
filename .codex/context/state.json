@@ -1,0 +1,20 @@
+{
+  "last_updated": "2026-09-14",
+  "current_work": {
+    "task": "Milestone 5 per-attacker matchup product specification",
+    "phase": "complete",
+    "progress": "100%",
+    "baseline": "d2dd731",
+    "plan": ".codex/plans/2026-09-14-aar-per-attacker-matchup-spec.md",
+    "deliverable": "docs/specs/aar-per-attacker-matchup.md",
+    "checkpoint": ".codex/checkpoints/2026-09-14-aar-per-attacker-matchup-spec.md",
+    "next_steps": []
+  },
+  "validation": {
+    "independent_review": "passed after fractional-accounting correction",
+    "structure": "8 sections, 5 scenarios, 28 acceptance criteria, 40 traced test cases",
+    "mathematics": "worked EHP and pressure oracles, tiny-hit scaling, 200 exact conservation examples passed",
+    "runtime_tests": "not run; documentation-only change"
+  },
+  "open_issues": []
+}

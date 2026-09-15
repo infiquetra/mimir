@@ -1,4 +1,46 @@
-# Project: Mimir - AI Battle Analyzer
+# Project: Mimir — Milestone 5 product specification
+Date: 2026-09-14
+Checkpoint: 2026-09-14-aar-per-attacker-matchup
+
+## Overview
+
+Write the complete per-attacker incoming damage profile and defense matchup
+specification requested by Product, grounded in Milestone 4 at `d2dd731`.
+This is documentation work; implementation remains a separate milestone.
+
+## Tasks
+
+- [x] [P1] Inspect shipped profile, matchup, provider, and evidence behavior.
+- [x] [P1] Independently inspect correlation and perspective constraints.
+  - Agent: `correlation_contract` (read-only explorer).
+- [x] [SEQ] Write `docs/specs/aar-per-attacker-matchup.md` with eight requested sections,
+  25–30 acceptance criteria, and approximately 40 test cases.
+- [x] [P2] Independently review the draft against shipped contracts.
+- [x] [P2] Verify quantitative examples, criterion/test coverage, and local links.
+- [x] [SEQ] Link the specification from README and the engineering journal;
+  preserve the queued implementation status.
+- [x] [CHECKPOINT] Record completion and commit the documentation change.
+
+## Notes
+
+The user's explicit request to write the complete artifact authorizes execution
+of this documentation plan. Canonical plan:
+[2026-09-14-aar-per-attacker-matchup-spec.md](../.codex/plans/2026-09-14-aar-per-attacker-matchup-spec.md).
+
+## Review
+
+Completed [the specification](../docs/specs/aar-per-attacker-matchup.md) with all eight
+sections, five scenarios, 28 acceptance criteria, and 40 domain/provider/UI test cases.
+Independent review passed after correcting integer rounding that could invent a
+tiny-hit weapon profile. Verified worked EHP/pressure examples, exact fractional
+conservation (including 200 randomized mathematical examples), criterion/test
+traceability, Markdown tables, local links, and whitespace. README/journal links
+identify this as a specification; implementation remains queued. No application
+code changed and no Flutter runtime tests were run for this documentation change.
+
+---
+
+# Historical roadmap: Mimir - AI Battle Analyzer
 Date: 2026-05-20
 Checkpoint: 2026-05-20-18-00
 

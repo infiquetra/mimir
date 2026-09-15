@@ -35,6 +35,7 @@ Keep entries newest-first, concise, and evidence-backed.
 
 ## Quick Navigation By Topic
 
+- Per-attacker incoming profiles and defense matchups (M5 specification, implementation pending) -> [Product spec](../specs/aar-per-attacker-matchup.md), [decision](DECISIONS.md#milestone-5-product-contract-for-per-attacker-incoming-matchups-specification-only)
 - Combat analyzer AAR evidence ledger and fit evidence -> [DECISIONS](DECISIONS.md#combat-aar-v3-uses-evidence-ledger-and-fit-evidence-before-deeper-simulation)
 - Combat logs as incomplete evidence -> [LEARNINGS](LEARNINGS.md#combat-logs-are-a-primary-source-but-not-a-complete-aar-evidence-source)
 - Mimir-owned AI auth -> [DECISIONS](DECISIONS.md#ai-auth-is-mimir-owned-app-auth-not-codex-cli-mutation)

@@ -29,6 +29,30 @@
 
 ---
 
+## 2026-09-14
+
+### Incoming type estimates need fractional accounting before per-attacker derivation
+
+**Author.** Product.
+**Context.** Source inspection and independent review for the Milestone 5 specification
+exposed two rounding boundaries in the shipped aggregate path.
+**Evidence.** [Resolver](../../lib/features/combat_analyzer/data/combat_damage_profile_resolver.dart)
+rounds each component and its total independently;
+[pattern conversion](../../lib/features/combat_analyzer/domain/damage_pattern_x.dart)
+then normalizes integer component amounts, while the matchup pressure calculation
+uses the profile's original percentages.
+**Mechanism.** Independent component rounding need not conserve the logged total.
+Forcing integer conservation before calculating a profile creates a different error:
+one damage unit with four equal fractions becomes a single damage type instead of omni.
+**Fix (queued).** [Milestone 5 R9–R11 and Fixture C](../specs/aar-per-attacker-matchup.md)
+require one lossless fractional vector for source/aggregate accounting, EHP, and pressure;
+display or legacy integer projections cannot feed back into calculations.
+**Validation.** Source review and exact-rational worked examples; this change specifies
+the correction and does not claim a shipped runtime fix.
+**Generalizable rule.** Preserve fractional evidence through derived calculations;
+integer display requirements must not change the phenomenon being modeled.
+**Refs.** [Milestone 5 decision](DECISIONS.md#milestone-5-product-contract-for-per-attacker-incoming-matchups-specification-only).
+
 ### 2026-09-14
 
 ### Combat logs name the displayed entity, not the pilot

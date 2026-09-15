@@ -26,6 +26,10 @@ Mimir aims to replace the need for multiple disconnected EVE tools (EVEMon, Pyfa
 
 See the [mimir-context-library](https://github.com/infiquetra/mimir-context-library) repository for detailed specifications and roadmap.
 
+### AAR product specifications
+
+- [Milestone 5: Per-Attacker Incoming Damage Profile and Defense Matchup](docs/specs/aar-per-attacker-matchup.md) — product contract, acceptance criteria, and test matrix; implementation pending.
+
 ## Getting Started
 
 ### Prerequisites

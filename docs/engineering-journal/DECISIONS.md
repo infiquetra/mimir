@@ -24,6 +24,28 @@
 
 ---
 
+## 2026-09-14
+
+### Milestone 5 product contract for per-attacker incoming matchups (specification only)
+
+**Author.** Product.
+**Decision.** Adopt the [Milestone 5 specification](../specs/aar-per-attacker-matchup.md):
+derive incoming profiles per source with lossless fractional component accounting;
+show named defense cards for Confirmed/Probable correlations; retain Possible damage
+under Unattributed for matchup without mutating Milestone 4. Keep untyped amounts and
+coverage explicit. Use the pilot's defense, including victim return fire on won fights.
+Supply deterministic results through an optional additive v4 input block while
+preserving historical AI reports. Implementation remains queued.
+**Rejected alternatives.** Aggregate profiles assigned to named attackers; identity
+confidence used as proof of damage-type accuracy; integer-rounded components fed back
+into EHP; automatic report regeneration.
+**Rationale.** Each named comparison needs its own observed weapon mix and inspectable
+assumptions. Rounding must not invent a damage profile for small logged amounts.
+**Revisit when.** Technical design finds a conflict with the numbered product rules,
+or new telemetry supports stronger damage-type or actor ownership evidence.
+**Refs.** [Specification §§3, 5, 8](../specs/aar-per-attacker-matchup.md);
+[queued implementation](QUEUED.md#per-attacker-incoming-damage-profile-and-matchup).
+
 ### 2026-09-14
 
 ### Attacker correlation architecture, signal weights, participant pool, and UI placement (commit: 3ab988a)
