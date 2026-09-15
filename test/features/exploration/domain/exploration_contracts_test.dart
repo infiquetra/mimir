@@ -617,6 +617,11 @@ void main() {
       variants.add(F1Fixtures.k162);
       expect(group.variants, hasLength(1));
       expect(group.variants.single.code, 'B274');
+
+      final urls = ['https://example.test/a'];
+      final manifest = ReferenceManifest(sourceUrls: urls);
+      urls.add('https://example.test/b');
+      expect(manifest.sourceUrls, ['https://example.test/a']);
     });
 
     test('content fingerprint ignores id/name/time and is order-stable', () {

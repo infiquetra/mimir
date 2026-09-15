@@ -125,7 +125,7 @@ class GraphSnapshot {
     this.referenceRevision = 0,
     this.publicRevision = 0,
     this.characterId,
-  }) : nodes = Set.unmodifiable(nodes),
+  }) : nodes = Set.unmodifiable(Set.of(nodes)),
        edges = List.unmodifiable(List<DirectedExplorationEdge>.from(edges));
 
   final Set<int> nodes;

@@ -25,9 +25,9 @@ class ReferenceManifest {
     this.importedAt,
     this.coverage = '',
     this.validation = '',
-  }) : sourceUrls = List.unmodifiable(sourceUrls),
-       checksums = Map.unmodifiable(checksums),
-       rowCounts = Map.unmodifiable(rowCounts);
+  }) : sourceUrls = List.unmodifiable(List.of(sourceUrls)),
+       checksums = Map.unmodifiable(Map.of(checksums)),
+       rowCounts = Map.unmodifiable(Map.of(rowCounts));
 
   final int sdeBuild;
   final int datasetSchema;
