@@ -33,7 +33,9 @@ import 'package:mimir/features/combat_analyzer/domain/aar_attacker_matchup.dart'
 import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_aar_report.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_attacker_correlation.dart';
+import 'package:mimir/features/combat_analyzer/domain/combat_damage_profile.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
+import 'package:mimir/features/combat_analyzer/domain/incoming_damage_allocation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_evidence_ledger.dart';
 import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.dart';
 import 'package:mimir/features/fitting/domain/models.dart';
@@ -67,7 +69,7 @@ class FitEvidenceHarness {
   late final RecordingDiscoveryClient discovery;
   late final RecordingCodexClient codex;
   late final CombatEnrichmentService enrichmentService;
-  late final CombatFitDerivationService derivationService;
+  late final GatedFitDerivationService derivationService;
   late final CombatDamageProfileResolver damageResolver;
   late final CombatAnalysisService analysisService;
   late final SkillRepository skillRepository;
@@ -116,7 +118,7 @@ class FitEvidenceHarness {
       sdeService: sdeService,
       coordinator: coordinator,
     );
-    derivationService = CombatFitDerivationService(
+    derivationService = GatedFitDerivationService(
       sde: sdeService,
       skills: skillRepository,
     );
@@ -155,6 +157,10 @@ class FitEvidenceHarness {
     final allow = repository.allowMutation;
     if (allow != null && !allow.isCompleted) {
       allow.complete();
+    }
+    final allowDerive = derivationService.allowDerive;
+    if (allowDerive != null && !allowDerive.isCompleted) {
+      allowDerive.complete();
     }
     esiClient.dispose();
     coordinator.dispose();
@@ -279,6 +285,8 @@ class FitEvidenceHarness {
           2456 => 'Hobgoblin II',
           185 => 'EMP S',
           9020 => 'UniqueShip',
+          kAarMseTypeId => 'Medium Shield Extender II',
+          kAarRailgunTypeId => 'Railgun',
           _ => 'Unknown Item',
         };
       }),
@@ -289,6 +297,8 @@ class FitEvidenceHarness {
     WidgetTester tester, {
     required ParsedCombatEncounter encounter,
     Size size = const Size(1400, 1200),
+    List<Override> extraOverrides = const [],
+    double textScale = 1.0,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
@@ -296,12 +306,19 @@ class FitEvidenceHarness {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
       ProviderScope(
-        overrides: overrides(),
+        overrides: [...overrides(), ...extraOverrides],
         child: MaterialApp(
           theme: AppTheme.darkTheme(),
           navigatorKey: navigatorKey,
           scaffoldMessengerKey: messengerKey,
-          home: AnalysisMultiPaneScreen(encounter: encounter),
+          home: MediaQuery(
+            data: MediaQueryData(
+              size: size,
+              devicePixelRatio: 1,
+              textScaler: TextScaler.linear(textScale),
+            ),
+            child: AnalysisMultiPaneScreen(encounter: encounter),
+          ),
         ),
       ),
     );
@@ -339,6 +356,21 @@ class FitEvidenceHarness {
   Future<void> activateCharacter(int characterId) {
     return appDb.setActiveCharacter(characterId);
   }
+
+  Future<void> seedKnownSkills({int characterId = characterAId}) {
+    return appDb.replaceCharacterSkills(characterId, [
+      CharacterSkillsCompanion.insert(
+        characterId: characterId,
+        skillId: 3300,
+        trainedSkillLevel: 5,
+        activeSkillLevel: 5,
+        skillpointsInSkill: 256000,
+        lastUpdated: clock(),
+      ),
+    ]);
+  }
+
+  Future<void> seedDefenseSde() => seedAarDefenseSde(sdeDb);
 
   void scriptCharacterShip({
     int characterId = characterAId,
@@ -807,6 +839,41 @@ class RecordingCodexClient extends CodexAnalysisClient {
             fits: '',
           ),
         );
+  }
+}
+
+class GatedFitDerivationService extends CombatFitDerivationService {
+  GatedFitDerivationService({required super.sde, required super.skills});
+
+  Completer<void>? deriveEntered;
+  Completer<void>? allowDerive;
+  Object? failWith;
+
+  @override
+  Future<AarDerivationBundle> deriveForEncounter({
+    required ParsedCombatEncounter encounter,
+    required CombatEnrichment enrichment,
+    required CombatDamageProfile incoming,
+    required CombatDamageProfile outgoing,
+    IncomingDamageAllocation? incomingAllocation,
+  }) async {
+    final entered = deriveEntered;
+    if (entered != null && !entered.isCompleted) {
+      entered.complete();
+    }
+    if (allowDerive != null) {
+      await allowDerive!.future;
+    }
+    if (failWith != null) {
+      throw failWith!;
+    }
+    return super.deriveForEncounter(
+      encounter: encounter,
+      enrichment: enrichment,
+      incoming: incoming,
+      outgoing: outgoing,
+      incomingAllocation: incomingAllocation,
+    );
   }
 }
 

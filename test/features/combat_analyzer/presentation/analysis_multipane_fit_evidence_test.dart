@@ -2,9 +2,14 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/features/combat_analyzer/data/codex_analysis_client.dart';
 import 'package:mimir/features/combat_analyzer/data/combat_enrichment_repository.dart';
+import 'package:mimir/features/combat_analyzer/data/combat_providers.dart';
+import 'package:mimir/features/combat_analyzer/domain/aar_evidence_assessment.dart';
+import 'package:mimir/features/combat_analyzer/domain/aar_evidence_scorer.dart';
 import 'package:mimir/features/combat_analyzer/domain/aar_fit_derivation.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_aar_report.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_enrichment.dart';
@@ -13,6 +18,7 @@ import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.da
 import 'package:mimir/features/fitting/domain/models.dart';
 import 'package:mimir/features/combat_analyzer/presentation/analysis_multipane_screen.dart';
 import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_evidence_checklist_card.dart';
+import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_incoming_matchups_section.dart';
 import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_pre_analysis_gate.dart';
 
 import '../fixtures/aar_evidence_fixtures.dart';
@@ -1123,6 +1129,759 @@ void main() {
         received: harness.codex.lastEnrichment,
         derivation: harness.codex.lastDerivation,
         source: EvidenceSource.manualFitImport,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  Future<void> expectImportDialog(WidgetTester tester) async {
+    expect(find.text('Import Pilot Fit'), findsOneWidget);
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.maxLines, greaterThan(1));
+    expect(field.minLines, greaterThanOrEqualTo(10));
+    expect(field.decoration?.hintText, contains('[Rifter, Fight Fit]'));
+    expect(find.widgetWithText(TextButton, 'Cancel'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Import'), findsOneWidget);
+  }
+
+  Future<void> waitForScoreChip(WidgetTester tester) async {
+    await harness.waitFor(
+      tester,
+      find.byKey(const Key('aar-evidence-score-chip')),
+    );
+  }
+
+  int readScoreChip(WidgetTester tester) {
+    final text = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const Key('aar-evidence-score-chip')),
+        matching: find.byType(Text),
+      ),
+    );
+    return int.parse(text.data!.replaceAll('%', ''));
+  }
+
+  Finder pilotFitStatus(String status) {
+    return find.descendant(
+      of: find.byKey(const Key('aar-evidence-row-pilotFit')),
+      matching: find.text(status),
+    );
+  }
+
+  Future<void> waitForPilotStatus(WidgetTester tester, String status) async {
+    await harness.waitFor(
+      tester,
+      find.byKey(const Key('aar-evidence-row-pilotFit')),
+      pumps: 80,
+    );
+    await harness.waitFor(tester, pilotFitStatus(status), pumps: 80);
+    expect(pilotFitStatus(status), findsOneWidget);
+  }
+
+  testWidgets(
+    'T01 Import Fit opens the real dialog in pre-analysis and cached views',
+    (tester) async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      await harness.pumpScreen(tester, encounter: encounter);
+      await openImportDialog(tester);
+      await expectImportDialog(tester);
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pump();
+      expect(find.text('Import Pilot Fit'), findsNothing);
+
+      await harness.seedCachedReport(encounter);
+      await harness.pumpScreen(tester, encounter: encounter);
+      await openImportDialog(tester);
+      await expectImportDialog(tester);
+      await submitImportDialog(tester, kAarHeaderOnlyEft);
+      await harness.waitFor(tester, find.text(kAarImportSuccessMessage));
+      final saved = await harness.repository.loadEnrichment(encounter.id);
+      expect(saved?.parsedEncounterId, encounter.id);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('T02 Cancel, barrier dismiss, and Escape do not save', (
+    tester,
+  ) async {
+    final encounter = encounterWith(
+      characterId: FitEvidenceHarness.characterAId,
+    );
+    await harness.pumpScreen(tester, encounter: encounter);
+    await openImportDialog(tester);
+    await tester.enterText(find.byType(TextField), kAarSupportedEft);
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pump();
+    expect(find.text('Import Pilot Fit'), findsNothing);
+    expect(harness.repository.saveCalls, 0);
+    expect(find.byType(SnackBar), findsNothing);
+
+    await openImportDialog(tester);
+    await tester.enterText(find.byType(TextField), kAarSupportedEft);
+    await tester.tapAt(const Offset(2, 2));
+    await tester.pump();
+    expect(find.text('Import Pilot Fit'), findsNothing);
+    expect(harness.repository.saveCalls, 0);
+
+    await openImportDialog(tester);
+    await tester.enterText(find.byType(TextField), kAarSupportedEft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(find.text('Import Pilot Fit'), findsNothing);
+    expect(harness.repository.saveCalls, 0);
+    expect(find.text(kAarImportSuccessMessage), findsNothing);
+    expect(await harness.repository.loadEnrichment(encounter.id), isNull);
+    expect(harness.codex.calls, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('T03 empty and whitespace submit closes without saving', (
+    tester,
+  ) async {
+    final encounter = encounterWith(
+      characterId: FitEvidenceHarness.characterAId,
+    );
+    await harness.repository.saveEnrichment(
+      CombatEnrichment(
+        parsedEncounterId: encounter.id,
+        status: CombatEnrichmentStatus.logOnly,
+        source: CombatEnrichmentSource.none,
+        pilotFitEvidence: const FitEvidence(
+          role: FitEvidenceRole.pilot,
+          source: EvidenceSource.currentShipSnapshot,
+          confidence: EvidenceConfidence.reference,
+          fitting: Fitting(
+            id: 'prior-ref',
+            name: 'Reference',
+            shipTypeId: 587,
+            shipName: 'Rifter',
+          ),
+        ),
+      ),
+    );
+    await harness.pumpScreen(tester, encounter: encounter);
+    for (final raw in ['', '   ', '\t\n  \n']) {
+      await openImportDialog(tester);
+      await submitImportDialog(tester, raw);
+      await tester.pump();
+      expect(find.text('Import Pilot Fit'), findsNothing);
+      expect(find.byType(SnackBar), findsNothing);
+    }
+    expect(harness.repository.saveCalls, 0);
+    final reloaded = await harness.repository.loadEnrichment(encounter.id);
+    expect(reloaded!.pilotFitEvidence!.fitting.id, 'prior-ref');
+    expect(tester.takeException(), isNull);
+  });
+
+  test(
+    'T23 scorer oracle is 70/79/85/100 and reduced 40/25 is 36/49/57/79',
+    () {
+      int overall(AarEvidenceStatus fit) {
+        return AarEvidenceScorer.combine(
+          rows(
+            d1: fit,
+            d2: AarEvidenceStatus.complete,
+            d3: AarEvidenceStatus.complete,
+            d4: AarEvidenceStatus.complete,
+            d5: AarEvidenceStatus.complete,
+          ),
+        ).score;
+      }
+
+      expect(overall(AarEvidenceStatus.missing), 70);
+      expect(overall(AarEvidenceStatus.inferred), 79);
+      expect(overall(AarEvidenceStatus.partial), 85);
+      expect(overall(AarEvidenceStatus.complete), 100);
+      expect(
+        AarEvidenceScorer.combine(
+          rows(
+            d1: AarEvidenceStatus.complete,
+            d2: AarEvidenceStatus.complete,
+            d3: AarEvidenceStatus.complete,
+            d4: AarEvidenceStatus.complete,
+            d5: AarEvidenceStatus.complete,
+          ),
+        ).dimensions.first.earned,
+        30,
+      );
+
+      int reduced(double fitEarned) => ((100 * (25 + fitEarned)) / 70).round();
+      expect(reduced(0), 36);
+      expect(reduced(9), 49);
+      expect(reduced(15), 57);
+      expect(reduced(30), 79);
+    },
+  );
+
+  testWidgets('T23 Missing/All V/unresolved/reference/known-skills statuses', (
+    tester,
+  ) async {
+    final encounter = encounterWith(
+      characterId: FitEvidenceHarness.characterAId,
+    );
+    await harness.pumpScreen(tester, encounter: encounter);
+    await waitForScoreChip(tester);
+    expect(find.text('Missing'), findsWidgets);
+    expect(find.textContaining('+30 pts'), findsWidgets);
+    final missingScore = readScoreChip(tester);
+    expect(missingScore, isNot(100));
+
+    await openImportDialog(tester);
+    await submitImportDialog(tester, kAarSupportedEft);
+    await harness.waitFor(tester, find.text(kAarImportSuccessMessage));
+    await waitForPilotStatus(tester, 'Partial');
+    expect(pilotFitStatus('Complete'), findsNothing);
+    final allVScore = readScoreChip(tester);
+    expect(allVScore, greaterThan(missingScore));
+    expect(allVScore - missingScore, isNot(30));
+
+    await harness.disposeWidgets(tester);
+    await harness.seedKnownSkills();
+    await harness.repository.saveEnrichment(
+      CombatEnrichment(
+        parsedEncounterId: encounter.id,
+        status: CombatEnrichmentStatus.logOnly,
+        source: CombatEnrichmentSource.none,
+        pilotFitEvidence: const FitEvidence(
+          role: FitEvidenceRole.pilot,
+          source: EvidenceSource.manualFitImport,
+          confidence: EvidenceConfidence.confirmed,
+          fitting: Fitting(
+            id: 'unresolved',
+            name: 'Ghost',
+            shipTypeId: 587,
+            shipName: 'Rifter',
+            lowSlots: [
+              FittedModule(
+                typeId: kAarMysteryTypeId,
+                typeName: 'Mystery Module',
+                slotType: SlotType.low,
+                slotIndex: 0,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await harness.pumpScreen(tester, encounter: encounter);
+    await waitForPilotStatus(tester, 'Partial');
+
+    harness.scriptFittedCapture();
+    await tester.runAsync(() {
+      return harness.enrichmentService.captureCurrentPilotFit(
+        encounter,
+        confirmed: false,
+      );
+    });
+    await harness.disposeWidgets(tester);
+    await harness.pumpScreen(tester, encounter: encounter);
+    await waitForPilotStatus(tester, 'Inferred');
+    expect(importFit, findsOneWidget);
+    expect(useCurrentFit, findsOneWidget);
+
+    await harness.seedKnownSkills();
+    await harness.enrichmentService.importPilotFit(encounter, kAarSupportedEft);
+    await harness.disposeWidgets(tester);
+    await harness.pumpScreen(tester, encounter: encounter);
+    await waitForPilotStatus(tester, 'Complete');
+    expect(importFit, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'T24 save success stays truthful when derivation is delayed or fails',
+    (tester) async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      harness.derivationService.deriveEntered = Completer<void>();
+      harness.derivationService.allowDerive = Completer<void>();
+      await harness.pumpScreen(tester, encounter: encounter);
+      await openImportDialog(tester);
+      await submitImportDialog(tester, kAarSupportedEft);
+      await harness.waitFor(tester, find.text(kAarImportSuccessMessage));
+      expect(find.text(kAarImportSuccessMessage), findsOneWidget);
+      expect(pilotFitStatus('Complete'), findsNothing);
+      expect(find.text('0%'), findsNothing);
+      expect(
+        (await harness.repository.loadEnrichment(
+          encounter.id,
+        ))!.pilotFitEvidence,
+        isNotNull,
+      );
+      harness.derivationService.failWith = StateError('derive boom');
+      harness.derivationService.allowDerive!.complete();
+      await harness.waitFor(
+        tester,
+        find.text('Evidence assessment unavailable'),
+      );
+      expect(find.text(kAarImportSuccessMessage), findsOneWidget);
+      expect(pilotFitStatus('Complete'), findsNothing);
+      expect(find.text('Evidence assessment unavailable'), findsOneWidget);
+      expect(find.byKey(const Key('aar-analyze-button')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'T25 provenance banner uses the +10 rule and command-strip stays available',
+    (tester) async {
+      Future<int> attachOnCached({
+        required ParsedCombatEncounter encounter,
+        required int recorded,
+      }) async {
+        await harness.seedCachedReport(
+          encounter,
+          report:
+              CombatAarReport.fromLegacy(
+                summary: 'Cached summary',
+                mistakes: '',
+                improvements: '',
+                fits: '',
+              ).withEvidenceAtGeneration(
+                AarEvidenceSnapshot(
+                  score: recorded,
+                  band: AarEvidenceBand.low,
+                  capped: true,
+                  statuses: const {
+                    AarEvidenceDimension.pilotFit: AarEvidenceStatus.missing,
+                    AarEvidenceDimension.combatLog: AarEvidenceStatus.complete,
+                    AarEvidenceDimension.opponentIdentity:
+                        AarEvidenceStatus.missing,
+                    AarEvidenceDimension.opponentFit: AarEvidenceStatus.missing,
+                    AarEvidenceDimension.damageProfile:
+                        AarEvidenceStatus.unavailable,
+                  },
+                ),
+              ),
+        );
+        await harness.pumpScreen(tester, encounter: encounter);
+        await openImportDialog(tester);
+        await submitImportDialog(tester, kAarSupportedEft);
+        await harness.waitFor(tester, find.text(kAarImportSuccessMessage));
+        await waitForPilotStatus(tester, 'Partial');
+        return readScoreChip(tester);
+      }
+
+      final plusNine = await attachOnCached(
+        encounter: encounterWith(incomingEvents: 12),
+        recorded: 32,
+      );
+      expect(plusNine - 32, 9);
+      expect(find.byKey(const Key('aar-provenance-reanalyze')), findsNothing);
+      expect(
+        find.byKey(const Key('aar-command-strip-reanalyze')),
+        findsOneWidget,
+      );
+
+      await harness.disposeWidgets(tester);
+      final plusTen = await attachOnCached(
+        encounter: encounterWith(incomingEvents: 13),
+        recorded: 31,
+      );
+      expect(plusTen - 31, 10);
+      expect(find.byKey(const Key('aar-provenance-reanalyze')), findsOneWidget);
+      expect(
+        find.byKey(const Key('aar-command-strip-reanalyze')),
+        findsOneWidget,
+      );
+
+      await harness.disposeWidgets(tester);
+      await attachOnCached(
+        encounter: encounterWith(incomingEvents: 11),
+        recorded: plusNine,
+      );
+      expect(find.byKey(const Key('aar-provenance-reanalyze')), findsNothing);
+      expect(
+        find.byKey(const Key('aar-command-strip-reanalyze')),
+        findsOneWidget,
+      );
+
+      await harness.disposeWidgets(tester);
+      final legacy = encounterWith(incomingEvents: 10);
+      await harness.seedCachedReport(legacy);
+      await harness.pumpScreen(tester, encounter: legacy);
+      expect(find.text('Evidence at generation: not recorded'), findsOneWidget);
+      expect(
+        find.byKey(const Key('aar-command-strip-reanalyze')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'T28 attaching a fit updates pilot defense without changing incoming allocation',
+    (tester) async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      await harness.seedDefenseSde();
+      await harness.repository.saveEnrichment(
+        CombatEnrichment(
+          parsedEncounterId: encounter.id,
+          status: CombatEnrichmentStatus.logOnly,
+          source: CombatEnrichmentSource.none,
+          pilotFitEvidence: const FitEvidence(
+            role: FitEvidenceRole.pilot,
+            source: EvidenceSource.currentShipSnapshot,
+            confidence: EvidenceConfidence.reference,
+            fitting: Fitting(
+              id: 'bare-hull',
+              name: 'Bare',
+              shipTypeId: 587,
+              shipName: 'Rifter',
+            ),
+          ),
+        ),
+      );
+      await harness.pumpScreen(tester, encounter: encounter);
+      await harness.waitFor(
+        tester,
+        find.byKey(Key('aar-incoming-${encounter.id}-overview')),
+      );
+      expect(find.textContaining('T 1,200'), findsWidgets);
+      final aggregate = find.text('Aggregate defense (combined sources)');
+      await tester.ensureVisible(aggregate);
+      await tester.tap(aggregate);
+      await tester.pump();
+      expect(find.textContaining('EHP '), findsWidgets);
+      final beforeEhp = tester
+          .widget<Text>(find.textContaining('EHP ').first)
+          .data;
+
+      await openImportDialog(tester);
+      await submitImportDialog(tester, kAarMseEft);
+      await harness.waitFor(tester, find.text(kAarImportSuccessMessage));
+      await waitForPilotStatus(tester, 'Partial');
+      await tester.tap(find.text('Aggregate defense (combined sources)'));
+      await tester.pump();
+      expect(find.textContaining('T 1,200'), findsWidgets);
+      expect(find.textContaining('EHP '), findsWidgets);
+      final afterEhp = tester
+          .widget<Text>(find.textContaining('EHP ').first)
+          .data;
+      expect(afterEhp, isNot(beforeEhp));
+      expect(harness.codex.calls, 0);
+      expect(harness.discovery.fetches, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'T29 leaving the route during dialog, fetch, or save does not leak onto B',
+    (tester) async {
+      final encounterA = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      final encounterB = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+        incomingEvents: 3,
+        outgoingEvents: 3,
+      );
+      await harness.pumpScreen(tester, encounter: encounterA);
+      await openImportDialog(tester);
+      await harness.replaceEncounter(tester, encounter: encounterB);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Import Pilot Fit'), findsNothing);
+      expect(find.byType(SnackBar), findsNothing);
+
+      final releaseShip = Completer<void>();
+      harness.scriptFittedCapture(delayShip: releaseShip.future);
+      await harness.pumpScreen(tester, encounter: encounterA);
+      await tapUseCurrentFit(tester);
+      await harness.replaceEncounter(tester, encounter: encounterB);
+      releaseShip.complete();
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(tester.takeException(), isNull);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(await harness.repository.loadEnrichment(encounterB.id), isNull);
+      expect(
+        (await harness.repository.loadEnrichment(
+          encounterA.id,
+        ))?.parsedEncounterId,
+        encounterA.id,
+      );
+
+      harness.repository.mutationEntered = Completer<void>();
+      harness.repository.allowMutation = Completer<void>();
+      await harness.pumpScreen(tester, encounter: encounterA);
+      await openImportDialog(tester);
+      await submitImportDialog(tester, kAarSupportedEft);
+      await harness.repository.mutationEntered!.future;
+      await harness.replaceEncounter(tester, encounter: encounterB);
+      harness.repository.allowMutation!.complete();
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(tester.takeException(), isNull);
+      expect(find.text(kAarImportSuccessMessage), findsNothing);
+      expect(
+        (await harness.repository.loadEnrichment(
+          encounterA.id,
+        ))!.pilotFitEvidence,
+        isNotNull,
+      );
+      expect(await harness.repository.loadEnrichment(encounterB.id), isNull);
+    },
+  );
+
+  testWidgets('T31 loading and error checklist states keep Analyze available', (
+    tester,
+  ) async {
+    final encounter = encounterWith(
+      characterId: FitEvidenceHarness.characterAId,
+    );
+    final gate = Completer<AarEvidenceAssessment>();
+    await harness.pumpScreen(
+      tester,
+      encounter: encounter,
+      extraOverrides: [
+        aarEvidenceAssessmentProvider.overrideWith((ref, _) => gate.future),
+      ],
+    );
+    await harness.waitFor(
+      tester,
+      find.byKey(const Key('aar-evidence-skeleton')),
+    );
+    expect(find.text('Assessing evidence…'), findsOneWidget);
+    expect(find.byKey(const Key('aar-analyze-button')), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('aar-analyze-button')))
+          .onPressed,
+      isNotNull,
+    );
+    expect(find.byKey(const Key('aar-evidence-score-chip')), findsNothing);
+
+    await harness.disposeWidgets(tester);
+    await harness.pumpScreen(
+      tester,
+      encounter: encounter,
+      extraOverrides: [
+        aarEvidenceAssessmentProvider.overrideWith((ref, _) async {
+          throw StateError('assessment boom');
+        }),
+      ],
+    );
+    await harness.waitFor(tester, find.text('Evidence assessment unavailable'));
+    expect(find.text('Evidence assessment unavailable'), findsOneWidget);
+    expect(find.byKey(const Key('aar-analyze-button')), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('aar-analyze-button')))
+          .onPressed,
+      isNotNull,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'T32 dialog stays usable at 360px, desktop, 200% text, and keyboard',
+    (tester) async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      final longFit = StringBuffer('[Rifter, Long]\n');
+      for (var i = 0; i < 40; i++) {
+        longFit.writeln('Damage Control II');
+      }
+
+      Future<void> openAt({required Size size, double textScale = 1}) async {
+        await harness.pumpScreen(
+          tester,
+          encounter: encounter,
+          size: size,
+          textScale: textScale,
+        );
+        await openImportDialog(tester);
+        expect(tester.takeException(), isNull);
+        expect(find.widgetWithText(FilledButton, 'Import'), findsOneWidget);
+        expect(find.widgetWithText(TextButton, 'Cancel'), findsOneWidget);
+      }
+
+      await openAt(size: const Size(360, 800));
+      await tester.enterText(find.byType(TextField), longFit.toString());
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(find.text('Import Pilot Fit'), findsNothing);
+      expect(tester.takeException(), isNull);
+
+      await openAt(size: const Size(1400, 1200));
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pump();
+
+      await openAt(size: const Size(360, 800), textScale: 2);
+      await tester.enterText(find.byType(TextField), longFit.toString());
+      expect(tester.takeException(), isNull);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('T33 fit identity never shows Type # or raw numeric EVE ids', (
+    tester,
+  ) async {
+    final encounter = encounterWith(
+      characterId: FitEvidenceHarness.characterAId,
+    );
+    await harness.seedCachedReport(encounter);
+    await harness.seedUnrelatedEnrichment(encounter);
+    await harness.pumpScreen(tester, encounter: encounter);
+    await harness.waitFor(
+      tester,
+      find.byKey(const Key('aar-evidence-score-chip')),
+    );
+    await harness.waitFor(tester, find.text('Victim Ship'), pumps: 80);
+    expect(find.text('Victim Ship'), findsOneWidget);
+    expect(find.textContaining('Type #'), findsNothing);
+    expect(find.textContaining('Type #587'), findsNothing);
+    expect(find.textContaining('Type #2048'), findsNothing);
+    expect(find.textContaining('character 42'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'T35 open/import/capture/reload/expand do not call AI or discovery',
+    (tester) async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      harness.scriptFittedCapture();
+      await harness.pumpScreen(tester, encounter: encounter);
+      await openImportDialog(tester);
+      await submitImportDialog(tester, kAarSupportedEft);
+      await harness.waitFor(tester, find.text(kAarImportSuccessMessage));
+      await harness.reopen(tester, encounter: encounter);
+      final captureEncounter = encounterWith(incomingEvents: 14);
+      harness.scriptFittedCapture();
+      await harness.pumpScreen(tester, encounter: captureEncounter);
+      await tapUseCurrentFit(tester);
+      await harness.waitFor(tester, find.text(kAarCaptureSuccessMessage));
+      final overview = find.byKey(Key('aar-incoming-${encounter.id}-overview'));
+      if (overview.evaluate().isNotEmpty) {
+        await tester.tap(overview);
+        await tester.pump();
+      }
+      expect(harness.codex.calls, 0);
+      expect(harness.discovery.fetches, isEmpty);
+      expect(
+        harness.esiAdapter.requests.where(
+          (request) => request.uri.path.contains('/killmails/'),
+        ),
+        isEmpty,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'T36 evidence quality never disables Analyze and follows action policy',
+    (tester) async {
+      final encounter = encounterWith(
+        characterId: FitEvidenceHarness.characterAId,
+      );
+      await harness.pumpScreen(tester, encounter: encounter);
+      await waitForScoreChip(tester);
+      expect(importFit, findsOneWidget);
+      expect(useCurrentFit, findsOneWidget);
+      expect(find.text('Snapshot Current Fit'), findsNothing);
+      final analyze = tester.widget<FilledButton>(
+        find.byKey(const Key('aar-analyze-button')),
+      );
+      expect(analyze.onPressed, isNotNull);
+
+      harness.scriptFittedCapture();
+      await tester.runAsync(() {
+        return harness.enrichmentService.captureCurrentPilotFit(
+          encounter,
+          confirmed: false,
+        );
+      });
+      await harness.disposeWidgets(tester);
+      await harness.pumpScreen(tester, encounter: encounter);
+      await waitForPilotStatus(tester, 'Inferred');
+      expect(importFit, findsOneWidget);
+      expect(useCurrentFit, findsOneWidget);
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('aar-analyze-button')))
+            .onPressed,
+        isNotNull,
+      );
+
+      await harness.enrichmentService.importPilotFit(
+        encounter,
+        kAarSupportedEft,
+      );
+      await harness.disposeWidgets(tester);
+      await harness.pumpScreen(tester, encounter: encounter);
+      await waitForPilotStatus(tester, 'Partial');
+      expect(importFit, findsNothing);
+      expect(useCurrentFit, findsNothing);
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('aar-analyze-button')))
+            .onPressed,
+        isNotNull,
+      );
+
+      await harness.seedKnownSkills();
+      await harness.enrichmentService.importPilotFit(
+        encounter,
+        kAarSupportedEft,
+      );
+      await harness.pumpScreen(tester, encounter: encounter);
+      await waitForScoreChip(tester);
+      expect(importFit, findsNothing);
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('aar-analyze-button')))
+            .onPressed,
+        isNotNull,
+      );
+
+      final complete = AarEvidenceScorer.combine(
+        rows(
+          d1: AarEvidenceStatus.complete,
+          d2: AarEvidenceStatus.complete,
+          d3: AarEvidenceStatus.complete,
+          d4: AarEvidenceStatus.complete,
+          d5: AarEvidenceStatus.complete,
+        ),
+      );
+      expect(complete.score, 100);
+      expect(complete.collapsedByDefault, isTrue);
+      var collapsed = complete.collapsedByDefault;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                return AarEvidenceChecklistBody(
+                  assessment: complete,
+                  handlers: const AarEvidenceActionHandlers(),
+                  collapsed: collapsed,
+                  onToggle: () => setState(() => collapsed = !collapsed),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      expect(find.byKey(const Key('aar-evidence-row-pilotFit')), findsNothing);
+      await tester.tap(find.byKey(const Key('aar-evidence-toggle')));
+      await tester.pump();
+      expect(
+        find.byKey(const Key('aar-evidence-row-pilotFit')),
+        findsOneWidget,
       );
       expect(tester.takeException(), isNull);
     },

@@ -158,6 +158,14 @@ const kAarOtherShipItemId = 999999;
 const kAarOtherModuleItemId = 300001;
 const kAarShipBTypeId = 9020;
 const kAarShipBItemId = 100002;
+const kAarMseTypeId = 3831;
+const kAarRailgunTypeId = 2210;
+const kAarMysteryTypeId = 99999;
+
+const kAarMseEft = '''
+[Rifter, MSE Fit]
+Medium Shield Extender II
+''';
 
 Map<String, dynamic> aarAssetJson({
   required int itemId,
@@ -336,6 +344,93 @@ Future<void> seedAarImportSde(SdeDatabase sdeDb) async {
       attributeId: 263,
       value: 450,
     ),
+    SdeTypeAttributesCompanion.insert(typeId: 587, attributeId: 12, value: 3),
+    SdeTypeAttributesCompanion.insert(typeId: 587, attributeId: 13, value: 3),
+    SdeTypeAttributesCompanion.insert(typeId: 587, attributeId: 14, value: 4),
   ]);
   await sdeDb.setMetadata('dogma_version', '${SdeService.bundledDogmaVersion}');
+}
+
+Future<void> seedAarDefenseSde(SdeDatabase sdeDb) async {
+  await sdeDb.upsertGroups([
+    SdeGroupsCompanion.insert(
+      groupId: const Value(38),
+      groupName: 'Shield Extender',
+      categoryId: 7,
+    ),
+    SdeGroupsCompanion.insert(
+      groupId: const Value(55),
+      groupName: 'Projectile Weapon',
+      categoryId: 7,
+    ),
+  ]);
+  await sdeDb.upsertTypes([
+    SdeTypesCompanion.insert(
+      typeId: const Value(kAarMseTypeId),
+      typeName: 'Medium Shield Extender II',
+      groupId: 38,
+    ),
+    SdeTypesCompanion.insert(
+      typeId: const Value(kAarRailgunTypeId),
+      typeName: 'Railgun',
+      groupId: 55,
+    ),
+  ]);
+  await sdeDb.upsertTypeEffects([
+    SdeTypeEffectsCompanion.insert(typeId: kAarMseTypeId, effectId: 13),
+    SdeTypeEffectsCompanion.insert(typeId: kAarMseTypeId, effectId: 21),
+    SdeTypeEffectsCompanion.insert(typeId: kAarRailgunTypeId, effectId: 12),
+  ]);
+  await sdeDb.upsertTypeAttributes([
+    SdeTypeAttributesCompanion.insert(
+      typeId: kAarMseTypeId,
+      attributeId: 72,
+      value: 1100,
+    ),
+    SdeTypeAttributesCompanion.insert(
+      typeId: kAarMseTypeId,
+      attributeId: 983,
+      value: 7,
+    ),
+    SdeTypeAttributesCompanion.insert(
+      typeId: 587,
+      attributeId: 271,
+      value: 1.0,
+    ),
+    SdeTypeAttributesCompanion.insert(
+      typeId: 587,
+      attributeId: 274,
+      value: 0.8,
+    ),
+    SdeTypeAttributesCompanion.insert(
+      typeId: 587,
+      attributeId: 273,
+      value: 0.6,
+    ),
+    SdeTypeAttributesCompanion.insert(
+      typeId: 587,
+      attributeId: 272,
+      value: 0.5,
+    ),
+    SdeTypeAttributesCompanion.insert(
+      typeId: kAarRailgunTypeId,
+      attributeId: 114,
+      value: 0,
+    ),
+    SdeTypeAttributesCompanion.insert(
+      typeId: kAarRailgunTypeId,
+      attributeId: 116,
+      value: 0,
+    ),
+    SdeTypeAttributesCompanion.insert(
+      typeId: kAarRailgunTypeId,
+      attributeId: 117,
+      value: 12,
+    ),
+    SdeTypeAttributesCompanion.insert(
+      typeId: kAarRailgunTypeId,
+      attributeId: 118,
+      value: 0,
+    ),
+  ]);
 }
