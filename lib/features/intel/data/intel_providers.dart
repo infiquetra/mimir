@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mimir/core/di/providers.dart';
 import '../../../core/network/esi_client.dart';
 import '../../characters/data/character_repository.dart';
+import '../../exploration/data/eve_scout_feed_repository.dart';
+import '../../exploration/data/eve_scout_transport.dart';
+import '../../exploration/domain/eve_scout_normalizer.dart';
 import '../domain/killmail_models.dart';
 import '../domain/thera_models.dart';
 import 'eve_scout_client.dart';
@@ -32,14 +35,55 @@ final intelConfigProvider = StreamProvider.autoDispose<List<dynamic>>((ref) {
   return repo.watchConfig();
 });
 
+final eveScoutTransportProvider = Provider<EveScoutTransport>((ref) {
+  return HttpEveScoutTransport();
+});
+
+final eveScoutFeedRepositoryProvider = Provider<EveScoutFeedRepository>((ref) {
+  return EveScoutFeedRepository(
+    database: ref.watch(databaseProvider),
+    transport: ref.watch(eveScoutTransportProvider),
+  );
+});
+
 final eveScoutClientProvider = Provider<EveScoutClient>((ref) {
-  return EveScoutClient();
+  return EveScoutClient(
+    transport: ref.watch(eveScoutTransportProvider),
+    repository: ref.watch(eveScoutFeedRepositoryProvider),
+  );
 });
 
 final theraConnectionsProvider =
     FutureProvider.autoDispose<List<TheraConnection>>((ref) async {
-      final client = ref.watch(eveScoutClientProvider);
-      return client.getTheraConnections();
+      final repository = ref.watch(eveScoutFeedRepositoryProvider);
+      var snapshot = await repository.readAccepted();
+      snapshot ??= await () async {
+        await repository.refresh();
+        return repository.readAccepted();
+      }();
+      if (snapshot == null) return const [];
+      return [
+        for (final connection in snapshot.records)
+          if (connection.hub.systemId == EveScoutNormalizer.theraSystemId)
+            TheraConnection(
+              id: connection.providerKey,
+              whType: connection.whType ?? '',
+              maxShipSize: connection.shipSize.name,
+              expiresAt:
+                  connection.expiresAt ??
+                  DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+              remainingHours: 0,
+              outSystemId: connection.hub.systemId,
+              outSystemName: connection.hub.systemName,
+              outSignature: connection.hub.signature ?? '',
+              inSystemId: connection.far.systemId,
+              inSystemClass: '',
+              inSystemName: connection.far.systemName,
+              inRegionId: 0,
+              inRegionName: '',
+              inSignature: connection.far.signature ?? '',
+            ),
+      ];
     });
 
 /// Resolves a solar-system name to a watch-list target, offline-first: the

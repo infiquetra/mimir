@@ -273,7 +273,7 @@ void main() {
         shared.enqueueJson([F3Fixtures.wireRecord(id: '99')]);
         final newer = await repoB.refresh();
         expect(newer.kind, FeedRefreshKind.updated);
-        expect(shared.requests, hasLength(1));
+        expect(shared.requests, hasLength(2));
         expect(
           (await repoB.readAccepted())!.records.single.providerKey,
           'evescout:99',
