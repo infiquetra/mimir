@@ -1,8 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_damage_matchup.dart';
 import 'package:mimir/features/combat_analyzer/domain/combat_damage_profile.dart';
+import 'package:mimir/features/combat_analyzer/domain/incoming_damage_allocation.dart';
+import 'package:mimir/features/combat_analyzer/domain/incoming_damage_matchup.dart';
 import 'package:mimir/features/combat_analyzer/domain/tank_classifier.dart';
 import 'package:mimir/features/fitting/domain/models.dart';
+
+import '../fixtures/attacker_matchup_fixtures.dart';
 
 void main() {
   group('CombatDamageMatchupAnalyzer', () {
@@ -359,5 +363,67 @@ void main() {
       expect(decoded.entries.single.appliedPercent, isNull);
       expect(decoded.primaryHole, 'EM');
     });
+  });
+
+  group('CombatDamageMatchupAnalyzer.analyzeIncoming', () {
+    test('D15 incoming oracle matches Fixture A Kite q and EHP', () {
+      final kite = CombatDamageMatchupAnalyzer.analyzeIncoming(
+        components: IncomingDamageVector(
+          em: DamageQuantity.fromInt(4500),
+          thermal: DamageQuantity.fromInt(0),
+          kinetic: DamageQuantity.fromInt(1500),
+          explosive: DamageQuantity.fromInt(0),
+        ),
+        defense: fixtureADefense,
+        tank: fixtureATank,
+        pilotFitKey: 'fit-a',
+      );
+      expect(kite.status, IncomingDefenseStatus.available);
+      expect(kite.ehp!.total, closeTo(1176.470588, 1e-6));
+      expect(kite.primaryHole, IncomingDamageType.em);
+      expect(kite.omniEhp!.total, closeTo(1333.333333, 1e-6));
+    });
+
+    test(
+      'legacy analyze outgoing behavior is unchanged by incoming entry point',
+      () {
+        final outgoing = CombatDamageMatchupAnalyzer.analyze(
+          profile: const CombatDamageProfile(
+            totalProfiledDamage: 1000,
+            unknownWeapons: [],
+            entries: [
+              CombatDamageTypeEstimate(
+                type: 'Kinetic',
+                amount: 700,
+                percent: 0.7,
+                confidence: CombatDamageConfidence.sdeExact,
+                source: 'Scourge Rocket',
+                evidence: 'SDE damage attributes',
+              ),
+              CombatDamageTypeEstimate(
+                type: 'Explosive',
+                amount: 300,
+                percent: 0.3,
+                confidence: CombatDamageConfidence.sdeExact,
+                source: 'Nova Rocket',
+                evidence: 'SDE damage attributes',
+              ),
+            ],
+          ),
+          defense: const DefenseProfile(
+            shieldHp: 1000,
+            shieldResists: ResistProfile(
+              em: 0,
+              thermal: 20,
+              kinetic: 70,
+              explosive: 10,
+            ),
+          ),
+          targetLabel: 'Condor',
+        );
+        expect(outgoing.entries, hasLength(2));
+        expect(outgoing.primaryHole, isNot(isA<IncomingDamageType>()));
+      },
+    );
   });
 }
