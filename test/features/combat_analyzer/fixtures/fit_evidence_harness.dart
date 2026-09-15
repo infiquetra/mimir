@@ -43,6 +43,7 @@ import 'package:mimir/features/combat_analyzer/presentation/analysis_multipane_s
 import 'package:mimir/features/skills/data/skill_repository.dart';
 import 'package:mimir/features/wallet/data/wallet_providers.dart';
 
+import 'aar_comparison_fixtures.dart';
 import 'aar_fit_import_fixtures.dart';
 
 /// Real-storage AAR fit-evidence test harness.
@@ -56,7 +57,10 @@ class FitEvidenceHarness {
   static const int characterBId = 99;
   static const String characterAName = 'Pilot';
   static const String characterBName = 'Other Pilot';
-  static DateTime clock() => DateTime.utc(2026, 9, 15, 12);
+  static DateTime defaultClock() => DateTime.utc(2026, 9, 15, 12);
+
+  /// Injected clock. Tests may replace this before [setUp].
+  DateTime Function() clock = defaultClock;
 
   late final AppDatabase appDb;
   late final SdeDatabase sdeDb;
@@ -170,7 +174,10 @@ class FitEvidenceHarness {
 
   Future<void> seedMinimalSde() async {
     await seedAarImportSde(sdeDb);
+    await seedComparisonSde(sdeDb);
   }
+
+  Future<void> seedComparisonFixtures() => seedComparisonSde(sdeDb);
 
   Future<void> seedCharacters() async {
     final expiry = clock().add(const Duration(days: 30));
@@ -241,7 +248,38 @@ class FitEvidenceHarness {
         );
   }
 
+  /// Default test overrides pin the enrichment service and finite SDE/skill
+  /// streams so widget teardown cannot deadlock NativeDatabase.close.
   List<Override> overrides() {
+    return _overrides(
+      pinEnrichmentService: true,
+      pinFiniteRevisionStreams: true,
+    );
+  }
+
+  /// Production-provider-composition variant. Does not override
+  /// [combatEnrichmentServiceProvider], [aarSdeRevisionProvider], or
+  /// [aarLocalSkillsProvider], so live revision/publication watches stay
+  /// wired. Callers must dispose the ProviderScope, then the ESI watch,
+  /// then close databases — a live SDE `tableUpdates` watch plus
+  /// NativeDatabase.close can deadlock.
+  List<Override> productionCompositionOverrides() {
+    return _overrides(
+      pinEnrichmentService: false,
+      pinFiniteRevisionStreams: false,
+    );
+  }
+
+  static const pinnedLiveSeams = {
+    'combatEnrichmentServiceProvider',
+    'aarSdeRevisionProvider',
+    'aarLocalSkillsProvider',
+  };
+
+  List<Override> _overrides({
+    required bool pinEnrichmentService,
+    required bool pinFiniteRevisionStreams,
+  }) {
     return [
       databaseProvider.overrideWithValue(appDb),
       sdeDatabaseProvider.overrideWithValue(sdeDb),
@@ -256,7 +294,8 @@ class FitEvidenceHarness {
       esiClientProvider.overrideWithValue(esiClient),
       combatEnrichmentRepositoryProvider.overrideWithValue(repository),
       combatKillmailDiscoveryClientProvider.overrideWithValue(discovery),
-      combatEnrichmentServiceProvider.overrideWithValue(enrichmentService),
+      if (pinEnrichmentService)
+        combatEnrichmentServiceProvider.overrideWithValue(enrichmentService),
       combatFitDerivationServiceProvider.overrideWithValue(derivationService),
       combatDamageProfileResolverProvider.overrideWithValue(damageResolver),
       combatAnalysisServiceProvider.overrideWithValue(analysisService),
@@ -265,16 +304,18 @@ class FitEvidenceHarness {
       ),
       skillRepositoryProvider.overrideWithValue(skillRepository),
       codexAnalysisClientProvider.overrideWithValue(codex),
-      aarSdeRevisionProvider.overrideWith(
-        (ref) => Stream<AarSdeRevision>.value(sdeRevision),
-      ),
-      aarLocalSkillsProvider.overrideWith((ref, characterId) {
-        return Stream<List<dynamic>>.fromFuture(
-          skillRepository
-              .getCharacterSkills(characterId)
-              .then(List<dynamic>.from),
-        );
-      }),
+      if (pinFiniteRevisionStreams) ...[
+        aarSdeRevisionProvider.overrideWith(
+          (ref) => Stream<AarSdeRevision>.value(sdeRevision),
+        ),
+        aarLocalSkillsProvider.overrideWith((ref, characterId) {
+          return Stream<List<dynamic>>.fromFuture(
+            skillRepository
+                .getCharacterSkills(characterId)
+                .then(List<dynamic>.from),
+          );
+        }),
+      ],
       itemNameProvider.overrideWith((ref, id) async {
         return switch (id) {
           587 => 'Rifter',
@@ -287,7 +328,7 @@ class FitEvidenceHarness {
           9020 => 'UniqueShip',
           kAarMseTypeId => 'Medium Shield Extender II',
           kAarRailgunTypeId => 'Railgun',
-          _ => 'Unknown Item',
+          _ => kCmpTypeNames[id] ?? 'Unknown Item',
         };
       }),
     ];
@@ -357,16 +398,20 @@ class FitEvidenceHarness {
     return appDb.setActiveCharacter(characterId);
   }
 
-  Future<void> seedKnownSkills({int characterId = characterAId}) {
+  Future<void> seedKnownSkills({
+    int characterId = characterAId,
+    Map<int, int> levels = const {3300: 5},
+  }) {
     return appDb.replaceCharacterSkills(characterId, [
-      CharacterSkillsCompanion.insert(
-        characterId: characterId,
-        skillId: 3300,
-        trainedSkillLevel: 5,
-        activeSkillLevel: 5,
-        skillpointsInSkill: 256000,
-        lastUpdated: clock(),
-      ),
+      for (final entry in levels.entries)
+        CharacterSkillsCompanion.insert(
+          characterId: characterId,
+          skillId: entry.key,
+          trainedSkillLevel: entry.value,
+          activeSkillLevel: entry.value,
+          skillpointsInSkill: 256000,
+          lastUpdated: clock(),
+        ),
     ]);
   }
 
