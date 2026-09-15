@@ -29,6 +29,48 @@
 
 ---
 
+### 2026-09-14
+
+### Combat logs name the displayed entity, not the pilot
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** When correlating combat-log `incomingBySource` actors with killmail attackers, combat logs record whatever entity string was displayed by the EVE client. For NPCs, this is an entity type name ("Serpentis Watchman", "Sansha Sentry"), while for players it is either the character name or ship type name depending on client settings and sensor brackets.
+**Evidence.** Inspection of real and fixture combat logs (`test/features/combat_analyzer/fixtures/attacker_correlation_fixtures.dart`) and CCP client logging formats.
+**Mechanism.** The EVE client's combat event text renders the bracket text of the source. If the attacker is an NPC or structure, no character exists; the string matches SDE Category 11 (Entity) or Category 2 (Celestial) / 20 (Deployable). Without local NPC classification, unresolvable entity names default to `player` and risk false-positive correlation against killmail player participants.
+**Fix (or queued).** Bundled Category 11 entity names in the local SDE. `CombatActorClassifier` checks `npc` (Category 11) ahead of `player` or `shipType`. NPC damage is partitioned into `npcIncomingDamage` and never correlated to players.
+**Generalizable rule.** Client logs represent UI display strings, not canonical entity identifiers. Any pipeline mapping display strings to domain entities must classify the display modality (entity vs pilot vs hull) before attempting identity attribution.
+**Refs.** docs/specs/aar-zkill-attacker-correlation-design.md §0 C1, §2.1; `lib/features/combat_analyzer/domain/combat_actor_classifier.dart`.
+
+### Killmails expose victim fits only (loss fights cannot infer attacker fits)
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** In combat analysis for own-loss fights, multiple attackers may participate on the killmail and correlate to combat log damage sources. It is tempting to attempt fit inference or opponent matchup derivation for correlated attackers.
+**Evidence.** ESI killmail schema (`/killmails/{killmail_id}/{killmail_hash}/`) specifies `victim.items` containing dropped and destroyed modules, but attacker records provide only `character_id`, `ship_type_id`, `weapon_type_id`, and `damage_done`.
+**Mechanism.** Killmails are recorded from the wreckage of the destroyed ship; CCP's server logs the victim's inventory state at the moment of destruction. Attackers survive the encounter and their ships/modules are never exposed in the killmail payload.
+**Fix (or queued).** Enforced strict boundary: correlated attackers display known hull types with a mandatory disclaimer (`aar-attackers-fits-note`: "Attacker fits are not exposed by killmails; hulls shown are ship types only."). Opponent fit dimension D4 remains `Unavailable` on loss fights, preserving Invariant I1 (`Missing ⇔ actionable`). Queued P3 for doctrine reference fits.
+**Generalizable rule.** Acknowledge asymmetric data availability in security/combat intelligence. Do not fabricate or upgrade confidence on unobserved entities; state hull boundaries explicitly.
+**Refs.** docs/specs/aar-zkill-attacker-correlation-design.md §0 C10, §4.1; `lib/features/combat_analyzer/domain/aar_evidence_scorer.dart`.
+
+### The SDE bundle is scoped by consumer: new consumers must audit categories first
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** When designing the pure domain `CombatActorClassifier`, it was assumed that `SdeService.searchTypesByName('Serpentis Watchman')` would return the NPC entity from the bundled database. At runtime, the query returned empty, causing NPCs to classify as `player`.
+**Evidence.** Auditing `scripts/sde/generate_dogma_sde.py` revealed that `TARGET_CATEGORIES` only bundled categories `{6, 7, 8, 16, 18, 20, 22, 32, 87}` (ships, modules, charges, drones, deployables, etc.) with `published == 1`. Category 11 (Entity: NPCs, sentries, pirates) was completely omitted, and most NPCs have `published == 0` in CCP's database.
+**Mechanism.** SDE bundling was originally optimized for Fitting and Dogma simulation, including only published item types with dogma attributes. When Combat Analyzer added actor classification, it became a new consumer with different category and publication requirements.
+**Fix (or queued).** Added `NAME_ONLY_CATEGORIES = {11}` to `generate_dogma_sde.py` that ignores the `published` filter and emits only `{typeId, typeName, groupId}` without attributes or dogma. Bumped `bundledDogmaVersion = 3` (+0.77 MB asset growth).
+**Generalizable rule.** Bundled static data is bespoke to its consumers. Whenever a new feature relies on static entity resolution, audit the inclusion allowlists and publication filters before writing domain classifiers.
+**Refs.** docs/specs/aar-zkill-attacker-correlation-design.md §0 C1, §4.5; `scripts/sde/generate_dogma_sde.py`; `lib/core/sde/sde_service.dart`.
+
+### `toJson` writing a field that `fromJson` ignores causes silent cache data loss
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** In Milestone 2/3, `EsiKillmailAttacker.toJson()` serialized `character_name`, which was stored in the Drift database JSON column for cached killmails. When re-loading enrichments from cache, however, attacker names were missing.
+**Evidence.** Checking `EsiKillmailAttacker.fromJson()` showed it parsed `character_id`, `ship_type_id`, `damage_done`, but never read `json['character_name']`. Round-trip deserialization silently dropped names, causing cached correlations to lose name-matching signals and degrade to damage-only scoring.
+**Mechanism.** Asymmetry between serializer and deserializer creates silent data loss on read that unit tests using mock objects (rather than serialized/deserialized models) fail to detect.
+**Fix (or queued).** Updated `EsiKillmailAttacker.fromJson` and `EsiKillmailVictim.fromJson` to read `character_name` and `faction_id`. Added explicit JSON round-trip tests for persisted domain models (Group E / D.7).
+**Generalizable rule.** Every persisted entity model must have automated JSON round-trip tests asserting that `Model.fromJson(jsonDecode(jsonEncode(model.toJson())))` is deep-equal to the original.
+**Refs.** docs/specs/aar-zkill-attacker-correlation-design.md §0 C2, §3.1; `lib/core/network/esi_client.dart`; `test/core/network/esi_client_test.dart`.
+
 ### 2026-09-11
 
 ### EVE combat logs carry no engagement range (structural limit vs missing evidence)

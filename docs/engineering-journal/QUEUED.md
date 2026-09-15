@@ -77,18 +77,14 @@ enrichment storage together.
 `test/features/combat_analyzer/domain/combat_fit_snapshot_mapper_test.dart`;
 `.codex/plans/2026-05-21-combat-analyzer-aar.md`.
 
-### Correlate zKill attackers with combat-log actors
+### Per-attacker incoming damage profile and matchup
 
-**Author.** Codex
+**Author.** Antigravity / Lead Orchestrator
 **Priority.** P2
-**Effort.** One to two days.
-**Worth it when.** AARs frequently include multiple opponents or when the same
-named actor appears across combat logs and killmails.
-**Context.** Killmails expose attackers, ships, weapons, and damage done. The
-combat log exposes local observed actors and timings. Correlating those sources
-can reduce opponent-fit unknowns and make ship-vs-ship diagrams more useful.
-**Refs.** `lib/features/combat_analyzer/domain/combat_killmail_matcher.dart`;
-`lib/features/combat_analyzer/domain/combat_killmail_fit_mapper.dart`.
+**Effort.** Two to three days.
+**Worth it when.** Users want to see individual weapon profiles, hole pressure, and EHP calculations against specific fleet attackers rather than solely the aggregate blend.
+**Context.** Shipped Milestone 4 correlates each combat-log actor with their killmail participant and warns when the aggregate incoming profile is a blend across multiple attackers (`aar-matchup-blend-advisory`). De-aggregating the combat log into per-attacker damage profiles will enable discrete matchup cards per confirmed/probable attacker.
+**Refs.** docs/specs/aar-zkill-attacker-correlation.md D4; docs/specs/aar-zkill-attacker-correlation-design.md §10; `lib/features/combat_analyzer/domain/combat_attacker_correlation.dart`.
 
 ### Fit comparison visuals for AAR reports
 
@@ -104,6 +100,33 @@ bill-of-materials style recommendations.
 `lib/features/fitting/presentation/widgets/fitting_editor.dart`.
 
 ## P3 - Nice To Have
+
+### Reference fits for correlated hulls
+
+**Author.** Antigravity / Lead Orchestrator
+**Priority.** P3
+**Effort.** One to two days.
+**Worth it when.** A fight has correlated opponent attacker hulls (whose actual modules are unexposed by killmails on a loss) and users want baseline doctrine reference fits to model opponent DPS and tracking.
+**Context.** Killmails expose only the victim's fit. Attackers have known hull type IDs (`shipTypeId`), but no module telemetry. Bundling archetypal reference fits per hull enables estimated matchup derivation for loss fights with explicit "reference" confidence labeling.
+**Refs.** docs/specs/aar-zkill-attacker-correlation.md §11; docs/specs/aar-zkill-attacker-correlation-design.md §10.
+
+### ESI inventory_type name resolution fallback for combat-log actors
+
+**Author.** Antigravity / Lead Orchestrator
+**Priority.** P3
+**Effort.** One day.
+**Worth it when.** Combat encounters involve unusual NPC or deployable entity names not captured in bundled SDE category 11.
+**Context.** Milestone 4 bundles SDE Category 11 entity names locally to classify NPCs without network I/O. If a future CCP expansion introduces unpublished or unbundled entities, falling back to ESI `/universe/names/` ensures they do not fall back to `player`.
+**Refs.** docs/specs/aar-zkill-attacker-correlation-design.md §10; `lib/features/combat_analyzer/domain/combat_actor_classifier.dart`.
+
+### Drone-named combat-log actor classification
+
+**Author.** Antigravity / Lead Orchestrator
+**Priority.** P3
+**Effort.** Half a day.
+**Worth it when.** Encounters contain heavy drone damage where combat log actors appear under drone names (e.g. "Valkyrie II", "Hobgoblin I") and users want automatic attribution to the launching player.
+**Context.** Currently drone actors are categorized by ship/entity rules or fall through to `player`/`unnamed`. Mapping drone types to launching participants via killmail weapon type IDs or drone groups will attribute drone damage directly to their pilot.
+**Refs.** docs/specs/aar-zkill-attacker-correlation-design.md §10.
 
 ### Weight recalibration from [AAR.EVIDENCE] score distributions
 

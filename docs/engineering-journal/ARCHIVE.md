@@ -9,6 +9,19 @@
 
 ---
 
+### SHIPPED 2026-09-14: Correlate zKill Attackers with Combat-Log Actors
+
+**Author.** Antigravity / Lead Orchestrator
+**Shipped as.** Implemented multi-signal correlation between local combat-log actors (`incomingBySource`) and killmail participants (attackers and victim) in Combat Analyzer:
+- Bundled category 11 (Entity) type names in SDE with `bundledDogmaVersion = 3` (+0.77 MB asset growth) enabling pure local NPC classification so NPC actors land in NPC buckets and never mistakenly correlate to players.
+- Pure domain pipeline: `CombatActorClassifier` (exact normalized matching, class priority: NPC > shipType > ambiguous > player > unnamed), `CombatAttackerCorrelator` with 6 weighted signals (`name: 0.75`, `ship: 0.30`, `weapon: 0.20`, `damage: 0.20`, `timing: 0.15`, `sole: 0.10`), ceilings/caps (`shipType` capped at `probable`), and 0.10 `ambiguityMargin`.
+- Strictly enforced damage invariant: `correlatedIncomingDamage + unattributedIncomingDamage + npcIncomingDamage == totalIncomingDamage` (`accountsForAllDamage`).
+- Preserved JSON caching integrity: parsed `character_name` and `faction_id` in `EsiKillmailAttacker/Victim.fromJson`, persisting `attackerCorrelation` on `CombatEnrichment`.
+- Lazy backfill on cached enrichments: `ensureAttackerCorrelation` in `CombatEnrichmentService` and stage 4 analysis pipeline writes once without hot-looping or failing enrichment.
+- D3 opponent identity detail suffix: enumerates correlated attackers and confidence levels with loss fight hulls-known / fits-not-exposed disclaimer, preserving Invariant I1 and score weights.
+- Presentation: `AarAttackerCorrelationSection` and `AarAttackerCorrelationBody` with confidence badges, `itemNameProvider` ship resolution, expandable toggle for uncorrelated killmail participants, distinct NPC/unattributed buckets, `AarMatchupSection` blend advisory when $\ge 2$ attackers correlate, and clean replacement of legacy `Incoming Sources` breakdown.
+**Refs.** LEARNINGS 2026-09-14; DECISIONS 2026-09-14; QUEUED.md; docs/specs/aar-zkill-attacker-correlation.md; docs/specs/aar-zkill-attacker-correlation-design.md; .agents/plans/2026-09-11-aar-zkill-attacker-correlation.md.
+
 ### SHIPPED 2026-09-11: AAR evidence completeness score and pre-analysis checklist
 
 **Author.** Antigravity / Lead Orchestrator

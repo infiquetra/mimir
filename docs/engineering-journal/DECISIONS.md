@@ -24,6 +24,25 @@
 
 ---
 
+### 2026-09-14
+
+### Attacker correlation architecture, signal weights, participant pool, and UI placement (commit: 3ab988a)
+
+**Author.** Antigravity / Lead Orchestrator
+**Decision.**
+1. **Replace Incoming Sources breakdown (D5):** Remove the redundant `_BreakdownSection(title: 'Incoming Sources', ...)` in `AnalysisMultiPaneScreen` and replace it with `AarAttackerCorrelationSection(encounter)`. When correlation is null or unperformed, the section falls back to rendering the same plain actor rows with the title `Incoming Sources`.
+2. **Names-only Category 11 bundling in SDE (D6):** Bundle EVE SDE Category 11 (Entity) type names without published filtering or dogma attributes (`NAME_ONLY_CATEGORIES = {11}`). Bump `bundledDogmaVersion = 3` (+0.77 MB asset growth). This enables exact local SDE normalization and classification of NPC combat-log actors without introducing network calls or SDE bloat.
+3. **Corrected signal weights and confidence thresholds (D7):** Calibrate multi-signal weights to `name: 0.75`, `ship: 0.30`, `weapon: 0.20`, `damage: 0.20`, `timing: 0.15`, `sole: 0.10` with confidence thresholds `Confirmed >= 0.75`, `Probable >= 0.50`, `Possible >= 0.30`, and `ambiguityMargin: 0.10`. Damage ratio tiers award full weight (+0.20) at $\ge 0.60$ and half weight (+0.10) at $\ge 0.35$. Cap shipType actors at `Probable` (never `Confirmed`).
+4. **Participant pool includes the victim and excludes the user (D8):** Form the participant pool as `attackers ∪ victim \ {user}`. On a kill, incoming combat-log damage was inflicted by the killmail victim, not the attackers. The victim participant has `damageDone = null` and cannot score on damage.
+**Rejected alternatives.**
+- Displaying both Incoming Sources and Attacker Correlation on the Damage tab: Rejected because competing lists of the same actors create visual confusion and duplicate rankings.
+- Hard-coding regex patterns or heuristics for NPC names: Rejected because EVE's NPC name taxonomy is large and irregular; only local SDE lookup provides sound classification.
+- Using 0.60/0.25 printed spec weights: Rejected because name alone would fail to reach Confirmed, ship+damage would fail to reach Probable, and solo kill scenario S1 would fail to reach 0.85.
+- Attacker-only participant pool: Rejected because incoming damage on kills would be completely uncorrelatable.
+**Rationale.** Establishes an attribution framework grounded in ground-truth combat logs and verified killmails. Enforces strict damage accounting (`correlated + unattributed + npc == totalIncomingDamage`) while preventing fabricated or ungrounded correlations.
+**Revisit when.** Per-attacker damage profiles or ESI `inventory_type` fallbacks are introduced.
+**Refs.** LEARNINGS 2026-09-14; ARCHIVE SHIPPED 2026-09-14; docs/specs/aar-zkill-attacker-correlation.md; docs/specs/aar-zkill-attacker-correlation-design.md; .agents/plans/2026-09-11-aar-zkill-attacker-correlation.md.
+
 ### 2026-09-11
 
 ### AAR evidence completeness score, provenance snapshot, and pre-analysis gate (commit: 506a371)
