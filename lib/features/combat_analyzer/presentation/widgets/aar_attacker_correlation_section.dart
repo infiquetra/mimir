@@ -332,8 +332,9 @@ class _AarAttackerCorrelationBodyState
     if (characterName != null && characterName.isNotEmpty) {
       return characterName;
     }
-    if (participant.shipTypeId != null)
+    if (participant.shipTypeId != null) {
       return 'Type #${participant.shipTypeId}';
+    }
     return participant.key;
   }
 
