@@ -17,6 +17,8 @@
 ///   identity still falls back, reference promoted as fight fit.
 /// Harness F1–F5 SDE mapping, injected clock, and production
 /// composition pin-omission start green.
+library;
+
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
