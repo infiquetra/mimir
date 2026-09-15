@@ -26,6 +26,32 @@
 
 ## 2026-09-15
 
+### Exploration uses versioned data, scoped transactions and tuple routing
+
+**Author.** Technical Architect.
+**Decision.** Adopt the [Exploration technical design](../specs/exploration-module-design.md):
+SDE7 validated exploration slice and AppDatabase21 scoped tables; millisecond
+timestamps; a fenced SQLite request lease shared with Intel; explicit notebook
+episodes, revision-checked imports and durable operation receipts; exact tuple-cost
+Dijkstra over directed gates and eligible wormholes. Add window ID14 and adaptive
+module navigation without a global shell migration. Keep reference readiness,
+public observations and derived route eligibility separate.
+**Rejected alternatives.** Provider-local refresh locks across independent engines;
+partial feed acceptance; default-second timestamps for millisecond boundaries;
+signature-code ownership across retired episodes; first-visit BFS or scalar
+highsec penalties; persisting calculated routes as current.
+**Rationale.** Provenance, time, scope and request ordering are independent dimensions.
+SQLite is the durable authority; events only prompt rereads. Formula-free views
+consume qualified snapshots, and stale Current origins require explicit action.
+**Revisit when.** Upstream contracts add authoritative observations, a different
+window/database transport is adopted, or separately approved mapper integration
+changes ownership. Any change preserves Product acceptance behavior or revises it
+explicitly first.
+**Refs.** [Product](../specs/exploration-module.md),
+[queued implementation](QUEUED.md#exploration-module),
+[checkpoint](../../.codex/checkpoints/2026-09-15-exploration-module-design.md).
+Documentation delivery only; executable tests and feature shipment remain pending.
+
 ### Exploration uses a dedicated window and explicit observation freshness
 
 **Author.** Product.

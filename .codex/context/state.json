@@ -1,29 +1,31 @@
 {
-  "last_updated": "2026-09-15T20:26:39Z",
+  "last_updated": "2026-09-15T21:01:11Z",
   "current_work": {
-    "task": "Exploration Module: authoritative Product specification",
+    "task": "Exploration Module: authoritative technical architecture and design",
     "phase": "complete",
     "progress": "100%",
     "baseline": "aec65c6",
+    "product_commit": "287c8e7",
     "branch": "feature/exploration-module",
-    "plan": ".codex/plans/2026-09-15-exploration-module-product.md",
-    "deliverable": "docs/specs/exploration-module.md",
-    "checkpoint": ".codex/checkpoints/2026-09-15-exploration-module-product.md",
+    "plan": ".codex/plans/2026-09-15-exploration-module-design.md",
+    "deliverable": "docs/specs/exploration-module-design.md",
+    "checkpoint": ".codex/checkpoints/2026-09-15-exploration-module-design.md",
     "next_steps": [
-      "Plan designs and estimates phases 4a-4d, including the offline universe and gate foundation",
-      "Test-Author implements F1-F8 fixtures and D01-D24, P01-P18, U01-U18 with full AC traceability",
-      "Implement the user-selected tray-launched Exploration window with four adaptive module views",
+      "Plan assigns X0-X10 owners and dependencies from technical design section 7",
+      "Test-Author creates RED F1-F8 and T01-T60 cases preserving Product D/P/U identifiers",
+      "Dev implements and Reviewer/Tester validate real storage, native host, offline and race contracts",
       "Implementation and tester signoff remain pending; prior AAR initiatives are shipped"
     ]
   },
   "validation": {
-    "independent_review": "two independent specification reviews passed; all findings resolved",
-    "structure": "8 requested sections; S1-S9; R1-R32; AC1-AC40; F1-F8; 60 D/P/U cases with traceability",
-    "checks": "live public API and primary SDE inspection; 12 route oracles; effect vectors; unit/resonance arithmetic; JSON examples; local links; table structure; whitespace",
+    "independent_review": "two independent architecture reviews passed; all material findings resolved",
+    "structure": "9 requested sections; X0-X10; all AC1-AC40; T01-T60 bijection to Product D/P/U cases; 22 test file keys; S1-S9",
+    "checks": "code/API grounding; all Product AC-case associations; 12 documentation route oracles; local links/anchors; table structure; whitespace and staged scope",
     "runtime_tests": "not run; documentation-only delivery"
   },
   "open_issues": [
-    "Feature architecture, implementation and tester verification pending",
+    "Implementation and executable tester verification pending",
+    "X1 must generate full pinned reference manifest counts/checksums and ship the complete artifact",
     "Per-system statics require a separate sourced dataset or explicit Unavailable state",
     "Public feed has no mass status; expose Unknown and preserve source freshness limits"
   ]

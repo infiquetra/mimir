@@ -1,4 +1,41 @@
-# Project: Mimir — Exploration Module Product specification
+# Project: Mimir — Exploration Module technical architecture
+Date: 2026-09-15
+Checkpoint: 2026-09-15-exploration-module-design
+
+## Overview
+
+Write and commit the authoritative nine-section technical design grounded in
+Product `287c8e7` and application baseline `aec65c6`. Implementation is separate.
+
+## Tasks
+
+- [x] Read the complete Product contract and all 60 test cases.
+- [x] [P1] Ground SDE/routing, window/storage and network/notebook seams.
+- [x] [SEQ] Define models, migrations, shared refresh, algorithms and presentation.
+- [x] [SEQ] Specify work units and complete AC/test traceability.
+- [x] [P2] Independently review and validate the documentation.
+- [x] [SEQ] Update journal/README and preserve implementation-pending status.
+- [x] [CHECKPOINT] Save handoff and commit documentation.
+
+## Notes
+
+[Canonical plan](../.codex/plans/2026-09-15-exploration-module-design.md).
+The user's request authorizes writing and committing this design.
+
+## Review
+
+Completed [Exploration technical design](../docs/specs/exploration-module-design.md)
+against Product `287c8e7`: SDE7/AppDatabase21 contracts, shared fenced public feed,
+scoped notebook episodes and transactions, exact tuple routing, origin/time gates,
+real host/provider seams, responsive presentation and X0–X10 ownership. Both
+independent architecture reviews passed. Verified all 40 AC associations, all
+60 T aliases and test files, nine-section structure, links/tables, and twelve
+synthetic route oracles. Journal/README retain implementation-pending status.
+No application files changed; Flutter runtime suites were not run for this design.
+
+---
+
+# Completed: Mimir — Exploration Module Product specification
 Date: 2026-09-15
 Checkpoint: 2026-09-15-exploration-module-product
 

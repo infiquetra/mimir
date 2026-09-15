@@ -31,6 +31,31 @@
 
 ## 2026-09-15
 
+### Exploration freshness requires millisecond storage and cross-engine observation
+
+**Author.** Technical Architect.
+**Context.** Architecture source review against Product `287c8e7` and application
+base `aec65c6`, plus public API verification on 2026-09-15.
+**Evidence.** Installed Drift's default DateTime mapping truncates to seconds;
+Product distinguishes exactly60s from60s+1ms and exactly4h from just below4h.
+AppDatabase engines have separate watch notifications, while cross-window event
+files are transient. Current migration callbacks do not provide the atomic
+DDL/version publication required by the new contract. SubWindowApp globally waits
+on SDE initialization, blocking local-only functionality on a reference failure.
+**Mechanism.** In-process streams and provider readiness are not durable shared
+state, and a rounded timestamp changes boundary behavior after restart.
+**Fix (queued).** Use feature-local UTC millisecond columns, explicit atomic
+migration/bootstrap tests, fenced refresh claims, revision rereads/polling and
+feature-scoped readiness in the [technical design](../specs/exploration-module-design.md).
+The public endpoint also returned an ETag with its300s cache directive; support
+conditional validation without treating receipt time as report time.
+**Validation.** Source inspection and independent architecture reviews; API HTTP200
+and OpenAPI2.1.55 verified. These are grounding findings, not runtime proof of an
+implemented fix; implementation and executable verification remain queued.
+**Generalizable rule.** Preserve the precision and ownership of the contract at
+storage and observation boundaries; provider-local convenience cannot establish
+cross-engine or restart correctness.
+
 ### Exploration reference and feed contracts differ from the old blueprint
 
 **Author.** Product.

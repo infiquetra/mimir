@@ -35,7 +35,7 @@ Keep entries newest-first, concise, and evidence-backed.
 
 ## Quick Navigation By Topic
 
-- Exploration reference, public highways, local signatures and routing -> [Product specification](../specs/exploration-module.md), [queued initiative](QUEUED.md#exploration-module)
+- Exploration reference, public highways, local signatures and routing -> [Product specification](../specs/exploration-module.md), [technical design](../specs/exploration-module-design.md), [architecture decision](DECISIONS.md#exploration-uses-versioned-data-scoped-transactions-and-tuple-routing), [queued initiative](QUEUED.md#exploration-module)
 - AAR fit comparison visuals, source snapshots and BOM -> [Product specification](../specs/aar-fit-comparison-visuals.md), [technical design](../specs/aar-fit-comparison-visuals-design.md), [shipped initiative](ARCHIVE.md#shipped-2026-09-15-fit-comparison-visuals-for-aar-reports)
 - AAR fit import/capture UI tests and re-analysis retention -> [Product contract](../specs/aar-fit-import-capture-ui-tests.md), [source finding](LEARNINGS.md#fit-attachment-mocks-do-not-prove-re-analysis-retains-the-fit)
 - Per-attacker incoming profiles and defense matchups (M5, shipped) -> [Product spec](../specs/aar-per-attacker-matchup.md), [shipped initiative](ARCHIVE.md#shipped-2026-09-15-per-attacker-incoming-damage-profile-and-defense-matchup)

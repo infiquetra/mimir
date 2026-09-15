@@ -29,6 +29,7 @@ See the [mimir-context-library](https://github.com/infiquetra/mimir-context-libr
 ### Exploration specification
 
 - [Exploration Module Product specification](docs/specs/exploration-module.md) — tray-launched window, offline reference, Thera/Turnur connections, local signatures and routing; nine workflows, 32 requirements, 40 acceptance criteria and 60 test cases; implementation pending.
+- [Exploration Module technical design](docs/specs/exploration-module-design.md) — versioned offline reference, shared durable feed, scoped notebook transactions, deterministic routing and responsive window; X0–X10 units with complete AC1–AC40 and T01–T60 traceability; implementation pending.
 
 ### AAR specifications
 

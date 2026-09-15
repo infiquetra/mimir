@@ -39,14 +39,16 @@
 the older Sprint 21–22 estimates do not include all required additions.
 **Worth it when.** Pilots need offline wormhole reference, public highway access,
 private scan records and routes through their known connections in Mimir.
-**Context.** Product specification complete at baseline `aec65c6`; architecture,
-implementation and tester verification remain pending. The user selected a new
+**Context.** Product specification complete at baseline `aec65c6`; technical
+architecture now defines X0–X10 with full AC/test traceability. Implementation and
+tester verification remain pending. The user selected a new
 tray-launched Exploration window with four adaptive module views. Required work
 includes populated universe/gate/SDE data, shared durable public-v2 EVE-Scout
 cache, character-scoped SQLite signatures and deterministic mixed-edge routing.
 Private mapper synchronization remains the separate initiative below.
 **Refs.** [Authoritative specification](../specs/exploration-module.md), including
 32 requirements, 40 acceptance criteria, 60 test cases and eight fixture groups;
+[technical design](../specs/exploration-module-design.md);
 [Product plan](../../.codex/plans/2026-09-15-exploration-module-product.md).
 
 ### Clip reloads in the cap simulation (charge quantities)
