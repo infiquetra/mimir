@@ -35,13 +35,13 @@ class PublicConnection {
     required this.far,
     this.whType,
     this.exitsOutward,
-    this.mass = MassState.fresh,
-    this.time = TimeEstimate.stable,
+    this.mass = MassState.unknown,
+    this.time = TimeEstimate.unknown,
     this.remainingHours,
     this.expiresAt,
     this.updatedAt,
     this.fetchedAt,
-    this.shipSize = ShipSizeCategory.xlarge,
+    this.shipSize = ShipSizeCategory.unknown,
     this.snapshotRevision = 0,
   });
 
@@ -63,55 +63,71 @@ class PublicConnection {
     Map<String, dynamic> json, {
     DateTime? now,
   }) {
-    final clock = now ?? DateTime.now();
+    final clock = now ?? DateTime.now().toUtc();
     final id = json['id'];
-    final outward = json['wh_exits_outward'] == true;
-    final named = json['wh_type']?.toString() ?? 'K162';
-    final hubType = named;
-    final farType = outward ? named : 'K162';
-    final remaining = json['remaining_hours'] as int? ?? 0;
+    final named = json['wh_type']?.toString();
+    final outward = json['wh_exits_outward'];
+    final hubType = outward == true
+        ? named
+        : outward == false
+        ? 'K162'
+        : null;
+    final farType = outward == true
+        ? 'K162'
+        : outward == false
+        ? named
+        : null;
+    final expiresAt = json['expires_at'] == null
+        ? null
+        : DateTime.tryParse(json['expires_at'].toString())?.toUtc();
     return PublicConnection(
-      providerKey: '$id',
+      providerKey: 'evescout:$id',
       hub: EndpointObservation(
         systemId: json['out_system_id'] as int? ?? 0,
         systemName: json['out_system_name']?.toString() ?? '',
-        signature:
-            json['out_signature']?.toString() ??
-            json['in_signature']?.toString(),
+        signature: json['out_signature']?.toString(),
         typeCode: hubType,
       ),
       far: EndpointObservation(
         systemId: json['in_system_id'] as int? ?? 0,
         systemName: json['in_system_name']?.toString() ?? '',
-        signature:
-            json['in_signature']?.toString() ??
-            json['out_signature']?.toString(),
+        signature: json['in_signature']?.toString(),
         typeCode: farType,
       ),
       whType: named,
-      exitsOutward: json['wh_exits_outward'] as bool? ?? false,
-      mass: json['completed'] == true ? MassState.fresh : MassState.unknown,
-      remainingHours: remaining,
-      expiresAt: json['expires_at'] == null
-          ? null
-          : DateTime.parse(json['expires_at'].toString()),
+      exitsOutward: outward is bool ? outward : null,
+      mass: MassState.unknown,
+      remainingHours: null,
+      expiresAt: expiresAt,
       updatedAt: json['updated_at'] == null
           ? null
-          : DateTime.parse(json['updated_at'].toString()),
+          : DateTime.tryParse(json['updated_at'].toString())?.toUtc(),
       fetchedAt: clock,
-      time: remaining >= 4 ? TimeEstimate.stable : TimeEstimate.eol,
-      shipSize: ShipSizeCategory.xlarge,
+      time: expiresAt == null
+          ? TimeEstimate.unknown
+          : ExplorationTime.timeEstimate(expiresAt: expiresAt, now: clock),
+      shipSize: _shipSize(json['max_ship_size']?.toString()),
     );
   }
 
   String departureType({required bool fromHub}) {
-    return fromHub ? (whType ?? 'K162') : (whType ?? 'K162');
+    final code = fromHub ? hub.typeCode : far.typeCode;
+    return code ?? '';
   }
 
   String departureSignature({required bool fromHub}) {
-    return fromHub
-        ? (hub.signature ?? far.signature ?? '')
-        : (far.signature ?? hub.signature ?? '');
+    return (fromHub ? hub.signature : far.signature) ?? '';
+  }
+
+  static ShipSizeCategory _shipSize(String? raw) {
+    return switch (raw) {
+      'small' => ShipSizeCategory.small,
+      'medium' => ShipSizeCategory.medium,
+      'large' => ShipSizeCategory.large,
+      'xlarge' => ShipSizeCategory.xlarge,
+      'capital' => ShipSizeCategory.capital,
+      _ => ShipSizeCategory.unknown,
+    };
   }
 }
 
@@ -149,30 +165,39 @@ class LocalConnection {
   bool eligibleAt(DateTime now) {
     if (lifecycle != ConnectionLifecycle.active) return false;
     if (verifiedAt == null) return true;
-    return now.difference(verifiedAt!) <= const Duration(hours: 24);
+    return now.difference(verifiedAt!) < const Duration(hours: 24);
   }
 
   String forwardType() {
-    if (originatingType == 'K162') return 'B274';
-    return originatingType ?? 'K162';
+    final type = originatingType;
+    if (type == null || type.isEmpty) return 'Unknown';
+    final side = originatingSide?.toLowerCase();
+    if (side == 'to' || side == 'other') {
+      return type == 'K162' ? 'Unknown' : 'K162';
+    }
+    return type;
   }
 
   String reverseType() {
-    if (originatingType == 'K162') return 'K162';
-    return originatingType ?? 'K162';
+    final type = originatingType;
+    if (type == null || type.isEmpty || type == 'K162') return 'Unknown';
+    final side = originatingSide?.toLowerCase();
+    if (side == 'to' || side == 'other') return type;
+    if (side == 'from' || side == 'this') return 'K162';
+    return 'Unknown';
   }
 }
 
 class FeedSnapshot {
   FeedSnapshot({
     this.scope = 'all',
-    this.records = const [],
+    List<PublicConnection> records = const [],
     this.payloadReceivedAt,
     this.lastSuccessfulValidationAt,
     this.revision = 0,
     this.retryAfter,
     this.lastError,
-  });
+  }) : records = List.unmodifiable(List<PublicConnection>.from(records));
 
   final String scope;
   final List<PublicConnection> records;
@@ -187,7 +212,7 @@ class FeedSnapshot {
     DateTime? now,
     int revision = 1,
   }) {
-    final clock = now ?? DateTime.now();
+    final clock = now ?? DateTime.now().toUtc();
     return FeedSnapshot(
       records: [
         for (final row in rows)
@@ -207,9 +232,11 @@ class FeedSnapshot {
     return FeedSnapshot(
       scope: scope,
       records: records,
-      payloadReceivedAt: at,
+      payloadReceivedAt: payloadReceivedAt,
       lastSuccessfulValidationAt: at,
       revision: revision,
+      retryAfter: retryAfter,
+      lastError: lastError,
     );
   }
 

@@ -19,13 +19,15 @@ class ReferenceManifest {
   ReferenceManifest({
     this.sdeBuild = 0,
     this.datasetSchema = 0,
-    this.sourceUrls = const [],
-    this.checksums = const {},
-    this.rowCounts = const {},
+    List<String> sourceUrls = const [],
+    Map<String, String> checksums = const {},
+    Map<String, int> rowCounts = const {},
     this.importedAt,
     this.coverage = '',
     this.validation = '',
-  });
+  }) : sourceUrls = List.unmodifiable(sourceUrls),
+       checksums = Map.unmodifiable(checksums),
+       rowCounts = Map.unmodifiable(rowCounts);
 
   final int sdeBuild;
   final int datasetSchema;
@@ -42,7 +44,7 @@ class ReferenceManifest {
     'sourceUrls': sourceUrls,
     'checksums': checksums,
     'rowCounts': rowCounts,
-    'importedAt': importedAt?.toIso8601String(),
+    if (importedAt != null) 'importedAt': importedAt!.toIso8601String(),
     'coverage': coverage,
     'validation': validation,
   };
@@ -61,13 +63,13 @@ class ReferenceManifest {
       },
       rowCounts: {
         for (final entry in (json['rowCounts'] as Map? ?? const {}).entries)
-          entry.key.toString(): entry.value as int,
+          entry.key.toString(): (entry.value as num).toInt(),
       },
       importedAt: json['importedAt'] == null
-          ? DateTime.now()
-          : DateTime.parse(json['importedAt'].toString()),
-      coverage: json['coverage']?.toString() ?? 'complete',
-      validation: json['validation']?.toString() ?? 'ok',
+          ? null
+          : DateTime.tryParse(json['importedAt'].toString())?.toUtc(),
+      coverage: json['coverage']?.toString() ?? '',
+      validation: json['validation']?.toString() ?? '',
     );
   }
 }
@@ -97,7 +99,8 @@ class WormholeTypeReference {
   final double? regenerationKgPerCycle;
   final DateTime? recordedAt;
 
-  /// Naive: minutes stored as seconds; missing dogma becomes zero.
+  static const capitalJumpThresholdKg = 1000000000.0;
+
   factory WormholeTypeReference.fromRaw({
     required int typeId,
     required String code,
@@ -116,32 +119,50 @@ class WormholeTypeReference {
       name: name,
       rawTargetClass: rawTargetClass,
       rawTargetDistribution: rawTargetDistribution,
-      reliableLifetimeSeconds: rawMaxStableTimeMinutes ?? 0,
-      maxJumpMassKg: rawJumpMassKg ?? 0,
-      totalMassKg: rawTotalMassKg ?? 0,
-      regenerationKgPerCycle: rawRegenKg ?? 0,
-      recordedAt: recordedAt ?? DateTime.now(),
+      reliableLifetimeSeconds: rawMaxStableTimeMinutes == null
+          ? null
+          : rawMaxStableTimeMinutes * 60,
+      maxJumpMassKg: rawJumpMassKg,
+      totalMassKg: rawTotalMassKg,
+      regenerationKgPerCycle: rawRegenKg,
+      recordedAt: recordedAt,
     );
   }
 
   String get destinationLabel {
-    if (rawTargetClass == null) return 'Unknown';
-    return 'C$rawTargetClass';
+    final target = rawTargetClass;
+    if (target == null) return 'Unknown';
+    return switch (target) {
+      7 => 'Highsec',
+      8 => 'Lowsec',
+      9 => 'Nullsec',
+      12 => 'Thera',
+      25 => 'Pochven',
+      -1 => 'Varies',
+      _ when target >= 1 && target <= 6 => 'C$target',
+      _ when target >= 14 && target <= 18 => 'Drifter',
+      13 => 'Shattered',
+      _ => 'Unknown',
+    };
   }
 
-  bool get isCapitalSize => (maxJumpMassKg ?? 0) > 1000000000;
+  bool get isCapitalSize =>
+      maxJumpMassKg != null && maxJumpMassKg! >= capitalJumpThresholdKg;
 
   Map<String, dynamic> toJson() => {
     'typeId': typeId,
     'code': code,
     'name': name,
-    'rawTargetClass': rawTargetClass,
-    'rawTargetDistribution': rawTargetDistribution,
-    'reliableLifetimeSeconds': reliableLifetimeSeconds,
-    'maxJumpMassKg': maxJumpMassKg,
-    'totalMassKg': totalMassKg,
-    'regenerationKgPerCycle': regenerationKgPerCycle,
-    'recordedAt': recordedAt?.toIso8601String(),
+    if (rawTargetClass != null) 'rawTargetClass': rawTargetClass,
+    if (rawTargetDistribution != null)
+      'rawTargetDistribution': rawTargetDistribution,
+    if (reliableLifetimeSeconds != null)
+      'reliableLifetimeSeconds': reliableLifetimeSeconds,
+    if (maxJumpMassKg != null) 'maxJumpMassKg': maxJumpMassKg,
+    if (totalMassKg != null) 'totalMassKg': totalMassKg,
+    if (regenerationKgPerCycle != null)
+      'regenerationKgPerCycle': regenerationKgPerCycle,
+    if (recordedAt != null) 'recordedAt': recordedAt!.toUtc().toIso8601String(),
   };
 
   factory WormholeTypeReference.fromJson(Map<String, dynamic> json) {
@@ -149,31 +170,71 @@ class WormholeTypeReference {
       typeId: json['typeId'] as int? ?? 0,
       code: json['code']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
-      rawTargetClass: json['rawTargetClass'] as int?,
-      rawTargetDistribution: json['rawTargetDistribution'] as int?,
-      reliableLifetimeSeconds: json['reliableLifetimeSeconds'] as int? ?? 0,
-      maxJumpMassKg: (json['maxJumpMassKg'] as num?)?.toDouble() ?? 0,
-      totalMassKg: (json['totalMassKg'] as num?)?.toDouble() ?? 0,
-      regenerationKgPerCycle:
-          (json['regenerationKgPerCycle'] as num?)?.toDouble() ?? 0,
+      rawTargetClass: (json['rawTargetClass'] as num?)?.toInt(),
+      rawTargetDistribution: (json['rawTargetDistribution'] as num?)?.toInt(),
+      reliableLifetimeSeconds: (json['reliableLifetimeSeconds'] as num?)
+          ?.toInt(),
+      maxJumpMassKg: (json['maxJumpMassKg'] as num?)?.toDouble(),
+      totalMassKg: (json['totalMassKg'] as num?)?.toDouble(),
+      regenerationKgPerCycle: (json['regenerationKgPerCycle'] as num?)
+          ?.toDouble(),
       recordedAt: json['recordedAt'] == null
-          ? DateTime.now()
-          : DateTime.parse(json['recordedAt'].toString()),
+          ? null
+          : DateTime.tryParse(json['recordedAt'].toString())?.toUtc(),
     );
   }
 
-  String get contentFingerprint =>
-      sha256.convert(utf8.encode(jsonEncode(toJson()))).toString();
+  String get contentFingerprint {
+    final payload = {
+      'code': code,
+      'rawTargetClass': rawTargetClass,
+      'rawTargetDistribution': rawTargetDistribution,
+      'reliableLifetimeSeconds': reliableLifetimeSeconds,
+      'maxJumpMassKg': maxJumpMassKg,
+      'totalMassKg': totalMassKg,
+      'regenerationKgPerCycle': regenerationKgPerCycle,
+    };
+    return sha256.convert(utf8.encode(jsonEncode(payload))).toString();
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is WormholeTypeReference &&
+        typeId == other.typeId &&
+        code == other.code &&
+        name == other.name &&
+        rawTargetClass == other.rawTargetClass &&
+        rawTargetDistribution == other.rawTargetDistribution &&
+        reliableLifetimeSeconds == other.reliableLifetimeSeconds &&
+        maxJumpMassKg == other.maxJumpMassKg &&
+        totalMassKg == other.totalMassKg &&
+        regenerationKgPerCycle == other.regenerationKgPerCycle &&
+        recordedAt == other.recordedAt;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    typeId,
+    code,
+    name,
+    rawTargetClass,
+    rawTargetDistribution,
+    reliableLifetimeSeconds,
+    maxJumpMassKg,
+    totalMassKg,
+    regenerationKgPerCycle,
+    recordedAt,
+  );
 }
 
 class WormholeCodeGroup {
   WormholeCodeGroup({
     required this.code,
-    required this.variants,
+    required List<WormholeTypeReference> variants,
     this.sharedLifetimeSeconds,
     this.sharedJumpMassKg,
     this.jumpVaries = false,
-  });
+  }) : variants = List.unmodifiable(List<WormholeTypeReference>.from(variants));
 
   final String code;
   final List<WormholeTypeReference> variants;
@@ -181,14 +242,22 @@ class WormholeCodeGroup {
   final double? sharedJumpMassKg;
   final bool jumpVaries;
 
-  /// Naive: last variant wins; disagreement is not Varies.
   factory WormholeCodeGroup.fromVariants(List<WormholeTypeReference> variants) {
-    final last = variants.last;
+    final copy = List<WormholeTypeReference>.from(variants);
+    final code = copy.isEmpty ? '' : copy.first.code;
+    final lifetimes = {
+      for (final variant in copy) variant.reliableLifetimeSeconds,
+    };
+    final jumps = {for (final variant in copy) variant.maxJumpMassKg};
+    final jumpVaries = jumps.length > 1;
     return WormholeCodeGroup(
-      code: last.code,
-      variants: variants,
-      sharedLifetimeSeconds: last.reliableLifetimeSeconds,
-      sharedJumpMassKg: last.maxJumpMassKg,
+      code: code,
+      variants: copy,
+      sharedLifetimeSeconds: lifetimes.length == 1 ? lifetimes.single : null,
+      sharedJumpMassKg: jumpVaries
+          ? null
+          : (jumps.isEmpty ? null : jumps.single),
+      jumpVaries: jumpVaries,
     );
   }
 }
@@ -207,8 +276,8 @@ class SystemReference {
     this.inheritanceSource,
     this.effectBeaconTypeId,
     this.visualSunTypeId,
-    this.statics = const [],
-  });
+    List<StaticAssignment> statics = const [],
+  }) : statics = List.unmodifiable(List<StaticAssignment>.from(statics));
 
   final int systemId;
   final String name;
@@ -225,23 +294,32 @@ class SystemReference {
   final List<StaticAssignment> statics;
 
   SecurityCategory get category {
-    if (rawClass == 12 || rawClass == 25) {
-      return SecurityCategory.nullsec;
-    }
+    if (_isSpecialClass(rawClass)) return SecurityCategory.special;
     return classifySecurity(rawSecurity);
   }
 
-  String get securityDisplay {
-    if (rawSecurity == null) return 'Unknown';
-    return rawSecurity!.toStringAsFixed(1);
+  String get securityDisplay => formatSecurity(rawSecurity);
+
+  static bool _isSpecialClass(int? rawClass) {
+    if (rawClass == null) return false;
+    if (rawClass >= 1 && rawClass <= 6) return true;
+    if (rawClass == 12 || rawClass == 13 || rawClass == 25) return true;
+    if (rawClass >= 14 && rawClass <= 18) return true;
+    return false;
   }
 
-  /// Naive: 0.5 threshold and rounded display as classifier.
   static SecurityCategory classifySecurity(double? x) {
     if (x == null) return SecurityCategory.unknown;
-    if (x >= 0.5) return SecurityCategory.highsec;
+    if (x >= 0.45) return SecurityCategory.highsec;
     if (x > 0) return SecurityCategory.lowsec;
     return SecurityCategory.nullsec;
+  }
+
+  static String formatSecurity(double? x) {
+    if (x == null) return 'Unknown';
+    if (x <= 0) return '0.0';
+    if (x < 0.05) return '0.1';
+    return ((x * 10).round() / 10).toStringAsFixed(1);
   }
 }
 
@@ -282,10 +360,10 @@ class SystemEffect {
     required this.family,
     required this.strength,
     required this.beaconTypeId,
-    this.modifiers = const [],
+    List<EffectModifier> modifiers = const [],
     this.state = SystemEffectState.applied,
     this.visualSunTypeId,
-  });
+  }) : modifiers = List.unmodifiable(List<EffectModifier>.from(modifiers));
 
   final EffectFamily family;
   final int strength;
@@ -294,7 +372,50 @@ class SystemEffect {
   final SystemEffectState state;
   final int? visualSunTypeId;
 
-  /// Naive: visual sun overrides the applied beacon.
+  static const _pulsarShield = [30.0, 44.0, 58.0, 72.0, 86.0, 100.0];
+  static const _magnetarExplosion = [30.0, 44.0, 58.0, 72.0, 86.0, 100.0];
+  static const _wolfRayetSmall = [60.0, 88.0, 116.0, 144.0, 172.0, 200.0];
+  static const _pulsarCapRecharge = [-15.0, -22.0, -29.0, -36.0, -43.0, -50.0];
+
+  static const _beaconIndex = <int, (EffectFamily, int)>{
+    30844: (EffectFamily.pulsar, 1),
+    30865: (EffectFamily.pulsar, 2),
+    30866: (EffectFamily.pulsar, 3),
+    30867: (EffectFamily.pulsar, 4),
+    30868: (EffectFamily.pulsar, 5),
+    30869: (EffectFamily.pulsar, 6),
+    30845: (EffectFamily.blackHole, 1),
+    30850: (EffectFamily.blackHole, 2),
+    30851: (EffectFamily.blackHole, 3),
+    30852: (EffectFamily.blackHole, 4),
+    30853: (EffectFamily.blackHole, 5),
+    30854: (EffectFamily.blackHole, 6),
+    30846: (EffectFamily.cataclysmicVariable, 1),
+    30880: (EffectFamily.cataclysmicVariable, 2),
+    30881: (EffectFamily.cataclysmicVariable, 3),
+    30884: (EffectFamily.cataclysmicVariable, 4),
+    30883: (EffectFamily.cataclysmicVariable, 5),
+    30882: (EffectFamily.cataclysmicVariable, 6),
+    30847: (EffectFamily.magnetar, 1),
+    30860: (EffectFamily.magnetar, 2),
+    30861: (EffectFamily.magnetar, 3),
+    30862: (EffectFamily.magnetar, 4),
+    30863: (EffectFamily.magnetar, 5),
+    30864: (EffectFamily.magnetar, 6),
+    30848: (EffectFamily.redGiant, 1),
+    30870: (EffectFamily.redGiant, 2),
+    30871: (EffectFamily.redGiant, 3),
+    30872: (EffectFamily.redGiant, 4),
+    30873: (EffectFamily.redGiant, 5),
+    30874: (EffectFamily.redGiant, 6),
+    30849: (EffectFamily.wolfRayet, 1),
+    30875: (EffectFamily.wolfRayet, 2),
+    30876: (EffectFamily.wolfRayet, 3),
+    30877: (EffectFamily.wolfRayet, 4),
+    30878: (EffectFamily.wolfRayet, 5),
+    30879: (EffectFamily.wolfRayet, 6),
+  };
+
   factory SystemEffect.resolve({
     required int? beaconTypeId,
     int? visualSunTypeId,
@@ -305,62 +426,60 @@ class SystemEffect {
       return SystemEffect(
         family: EffectFamily.pulsar,
         strength: 1,
-        beaconTypeId: 0,
-        state: SystemEffectState.none,
-        visualSunTypeId: visualSunTypeId,
-      );
-    }
-    if (verifiedAbsent) {
-      return SystemEffect(
-        family: EffectFamily.pulsar,
-        strength: 1,
-        beaconTypeId: 0,
+        beaconTypeId: beaconTypeId ?? 0,
         state: SystemEffectState.unknown,
         visualSunTypeId: visualSunTypeId,
       );
     }
-    final chosen = visualSunTypeId ?? beaconTypeId ?? 0;
+    if (verifiedAbsent || beaconTypeId == null) {
+      return SystemEffect(
+        family: EffectFamily.pulsar,
+        strength: 1,
+        beaconTypeId: beaconTypeId ?? 0,
+        state: SystemEffectState.none,
+        visualSunTypeId: visualSunTypeId,
+      );
+    }
     return SystemEffect(
-      family: familyForBeacon(chosen),
-      strength: strengthForBeacon(chosen),
-      beaconTypeId: chosen,
+      family: familyForBeacon(beaconTypeId),
+      strength: strengthForBeacon(beaconTypeId),
+      beaconTypeId: beaconTypeId,
       visualSunTypeId: visualSunTypeId,
     );
   }
 
   static EffectFamily familyForBeacon(int beaconTypeId) {
-    if (beaconTypeId >= 30870 && beaconTypeId <= 30874) {
-      return EffectFamily.redGiant;
-    }
-    if (beaconTypeId >= 30875 && beaconTypeId <= 30879) {
-      return EffectFamily.wolfRayet;
-    }
-    if (beaconTypeId == 30848) return EffectFamily.pulsar;
-    if (beaconTypeId == 30849) return EffectFamily.redGiant;
-    return EffectFamily.pulsar;
+    return _beaconIndex[beaconTypeId]?.$1 ?? EffectFamily.pulsar;
   }
 
   static int strengthForBeacon(int beaconTypeId) {
-    if (beaconTypeId == 30879) return 1;
-    return 1;
+    return _beaconIndex[beaconTypeId]?.$2 ?? 1;
   }
 
-  static double pulsarShieldPercent(int strength) => 10.0 * strength;
+  static double pulsarShieldPercent(int strength) =>
+      _atStrength(_pulsarShield, strength);
 
   static double magnetarExplosionRadiusFrom100(int strength) =>
-      100 + 15.0 * strength;
+      100 + _atStrength(_magnetarExplosion, strength);
 
   static double wolfRayetSmallWeaponFrom100(int strength) =>
-      100 + 15.0 * strength;
+      100 + _atStrength(_wolfRayetSmall, strength);
 
-  static double pulsarCapRechargeFrom100(int strength) => 100 - 10.0 * strength;
+  static double pulsarCapRechargeFrom100(int strength) =>
+      100 + _atStrength(_pulsarCapRecharge, strength);
 
-  /// Naive: subtracts percentage points instead of resonance compounding.
   static double applyResonance({
     required double oldResist,
     required double percentIncrease,
   }) {
-    return oldResist - percentIncrease / 100;
+    final oldResonance = 1 - oldResist;
+    final newResonance = oldResonance * (1 + percentIncrease / 100);
+    return 1 - newResonance;
+  }
+
+  static double _atStrength(List<double> table, int strength) {
+    if (strength < 1 || strength > table.length) return 0;
+    return table[strength - 1];
   }
 }
 
@@ -370,8 +489,8 @@ class GateEdge {
     required this.fromSystemId,
     required this.toSystemId,
     this.topologyVersion = 0,
-    this.restrictions = const [],
-  });
+    List<String> restrictions = const [],
+  }) : restrictions = List.unmodifiable(List<String>.from(restrictions));
 
   final int gateId;
   final int fromSystemId;
@@ -381,7 +500,8 @@ class GateEdge {
 }
 
 class UniverseTopology {
-  UniverseTopology({this.gates = const [], this.manifest});
+  UniverseTopology({List<GateEdge> gates = const [], this.manifest})
+    : gates = List.unmodifiable(List<GateEdge>.from(gates));
 
   final List<GateEdge> gates;
   final ReferenceManifest? manifest;

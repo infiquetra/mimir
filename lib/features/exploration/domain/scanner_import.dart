@@ -73,8 +73,10 @@ class ImportPreview {
   final int invalid;
   final List<ImportConflict> conflicts;
 
-  String get successMessage =>
-      'Imported ${rows.length} signatures: $added added, $updated updated, $seenAgain seen again.';
+  String get successMessage {
+    final imported = added + updated + seenAgain;
+    return 'Imported $imported signatures: $added added, $updated updated, $seenAgain seen again.';
+  }
 }
 
 class ResolvedImportPreview {
@@ -90,25 +92,89 @@ class ResolvedImportPreview {
 }
 
 class ScannerImportParser {
-  /// Naive: whitespace split, no tab contract, no duplicate coalescing.
+  static final _codePattern = RegExp(r'^[A-Z]{3}-[0-9]{3}$');
+  static const _supportedGroups = {'cosmic signature', 'cosmic anomaly'};
+
   static ParsedScan parse(String text) {
-    final lines = text.split('\n').where((line) => line.trim().isNotEmpty);
+    final normalized = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    final stripped = normalized.startsWith('\uFEFF')
+        ? normalized.substring(1)
+        : normalized;
     final rows = <ScanRow>[];
-    var index = 1;
-    for (final line in lines) {
-      final cells = line.trim().split(RegExp(r'\s+'));
+    final diagnostics = <RowDiagnostic>[];
+    final seen = <String>{};
+    var physical = 0;
+    var skippedHeader = false;
+    for (final rawLine in stripped.split('\n')) {
+      if (rawLine.trim().isEmpty) continue;
+      physical += 1;
+      final cells = rawLine.split('\t');
+      if (!skippedHeader && _isHeader(cells)) {
+        skippedHeader = true;
+        continue;
+      }
+      if (cells.length < 2 || cells.length > 6) {
+        rows.add(
+          ScanRow(
+            sourceRow: physical,
+            code: cells.isEmpty ? '' : cells.first.trim(),
+            valid: false,
+          ),
+        );
+        diagnostics.add(
+          RowDiagnostic(
+            sourceRow: physical,
+            message: 'Row must have 2 to 6 tab-separated cells.',
+          ),
+        );
+        continue;
+      }
+      final code = cells[0].trim().toUpperCase();
+      final group = cells.length > 1 ? cells[1].trim() : '';
+      final typeLabel = cells.length > 2 ? cells[2].trim() : '';
+      final name = cells.length > 3 ? cells[3].trim() : '';
+      final groupOk = _supportedGroups.contains(group.toLowerCase());
+      final codeOk = _codePattern.hasMatch(code);
+      if (!codeOk || !groupOk) {
+        rows.add(
+          ScanRow(
+            sourceRow: physical,
+            code: code,
+            group: group,
+            typeLabel: typeLabel,
+            name: name,
+            valid: false,
+          ),
+        );
+        diagnostics.add(
+          RowDiagnostic(
+            sourceRow: physical,
+            message: codeOk
+                ? 'Unsupported scan group.'
+                : 'Signature code is invalid.',
+          ),
+        );
+        continue;
+      }
+      final duplicate = !seen.add(code);
       rows.add(
         ScanRow(
-          sourceRow: index,
-          code: cells.first,
-          group: cells.length > 1 ? cells[1] : '',
-          typeLabel: cells.length > 2 ? cells[2] : '',
-          name: cells.length > 3 ? cells[3] : '',
+          sourceRow: physical,
+          code: code,
+          group: group,
+          typeLabel: typeLabel,
+          name: name,
+          valid: true,
+          duplicate: duplicate,
         ),
       );
-      index += 1;
     }
-    return ParsedScan(rows: rows);
+    return ParsedScan(rows: rows, diagnostics: diagnostics);
+  }
+
+  static bool _isHeader(List<String> cells) {
+    if (cells.isEmpty) return false;
+    return cells.first.trim().toUpperCase() == 'ID';
   }
 }
 
@@ -120,16 +186,61 @@ class ScannerMergePlanner {
     List<TrackedSignature> existing = const [],
     String operationId = 'preview',
   }) {
+    final byCode = <String, TrackedSignature>{
+      for (final row in existing) row.code.toUpperCase(): row,
+    };
+    var added = 0;
+    var updated = 0;
+    var seenAgain = 0;
+    var duplicates = 0;
+    var invalid = 0;
+    for (final row in parsed.rows) {
+      if (!row.valid) {
+        invalid += 1;
+        continue;
+      }
+      if (row.duplicate) {
+        duplicates += 1;
+        continue;
+      }
+      final current = byCode[row.code];
+      if (current == null) {
+        added += 1;
+        continue;
+      }
+      final incomingType = _mapType(row.typeLabel);
+      final typeChanged =
+          incomingType != SignatureType.unknown && incomingType != current.type;
+      final nameChanged =
+          row.name.isNotEmpty && row.name != (current.name ?? '');
+      if (typeChanged || nameChanged) {
+        updated += 1;
+      } else {
+        seenAgain += 1;
+      }
+    }
     return ImportPreview(
       operationId: operationId,
       scope: scope,
       observedAt: observedAt,
       rows: parsed.rows,
-      added: parsed.rows.length,
-      updated: 0,
-      seenAgain: 0,
-      duplicates: 0,
-      invalid: 0,
+      added: added,
+      updated: updated,
+      seenAgain: seenAgain,
+      duplicates: duplicates,
+      invalid: invalid,
     );
+  }
+
+  static SignatureType _mapType(String label) {
+    final normalized = label.trim().toLowerCase();
+    if (normalized.isEmpty) return SignatureType.unknown;
+    if (normalized.contains('wormhole')) return SignatureType.wormhole;
+    if (normalized.contains('data')) return SignatureType.data;
+    if (normalized.contains('relic')) return SignatureType.relic;
+    if (normalized.contains('gas')) return SignatureType.gas;
+    if (normalized.contains('combat')) return SignatureType.combat;
+    if (normalized.contains('ore')) return SignatureType.ore;
+    return SignatureType.unknown;
   }
 }

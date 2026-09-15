@@ -100,7 +100,6 @@ class NotebookTransaction {
 }
 
 class ExplorationPruner {
-  /// Naive: anything last seen at least 23h59m59s ago is pruned, so AGE-002 moves.
   static List<TrackedSignature> prune(
     List<TrackedSignature> rows, {
     required DateTime now,
@@ -108,8 +107,7 @@ class ExplorationPruner {
   }) {
     if (policy == PrunePolicy.off) return const [];
     final threshold = switch (policy) {
-      PrunePolicy.hours24 =>
-        const Duration(hours: 24) - const Duration(seconds: 1),
+      PrunePolicy.hours24 => const Duration(hours: 24),
       PrunePolicy.hours48 => const Duration(hours: 48),
       PrunePolicy.hours72 => const Duration(hours: 72),
       PrunePolicy.off => Duration.zero,
@@ -117,7 +115,6 @@ class ExplorationPruner {
     return [
       for (final row in rows)
         if (row.lastSeenAt != null &&
-            !now.difference(row.lastSeenAt!).isNegative &&
             now.difference(row.lastSeenAt!) >= threshold)
           row,
     ];
