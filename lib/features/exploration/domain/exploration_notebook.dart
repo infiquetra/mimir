@@ -71,6 +71,7 @@ class ConnectionDraft {
   const ConnectionDraft({
     required this.fromSystemId,
     required this.toSystemId,
+    this.ownerSignatureId,
     this.fromSignature,
     this.toSignature,
     this.originatingType,
@@ -79,6 +80,7 @@ class ConnectionDraft {
 
   final int fromSystemId;
   final int toSystemId;
+  final String? ownerSignatureId;
   final String? fromSignature;
   final String? toSignature;
   final String? originatingType;
@@ -97,6 +99,49 @@ class NotebookTransaction {
   final int expectedRevision;
   final bool success;
   final bool conflict;
+}
+
+class ExpectedRevision {
+  const ExpectedRevision(this.value);
+  final int value;
+}
+
+class ScopeGuard {
+  const ScopeGuard({required this.scope, required this.revision});
+  final NotebookScope scope;
+  final int revision;
+}
+
+class ConfirmedDeletion {
+  const ConfirmedDeletion({
+    required this.ids,
+    required this.scope,
+    required this.revision,
+  });
+  final Set<String> ids;
+  final NotebookScope scope;
+  final int revision;
+}
+
+enum NotebookWriteKind {
+  committed,
+  alreadyApplied,
+  conflict,
+  validation,
+  failed,
+  cancelled,
+}
+
+class NotebookWriteResult {
+  const NotebookWriteResult({
+    required this.kind,
+    this.written = 0,
+    this.message,
+  });
+
+  final NotebookWriteKind kind;
+  final int written;
+  final String? message;
 }
 
 class ExplorationPruner {

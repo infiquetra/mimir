@@ -7,6 +7,7 @@ class ScanRow {
     this.group = '',
     this.typeLabel = '',
     this.name = '',
+    this.type = SignatureType.unknown,
     this.valid = true,
     this.duplicate = false,
   });
@@ -16,6 +17,7 @@ class ScanRow {
   final String group;
   final String typeLabel;
   final String name;
+  final SignatureType type;
   final bool valid;
   final bool duplicate;
 }
@@ -40,10 +42,35 @@ class ImportConflict {
 }
 
 class ParsedScan {
-  const ParsedScan({this.rows = const [], this.diagnostics = const []});
+  const ParsedScan({
+    this.rows = const [],
+    this.diagnostics = const [],
+    this.wholeInputError,
+  });
 
   final List<ScanRow> rows;
   final List<RowDiagnostic> diagnostics;
+  final String? wholeInputError;
+}
+
+class MergeCandidate {
+  const MergeCandidate({
+    required this.code,
+    this.preservedNotes,
+    this.preservedBookmark,
+    this.preservedFirstSeenAt,
+    this.preservedName,
+    this.conflict = false,
+    this.newEpisode = false,
+  });
+
+  final String code;
+  final String? preservedNotes;
+  final String? preservedBookmark;
+  final DateTime? preservedFirstSeenAt;
+  final String? preservedName;
+  final bool conflict;
+  final bool newEpisode;
 }
 
 class ImportPreview {
@@ -59,6 +86,7 @@ class ImportPreview {
     this.duplicates = 0,
     this.invalid = 0,
     this.conflicts = const [],
+    this.candidates = const [],
   });
 
   final String operationId;
@@ -72,6 +100,7 @@ class ImportPreview {
   final int duplicates;
   final int invalid;
   final List<ImportConflict> conflicts;
+  final List<MergeCandidate> candidates;
 
   String get successMessage {
     final imported = added + updated + seenAgain;
