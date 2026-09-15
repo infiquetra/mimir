@@ -19365,6 +19365,7096 @@ class CombatEncountersCompanion extends UpdateCompanion<CombatEncounter> {
   }
 }
 
+class $EveScoutFeedStatesTable extends EveScoutFeedStates
+    with TableInfo<$EveScoutFeedStatesTable, EveScoutFeedState> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EveScoutFeedStatesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _scopeKeyMeta = const VerificationMeta(
+    'scopeKey',
+  );
+  @override
+  late final GeneratedColumn<String> scopeKey = GeneratedColumn<String>(
+    'scope_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cacheValidMeta = const VerificationMeta(
+    'cacheValid',
+  );
+  @override
+  late final GeneratedColumn<bool> cacheValid = GeneratedColumn<bool>(
+    'cache_valid',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("cache_valid" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _snapshotRevisionMeta = const VerificationMeta(
+    'snapshotRevision',
+  );
+  @override
+  late final GeneratedColumn<int> snapshotRevision = GeneratedColumn<int>(
+    'snapshot_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _validationRevisionMeta =
+      const VerificationMeta('validationRevision');
+  @override
+  late final GeneratedColumn<int> validationRevision = GeneratedColumn<int>(
+    'validation_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _metadataRevisionMeta = const VerificationMeta(
+    'metadataRevision',
+  );
+  @override
+  late final GeneratedColumn<int> metadataRevision = GeneratedColumn<int>(
+    'metadata_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _payloadReceivedAtMsMeta =
+      const VerificationMeta('payloadReceivedAtMs');
+  @override
+  late final GeneratedColumn<int> payloadReceivedAtMs = GeneratedColumn<int>(
+    'payload_received_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastValidatedAtMsMeta = const VerificationMeta(
+    'lastValidatedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> lastValidatedAtMs = GeneratedColumn<int>(
+    'last_validated_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastAttemptAtMsMeta = const VerificationMeta(
+    'lastAttemptAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> lastAttemptAtMs = GeneratedColumn<int>(
+    'last_attempt_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _etagMeta = const VerificationMeta('etag');
+  @override
+  late final GeneratedColumn<String> etag = GeneratedColumn<String>(
+    'etag',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastModifiedMeta = const VerificationMeta(
+    'lastModified',
+  );
+  @override
+  late final GeneratedColumn<String> lastModified = GeneratedColumn<String>(
+    'last_modified',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cacheExpiresAtMsMeta = const VerificationMeta(
+    'cacheExpiresAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> cacheExpiresAtMs = GeneratedColumn<int>(
+    'cache_expires_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nextAttemptAtMsMeta = const VerificationMeta(
+    'nextAttemptAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> nextAttemptAtMs = GeneratedColumn<int>(
+    'next_attempt_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastErrorMeta = const VerificationMeta(
+    'lastError',
+  );
+  @override
+  late final GeneratedColumn<String> lastError = GeneratedColumn<String>(
+    'last_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _failureCountMeta = const VerificationMeta(
+    'failureCount',
+  );
+  @override
+  late final GeneratedColumn<int> failureCount = GeneratedColumn<int>(
+    'failure_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _bodyDigestMeta = const VerificationMeta(
+    'bodyDigest',
+  );
+  @override
+  late final GeneratedColumn<String> bodyDigest = GeneratedColumn<String>(
+    'body_digest',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _requestEpochMeta = const VerificationMeta(
+    'requestEpoch',
+  );
+  @override
+  late final GeneratedColumn<int> requestEpoch = GeneratedColumn<int>(
+    'request_epoch',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _requestTokenMeta = const VerificationMeta(
+    'requestToken',
+  );
+  @override
+  late final GeneratedColumn<String> requestToken = GeneratedColumn<String>(
+    'request_token',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _requestOwnerMeta = const VerificationMeta(
+    'requestOwner',
+  );
+  @override
+  late final GeneratedColumn<String> requestOwner = GeneratedColumn<String>(
+    'request_owner',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _leaseUntilMsMeta = const VerificationMeta(
+    'leaseUntilMs',
+  );
+  @override
+  late final GeneratedColumn<int> leaseUntilMs = GeneratedColumn<int>(
+    'lease_until_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    scopeKey,
+    cacheValid,
+    snapshotRevision,
+    validationRevision,
+    metadataRevision,
+    payloadReceivedAtMs,
+    lastValidatedAtMs,
+    lastAttemptAtMs,
+    etag,
+    lastModified,
+    cacheExpiresAtMs,
+    nextAttemptAtMs,
+    lastError,
+    failureCount,
+    bodyDigest,
+    requestEpoch,
+    requestToken,
+    requestOwner,
+    leaseUntilMs,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'eve_scout_feed_states';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<EveScoutFeedState> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('scope_key')) {
+      context.handle(
+        _scopeKeyMeta,
+        scopeKey.isAcceptableOrUnknown(data['scope_key']!, _scopeKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scopeKeyMeta);
+    }
+    if (data.containsKey('cache_valid')) {
+      context.handle(
+        _cacheValidMeta,
+        cacheValid.isAcceptableOrUnknown(data['cache_valid']!, _cacheValidMeta),
+      );
+    }
+    if (data.containsKey('snapshot_revision')) {
+      context.handle(
+        _snapshotRevisionMeta,
+        snapshotRevision.isAcceptableOrUnknown(
+          data['snapshot_revision']!,
+          _snapshotRevisionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('validation_revision')) {
+      context.handle(
+        _validationRevisionMeta,
+        validationRevision.isAcceptableOrUnknown(
+          data['validation_revision']!,
+          _validationRevisionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('metadata_revision')) {
+      context.handle(
+        _metadataRevisionMeta,
+        metadataRevision.isAcceptableOrUnknown(
+          data['metadata_revision']!,
+          _metadataRevisionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('payload_received_at_ms')) {
+      context.handle(
+        _payloadReceivedAtMsMeta,
+        payloadReceivedAtMs.isAcceptableOrUnknown(
+          data['payload_received_at_ms']!,
+          _payloadReceivedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_validated_at_ms')) {
+      context.handle(
+        _lastValidatedAtMsMeta,
+        lastValidatedAtMs.isAcceptableOrUnknown(
+          data['last_validated_at_ms']!,
+          _lastValidatedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_attempt_at_ms')) {
+      context.handle(
+        _lastAttemptAtMsMeta,
+        lastAttemptAtMs.isAcceptableOrUnknown(
+          data['last_attempt_at_ms']!,
+          _lastAttemptAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('etag')) {
+      context.handle(
+        _etagMeta,
+        etag.isAcceptableOrUnknown(data['etag']!, _etagMeta),
+      );
+    }
+    if (data.containsKey('last_modified')) {
+      context.handle(
+        _lastModifiedMeta,
+        lastModified.isAcceptableOrUnknown(
+          data['last_modified']!,
+          _lastModifiedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cache_expires_at_ms')) {
+      context.handle(
+        _cacheExpiresAtMsMeta,
+        cacheExpiresAtMs.isAcceptableOrUnknown(
+          data['cache_expires_at_ms']!,
+          _cacheExpiresAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('next_attempt_at_ms')) {
+      context.handle(
+        _nextAttemptAtMsMeta,
+        nextAttemptAtMs.isAcceptableOrUnknown(
+          data['next_attempt_at_ms']!,
+          _nextAttemptAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_error')) {
+      context.handle(
+        _lastErrorMeta,
+        lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta),
+      );
+    }
+    if (data.containsKey('failure_count')) {
+      context.handle(
+        _failureCountMeta,
+        failureCount.isAcceptableOrUnknown(
+          data['failure_count']!,
+          _failureCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('body_digest')) {
+      context.handle(
+        _bodyDigestMeta,
+        bodyDigest.isAcceptableOrUnknown(data['body_digest']!, _bodyDigestMeta),
+      );
+    }
+    if (data.containsKey('request_epoch')) {
+      context.handle(
+        _requestEpochMeta,
+        requestEpoch.isAcceptableOrUnknown(
+          data['request_epoch']!,
+          _requestEpochMeta,
+        ),
+      );
+    }
+    if (data.containsKey('request_token')) {
+      context.handle(
+        _requestTokenMeta,
+        requestToken.isAcceptableOrUnknown(
+          data['request_token']!,
+          _requestTokenMeta,
+        ),
+      );
+    }
+    if (data.containsKey('request_owner')) {
+      context.handle(
+        _requestOwnerMeta,
+        requestOwner.isAcceptableOrUnknown(
+          data['request_owner']!,
+          _requestOwnerMeta,
+        ),
+      );
+    }
+    if (data.containsKey('lease_until_ms')) {
+      context.handle(
+        _leaseUntilMsMeta,
+        leaseUntilMs.isAcceptableOrUnknown(
+          data['lease_until_ms']!,
+          _leaseUntilMsMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {scopeKey};
+  @override
+  EveScoutFeedState map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return EveScoutFeedState(
+      scopeKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scope_key'],
+      )!,
+      cacheValid: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}cache_valid'],
+      )!,
+      snapshotRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}snapshot_revision'],
+      )!,
+      validationRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}validation_revision'],
+      )!,
+      metadataRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}metadata_revision'],
+      )!,
+      payloadReceivedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}payload_received_at_ms'],
+      ),
+      lastValidatedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_validated_at_ms'],
+      ),
+      lastAttemptAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_attempt_at_ms'],
+      ),
+      etag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}etag'],
+      ),
+      lastModified: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_modified'],
+      ),
+      cacheExpiresAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cache_expires_at_ms'],
+      ),
+      nextAttemptAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}next_attempt_at_ms'],
+      ),
+      lastError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_error'],
+      ),
+      failureCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}failure_count'],
+      )!,
+      bodyDigest: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body_digest'],
+      ),
+      requestEpoch: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}request_epoch'],
+      )!,
+      requestToken: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}request_token'],
+      ),
+      requestOwner: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}request_owner'],
+      ),
+      leaseUntilMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}lease_until_ms'],
+      ),
+    );
+  }
+
+  @override
+  $EveScoutFeedStatesTable createAlias(String alias) {
+    return $EveScoutFeedStatesTable(attachedDatabase, alias);
+  }
+}
+
+class EveScoutFeedState extends DataClass
+    implements Insertable<EveScoutFeedState> {
+  final String scopeKey;
+  final bool cacheValid;
+  final int snapshotRevision;
+  final int validationRevision;
+  final int metadataRevision;
+  final int? payloadReceivedAtMs;
+  final int? lastValidatedAtMs;
+  final int? lastAttemptAtMs;
+  final String? etag;
+  final String? lastModified;
+  final int? cacheExpiresAtMs;
+  final int? nextAttemptAtMs;
+  final String? lastError;
+  final int failureCount;
+  final String? bodyDigest;
+  final int requestEpoch;
+  final String? requestToken;
+  final String? requestOwner;
+  final int? leaseUntilMs;
+  const EveScoutFeedState({
+    required this.scopeKey,
+    required this.cacheValid,
+    required this.snapshotRevision,
+    required this.validationRevision,
+    required this.metadataRevision,
+    this.payloadReceivedAtMs,
+    this.lastValidatedAtMs,
+    this.lastAttemptAtMs,
+    this.etag,
+    this.lastModified,
+    this.cacheExpiresAtMs,
+    this.nextAttemptAtMs,
+    this.lastError,
+    required this.failureCount,
+    this.bodyDigest,
+    required this.requestEpoch,
+    this.requestToken,
+    this.requestOwner,
+    this.leaseUntilMs,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['scope_key'] = Variable<String>(scopeKey);
+    map['cache_valid'] = Variable<bool>(cacheValid);
+    map['snapshot_revision'] = Variable<int>(snapshotRevision);
+    map['validation_revision'] = Variable<int>(validationRevision);
+    map['metadata_revision'] = Variable<int>(metadataRevision);
+    if (!nullToAbsent || payloadReceivedAtMs != null) {
+      map['payload_received_at_ms'] = Variable<int>(payloadReceivedAtMs);
+    }
+    if (!nullToAbsent || lastValidatedAtMs != null) {
+      map['last_validated_at_ms'] = Variable<int>(lastValidatedAtMs);
+    }
+    if (!nullToAbsent || lastAttemptAtMs != null) {
+      map['last_attempt_at_ms'] = Variable<int>(lastAttemptAtMs);
+    }
+    if (!nullToAbsent || etag != null) {
+      map['etag'] = Variable<String>(etag);
+    }
+    if (!nullToAbsent || lastModified != null) {
+      map['last_modified'] = Variable<String>(lastModified);
+    }
+    if (!nullToAbsent || cacheExpiresAtMs != null) {
+      map['cache_expires_at_ms'] = Variable<int>(cacheExpiresAtMs);
+    }
+    if (!nullToAbsent || nextAttemptAtMs != null) {
+      map['next_attempt_at_ms'] = Variable<int>(nextAttemptAtMs);
+    }
+    if (!nullToAbsent || lastError != null) {
+      map['last_error'] = Variable<String>(lastError);
+    }
+    map['failure_count'] = Variable<int>(failureCount);
+    if (!nullToAbsent || bodyDigest != null) {
+      map['body_digest'] = Variable<String>(bodyDigest);
+    }
+    map['request_epoch'] = Variable<int>(requestEpoch);
+    if (!nullToAbsent || requestToken != null) {
+      map['request_token'] = Variable<String>(requestToken);
+    }
+    if (!nullToAbsent || requestOwner != null) {
+      map['request_owner'] = Variable<String>(requestOwner);
+    }
+    if (!nullToAbsent || leaseUntilMs != null) {
+      map['lease_until_ms'] = Variable<int>(leaseUntilMs);
+    }
+    return map;
+  }
+
+  EveScoutFeedStatesCompanion toCompanion(bool nullToAbsent) {
+    return EveScoutFeedStatesCompanion(
+      scopeKey: Value(scopeKey),
+      cacheValid: Value(cacheValid),
+      snapshotRevision: Value(snapshotRevision),
+      validationRevision: Value(validationRevision),
+      metadataRevision: Value(metadataRevision),
+      payloadReceivedAtMs: payloadReceivedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(payloadReceivedAtMs),
+      lastValidatedAtMs: lastValidatedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastValidatedAtMs),
+      lastAttemptAtMs: lastAttemptAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastAttemptAtMs),
+      etag: etag == null && nullToAbsent ? const Value.absent() : Value(etag),
+      lastModified: lastModified == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastModified),
+      cacheExpiresAtMs: cacheExpiresAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cacheExpiresAtMs),
+      nextAttemptAtMs: nextAttemptAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextAttemptAtMs),
+      lastError: lastError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastError),
+      failureCount: Value(failureCount),
+      bodyDigest: bodyDigest == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bodyDigest),
+      requestEpoch: Value(requestEpoch),
+      requestToken: requestToken == null && nullToAbsent
+          ? const Value.absent()
+          : Value(requestToken),
+      requestOwner: requestOwner == null && nullToAbsent
+          ? const Value.absent()
+          : Value(requestOwner),
+      leaseUntilMs: leaseUntilMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(leaseUntilMs),
+    );
+  }
+
+  factory EveScoutFeedState.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return EveScoutFeedState(
+      scopeKey: serializer.fromJson<String>(json['scopeKey']),
+      cacheValid: serializer.fromJson<bool>(json['cacheValid']),
+      snapshotRevision: serializer.fromJson<int>(json['snapshotRevision']),
+      validationRevision: serializer.fromJson<int>(json['validationRevision']),
+      metadataRevision: serializer.fromJson<int>(json['metadataRevision']),
+      payloadReceivedAtMs: serializer.fromJson<int?>(
+        json['payloadReceivedAtMs'],
+      ),
+      lastValidatedAtMs: serializer.fromJson<int?>(json['lastValidatedAtMs']),
+      lastAttemptAtMs: serializer.fromJson<int?>(json['lastAttemptAtMs']),
+      etag: serializer.fromJson<String?>(json['etag']),
+      lastModified: serializer.fromJson<String?>(json['lastModified']),
+      cacheExpiresAtMs: serializer.fromJson<int?>(json['cacheExpiresAtMs']),
+      nextAttemptAtMs: serializer.fromJson<int?>(json['nextAttemptAtMs']),
+      lastError: serializer.fromJson<String?>(json['lastError']),
+      failureCount: serializer.fromJson<int>(json['failureCount']),
+      bodyDigest: serializer.fromJson<String?>(json['bodyDigest']),
+      requestEpoch: serializer.fromJson<int>(json['requestEpoch']),
+      requestToken: serializer.fromJson<String?>(json['requestToken']),
+      requestOwner: serializer.fromJson<String?>(json['requestOwner']),
+      leaseUntilMs: serializer.fromJson<int?>(json['leaseUntilMs']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'scopeKey': serializer.toJson<String>(scopeKey),
+      'cacheValid': serializer.toJson<bool>(cacheValid),
+      'snapshotRevision': serializer.toJson<int>(snapshotRevision),
+      'validationRevision': serializer.toJson<int>(validationRevision),
+      'metadataRevision': serializer.toJson<int>(metadataRevision),
+      'payloadReceivedAtMs': serializer.toJson<int?>(payloadReceivedAtMs),
+      'lastValidatedAtMs': serializer.toJson<int?>(lastValidatedAtMs),
+      'lastAttemptAtMs': serializer.toJson<int?>(lastAttemptAtMs),
+      'etag': serializer.toJson<String?>(etag),
+      'lastModified': serializer.toJson<String?>(lastModified),
+      'cacheExpiresAtMs': serializer.toJson<int?>(cacheExpiresAtMs),
+      'nextAttemptAtMs': serializer.toJson<int?>(nextAttemptAtMs),
+      'lastError': serializer.toJson<String?>(lastError),
+      'failureCount': serializer.toJson<int>(failureCount),
+      'bodyDigest': serializer.toJson<String?>(bodyDigest),
+      'requestEpoch': serializer.toJson<int>(requestEpoch),
+      'requestToken': serializer.toJson<String?>(requestToken),
+      'requestOwner': serializer.toJson<String?>(requestOwner),
+      'leaseUntilMs': serializer.toJson<int?>(leaseUntilMs),
+    };
+  }
+
+  EveScoutFeedState copyWith({
+    String? scopeKey,
+    bool? cacheValid,
+    int? snapshotRevision,
+    int? validationRevision,
+    int? metadataRevision,
+    Value<int?> payloadReceivedAtMs = const Value.absent(),
+    Value<int?> lastValidatedAtMs = const Value.absent(),
+    Value<int?> lastAttemptAtMs = const Value.absent(),
+    Value<String?> etag = const Value.absent(),
+    Value<String?> lastModified = const Value.absent(),
+    Value<int?> cacheExpiresAtMs = const Value.absent(),
+    Value<int?> nextAttemptAtMs = const Value.absent(),
+    Value<String?> lastError = const Value.absent(),
+    int? failureCount,
+    Value<String?> bodyDigest = const Value.absent(),
+    int? requestEpoch,
+    Value<String?> requestToken = const Value.absent(),
+    Value<String?> requestOwner = const Value.absent(),
+    Value<int?> leaseUntilMs = const Value.absent(),
+  }) => EveScoutFeedState(
+    scopeKey: scopeKey ?? this.scopeKey,
+    cacheValid: cacheValid ?? this.cacheValid,
+    snapshotRevision: snapshotRevision ?? this.snapshotRevision,
+    validationRevision: validationRevision ?? this.validationRevision,
+    metadataRevision: metadataRevision ?? this.metadataRevision,
+    payloadReceivedAtMs: payloadReceivedAtMs.present
+        ? payloadReceivedAtMs.value
+        : this.payloadReceivedAtMs,
+    lastValidatedAtMs: lastValidatedAtMs.present
+        ? lastValidatedAtMs.value
+        : this.lastValidatedAtMs,
+    lastAttemptAtMs: lastAttemptAtMs.present
+        ? lastAttemptAtMs.value
+        : this.lastAttemptAtMs,
+    etag: etag.present ? etag.value : this.etag,
+    lastModified: lastModified.present ? lastModified.value : this.lastModified,
+    cacheExpiresAtMs: cacheExpiresAtMs.present
+        ? cacheExpiresAtMs.value
+        : this.cacheExpiresAtMs,
+    nextAttemptAtMs: nextAttemptAtMs.present
+        ? nextAttemptAtMs.value
+        : this.nextAttemptAtMs,
+    lastError: lastError.present ? lastError.value : this.lastError,
+    failureCount: failureCount ?? this.failureCount,
+    bodyDigest: bodyDigest.present ? bodyDigest.value : this.bodyDigest,
+    requestEpoch: requestEpoch ?? this.requestEpoch,
+    requestToken: requestToken.present ? requestToken.value : this.requestToken,
+    requestOwner: requestOwner.present ? requestOwner.value : this.requestOwner,
+    leaseUntilMs: leaseUntilMs.present ? leaseUntilMs.value : this.leaseUntilMs,
+  );
+  EveScoutFeedState copyWithCompanion(EveScoutFeedStatesCompanion data) {
+    return EveScoutFeedState(
+      scopeKey: data.scopeKey.present ? data.scopeKey.value : this.scopeKey,
+      cacheValid: data.cacheValid.present
+          ? data.cacheValid.value
+          : this.cacheValid,
+      snapshotRevision: data.snapshotRevision.present
+          ? data.snapshotRevision.value
+          : this.snapshotRevision,
+      validationRevision: data.validationRevision.present
+          ? data.validationRevision.value
+          : this.validationRevision,
+      metadataRevision: data.metadataRevision.present
+          ? data.metadataRevision.value
+          : this.metadataRevision,
+      payloadReceivedAtMs: data.payloadReceivedAtMs.present
+          ? data.payloadReceivedAtMs.value
+          : this.payloadReceivedAtMs,
+      lastValidatedAtMs: data.lastValidatedAtMs.present
+          ? data.lastValidatedAtMs.value
+          : this.lastValidatedAtMs,
+      lastAttemptAtMs: data.lastAttemptAtMs.present
+          ? data.lastAttemptAtMs.value
+          : this.lastAttemptAtMs,
+      etag: data.etag.present ? data.etag.value : this.etag,
+      lastModified: data.lastModified.present
+          ? data.lastModified.value
+          : this.lastModified,
+      cacheExpiresAtMs: data.cacheExpiresAtMs.present
+          ? data.cacheExpiresAtMs.value
+          : this.cacheExpiresAtMs,
+      nextAttemptAtMs: data.nextAttemptAtMs.present
+          ? data.nextAttemptAtMs.value
+          : this.nextAttemptAtMs,
+      lastError: data.lastError.present ? data.lastError.value : this.lastError,
+      failureCount: data.failureCount.present
+          ? data.failureCount.value
+          : this.failureCount,
+      bodyDigest: data.bodyDigest.present
+          ? data.bodyDigest.value
+          : this.bodyDigest,
+      requestEpoch: data.requestEpoch.present
+          ? data.requestEpoch.value
+          : this.requestEpoch,
+      requestToken: data.requestToken.present
+          ? data.requestToken.value
+          : this.requestToken,
+      requestOwner: data.requestOwner.present
+          ? data.requestOwner.value
+          : this.requestOwner,
+      leaseUntilMs: data.leaseUntilMs.present
+          ? data.leaseUntilMs.value
+          : this.leaseUntilMs,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EveScoutFeedState(')
+          ..write('scopeKey: $scopeKey, ')
+          ..write('cacheValid: $cacheValid, ')
+          ..write('snapshotRevision: $snapshotRevision, ')
+          ..write('validationRevision: $validationRevision, ')
+          ..write('metadataRevision: $metadataRevision, ')
+          ..write('payloadReceivedAtMs: $payloadReceivedAtMs, ')
+          ..write('lastValidatedAtMs: $lastValidatedAtMs, ')
+          ..write('lastAttemptAtMs: $lastAttemptAtMs, ')
+          ..write('etag: $etag, ')
+          ..write('lastModified: $lastModified, ')
+          ..write('cacheExpiresAtMs: $cacheExpiresAtMs, ')
+          ..write('nextAttemptAtMs: $nextAttemptAtMs, ')
+          ..write('lastError: $lastError, ')
+          ..write('failureCount: $failureCount, ')
+          ..write('bodyDigest: $bodyDigest, ')
+          ..write('requestEpoch: $requestEpoch, ')
+          ..write('requestToken: $requestToken, ')
+          ..write('requestOwner: $requestOwner, ')
+          ..write('leaseUntilMs: $leaseUntilMs')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    scopeKey,
+    cacheValid,
+    snapshotRevision,
+    validationRevision,
+    metadataRevision,
+    payloadReceivedAtMs,
+    lastValidatedAtMs,
+    lastAttemptAtMs,
+    etag,
+    lastModified,
+    cacheExpiresAtMs,
+    nextAttemptAtMs,
+    lastError,
+    failureCount,
+    bodyDigest,
+    requestEpoch,
+    requestToken,
+    requestOwner,
+    leaseUntilMs,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is EveScoutFeedState &&
+          other.scopeKey == this.scopeKey &&
+          other.cacheValid == this.cacheValid &&
+          other.snapshotRevision == this.snapshotRevision &&
+          other.validationRevision == this.validationRevision &&
+          other.metadataRevision == this.metadataRevision &&
+          other.payloadReceivedAtMs == this.payloadReceivedAtMs &&
+          other.lastValidatedAtMs == this.lastValidatedAtMs &&
+          other.lastAttemptAtMs == this.lastAttemptAtMs &&
+          other.etag == this.etag &&
+          other.lastModified == this.lastModified &&
+          other.cacheExpiresAtMs == this.cacheExpiresAtMs &&
+          other.nextAttemptAtMs == this.nextAttemptAtMs &&
+          other.lastError == this.lastError &&
+          other.failureCount == this.failureCount &&
+          other.bodyDigest == this.bodyDigest &&
+          other.requestEpoch == this.requestEpoch &&
+          other.requestToken == this.requestToken &&
+          other.requestOwner == this.requestOwner &&
+          other.leaseUntilMs == this.leaseUntilMs);
+}
+
+class EveScoutFeedStatesCompanion extends UpdateCompanion<EveScoutFeedState> {
+  final Value<String> scopeKey;
+  final Value<bool> cacheValid;
+  final Value<int> snapshotRevision;
+  final Value<int> validationRevision;
+  final Value<int> metadataRevision;
+  final Value<int?> payloadReceivedAtMs;
+  final Value<int?> lastValidatedAtMs;
+  final Value<int?> lastAttemptAtMs;
+  final Value<String?> etag;
+  final Value<String?> lastModified;
+  final Value<int?> cacheExpiresAtMs;
+  final Value<int?> nextAttemptAtMs;
+  final Value<String?> lastError;
+  final Value<int> failureCount;
+  final Value<String?> bodyDigest;
+  final Value<int> requestEpoch;
+  final Value<String?> requestToken;
+  final Value<String?> requestOwner;
+  final Value<int?> leaseUntilMs;
+  final Value<int> rowid;
+  const EveScoutFeedStatesCompanion({
+    this.scopeKey = const Value.absent(),
+    this.cacheValid = const Value.absent(),
+    this.snapshotRevision = const Value.absent(),
+    this.validationRevision = const Value.absent(),
+    this.metadataRevision = const Value.absent(),
+    this.payloadReceivedAtMs = const Value.absent(),
+    this.lastValidatedAtMs = const Value.absent(),
+    this.lastAttemptAtMs = const Value.absent(),
+    this.etag = const Value.absent(),
+    this.lastModified = const Value.absent(),
+    this.cacheExpiresAtMs = const Value.absent(),
+    this.nextAttemptAtMs = const Value.absent(),
+    this.lastError = const Value.absent(),
+    this.failureCount = const Value.absent(),
+    this.bodyDigest = const Value.absent(),
+    this.requestEpoch = const Value.absent(),
+    this.requestToken = const Value.absent(),
+    this.requestOwner = const Value.absent(),
+    this.leaseUntilMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  EveScoutFeedStatesCompanion.insert({
+    required String scopeKey,
+    this.cacheValid = const Value.absent(),
+    this.snapshotRevision = const Value.absent(),
+    this.validationRevision = const Value.absent(),
+    this.metadataRevision = const Value.absent(),
+    this.payloadReceivedAtMs = const Value.absent(),
+    this.lastValidatedAtMs = const Value.absent(),
+    this.lastAttemptAtMs = const Value.absent(),
+    this.etag = const Value.absent(),
+    this.lastModified = const Value.absent(),
+    this.cacheExpiresAtMs = const Value.absent(),
+    this.nextAttemptAtMs = const Value.absent(),
+    this.lastError = const Value.absent(),
+    this.failureCount = const Value.absent(),
+    this.bodyDigest = const Value.absent(),
+    this.requestEpoch = const Value.absent(),
+    this.requestToken = const Value.absent(),
+    this.requestOwner = const Value.absent(),
+    this.leaseUntilMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : scopeKey = Value(scopeKey);
+  static Insertable<EveScoutFeedState> custom({
+    Expression<String>? scopeKey,
+    Expression<bool>? cacheValid,
+    Expression<int>? snapshotRevision,
+    Expression<int>? validationRevision,
+    Expression<int>? metadataRevision,
+    Expression<int>? payloadReceivedAtMs,
+    Expression<int>? lastValidatedAtMs,
+    Expression<int>? lastAttemptAtMs,
+    Expression<String>? etag,
+    Expression<String>? lastModified,
+    Expression<int>? cacheExpiresAtMs,
+    Expression<int>? nextAttemptAtMs,
+    Expression<String>? lastError,
+    Expression<int>? failureCount,
+    Expression<String>? bodyDigest,
+    Expression<int>? requestEpoch,
+    Expression<String>? requestToken,
+    Expression<String>? requestOwner,
+    Expression<int>? leaseUntilMs,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (scopeKey != null) 'scope_key': scopeKey,
+      if (cacheValid != null) 'cache_valid': cacheValid,
+      if (snapshotRevision != null) 'snapshot_revision': snapshotRevision,
+      if (validationRevision != null) 'validation_revision': validationRevision,
+      if (metadataRevision != null) 'metadata_revision': metadataRevision,
+      if (payloadReceivedAtMs != null)
+        'payload_received_at_ms': payloadReceivedAtMs,
+      if (lastValidatedAtMs != null) 'last_validated_at_ms': lastValidatedAtMs,
+      if (lastAttemptAtMs != null) 'last_attempt_at_ms': lastAttemptAtMs,
+      if (etag != null) 'etag': etag,
+      if (lastModified != null) 'last_modified': lastModified,
+      if (cacheExpiresAtMs != null) 'cache_expires_at_ms': cacheExpiresAtMs,
+      if (nextAttemptAtMs != null) 'next_attempt_at_ms': nextAttemptAtMs,
+      if (lastError != null) 'last_error': lastError,
+      if (failureCount != null) 'failure_count': failureCount,
+      if (bodyDigest != null) 'body_digest': bodyDigest,
+      if (requestEpoch != null) 'request_epoch': requestEpoch,
+      if (requestToken != null) 'request_token': requestToken,
+      if (requestOwner != null) 'request_owner': requestOwner,
+      if (leaseUntilMs != null) 'lease_until_ms': leaseUntilMs,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  EveScoutFeedStatesCompanion copyWith({
+    Value<String>? scopeKey,
+    Value<bool>? cacheValid,
+    Value<int>? snapshotRevision,
+    Value<int>? validationRevision,
+    Value<int>? metadataRevision,
+    Value<int?>? payloadReceivedAtMs,
+    Value<int?>? lastValidatedAtMs,
+    Value<int?>? lastAttemptAtMs,
+    Value<String?>? etag,
+    Value<String?>? lastModified,
+    Value<int?>? cacheExpiresAtMs,
+    Value<int?>? nextAttemptAtMs,
+    Value<String?>? lastError,
+    Value<int>? failureCount,
+    Value<String?>? bodyDigest,
+    Value<int>? requestEpoch,
+    Value<String?>? requestToken,
+    Value<String?>? requestOwner,
+    Value<int?>? leaseUntilMs,
+    Value<int>? rowid,
+  }) {
+    return EveScoutFeedStatesCompanion(
+      scopeKey: scopeKey ?? this.scopeKey,
+      cacheValid: cacheValid ?? this.cacheValid,
+      snapshotRevision: snapshotRevision ?? this.snapshotRevision,
+      validationRevision: validationRevision ?? this.validationRevision,
+      metadataRevision: metadataRevision ?? this.metadataRevision,
+      payloadReceivedAtMs: payloadReceivedAtMs ?? this.payloadReceivedAtMs,
+      lastValidatedAtMs: lastValidatedAtMs ?? this.lastValidatedAtMs,
+      lastAttemptAtMs: lastAttemptAtMs ?? this.lastAttemptAtMs,
+      etag: etag ?? this.etag,
+      lastModified: lastModified ?? this.lastModified,
+      cacheExpiresAtMs: cacheExpiresAtMs ?? this.cacheExpiresAtMs,
+      nextAttemptAtMs: nextAttemptAtMs ?? this.nextAttemptAtMs,
+      lastError: lastError ?? this.lastError,
+      failureCount: failureCount ?? this.failureCount,
+      bodyDigest: bodyDigest ?? this.bodyDigest,
+      requestEpoch: requestEpoch ?? this.requestEpoch,
+      requestToken: requestToken ?? this.requestToken,
+      requestOwner: requestOwner ?? this.requestOwner,
+      leaseUntilMs: leaseUntilMs ?? this.leaseUntilMs,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (scopeKey.present) {
+      map['scope_key'] = Variable<String>(scopeKey.value);
+    }
+    if (cacheValid.present) {
+      map['cache_valid'] = Variable<bool>(cacheValid.value);
+    }
+    if (snapshotRevision.present) {
+      map['snapshot_revision'] = Variable<int>(snapshotRevision.value);
+    }
+    if (validationRevision.present) {
+      map['validation_revision'] = Variable<int>(validationRevision.value);
+    }
+    if (metadataRevision.present) {
+      map['metadata_revision'] = Variable<int>(metadataRevision.value);
+    }
+    if (payloadReceivedAtMs.present) {
+      map['payload_received_at_ms'] = Variable<int>(payloadReceivedAtMs.value);
+    }
+    if (lastValidatedAtMs.present) {
+      map['last_validated_at_ms'] = Variable<int>(lastValidatedAtMs.value);
+    }
+    if (lastAttemptAtMs.present) {
+      map['last_attempt_at_ms'] = Variable<int>(lastAttemptAtMs.value);
+    }
+    if (etag.present) {
+      map['etag'] = Variable<String>(etag.value);
+    }
+    if (lastModified.present) {
+      map['last_modified'] = Variable<String>(lastModified.value);
+    }
+    if (cacheExpiresAtMs.present) {
+      map['cache_expires_at_ms'] = Variable<int>(cacheExpiresAtMs.value);
+    }
+    if (nextAttemptAtMs.present) {
+      map['next_attempt_at_ms'] = Variable<int>(nextAttemptAtMs.value);
+    }
+    if (lastError.present) {
+      map['last_error'] = Variable<String>(lastError.value);
+    }
+    if (failureCount.present) {
+      map['failure_count'] = Variable<int>(failureCount.value);
+    }
+    if (bodyDigest.present) {
+      map['body_digest'] = Variable<String>(bodyDigest.value);
+    }
+    if (requestEpoch.present) {
+      map['request_epoch'] = Variable<int>(requestEpoch.value);
+    }
+    if (requestToken.present) {
+      map['request_token'] = Variable<String>(requestToken.value);
+    }
+    if (requestOwner.present) {
+      map['request_owner'] = Variable<String>(requestOwner.value);
+    }
+    if (leaseUntilMs.present) {
+      map['lease_until_ms'] = Variable<int>(leaseUntilMs.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EveScoutFeedStatesCompanion(')
+          ..write('scopeKey: $scopeKey, ')
+          ..write('cacheValid: $cacheValid, ')
+          ..write('snapshotRevision: $snapshotRevision, ')
+          ..write('validationRevision: $validationRevision, ')
+          ..write('metadataRevision: $metadataRevision, ')
+          ..write('payloadReceivedAtMs: $payloadReceivedAtMs, ')
+          ..write('lastValidatedAtMs: $lastValidatedAtMs, ')
+          ..write('lastAttemptAtMs: $lastAttemptAtMs, ')
+          ..write('etag: $etag, ')
+          ..write('lastModified: $lastModified, ')
+          ..write('cacheExpiresAtMs: $cacheExpiresAtMs, ')
+          ..write('nextAttemptAtMs: $nextAttemptAtMs, ')
+          ..write('lastError: $lastError, ')
+          ..write('failureCount: $failureCount, ')
+          ..write('bodyDigest: $bodyDigest, ')
+          ..write('requestEpoch: $requestEpoch, ')
+          ..write('requestToken: $requestToken, ')
+          ..write('requestOwner: $requestOwner, ')
+          ..write('leaseUntilMs: $leaseUntilMs, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $EveScoutSignaturesTable extends EveScoutSignatures
+    with TableInfo<$EveScoutSignaturesTable, EveScoutSignature> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EveScoutSignaturesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _scopeKeyMeta = const VerificationMeta(
+    'scopeKey',
+  );
+  @override
+  late final GeneratedColumn<String> scopeKey = GeneratedColumn<String>(
+    'scope_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _providerRecordKeyMeta = const VerificationMeta(
+    'providerRecordKey',
+  );
+  @override
+  late final GeneratedColumn<String> providerRecordKey =
+      GeneratedColumn<String>(
+        'provider_record_key',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _hubSystemIdMeta = const VerificationMeta(
+    'hubSystemId',
+  );
+  @override
+  late final GeneratedColumn<int> hubSystemId = GeneratedColumn<int>(
+    'hub_system_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hubSystemNameMeta = const VerificationMeta(
+    'hubSystemName',
+  );
+  @override
+  late final GeneratedColumn<String> hubSystemName = GeneratedColumn<String>(
+    'hub_system_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _hubRegionHintMeta = const VerificationMeta(
+    'hubRegionHint',
+  );
+  @override
+  late final GeneratedColumn<String> hubRegionHint = GeneratedColumn<String>(
+    'hub_region_hint',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _farSystemIdMeta = const VerificationMeta(
+    'farSystemId',
+  );
+  @override
+  late final GeneratedColumn<int> farSystemId = GeneratedColumn<int>(
+    'far_system_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _farSystemNameMeta = const VerificationMeta(
+    'farSystemName',
+  );
+  @override
+  late final GeneratedColumn<String> farSystemName = GeneratedColumn<String>(
+    'far_system_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _farRegionHintMeta = const VerificationMeta(
+    'farRegionHint',
+  );
+  @override
+  late final GeneratedColumn<String> farRegionHint = GeneratedColumn<String>(
+    'far_region_hint',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _hubSignatureMeta = const VerificationMeta(
+    'hubSignature',
+  );
+  @override
+  late final GeneratedColumn<String> hubSignature = GeneratedColumn<String>(
+    'hub_signature',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _farSignatureMeta = const VerificationMeta(
+    'farSignature',
+  );
+  @override
+  late final GeneratedColumn<String> farSignature = GeneratedColumn<String>(
+    'far_signature',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _wormholeTypeMeta = const VerificationMeta(
+    'wormholeType',
+  );
+  @override
+  late final GeneratedColumn<String> wormholeType = GeneratedColumn<String>(
+    'wormhole_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _orientationMeta = const VerificationMeta(
+    'orientation',
+  );
+  @override
+  late final GeneratedColumn<String> orientation = GeneratedColumn<String>(
+    'orientation',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _maxShipSizeMeta = const VerificationMeta(
+    'maxShipSize',
+  );
+  @override
+  late final GeneratedColumn<String> maxShipSize = GeneratedColumn<String>(
+    'max_ship_size',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _completionTypeMeta = const VerificationMeta(
+    'completionType',
+  );
+  @override
+  late final GeneratedColumn<String> completionType = GeneratedColumn<String>(
+    'completion_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sourceCreatedAtMsMeta = const VerificationMeta(
+    'sourceCreatedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> sourceCreatedAtMs = GeneratedColumn<int>(
+    'source_created_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sourceUpdatedAtMsMeta = const VerificationMeta(
+    'sourceUpdatedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> sourceUpdatedAtMs = GeneratedColumn<int>(
+    'source_updated_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sourceCompletedAtMsMeta =
+      const VerificationMeta('sourceCompletedAtMs');
+  @override
+  late final GeneratedColumn<int> sourceCompletedAtMs = GeneratedColumn<int>(
+    'source_completed_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sourceExpiresAtMsMeta = const VerificationMeta(
+    'sourceExpiresAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> sourceExpiresAtMs = GeneratedColumn<int>(
+    'source_expires_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _rawCategoryHintsJsonMeta =
+      const VerificationMeta('rawCategoryHintsJson');
+  @override
+  late final GeneratedColumn<String> rawCategoryHintsJson =
+      GeneratedColumn<String>(
+        'raw_category_hints_json',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _diagnosticsJsonMeta = const VerificationMeta(
+    'diagnosticsJson',
+  );
+  @override
+  late final GeneratedColumn<String> diagnosticsJson = GeneratedColumn<String>(
+    'diagnostics_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _listedSnapshotRevisionMeta =
+      const VerificationMeta('listedSnapshotRevision');
+  @override
+  late final GeneratedColumn<int> listedSnapshotRevision = GeneratedColumn<int>(
+    'listed_snapshot_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastPayloadSeenAtMsMeta =
+      const VerificationMeta('lastPayloadSeenAtMs');
+  @override
+  late final GeneratedColumn<int> lastPayloadSeenAtMs = GeneratedColumn<int>(
+    'last_payload_seen_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _unavailableAtMsMeta = const VerificationMeta(
+    'unavailableAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> unavailableAtMs = GeneratedColumn<int>(
+    'unavailable_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _retiredAtMsMeta = const VerificationMeta(
+    'retiredAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> retiredAtMs = GeneratedColumn<int>(
+    'retired_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    scopeKey,
+    providerRecordKey,
+    hubSystemId,
+    hubSystemName,
+    hubRegionHint,
+    farSystemId,
+    farSystemName,
+    farRegionHint,
+    hubSignature,
+    farSignature,
+    wormholeType,
+    orientation,
+    maxShipSize,
+    completionType,
+    sourceCreatedAtMs,
+    sourceUpdatedAtMs,
+    sourceCompletedAtMs,
+    sourceExpiresAtMs,
+    rawCategoryHintsJson,
+    diagnosticsJson,
+    listedSnapshotRevision,
+    lastPayloadSeenAtMs,
+    unavailableAtMs,
+    retiredAtMs,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'eve_scout_signatures';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<EveScoutSignature> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('scope_key')) {
+      context.handle(
+        _scopeKeyMeta,
+        scopeKey.isAcceptableOrUnknown(data['scope_key']!, _scopeKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scopeKeyMeta);
+    }
+    if (data.containsKey('provider_record_key')) {
+      context.handle(
+        _providerRecordKeyMeta,
+        providerRecordKey.isAcceptableOrUnknown(
+          data['provider_record_key']!,
+          _providerRecordKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_providerRecordKeyMeta);
+    }
+    if (data.containsKey('hub_system_id')) {
+      context.handle(
+        _hubSystemIdMeta,
+        hubSystemId.isAcceptableOrUnknown(
+          data['hub_system_id']!,
+          _hubSystemIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_hubSystemIdMeta);
+    }
+    if (data.containsKey('hub_system_name')) {
+      context.handle(
+        _hubSystemNameMeta,
+        hubSystemName.isAcceptableOrUnknown(
+          data['hub_system_name']!,
+          _hubSystemNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('hub_region_hint')) {
+      context.handle(
+        _hubRegionHintMeta,
+        hubRegionHint.isAcceptableOrUnknown(
+          data['hub_region_hint']!,
+          _hubRegionHintMeta,
+        ),
+      );
+    }
+    if (data.containsKey('far_system_id')) {
+      context.handle(
+        _farSystemIdMeta,
+        farSystemId.isAcceptableOrUnknown(
+          data['far_system_id']!,
+          _farSystemIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_farSystemIdMeta);
+    }
+    if (data.containsKey('far_system_name')) {
+      context.handle(
+        _farSystemNameMeta,
+        farSystemName.isAcceptableOrUnknown(
+          data['far_system_name']!,
+          _farSystemNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('far_region_hint')) {
+      context.handle(
+        _farRegionHintMeta,
+        farRegionHint.isAcceptableOrUnknown(
+          data['far_region_hint']!,
+          _farRegionHintMeta,
+        ),
+      );
+    }
+    if (data.containsKey('hub_signature')) {
+      context.handle(
+        _hubSignatureMeta,
+        hubSignature.isAcceptableOrUnknown(
+          data['hub_signature']!,
+          _hubSignatureMeta,
+        ),
+      );
+    }
+    if (data.containsKey('far_signature')) {
+      context.handle(
+        _farSignatureMeta,
+        farSignature.isAcceptableOrUnknown(
+          data['far_signature']!,
+          _farSignatureMeta,
+        ),
+      );
+    }
+    if (data.containsKey('wormhole_type')) {
+      context.handle(
+        _wormholeTypeMeta,
+        wormholeType.isAcceptableOrUnknown(
+          data['wormhole_type']!,
+          _wormholeTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('orientation')) {
+      context.handle(
+        _orientationMeta,
+        orientation.isAcceptableOrUnknown(
+          data['orientation']!,
+          _orientationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('max_ship_size')) {
+      context.handle(
+        _maxShipSizeMeta,
+        maxShipSize.isAcceptableOrUnknown(
+          data['max_ship_size']!,
+          _maxShipSizeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('completion_type')) {
+      context.handle(
+        _completionTypeMeta,
+        completionType.isAcceptableOrUnknown(
+          data['completion_type']!,
+          _completionTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('source_created_at_ms')) {
+      context.handle(
+        _sourceCreatedAtMsMeta,
+        sourceCreatedAtMs.isAcceptableOrUnknown(
+          data['source_created_at_ms']!,
+          _sourceCreatedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('source_updated_at_ms')) {
+      context.handle(
+        _sourceUpdatedAtMsMeta,
+        sourceUpdatedAtMs.isAcceptableOrUnknown(
+          data['source_updated_at_ms']!,
+          _sourceUpdatedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('source_completed_at_ms')) {
+      context.handle(
+        _sourceCompletedAtMsMeta,
+        sourceCompletedAtMs.isAcceptableOrUnknown(
+          data['source_completed_at_ms']!,
+          _sourceCompletedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('source_expires_at_ms')) {
+      context.handle(
+        _sourceExpiresAtMsMeta,
+        sourceExpiresAtMs.isAcceptableOrUnknown(
+          data['source_expires_at_ms']!,
+          _sourceExpiresAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('raw_category_hints_json')) {
+      context.handle(
+        _rawCategoryHintsJsonMeta,
+        rawCategoryHintsJson.isAcceptableOrUnknown(
+          data['raw_category_hints_json']!,
+          _rawCategoryHintsJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('diagnostics_json')) {
+      context.handle(
+        _diagnosticsJsonMeta,
+        diagnosticsJson.isAcceptableOrUnknown(
+          data['diagnostics_json']!,
+          _diagnosticsJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('listed_snapshot_revision')) {
+      context.handle(
+        _listedSnapshotRevisionMeta,
+        listedSnapshotRevision.isAcceptableOrUnknown(
+          data['listed_snapshot_revision']!,
+          _listedSnapshotRevisionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_listedSnapshotRevisionMeta);
+    }
+    if (data.containsKey('last_payload_seen_at_ms')) {
+      context.handle(
+        _lastPayloadSeenAtMsMeta,
+        lastPayloadSeenAtMs.isAcceptableOrUnknown(
+          data['last_payload_seen_at_ms']!,
+          _lastPayloadSeenAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('unavailable_at_ms')) {
+      context.handle(
+        _unavailableAtMsMeta,
+        unavailableAtMs.isAcceptableOrUnknown(
+          data['unavailable_at_ms']!,
+          _unavailableAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('retired_at_ms')) {
+      context.handle(
+        _retiredAtMsMeta,
+        retiredAtMs.isAcceptableOrUnknown(
+          data['retired_at_ms']!,
+          _retiredAtMsMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {scopeKey, providerRecordKey};
+  @override
+  EveScoutSignature map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return EveScoutSignature(
+      scopeKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scope_key'],
+      )!,
+      providerRecordKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider_record_key'],
+      )!,
+      hubSystemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}hub_system_id'],
+      )!,
+      hubSystemName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hub_system_name'],
+      ),
+      hubRegionHint: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hub_region_hint'],
+      ),
+      farSystemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}far_system_id'],
+      )!,
+      farSystemName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}far_system_name'],
+      ),
+      farRegionHint: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}far_region_hint'],
+      ),
+      hubSignature: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hub_signature'],
+      ),
+      farSignature: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}far_signature'],
+      ),
+      wormholeType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}wormhole_type'],
+      ),
+      orientation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}orientation'],
+      ),
+      maxShipSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}max_ship_size'],
+      ),
+      completionType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}completion_type'],
+      ),
+      sourceCreatedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}source_created_at_ms'],
+      ),
+      sourceUpdatedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}source_updated_at_ms'],
+      ),
+      sourceCompletedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}source_completed_at_ms'],
+      ),
+      sourceExpiresAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}source_expires_at_ms'],
+      ),
+      rawCategoryHintsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}raw_category_hints_json'],
+      ),
+      diagnosticsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}diagnostics_json'],
+      ),
+      listedSnapshotRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}listed_snapshot_revision'],
+      )!,
+      lastPayloadSeenAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_payload_seen_at_ms'],
+      ),
+      unavailableAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}unavailable_at_ms'],
+      ),
+      retiredAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}retired_at_ms'],
+      ),
+    );
+  }
+
+  @override
+  $EveScoutSignaturesTable createAlias(String alias) {
+    return $EveScoutSignaturesTable(attachedDatabase, alias);
+  }
+}
+
+class EveScoutSignature extends DataClass
+    implements Insertable<EveScoutSignature> {
+  final String scopeKey;
+  final String providerRecordKey;
+  final int hubSystemId;
+  final String? hubSystemName;
+  final String? hubRegionHint;
+  final int farSystemId;
+  final String? farSystemName;
+  final String? farRegionHint;
+  final String? hubSignature;
+  final String? farSignature;
+  final String? wormholeType;
+  final String? orientation;
+  final String? maxShipSize;
+  final String? completionType;
+  final int? sourceCreatedAtMs;
+  final int? sourceUpdatedAtMs;
+  final int? sourceCompletedAtMs;
+  final int? sourceExpiresAtMs;
+  final String? rawCategoryHintsJson;
+  final String? diagnosticsJson;
+  final int listedSnapshotRevision;
+  final int? lastPayloadSeenAtMs;
+  final int? unavailableAtMs;
+  final int? retiredAtMs;
+  const EveScoutSignature({
+    required this.scopeKey,
+    required this.providerRecordKey,
+    required this.hubSystemId,
+    this.hubSystemName,
+    this.hubRegionHint,
+    required this.farSystemId,
+    this.farSystemName,
+    this.farRegionHint,
+    this.hubSignature,
+    this.farSignature,
+    this.wormholeType,
+    this.orientation,
+    this.maxShipSize,
+    this.completionType,
+    this.sourceCreatedAtMs,
+    this.sourceUpdatedAtMs,
+    this.sourceCompletedAtMs,
+    this.sourceExpiresAtMs,
+    this.rawCategoryHintsJson,
+    this.diagnosticsJson,
+    required this.listedSnapshotRevision,
+    this.lastPayloadSeenAtMs,
+    this.unavailableAtMs,
+    this.retiredAtMs,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['scope_key'] = Variable<String>(scopeKey);
+    map['provider_record_key'] = Variable<String>(providerRecordKey);
+    map['hub_system_id'] = Variable<int>(hubSystemId);
+    if (!nullToAbsent || hubSystemName != null) {
+      map['hub_system_name'] = Variable<String>(hubSystemName);
+    }
+    if (!nullToAbsent || hubRegionHint != null) {
+      map['hub_region_hint'] = Variable<String>(hubRegionHint);
+    }
+    map['far_system_id'] = Variable<int>(farSystemId);
+    if (!nullToAbsent || farSystemName != null) {
+      map['far_system_name'] = Variable<String>(farSystemName);
+    }
+    if (!nullToAbsent || farRegionHint != null) {
+      map['far_region_hint'] = Variable<String>(farRegionHint);
+    }
+    if (!nullToAbsent || hubSignature != null) {
+      map['hub_signature'] = Variable<String>(hubSignature);
+    }
+    if (!nullToAbsent || farSignature != null) {
+      map['far_signature'] = Variable<String>(farSignature);
+    }
+    if (!nullToAbsent || wormholeType != null) {
+      map['wormhole_type'] = Variable<String>(wormholeType);
+    }
+    if (!nullToAbsent || orientation != null) {
+      map['orientation'] = Variable<String>(orientation);
+    }
+    if (!nullToAbsent || maxShipSize != null) {
+      map['max_ship_size'] = Variable<String>(maxShipSize);
+    }
+    if (!nullToAbsent || completionType != null) {
+      map['completion_type'] = Variable<String>(completionType);
+    }
+    if (!nullToAbsent || sourceCreatedAtMs != null) {
+      map['source_created_at_ms'] = Variable<int>(sourceCreatedAtMs);
+    }
+    if (!nullToAbsent || sourceUpdatedAtMs != null) {
+      map['source_updated_at_ms'] = Variable<int>(sourceUpdatedAtMs);
+    }
+    if (!nullToAbsent || sourceCompletedAtMs != null) {
+      map['source_completed_at_ms'] = Variable<int>(sourceCompletedAtMs);
+    }
+    if (!nullToAbsent || sourceExpiresAtMs != null) {
+      map['source_expires_at_ms'] = Variable<int>(sourceExpiresAtMs);
+    }
+    if (!nullToAbsent || rawCategoryHintsJson != null) {
+      map['raw_category_hints_json'] = Variable<String>(rawCategoryHintsJson);
+    }
+    if (!nullToAbsent || diagnosticsJson != null) {
+      map['diagnostics_json'] = Variable<String>(diagnosticsJson);
+    }
+    map['listed_snapshot_revision'] = Variable<int>(listedSnapshotRevision);
+    if (!nullToAbsent || lastPayloadSeenAtMs != null) {
+      map['last_payload_seen_at_ms'] = Variable<int>(lastPayloadSeenAtMs);
+    }
+    if (!nullToAbsent || unavailableAtMs != null) {
+      map['unavailable_at_ms'] = Variable<int>(unavailableAtMs);
+    }
+    if (!nullToAbsent || retiredAtMs != null) {
+      map['retired_at_ms'] = Variable<int>(retiredAtMs);
+    }
+    return map;
+  }
+
+  EveScoutSignaturesCompanion toCompanion(bool nullToAbsent) {
+    return EveScoutSignaturesCompanion(
+      scopeKey: Value(scopeKey),
+      providerRecordKey: Value(providerRecordKey),
+      hubSystemId: Value(hubSystemId),
+      hubSystemName: hubSystemName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(hubSystemName),
+      hubRegionHint: hubRegionHint == null && nullToAbsent
+          ? const Value.absent()
+          : Value(hubRegionHint),
+      farSystemId: Value(farSystemId),
+      farSystemName: farSystemName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(farSystemName),
+      farRegionHint: farRegionHint == null && nullToAbsent
+          ? const Value.absent()
+          : Value(farRegionHint),
+      hubSignature: hubSignature == null && nullToAbsent
+          ? const Value.absent()
+          : Value(hubSignature),
+      farSignature: farSignature == null && nullToAbsent
+          ? const Value.absent()
+          : Value(farSignature),
+      wormholeType: wormholeType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(wormholeType),
+      orientation: orientation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(orientation),
+      maxShipSize: maxShipSize == null && nullToAbsent
+          ? const Value.absent()
+          : Value(maxShipSize),
+      completionType: completionType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(completionType),
+      sourceCreatedAtMs: sourceCreatedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceCreatedAtMs),
+      sourceUpdatedAtMs: sourceUpdatedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceUpdatedAtMs),
+      sourceCompletedAtMs: sourceCompletedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceCompletedAtMs),
+      sourceExpiresAtMs: sourceExpiresAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceExpiresAtMs),
+      rawCategoryHintsJson: rawCategoryHintsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rawCategoryHintsJson),
+      diagnosticsJson: diagnosticsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(diagnosticsJson),
+      listedSnapshotRevision: Value(listedSnapshotRevision),
+      lastPayloadSeenAtMs: lastPayloadSeenAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastPayloadSeenAtMs),
+      unavailableAtMs: unavailableAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(unavailableAtMs),
+      retiredAtMs: retiredAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(retiredAtMs),
+    );
+  }
+
+  factory EveScoutSignature.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return EveScoutSignature(
+      scopeKey: serializer.fromJson<String>(json['scopeKey']),
+      providerRecordKey: serializer.fromJson<String>(json['providerRecordKey']),
+      hubSystemId: serializer.fromJson<int>(json['hubSystemId']),
+      hubSystemName: serializer.fromJson<String?>(json['hubSystemName']),
+      hubRegionHint: serializer.fromJson<String?>(json['hubRegionHint']),
+      farSystemId: serializer.fromJson<int>(json['farSystemId']),
+      farSystemName: serializer.fromJson<String?>(json['farSystemName']),
+      farRegionHint: serializer.fromJson<String?>(json['farRegionHint']),
+      hubSignature: serializer.fromJson<String?>(json['hubSignature']),
+      farSignature: serializer.fromJson<String?>(json['farSignature']),
+      wormholeType: serializer.fromJson<String?>(json['wormholeType']),
+      orientation: serializer.fromJson<String?>(json['orientation']),
+      maxShipSize: serializer.fromJson<String?>(json['maxShipSize']),
+      completionType: serializer.fromJson<String?>(json['completionType']),
+      sourceCreatedAtMs: serializer.fromJson<int?>(json['sourceCreatedAtMs']),
+      sourceUpdatedAtMs: serializer.fromJson<int?>(json['sourceUpdatedAtMs']),
+      sourceCompletedAtMs: serializer.fromJson<int?>(
+        json['sourceCompletedAtMs'],
+      ),
+      sourceExpiresAtMs: serializer.fromJson<int?>(json['sourceExpiresAtMs']),
+      rawCategoryHintsJson: serializer.fromJson<String?>(
+        json['rawCategoryHintsJson'],
+      ),
+      diagnosticsJson: serializer.fromJson<String?>(json['diagnosticsJson']),
+      listedSnapshotRevision: serializer.fromJson<int>(
+        json['listedSnapshotRevision'],
+      ),
+      lastPayloadSeenAtMs: serializer.fromJson<int?>(
+        json['lastPayloadSeenAtMs'],
+      ),
+      unavailableAtMs: serializer.fromJson<int?>(json['unavailableAtMs']),
+      retiredAtMs: serializer.fromJson<int?>(json['retiredAtMs']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'scopeKey': serializer.toJson<String>(scopeKey),
+      'providerRecordKey': serializer.toJson<String>(providerRecordKey),
+      'hubSystemId': serializer.toJson<int>(hubSystemId),
+      'hubSystemName': serializer.toJson<String?>(hubSystemName),
+      'hubRegionHint': serializer.toJson<String?>(hubRegionHint),
+      'farSystemId': serializer.toJson<int>(farSystemId),
+      'farSystemName': serializer.toJson<String?>(farSystemName),
+      'farRegionHint': serializer.toJson<String?>(farRegionHint),
+      'hubSignature': serializer.toJson<String?>(hubSignature),
+      'farSignature': serializer.toJson<String?>(farSignature),
+      'wormholeType': serializer.toJson<String?>(wormholeType),
+      'orientation': serializer.toJson<String?>(orientation),
+      'maxShipSize': serializer.toJson<String?>(maxShipSize),
+      'completionType': serializer.toJson<String?>(completionType),
+      'sourceCreatedAtMs': serializer.toJson<int?>(sourceCreatedAtMs),
+      'sourceUpdatedAtMs': serializer.toJson<int?>(sourceUpdatedAtMs),
+      'sourceCompletedAtMs': serializer.toJson<int?>(sourceCompletedAtMs),
+      'sourceExpiresAtMs': serializer.toJson<int?>(sourceExpiresAtMs),
+      'rawCategoryHintsJson': serializer.toJson<String?>(rawCategoryHintsJson),
+      'diagnosticsJson': serializer.toJson<String?>(diagnosticsJson),
+      'listedSnapshotRevision': serializer.toJson<int>(listedSnapshotRevision),
+      'lastPayloadSeenAtMs': serializer.toJson<int?>(lastPayloadSeenAtMs),
+      'unavailableAtMs': serializer.toJson<int?>(unavailableAtMs),
+      'retiredAtMs': serializer.toJson<int?>(retiredAtMs),
+    };
+  }
+
+  EveScoutSignature copyWith({
+    String? scopeKey,
+    String? providerRecordKey,
+    int? hubSystemId,
+    Value<String?> hubSystemName = const Value.absent(),
+    Value<String?> hubRegionHint = const Value.absent(),
+    int? farSystemId,
+    Value<String?> farSystemName = const Value.absent(),
+    Value<String?> farRegionHint = const Value.absent(),
+    Value<String?> hubSignature = const Value.absent(),
+    Value<String?> farSignature = const Value.absent(),
+    Value<String?> wormholeType = const Value.absent(),
+    Value<String?> orientation = const Value.absent(),
+    Value<String?> maxShipSize = const Value.absent(),
+    Value<String?> completionType = const Value.absent(),
+    Value<int?> sourceCreatedAtMs = const Value.absent(),
+    Value<int?> sourceUpdatedAtMs = const Value.absent(),
+    Value<int?> sourceCompletedAtMs = const Value.absent(),
+    Value<int?> sourceExpiresAtMs = const Value.absent(),
+    Value<String?> rawCategoryHintsJson = const Value.absent(),
+    Value<String?> diagnosticsJson = const Value.absent(),
+    int? listedSnapshotRevision,
+    Value<int?> lastPayloadSeenAtMs = const Value.absent(),
+    Value<int?> unavailableAtMs = const Value.absent(),
+    Value<int?> retiredAtMs = const Value.absent(),
+  }) => EveScoutSignature(
+    scopeKey: scopeKey ?? this.scopeKey,
+    providerRecordKey: providerRecordKey ?? this.providerRecordKey,
+    hubSystemId: hubSystemId ?? this.hubSystemId,
+    hubSystemName: hubSystemName.present
+        ? hubSystemName.value
+        : this.hubSystemName,
+    hubRegionHint: hubRegionHint.present
+        ? hubRegionHint.value
+        : this.hubRegionHint,
+    farSystemId: farSystemId ?? this.farSystemId,
+    farSystemName: farSystemName.present
+        ? farSystemName.value
+        : this.farSystemName,
+    farRegionHint: farRegionHint.present
+        ? farRegionHint.value
+        : this.farRegionHint,
+    hubSignature: hubSignature.present ? hubSignature.value : this.hubSignature,
+    farSignature: farSignature.present ? farSignature.value : this.farSignature,
+    wormholeType: wormholeType.present ? wormholeType.value : this.wormholeType,
+    orientation: orientation.present ? orientation.value : this.orientation,
+    maxShipSize: maxShipSize.present ? maxShipSize.value : this.maxShipSize,
+    completionType: completionType.present
+        ? completionType.value
+        : this.completionType,
+    sourceCreatedAtMs: sourceCreatedAtMs.present
+        ? sourceCreatedAtMs.value
+        : this.sourceCreatedAtMs,
+    sourceUpdatedAtMs: sourceUpdatedAtMs.present
+        ? sourceUpdatedAtMs.value
+        : this.sourceUpdatedAtMs,
+    sourceCompletedAtMs: sourceCompletedAtMs.present
+        ? sourceCompletedAtMs.value
+        : this.sourceCompletedAtMs,
+    sourceExpiresAtMs: sourceExpiresAtMs.present
+        ? sourceExpiresAtMs.value
+        : this.sourceExpiresAtMs,
+    rawCategoryHintsJson: rawCategoryHintsJson.present
+        ? rawCategoryHintsJson.value
+        : this.rawCategoryHintsJson,
+    diagnosticsJson: diagnosticsJson.present
+        ? diagnosticsJson.value
+        : this.diagnosticsJson,
+    listedSnapshotRevision:
+        listedSnapshotRevision ?? this.listedSnapshotRevision,
+    lastPayloadSeenAtMs: lastPayloadSeenAtMs.present
+        ? lastPayloadSeenAtMs.value
+        : this.lastPayloadSeenAtMs,
+    unavailableAtMs: unavailableAtMs.present
+        ? unavailableAtMs.value
+        : this.unavailableAtMs,
+    retiredAtMs: retiredAtMs.present ? retiredAtMs.value : this.retiredAtMs,
+  );
+  EveScoutSignature copyWithCompanion(EveScoutSignaturesCompanion data) {
+    return EveScoutSignature(
+      scopeKey: data.scopeKey.present ? data.scopeKey.value : this.scopeKey,
+      providerRecordKey: data.providerRecordKey.present
+          ? data.providerRecordKey.value
+          : this.providerRecordKey,
+      hubSystemId: data.hubSystemId.present
+          ? data.hubSystemId.value
+          : this.hubSystemId,
+      hubSystemName: data.hubSystemName.present
+          ? data.hubSystemName.value
+          : this.hubSystemName,
+      hubRegionHint: data.hubRegionHint.present
+          ? data.hubRegionHint.value
+          : this.hubRegionHint,
+      farSystemId: data.farSystemId.present
+          ? data.farSystemId.value
+          : this.farSystemId,
+      farSystemName: data.farSystemName.present
+          ? data.farSystemName.value
+          : this.farSystemName,
+      farRegionHint: data.farRegionHint.present
+          ? data.farRegionHint.value
+          : this.farRegionHint,
+      hubSignature: data.hubSignature.present
+          ? data.hubSignature.value
+          : this.hubSignature,
+      farSignature: data.farSignature.present
+          ? data.farSignature.value
+          : this.farSignature,
+      wormholeType: data.wormholeType.present
+          ? data.wormholeType.value
+          : this.wormholeType,
+      orientation: data.orientation.present
+          ? data.orientation.value
+          : this.orientation,
+      maxShipSize: data.maxShipSize.present
+          ? data.maxShipSize.value
+          : this.maxShipSize,
+      completionType: data.completionType.present
+          ? data.completionType.value
+          : this.completionType,
+      sourceCreatedAtMs: data.sourceCreatedAtMs.present
+          ? data.sourceCreatedAtMs.value
+          : this.sourceCreatedAtMs,
+      sourceUpdatedAtMs: data.sourceUpdatedAtMs.present
+          ? data.sourceUpdatedAtMs.value
+          : this.sourceUpdatedAtMs,
+      sourceCompletedAtMs: data.sourceCompletedAtMs.present
+          ? data.sourceCompletedAtMs.value
+          : this.sourceCompletedAtMs,
+      sourceExpiresAtMs: data.sourceExpiresAtMs.present
+          ? data.sourceExpiresAtMs.value
+          : this.sourceExpiresAtMs,
+      rawCategoryHintsJson: data.rawCategoryHintsJson.present
+          ? data.rawCategoryHintsJson.value
+          : this.rawCategoryHintsJson,
+      diagnosticsJson: data.diagnosticsJson.present
+          ? data.diagnosticsJson.value
+          : this.diagnosticsJson,
+      listedSnapshotRevision: data.listedSnapshotRevision.present
+          ? data.listedSnapshotRevision.value
+          : this.listedSnapshotRevision,
+      lastPayloadSeenAtMs: data.lastPayloadSeenAtMs.present
+          ? data.lastPayloadSeenAtMs.value
+          : this.lastPayloadSeenAtMs,
+      unavailableAtMs: data.unavailableAtMs.present
+          ? data.unavailableAtMs.value
+          : this.unavailableAtMs,
+      retiredAtMs: data.retiredAtMs.present
+          ? data.retiredAtMs.value
+          : this.retiredAtMs,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EveScoutSignature(')
+          ..write('scopeKey: $scopeKey, ')
+          ..write('providerRecordKey: $providerRecordKey, ')
+          ..write('hubSystemId: $hubSystemId, ')
+          ..write('hubSystemName: $hubSystemName, ')
+          ..write('hubRegionHint: $hubRegionHint, ')
+          ..write('farSystemId: $farSystemId, ')
+          ..write('farSystemName: $farSystemName, ')
+          ..write('farRegionHint: $farRegionHint, ')
+          ..write('hubSignature: $hubSignature, ')
+          ..write('farSignature: $farSignature, ')
+          ..write('wormholeType: $wormholeType, ')
+          ..write('orientation: $orientation, ')
+          ..write('maxShipSize: $maxShipSize, ')
+          ..write('completionType: $completionType, ')
+          ..write('sourceCreatedAtMs: $sourceCreatedAtMs, ')
+          ..write('sourceUpdatedAtMs: $sourceUpdatedAtMs, ')
+          ..write('sourceCompletedAtMs: $sourceCompletedAtMs, ')
+          ..write('sourceExpiresAtMs: $sourceExpiresAtMs, ')
+          ..write('rawCategoryHintsJson: $rawCategoryHintsJson, ')
+          ..write('diagnosticsJson: $diagnosticsJson, ')
+          ..write('listedSnapshotRevision: $listedSnapshotRevision, ')
+          ..write('lastPayloadSeenAtMs: $lastPayloadSeenAtMs, ')
+          ..write('unavailableAtMs: $unavailableAtMs, ')
+          ..write('retiredAtMs: $retiredAtMs')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    scopeKey,
+    providerRecordKey,
+    hubSystemId,
+    hubSystemName,
+    hubRegionHint,
+    farSystemId,
+    farSystemName,
+    farRegionHint,
+    hubSignature,
+    farSignature,
+    wormholeType,
+    orientation,
+    maxShipSize,
+    completionType,
+    sourceCreatedAtMs,
+    sourceUpdatedAtMs,
+    sourceCompletedAtMs,
+    sourceExpiresAtMs,
+    rawCategoryHintsJson,
+    diagnosticsJson,
+    listedSnapshotRevision,
+    lastPayloadSeenAtMs,
+    unavailableAtMs,
+    retiredAtMs,
+  ]);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is EveScoutSignature &&
+          other.scopeKey == this.scopeKey &&
+          other.providerRecordKey == this.providerRecordKey &&
+          other.hubSystemId == this.hubSystemId &&
+          other.hubSystemName == this.hubSystemName &&
+          other.hubRegionHint == this.hubRegionHint &&
+          other.farSystemId == this.farSystemId &&
+          other.farSystemName == this.farSystemName &&
+          other.farRegionHint == this.farRegionHint &&
+          other.hubSignature == this.hubSignature &&
+          other.farSignature == this.farSignature &&
+          other.wormholeType == this.wormholeType &&
+          other.orientation == this.orientation &&
+          other.maxShipSize == this.maxShipSize &&
+          other.completionType == this.completionType &&
+          other.sourceCreatedAtMs == this.sourceCreatedAtMs &&
+          other.sourceUpdatedAtMs == this.sourceUpdatedAtMs &&
+          other.sourceCompletedAtMs == this.sourceCompletedAtMs &&
+          other.sourceExpiresAtMs == this.sourceExpiresAtMs &&
+          other.rawCategoryHintsJson == this.rawCategoryHintsJson &&
+          other.diagnosticsJson == this.diagnosticsJson &&
+          other.listedSnapshotRevision == this.listedSnapshotRevision &&
+          other.lastPayloadSeenAtMs == this.lastPayloadSeenAtMs &&
+          other.unavailableAtMs == this.unavailableAtMs &&
+          other.retiredAtMs == this.retiredAtMs);
+}
+
+class EveScoutSignaturesCompanion extends UpdateCompanion<EveScoutSignature> {
+  final Value<String> scopeKey;
+  final Value<String> providerRecordKey;
+  final Value<int> hubSystemId;
+  final Value<String?> hubSystemName;
+  final Value<String?> hubRegionHint;
+  final Value<int> farSystemId;
+  final Value<String?> farSystemName;
+  final Value<String?> farRegionHint;
+  final Value<String?> hubSignature;
+  final Value<String?> farSignature;
+  final Value<String?> wormholeType;
+  final Value<String?> orientation;
+  final Value<String?> maxShipSize;
+  final Value<String?> completionType;
+  final Value<int?> sourceCreatedAtMs;
+  final Value<int?> sourceUpdatedAtMs;
+  final Value<int?> sourceCompletedAtMs;
+  final Value<int?> sourceExpiresAtMs;
+  final Value<String?> rawCategoryHintsJson;
+  final Value<String?> diagnosticsJson;
+  final Value<int> listedSnapshotRevision;
+  final Value<int?> lastPayloadSeenAtMs;
+  final Value<int?> unavailableAtMs;
+  final Value<int?> retiredAtMs;
+  final Value<int> rowid;
+  const EveScoutSignaturesCompanion({
+    this.scopeKey = const Value.absent(),
+    this.providerRecordKey = const Value.absent(),
+    this.hubSystemId = const Value.absent(),
+    this.hubSystemName = const Value.absent(),
+    this.hubRegionHint = const Value.absent(),
+    this.farSystemId = const Value.absent(),
+    this.farSystemName = const Value.absent(),
+    this.farRegionHint = const Value.absent(),
+    this.hubSignature = const Value.absent(),
+    this.farSignature = const Value.absent(),
+    this.wormholeType = const Value.absent(),
+    this.orientation = const Value.absent(),
+    this.maxShipSize = const Value.absent(),
+    this.completionType = const Value.absent(),
+    this.sourceCreatedAtMs = const Value.absent(),
+    this.sourceUpdatedAtMs = const Value.absent(),
+    this.sourceCompletedAtMs = const Value.absent(),
+    this.sourceExpiresAtMs = const Value.absent(),
+    this.rawCategoryHintsJson = const Value.absent(),
+    this.diagnosticsJson = const Value.absent(),
+    this.listedSnapshotRevision = const Value.absent(),
+    this.lastPayloadSeenAtMs = const Value.absent(),
+    this.unavailableAtMs = const Value.absent(),
+    this.retiredAtMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  EveScoutSignaturesCompanion.insert({
+    required String scopeKey,
+    required String providerRecordKey,
+    required int hubSystemId,
+    this.hubSystemName = const Value.absent(),
+    this.hubRegionHint = const Value.absent(),
+    required int farSystemId,
+    this.farSystemName = const Value.absent(),
+    this.farRegionHint = const Value.absent(),
+    this.hubSignature = const Value.absent(),
+    this.farSignature = const Value.absent(),
+    this.wormholeType = const Value.absent(),
+    this.orientation = const Value.absent(),
+    this.maxShipSize = const Value.absent(),
+    this.completionType = const Value.absent(),
+    this.sourceCreatedAtMs = const Value.absent(),
+    this.sourceUpdatedAtMs = const Value.absent(),
+    this.sourceCompletedAtMs = const Value.absent(),
+    this.sourceExpiresAtMs = const Value.absent(),
+    this.rawCategoryHintsJson = const Value.absent(),
+    this.diagnosticsJson = const Value.absent(),
+    required int listedSnapshotRevision,
+    this.lastPayloadSeenAtMs = const Value.absent(),
+    this.unavailableAtMs = const Value.absent(),
+    this.retiredAtMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : scopeKey = Value(scopeKey),
+       providerRecordKey = Value(providerRecordKey),
+       hubSystemId = Value(hubSystemId),
+       farSystemId = Value(farSystemId),
+       listedSnapshotRevision = Value(listedSnapshotRevision);
+  static Insertable<EveScoutSignature> custom({
+    Expression<String>? scopeKey,
+    Expression<String>? providerRecordKey,
+    Expression<int>? hubSystemId,
+    Expression<String>? hubSystemName,
+    Expression<String>? hubRegionHint,
+    Expression<int>? farSystemId,
+    Expression<String>? farSystemName,
+    Expression<String>? farRegionHint,
+    Expression<String>? hubSignature,
+    Expression<String>? farSignature,
+    Expression<String>? wormholeType,
+    Expression<String>? orientation,
+    Expression<String>? maxShipSize,
+    Expression<String>? completionType,
+    Expression<int>? sourceCreatedAtMs,
+    Expression<int>? sourceUpdatedAtMs,
+    Expression<int>? sourceCompletedAtMs,
+    Expression<int>? sourceExpiresAtMs,
+    Expression<String>? rawCategoryHintsJson,
+    Expression<String>? diagnosticsJson,
+    Expression<int>? listedSnapshotRevision,
+    Expression<int>? lastPayloadSeenAtMs,
+    Expression<int>? unavailableAtMs,
+    Expression<int>? retiredAtMs,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (scopeKey != null) 'scope_key': scopeKey,
+      if (providerRecordKey != null) 'provider_record_key': providerRecordKey,
+      if (hubSystemId != null) 'hub_system_id': hubSystemId,
+      if (hubSystemName != null) 'hub_system_name': hubSystemName,
+      if (hubRegionHint != null) 'hub_region_hint': hubRegionHint,
+      if (farSystemId != null) 'far_system_id': farSystemId,
+      if (farSystemName != null) 'far_system_name': farSystemName,
+      if (farRegionHint != null) 'far_region_hint': farRegionHint,
+      if (hubSignature != null) 'hub_signature': hubSignature,
+      if (farSignature != null) 'far_signature': farSignature,
+      if (wormholeType != null) 'wormhole_type': wormholeType,
+      if (orientation != null) 'orientation': orientation,
+      if (maxShipSize != null) 'max_ship_size': maxShipSize,
+      if (completionType != null) 'completion_type': completionType,
+      if (sourceCreatedAtMs != null) 'source_created_at_ms': sourceCreatedAtMs,
+      if (sourceUpdatedAtMs != null) 'source_updated_at_ms': sourceUpdatedAtMs,
+      if (sourceCompletedAtMs != null)
+        'source_completed_at_ms': sourceCompletedAtMs,
+      if (sourceExpiresAtMs != null) 'source_expires_at_ms': sourceExpiresAtMs,
+      if (rawCategoryHintsJson != null)
+        'raw_category_hints_json': rawCategoryHintsJson,
+      if (diagnosticsJson != null) 'diagnostics_json': diagnosticsJson,
+      if (listedSnapshotRevision != null)
+        'listed_snapshot_revision': listedSnapshotRevision,
+      if (lastPayloadSeenAtMs != null)
+        'last_payload_seen_at_ms': lastPayloadSeenAtMs,
+      if (unavailableAtMs != null) 'unavailable_at_ms': unavailableAtMs,
+      if (retiredAtMs != null) 'retired_at_ms': retiredAtMs,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  EveScoutSignaturesCompanion copyWith({
+    Value<String>? scopeKey,
+    Value<String>? providerRecordKey,
+    Value<int>? hubSystemId,
+    Value<String?>? hubSystemName,
+    Value<String?>? hubRegionHint,
+    Value<int>? farSystemId,
+    Value<String?>? farSystemName,
+    Value<String?>? farRegionHint,
+    Value<String?>? hubSignature,
+    Value<String?>? farSignature,
+    Value<String?>? wormholeType,
+    Value<String?>? orientation,
+    Value<String?>? maxShipSize,
+    Value<String?>? completionType,
+    Value<int?>? sourceCreatedAtMs,
+    Value<int?>? sourceUpdatedAtMs,
+    Value<int?>? sourceCompletedAtMs,
+    Value<int?>? sourceExpiresAtMs,
+    Value<String?>? rawCategoryHintsJson,
+    Value<String?>? diagnosticsJson,
+    Value<int>? listedSnapshotRevision,
+    Value<int?>? lastPayloadSeenAtMs,
+    Value<int?>? unavailableAtMs,
+    Value<int?>? retiredAtMs,
+    Value<int>? rowid,
+  }) {
+    return EveScoutSignaturesCompanion(
+      scopeKey: scopeKey ?? this.scopeKey,
+      providerRecordKey: providerRecordKey ?? this.providerRecordKey,
+      hubSystemId: hubSystemId ?? this.hubSystemId,
+      hubSystemName: hubSystemName ?? this.hubSystemName,
+      hubRegionHint: hubRegionHint ?? this.hubRegionHint,
+      farSystemId: farSystemId ?? this.farSystemId,
+      farSystemName: farSystemName ?? this.farSystemName,
+      farRegionHint: farRegionHint ?? this.farRegionHint,
+      hubSignature: hubSignature ?? this.hubSignature,
+      farSignature: farSignature ?? this.farSignature,
+      wormholeType: wormholeType ?? this.wormholeType,
+      orientation: orientation ?? this.orientation,
+      maxShipSize: maxShipSize ?? this.maxShipSize,
+      completionType: completionType ?? this.completionType,
+      sourceCreatedAtMs: sourceCreatedAtMs ?? this.sourceCreatedAtMs,
+      sourceUpdatedAtMs: sourceUpdatedAtMs ?? this.sourceUpdatedAtMs,
+      sourceCompletedAtMs: sourceCompletedAtMs ?? this.sourceCompletedAtMs,
+      sourceExpiresAtMs: sourceExpiresAtMs ?? this.sourceExpiresAtMs,
+      rawCategoryHintsJson: rawCategoryHintsJson ?? this.rawCategoryHintsJson,
+      diagnosticsJson: diagnosticsJson ?? this.diagnosticsJson,
+      listedSnapshotRevision:
+          listedSnapshotRevision ?? this.listedSnapshotRevision,
+      lastPayloadSeenAtMs: lastPayloadSeenAtMs ?? this.lastPayloadSeenAtMs,
+      unavailableAtMs: unavailableAtMs ?? this.unavailableAtMs,
+      retiredAtMs: retiredAtMs ?? this.retiredAtMs,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (scopeKey.present) {
+      map['scope_key'] = Variable<String>(scopeKey.value);
+    }
+    if (providerRecordKey.present) {
+      map['provider_record_key'] = Variable<String>(providerRecordKey.value);
+    }
+    if (hubSystemId.present) {
+      map['hub_system_id'] = Variable<int>(hubSystemId.value);
+    }
+    if (hubSystemName.present) {
+      map['hub_system_name'] = Variable<String>(hubSystemName.value);
+    }
+    if (hubRegionHint.present) {
+      map['hub_region_hint'] = Variable<String>(hubRegionHint.value);
+    }
+    if (farSystemId.present) {
+      map['far_system_id'] = Variable<int>(farSystemId.value);
+    }
+    if (farSystemName.present) {
+      map['far_system_name'] = Variable<String>(farSystemName.value);
+    }
+    if (farRegionHint.present) {
+      map['far_region_hint'] = Variable<String>(farRegionHint.value);
+    }
+    if (hubSignature.present) {
+      map['hub_signature'] = Variable<String>(hubSignature.value);
+    }
+    if (farSignature.present) {
+      map['far_signature'] = Variable<String>(farSignature.value);
+    }
+    if (wormholeType.present) {
+      map['wormhole_type'] = Variable<String>(wormholeType.value);
+    }
+    if (orientation.present) {
+      map['orientation'] = Variable<String>(orientation.value);
+    }
+    if (maxShipSize.present) {
+      map['max_ship_size'] = Variable<String>(maxShipSize.value);
+    }
+    if (completionType.present) {
+      map['completion_type'] = Variable<String>(completionType.value);
+    }
+    if (sourceCreatedAtMs.present) {
+      map['source_created_at_ms'] = Variable<int>(sourceCreatedAtMs.value);
+    }
+    if (sourceUpdatedAtMs.present) {
+      map['source_updated_at_ms'] = Variable<int>(sourceUpdatedAtMs.value);
+    }
+    if (sourceCompletedAtMs.present) {
+      map['source_completed_at_ms'] = Variable<int>(sourceCompletedAtMs.value);
+    }
+    if (sourceExpiresAtMs.present) {
+      map['source_expires_at_ms'] = Variable<int>(sourceExpiresAtMs.value);
+    }
+    if (rawCategoryHintsJson.present) {
+      map['raw_category_hints_json'] = Variable<String>(
+        rawCategoryHintsJson.value,
+      );
+    }
+    if (diagnosticsJson.present) {
+      map['diagnostics_json'] = Variable<String>(diagnosticsJson.value);
+    }
+    if (listedSnapshotRevision.present) {
+      map['listed_snapshot_revision'] = Variable<int>(
+        listedSnapshotRevision.value,
+      );
+    }
+    if (lastPayloadSeenAtMs.present) {
+      map['last_payload_seen_at_ms'] = Variable<int>(lastPayloadSeenAtMs.value);
+    }
+    if (unavailableAtMs.present) {
+      map['unavailable_at_ms'] = Variable<int>(unavailableAtMs.value);
+    }
+    if (retiredAtMs.present) {
+      map['retired_at_ms'] = Variable<int>(retiredAtMs.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EveScoutSignaturesCompanion(')
+          ..write('scopeKey: $scopeKey, ')
+          ..write('providerRecordKey: $providerRecordKey, ')
+          ..write('hubSystemId: $hubSystemId, ')
+          ..write('hubSystemName: $hubSystemName, ')
+          ..write('hubRegionHint: $hubRegionHint, ')
+          ..write('farSystemId: $farSystemId, ')
+          ..write('farSystemName: $farSystemName, ')
+          ..write('farRegionHint: $farRegionHint, ')
+          ..write('hubSignature: $hubSignature, ')
+          ..write('farSignature: $farSignature, ')
+          ..write('wormholeType: $wormholeType, ')
+          ..write('orientation: $orientation, ')
+          ..write('maxShipSize: $maxShipSize, ')
+          ..write('completionType: $completionType, ')
+          ..write('sourceCreatedAtMs: $sourceCreatedAtMs, ')
+          ..write('sourceUpdatedAtMs: $sourceUpdatedAtMs, ')
+          ..write('sourceCompletedAtMs: $sourceCompletedAtMs, ')
+          ..write('sourceExpiresAtMs: $sourceExpiresAtMs, ')
+          ..write('rawCategoryHintsJson: $rawCategoryHintsJson, ')
+          ..write('diagnosticsJson: $diagnosticsJson, ')
+          ..write('listedSnapshotRevision: $listedSnapshotRevision, ')
+          ..write('lastPayloadSeenAtMs: $lastPayloadSeenAtMs, ')
+          ..write('unavailableAtMs: $unavailableAtMs, ')
+          ..write('retiredAtMs: $retiredAtMs, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $TrackedSignaturesTable extends TrackedSignatures
+    with TableInfo<$TrackedSignaturesTable, TrackedSignature> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TrackedSignaturesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _systemIdMeta = const VerificationMeta(
+    'systemId',
+  );
+  @override
+  late final GeneratedColumn<int> systemId = GeneratedColumn<int>(
+    'system_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
+  @override
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+    'code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _scanGroupMeta = const VerificationMeta(
+    'scanGroup',
+  );
+  @override
+  late final GeneratedColumn<String> scanGroup = GeneratedColumn<String>(
+    'scan_group',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('Cosmic Signature'),
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('unknown'),
+  );
+  static const VerificationMeta _rawTypeLabelMeta = const VerificationMeta(
+    'rawTypeLabel',
+  );
+  @override
+  late final GeneratedColumn<String> rawTypeLabel = GeneratedColumn<String>(
+    'raw_type_label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _bookmarkMeta = const VerificationMeta(
+    'bookmark',
+  );
+  @override
+  late final GeneratedColumn<String> bookmark = GeneratedColumn<String>(
+    'bookmark',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _firstSeenAtMsMeta = const VerificationMeta(
+    'firstSeenAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> firstSeenAtMs = GeneratedColumn<int>(
+    'first_seen_at_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastSeenAtMsMeta = const VerificationMeta(
+    'lastSeenAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> lastSeenAtMs = GeneratedColumn<int>(
+    'last_seen_at_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _editedAtMsMeta = const VerificationMeta(
+    'editedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> editedAtMs = GeneratedColumn<int>(
+    'edited_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lifecycleMeta = const VerificationMeta(
+    'lifecycle',
+  );
+  @override
+  late final GeneratedColumn<String> lifecycle = GeneratedColumn<String>(
+    'lifecycle',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('active'),
+  );
+  static const VerificationMeta _retiredAtMsMeta = const VerificationMeta(
+    'retiredAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> retiredAtMs = GeneratedColumn<int>(
+    'retired_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _retiredReasonMeta = const VerificationMeta(
+    'retiredReason',
+  );
+  @override
+  late final GeneratedColumn<String> retiredReason = GeneratedColumn<String>(
+    'retired_reason',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _rowRevisionMeta = const VerificationMeta(
+    'rowRevision',
+  );
+  @override
+  late final GeneratedColumn<int> rowRevision = GeneratedColumn<int>(
+    'row_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    characterId,
+    systemId,
+    code,
+    scanGroup,
+    type,
+    rawTypeLabel,
+    name,
+    bookmark,
+    notes,
+    firstSeenAtMs,
+    lastSeenAtMs,
+    editedAtMs,
+    lifecycle,
+    retiredAtMs,
+    retiredReason,
+    rowRevision,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'tracked_signatures';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TrackedSignature> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('system_id')) {
+      context.handle(
+        _systemIdMeta,
+        systemId.isAcceptableOrUnknown(data['system_id']!, _systemIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_systemIdMeta);
+    }
+    if (data.containsKey('code')) {
+      context.handle(
+        _codeMeta,
+        code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_codeMeta);
+    }
+    if (data.containsKey('scan_group')) {
+      context.handle(
+        _scanGroupMeta,
+        scanGroup.isAcceptableOrUnknown(data['scan_group']!, _scanGroupMeta),
+      );
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    }
+    if (data.containsKey('raw_type_label')) {
+      context.handle(
+        _rawTypeLabelMeta,
+        rawTypeLabel.isAcceptableOrUnknown(
+          data['raw_type_label']!,
+          _rawTypeLabelMeta,
+        ),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
+    if (data.containsKey('bookmark')) {
+      context.handle(
+        _bookmarkMeta,
+        bookmark.isAcceptableOrUnknown(data['bookmark']!, _bookmarkMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('first_seen_at_ms')) {
+      context.handle(
+        _firstSeenAtMsMeta,
+        firstSeenAtMs.isAcceptableOrUnknown(
+          data['first_seen_at_ms']!,
+          _firstSeenAtMsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_firstSeenAtMsMeta);
+    }
+    if (data.containsKey('last_seen_at_ms')) {
+      context.handle(
+        _lastSeenAtMsMeta,
+        lastSeenAtMs.isAcceptableOrUnknown(
+          data['last_seen_at_ms']!,
+          _lastSeenAtMsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastSeenAtMsMeta);
+    }
+    if (data.containsKey('edited_at_ms')) {
+      context.handle(
+        _editedAtMsMeta,
+        editedAtMs.isAcceptableOrUnknown(
+          data['edited_at_ms']!,
+          _editedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('lifecycle')) {
+      context.handle(
+        _lifecycleMeta,
+        lifecycle.isAcceptableOrUnknown(data['lifecycle']!, _lifecycleMeta),
+      );
+    }
+    if (data.containsKey('retired_at_ms')) {
+      context.handle(
+        _retiredAtMsMeta,
+        retiredAtMs.isAcceptableOrUnknown(
+          data['retired_at_ms']!,
+          _retiredAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('retired_reason')) {
+      context.handle(
+        _retiredReasonMeta,
+        retiredReason.isAcceptableOrUnknown(
+          data['retired_reason']!,
+          _retiredReasonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('row_revision')) {
+      context.handle(
+        _rowRevisionMeta,
+        rowRevision.isAcceptableOrUnknown(
+          data['row_revision']!,
+          _rowRevisionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TrackedSignature map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TrackedSignature(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      )!,
+      systemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}system_id'],
+      )!,
+      code: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code'],
+      )!,
+      scanGroup: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scan_group'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      rawTypeLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}raw_type_label'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      ),
+      bookmark: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}bookmark'],
+      ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      firstSeenAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}first_seen_at_ms'],
+      )!,
+      lastSeenAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_seen_at_ms'],
+      )!,
+      editedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}edited_at_ms'],
+      ),
+      lifecycle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lifecycle'],
+      )!,
+      retiredAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}retired_at_ms'],
+      ),
+      retiredReason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}retired_reason'],
+      ),
+      rowRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}row_revision'],
+      )!,
+    );
+  }
+
+  @override
+  $TrackedSignaturesTable createAlias(String alias) {
+    return $TrackedSignaturesTable(attachedDatabase, alias);
+  }
+}
+
+class TrackedSignature extends DataClass
+    implements Insertable<TrackedSignature> {
+  final String id;
+  final int characterId;
+  final int systemId;
+  final String code;
+  final String scanGroup;
+  final String type;
+  final String rawTypeLabel;
+  final String? name;
+  final String? bookmark;
+  final String? notes;
+  final int firstSeenAtMs;
+  final int lastSeenAtMs;
+  final int? editedAtMs;
+  final String lifecycle;
+  final int? retiredAtMs;
+  final String? retiredReason;
+  final int rowRevision;
+  const TrackedSignature({
+    required this.id,
+    required this.characterId,
+    required this.systemId,
+    required this.code,
+    required this.scanGroup,
+    required this.type,
+    required this.rawTypeLabel,
+    this.name,
+    this.bookmark,
+    this.notes,
+    required this.firstSeenAtMs,
+    required this.lastSeenAtMs,
+    this.editedAtMs,
+    required this.lifecycle,
+    this.retiredAtMs,
+    this.retiredReason,
+    required this.rowRevision,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['character_id'] = Variable<int>(characterId);
+    map['system_id'] = Variable<int>(systemId);
+    map['code'] = Variable<String>(code);
+    map['scan_group'] = Variable<String>(scanGroup);
+    map['type'] = Variable<String>(type);
+    map['raw_type_label'] = Variable<String>(rawTypeLabel);
+    if (!nullToAbsent || name != null) {
+      map['name'] = Variable<String>(name);
+    }
+    if (!nullToAbsent || bookmark != null) {
+      map['bookmark'] = Variable<String>(bookmark);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['first_seen_at_ms'] = Variable<int>(firstSeenAtMs);
+    map['last_seen_at_ms'] = Variable<int>(lastSeenAtMs);
+    if (!nullToAbsent || editedAtMs != null) {
+      map['edited_at_ms'] = Variable<int>(editedAtMs);
+    }
+    map['lifecycle'] = Variable<String>(lifecycle);
+    if (!nullToAbsent || retiredAtMs != null) {
+      map['retired_at_ms'] = Variable<int>(retiredAtMs);
+    }
+    if (!nullToAbsent || retiredReason != null) {
+      map['retired_reason'] = Variable<String>(retiredReason);
+    }
+    map['row_revision'] = Variable<int>(rowRevision);
+    return map;
+  }
+
+  TrackedSignaturesCompanion toCompanion(bool nullToAbsent) {
+    return TrackedSignaturesCompanion(
+      id: Value(id),
+      characterId: Value(characterId),
+      systemId: Value(systemId),
+      code: Value(code),
+      scanGroup: Value(scanGroup),
+      type: Value(type),
+      rawTypeLabel: Value(rawTypeLabel),
+      name: name == null && nullToAbsent ? const Value.absent() : Value(name),
+      bookmark: bookmark == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bookmark),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      firstSeenAtMs: Value(firstSeenAtMs),
+      lastSeenAtMs: Value(lastSeenAtMs),
+      editedAtMs: editedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(editedAtMs),
+      lifecycle: Value(lifecycle),
+      retiredAtMs: retiredAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(retiredAtMs),
+      retiredReason: retiredReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(retiredReason),
+      rowRevision: Value(rowRevision),
+    );
+  }
+
+  factory TrackedSignature.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TrackedSignature(
+      id: serializer.fromJson<String>(json['id']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      systemId: serializer.fromJson<int>(json['systemId']),
+      code: serializer.fromJson<String>(json['code']),
+      scanGroup: serializer.fromJson<String>(json['scanGroup']),
+      type: serializer.fromJson<String>(json['type']),
+      rawTypeLabel: serializer.fromJson<String>(json['rawTypeLabel']),
+      name: serializer.fromJson<String?>(json['name']),
+      bookmark: serializer.fromJson<String?>(json['bookmark']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      firstSeenAtMs: serializer.fromJson<int>(json['firstSeenAtMs']),
+      lastSeenAtMs: serializer.fromJson<int>(json['lastSeenAtMs']),
+      editedAtMs: serializer.fromJson<int?>(json['editedAtMs']),
+      lifecycle: serializer.fromJson<String>(json['lifecycle']),
+      retiredAtMs: serializer.fromJson<int?>(json['retiredAtMs']),
+      retiredReason: serializer.fromJson<String?>(json['retiredReason']),
+      rowRevision: serializer.fromJson<int>(json['rowRevision']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'characterId': serializer.toJson<int>(characterId),
+      'systemId': serializer.toJson<int>(systemId),
+      'code': serializer.toJson<String>(code),
+      'scanGroup': serializer.toJson<String>(scanGroup),
+      'type': serializer.toJson<String>(type),
+      'rawTypeLabel': serializer.toJson<String>(rawTypeLabel),
+      'name': serializer.toJson<String?>(name),
+      'bookmark': serializer.toJson<String?>(bookmark),
+      'notes': serializer.toJson<String?>(notes),
+      'firstSeenAtMs': serializer.toJson<int>(firstSeenAtMs),
+      'lastSeenAtMs': serializer.toJson<int>(lastSeenAtMs),
+      'editedAtMs': serializer.toJson<int?>(editedAtMs),
+      'lifecycle': serializer.toJson<String>(lifecycle),
+      'retiredAtMs': serializer.toJson<int?>(retiredAtMs),
+      'retiredReason': serializer.toJson<String?>(retiredReason),
+      'rowRevision': serializer.toJson<int>(rowRevision),
+    };
+  }
+
+  TrackedSignature copyWith({
+    String? id,
+    int? characterId,
+    int? systemId,
+    String? code,
+    String? scanGroup,
+    String? type,
+    String? rawTypeLabel,
+    Value<String?> name = const Value.absent(),
+    Value<String?> bookmark = const Value.absent(),
+    Value<String?> notes = const Value.absent(),
+    int? firstSeenAtMs,
+    int? lastSeenAtMs,
+    Value<int?> editedAtMs = const Value.absent(),
+    String? lifecycle,
+    Value<int?> retiredAtMs = const Value.absent(),
+    Value<String?> retiredReason = const Value.absent(),
+    int? rowRevision,
+  }) => TrackedSignature(
+    id: id ?? this.id,
+    characterId: characterId ?? this.characterId,
+    systemId: systemId ?? this.systemId,
+    code: code ?? this.code,
+    scanGroup: scanGroup ?? this.scanGroup,
+    type: type ?? this.type,
+    rawTypeLabel: rawTypeLabel ?? this.rawTypeLabel,
+    name: name.present ? name.value : this.name,
+    bookmark: bookmark.present ? bookmark.value : this.bookmark,
+    notes: notes.present ? notes.value : this.notes,
+    firstSeenAtMs: firstSeenAtMs ?? this.firstSeenAtMs,
+    lastSeenAtMs: lastSeenAtMs ?? this.lastSeenAtMs,
+    editedAtMs: editedAtMs.present ? editedAtMs.value : this.editedAtMs,
+    lifecycle: lifecycle ?? this.lifecycle,
+    retiredAtMs: retiredAtMs.present ? retiredAtMs.value : this.retiredAtMs,
+    retiredReason: retiredReason.present
+        ? retiredReason.value
+        : this.retiredReason,
+    rowRevision: rowRevision ?? this.rowRevision,
+  );
+  TrackedSignature copyWithCompanion(TrackedSignaturesCompanion data) {
+    return TrackedSignature(
+      id: data.id.present ? data.id.value : this.id,
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      systemId: data.systemId.present ? data.systemId.value : this.systemId,
+      code: data.code.present ? data.code.value : this.code,
+      scanGroup: data.scanGroup.present ? data.scanGroup.value : this.scanGroup,
+      type: data.type.present ? data.type.value : this.type,
+      rawTypeLabel: data.rawTypeLabel.present
+          ? data.rawTypeLabel.value
+          : this.rawTypeLabel,
+      name: data.name.present ? data.name.value : this.name,
+      bookmark: data.bookmark.present ? data.bookmark.value : this.bookmark,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      firstSeenAtMs: data.firstSeenAtMs.present
+          ? data.firstSeenAtMs.value
+          : this.firstSeenAtMs,
+      lastSeenAtMs: data.lastSeenAtMs.present
+          ? data.lastSeenAtMs.value
+          : this.lastSeenAtMs,
+      editedAtMs: data.editedAtMs.present
+          ? data.editedAtMs.value
+          : this.editedAtMs,
+      lifecycle: data.lifecycle.present ? data.lifecycle.value : this.lifecycle,
+      retiredAtMs: data.retiredAtMs.present
+          ? data.retiredAtMs.value
+          : this.retiredAtMs,
+      retiredReason: data.retiredReason.present
+          ? data.retiredReason.value
+          : this.retiredReason,
+      rowRevision: data.rowRevision.present
+          ? data.rowRevision.value
+          : this.rowRevision,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrackedSignature(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('systemId: $systemId, ')
+          ..write('code: $code, ')
+          ..write('scanGroup: $scanGroup, ')
+          ..write('type: $type, ')
+          ..write('rawTypeLabel: $rawTypeLabel, ')
+          ..write('name: $name, ')
+          ..write('bookmark: $bookmark, ')
+          ..write('notes: $notes, ')
+          ..write('firstSeenAtMs: $firstSeenAtMs, ')
+          ..write('lastSeenAtMs: $lastSeenAtMs, ')
+          ..write('editedAtMs: $editedAtMs, ')
+          ..write('lifecycle: $lifecycle, ')
+          ..write('retiredAtMs: $retiredAtMs, ')
+          ..write('retiredReason: $retiredReason, ')
+          ..write('rowRevision: $rowRevision')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    characterId,
+    systemId,
+    code,
+    scanGroup,
+    type,
+    rawTypeLabel,
+    name,
+    bookmark,
+    notes,
+    firstSeenAtMs,
+    lastSeenAtMs,
+    editedAtMs,
+    lifecycle,
+    retiredAtMs,
+    retiredReason,
+    rowRevision,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TrackedSignature &&
+          other.id == this.id &&
+          other.characterId == this.characterId &&
+          other.systemId == this.systemId &&
+          other.code == this.code &&
+          other.scanGroup == this.scanGroup &&
+          other.type == this.type &&
+          other.rawTypeLabel == this.rawTypeLabel &&
+          other.name == this.name &&
+          other.bookmark == this.bookmark &&
+          other.notes == this.notes &&
+          other.firstSeenAtMs == this.firstSeenAtMs &&
+          other.lastSeenAtMs == this.lastSeenAtMs &&
+          other.editedAtMs == this.editedAtMs &&
+          other.lifecycle == this.lifecycle &&
+          other.retiredAtMs == this.retiredAtMs &&
+          other.retiredReason == this.retiredReason &&
+          other.rowRevision == this.rowRevision);
+}
+
+class TrackedSignaturesCompanion extends UpdateCompanion<TrackedSignature> {
+  final Value<String> id;
+  final Value<int> characterId;
+  final Value<int> systemId;
+  final Value<String> code;
+  final Value<String> scanGroup;
+  final Value<String> type;
+  final Value<String> rawTypeLabel;
+  final Value<String?> name;
+  final Value<String?> bookmark;
+  final Value<String?> notes;
+  final Value<int> firstSeenAtMs;
+  final Value<int> lastSeenAtMs;
+  final Value<int?> editedAtMs;
+  final Value<String> lifecycle;
+  final Value<int?> retiredAtMs;
+  final Value<String?> retiredReason;
+  final Value<int> rowRevision;
+  final Value<int> rowid;
+  const TrackedSignaturesCompanion({
+    this.id = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.systemId = const Value.absent(),
+    this.code = const Value.absent(),
+    this.scanGroup = const Value.absent(),
+    this.type = const Value.absent(),
+    this.rawTypeLabel = const Value.absent(),
+    this.name = const Value.absent(),
+    this.bookmark = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.firstSeenAtMs = const Value.absent(),
+    this.lastSeenAtMs = const Value.absent(),
+    this.editedAtMs = const Value.absent(),
+    this.lifecycle = const Value.absent(),
+    this.retiredAtMs = const Value.absent(),
+    this.retiredReason = const Value.absent(),
+    this.rowRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TrackedSignaturesCompanion.insert({
+    required String id,
+    required int characterId,
+    required int systemId,
+    required String code,
+    this.scanGroup = const Value.absent(),
+    this.type = const Value.absent(),
+    this.rawTypeLabel = const Value.absent(),
+    this.name = const Value.absent(),
+    this.bookmark = const Value.absent(),
+    this.notes = const Value.absent(),
+    required int firstSeenAtMs,
+    required int lastSeenAtMs,
+    this.editedAtMs = const Value.absent(),
+    this.lifecycle = const Value.absent(),
+    this.retiredAtMs = const Value.absent(),
+    this.retiredReason = const Value.absent(),
+    this.rowRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       characterId = Value(characterId),
+       systemId = Value(systemId),
+       code = Value(code),
+       firstSeenAtMs = Value(firstSeenAtMs),
+       lastSeenAtMs = Value(lastSeenAtMs);
+  static Insertable<TrackedSignature> custom({
+    Expression<String>? id,
+    Expression<int>? characterId,
+    Expression<int>? systemId,
+    Expression<String>? code,
+    Expression<String>? scanGroup,
+    Expression<String>? type,
+    Expression<String>? rawTypeLabel,
+    Expression<String>? name,
+    Expression<String>? bookmark,
+    Expression<String>? notes,
+    Expression<int>? firstSeenAtMs,
+    Expression<int>? lastSeenAtMs,
+    Expression<int>? editedAtMs,
+    Expression<String>? lifecycle,
+    Expression<int>? retiredAtMs,
+    Expression<String>? retiredReason,
+    Expression<int>? rowRevision,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (characterId != null) 'character_id': characterId,
+      if (systemId != null) 'system_id': systemId,
+      if (code != null) 'code': code,
+      if (scanGroup != null) 'scan_group': scanGroup,
+      if (type != null) 'type': type,
+      if (rawTypeLabel != null) 'raw_type_label': rawTypeLabel,
+      if (name != null) 'name': name,
+      if (bookmark != null) 'bookmark': bookmark,
+      if (notes != null) 'notes': notes,
+      if (firstSeenAtMs != null) 'first_seen_at_ms': firstSeenAtMs,
+      if (lastSeenAtMs != null) 'last_seen_at_ms': lastSeenAtMs,
+      if (editedAtMs != null) 'edited_at_ms': editedAtMs,
+      if (lifecycle != null) 'lifecycle': lifecycle,
+      if (retiredAtMs != null) 'retired_at_ms': retiredAtMs,
+      if (retiredReason != null) 'retired_reason': retiredReason,
+      if (rowRevision != null) 'row_revision': rowRevision,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TrackedSignaturesCompanion copyWith({
+    Value<String>? id,
+    Value<int>? characterId,
+    Value<int>? systemId,
+    Value<String>? code,
+    Value<String>? scanGroup,
+    Value<String>? type,
+    Value<String>? rawTypeLabel,
+    Value<String?>? name,
+    Value<String?>? bookmark,
+    Value<String?>? notes,
+    Value<int>? firstSeenAtMs,
+    Value<int>? lastSeenAtMs,
+    Value<int?>? editedAtMs,
+    Value<String>? lifecycle,
+    Value<int?>? retiredAtMs,
+    Value<String?>? retiredReason,
+    Value<int>? rowRevision,
+    Value<int>? rowid,
+  }) {
+    return TrackedSignaturesCompanion(
+      id: id ?? this.id,
+      characterId: characterId ?? this.characterId,
+      systemId: systemId ?? this.systemId,
+      code: code ?? this.code,
+      scanGroup: scanGroup ?? this.scanGroup,
+      type: type ?? this.type,
+      rawTypeLabel: rawTypeLabel ?? this.rawTypeLabel,
+      name: name ?? this.name,
+      bookmark: bookmark ?? this.bookmark,
+      notes: notes ?? this.notes,
+      firstSeenAtMs: firstSeenAtMs ?? this.firstSeenAtMs,
+      lastSeenAtMs: lastSeenAtMs ?? this.lastSeenAtMs,
+      editedAtMs: editedAtMs ?? this.editedAtMs,
+      lifecycle: lifecycle ?? this.lifecycle,
+      retiredAtMs: retiredAtMs ?? this.retiredAtMs,
+      retiredReason: retiredReason ?? this.retiredReason,
+      rowRevision: rowRevision ?? this.rowRevision,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (systemId.present) {
+      map['system_id'] = Variable<int>(systemId.value);
+    }
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
+    }
+    if (scanGroup.present) {
+      map['scan_group'] = Variable<String>(scanGroup.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (rawTypeLabel.present) {
+      map['raw_type_label'] = Variable<String>(rawTypeLabel.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (bookmark.present) {
+      map['bookmark'] = Variable<String>(bookmark.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (firstSeenAtMs.present) {
+      map['first_seen_at_ms'] = Variable<int>(firstSeenAtMs.value);
+    }
+    if (lastSeenAtMs.present) {
+      map['last_seen_at_ms'] = Variable<int>(lastSeenAtMs.value);
+    }
+    if (editedAtMs.present) {
+      map['edited_at_ms'] = Variable<int>(editedAtMs.value);
+    }
+    if (lifecycle.present) {
+      map['lifecycle'] = Variable<String>(lifecycle.value);
+    }
+    if (retiredAtMs.present) {
+      map['retired_at_ms'] = Variable<int>(retiredAtMs.value);
+    }
+    if (retiredReason.present) {
+      map['retired_reason'] = Variable<String>(retiredReason.value);
+    }
+    if (rowRevision.present) {
+      map['row_revision'] = Variable<int>(rowRevision.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrackedSignaturesCompanion(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('systemId: $systemId, ')
+          ..write('code: $code, ')
+          ..write('scanGroup: $scanGroup, ')
+          ..write('type: $type, ')
+          ..write('rawTypeLabel: $rawTypeLabel, ')
+          ..write('name: $name, ')
+          ..write('bookmark: $bookmark, ')
+          ..write('notes: $notes, ')
+          ..write('firstSeenAtMs: $firstSeenAtMs, ')
+          ..write('lastSeenAtMs: $lastSeenAtMs, ')
+          ..write('editedAtMs: $editedAtMs, ')
+          ..write('lifecycle: $lifecycle, ')
+          ..write('retiredAtMs: $retiredAtMs, ')
+          ..write('retiredReason: $retiredReason, ')
+          ..write('rowRevision: $rowRevision, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $TrackedConnectionsTable extends TrackedConnections
+    with TableInfo<$TrackedConnectionsTable, TrackedConnection> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TrackedConnectionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerSignatureIdMeta = const VerificationMeta(
+    'ownerSignatureId',
+  );
+  @override
+  late final GeneratedColumn<String> ownerSignatureId = GeneratedColumn<String>(
+    'owner_signature_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fromSystemIdMeta = const VerificationMeta(
+    'fromSystemId',
+  );
+  @override
+  late final GeneratedColumn<int> fromSystemId = GeneratedColumn<int>(
+    'from_system_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _toSystemIdMeta = const VerificationMeta(
+    'toSystemId',
+  );
+  @override
+  late final GeneratedColumn<int> toSystemId = GeneratedColumn<int>(
+    'to_system_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fromSignatureMeta = const VerificationMeta(
+    'fromSignature',
+  );
+  @override
+  late final GeneratedColumn<String> fromSignature = GeneratedColumn<String>(
+    'from_signature',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _toSignatureMeta = const VerificationMeta(
+    'toSignature',
+  );
+  @override
+  late final GeneratedColumn<String> toSignature = GeneratedColumn<String>(
+    'to_signature',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _observedFromCodeMeta = const VerificationMeta(
+    'observedFromCode',
+  );
+  @override
+  late final GeneratedColumn<String> observedFromCode = GeneratedColumn<String>(
+    'observed_from_code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _observedToCodeMeta = const VerificationMeta(
+    'observedToCode',
+  );
+  @override
+  late final GeneratedColumn<String> observedToCode = GeneratedColumn<String>(
+    'observed_to_code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _originatingTypeIdMeta = const VerificationMeta(
+    'originatingTypeId',
+  );
+  @override
+  late final GeneratedColumn<int> originatingTypeId = GeneratedColumn<int>(
+    'originating_type_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _originatingTypeMeta = const VerificationMeta(
+    'originatingType',
+  );
+  @override
+  late final GeneratedColumn<String> originatingType = GeneratedColumn<String>(
+    'originating_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _originatingSideMeta = const VerificationMeta(
+    'originatingSide',
+  );
+  @override
+  late final GeneratedColumn<String> originatingSide = GeneratedColumn<String>(
+    'originating_side',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _massValueMeta = const VerificationMeta(
+    'massValue',
+  );
+  @override
+  late final GeneratedColumn<String> massValue = GeneratedColumn<String>(
+    'mass_value',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _massObservedAtMsMeta = const VerificationMeta(
+    'massObservedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> massObservedAtMs = GeneratedColumn<int>(
+    'mass_observed_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _massSourceMeta = const VerificationMeta(
+    'massSource',
+  );
+  @override
+  late final GeneratedColumn<String> massSource = GeneratedColumn<String>(
+    'mass_source',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _timeValueMeta = const VerificationMeta(
+    'timeValue',
+  );
+  @override
+  late final GeneratedColumn<String> timeValue = GeneratedColumn<String>(
+    'time_value',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _timeObservedAtMsMeta = const VerificationMeta(
+    'timeObservedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> timeObservedAtMs = GeneratedColumn<int>(
+    'time_observed_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _timeSourceMeta = const VerificationMeta(
+    'timeSource',
+  );
+  @override
+  late final GeneratedColumn<String> timeSource = GeneratedColumn<String>(
+    'time_source',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _estimatedExpiryAtMsMeta =
+      const VerificationMeta('estimatedExpiryAtMs');
+  @override
+  late final GeneratedColumn<int> estimatedExpiryAtMs = GeneratedColumn<int>(
+    'estimated_expiry_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _verifiedAtMsMeta = const VerificationMeta(
+    'verifiedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> verifiedAtMs = GeneratedColumn<int>(
+    'verified_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lifecycleMeta = const VerificationMeta(
+    'lifecycle',
+  );
+  @override
+  late final GeneratedColumn<String> lifecycle = GeneratedColumn<String>(
+    'lifecycle',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('active'),
+  );
+  static const VerificationMeta _retiredReasonMeta = const VerificationMeta(
+    'retiredReason',
+  );
+  @override
+  late final GeneratedColumn<String> retiredReason = GeneratedColumn<String>(
+    'retired_reason',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _rowRevisionMeta = const VerificationMeta(
+    'rowRevision',
+  );
+  @override
+  late final GeneratedColumn<int> rowRevision = GeneratedColumn<int>(
+    'row_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    ownerSignatureId,
+    characterId,
+    fromSystemId,
+    toSystemId,
+    fromSignature,
+    toSignature,
+    observedFromCode,
+    observedToCode,
+    originatingTypeId,
+    originatingType,
+    originatingSide,
+    massValue,
+    massObservedAtMs,
+    massSource,
+    timeValue,
+    timeObservedAtMs,
+    timeSource,
+    estimatedExpiryAtMs,
+    verifiedAtMs,
+    lifecycle,
+    retiredReason,
+    rowRevision,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'tracked_connections';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TrackedConnection> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('owner_signature_id')) {
+      context.handle(
+        _ownerSignatureIdMeta,
+        ownerSignatureId.isAcceptableOrUnknown(
+          data['owner_signature_id']!,
+          _ownerSignatureIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerSignatureIdMeta);
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('from_system_id')) {
+      context.handle(
+        _fromSystemIdMeta,
+        fromSystemId.isAcceptableOrUnknown(
+          data['from_system_id']!,
+          _fromSystemIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_fromSystemIdMeta);
+    }
+    if (data.containsKey('to_system_id')) {
+      context.handle(
+        _toSystemIdMeta,
+        toSystemId.isAcceptableOrUnknown(
+          data['to_system_id']!,
+          _toSystemIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_toSystemIdMeta);
+    }
+    if (data.containsKey('from_signature')) {
+      context.handle(
+        _fromSignatureMeta,
+        fromSignature.isAcceptableOrUnknown(
+          data['from_signature']!,
+          _fromSignatureMeta,
+        ),
+      );
+    }
+    if (data.containsKey('to_signature')) {
+      context.handle(
+        _toSignatureMeta,
+        toSignature.isAcceptableOrUnknown(
+          data['to_signature']!,
+          _toSignatureMeta,
+        ),
+      );
+    }
+    if (data.containsKey('observed_from_code')) {
+      context.handle(
+        _observedFromCodeMeta,
+        observedFromCode.isAcceptableOrUnknown(
+          data['observed_from_code']!,
+          _observedFromCodeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('observed_to_code')) {
+      context.handle(
+        _observedToCodeMeta,
+        observedToCode.isAcceptableOrUnknown(
+          data['observed_to_code']!,
+          _observedToCodeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('originating_type_id')) {
+      context.handle(
+        _originatingTypeIdMeta,
+        originatingTypeId.isAcceptableOrUnknown(
+          data['originating_type_id']!,
+          _originatingTypeIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('originating_type')) {
+      context.handle(
+        _originatingTypeMeta,
+        originatingType.isAcceptableOrUnknown(
+          data['originating_type']!,
+          _originatingTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('originating_side')) {
+      context.handle(
+        _originatingSideMeta,
+        originatingSide.isAcceptableOrUnknown(
+          data['originating_side']!,
+          _originatingSideMeta,
+        ),
+      );
+    }
+    if (data.containsKey('mass_value')) {
+      context.handle(
+        _massValueMeta,
+        massValue.isAcceptableOrUnknown(data['mass_value']!, _massValueMeta),
+      );
+    }
+    if (data.containsKey('mass_observed_at_ms')) {
+      context.handle(
+        _massObservedAtMsMeta,
+        massObservedAtMs.isAcceptableOrUnknown(
+          data['mass_observed_at_ms']!,
+          _massObservedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('mass_source')) {
+      context.handle(
+        _massSourceMeta,
+        massSource.isAcceptableOrUnknown(data['mass_source']!, _massSourceMeta),
+      );
+    }
+    if (data.containsKey('time_value')) {
+      context.handle(
+        _timeValueMeta,
+        timeValue.isAcceptableOrUnknown(data['time_value']!, _timeValueMeta),
+      );
+    }
+    if (data.containsKey('time_observed_at_ms')) {
+      context.handle(
+        _timeObservedAtMsMeta,
+        timeObservedAtMs.isAcceptableOrUnknown(
+          data['time_observed_at_ms']!,
+          _timeObservedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('time_source')) {
+      context.handle(
+        _timeSourceMeta,
+        timeSource.isAcceptableOrUnknown(data['time_source']!, _timeSourceMeta),
+      );
+    }
+    if (data.containsKey('estimated_expiry_at_ms')) {
+      context.handle(
+        _estimatedExpiryAtMsMeta,
+        estimatedExpiryAtMs.isAcceptableOrUnknown(
+          data['estimated_expiry_at_ms']!,
+          _estimatedExpiryAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('verified_at_ms')) {
+      context.handle(
+        _verifiedAtMsMeta,
+        verifiedAtMs.isAcceptableOrUnknown(
+          data['verified_at_ms']!,
+          _verifiedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('lifecycle')) {
+      context.handle(
+        _lifecycleMeta,
+        lifecycle.isAcceptableOrUnknown(data['lifecycle']!, _lifecycleMeta),
+      );
+    }
+    if (data.containsKey('retired_reason')) {
+      context.handle(
+        _retiredReasonMeta,
+        retiredReason.isAcceptableOrUnknown(
+          data['retired_reason']!,
+          _retiredReasonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('row_revision')) {
+      context.handle(
+        _rowRevisionMeta,
+        rowRevision.isAcceptableOrUnknown(
+          data['row_revision']!,
+          _rowRevisionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {ownerSignatureId},
+  ];
+  @override
+  TrackedConnection map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TrackedConnection(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      ownerSignatureId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_signature_id'],
+      )!,
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      )!,
+      fromSystemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}from_system_id'],
+      )!,
+      toSystemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}to_system_id'],
+      )!,
+      fromSignature: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}from_signature'],
+      ),
+      toSignature: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}to_signature'],
+      ),
+      observedFromCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}observed_from_code'],
+      ),
+      observedToCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}observed_to_code'],
+      ),
+      originatingTypeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}originating_type_id'],
+      ),
+      originatingType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}originating_type'],
+      ),
+      originatingSide: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}originating_side'],
+      ),
+      massValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mass_value'],
+      ),
+      massObservedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}mass_observed_at_ms'],
+      ),
+      massSource: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mass_source'],
+      ),
+      timeValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}time_value'],
+      ),
+      timeObservedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}time_observed_at_ms'],
+      ),
+      timeSource: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}time_source'],
+      ),
+      estimatedExpiryAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}estimated_expiry_at_ms'],
+      ),
+      verifiedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}verified_at_ms'],
+      ),
+      lifecycle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lifecycle'],
+      )!,
+      retiredReason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}retired_reason'],
+      ),
+      rowRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}row_revision'],
+      )!,
+    );
+  }
+
+  @override
+  $TrackedConnectionsTable createAlias(String alias) {
+    return $TrackedConnectionsTable(attachedDatabase, alias);
+  }
+}
+
+class TrackedConnection extends DataClass
+    implements Insertable<TrackedConnection> {
+  final String id;
+  final String ownerSignatureId;
+  final int characterId;
+  final int fromSystemId;
+  final int toSystemId;
+  final String? fromSignature;
+  final String? toSignature;
+  final String? observedFromCode;
+  final String? observedToCode;
+  final int? originatingTypeId;
+  final String? originatingType;
+  final String? originatingSide;
+  final String? massValue;
+  final int? massObservedAtMs;
+  final String? massSource;
+  final String? timeValue;
+  final int? timeObservedAtMs;
+  final String? timeSource;
+  final int? estimatedExpiryAtMs;
+  final int? verifiedAtMs;
+  final String lifecycle;
+  final String? retiredReason;
+  final int rowRevision;
+  const TrackedConnection({
+    required this.id,
+    required this.ownerSignatureId,
+    required this.characterId,
+    required this.fromSystemId,
+    required this.toSystemId,
+    this.fromSignature,
+    this.toSignature,
+    this.observedFromCode,
+    this.observedToCode,
+    this.originatingTypeId,
+    this.originatingType,
+    this.originatingSide,
+    this.massValue,
+    this.massObservedAtMs,
+    this.massSource,
+    this.timeValue,
+    this.timeObservedAtMs,
+    this.timeSource,
+    this.estimatedExpiryAtMs,
+    this.verifiedAtMs,
+    required this.lifecycle,
+    this.retiredReason,
+    required this.rowRevision,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['owner_signature_id'] = Variable<String>(ownerSignatureId);
+    map['character_id'] = Variable<int>(characterId);
+    map['from_system_id'] = Variable<int>(fromSystemId);
+    map['to_system_id'] = Variable<int>(toSystemId);
+    if (!nullToAbsent || fromSignature != null) {
+      map['from_signature'] = Variable<String>(fromSignature);
+    }
+    if (!nullToAbsent || toSignature != null) {
+      map['to_signature'] = Variable<String>(toSignature);
+    }
+    if (!nullToAbsent || observedFromCode != null) {
+      map['observed_from_code'] = Variable<String>(observedFromCode);
+    }
+    if (!nullToAbsent || observedToCode != null) {
+      map['observed_to_code'] = Variable<String>(observedToCode);
+    }
+    if (!nullToAbsent || originatingTypeId != null) {
+      map['originating_type_id'] = Variable<int>(originatingTypeId);
+    }
+    if (!nullToAbsent || originatingType != null) {
+      map['originating_type'] = Variable<String>(originatingType);
+    }
+    if (!nullToAbsent || originatingSide != null) {
+      map['originating_side'] = Variable<String>(originatingSide);
+    }
+    if (!nullToAbsent || massValue != null) {
+      map['mass_value'] = Variable<String>(massValue);
+    }
+    if (!nullToAbsent || massObservedAtMs != null) {
+      map['mass_observed_at_ms'] = Variable<int>(massObservedAtMs);
+    }
+    if (!nullToAbsent || massSource != null) {
+      map['mass_source'] = Variable<String>(massSource);
+    }
+    if (!nullToAbsent || timeValue != null) {
+      map['time_value'] = Variable<String>(timeValue);
+    }
+    if (!nullToAbsent || timeObservedAtMs != null) {
+      map['time_observed_at_ms'] = Variable<int>(timeObservedAtMs);
+    }
+    if (!nullToAbsent || timeSource != null) {
+      map['time_source'] = Variable<String>(timeSource);
+    }
+    if (!nullToAbsent || estimatedExpiryAtMs != null) {
+      map['estimated_expiry_at_ms'] = Variable<int>(estimatedExpiryAtMs);
+    }
+    if (!nullToAbsent || verifiedAtMs != null) {
+      map['verified_at_ms'] = Variable<int>(verifiedAtMs);
+    }
+    map['lifecycle'] = Variable<String>(lifecycle);
+    if (!nullToAbsent || retiredReason != null) {
+      map['retired_reason'] = Variable<String>(retiredReason);
+    }
+    map['row_revision'] = Variable<int>(rowRevision);
+    return map;
+  }
+
+  TrackedConnectionsCompanion toCompanion(bool nullToAbsent) {
+    return TrackedConnectionsCompanion(
+      id: Value(id),
+      ownerSignatureId: Value(ownerSignatureId),
+      characterId: Value(characterId),
+      fromSystemId: Value(fromSystemId),
+      toSystemId: Value(toSystemId),
+      fromSignature: fromSignature == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fromSignature),
+      toSignature: toSignature == null && nullToAbsent
+          ? const Value.absent()
+          : Value(toSignature),
+      observedFromCode: observedFromCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(observedFromCode),
+      observedToCode: observedToCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(observedToCode),
+      originatingTypeId: originatingTypeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(originatingTypeId),
+      originatingType: originatingType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(originatingType),
+      originatingSide: originatingSide == null && nullToAbsent
+          ? const Value.absent()
+          : Value(originatingSide),
+      massValue: massValue == null && nullToAbsent
+          ? const Value.absent()
+          : Value(massValue),
+      massObservedAtMs: massObservedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(massObservedAtMs),
+      massSource: massSource == null && nullToAbsent
+          ? const Value.absent()
+          : Value(massSource),
+      timeValue: timeValue == null && nullToAbsent
+          ? const Value.absent()
+          : Value(timeValue),
+      timeObservedAtMs: timeObservedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(timeObservedAtMs),
+      timeSource: timeSource == null && nullToAbsent
+          ? const Value.absent()
+          : Value(timeSource),
+      estimatedExpiryAtMs: estimatedExpiryAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(estimatedExpiryAtMs),
+      verifiedAtMs: verifiedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(verifiedAtMs),
+      lifecycle: Value(lifecycle),
+      retiredReason: retiredReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(retiredReason),
+      rowRevision: Value(rowRevision),
+    );
+  }
+
+  factory TrackedConnection.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TrackedConnection(
+      id: serializer.fromJson<String>(json['id']),
+      ownerSignatureId: serializer.fromJson<String>(json['ownerSignatureId']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      fromSystemId: serializer.fromJson<int>(json['fromSystemId']),
+      toSystemId: serializer.fromJson<int>(json['toSystemId']),
+      fromSignature: serializer.fromJson<String?>(json['fromSignature']),
+      toSignature: serializer.fromJson<String?>(json['toSignature']),
+      observedFromCode: serializer.fromJson<String?>(json['observedFromCode']),
+      observedToCode: serializer.fromJson<String?>(json['observedToCode']),
+      originatingTypeId: serializer.fromJson<int?>(json['originatingTypeId']),
+      originatingType: serializer.fromJson<String?>(json['originatingType']),
+      originatingSide: serializer.fromJson<String?>(json['originatingSide']),
+      massValue: serializer.fromJson<String?>(json['massValue']),
+      massObservedAtMs: serializer.fromJson<int?>(json['massObservedAtMs']),
+      massSource: serializer.fromJson<String?>(json['massSource']),
+      timeValue: serializer.fromJson<String?>(json['timeValue']),
+      timeObservedAtMs: serializer.fromJson<int?>(json['timeObservedAtMs']),
+      timeSource: serializer.fromJson<String?>(json['timeSource']),
+      estimatedExpiryAtMs: serializer.fromJson<int?>(
+        json['estimatedExpiryAtMs'],
+      ),
+      verifiedAtMs: serializer.fromJson<int?>(json['verifiedAtMs']),
+      lifecycle: serializer.fromJson<String>(json['lifecycle']),
+      retiredReason: serializer.fromJson<String?>(json['retiredReason']),
+      rowRevision: serializer.fromJson<int>(json['rowRevision']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'ownerSignatureId': serializer.toJson<String>(ownerSignatureId),
+      'characterId': serializer.toJson<int>(characterId),
+      'fromSystemId': serializer.toJson<int>(fromSystemId),
+      'toSystemId': serializer.toJson<int>(toSystemId),
+      'fromSignature': serializer.toJson<String?>(fromSignature),
+      'toSignature': serializer.toJson<String?>(toSignature),
+      'observedFromCode': serializer.toJson<String?>(observedFromCode),
+      'observedToCode': serializer.toJson<String?>(observedToCode),
+      'originatingTypeId': serializer.toJson<int?>(originatingTypeId),
+      'originatingType': serializer.toJson<String?>(originatingType),
+      'originatingSide': serializer.toJson<String?>(originatingSide),
+      'massValue': serializer.toJson<String?>(massValue),
+      'massObservedAtMs': serializer.toJson<int?>(massObservedAtMs),
+      'massSource': serializer.toJson<String?>(massSource),
+      'timeValue': serializer.toJson<String?>(timeValue),
+      'timeObservedAtMs': serializer.toJson<int?>(timeObservedAtMs),
+      'timeSource': serializer.toJson<String?>(timeSource),
+      'estimatedExpiryAtMs': serializer.toJson<int?>(estimatedExpiryAtMs),
+      'verifiedAtMs': serializer.toJson<int?>(verifiedAtMs),
+      'lifecycle': serializer.toJson<String>(lifecycle),
+      'retiredReason': serializer.toJson<String?>(retiredReason),
+      'rowRevision': serializer.toJson<int>(rowRevision),
+    };
+  }
+
+  TrackedConnection copyWith({
+    String? id,
+    String? ownerSignatureId,
+    int? characterId,
+    int? fromSystemId,
+    int? toSystemId,
+    Value<String?> fromSignature = const Value.absent(),
+    Value<String?> toSignature = const Value.absent(),
+    Value<String?> observedFromCode = const Value.absent(),
+    Value<String?> observedToCode = const Value.absent(),
+    Value<int?> originatingTypeId = const Value.absent(),
+    Value<String?> originatingType = const Value.absent(),
+    Value<String?> originatingSide = const Value.absent(),
+    Value<String?> massValue = const Value.absent(),
+    Value<int?> massObservedAtMs = const Value.absent(),
+    Value<String?> massSource = const Value.absent(),
+    Value<String?> timeValue = const Value.absent(),
+    Value<int?> timeObservedAtMs = const Value.absent(),
+    Value<String?> timeSource = const Value.absent(),
+    Value<int?> estimatedExpiryAtMs = const Value.absent(),
+    Value<int?> verifiedAtMs = const Value.absent(),
+    String? lifecycle,
+    Value<String?> retiredReason = const Value.absent(),
+    int? rowRevision,
+  }) => TrackedConnection(
+    id: id ?? this.id,
+    ownerSignatureId: ownerSignatureId ?? this.ownerSignatureId,
+    characterId: characterId ?? this.characterId,
+    fromSystemId: fromSystemId ?? this.fromSystemId,
+    toSystemId: toSystemId ?? this.toSystemId,
+    fromSignature: fromSignature.present
+        ? fromSignature.value
+        : this.fromSignature,
+    toSignature: toSignature.present ? toSignature.value : this.toSignature,
+    observedFromCode: observedFromCode.present
+        ? observedFromCode.value
+        : this.observedFromCode,
+    observedToCode: observedToCode.present
+        ? observedToCode.value
+        : this.observedToCode,
+    originatingTypeId: originatingTypeId.present
+        ? originatingTypeId.value
+        : this.originatingTypeId,
+    originatingType: originatingType.present
+        ? originatingType.value
+        : this.originatingType,
+    originatingSide: originatingSide.present
+        ? originatingSide.value
+        : this.originatingSide,
+    massValue: massValue.present ? massValue.value : this.massValue,
+    massObservedAtMs: massObservedAtMs.present
+        ? massObservedAtMs.value
+        : this.massObservedAtMs,
+    massSource: massSource.present ? massSource.value : this.massSource,
+    timeValue: timeValue.present ? timeValue.value : this.timeValue,
+    timeObservedAtMs: timeObservedAtMs.present
+        ? timeObservedAtMs.value
+        : this.timeObservedAtMs,
+    timeSource: timeSource.present ? timeSource.value : this.timeSource,
+    estimatedExpiryAtMs: estimatedExpiryAtMs.present
+        ? estimatedExpiryAtMs.value
+        : this.estimatedExpiryAtMs,
+    verifiedAtMs: verifiedAtMs.present ? verifiedAtMs.value : this.verifiedAtMs,
+    lifecycle: lifecycle ?? this.lifecycle,
+    retiredReason: retiredReason.present
+        ? retiredReason.value
+        : this.retiredReason,
+    rowRevision: rowRevision ?? this.rowRevision,
+  );
+  TrackedConnection copyWithCompanion(TrackedConnectionsCompanion data) {
+    return TrackedConnection(
+      id: data.id.present ? data.id.value : this.id,
+      ownerSignatureId: data.ownerSignatureId.present
+          ? data.ownerSignatureId.value
+          : this.ownerSignatureId,
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      fromSystemId: data.fromSystemId.present
+          ? data.fromSystemId.value
+          : this.fromSystemId,
+      toSystemId: data.toSystemId.present
+          ? data.toSystemId.value
+          : this.toSystemId,
+      fromSignature: data.fromSignature.present
+          ? data.fromSignature.value
+          : this.fromSignature,
+      toSignature: data.toSignature.present
+          ? data.toSignature.value
+          : this.toSignature,
+      observedFromCode: data.observedFromCode.present
+          ? data.observedFromCode.value
+          : this.observedFromCode,
+      observedToCode: data.observedToCode.present
+          ? data.observedToCode.value
+          : this.observedToCode,
+      originatingTypeId: data.originatingTypeId.present
+          ? data.originatingTypeId.value
+          : this.originatingTypeId,
+      originatingType: data.originatingType.present
+          ? data.originatingType.value
+          : this.originatingType,
+      originatingSide: data.originatingSide.present
+          ? data.originatingSide.value
+          : this.originatingSide,
+      massValue: data.massValue.present ? data.massValue.value : this.massValue,
+      massObservedAtMs: data.massObservedAtMs.present
+          ? data.massObservedAtMs.value
+          : this.massObservedAtMs,
+      massSource: data.massSource.present
+          ? data.massSource.value
+          : this.massSource,
+      timeValue: data.timeValue.present ? data.timeValue.value : this.timeValue,
+      timeObservedAtMs: data.timeObservedAtMs.present
+          ? data.timeObservedAtMs.value
+          : this.timeObservedAtMs,
+      timeSource: data.timeSource.present
+          ? data.timeSource.value
+          : this.timeSource,
+      estimatedExpiryAtMs: data.estimatedExpiryAtMs.present
+          ? data.estimatedExpiryAtMs.value
+          : this.estimatedExpiryAtMs,
+      verifiedAtMs: data.verifiedAtMs.present
+          ? data.verifiedAtMs.value
+          : this.verifiedAtMs,
+      lifecycle: data.lifecycle.present ? data.lifecycle.value : this.lifecycle,
+      retiredReason: data.retiredReason.present
+          ? data.retiredReason.value
+          : this.retiredReason,
+      rowRevision: data.rowRevision.present
+          ? data.rowRevision.value
+          : this.rowRevision,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrackedConnection(')
+          ..write('id: $id, ')
+          ..write('ownerSignatureId: $ownerSignatureId, ')
+          ..write('characterId: $characterId, ')
+          ..write('fromSystemId: $fromSystemId, ')
+          ..write('toSystemId: $toSystemId, ')
+          ..write('fromSignature: $fromSignature, ')
+          ..write('toSignature: $toSignature, ')
+          ..write('observedFromCode: $observedFromCode, ')
+          ..write('observedToCode: $observedToCode, ')
+          ..write('originatingTypeId: $originatingTypeId, ')
+          ..write('originatingType: $originatingType, ')
+          ..write('originatingSide: $originatingSide, ')
+          ..write('massValue: $massValue, ')
+          ..write('massObservedAtMs: $massObservedAtMs, ')
+          ..write('massSource: $massSource, ')
+          ..write('timeValue: $timeValue, ')
+          ..write('timeObservedAtMs: $timeObservedAtMs, ')
+          ..write('timeSource: $timeSource, ')
+          ..write('estimatedExpiryAtMs: $estimatedExpiryAtMs, ')
+          ..write('verifiedAtMs: $verifiedAtMs, ')
+          ..write('lifecycle: $lifecycle, ')
+          ..write('retiredReason: $retiredReason, ')
+          ..write('rowRevision: $rowRevision')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    id,
+    ownerSignatureId,
+    characterId,
+    fromSystemId,
+    toSystemId,
+    fromSignature,
+    toSignature,
+    observedFromCode,
+    observedToCode,
+    originatingTypeId,
+    originatingType,
+    originatingSide,
+    massValue,
+    massObservedAtMs,
+    massSource,
+    timeValue,
+    timeObservedAtMs,
+    timeSource,
+    estimatedExpiryAtMs,
+    verifiedAtMs,
+    lifecycle,
+    retiredReason,
+    rowRevision,
+  ]);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TrackedConnection &&
+          other.id == this.id &&
+          other.ownerSignatureId == this.ownerSignatureId &&
+          other.characterId == this.characterId &&
+          other.fromSystemId == this.fromSystemId &&
+          other.toSystemId == this.toSystemId &&
+          other.fromSignature == this.fromSignature &&
+          other.toSignature == this.toSignature &&
+          other.observedFromCode == this.observedFromCode &&
+          other.observedToCode == this.observedToCode &&
+          other.originatingTypeId == this.originatingTypeId &&
+          other.originatingType == this.originatingType &&
+          other.originatingSide == this.originatingSide &&
+          other.massValue == this.massValue &&
+          other.massObservedAtMs == this.massObservedAtMs &&
+          other.massSource == this.massSource &&
+          other.timeValue == this.timeValue &&
+          other.timeObservedAtMs == this.timeObservedAtMs &&
+          other.timeSource == this.timeSource &&
+          other.estimatedExpiryAtMs == this.estimatedExpiryAtMs &&
+          other.verifiedAtMs == this.verifiedAtMs &&
+          other.lifecycle == this.lifecycle &&
+          other.retiredReason == this.retiredReason &&
+          other.rowRevision == this.rowRevision);
+}
+
+class TrackedConnectionsCompanion extends UpdateCompanion<TrackedConnection> {
+  final Value<String> id;
+  final Value<String> ownerSignatureId;
+  final Value<int> characterId;
+  final Value<int> fromSystemId;
+  final Value<int> toSystemId;
+  final Value<String?> fromSignature;
+  final Value<String?> toSignature;
+  final Value<String?> observedFromCode;
+  final Value<String?> observedToCode;
+  final Value<int?> originatingTypeId;
+  final Value<String?> originatingType;
+  final Value<String?> originatingSide;
+  final Value<String?> massValue;
+  final Value<int?> massObservedAtMs;
+  final Value<String?> massSource;
+  final Value<String?> timeValue;
+  final Value<int?> timeObservedAtMs;
+  final Value<String?> timeSource;
+  final Value<int?> estimatedExpiryAtMs;
+  final Value<int?> verifiedAtMs;
+  final Value<String> lifecycle;
+  final Value<String?> retiredReason;
+  final Value<int> rowRevision;
+  final Value<int> rowid;
+  const TrackedConnectionsCompanion({
+    this.id = const Value.absent(),
+    this.ownerSignatureId = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.fromSystemId = const Value.absent(),
+    this.toSystemId = const Value.absent(),
+    this.fromSignature = const Value.absent(),
+    this.toSignature = const Value.absent(),
+    this.observedFromCode = const Value.absent(),
+    this.observedToCode = const Value.absent(),
+    this.originatingTypeId = const Value.absent(),
+    this.originatingType = const Value.absent(),
+    this.originatingSide = const Value.absent(),
+    this.massValue = const Value.absent(),
+    this.massObservedAtMs = const Value.absent(),
+    this.massSource = const Value.absent(),
+    this.timeValue = const Value.absent(),
+    this.timeObservedAtMs = const Value.absent(),
+    this.timeSource = const Value.absent(),
+    this.estimatedExpiryAtMs = const Value.absent(),
+    this.verifiedAtMs = const Value.absent(),
+    this.lifecycle = const Value.absent(),
+    this.retiredReason = const Value.absent(),
+    this.rowRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TrackedConnectionsCompanion.insert({
+    required String id,
+    required String ownerSignatureId,
+    required int characterId,
+    required int fromSystemId,
+    required int toSystemId,
+    this.fromSignature = const Value.absent(),
+    this.toSignature = const Value.absent(),
+    this.observedFromCode = const Value.absent(),
+    this.observedToCode = const Value.absent(),
+    this.originatingTypeId = const Value.absent(),
+    this.originatingType = const Value.absent(),
+    this.originatingSide = const Value.absent(),
+    this.massValue = const Value.absent(),
+    this.massObservedAtMs = const Value.absent(),
+    this.massSource = const Value.absent(),
+    this.timeValue = const Value.absent(),
+    this.timeObservedAtMs = const Value.absent(),
+    this.timeSource = const Value.absent(),
+    this.estimatedExpiryAtMs = const Value.absent(),
+    this.verifiedAtMs = const Value.absent(),
+    this.lifecycle = const Value.absent(),
+    this.retiredReason = const Value.absent(),
+    this.rowRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       ownerSignatureId = Value(ownerSignatureId),
+       characterId = Value(characterId),
+       fromSystemId = Value(fromSystemId),
+       toSystemId = Value(toSystemId);
+  static Insertable<TrackedConnection> custom({
+    Expression<String>? id,
+    Expression<String>? ownerSignatureId,
+    Expression<int>? characterId,
+    Expression<int>? fromSystemId,
+    Expression<int>? toSystemId,
+    Expression<String>? fromSignature,
+    Expression<String>? toSignature,
+    Expression<String>? observedFromCode,
+    Expression<String>? observedToCode,
+    Expression<int>? originatingTypeId,
+    Expression<String>? originatingType,
+    Expression<String>? originatingSide,
+    Expression<String>? massValue,
+    Expression<int>? massObservedAtMs,
+    Expression<String>? massSource,
+    Expression<String>? timeValue,
+    Expression<int>? timeObservedAtMs,
+    Expression<String>? timeSource,
+    Expression<int>? estimatedExpiryAtMs,
+    Expression<int>? verifiedAtMs,
+    Expression<String>? lifecycle,
+    Expression<String>? retiredReason,
+    Expression<int>? rowRevision,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (ownerSignatureId != null) 'owner_signature_id': ownerSignatureId,
+      if (characterId != null) 'character_id': characterId,
+      if (fromSystemId != null) 'from_system_id': fromSystemId,
+      if (toSystemId != null) 'to_system_id': toSystemId,
+      if (fromSignature != null) 'from_signature': fromSignature,
+      if (toSignature != null) 'to_signature': toSignature,
+      if (observedFromCode != null) 'observed_from_code': observedFromCode,
+      if (observedToCode != null) 'observed_to_code': observedToCode,
+      if (originatingTypeId != null) 'originating_type_id': originatingTypeId,
+      if (originatingType != null) 'originating_type': originatingType,
+      if (originatingSide != null) 'originating_side': originatingSide,
+      if (massValue != null) 'mass_value': massValue,
+      if (massObservedAtMs != null) 'mass_observed_at_ms': massObservedAtMs,
+      if (massSource != null) 'mass_source': massSource,
+      if (timeValue != null) 'time_value': timeValue,
+      if (timeObservedAtMs != null) 'time_observed_at_ms': timeObservedAtMs,
+      if (timeSource != null) 'time_source': timeSource,
+      if (estimatedExpiryAtMs != null)
+        'estimated_expiry_at_ms': estimatedExpiryAtMs,
+      if (verifiedAtMs != null) 'verified_at_ms': verifiedAtMs,
+      if (lifecycle != null) 'lifecycle': lifecycle,
+      if (retiredReason != null) 'retired_reason': retiredReason,
+      if (rowRevision != null) 'row_revision': rowRevision,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TrackedConnectionsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? ownerSignatureId,
+    Value<int>? characterId,
+    Value<int>? fromSystemId,
+    Value<int>? toSystemId,
+    Value<String?>? fromSignature,
+    Value<String?>? toSignature,
+    Value<String?>? observedFromCode,
+    Value<String?>? observedToCode,
+    Value<int?>? originatingTypeId,
+    Value<String?>? originatingType,
+    Value<String?>? originatingSide,
+    Value<String?>? massValue,
+    Value<int?>? massObservedAtMs,
+    Value<String?>? massSource,
+    Value<String?>? timeValue,
+    Value<int?>? timeObservedAtMs,
+    Value<String?>? timeSource,
+    Value<int?>? estimatedExpiryAtMs,
+    Value<int?>? verifiedAtMs,
+    Value<String>? lifecycle,
+    Value<String?>? retiredReason,
+    Value<int>? rowRevision,
+    Value<int>? rowid,
+  }) {
+    return TrackedConnectionsCompanion(
+      id: id ?? this.id,
+      ownerSignatureId: ownerSignatureId ?? this.ownerSignatureId,
+      characterId: characterId ?? this.characterId,
+      fromSystemId: fromSystemId ?? this.fromSystemId,
+      toSystemId: toSystemId ?? this.toSystemId,
+      fromSignature: fromSignature ?? this.fromSignature,
+      toSignature: toSignature ?? this.toSignature,
+      observedFromCode: observedFromCode ?? this.observedFromCode,
+      observedToCode: observedToCode ?? this.observedToCode,
+      originatingTypeId: originatingTypeId ?? this.originatingTypeId,
+      originatingType: originatingType ?? this.originatingType,
+      originatingSide: originatingSide ?? this.originatingSide,
+      massValue: massValue ?? this.massValue,
+      massObservedAtMs: massObservedAtMs ?? this.massObservedAtMs,
+      massSource: massSource ?? this.massSource,
+      timeValue: timeValue ?? this.timeValue,
+      timeObservedAtMs: timeObservedAtMs ?? this.timeObservedAtMs,
+      timeSource: timeSource ?? this.timeSource,
+      estimatedExpiryAtMs: estimatedExpiryAtMs ?? this.estimatedExpiryAtMs,
+      verifiedAtMs: verifiedAtMs ?? this.verifiedAtMs,
+      lifecycle: lifecycle ?? this.lifecycle,
+      retiredReason: retiredReason ?? this.retiredReason,
+      rowRevision: rowRevision ?? this.rowRevision,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (ownerSignatureId.present) {
+      map['owner_signature_id'] = Variable<String>(ownerSignatureId.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (fromSystemId.present) {
+      map['from_system_id'] = Variable<int>(fromSystemId.value);
+    }
+    if (toSystemId.present) {
+      map['to_system_id'] = Variable<int>(toSystemId.value);
+    }
+    if (fromSignature.present) {
+      map['from_signature'] = Variable<String>(fromSignature.value);
+    }
+    if (toSignature.present) {
+      map['to_signature'] = Variable<String>(toSignature.value);
+    }
+    if (observedFromCode.present) {
+      map['observed_from_code'] = Variable<String>(observedFromCode.value);
+    }
+    if (observedToCode.present) {
+      map['observed_to_code'] = Variable<String>(observedToCode.value);
+    }
+    if (originatingTypeId.present) {
+      map['originating_type_id'] = Variable<int>(originatingTypeId.value);
+    }
+    if (originatingType.present) {
+      map['originating_type'] = Variable<String>(originatingType.value);
+    }
+    if (originatingSide.present) {
+      map['originating_side'] = Variable<String>(originatingSide.value);
+    }
+    if (massValue.present) {
+      map['mass_value'] = Variable<String>(massValue.value);
+    }
+    if (massObservedAtMs.present) {
+      map['mass_observed_at_ms'] = Variable<int>(massObservedAtMs.value);
+    }
+    if (massSource.present) {
+      map['mass_source'] = Variable<String>(massSource.value);
+    }
+    if (timeValue.present) {
+      map['time_value'] = Variable<String>(timeValue.value);
+    }
+    if (timeObservedAtMs.present) {
+      map['time_observed_at_ms'] = Variable<int>(timeObservedAtMs.value);
+    }
+    if (timeSource.present) {
+      map['time_source'] = Variable<String>(timeSource.value);
+    }
+    if (estimatedExpiryAtMs.present) {
+      map['estimated_expiry_at_ms'] = Variable<int>(estimatedExpiryAtMs.value);
+    }
+    if (verifiedAtMs.present) {
+      map['verified_at_ms'] = Variable<int>(verifiedAtMs.value);
+    }
+    if (lifecycle.present) {
+      map['lifecycle'] = Variable<String>(lifecycle.value);
+    }
+    if (retiredReason.present) {
+      map['retired_reason'] = Variable<String>(retiredReason.value);
+    }
+    if (rowRevision.present) {
+      map['row_revision'] = Variable<int>(rowRevision.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrackedConnectionsCompanion(')
+          ..write('id: $id, ')
+          ..write('ownerSignatureId: $ownerSignatureId, ')
+          ..write('characterId: $characterId, ')
+          ..write('fromSystemId: $fromSystemId, ')
+          ..write('toSystemId: $toSystemId, ')
+          ..write('fromSignature: $fromSignature, ')
+          ..write('toSignature: $toSignature, ')
+          ..write('observedFromCode: $observedFromCode, ')
+          ..write('observedToCode: $observedToCode, ')
+          ..write('originatingTypeId: $originatingTypeId, ')
+          ..write('originatingType: $originatingType, ')
+          ..write('originatingSide: $originatingSide, ')
+          ..write('massValue: $massValue, ')
+          ..write('massObservedAtMs: $massObservedAtMs, ')
+          ..write('massSource: $massSource, ')
+          ..write('timeValue: $timeValue, ')
+          ..write('timeObservedAtMs: $timeObservedAtMs, ')
+          ..write('timeSource: $timeSource, ')
+          ..write('estimatedExpiryAtMs: $estimatedExpiryAtMs, ')
+          ..write('verifiedAtMs: $verifiedAtMs, ')
+          ..write('lifecycle: $lifecycle, ')
+          ..write('retiredReason: $retiredReason, ')
+          ..write('rowRevision: $rowRevision, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ExplorationNotebookScopesTable extends ExplorationNotebookScopes
+    with TableInfo<$ExplorationNotebookScopesTable, ExplorationNotebookScope> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ExplorationNotebookScopesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _systemIdMeta = const VerificationMeta(
+    'systemId',
+  );
+  @override
+  late final GeneratedColumn<int> systemId = GeneratedColumn<int>(
+    'system_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  @override
+  late final GeneratedColumn<int> revision = GeneratedColumn<int>(
+    'revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [characterId, systemId, revision];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'exploration_notebook_scopes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ExplorationNotebookScope> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('system_id')) {
+      context.handle(
+        _systemIdMeta,
+        systemId.isAcceptableOrUnknown(data['system_id']!, _systemIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_systemIdMeta);
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {characterId, systemId};
+  @override
+  ExplorationNotebookScope map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ExplorationNotebookScope(
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      )!,
+      systemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}system_id'],
+      )!,
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}revision'],
+      )!,
+    );
+  }
+
+  @override
+  $ExplorationNotebookScopesTable createAlias(String alias) {
+    return $ExplorationNotebookScopesTable(attachedDatabase, alias);
+  }
+}
+
+class ExplorationNotebookScope extends DataClass
+    implements Insertable<ExplorationNotebookScope> {
+  final int characterId;
+  final int systemId;
+  final int revision;
+  const ExplorationNotebookScope({
+    required this.characterId,
+    required this.systemId,
+    required this.revision,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['character_id'] = Variable<int>(characterId);
+    map['system_id'] = Variable<int>(systemId);
+    map['revision'] = Variable<int>(revision);
+    return map;
+  }
+
+  ExplorationNotebookScopesCompanion toCompanion(bool nullToAbsent) {
+    return ExplorationNotebookScopesCompanion(
+      characterId: Value(characterId),
+      systemId: Value(systemId),
+      revision: Value(revision),
+    );
+  }
+
+  factory ExplorationNotebookScope.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ExplorationNotebookScope(
+      characterId: serializer.fromJson<int>(json['characterId']),
+      systemId: serializer.fromJson<int>(json['systemId']),
+      revision: serializer.fromJson<int>(json['revision']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'characterId': serializer.toJson<int>(characterId),
+      'systemId': serializer.toJson<int>(systemId),
+      'revision': serializer.toJson<int>(revision),
+    };
+  }
+
+  ExplorationNotebookScope copyWith({
+    int? characterId,
+    int? systemId,
+    int? revision,
+  }) => ExplorationNotebookScope(
+    characterId: characterId ?? this.characterId,
+    systemId: systemId ?? this.systemId,
+    revision: revision ?? this.revision,
+  );
+  ExplorationNotebookScope copyWithCompanion(
+    ExplorationNotebookScopesCompanion data,
+  ) {
+    return ExplorationNotebookScope(
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      systemId: data.systemId.present ? data.systemId.value : this.systemId,
+      revision: data.revision.present ? data.revision.value : this.revision,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExplorationNotebookScope(')
+          ..write('characterId: $characterId, ')
+          ..write('systemId: $systemId, ')
+          ..write('revision: $revision')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(characterId, systemId, revision);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ExplorationNotebookScope &&
+          other.characterId == this.characterId &&
+          other.systemId == this.systemId &&
+          other.revision == this.revision);
+}
+
+class ExplorationNotebookScopesCompanion
+    extends UpdateCompanion<ExplorationNotebookScope> {
+  final Value<int> characterId;
+  final Value<int> systemId;
+  final Value<int> revision;
+  final Value<int> rowid;
+  const ExplorationNotebookScopesCompanion({
+    this.characterId = const Value.absent(),
+    this.systemId = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ExplorationNotebookScopesCompanion.insert({
+    required int characterId,
+    required int systemId,
+    this.revision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : characterId = Value(characterId),
+       systemId = Value(systemId);
+  static Insertable<ExplorationNotebookScope> custom({
+    Expression<int>? characterId,
+    Expression<int>? systemId,
+    Expression<int>? revision,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (characterId != null) 'character_id': characterId,
+      if (systemId != null) 'system_id': systemId,
+      if (revision != null) 'revision': revision,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ExplorationNotebookScopesCompanion copyWith({
+    Value<int>? characterId,
+    Value<int>? systemId,
+    Value<int>? revision,
+    Value<int>? rowid,
+  }) {
+    return ExplorationNotebookScopesCompanion(
+      characterId: characterId ?? this.characterId,
+      systemId: systemId ?? this.systemId,
+      revision: revision ?? this.revision,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (systemId.present) {
+      map['system_id'] = Variable<int>(systemId.value);
+    }
+    if (revision.present) {
+      map['revision'] = Variable<int>(revision.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExplorationNotebookScopesCompanion(')
+          ..write('characterId: $characterId, ')
+          ..write('systemId: $systemId, ')
+          ..write('revision: $revision, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ExplorationImportOperationsTable extends ExplorationImportOperations
+    with
+        TableInfo<
+          $ExplorationImportOperationsTable,
+          ExplorationImportOperation
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ExplorationImportOperationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _systemIdMeta = const VerificationMeta(
+    'systemId',
+  );
+  @override
+  late final GeneratedColumn<int> systemId = GeneratedColumn<int>(
+    'system_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _inputDigestMeta = const VerificationMeta(
+    'inputDigest',
+  );
+  @override
+  late final GeneratedColumn<String> inputDigest = GeneratedColumn<String>(
+    'input_digest',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _committedAtMsMeta = const VerificationMeta(
+    'committedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> committedAtMs = GeneratedColumn<int>(
+    'committed_at_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _selectedRowDigestMeta = const VerificationMeta(
+    'selectedRowDigest',
+  );
+  @override
+  late final GeneratedColumn<String> selectedRowDigest =
+      GeneratedColumn<String>(
+        'selected_row_digest',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _addedCountMeta = const VerificationMeta(
+    'addedCount',
+  );
+  @override
+  late final GeneratedColumn<int> addedCount = GeneratedColumn<int>(
+    'added_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _updatedCountMeta = const VerificationMeta(
+    'updatedCount',
+  );
+  @override
+  late final GeneratedColumn<int> updatedCount = GeneratedColumn<int>(
+    'updated_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _skippedCountMeta = const VerificationMeta(
+    'skippedCount',
+  );
+  @override
+  late final GeneratedColumn<int> skippedCount = GeneratedColumn<int>(
+    'skipped_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _conflictCountMeta = const VerificationMeta(
+    'conflictCount',
+  );
+  @override
+  late final GeneratedColumn<int> conflictCount = GeneratedColumn<int>(
+    'conflict_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    characterId,
+    systemId,
+    inputDigest,
+    committedAtMs,
+    selectedRowDigest,
+    addedCount,
+    updatedCount,
+    skippedCount,
+    conflictCount,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'exploration_import_operations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ExplorationImportOperation> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('system_id')) {
+      context.handle(
+        _systemIdMeta,
+        systemId.isAcceptableOrUnknown(data['system_id']!, _systemIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_systemIdMeta);
+    }
+    if (data.containsKey('input_digest')) {
+      context.handle(
+        _inputDigestMeta,
+        inputDigest.isAcceptableOrUnknown(
+          data['input_digest']!,
+          _inputDigestMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_inputDigestMeta);
+    }
+    if (data.containsKey('committed_at_ms')) {
+      context.handle(
+        _committedAtMsMeta,
+        committedAtMs.isAcceptableOrUnknown(
+          data['committed_at_ms']!,
+          _committedAtMsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_committedAtMsMeta);
+    }
+    if (data.containsKey('selected_row_digest')) {
+      context.handle(
+        _selectedRowDigestMeta,
+        selectedRowDigest.isAcceptableOrUnknown(
+          data['selected_row_digest']!,
+          _selectedRowDigestMeta,
+        ),
+      );
+    }
+    if (data.containsKey('added_count')) {
+      context.handle(
+        _addedCountMeta,
+        addedCount.isAcceptableOrUnknown(data['added_count']!, _addedCountMeta),
+      );
+    }
+    if (data.containsKey('updated_count')) {
+      context.handle(
+        _updatedCountMeta,
+        updatedCount.isAcceptableOrUnknown(
+          data['updated_count']!,
+          _updatedCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('skipped_count')) {
+      context.handle(
+        _skippedCountMeta,
+        skippedCount.isAcceptableOrUnknown(
+          data['skipped_count']!,
+          _skippedCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('conflict_count')) {
+      context.handle(
+        _conflictCountMeta,
+        conflictCount.isAcceptableOrUnknown(
+          data['conflict_count']!,
+          _conflictCountMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ExplorationImportOperation map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ExplorationImportOperation(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      )!,
+      systemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}system_id'],
+      )!,
+      inputDigest: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}input_digest'],
+      )!,
+      committedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}committed_at_ms'],
+      )!,
+      selectedRowDigest: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}selected_row_digest'],
+      ),
+      addedCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}added_count'],
+      )!,
+      updatedCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_count'],
+      )!,
+      skippedCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}skipped_count'],
+      )!,
+      conflictCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}conflict_count'],
+      )!,
+    );
+  }
+
+  @override
+  $ExplorationImportOperationsTable createAlias(String alias) {
+    return $ExplorationImportOperationsTable(attachedDatabase, alias);
+  }
+}
+
+class ExplorationImportOperation extends DataClass
+    implements Insertable<ExplorationImportOperation> {
+  final String id;
+  final int characterId;
+  final int systemId;
+  final String inputDigest;
+  final int committedAtMs;
+  final String? selectedRowDigest;
+  final int addedCount;
+  final int updatedCount;
+  final int skippedCount;
+  final int conflictCount;
+  const ExplorationImportOperation({
+    required this.id,
+    required this.characterId,
+    required this.systemId,
+    required this.inputDigest,
+    required this.committedAtMs,
+    this.selectedRowDigest,
+    required this.addedCount,
+    required this.updatedCount,
+    required this.skippedCount,
+    required this.conflictCount,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['character_id'] = Variable<int>(characterId);
+    map['system_id'] = Variable<int>(systemId);
+    map['input_digest'] = Variable<String>(inputDigest);
+    map['committed_at_ms'] = Variable<int>(committedAtMs);
+    if (!nullToAbsent || selectedRowDigest != null) {
+      map['selected_row_digest'] = Variable<String>(selectedRowDigest);
+    }
+    map['added_count'] = Variable<int>(addedCount);
+    map['updated_count'] = Variable<int>(updatedCount);
+    map['skipped_count'] = Variable<int>(skippedCount);
+    map['conflict_count'] = Variable<int>(conflictCount);
+    return map;
+  }
+
+  ExplorationImportOperationsCompanion toCompanion(bool nullToAbsent) {
+    return ExplorationImportOperationsCompanion(
+      id: Value(id),
+      characterId: Value(characterId),
+      systemId: Value(systemId),
+      inputDigest: Value(inputDigest),
+      committedAtMs: Value(committedAtMs),
+      selectedRowDigest: selectedRowDigest == null && nullToAbsent
+          ? const Value.absent()
+          : Value(selectedRowDigest),
+      addedCount: Value(addedCount),
+      updatedCount: Value(updatedCount),
+      skippedCount: Value(skippedCount),
+      conflictCount: Value(conflictCount),
+    );
+  }
+
+  factory ExplorationImportOperation.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ExplorationImportOperation(
+      id: serializer.fromJson<String>(json['id']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      systemId: serializer.fromJson<int>(json['systemId']),
+      inputDigest: serializer.fromJson<String>(json['inputDigest']),
+      committedAtMs: serializer.fromJson<int>(json['committedAtMs']),
+      selectedRowDigest: serializer.fromJson<String?>(
+        json['selectedRowDigest'],
+      ),
+      addedCount: serializer.fromJson<int>(json['addedCount']),
+      updatedCount: serializer.fromJson<int>(json['updatedCount']),
+      skippedCount: serializer.fromJson<int>(json['skippedCount']),
+      conflictCount: serializer.fromJson<int>(json['conflictCount']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'characterId': serializer.toJson<int>(characterId),
+      'systemId': serializer.toJson<int>(systemId),
+      'inputDigest': serializer.toJson<String>(inputDigest),
+      'committedAtMs': serializer.toJson<int>(committedAtMs),
+      'selectedRowDigest': serializer.toJson<String?>(selectedRowDigest),
+      'addedCount': serializer.toJson<int>(addedCount),
+      'updatedCount': serializer.toJson<int>(updatedCount),
+      'skippedCount': serializer.toJson<int>(skippedCount),
+      'conflictCount': serializer.toJson<int>(conflictCount),
+    };
+  }
+
+  ExplorationImportOperation copyWith({
+    String? id,
+    int? characterId,
+    int? systemId,
+    String? inputDigest,
+    int? committedAtMs,
+    Value<String?> selectedRowDigest = const Value.absent(),
+    int? addedCount,
+    int? updatedCount,
+    int? skippedCount,
+    int? conflictCount,
+  }) => ExplorationImportOperation(
+    id: id ?? this.id,
+    characterId: characterId ?? this.characterId,
+    systemId: systemId ?? this.systemId,
+    inputDigest: inputDigest ?? this.inputDigest,
+    committedAtMs: committedAtMs ?? this.committedAtMs,
+    selectedRowDigest: selectedRowDigest.present
+        ? selectedRowDigest.value
+        : this.selectedRowDigest,
+    addedCount: addedCount ?? this.addedCount,
+    updatedCount: updatedCount ?? this.updatedCount,
+    skippedCount: skippedCount ?? this.skippedCount,
+    conflictCount: conflictCount ?? this.conflictCount,
+  );
+  ExplorationImportOperation copyWithCompanion(
+    ExplorationImportOperationsCompanion data,
+  ) {
+    return ExplorationImportOperation(
+      id: data.id.present ? data.id.value : this.id,
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      systemId: data.systemId.present ? data.systemId.value : this.systemId,
+      inputDigest: data.inputDigest.present
+          ? data.inputDigest.value
+          : this.inputDigest,
+      committedAtMs: data.committedAtMs.present
+          ? data.committedAtMs.value
+          : this.committedAtMs,
+      selectedRowDigest: data.selectedRowDigest.present
+          ? data.selectedRowDigest.value
+          : this.selectedRowDigest,
+      addedCount: data.addedCount.present
+          ? data.addedCount.value
+          : this.addedCount,
+      updatedCount: data.updatedCount.present
+          ? data.updatedCount.value
+          : this.updatedCount,
+      skippedCount: data.skippedCount.present
+          ? data.skippedCount.value
+          : this.skippedCount,
+      conflictCount: data.conflictCount.present
+          ? data.conflictCount.value
+          : this.conflictCount,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExplorationImportOperation(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('systemId: $systemId, ')
+          ..write('inputDigest: $inputDigest, ')
+          ..write('committedAtMs: $committedAtMs, ')
+          ..write('selectedRowDigest: $selectedRowDigest, ')
+          ..write('addedCount: $addedCount, ')
+          ..write('updatedCount: $updatedCount, ')
+          ..write('skippedCount: $skippedCount, ')
+          ..write('conflictCount: $conflictCount')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    characterId,
+    systemId,
+    inputDigest,
+    committedAtMs,
+    selectedRowDigest,
+    addedCount,
+    updatedCount,
+    skippedCount,
+    conflictCount,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ExplorationImportOperation &&
+          other.id == this.id &&
+          other.characterId == this.characterId &&
+          other.systemId == this.systemId &&
+          other.inputDigest == this.inputDigest &&
+          other.committedAtMs == this.committedAtMs &&
+          other.selectedRowDigest == this.selectedRowDigest &&
+          other.addedCount == this.addedCount &&
+          other.updatedCount == this.updatedCount &&
+          other.skippedCount == this.skippedCount &&
+          other.conflictCount == this.conflictCount);
+}
+
+class ExplorationImportOperationsCompanion
+    extends UpdateCompanion<ExplorationImportOperation> {
+  final Value<String> id;
+  final Value<int> characterId;
+  final Value<int> systemId;
+  final Value<String> inputDigest;
+  final Value<int> committedAtMs;
+  final Value<String?> selectedRowDigest;
+  final Value<int> addedCount;
+  final Value<int> updatedCount;
+  final Value<int> skippedCount;
+  final Value<int> conflictCount;
+  final Value<int> rowid;
+  const ExplorationImportOperationsCompanion({
+    this.id = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.systemId = const Value.absent(),
+    this.inputDigest = const Value.absent(),
+    this.committedAtMs = const Value.absent(),
+    this.selectedRowDigest = const Value.absent(),
+    this.addedCount = const Value.absent(),
+    this.updatedCount = const Value.absent(),
+    this.skippedCount = const Value.absent(),
+    this.conflictCount = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ExplorationImportOperationsCompanion.insert({
+    required String id,
+    required int characterId,
+    required int systemId,
+    required String inputDigest,
+    required int committedAtMs,
+    this.selectedRowDigest = const Value.absent(),
+    this.addedCount = const Value.absent(),
+    this.updatedCount = const Value.absent(),
+    this.skippedCount = const Value.absent(),
+    this.conflictCount = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       characterId = Value(characterId),
+       systemId = Value(systemId),
+       inputDigest = Value(inputDigest),
+       committedAtMs = Value(committedAtMs);
+  static Insertable<ExplorationImportOperation> custom({
+    Expression<String>? id,
+    Expression<int>? characterId,
+    Expression<int>? systemId,
+    Expression<String>? inputDigest,
+    Expression<int>? committedAtMs,
+    Expression<String>? selectedRowDigest,
+    Expression<int>? addedCount,
+    Expression<int>? updatedCount,
+    Expression<int>? skippedCount,
+    Expression<int>? conflictCount,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (characterId != null) 'character_id': characterId,
+      if (systemId != null) 'system_id': systemId,
+      if (inputDigest != null) 'input_digest': inputDigest,
+      if (committedAtMs != null) 'committed_at_ms': committedAtMs,
+      if (selectedRowDigest != null) 'selected_row_digest': selectedRowDigest,
+      if (addedCount != null) 'added_count': addedCount,
+      if (updatedCount != null) 'updated_count': updatedCount,
+      if (skippedCount != null) 'skipped_count': skippedCount,
+      if (conflictCount != null) 'conflict_count': conflictCount,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ExplorationImportOperationsCompanion copyWith({
+    Value<String>? id,
+    Value<int>? characterId,
+    Value<int>? systemId,
+    Value<String>? inputDigest,
+    Value<int>? committedAtMs,
+    Value<String?>? selectedRowDigest,
+    Value<int>? addedCount,
+    Value<int>? updatedCount,
+    Value<int>? skippedCount,
+    Value<int>? conflictCount,
+    Value<int>? rowid,
+  }) {
+    return ExplorationImportOperationsCompanion(
+      id: id ?? this.id,
+      characterId: characterId ?? this.characterId,
+      systemId: systemId ?? this.systemId,
+      inputDigest: inputDigest ?? this.inputDigest,
+      committedAtMs: committedAtMs ?? this.committedAtMs,
+      selectedRowDigest: selectedRowDigest ?? this.selectedRowDigest,
+      addedCount: addedCount ?? this.addedCount,
+      updatedCount: updatedCount ?? this.updatedCount,
+      skippedCount: skippedCount ?? this.skippedCount,
+      conflictCount: conflictCount ?? this.conflictCount,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (systemId.present) {
+      map['system_id'] = Variable<int>(systemId.value);
+    }
+    if (inputDigest.present) {
+      map['input_digest'] = Variable<String>(inputDigest.value);
+    }
+    if (committedAtMs.present) {
+      map['committed_at_ms'] = Variable<int>(committedAtMs.value);
+    }
+    if (selectedRowDigest.present) {
+      map['selected_row_digest'] = Variable<String>(selectedRowDigest.value);
+    }
+    if (addedCount.present) {
+      map['added_count'] = Variable<int>(addedCount.value);
+    }
+    if (updatedCount.present) {
+      map['updated_count'] = Variable<int>(updatedCount.value);
+    }
+    if (skippedCount.present) {
+      map['skipped_count'] = Variable<int>(skippedCount.value);
+    }
+    if (conflictCount.present) {
+      map['conflict_count'] = Variable<int>(conflictCount.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExplorationImportOperationsCompanion(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('systemId: $systemId, ')
+          ..write('inputDigest: $inputDigest, ')
+          ..write('committedAtMs: $committedAtMs, ')
+          ..write('selectedRowDigest: $selectedRowDigest, ')
+          ..write('addedCount: $addedCount, ')
+          ..write('updatedCount: $updatedCount, ')
+          ..write('skippedCount: $skippedCount, ')
+          ..write('conflictCount: $conflictCount, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ExplorationNotebookPreferencesTable
+    extends ExplorationNotebookPreferences
+    with
+        TableInfo<
+          $ExplorationNotebookPreferencesTable,
+          ExplorationNotebookPreference
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ExplorationNotebookPreferencesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pruneHoursMeta = const VerificationMeta(
+    'pruneHours',
+  );
+  @override
+  late final GeneratedColumn<int> pruneHours = GeneratedColumn<int>(
+    'prune_hours',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(24),
+  );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  @override
+  late final GeneratedColumn<int> revision = GeneratedColumn<int>(
+    'revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [characterId, pruneHours, revision];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'exploration_notebook_preferences';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ExplorationNotebookPreference> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('prune_hours')) {
+      context.handle(
+        _pruneHoursMeta,
+        pruneHours.isAcceptableOrUnknown(data['prune_hours']!, _pruneHoursMeta),
+      );
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {characterId};
+  @override
+  ExplorationNotebookPreference map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ExplorationNotebookPreference(
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      )!,
+      pruneHours: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}prune_hours'],
+      ),
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}revision'],
+      )!,
+    );
+  }
+
+  @override
+  $ExplorationNotebookPreferencesTable createAlias(String alias) {
+    return $ExplorationNotebookPreferencesTable(attachedDatabase, alias);
+  }
+}
+
+class ExplorationNotebookPreference extends DataClass
+    implements Insertable<ExplorationNotebookPreference> {
+  final int characterId;
+  final int? pruneHours;
+  final int revision;
+  const ExplorationNotebookPreference({
+    required this.characterId,
+    this.pruneHours,
+    required this.revision,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['character_id'] = Variable<int>(characterId);
+    if (!nullToAbsent || pruneHours != null) {
+      map['prune_hours'] = Variable<int>(pruneHours);
+    }
+    map['revision'] = Variable<int>(revision);
+    return map;
+  }
+
+  ExplorationNotebookPreferencesCompanion toCompanion(bool nullToAbsent) {
+    return ExplorationNotebookPreferencesCompanion(
+      characterId: Value(characterId),
+      pruneHours: pruneHours == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pruneHours),
+      revision: Value(revision),
+    );
+  }
+
+  factory ExplorationNotebookPreference.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ExplorationNotebookPreference(
+      characterId: serializer.fromJson<int>(json['characterId']),
+      pruneHours: serializer.fromJson<int?>(json['pruneHours']),
+      revision: serializer.fromJson<int>(json['revision']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'characterId': serializer.toJson<int>(characterId),
+      'pruneHours': serializer.toJson<int?>(pruneHours),
+      'revision': serializer.toJson<int>(revision),
+    };
+  }
+
+  ExplorationNotebookPreference copyWith({
+    int? characterId,
+    Value<int?> pruneHours = const Value.absent(),
+    int? revision,
+  }) => ExplorationNotebookPreference(
+    characterId: characterId ?? this.characterId,
+    pruneHours: pruneHours.present ? pruneHours.value : this.pruneHours,
+    revision: revision ?? this.revision,
+  );
+  ExplorationNotebookPreference copyWithCompanion(
+    ExplorationNotebookPreferencesCompanion data,
+  ) {
+    return ExplorationNotebookPreference(
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      pruneHours: data.pruneHours.present
+          ? data.pruneHours.value
+          : this.pruneHours,
+      revision: data.revision.present ? data.revision.value : this.revision,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExplorationNotebookPreference(')
+          ..write('characterId: $characterId, ')
+          ..write('pruneHours: $pruneHours, ')
+          ..write('revision: $revision')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(characterId, pruneHours, revision);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ExplorationNotebookPreference &&
+          other.characterId == this.characterId &&
+          other.pruneHours == this.pruneHours &&
+          other.revision == this.revision);
+}
+
+class ExplorationNotebookPreferencesCompanion
+    extends UpdateCompanion<ExplorationNotebookPreference> {
+  final Value<int> characterId;
+  final Value<int?> pruneHours;
+  final Value<int> revision;
+  const ExplorationNotebookPreferencesCompanion({
+    this.characterId = const Value.absent(),
+    this.pruneHours = const Value.absent(),
+    this.revision = const Value.absent(),
+  });
+  ExplorationNotebookPreferencesCompanion.insert({
+    this.characterId = const Value.absent(),
+    this.pruneHours = const Value.absent(),
+    this.revision = const Value.absent(),
+  });
+  static Insertable<ExplorationNotebookPreference> custom({
+    Expression<int>? characterId,
+    Expression<int>? pruneHours,
+    Expression<int>? revision,
+  }) {
+    return RawValuesInsertable({
+      if (characterId != null) 'character_id': characterId,
+      if (pruneHours != null) 'prune_hours': pruneHours,
+      if (revision != null) 'revision': revision,
+    });
+  }
+
+  ExplorationNotebookPreferencesCompanion copyWith({
+    Value<int>? characterId,
+    Value<int?>? pruneHours,
+    Value<int>? revision,
+  }) {
+    return ExplorationNotebookPreferencesCompanion(
+      characterId: characterId ?? this.characterId,
+      pruneHours: pruneHours ?? this.pruneHours,
+      revision: revision ?? this.revision,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (pruneHours.present) {
+      map['prune_hours'] = Variable<int>(pruneHours.value);
+    }
+    if (revision.present) {
+      map['revision'] = Variable<int>(revision.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExplorationNotebookPreferencesCompanion(')
+          ..write('characterId: $characterId, ')
+          ..write('pruneHours: $pruneHours, ')
+          ..write('revision: $revision')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ExplorationWindowPreferencesTable extends ExplorationWindowPreferences
+    with
+        TableInfo<
+          $ExplorationWindowPreferencesTable,
+          ExplorationWindowPreference
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ExplorationWindowPreferencesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _windowKeyMeta = const VerificationMeta(
+    'windowKey',
+  );
+  @override
+  late final GeneratedColumn<String> windowKey = GeneratedColumn<String>(
+    'window_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastSelectedDestinationMeta =
+      const VerificationMeta('lastSelectedDestination');
+  @override
+  late final GeneratedColumn<String> lastSelectedDestination =
+      GeneratedColumn<String>(
+        'last_selected_destination',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _manualOriginSystemIdMeta =
+      const VerificationMeta('manualOriginSystemId');
+  @override
+  late final GeneratedColumn<int> manualOriginSystemId = GeneratedColumn<int>(
+    'manual_origin_system_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _manualDestinationSystemIdMeta =
+      const VerificationMeta('manualDestinationSystemId');
+  @override
+  late final GeneratedColumn<int> manualDestinationSystemId =
+      GeneratedColumn<int>(
+        'manual_destination_system_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _viewFiltersJsonMeta = const VerificationMeta(
+    'viewFiltersJson',
+  );
+  @override
+  late final GeneratedColumn<String> viewFiltersJson = GeneratedColumn<String>(
+    'view_filters_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _selectedStableKeysJsonMeta =
+      const VerificationMeta('selectedStableKeysJson');
+  @override
+  late final GeneratedColumn<String> selectedStableKeysJson =
+      GeneratedColumn<String>(
+        'selected_stable_keys_json',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _schemaVersionMeta = const VerificationMeta(
+    'schemaVersion',
+  );
+  @override
+  late final GeneratedColumn<int> schemaVersion = GeneratedColumn<int>(
+    'schema_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    windowKey,
+    lastSelectedDestination,
+    manualOriginSystemId,
+    manualDestinationSystemId,
+    viewFiltersJson,
+    selectedStableKeysJson,
+    schemaVersion,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'exploration_window_preferences';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ExplorationWindowPreference> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('window_key')) {
+      context.handle(
+        _windowKeyMeta,
+        windowKey.isAcceptableOrUnknown(data['window_key']!, _windowKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_windowKeyMeta);
+    }
+    if (data.containsKey('last_selected_destination')) {
+      context.handle(
+        _lastSelectedDestinationMeta,
+        lastSelectedDestination.isAcceptableOrUnknown(
+          data['last_selected_destination']!,
+          _lastSelectedDestinationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('manual_origin_system_id')) {
+      context.handle(
+        _manualOriginSystemIdMeta,
+        manualOriginSystemId.isAcceptableOrUnknown(
+          data['manual_origin_system_id']!,
+          _manualOriginSystemIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('manual_destination_system_id')) {
+      context.handle(
+        _manualDestinationSystemIdMeta,
+        manualDestinationSystemId.isAcceptableOrUnknown(
+          data['manual_destination_system_id']!,
+          _manualDestinationSystemIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('view_filters_json')) {
+      context.handle(
+        _viewFiltersJsonMeta,
+        viewFiltersJson.isAcceptableOrUnknown(
+          data['view_filters_json']!,
+          _viewFiltersJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('selected_stable_keys_json')) {
+      context.handle(
+        _selectedStableKeysJsonMeta,
+        selectedStableKeysJson.isAcceptableOrUnknown(
+          data['selected_stable_keys_json']!,
+          _selectedStableKeysJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('schema_version')) {
+      context.handle(
+        _schemaVersionMeta,
+        schemaVersion.isAcceptableOrUnknown(
+          data['schema_version']!,
+          _schemaVersionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {windowKey};
+  @override
+  ExplorationWindowPreference map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ExplorationWindowPreference(
+      windowKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}window_key'],
+      )!,
+      lastSelectedDestination: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_selected_destination'],
+      ),
+      manualOriginSystemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}manual_origin_system_id'],
+      ),
+      manualDestinationSystemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}manual_destination_system_id'],
+      ),
+      viewFiltersJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}view_filters_json'],
+      ),
+      selectedStableKeysJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}selected_stable_keys_json'],
+      ),
+      schemaVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}schema_version'],
+      )!,
+    );
+  }
+
+  @override
+  $ExplorationWindowPreferencesTable createAlias(String alias) {
+    return $ExplorationWindowPreferencesTable(attachedDatabase, alias);
+  }
+}
+
+class ExplorationWindowPreference extends DataClass
+    implements Insertable<ExplorationWindowPreference> {
+  final String windowKey;
+  final String? lastSelectedDestination;
+  final int? manualOriginSystemId;
+  final int? manualDestinationSystemId;
+  final String? viewFiltersJson;
+  final String? selectedStableKeysJson;
+  final int schemaVersion;
+  const ExplorationWindowPreference({
+    required this.windowKey,
+    this.lastSelectedDestination,
+    this.manualOriginSystemId,
+    this.manualDestinationSystemId,
+    this.viewFiltersJson,
+    this.selectedStableKeysJson,
+    required this.schemaVersion,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['window_key'] = Variable<String>(windowKey);
+    if (!nullToAbsent || lastSelectedDestination != null) {
+      map['last_selected_destination'] = Variable<String>(
+        lastSelectedDestination,
+      );
+    }
+    if (!nullToAbsent || manualOriginSystemId != null) {
+      map['manual_origin_system_id'] = Variable<int>(manualOriginSystemId);
+    }
+    if (!nullToAbsent || manualDestinationSystemId != null) {
+      map['manual_destination_system_id'] = Variable<int>(
+        manualDestinationSystemId,
+      );
+    }
+    if (!nullToAbsent || viewFiltersJson != null) {
+      map['view_filters_json'] = Variable<String>(viewFiltersJson);
+    }
+    if (!nullToAbsent || selectedStableKeysJson != null) {
+      map['selected_stable_keys_json'] = Variable<String>(
+        selectedStableKeysJson,
+      );
+    }
+    map['schema_version'] = Variable<int>(schemaVersion);
+    return map;
+  }
+
+  ExplorationWindowPreferencesCompanion toCompanion(bool nullToAbsent) {
+    return ExplorationWindowPreferencesCompanion(
+      windowKey: Value(windowKey),
+      lastSelectedDestination: lastSelectedDestination == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSelectedDestination),
+      manualOriginSystemId: manualOriginSystemId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(manualOriginSystemId),
+      manualDestinationSystemId:
+          manualDestinationSystemId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(manualDestinationSystemId),
+      viewFiltersJson: viewFiltersJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(viewFiltersJson),
+      selectedStableKeysJson: selectedStableKeysJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(selectedStableKeysJson),
+      schemaVersion: Value(schemaVersion),
+    );
+  }
+
+  factory ExplorationWindowPreference.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ExplorationWindowPreference(
+      windowKey: serializer.fromJson<String>(json['windowKey']),
+      lastSelectedDestination: serializer.fromJson<String?>(
+        json['lastSelectedDestination'],
+      ),
+      manualOriginSystemId: serializer.fromJson<int?>(
+        json['manualOriginSystemId'],
+      ),
+      manualDestinationSystemId: serializer.fromJson<int?>(
+        json['manualDestinationSystemId'],
+      ),
+      viewFiltersJson: serializer.fromJson<String?>(json['viewFiltersJson']),
+      selectedStableKeysJson: serializer.fromJson<String?>(
+        json['selectedStableKeysJson'],
+      ),
+      schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'windowKey': serializer.toJson<String>(windowKey),
+      'lastSelectedDestination': serializer.toJson<String?>(
+        lastSelectedDestination,
+      ),
+      'manualOriginSystemId': serializer.toJson<int?>(manualOriginSystemId),
+      'manualDestinationSystemId': serializer.toJson<int?>(
+        manualDestinationSystemId,
+      ),
+      'viewFiltersJson': serializer.toJson<String?>(viewFiltersJson),
+      'selectedStableKeysJson': serializer.toJson<String?>(
+        selectedStableKeysJson,
+      ),
+      'schemaVersion': serializer.toJson<int>(schemaVersion),
+    };
+  }
+
+  ExplorationWindowPreference copyWith({
+    String? windowKey,
+    Value<String?> lastSelectedDestination = const Value.absent(),
+    Value<int?> manualOriginSystemId = const Value.absent(),
+    Value<int?> manualDestinationSystemId = const Value.absent(),
+    Value<String?> viewFiltersJson = const Value.absent(),
+    Value<String?> selectedStableKeysJson = const Value.absent(),
+    int? schemaVersion,
+  }) => ExplorationWindowPreference(
+    windowKey: windowKey ?? this.windowKey,
+    lastSelectedDestination: lastSelectedDestination.present
+        ? lastSelectedDestination.value
+        : this.lastSelectedDestination,
+    manualOriginSystemId: manualOriginSystemId.present
+        ? manualOriginSystemId.value
+        : this.manualOriginSystemId,
+    manualDestinationSystemId: manualDestinationSystemId.present
+        ? manualDestinationSystemId.value
+        : this.manualDestinationSystemId,
+    viewFiltersJson: viewFiltersJson.present
+        ? viewFiltersJson.value
+        : this.viewFiltersJson,
+    selectedStableKeysJson: selectedStableKeysJson.present
+        ? selectedStableKeysJson.value
+        : this.selectedStableKeysJson,
+    schemaVersion: schemaVersion ?? this.schemaVersion,
+  );
+  ExplorationWindowPreference copyWithCompanion(
+    ExplorationWindowPreferencesCompanion data,
+  ) {
+    return ExplorationWindowPreference(
+      windowKey: data.windowKey.present ? data.windowKey.value : this.windowKey,
+      lastSelectedDestination: data.lastSelectedDestination.present
+          ? data.lastSelectedDestination.value
+          : this.lastSelectedDestination,
+      manualOriginSystemId: data.manualOriginSystemId.present
+          ? data.manualOriginSystemId.value
+          : this.manualOriginSystemId,
+      manualDestinationSystemId: data.manualDestinationSystemId.present
+          ? data.manualDestinationSystemId.value
+          : this.manualDestinationSystemId,
+      viewFiltersJson: data.viewFiltersJson.present
+          ? data.viewFiltersJson.value
+          : this.viewFiltersJson,
+      selectedStableKeysJson: data.selectedStableKeysJson.present
+          ? data.selectedStableKeysJson.value
+          : this.selectedStableKeysJson,
+      schemaVersion: data.schemaVersion.present
+          ? data.schemaVersion.value
+          : this.schemaVersion,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExplorationWindowPreference(')
+          ..write('windowKey: $windowKey, ')
+          ..write('lastSelectedDestination: $lastSelectedDestination, ')
+          ..write('manualOriginSystemId: $manualOriginSystemId, ')
+          ..write('manualDestinationSystemId: $manualDestinationSystemId, ')
+          ..write('viewFiltersJson: $viewFiltersJson, ')
+          ..write('selectedStableKeysJson: $selectedStableKeysJson, ')
+          ..write('schemaVersion: $schemaVersion')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    windowKey,
+    lastSelectedDestination,
+    manualOriginSystemId,
+    manualDestinationSystemId,
+    viewFiltersJson,
+    selectedStableKeysJson,
+    schemaVersion,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ExplorationWindowPreference &&
+          other.windowKey == this.windowKey &&
+          other.lastSelectedDestination == this.lastSelectedDestination &&
+          other.manualOriginSystemId == this.manualOriginSystemId &&
+          other.manualDestinationSystemId == this.manualDestinationSystemId &&
+          other.viewFiltersJson == this.viewFiltersJson &&
+          other.selectedStableKeysJson == this.selectedStableKeysJson &&
+          other.schemaVersion == this.schemaVersion);
+}
+
+class ExplorationWindowPreferencesCompanion
+    extends UpdateCompanion<ExplorationWindowPreference> {
+  final Value<String> windowKey;
+  final Value<String?> lastSelectedDestination;
+  final Value<int?> manualOriginSystemId;
+  final Value<int?> manualDestinationSystemId;
+  final Value<String?> viewFiltersJson;
+  final Value<String?> selectedStableKeysJson;
+  final Value<int> schemaVersion;
+  final Value<int> rowid;
+  const ExplorationWindowPreferencesCompanion({
+    this.windowKey = const Value.absent(),
+    this.lastSelectedDestination = const Value.absent(),
+    this.manualOriginSystemId = const Value.absent(),
+    this.manualDestinationSystemId = const Value.absent(),
+    this.viewFiltersJson = const Value.absent(),
+    this.selectedStableKeysJson = const Value.absent(),
+    this.schemaVersion = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ExplorationWindowPreferencesCompanion.insert({
+    required String windowKey,
+    this.lastSelectedDestination = const Value.absent(),
+    this.manualOriginSystemId = const Value.absent(),
+    this.manualDestinationSystemId = const Value.absent(),
+    this.viewFiltersJson = const Value.absent(),
+    this.selectedStableKeysJson = const Value.absent(),
+    this.schemaVersion = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : windowKey = Value(windowKey);
+  static Insertable<ExplorationWindowPreference> custom({
+    Expression<String>? windowKey,
+    Expression<String>? lastSelectedDestination,
+    Expression<int>? manualOriginSystemId,
+    Expression<int>? manualDestinationSystemId,
+    Expression<String>? viewFiltersJson,
+    Expression<String>? selectedStableKeysJson,
+    Expression<int>? schemaVersion,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (windowKey != null) 'window_key': windowKey,
+      if (lastSelectedDestination != null)
+        'last_selected_destination': lastSelectedDestination,
+      if (manualOriginSystemId != null)
+        'manual_origin_system_id': manualOriginSystemId,
+      if (manualDestinationSystemId != null)
+        'manual_destination_system_id': manualDestinationSystemId,
+      if (viewFiltersJson != null) 'view_filters_json': viewFiltersJson,
+      if (selectedStableKeysJson != null)
+        'selected_stable_keys_json': selectedStableKeysJson,
+      if (schemaVersion != null) 'schema_version': schemaVersion,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ExplorationWindowPreferencesCompanion copyWith({
+    Value<String>? windowKey,
+    Value<String?>? lastSelectedDestination,
+    Value<int?>? manualOriginSystemId,
+    Value<int?>? manualDestinationSystemId,
+    Value<String?>? viewFiltersJson,
+    Value<String?>? selectedStableKeysJson,
+    Value<int>? schemaVersion,
+    Value<int>? rowid,
+  }) {
+    return ExplorationWindowPreferencesCompanion(
+      windowKey: windowKey ?? this.windowKey,
+      lastSelectedDestination:
+          lastSelectedDestination ?? this.lastSelectedDestination,
+      manualOriginSystemId: manualOriginSystemId ?? this.manualOriginSystemId,
+      manualDestinationSystemId:
+          manualDestinationSystemId ?? this.manualDestinationSystemId,
+      viewFiltersJson: viewFiltersJson ?? this.viewFiltersJson,
+      selectedStableKeysJson:
+          selectedStableKeysJson ?? this.selectedStableKeysJson,
+      schemaVersion: schemaVersion ?? this.schemaVersion,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (windowKey.present) {
+      map['window_key'] = Variable<String>(windowKey.value);
+    }
+    if (lastSelectedDestination.present) {
+      map['last_selected_destination'] = Variable<String>(
+        lastSelectedDestination.value,
+      );
+    }
+    if (manualOriginSystemId.present) {
+      map['manual_origin_system_id'] = Variable<int>(
+        manualOriginSystemId.value,
+      );
+    }
+    if (manualDestinationSystemId.present) {
+      map['manual_destination_system_id'] = Variable<int>(
+        manualDestinationSystemId.value,
+      );
+    }
+    if (viewFiltersJson.present) {
+      map['view_filters_json'] = Variable<String>(viewFiltersJson.value);
+    }
+    if (selectedStableKeysJson.present) {
+      map['selected_stable_keys_json'] = Variable<String>(
+        selectedStableKeysJson.value,
+      );
+    }
+    if (schemaVersion.present) {
+      map['schema_version'] = Variable<int>(schemaVersion.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExplorationWindowPreferencesCompanion(')
+          ..write('windowKey: $windowKey, ')
+          ..write('lastSelectedDestination: $lastSelectedDestination, ')
+          ..write('manualOriginSystemId: $manualOriginSystemId, ')
+          ..write('manualDestinationSystemId: $manualDestinationSystemId, ')
+          ..write('viewFiltersJson: $viewFiltersJson, ')
+          ..write('selectedStableKeysJson: $selectedStableKeysJson, ')
+          ..write('schemaVersion: $schemaVersion, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ExplorationLocationObservationsTable
+    extends ExplorationLocationObservations
+    with
+        TableInfo<
+          $ExplorationLocationObservationsTable,
+          ExplorationLocationObservation
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ExplorationLocationObservationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _systemIdMeta = const VerificationMeta(
+    'systemId',
+  );
+  @override
+  late final GeneratedColumn<int> systemId = GeneratedColumn<int>(
+    'system_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _observedAtMsMeta = const VerificationMeta(
+    'observedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> observedAtMs = GeneratedColumn<int>(
+    'observed_at_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _receivedAtMsMeta = const VerificationMeta(
+    'receivedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> receivedAtMs = GeneratedColumn<int>(
+    'received_at_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceFreshnessJsonMeta =
+      const VerificationMeta('sourceFreshnessJson');
+  @override
+  late final GeneratedColumn<String> sourceFreshnessJson =
+      GeneratedColumn<String>(
+        'source_freshness_json',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    characterId,
+    systemId,
+    observedAtMs,
+    receivedAtMs,
+    sourceFreshnessJson,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'exploration_location_observations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ExplorationLocationObservation> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('system_id')) {
+      context.handle(
+        _systemIdMeta,
+        systemId.isAcceptableOrUnknown(data['system_id']!, _systemIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_systemIdMeta);
+    }
+    if (data.containsKey('observed_at_ms')) {
+      context.handle(
+        _observedAtMsMeta,
+        observedAtMs.isAcceptableOrUnknown(
+          data['observed_at_ms']!,
+          _observedAtMsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_observedAtMsMeta);
+    }
+    if (data.containsKey('received_at_ms')) {
+      context.handle(
+        _receivedAtMsMeta,
+        receivedAtMs.isAcceptableOrUnknown(
+          data['received_at_ms']!,
+          _receivedAtMsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_receivedAtMsMeta);
+    }
+    if (data.containsKey('source_freshness_json')) {
+      context.handle(
+        _sourceFreshnessJsonMeta,
+        sourceFreshnessJson.isAcceptableOrUnknown(
+          data['source_freshness_json']!,
+          _sourceFreshnessJsonMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {characterId};
+  @override
+  ExplorationLocationObservation map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ExplorationLocationObservation(
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      )!,
+      systemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}system_id'],
+      )!,
+      observedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}observed_at_ms'],
+      )!,
+      receivedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}received_at_ms'],
+      )!,
+      sourceFreshnessJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_freshness_json'],
+      ),
+    );
+  }
+
+  @override
+  $ExplorationLocationObservationsTable createAlias(String alias) {
+    return $ExplorationLocationObservationsTable(attachedDatabase, alias);
+  }
+}
+
+class ExplorationLocationObservation extends DataClass
+    implements Insertable<ExplorationLocationObservation> {
+  final int characterId;
+  final int systemId;
+  final int observedAtMs;
+  final int receivedAtMs;
+  final String? sourceFreshnessJson;
+  const ExplorationLocationObservation({
+    required this.characterId,
+    required this.systemId,
+    required this.observedAtMs,
+    required this.receivedAtMs,
+    this.sourceFreshnessJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['character_id'] = Variable<int>(characterId);
+    map['system_id'] = Variable<int>(systemId);
+    map['observed_at_ms'] = Variable<int>(observedAtMs);
+    map['received_at_ms'] = Variable<int>(receivedAtMs);
+    if (!nullToAbsent || sourceFreshnessJson != null) {
+      map['source_freshness_json'] = Variable<String>(sourceFreshnessJson);
+    }
+    return map;
+  }
+
+  ExplorationLocationObservationsCompanion toCompanion(bool nullToAbsent) {
+    return ExplorationLocationObservationsCompanion(
+      characterId: Value(characterId),
+      systemId: Value(systemId),
+      observedAtMs: Value(observedAtMs),
+      receivedAtMs: Value(receivedAtMs),
+      sourceFreshnessJson: sourceFreshnessJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceFreshnessJson),
+    );
+  }
+
+  factory ExplorationLocationObservation.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ExplorationLocationObservation(
+      characterId: serializer.fromJson<int>(json['characterId']),
+      systemId: serializer.fromJson<int>(json['systemId']),
+      observedAtMs: serializer.fromJson<int>(json['observedAtMs']),
+      receivedAtMs: serializer.fromJson<int>(json['receivedAtMs']),
+      sourceFreshnessJson: serializer.fromJson<String?>(
+        json['sourceFreshnessJson'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'characterId': serializer.toJson<int>(characterId),
+      'systemId': serializer.toJson<int>(systemId),
+      'observedAtMs': serializer.toJson<int>(observedAtMs),
+      'receivedAtMs': serializer.toJson<int>(receivedAtMs),
+      'sourceFreshnessJson': serializer.toJson<String?>(sourceFreshnessJson),
+    };
+  }
+
+  ExplorationLocationObservation copyWith({
+    int? characterId,
+    int? systemId,
+    int? observedAtMs,
+    int? receivedAtMs,
+    Value<String?> sourceFreshnessJson = const Value.absent(),
+  }) => ExplorationLocationObservation(
+    characterId: characterId ?? this.characterId,
+    systemId: systemId ?? this.systemId,
+    observedAtMs: observedAtMs ?? this.observedAtMs,
+    receivedAtMs: receivedAtMs ?? this.receivedAtMs,
+    sourceFreshnessJson: sourceFreshnessJson.present
+        ? sourceFreshnessJson.value
+        : this.sourceFreshnessJson,
+  );
+  ExplorationLocationObservation copyWithCompanion(
+    ExplorationLocationObservationsCompanion data,
+  ) {
+    return ExplorationLocationObservation(
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      systemId: data.systemId.present ? data.systemId.value : this.systemId,
+      observedAtMs: data.observedAtMs.present
+          ? data.observedAtMs.value
+          : this.observedAtMs,
+      receivedAtMs: data.receivedAtMs.present
+          ? data.receivedAtMs.value
+          : this.receivedAtMs,
+      sourceFreshnessJson: data.sourceFreshnessJson.present
+          ? data.sourceFreshnessJson.value
+          : this.sourceFreshnessJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExplorationLocationObservation(')
+          ..write('characterId: $characterId, ')
+          ..write('systemId: $systemId, ')
+          ..write('observedAtMs: $observedAtMs, ')
+          ..write('receivedAtMs: $receivedAtMs, ')
+          ..write('sourceFreshnessJson: $sourceFreshnessJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    characterId,
+    systemId,
+    observedAtMs,
+    receivedAtMs,
+    sourceFreshnessJson,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ExplorationLocationObservation &&
+          other.characterId == this.characterId &&
+          other.systemId == this.systemId &&
+          other.observedAtMs == this.observedAtMs &&
+          other.receivedAtMs == this.receivedAtMs &&
+          other.sourceFreshnessJson == this.sourceFreshnessJson);
+}
+
+class ExplorationLocationObservationsCompanion
+    extends UpdateCompanion<ExplorationLocationObservation> {
+  final Value<int> characterId;
+  final Value<int> systemId;
+  final Value<int> observedAtMs;
+  final Value<int> receivedAtMs;
+  final Value<String?> sourceFreshnessJson;
+  const ExplorationLocationObservationsCompanion({
+    this.characterId = const Value.absent(),
+    this.systemId = const Value.absent(),
+    this.observedAtMs = const Value.absent(),
+    this.receivedAtMs = const Value.absent(),
+    this.sourceFreshnessJson = const Value.absent(),
+  });
+  ExplorationLocationObservationsCompanion.insert({
+    this.characterId = const Value.absent(),
+    required int systemId,
+    required int observedAtMs,
+    required int receivedAtMs,
+    this.sourceFreshnessJson = const Value.absent(),
+  }) : systemId = Value(systemId),
+       observedAtMs = Value(observedAtMs),
+       receivedAtMs = Value(receivedAtMs);
+  static Insertable<ExplorationLocationObservation> custom({
+    Expression<int>? characterId,
+    Expression<int>? systemId,
+    Expression<int>? observedAtMs,
+    Expression<int>? receivedAtMs,
+    Expression<String>? sourceFreshnessJson,
+  }) {
+    return RawValuesInsertable({
+      if (characterId != null) 'character_id': characterId,
+      if (systemId != null) 'system_id': systemId,
+      if (observedAtMs != null) 'observed_at_ms': observedAtMs,
+      if (receivedAtMs != null) 'received_at_ms': receivedAtMs,
+      if (sourceFreshnessJson != null)
+        'source_freshness_json': sourceFreshnessJson,
+    });
+  }
+
+  ExplorationLocationObservationsCompanion copyWith({
+    Value<int>? characterId,
+    Value<int>? systemId,
+    Value<int>? observedAtMs,
+    Value<int>? receivedAtMs,
+    Value<String?>? sourceFreshnessJson,
+  }) {
+    return ExplorationLocationObservationsCompanion(
+      characterId: characterId ?? this.characterId,
+      systemId: systemId ?? this.systemId,
+      observedAtMs: observedAtMs ?? this.observedAtMs,
+      receivedAtMs: receivedAtMs ?? this.receivedAtMs,
+      sourceFreshnessJson: sourceFreshnessJson ?? this.sourceFreshnessJson,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (systemId.present) {
+      map['system_id'] = Variable<int>(systemId.value);
+    }
+    if (observedAtMs.present) {
+      map['observed_at_ms'] = Variable<int>(observedAtMs.value);
+    }
+    if (receivedAtMs.present) {
+      map['received_at_ms'] = Variable<int>(receivedAtMs.value);
+    }
+    if (sourceFreshnessJson.present) {
+      map['source_freshness_json'] = Variable<String>(
+        sourceFreshnessJson.value,
+      );
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExplorationLocationObservationsCompanion(')
+          ..write('characterId: $characterId, ')
+          ..write('systemId: $systemId, ')
+          ..write('observedAtMs: $observedAtMs, ')
+          ..write('receivedAtMs: $receivedAtMs, ')
+          ..write('sourceFreshnessJson: $sourceFreshnessJson')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -19417,6 +26507,24 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CombatEncountersTable combatEncounters = $CombatEncountersTable(
     this,
   );
+  late final $EveScoutFeedStatesTable eveScoutFeedStates =
+      $EveScoutFeedStatesTable(this);
+  late final $EveScoutSignaturesTable eveScoutSignatures =
+      $EveScoutSignaturesTable(this);
+  late final $TrackedSignaturesTable trackedSignatures =
+      $TrackedSignaturesTable(this);
+  late final $TrackedConnectionsTable trackedConnections =
+      $TrackedConnectionsTable(this);
+  late final $ExplorationNotebookScopesTable explorationNotebookScopes =
+      $ExplorationNotebookScopesTable(this);
+  late final $ExplorationImportOperationsTable explorationImportOperations =
+      $ExplorationImportOperationsTable(this);
+  late final $ExplorationNotebookPreferencesTable
+  explorationNotebookPreferences = $ExplorationNotebookPreferencesTable(this);
+  late final $ExplorationWindowPreferencesTable explorationWindowPreferences =
+      $ExplorationWindowPreferencesTable(this);
+  late final $ExplorationLocationObservationsTable
+  explorationLocationObservations = $ExplorationLocationObservationsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -19455,6 +26563,15 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     watchList,
     combatParsedEncounters,
     combatEncounters,
+    eveScoutFeedStates,
+    eveScoutSignatures,
+    trackedSignatures,
+    trackedConnections,
+    explorationNotebookScopes,
+    explorationImportOperations,
+    explorationNotebookPreferences,
+    explorationWindowPreferences,
+    explorationLocationObservations,
   ];
 }
 
@@ -32947,6 +40064,3369 @@ typedef $$CombatEncountersTableProcessedTableManager =
       CombatEncounter,
       PrefetchHooks Function()
     >;
+typedef $$EveScoutFeedStatesTableCreateCompanionBuilder =
+    EveScoutFeedStatesCompanion Function({
+      required String scopeKey,
+      Value<bool> cacheValid,
+      Value<int> snapshotRevision,
+      Value<int> validationRevision,
+      Value<int> metadataRevision,
+      Value<int?> payloadReceivedAtMs,
+      Value<int?> lastValidatedAtMs,
+      Value<int?> lastAttemptAtMs,
+      Value<String?> etag,
+      Value<String?> lastModified,
+      Value<int?> cacheExpiresAtMs,
+      Value<int?> nextAttemptAtMs,
+      Value<String?> lastError,
+      Value<int> failureCount,
+      Value<String?> bodyDigest,
+      Value<int> requestEpoch,
+      Value<String?> requestToken,
+      Value<String?> requestOwner,
+      Value<int?> leaseUntilMs,
+      Value<int> rowid,
+    });
+typedef $$EveScoutFeedStatesTableUpdateCompanionBuilder =
+    EveScoutFeedStatesCompanion Function({
+      Value<String> scopeKey,
+      Value<bool> cacheValid,
+      Value<int> snapshotRevision,
+      Value<int> validationRevision,
+      Value<int> metadataRevision,
+      Value<int?> payloadReceivedAtMs,
+      Value<int?> lastValidatedAtMs,
+      Value<int?> lastAttemptAtMs,
+      Value<String?> etag,
+      Value<String?> lastModified,
+      Value<int?> cacheExpiresAtMs,
+      Value<int?> nextAttemptAtMs,
+      Value<String?> lastError,
+      Value<int> failureCount,
+      Value<String?> bodyDigest,
+      Value<int> requestEpoch,
+      Value<String?> requestToken,
+      Value<String?> requestOwner,
+      Value<int?> leaseUntilMs,
+      Value<int> rowid,
+    });
+
+class $$EveScoutFeedStatesTableFilterComposer
+    extends Composer<_$AppDatabase, $EveScoutFeedStatesTable> {
+  $$EveScoutFeedStatesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get scopeKey => $composableBuilder(
+    column: $table.scopeKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get cacheValid => $composableBuilder(
+    column: $table.cacheValid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get snapshotRevision => $composableBuilder(
+    column: $table.snapshotRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get validationRevision => $composableBuilder(
+    column: $table.validationRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get metadataRevision => $composableBuilder(
+    column: $table.metadataRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get payloadReceivedAtMs => $composableBuilder(
+    column: $table.payloadReceivedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastValidatedAtMs => $composableBuilder(
+    column: $table.lastValidatedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastAttemptAtMs => $composableBuilder(
+    column: $table.lastAttemptAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get etag => $composableBuilder(
+    column: $table.etag,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastModified => $composableBuilder(
+    column: $table.lastModified,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cacheExpiresAtMs => $composableBuilder(
+    column: $table.cacheExpiresAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get nextAttemptAtMs => $composableBuilder(
+    column: $table.nextAttemptAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get failureCount => $composableBuilder(
+    column: $table.failureCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bodyDigest => $composableBuilder(
+    column: $table.bodyDigest,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get requestEpoch => $composableBuilder(
+    column: $table.requestEpoch,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get requestToken => $composableBuilder(
+    column: $table.requestToken,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get requestOwner => $composableBuilder(
+    column: $table.requestOwner,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get leaseUntilMs => $composableBuilder(
+    column: $table.leaseUntilMs,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$EveScoutFeedStatesTableOrderingComposer
+    extends Composer<_$AppDatabase, $EveScoutFeedStatesTable> {
+  $$EveScoutFeedStatesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get scopeKey => $composableBuilder(
+    column: $table.scopeKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get cacheValid => $composableBuilder(
+    column: $table.cacheValid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get snapshotRevision => $composableBuilder(
+    column: $table.snapshotRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get validationRevision => $composableBuilder(
+    column: $table.validationRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get metadataRevision => $composableBuilder(
+    column: $table.metadataRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get payloadReceivedAtMs => $composableBuilder(
+    column: $table.payloadReceivedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastValidatedAtMs => $composableBuilder(
+    column: $table.lastValidatedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastAttemptAtMs => $composableBuilder(
+    column: $table.lastAttemptAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get etag => $composableBuilder(
+    column: $table.etag,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastModified => $composableBuilder(
+    column: $table.lastModified,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cacheExpiresAtMs => $composableBuilder(
+    column: $table.cacheExpiresAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get nextAttemptAtMs => $composableBuilder(
+    column: $table.nextAttemptAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get failureCount => $composableBuilder(
+    column: $table.failureCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bodyDigest => $composableBuilder(
+    column: $table.bodyDigest,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get requestEpoch => $composableBuilder(
+    column: $table.requestEpoch,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get requestToken => $composableBuilder(
+    column: $table.requestToken,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get requestOwner => $composableBuilder(
+    column: $table.requestOwner,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get leaseUntilMs => $composableBuilder(
+    column: $table.leaseUntilMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$EveScoutFeedStatesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $EveScoutFeedStatesTable> {
+  $$EveScoutFeedStatesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get scopeKey =>
+      $composableBuilder(column: $table.scopeKey, builder: (column) => column);
+
+  GeneratedColumn<bool> get cacheValid => $composableBuilder(
+    column: $table.cacheValid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get snapshotRevision => $composableBuilder(
+    column: $table.snapshotRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get validationRevision => $composableBuilder(
+    column: $table.validationRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get metadataRevision => $composableBuilder(
+    column: $table.metadataRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get payloadReceivedAtMs => $composableBuilder(
+    column: $table.payloadReceivedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastValidatedAtMs => $composableBuilder(
+    column: $table.lastValidatedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastAttemptAtMs => $composableBuilder(
+    column: $table.lastAttemptAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get etag =>
+      $composableBuilder(column: $table.etag, builder: (column) => column);
+
+  GeneratedColumn<String> get lastModified => $composableBuilder(
+    column: $table.lastModified,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cacheExpiresAtMs => $composableBuilder(
+    column: $table.cacheExpiresAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get nextAttemptAtMs => $composableBuilder(
+    column: $table.nextAttemptAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastError =>
+      $composableBuilder(column: $table.lastError, builder: (column) => column);
+
+  GeneratedColumn<int> get failureCount => $composableBuilder(
+    column: $table.failureCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get bodyDigest => $composableBuilder(
+    column: $table.bodyDigest,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get requestEpoch => $composableBuilder(
+    column: $table.requestEpoch,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get requestToken => $composableBuilder(
+    column: $table.requestToken,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get requestOwner => $composableBuilder(
+    column: $table.requestOwner,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get leaseUntilMs => $composableBuilder(
+    column: $table.leaseUntilMs,
+    builder: (column) => column,
+  );
+}
+
+class $$EveScoutFeedStatesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $EveScoutFeedStatesTable,
+          EveScoutFeedState,
+          $$EveScoutFeedStatesTableFilterComposer,
+          $$EveScoutFeedStatesTableOrderingComposer,
+          $$EveScoutFeedStatesTableAnnotationComposer,
+          $$EveScoutFeedStatesTableCreateCompanionBuilder,
+          $$EveScoutFeedStatesTableUpdateCompanionBuilder,
+          (
+            EveScoutFeedState,
+            BaseReferences<
+              _$AppDatabase,
+              $EveScoutFeedStatesTable,
+              EveScoutFeedState
+            >,
+          ),
+          EveScoutFeedState,
+          PrefetchHooks Function()
+        > {
+  $$EveScoutFeedStatesTableTableManager(
+    _$AppDatabase db,
+    $EveScoutFeedStatesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EveScoutFeedStatesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EveScoutFeedStatesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$EveScoutFeedStatesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> scopeKey = const Value.absent(),
+                Value<bool> cacheValid = const Value.absent(),
+                Value<int> snapshotRevision = const Value.absent(),
+                Value<int> validationRevision = const Value.absent(),
+                Value<int> metadataRevision = const Value.absent(),
+                Value<int?> payloadReceivedAtMs = const Value.absent(),
+                Value<int?> lastValidatedAtMs = const Value.absent(),
+                Value<int?> lastAttemptAtMs = const Value.absent(),
+                Value<String?> etag = const Value.absent(),
+                Value<String?> lastModified = const Value.absent(),
+                Value<int?> cacheExpiresAtMs = const Value.absent(),
+                Value<int?> nextAttemptAtMs = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                Value<int> failureCount = const Value.absent(),
+                Value<String?> bodyDigest = const Value.absent(),
+                Value<int> requestEpoch = const Value.absent(),
+                Value<String?> requestToken = const Value.absent(),
+                Value<String?> requestOwner = const Value.absent(),
+                Value<int?> leaseUntilMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EveScoutFeedStatesCompanion(
+                scopeKey: scopeKey,
+                cacheValid: cacheValid,
+                snapshotRevision: snapshotRevision,
+                validationRevision: validationRevision,
+                metadataRevision: metadataRevision,
+                payloadReceivedAtMs: payloadReceivedAtMs,
+                lastValidatedAtMs: lastValidatedAtMs,
+                lastAttemptAtMs: lastAttemptAtMs,
+                etag: etag,
+                lastModified: lastModified,
+                cacheExpiresAtMs: cacheExpiresAtMs,
+                nextAttemptAtMs: nextAttemptAtMs,
+                lastError: lastError,
+                failureCount: failureCount,
+                bodyDigest: bodyDigest,
+                requestEpoch: requestEpoch,
+                requestToken: requestToken,
+                requestOwner: requestOwner,
+                leaseUntilMs: leaseUntilMs,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String scopeKey,
+                Value<bool> cacheValid = const Value.absent(),
+                Value<int> snapshotRevision = const Value.absent(),
+                Value<int> validationRevision = const Value.absent(),
+                Value<int> metadataRevision = const Value.absent(),
+                Value<int?> payloadReceivedAtMs = const Value.absent(),
+                Value<int?> lastValidatedAtMs = const Value.absent(),
+                Value<int?> lastAttemptAtMs = const Value.absent(),
+                Value<String?> etag = const Value.absent(),
+                Value<String?> lastModified = const Value.absent(),
+                Value<int?> cacheExpiresAtMs = const Value.absent(),
+                Value<int?> nextAttemptAtMs = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                Value<int> failureCount = const Value.absent(),
+                Value<String?> bodyDigest = const Value.absent(),
+                Value<int> requestEpoch = const Value.absent(),
+                Value<String?> requestToken = const Value.absent(),
+                Value<String?> requestOwner = const Value.absent(),
+                Value<int?> leaseUntilMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EveScoutFeedStatesCompanion.insert(
+                scopeKey: scopeKey,
+                cacheValid: cacheValid,
+                snapshotRevision: snapshotRevision,
+                validationRevision: validationRevision,
+                metadataRevision: metadataRevision,
+                payloadReceivedAtMs: payloadReceivedAtMs,
+                lastValidatedAtMs: lastValidatedAtMs,
+                lastAttemptAtMs: lastAttemptAtMs,
+                etag: etag,
+                lastModified: lastModified,
+                cacheExpiresAtMs: cacheExpiresAtMs,
+                nextAttemptAtMs: nextAttemptAtMs,
+                lastError: lastError,
+                failureCount: failureCount,
+                bodyDigest: bodyDigest,
+                requestEpoch: requestEpoch,
+                requestToken: requestToken,
+                requestOwner: requestOwner,
+                leaseUntilMs: leaseUntilMs,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$EveScoutFeedStatesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $EveScoutFeedStatesTable,
+      EveScoutFeedState,
+      $$EveScoutFeedStatesTableFilterComposer,
+      $$EveScoutFeedStatesTableOrderingComposer,
+      $$EveScoutFeedStatesTableAnnotationComposer,
+      $$EveScoutFeedStatesTableCreateCompanionBuilder,
+      $$EveScoutFeedStatesTableUpdateCompanionBuilder,
+      (
+        EveScoutFeedState,
+        BaseReferences<
+          _$AppDatabase,
+          $EveScoutFeedStatesTable,
+          EveScoutFeedState
+        >,
+      ),
+      EveScoutFeedState,
+      PrefetchHooks Function()
+    >;
+typedef $$EveScoutSignaturesTableCreateCompanionBuilder =
+    EveScoutSignaturesCompanion Function({
+      required String scopeKey,
+      required String providerRecordKey,
+      required int hubSystemId,
+      Value<String?> hubSystemName,
+      Value<String?> hubRegionHint,
+      required int farSystemId,
+      Value<String?> farSystemName,
+      Value<String?> farRegionHint,
+      Value<String?> hubSignature,
+      Value<String?> farSignature,
+      Value<String?> wormholeType,
+      Value<String?> orientation,
+      Value<String?> maxShipSize,
+      Value<String?> completionType,
+      Value<int?> sourceCreatedAtMs,
+      Value<int?> sourceUpdatedAtMs,
+      Value<int?> sourceCompletedAtMs,
+      Value<int?> sourceExpiresAtMs,
+      Value<String?> rawCategoryHintsJson,
+      Value<String?> diagnosticsJson,
+      required int listedSnapshotRevision,
+      Value<int?> lastPayloadSeenAtMs,
+      Value<int?> unavailableAtMs,
+      Value<int?> retiredAtMs,
+      Value<int> rowid,
+    });
+typedef $$EveScoutSignaturesTableUpdateCompanionBuilder =
+    EveScoutSignaturesCompanion Function({
+      Value<String> scopeKey,
+      Value<String> providerRecordKey,
+      Value<int> hubSystemId,
+      Value<String?> hubSystemName,
+      Value<String?> hubRegionHint,
+      Value<int> farSystemId,
+      Value<String?> farSystemName,
+      Value<String?> farRegionHint,
+      Value<String?> hubSignature,
+      Value<String?> farSignature,
+      Value<String?> wormholeType,
+      Value<String?> orientation,
+      Value<String?> maxShipSize,
+      Value<String?> completionType,
+      Value<int?> sourceCreatedAtMs,
+      Value<int?> sourceUpdatedAtMs,
+      Value<int?> sourceCompletedAtMs,
+      Value<int?> sourceExpiresAtMs,
+      Value<String?> rawCategoryHintsJson,
+      Value<String?> diagnosticsJson,
+      Value<int> listedSnapshotRevision,
+      Value<int?> lastPayloadSeenAtMs,
+      Value<int?> unavailableAtMs,
+      Value<int?> retiredAtMs,
+      Value<int> rowid,
+    });
+
+class $$EveScoutSignaturesTableFilterComposer
+    extends Composer<_$AppDatabase, $EveScoutSignaturesTable> {
+  $$EveScoutSignaturesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get scopeKey => $composableBuilder(
+    column: $table.scopeKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get providerRecordKey => $composableBuilder(
+    column: $table.providerRecordKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get hubSystemId => $composableBuilder(
+    column: $table.hubSystemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hubSystemName => $composableBuilder(
+    column: $table.hubSystemName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hubRegionHint => $composableBuilder(
+    column: $table.hubRegionHint,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get farSystemId => $composableBuilder(
+    column: $table.farSystemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get farSystemName => $composableBuilder(
+    column: $table.farSystemName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get farRegionHint => $composableBuilder(
+    column: $table.farRegionHint,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hubSignature => $composableBuilder(
+    column: $table.hubSignature,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get farSignature => $composableBuilder(
+    column: $table.farSignature,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get wormholeType => $composableBuilder(
+    column: $table.wormholeType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get orientation => $composableBuilder(
+    column: $table.orientation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get maxShipSize => $composableBuilder(
+    column: $table.maxShipSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get completionType => $composableBuilder(
+    column: $table.completionType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sourceCreatedAtMs => $composableBuilder(
+    column: $table.sourceCreatedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sourceUpdatedAtMs => $composableBuilder(
+    column: $table.sourceUpdatedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sourceCompletedAtMs => $composableBuilder(
+    column: $table.sourceCompletedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sourceExpiresAtMs => $composableBuilder(
+    column: $table.sourceExpiresAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rawCategoryHintsJson => $composableBuilder(
+    column: $table.rawCategoryHintsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get diagnosticsJson => $composableBuilder(
+    column: $table.diagnosticsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get listedSnapshotRevision => $composableBuilder(
+    column: $table.listedSnapshotRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastPayloadSeenAtMs => $composableBuilder(
+    column: $table.lastPayloadSeenAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get unavailableAtMs => $composableBuilder(
+    column: $table.unavailableAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get retiredAtMs => $composableBuilder(
+    column: $table.retiredAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$EveScoutSignaturesTableOrderingComposer
+    extends Composer<_$AppDatabase, $EveScoutSignaturesTable> {
+  $$EveScoutSignaturesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get scopeKey => $composableBuilder(
+    column: $table.scopeKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get providerRecordKey => $composableBuilder(
+    column: $table.providerRecordKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get hubSystemId => $composableBuilder(
+    column: $table.hubSystemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hubSystemName => $composableBuilder(
+    column: $table.hubSystemName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hubRegionHint => $composableBuilder(
+    column: $table.hubRegionHint,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get farSystemId => $composableBuilder(
+    column: $table.farSystemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get farSystemName => $composableBuilder(
+    column: $table.farSystemName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get farRegionHint => $composableBuilder(
+    column: $table.farRegionHint,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hubSignature => $composableBuilder(
+    column: $table.hubSignature,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get farSignature => $composableBuilder(
+    column: $table.farSignature,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get wormholeType => $composableBuilder(
+    column: $table.wormholeType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get orientation => $composableBuilder(
+    column: $table.orientation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get maxShipSize => $composableBuilder(
+    column: $table.maxShipSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get completionType => $composableBuilder(
+    column: $table.completionType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sourceCreatedAtMs => $composableBuilder(
+    column: $table.sourceCreatedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sourceUpdatedAtMs => $composableBuilder(
+    column: $table.sourceUpdatedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sourceCompletedAtMs => $composableBuilder(
+    column: $table.sourceCompletedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sourceExpiresAtMs => $composableBuilder(
+    column: $table.sourceExpiresAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rawCategoryHintsJson => $composableBuilder(
+    column: $table.rawCategoryHintsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get diagnosticsJson => $composableBuilder(
+    column: $table.diagnosticsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get listedSnapshotRevision => $composableBuilder(
+    column: $table.listedSnapshotRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastPayloadSeenAtMs => $composableBuilder(
+    column: $table.lastPayloadSeenAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get unavailableAtMs => $composableBuilder(
+    column: $table.unavailableAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get retiredAtMs => $composableBuilder(
+    column: $table.retiredAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$EveScoutSignaturesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $EveScoutSignaturesTable> {
+  $$EveScoutSignaturesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get scopeKey =>
+      $composableBuilder(column: $table.scopeKey, builder: (column) => column);
+
+  GeneratedColumn<String> get providerRecordKey => $composableBuilder(
+    column: $table.providerRecordKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get hubSystemId => $composableBuilder(
+    column: $table.hubSystemId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get hubSystemName => $composableBuilder(
+    column: $table.hubSystemName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get hubRegionHint => $composableBuilder(
+    column: $table.hubRegionHint,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get farSystemId => $composableBuilder(
+    column: $table.farSystemId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get farSystemName => $composableBuilder(
+    column: $table.farSystemName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get farRegionHint => $composableBuilder(
+    column: $table.farRegionHint,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get hubSignature => $composableBuilder(
+    column: $table.hubSignature,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get farSignature => $composableBuilder(
+    column: $table.farSignature,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get wormholeType => $composableBuilder(
+    column: $table.wormholeType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get orientation => $composableBuilder(
+    column: $table.orientation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get maxShipSize => $composableBuilder(
+    column: $table.maxShipSize,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get completionType => $composableBuilder(
+    column: $table.completionType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sourceCreatedAtMs => $composableBuilder(
+    column: $table.sourceCreatedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sourceUpdatedAtMs => $composableBuilder(
+    column: $table.sourceUpdatedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sourceCompletedAtMs => $composableBuilder(
+    column: $table.sourceCompletedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sourceExpiresAtMs => $composableBuilder(
+    column: $table.sourceExpiresAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get rawCategoryHintsJson => $composableBuilder(
+    column: $table.rawCategoryHintsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get diagnosticsJson => $composableBuilder(
+    column: $table.diagnosticsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get listedSnapshotRevision => $composableBuilder(
+    column: $table.listedSnapshotRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastPayloadSeenAtMs => $composableBuilder(
+    column: $table.lastPayloadSeenAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get unavailableAtMs => $composableBuilder(
+    column: $table.unavailableAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get retiredAtMs => $composableBuilder(
+    column: $table.retiredAtMs,
+    builder: (column) => column,
+  );
+}
+
+class $$EveScoutSignaturesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $EveScoutSignaturesTable,
+          EveScoutSignature,
+          $$EveScoutSignaturesTableFilterComposer,
+          $$EveScoutSignaturesTableOrderingComposer,
+          $$EveScoutSignaturesTableAnnotationComposer,
+          $$EveScoutSignaturesTableCreateCompanionBuilder,
+          $$EveScoutSignaturesTableUpdateCompanionBuilder,
+          (
+            EveScoutSignature,
+            BaseReferences<
+              _$AppDatabase,
+              $EveScoutSignaturesTable,
+              EveScoutSignature
+            >,
+          ),
+          EveScoutSignature,
+          PrefetchHooks Function()
+        > {
+  $$EveScoutSignaturesTableTableManager(
+    _$AppDatabase db,
+    $EveScoutSignaturesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EveScoutSignaturesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EveScoutSignaturesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$EveScoutSignaturesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> scopeKey = const Value.absent(),
+                Value<String> providerRecordKey = const Value.absent(),
+                Value<int> hubSystemId = const Value.absent(),
+                Value<String?> hubSystemName = const Value.absent(),
+                Value<String?> hubRegionHint = const Value.absent(),
+                Value<int> farSystemId = const Value.absent(),
+                Value<String?> farSystemName = const Value.absent(),
+                Value<String?> farRegionHint = const Value.absent(),
+                Value<String?> hubSignature = const Value.absent(),
+                Value<String?> farSignature = const Value.absent(),
+                Value<String?> wormholeType = const Value.absent(),
+                Value<String?> orientation = const Value.absent(),
+                Value<String?> maxShipSize = const Value.absent(),
+                Value<String?> completionType = const Value.absent(),
+                Value<int?> sourceCreatedAtMs = const Value.absent(),
+                Value<int?> sourceUpdatedAtMs = const Value.absent(),
+                Value<int?> sourceCompletedAtMs = const Value.absent(),
+                Value<int?> sourceExpiresAtMs = const Value.absent(),
+                Value<String?> rawCategoryHintsJson = const Value.absent(),
+                Value<String?> diagnosticsJson = const Value.absent(),
+                Value<int> listedSnapshotRevision = const Value.absent(),
+                Value<int?> lastPayloadSeenAtMs = const Value.absent(),
+                Value<int?> unavailableAtMs = const Value.absent(),
+                Value<int?> retiredAtMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EveScoutSignaturesCompanion(
+                scopeKey: scopeKey,
+                providerRecordKey: providerRecordKey,
+                hubSystemId: hubSystemId,
+                hubSystemName: hubSystemName,
+                hubRegionHint: hubRegionHint,
+                farSystemId: farSystemId,
+                farSystemName: farSystemName,
+                farRegionHint: farRegionHint,
+                hubSignature: hubSignature,
+                farSignature: farSignature,
+                wormholeType: wormholeType,
+                orientation: orientation,
+                maxShipSize: maxShipSize,
+                completionType: completionType,
+                sourceCreatedAtMs: sourceCreatedAtMs,
+                sourceUpdatedAtMs: sourceUpdatedAtMs,
+                sourceCompletedAtMs: sourceCompletedAtMs,
+                sourceExpiresAtMs: sourceExpiresAtMs,
+                rawCategoryHintsJson: rawCategoryHintsJson,
+                diagnosticsJson: diagnosticsJson,
+                listedSnapshotRevision: listedSnapshotRevision,
+                lastPayloadSeenAtMs: lastPayloadSeenAtMs,
+                unavailableAtMs: unavailableAtMs,
+                retiredAtMs: retiredAtMs,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String scopeKey,
+                required String providerRecordKey,
+                required int hubSystemId,
+                Value<String?> hubSystemName = const Value.absent(),
+                Value<String?> hubRegionHint = const Value.absent(),
+                required int farSystemId,
+                Value<String?> farSystemName = const Value.absent(),
+                Value<String?> farRegionHint = const Value.absent(),
+                Value<String?> hubSignature = const Value.absent(),
+                Value<String?> farSignature = const Value.absent(),
+                Value<String?> wormholeType = const Value.absent(),
+                Value<String?> orientation = const Value.absent(),
+                Value<String?> maxShipSize = const Value.absent(),
+                Value<String?> completionType = const Value.absent(),
+                Value<int?> sourceCreatedAtMs = const Value.absent(),
+                Value<int?> sourceUpdatedAtMs = const Value.absent(),
+                Value<int?> sourceCompletedAtMs = const Value.absent(),
+                Value<int?> sourceExpiresAtMs = const Value.absent(),
+                Value<String?> rawCategoryHintsJson = const Value.absent(),
+                Value<String?> diagnosticsJson = const Value.absent(),
+                required int listedSnapshotRevision,
+                Value<int?> lastPayloadSeenAtMs = const Value.absent(),
+                Value<int?> unavailableAtMs = const Value.absent(),
+                Value<int?> retiredAtMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EveScoutSignaturesCompanion.insert(
+                scopeKey: scopeKey,
+                providerRecordKey: providerRecordKey,
+                hubSystemId: hubSystemId,
+                hubSystemName: hubSystemName,
+                hubRegionHint: hubRegionHint,
+                farSystemId: farSystemId,
+                farSystemName: farSystemName,
+                farRegionHint: farRegionHint,
+                hubSignature: hubSignature,
+                farSignature: farSignature,
+                wormholeType: wormholeType,
+                orientation: orientation,
+                maxShipSize: maxShipSize,
+                completionType: completionType,
+                sourceCreatedAtMs: sourceCreatedAtMs,
+                sourceUpdatedAtMs: sourceUpdatedAtMs,
+                sourceCompletedAtMs: sourceCompletedAtMs,
+                sourceExpiresAtMs: sourceExpiresAtMs,
+                rawCategoryHintsJson: rawCategoryHintsJson,
+                diagnosticsJson: diagnosticsJson,
+                listedSnapshotRevision: listedSnapshotRevision,
+                lastPayloadSeenAtMs: lastPayloadSeenAtMs,
+                unavailableAtMs: unavailableAtMs,
+                retiredAtMs: retiredAtMs,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$EveScoutSignaturesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $EveScoutSignaturesTable,
+      EveScoutSignature,
+      $$EveScoutSignaturesTableFilterComposer,
+      $$EveScoutSignaturesTableOrderingComposer,
+      $$EveScoutSignaturesTableAnnotationComposer,
+      $$EveScoutSignaturesTableCreateCompanionBuilder,
+      $$EveScoutSignaturesTableUpdateCompanionBuilder,
+      (
+        EveScoutSignature,
+        BaseReferences<
+          _$AppDatabase,
+          $EveScoutSignaturesTable,
+          EveScoutSignature
+        >,
+      ),
+      EveScoutSignature,
+      PrefetchHooks Function()
+    >;
+typedef $$TrackedSignaturesTableCreateCompanionBuilder =
+    TrackedSignaturesCompanion Function({
+      required String id,
+      required int characterId,
+      required int systemId,
+      required String code,
+      Value<String> scanGroup,
+      Value<String> type,
+      Value<String> rawTypeLabel,
+      Value<String?> name,
+      Value<String?> bookmark,
+      Value<String?> notes,
+      required int firstSeenAtMs,
+      required int lastSeenAtMs,
+      Value<int?> editedAtMs,
+      Value<String> lifecycle,
+      Value<int?> retiredAtMs,
+      Value<String?> retiredReason,
+      Value<int> rowRevision,
+      Value<int> rowid,
+    });
+typedef $$TrackedSignaturesTableUpdateCompanionBuilder =
+    TrackedSignaturesCompanion Function({
+      Value<String> id,
+      Value<int> characterId,
+      Value<int> systemId,
+      Value<String> code,
+      Value<String> scanGroup,
+      Value<String> type,
+      Value<String> rawTypeLabel,
+      Value<String?> name,
+      Value<String?> bookmark,
+      Value<String?> notes,
+      Value<int> firstSeenAtMs,
+      Value<int> lastSeenAtMs,
+      Value<int?> editedAtMs,
+      Value<String> lifecycle,
+      Value<int?> retiredAtMs,
+      Value<String?> retiredReason,
+      Value<int> rowRevision,
+      Value<int> rowid,
+    });
+
+class $$TrackedSignaturesTableFilterComposer
+    extends Composer<_$AppDatabase, $TrackedSignaturesTable> {
+  $$TrackedSignaturesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get systemId => $composableBuilder(
+    column: $table.systemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scanGroup => $composableBuilder(
+    column: $table.scanGroup,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rawTypeLabel => $composableBuilder(
+    column: $table.rawTypeLabel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bookmark => $composableBuilder(
+    column: $table.bookmark,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get firstSeenAtMs => $composableBuilder(
+    column: $table.firstSeenAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastSeenAtMs => $composableBuilder(
+    column: $table.lastSeenAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get editedAtMs => $composableBuilder(
+    column: $table.editedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lifecycle => $composableBuilder(
+    column: $table.lifecycle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get retiredAtMs => $composableBuilder(
+    column: $table.retiredAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get retiredReason => $composableBuilder(
+    column: $table.retiredReason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get rowRevision => $composableBuilder(
+    column: $table.rowRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TrackedSignaturesTableOrderingComposer
+    extends Composer<_$AppDatabase, $TrackedSignaturesTable> {
+  $$TrackedSignaturesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get systemId => $composableBuilder(
+    column: $table.systemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get scanGroup => $composableBuilder(
+    column: $table.scanGroup,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rawTypeLabel => $composableBuilder(
+    column: $table.rawTypeLabel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bookmark => $composableBuilder(
+    column: $table.bookmark,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get firstSeenAtMs => $composableBuilder(
+    column: $table.firstSeenAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastSeenAtMs => $composableBuilder(
+    column: $table.lastSeenAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get editedAtMs => $composableBuilder(
+    column: $table.editedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lifecycle => $composableBuilder(
+    column: $table.lifecycle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get retiredAtMs => $composableBuilder(
+    column: $table.retiredAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get retiredReason => $composableBuilder(
+    column: $table.retiredReason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get rowRevision => $composableBuilder(
+    column: $table.rowRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TrackedSignaturesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TrackedSignaturesTable> {
+  $$TrackedSignaturesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get systemId =>
+      $composableBuilder(column: $table.systemId, builder: (column) => column);
+
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
+
+  GeneratedColumn<String> get scanGroup =>
+      $composableBuilder(column: $table.scanGroup, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get rawTypeLabel => $composableBuilder(
+    column: $table.rawTypeLabel,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get bookmark =>
+      $composableBuilder(column: $table.bookmark, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<int> get firstSeenAtMs => $composableBuilder(
+    column: $table.firstSeenAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastSeenAtMs => $composableBuilder(
+    column: $table.lastSeenAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get editedAtMs => $composableBuilder(
+    column: $table.editedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lifecycle =>
+      $composableBuilder(column: $table.lifecycle, builder: (column) => column);
+
+  GeneratedColumn<int> get retiredAtMs => $composableBuilder(
+    column: $table.retiredAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get retiredReason => $composableBuilder(
+    column: $table.retiredReason,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get rowRevision => $composableBuilder(
+    column: $table.rowRevision,
+    builder: (column) => column,
+  );
+}
+
+class $$TrackedSignaturesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TrackedSignaturesTable,
+          TrackedSignature,
+          $$TrackedSignaturesTableFilterComposer,
+          $$TrackedSignaturesTableOrderingComposer,
+          $$TrackedSignaturesTableAnnotationComposer,
+          $$TrackedSignaturesTableCreateCompanionBuilder,
+          $$TrackedSignaturesTableUpdateCompanionBuilder,
+          (
+            TrackedSignature,
+            BaseReferences<
+              _$AppDatabase,
+              $TrackedSignaturesTable,
+              TrackedSignature
+            >,
+          ),
+          TrackedSignature,
+          PrefetchHooks Function()
+        > {
+  $$TrackedSignaturesTableTableManager(
+    _$AppDatabase db,
+    $TrackedSignaturesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TrackedSignaturesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TrackedSignaturesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TrackedSignaturesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<int> characterId = const Value.absent(),
+                Value<int> systemId = const Value.absent(),
+                Value<String> code = const Value.absent(),
+                Value<String> scanGroup = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<String> rawTypeLabel = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<String?> bookmark = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<int> firstSeenAtMs = const Value.absent(),
+                Value<int> lastSeenAtMs = const Value.absent(),
+                Value<int?> editedAtMs = const Value.absent(),
+                Value<String> lifecycle = const Value.absent(),
+                Value<int?> retiredAtMs = const Value.absent(),
+                Value<String?> retiredReason = const Value.absent(),
+                Value<int> rowRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TrackedSignaturesCompanion(
+                id: id,
+                characterId: characterId,
+                systemId: systemId,
+                code: code,
+                scanGroup: scanGroup,
+                type: type,
+                rawTypeLabel: rawTypeLabel,
+                name: name,
+                bookmark: bookmark,
+                notes: notes,
+                firstSeenAtMs: firstSeenAtMs,
+                lastSeenAtMs: lastSeenAtMs,
+                editedAtMs: editedAtMs,
+                lifecycle: lifecycle,
+                retiredAtMs: retiredAtMs,
+                retiredReason: retiredReason,
+                rowRevision: rowRevision,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required int characterId,
+                required int systemId,
+                required String code,
+                Value<String> scanGroup = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<String> rawTypeLabel = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<String?> bookmark = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                required int firstSeenAtMs,
+                required int lastSeenAtMs,
+                Value<int?> editedAtMs = const Value.absent(),
+                Value<String> lifecycle = const Value.absent(),
+                Value<int?> retiredAtMs = const Value.absent(),
+                Value<String?> retiredReason = const Value.absent(),
+                Value<int> rowRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TrackedSignaturesCompanion.insert(
+                id: id,
+                characterId: characterId,
+                systemId: systemId,
+                code: code,
+                scanGroup: scanGroup,
+                type: type,
+                rawTypeLabel: rawTypeLabel,
+                name: name,
+                bookmark: bookmark,
+                notes: notes,
+                firstSeenAtMs: firstSeenAtMs,
+                lastSeenAtMs: lastSeenAtMs,
+                editedAtMs: editedAtMs,
+                lifecycle: lifecycle,
+                retiredAtMs: retiredAtMs,
+                retiredReason: retiredReason,
+                rowRevision: rowRevision,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TrackedSignaturesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TrackedSignaturesTable,
+      TrackedSignature,
+      $$TrackedSignaturesTableFilterComposer,
+      $$TrackedSignaturesTableOrderingComposer,
+      $$TrackedSignaturesTableAnnotationComposer,
+      $$TrackedSignaturesTableCreateCompanionBuilder,
+      $$TrackedSignaturesTableUpdateCompanionBuilder,
+      (
+        TrackedSignature,
+        BaseReferences<
+          _$AppDatabase,
+          $TrackedSignaturesTable,
+          TrackedSignature
+        >,
+      ),
+      TrackedSignature,
+      PrefetchHooks Function()
+    >;
+typedef $$TrackedConnectionsTableCreateCompanionBuilder =
+    TrackedConnectionsCompanion Function({
+      required String id,
+      required String ownerSignatureId,
+      required int characterId,
+      required int fromSystemId,
+      required int toSystemId,
+      Value<String?> fromSignature,
+      Value<String?> toSignature,
+      Value<String?> observedFromCode,
+      Value<String?> observedToCode,
+      Value<int?> originatingTypeId,
+      Value<String?> originatingType,
+      Value<String?> originatingSide,
+      Value<String?> massValue,
+      Value<int?> massObservedAtMs,
+      Value<String?> massSource,
+      Value<String?> timeValue,
+      Value<int?> timeObservedAtMs,
+      Value<String?> timeSource,
+      Value<int?> estimatedExpiryAtMs,
+      Value<int?> verifiedAtMs,
+      Value<String> lifecycle,
+      Value<String?> retiredReason,
+      Value<int> rowRevision,
+      Value<int> rowid,
+    });
+typedef $$TrackedConnectionsTableUpdateCompanionBuilder =
+    TrackedConnectionsCompanion Function({
+      Value<String> id,
+      Value<String> ownerSignatureId,
+      Value<int> characterId,
+      Value<int> fromSystemId,
+      Value<int> toSystemId,
+      Value<String?> fromSignature,
+      Value<String?> toSignature,
+      Value<String?> observedFromCode,
+      Value<String?> observedToCode,
+      Value<int?> originatingTypeId,
+      Value<String?> originatingType,
+      Value<String?> originatingSide,
+      Value<String?> massValue,
+      Value<int?> massObservedAtMs,
+      Value<String?> massSource,
+      Value<String?> timeValue,
+      Value<int?> timeObservedAtMs,
+      Value<String?> timeSource,
+      Value<int?> estimatedExpiryAtMs,
+      Value<int?> verifiedAtMs,
+      Value<String> lifecycle,
+      Value<String?> retiredReason,
+      Value<int> rowRevision,
+      Value<int> rowid,
+    });
+
+class $$TrackedConnectionsTableFilterComposer
+    extends Composer<_$AppDatabase, $TrackedConnectionsTable> {
+  $$TrackedConnectionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ownerSignatureId => $composableBuilder(
+    column: $table.ownerSignatureId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get fromSystemId => $composableBuilder(
+    column: $table.fromSystemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get toSystemId => $composableBuilder(
+    column: $table.toSystemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fromSignature => $composableBuilder(
+    column: $table.fromSignature,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get toSignature => $composableBuilder(
+    column: $table.toSignature,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get observedFromCode => $composableBuilder(
+    column: $table.observedFromCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get observedToCode => $composableBuilder(
+    column: $table.observedToCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get originatingTypeId => $composableBuilder(
+    column: $table.originatingTypeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get originatingType => $composableBuilder(
+    column: $table.originatingType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get originatingSide => $composableBuilder(
+    column: $table.originatingSide,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get massValue => $composableBuilder(
+    column: $table.massValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get massObservedAtMs => $composableBuilder(
+    column: $table.massObservedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get massSource => $composableBuilder(
+    column: $table.massSource,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get timeValue => $composableBuilder(
+    column: $table.timeValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get timeObservedAtMs => $composableBuilder(
+    column: $table.timeObservedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get timeSource => $composableBuilder(
+    column: $table.timeSource,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get estimatedExpiryAtMs => $composableBuilder(
+    column: $table.estimatedExpiryAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get verifiedAtMs => $composableBuilder(
+    column: $table.verifiedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lifecycle => $composableBuilder(
+    column: $table.lifecycle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get retiredReason => $composableBuilder(
+    column: $table.retiredReason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get rowRevision => $composableBuilder(
+    column: $table.rowRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TrackedConnectionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $TrackedConnectionsTable> {
+  $$TrackedConnectionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ownerSignatureId => $composableBuilder(
+    column: $table.ownerSignatureId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get fromSystemId => $composableBuilder(
+    column: $table.fromSystemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get toSystemId => $composableBuilder(
+    column: $table.toSystemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fromSignature => $composableBuilder(
+    column: $table.fromSignature,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get toSignature => $composableBuilder(
+    column: $table.toSignature,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get observedFromCode => $composableBuilder(
+    column: $table.observedFromCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get observedToCode => $composableBuilder(
+    column: $table.observedToCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get originatingTypeId => $composableBuilder(
+    column: $table.originatingTypeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get originatingType => $composableBuilder(
+    column: $table.originatingType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get originatingSide => $composableBuilder(
+    column: $table.originatingSide,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get massValue => $composableBuilder(
+    column: $table.massValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get massObservedAtMs => $composableBuilder(
+    column: $table.massObservedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get massSource => $composableBuilder(
+    column: $table.massSource,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get timeValue => $composableBuilder(
+    column: $table.timeValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get timeObservedAtMs => $composableBuilder(
+    column: $table.timeObservedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get timeSource => $composableBuilder(
+    column: $table.timeSource,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get estimatedExpiryAtMs => $composableBuilder(
+    column: $table.estimatedExpiryAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get verifiedAtMs => $composableBuilder(
+    column: $table.verifiedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lifecycle => $composableBuilder(
+    column: $table.lifecycle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get retiredReason => $composableBuilder(
+    column: $table.retiredReason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get rowRevision => $composableBuilder(
+    column: $table.rowRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TrackedConnectionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TrackedConnectionsTable> {
+  $$TrackedConnectionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get ownerSignatureId => $composableBuilder(
+    column: $table.ownerSignatureId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get fromSystemId => $composableBuilder(
+    column: $table.fromSystemId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get toSystemId => $composableBuilder(
+    column: $table.toSystemId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get fromSignature => $composableBuilder(
+    column: $table.fromSignature,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get toSignature => $composableBuilder(
+    column: $table.toSignature,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get observedFromCode => $composableBuilder(
+    column: $table.observedFromCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get observedToCode => $composableBuilder(
+    column: $table.observedToCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get originatingTypeId => $composableBuilder(
+    column: $table.originatingTypeId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get originatingType => $composableBuilder(
+    column: $table.originatingType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get originatingSide => $composableBuilder(
+    column: $table.originatingSide,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get massValue =>
+      $composableBuilder(column: $table.massValue, builder: (column) => column);
+
+  GeneratedColumn<int> get massObservedAtMs => $composableBuilder(
+    column: $table.massObservedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get massSource => $composableBuilder(
+    column: $table.massSource,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get timeValue =>
+      $composableBuilder(column: $table.timeValue, builder: (column) => column);
+
+  GeneratedColumn<int> get timeObservedAtMs => $composableBuilder(
+    column: $table.timeObservedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get timeSource => $composableBuilder(
+    column: $table.timeSource,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get estimatedExpiryAtMs => $composableBuilder(
+    column: $table.estimatedExpiryAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get verifiedAtMs => $composableBuilder(
+    column: $table.verifiedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lifecycle =>
+      $composableBuilder(column: $table.lifecycle, builder: (column) => column);
+
+  GeneratedColumn<String> get retiredReason => $composableBuilder(
+    column: $table.retiredReason,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get rowRevision => $composableBuilder(
+    column: $table.rowRevision,
+    builder: (column) => column,
+  );
+}
+
+class $$TrackedConnectionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TrackedConnectionsTable,
+          TrackedConnection,
+          $$TrackedConnectionsTableFilterComposer,
+          $$TrackedConnectionsTableOrderingComposer,
+          $$TrackedConnectionsTableAnnotationComposer,
+          $$TrackedConnectionsTableCreateCompanionBuilder,
+          $$TrackedConnectionsTableUpdateCompanionBuilder,
+          (
+            TrackedConnection,
+            BaseReferences<
+              _$AppDatabase,
+              $TrackedConnectionsTable,
+              TrackedConnection
+            >,
+          ),
+          TrackedConnection,
+          PrefetchHooks Function()
+        > {
+  $$TrackedConnectionsTableTableManager(
+    _$AppDatabase db,
+    $TrackedConnectionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TrackedConnectionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TrackedConnectionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TrackedConnectionsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> ownerSignatureId = const Value.absent(),
+                Value<int> characterId = const Value.absent(),
+                Value<int> fromSystemId = const Value.absent(),
+                Value<int> toSystemId = const Value.absent(),
+                Value<String?> fromSignature = const Value.absent(),
+                Value<String?> toSignature = const Value.absent(),
+                Value<String?> observedFromCode = const Value.absent(),
+                Value<String?> observedToCode = const Value.absent(),
+                Value<int?> originatingTypeId = const Value.absent(),
+                Value<String?> originatingType = const Value.absent(),
+                Value<String?> originatingSide = const Value.absent(),
+                Value<String?> massValue = const Value.absent(),
+                Value<int?> massObservedAtMs = const Value.absent(),
+                Value<String?> massSource = const Value.absent(),
+                Value<String?> timeValue = const Value.absent(),
+                Value<int?> timeObservedAtMs = const Value.absent(),
+                Value<String?> timeSource = const Value.absent(),
+                Value<int?> estimatedExpiryAtMs = const Value.absent(),
+                Value<int?> verifiedAtMs = const Value.absent(),
+                Value<String> lifecycle = const Value.absent(),
+                Value<String?> retiredReason = const Value.absent(),
+                Value<int> rowRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TrackedConnectionsCompanion(
+                id: id,
+                ownerSignatureId: ownerSignatureId,
+                characterId: characterId,
+                fromSystemId: fromSystemId,
+                toSystemId: toSystemId,
+                fromSignature: fromSignature,
+                toSignature: toSignature,
+                observedFromCode: observedFromCode,
+                observedToCode: observedToCode,
+                originatingTypeId: originatingTypeId,
+                originatingType: originatingType,
+                originatingSide: originatingSide,
+                massValue: massValue,
+                massObservedAtMs: massObservedAtMs,
+                massSource: massSource,
+                timeValue: timeValue,
+                timeObservedAtMs: timeObservedAtMs,
+                timeSource: timeSource,
+                estimatedExpiryAtMs: estimatedExpiryAtMs,
+                verifiedAtMs: verifiedAtMs,
+                lifecycle: lifecycle,
+                retiredReason: retiredReason,
+                rowRevision: rowRevision,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String ownerSignatureId,
+                required int characterId,
+                required int fromSystemId,
+                required int toSystemId,
+                Value<String?> fromSignature = const Value.absent(),
+                Value<String?> toSignature = const Value.absent(),
+                Value<String?> observedFromCode = const Value.absent(),
+                Value<String?> observedToCode = const Value.absent(),
+                Value<int?> originatingTypeId = const Value.absent(),
+                Value<String?> originatingType = const Value.absent(),
+                Value<String?> originatingSide = const Value.absent(),
+                Value<String?> massValue = const Value.absent(),
+                Value<int?> massObservedAtMs = const Value.absent(),
+                Value<String?> massSource = const Value.absent(),
+                Value<String?> timeValue = const Value.absent(),
+                Value<int?> timeObservedAtMs = const Value.absent(),
+                Value<String?> timeSource = const Value.absent(),
+                Value<int?> estimatedExpiryAtMs = const Value.absent(),
+                Value<int?> verifiedAtMs = const Value.absent(),
+                Value<String> lifecycle = const Value.absent(),
+                Value<String?> retiredReason = const Value.absent(),
+                Value<int> rowRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TrackedConnectionsCompanion.insert(
+                id: id,
+                ownerSignatureId: ownerSignatureId,
+                characterId: characterId,
+                fromSystemId: fromSystemId,
+                toSystemId: toSystemId,
+                fromSignature: fromSignature,
+                toSignature: toSignature,
+                observedFromCode: observedFromCode,
+                observedToCode: observedToCode,
+                originatingTypeId: originatingTypeId,
+                originatingType: originatingType,
+                originatingSide: originatingSide,
+                massValue: massValue,
+                massObservedAtMs: massObservedAtMs,
+                massSource: massSource,
+                timeValue: timeValue,
+                timeObservedAtMs: timeObservedAtMs,
+                timeSource: timeSource,
+                estimatedExpiryAtMs: estimatedExpiryAtMs,
+                verifiedAtMs: verifiedAtMs,
+                lifecycle: lifecycle,
+                retiredReason: retiredReason,
+                rowRevision: rowRevision,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TrackedConnectionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TrackedConnectionsTable,
+      TrackedConnection,
+      $$TrackedConnectionsTableFilterComposer,
+      $$TrackedConnectionsTableOrderingComposer,
+      $$TrackedConnectionsTableAnnotationComposer,
+      $$TrackedConnectionsTableCreateCompanionBuilder,
+      $$TrackedConnectionsTableUpdateCompanionBuilder,
+      (
+        TrackedConnection,
+        BaseReferences<
+          _$AppDatabase,
+          $TrackedConnectionsTable,
+          TrackedConnection
+        >,
+      ),
+      TrackedConnection,
+      PrefetchHooks Function()
+    >;
+typedef $$ExplorationNotebookScopesTableCreateCompanionBuilder =
+    ExplorationNotebookScopesCompanion Function({
+      required int characterId,
+      required int systemId,
+      Value<int> revision,
+      Value<int> rowid,
+    });
+typedef $$ExplorationNotebookScopesTableUpdateCompanionBuilder =
+    ExplorationNotebookScopesCompanion Function({
+      Value<int> characterId,
+      Value<int> systemId,
+      Value<int> revision,
+      Value<int> rowid,
+    });
+
+class $$ExplorationNotebookScopesTableFilterComposer
+    extends Composer<_$AppDatabase, $ExplorationNotebookScopesTable> {
+  $$ExplorationNotebookScopesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get systemId => $composableBuilder(
+    column: $table.systemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ExplorationNotebookScopesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ExplorationNotebookScopesTable> {
+  $$ExplorationNotebookScopesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get systemId => $composableBuilder(
+    column: $table.systemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ExplorationNotebookScopesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ExplorationNotebookScopesTable> {
+  $$ExplorationNotebookScopesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get systemId =>
+      $composableBuilder(column: $table.systemId, builder: (column) => column);
+
+  GeneratedColumn<int> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+}
+
+class $$ExplorationNotebookScopesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ExplorationNotebookScopesTable,
+          ExplorationNotebookScope,
+          $$ExplorationNotebookScopesTableFilterComposer,
+          $$ExplorationNotebookScopesTableOrderingComposer,
+          $$ExplorationNotebookScopesTableAnnotationComposer,
+          $$ExplorationNotebookScopesTableCreateCompanionBuilder,
+          $$ExplorationNotebookScopesTableUpdateCompanionBuilder,
+          (
+            ExplorationNotebookScope,
+            BaseReferences<
+              _$AppDatabase,
+              $ExplorationNotebookScopesTable,
+              ExplorationNotebookScope
+            >,
+          ),
+          ExplorationNotebookScope,
+          PrefetchHooks Function()
+        > {
+  $$ExplorationNotebookScopesTableTableManager(
+    _$AppDatabase db,
+    $ExplorationNotebookScopesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ExplorationNotebookScopesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$ExplorationNotebookScopesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ExplorationNotebookScopesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> characterId = const Value.absent(),
+                Value<int> systemId = const Value.absent(),
+                Value<int> revision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ExplorationNotebookScopesCompanion(
+                characterId: characterId,
+                systemId: systemId,
+                revision: revision,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int characterId,
+                required int systemId,
+                Value<int> revision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ExplorationNotebookScopesCompanion.insert(
+                characterId: characterId,
+                systemId: systemId,
+                revision: revision,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ExplorationNotebookScopesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ExplorationNotebookScopesTable,
+      ExplorationNotebookScope,
+      $$ExplorationNotebookScopesTableFilterComposer,
+      $$ExplorationNotebookScopesTableOrderingComposer,
+      $$ExplorationNotebookScopesTableAnnotationComposer,
+      $$ExplorationNotebookScopesTableCreateCompanionBuilder,
+      $$ExplorationNotebookScopesTableUpdateCompanionBuilder,
+      (
+        ExplorationNotebookScope,
+        BaseReferences<
+          _$AppDatabase,
+          $ExplorationNotebookScopesTable,
+          ExplorationNotebookScope
+        >,
+      ),
+      ExplorationNotebookScope,
+      PrefetchHooks Function()
+    >;
+typedef $$ExplorationImportOperationsTableCreateCompanionBuilder =
+    ExplorationImportOperationsCompanion Function({
+      required String id,
+      required int characterId,
+      required int systemId,
+      required String inputDigest,
+      required int committedAtMs,
+      Value<String?> selectedRowDigest,
+      Value<int> addedCount,
+      Value<int> updatedCount,
+      Value<int> skippedCount,
+      Value<int> conflictCount,
+      Value<int> rowid,
+    });
+typedef $$ExplorationImportOperationsTableUpdateCompanionBuilder =
+    ExplorationImportOperationsCompanion Function({
+      Value<String> id,
+      Value<int> characterId,
+      Value<int> systemId,
+      Value<String> inputDigest,
+      Value<int> committedAtMs,
+      Value<String?> selectedRowDigest,
+      Value<int> addedCount,
+      Value<int> updatedCount,
+      Value<int> skippedCount,
+      Value<int> conflictCount,
+      Value<int> rowid,
+    });
+
+class $$ExplorationImportOperationsTableFilterComposer
+    extends Composer<_$AppDatabase, $ExplorationImportOperationsTable> {
+  $$ExplorationImportOperationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get systemId => $composableBuilder(
+    column: $table.systemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get inputDigest => $composableBuilder(
+    column: $table.inputDigest,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get committedAtMs => $composableBuilder(
+    column: $table.committedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get selectedRowDigest => $composableBuilder(
+    column: $table.selectedRowDigest,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get addedCount => $composableBuilder(
+    column: $table.addedCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedCount => $composableBuilder(
+    column: $table.updatedCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get skippedCount => $composableBuilder(
+    column: $table.skippedCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get conflictCount => $composableBuilder(
+    column: $table.conflictCount,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ExplorationImportOperationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ExplorationImportOperationsTable> {
+  $$ExplorationImportOperationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get systemId => $composableBuilder(
+    column: $table.systemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get inputDigest => $composableBuilder(
+    column: $table.inputDigest,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get committedAtMs => $composableBuilder(
+    column: $table.committedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get selectedRowDigest => $composableBuilder(
+    column: $table.selectedRowDigest,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get addedCount => $composableBuilder(
+    column: $table.addedCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedCount => $composableBuilder(
+    column: $table.updatedCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get skippedCount => $composableBuilder(
+    column: $table.skippedCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get conflictCount => $composableBuilder(
+    column: $table.conflictCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ExplorationImportOperationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ExplorationImportOperationsTable> {
+  $$ExplorationImportOperationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get systemId =>
+      $composableBuilder(column: $table.systemId, builder: (column) => column);
+
+  GeneratedColumn<String> get inputDigest => $composableBuilder(
+    column: $table.inputDigest,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get committedAtMs => $composableBuilder(
+    column: $table.committedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get selectedRowDigest => $composableBuilder(
+    column: $table.selectedRowDigest,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get addedCount => $composableBuilder(
+    column: $table.addedCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get updatedCount => $composableBuilder(
+    column: $table.updatedCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get skippedCount => $composableBuilder(
+    column: $table.skippedCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get conflictCount => $composableBuilder(
+    column: $table.conflictCount,
+    builder: (column) => column,
+  );
+}
+
+class $$ExplorationImportOperationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ExplorationImportOperationsTable,
+          ExplorationImportOperation,
+          $$ExplorationImportOperationsTableFilterComposer,
+          $$ExplorationImportOperationsTableOrderingComposer,
+          $$ExplorationImportOperationsTableAnnotationComposer,
+          $$ExplorationImportOperationsTableCreateCompanionBuilder,
+          $$ExplorationImportOperationsTableUpdateCompanionBuilder,
+          (
+            ExplorationImportOperation,
+            BaseReferences<
+              _$AppDatabase,
+              $ExplorationImportOperationsTable,
+              ExplorationImportOperation
+            >,
+          ),
+          ExplorationImportOperation,
+          PrefetchHooks Function()
+        > {
+  $$ExplorationImportOperationsTableTableManager(
+    _$AppDatabase db,
+    $ExplorationImportOperationsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ExplorationImportOperationsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$ExplorationImportOperationsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ExplorationImportOperationsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<int> characterId = const Value.absent(),
+                Value<int> systemId = const Value.absent(),
+                Value<String> inputDigest = const Value.absent(),
+                Value<int> committedAtMs = const Value.absent(),
+                Value<String?> selectedRowDigest = const Value.absent(),
+                Value<int> addedCount = const Value.absent(),
+                Value<int> updatedCount = const Value.absent(),
+                Value<int> skippedCount = const Value.absent(),
+                Value<int> conflictCount = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ExplorationImportOperationsCompanion(
+                id: id,
+                characterId: characterId,
+                systemId: systemId,
+                inputDigest: inputDigest,
+                committedAtMs: committedAtMs,
+                selectedRowDigest: selectedRowDigest,
+                addedCount: addedCount,
+                updatedCount: updatedCount,
+                skippedCount: skippedCount,
+                conflictCount: conflictCount,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required int characterId,
+                required int systemId,
+                required String inputDigest,
+                required int committedAtMs,
+                Value<String?> selectedRowDigest = const Value.absent(),
+                Value<int> addedCount = const Value.absent(),
+                Value<int> updatedCount = const Value.absent(),
+                Value<int> skippedCount = const Value.absent(),
+                Value<int> conflictCount = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ExplorationImportOperationsCompanion.insert(
+                id: id,
+                characterId: characterId,
+                systemId: systemId,
+                inputDigest: inputDigest,
+                committedAtMs: committedAtMs,
+                selectedRowDigest: selectedRowDigest,
+                addedCount: addedCount,
+                updatedCount: updatedCount,
+                skippedCount: skippedCount,
+                conflictCount: conflictCount,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ExplorationImportOperationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ExplorationImportOperationsTable,
+      ExplorationImportOperation,
+      $$ExplorationImportOperationsTableFilterComposer,
+      $$ExplorationImportOperationsTableOrderingComposer,
+      $$ExplorationImportOperationsTableAnnotationComposer,
+      $$ExplorationImportOperationsTableCreateCompanionBuilder,
+      $$ExplorationImportOperationsTableUpdateCompanionBuilder,
+      (
+        ExplorationImportOperation,
+        BaseReferences<
+          _$AppDatabase,
+          $ExplorationImportOperationsTable,
+          ExplorationImportOperation
+        >,
+      ),
+      ExplorationImportOperation,
+      PrefetchHooks Function()
+    >;
+typedef $$ExplorationNotebookPreferencesTableCreateCompanionBuilder =
+    ExplorationNotebookPreferencesCompanion Function({
+      Value<int> characterId,
+      Value<int?> pruneHours,
+      Value<int> revision,
+    });
+typedef $$ExplorationNotebookPreferencesTableUpdateCompanionBuilder =
+    ExplorationNotebookPreferencesCompanion Function({
+      Value<int> characterId,
+      Value<int?> pruneHours,
+      Value<int> revision,
+    });
+
+class $$ExplorationNotebookPreferencesTableFilterComposer
+    extends Composer<_$AppDatabase, $ExplorationNotebookPreferencesTable> {
+  $$ExplorationNotebookPreferencesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pruneHours => $composableBuilder(
+    column: $table.pruneHours,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ExplorationNotebookPreferencesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ExplorationNotebookPreferencesTable> {
+  $$ExplorationNotebookPreferencesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pruneHours => $composableBuilder(
+    column: $table.pruneHours,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ExplorationNotebookPreferencesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ExplorationNotebookPreferencesTable> {
+  $$ExplorationNotebookPreferencesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get pruneHours => $composableBuilder(
+    column: $table.pruneHours,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+}
+
+class $$ExplorationNotebookPreferencesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ExplorationNotebookPreferencesTable,
+          ExplorationNotebookPreference,
+          $$ExplorationNotebookPreferencesTableFilterComposer,
+          $$ExplorationNotebookPreferencesTableOrderingComposer,
+          $$ExplorationNotebookPreferencesTableAnnotationComposer,
+          $$ExplorationNotebookPreferencesTableCreateCompanionBuilder,
+          $$ExplorationNotebookPreferencesTableUpdateCompanionBuilder,
+          (
+            ExplorationNotebookPreference,
+            BaseReferences<
+              _$AppDatabase,
+              $ExplorationNotebookPreferencesTable,
+              ExplorationNotebookPreference
+            >,
+          ),
+          ExplorationNotebookPreference,
+          PrefetchHooks Function()
+        > {
+  $$ExplorationNotebookPreferencesTableTableManager(
+    _$AppDatabase db,
+    $ExplorationNotebookPreferencesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ExplorationNotebookPreferencesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$ExplorationNotebookPreferencesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ExplorationNotebookPreferencesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> characterId = const Value.absent(),
+                Value<int?> pruneHours = const Value.absent(),
+                Value<int> revision = const Value.absent(),
+              }) => ExplorationNotebookPreferencesCompanion(
+                characterId: characterId,
+                pruneHours: pruneHours,
+                revision: revision,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> characterId = const Value.absent(),
+                Value<int?> pruneHours = const Value.absent(),
+                Value<int> revision = const Value.absent(),
+              }) => ExplorationNotebookPreferencesCompanion.insert(
+                characterId: characterId,
+                pruneHours: pruneHours,
+                revision: revision,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ExplorationNotebookPreferencesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ExplorationNotebookPreferencesTable,
+      ExplorationNotebookPreference,
+      $$ExplorationNotebookPreferencesTableFilterComposer,
+      $$ExplorationNotebookPreferencesTableOrderingComposer,
+      $$ExplorationNotebookPreferencesTableAnnotationComposer,
+      $$ExplorationNotebookPreferencesTableCreateCompanionBuilder,
+      $$ExplorationNotebookPreferencesTableUpdateCompanionBuilder,
+      (
+        ExplorationNotebookPreference,
+        BaseReferences<
+          _$AppDatabase,
+          $ExplorationNotebookPreferencesTable,
+          ExplorationNotebookPreference
+        >,
+      ),
+      ExplorationNotebookPreference,
+      PrefetchHooks Function()
+    >;
+typedef $$ExplorationWindowPreferencesTableCreateCompanionBuilder =
+    ExplorationWindowPreferencesCompanion Function({
+      required String windowKey,
+      Value<String?> lastSelectedDestination,
+      Value<int?> manualOriginSystemId,
+      Value<int?> manualDestinationSystemId,
+      Value<String?> viewFiltersJson,
+      Value<String?> selectedStableKeysJson,
+      Value<int> schemaVersion,
+      Value<int> rowid,
+    });
+typedef $$ExplorationWindowPreferencesTableUpdateCompanionBuilder =
+    ExplorationWindowPreferencesCompanion Function({
+      Value<String> windowKey,
+      Value<String?> lastSelectedDestination,
+      Value<int?> manualOriginSystemId,
+      Value<int?> manualDestinationSystemId,
+      Value<String?> viewFiltersJson,
+      Value<String?> selectedStableKeysJson,
+      Value<int> schemaVersion,
+      Value<int> rowid,
+    });
+
+class $$ExplorationWindowPreferencesTableFilterComposer
+    extends Composer<_$AppDatabase, $ExplorationWindowPreferencesTable> {
+  $$ExplorationWindowPreferencesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get windowKey => $composableBuilder(
+    column: $table.windowKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastSelectedDestination => $composableBuilder(
+    column: $table.lastSelectedDestination,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get manualOriginSystemId => $composableBuilder(
+    column: $table.manualOriginSystemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get manualDestinationSystemId => $composableBuilder(
+    column: $table.manualDestinationSystemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get viewFiltersJson => $composableBuilder(
+    column: $table.viewFiltersJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get selectedStableKeysJson => $composableBuilder(
+    column: $table.selectedStableKeysJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get schemaVersion => $composableBuilder(
+    column: $table.schemaVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ExplorationWindowPreferencesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ExplorationWindowPreferencesTable> {
+  $$ExplorationWindowPreferencesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get windowKey => $composableBuilder(
+    column: $table.windowKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastSelectedDestination => $composableBuilder(
+    column: $table.lastSelectedDestination,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get manualOriginSystemId => $composableBuilder(
+    column: $table.manualOriginSystemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get manualDestinationSystemId => $composableBuilder(
+    column: $table.manualDestinationSystemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get viewFiltersJson => $composableBuilder(
+    column: $table.viewFiltersJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get selectedStableKeysJson => $composableBuilder(
+    column: $table.selectedStableKeysJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get schemaVersion => $composableBuilder(
+    column: $table.schemaVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ExplorationWindowPreferencesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ExplorationWindowPreferencesTable> {
+  $$ExplorationWindowPreferencesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get windowKey =>
+      $composableBuilder(column: $table.windowKey, builder: (column) => column);
+
+  GeneratedColumn<String> get lastSelectedDestination => $composableBuilder(
+    column: $table.lastSelectedDestination,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get manualOriginSystemId => $composableBuilder(
+    column: $table.manualOriginSystemId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get manualDestinationSystemId => $composableBuilder(
+    column: $table.manualDestinationSystemId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get viewFiltersJson => $composableBuilder(
+    column: $table.viewFiltersJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get selectedStableKeysJson => $composableBuilder(
+    column: $table.selectedStableKeysJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get schemaVersion => $composableBuilder(
+    column: $table.schemaVersion,
+    builder: (column) => column,
+  );
+}
+
+class $$ExplorationWindowPreferencesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ExplorationWindowPreferencesTable,
+          ExplorationWindowPreference,
+          $$ExplorationWindowPreferencesTableFilterComposer,
+          $$ExplorationWindowPreferencesTableOrderingComposer,
+          $$ExplorationWindowPreferencesTableAnnotationComposer,
+          $$ExplorationWindowPreferencesTableCreateCompanionBuilder,
+          $$ExplorationWindowPreferencesTableUpdateCompanionBuilder,
+          (
+            ExplorationWindowPreference,
+            BaseReferences<
+              _$AppDatabase,
+              $ExplorationWindowPreferencesTable,
+              ExplorationWindowPreference
+            >,
+          ),
+          ExplorationWindowPreference,
+          PrefetchHooks Function()
+        > {
+  $$ExplorationWindowPreferencesTableTableManager(
+    _$AppDatabase db,
+    $ExplorationWindowPreferencesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ExplorationWindowPreferencesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$ExplorationWindowPreferencesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ExplorationWindowPreferencesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> windowKey = const Value.absent(),
+                Value<String?> lastSelectedDestination = const Value.absent(),
+                Value<int?> manualOriginSystemId = const Value.absent(),
+                Value<int?> manualDestinationSystemId = const Value.absent(),
+                Value<String?> viewFiltersJson = const Value.absent(),
+                Value<String?> selectedStableKeysJson = const Value.absent(),
+                Value<int> schemaVersion = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ExplorationWindowPreferencesCompanion(
+                windowKey: windowKey,
+                lastSelectedDestination: lastSelectedDestination,
+                manualOriginSystemId: manualOriginSystemId,
+                manualDestinationSystemId: manualDestinationSystemId,
+                viewFiltersJson: viewFiltersJson,
+                selectedStableKeysJson: selectedStableKeysJson,
+                schemaVersion: schemaVersion,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String windowKey,
+                Value<String?> lastSelectedDestination = const Value.absent(),
+                Value<int?> manualOriginSystemId = const Value.absent(),
+                Value<int?> manualDestinationSystemId = const Value.absent(),
+                Value<String?> viewFiltersJson = const Value.absent(),
+                Value<String?> selectedStableKeysJson = const Value.absent(),
+                Value<int> schemaVersion = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ExplorationWindowPreferencesCompanion.insert(
+                windowKey: windowKey,
+                lastSelectedDestination: lastSelectedDestination,
+                manualOriginSystemId: manualOriginSystemId,
+                manualDestinationSystemId: manualDestinationSystemId,
+                viewFiltersJson: viewFiltersJson,
+                selectedStableKeysJson: selectedStableKeysJson,
+                schemaVersion: schemaVersion,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ExplorationWindowPreferencesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ExplorationWindowPreferencesTable,
+      ExplorationWindowPreference,
+      $$ExplorationWindowPreferencesTableFilterComposer,
+      $$ExplorationWindowPreferencesTableOrderingComposer,
+      $$ExplorationWindowPreferencesTableAnnotationComposer,
+      $$ExplorationWindowPreferencesTableCreateCompanionBuilder,
+      $$ExplorationWindowPreferencesTableUpdateCompanionBuilder,
+      (
+        ExplorationWindowPreference,
+        BaseReferences<
+          _$AppDatabase,
+          $ExplorationWindowPreferencesTable,
+          ExplorationWindowPreference
+        >,
+      ),
+      ExplorationWindowPreference,
+      PrefetchHooks Function()
+    >;
+typedef $$ExplorationLocationObservationsTableCreateCompanionBuilder =
+    ExplorationLocationObservationsCompanion Function({
+      Value<int> characterId,
+      required int systemId,
+      required int observedAtMs,
+      required int receivedAtMs,
+      Value<String?> sourceFreshnessJson,
+    });
+typedef $$ExplorationLocationObservationsTableUpdateCompanionBuilder =
+    ExplorationLocationObservationsCompanion Function({
+      Value<int> characterId,
+      Value<int> systemId,
+      Value<int> observedAtMs,
+      Value<int> receivedAtMs,
+      Value<String?> sourceFreshnessJson,
+    });
+
+class $$ExplorationLocationObservationsTableFilterComposer
+    extends Composer<_$AppDatabase, $ExplorationLocationObservationsTable> {
+  $$ExplorationLocationObservationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get systemId => $composableBuilder(
+    column: $table.systemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get observedAtMs => $composableBuilder(
+    column: $table.observedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get receivedAtMs => $composableBuilder(
+    column: $table.receivedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceFreshnessJson => $composableBuilder(
+    column: $table.sourceFreshnessJson,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ExplorationLocationObservationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ExplorationLocationObservationsTable> {
+  $$ExplorationLocationObservationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get systemId => $composableBuilder(
+    column: $table.systemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get observedAtMs => $composableBuilder(
+    column: $table.observedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get receivedAtMs => $composableBuilder(
+    column: $table.receivedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceFreshnessJson => $composableBuilder(
+    column: $table.sourceFreshnessJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ExplorationLocationObservationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ExplorationLocationObservationsTable> {
+  $$ExplorationLocationObservationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get systemId =>
+      $composableBuilder(column: $table.systemId, builder: (column) => column);
+
+  GeneratedColumn<int> get observedAtMs => $composableBuilder(
+    column: $table.observedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get receivedAtMs => $composableBuilder(
+    column: $table.receivedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get sourceFreshnessJson => $composableBuilder(
+    column: $table.sourceFreshnessJson,
+    builder: (column) => column,
+  );
+}
+
+class $$ExplorationLocationObservationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ExplorationLocationObservationsTable,
+          ExplorationLocationObservation,
+          $$ExplorationLocationObservationsTableFilterComposer,
+          $$ExplorationLocationObservationsTableOrderingComposer,
+          $$ExplorationLocationObservationsTableAnnotationComposer,
+          $$ExplorationLocationObservationsTableCreateCompanionBuilder,
+          $$ExplorationLocationObservationsTableUpdateCompanionBuilder,
+          (
+            ExplorationLocationObservation,
+            BaseReferences<
+              _$AppDatabase,
+              $ExplorationLocationObservationsTable,
+              ExplorationLocationObservation
+            >,
+          ),
+          ExplorationLocationObservation,
+          PrefetchHooks Function()
+        > {
+  $$ExplorationLocationObservationsTableTableManager(
+    _$AppDatabase db,
+    $ExplorationLocationObservationsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ExplorationLocationObservationsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$ExplorationLocationObservationsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ExplorationLocationObservationsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> characterId = const Value.absent(),
+                Value<int> systemId = const Value.absent(),
+                Value<int> observedAtMs = const Value.absent(),
+                Value<int> receivedAtMs = const Value.absent(),
+                Value<String?> sourceFreshnessJson = const Value.absent(),
+              }) => ExplorationLocationObservationsCompanion(
+                characterId: characterId,
+                systemId: systemId,
+                observedAtMs: observedAtMs,
+                receivedAtMs: receivedAtMs,
+                sourceFreshnessJson: sourceFreshnessJson,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> characterId = const Value.absent(),
+                required int systemId,
+                required int observedAtMs,
+                required int receivedAtMs,
+                Value<String?> sourceFreshnessJson = const Value.absent(),
+              }) => ExplorationLocationObservationsCompanion.insert(
+                characterId: characterId,
+                systemId: systemId,
+                observedAtMs: observedAtMs,
+                receivedAtMs: receivedAtMs,
+                sourceFreshnessJson: sourceFreshnessJson,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ExplorationLocationObservationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ExplorationLocationObservationsTable,
+      ExplorationLocationObservation,
+      $$ExplorationLocationObservationsTableFilterComposer,
+      $$ExplorationLocationObservationsTableOrderingComposer,
+      $$ExplorationLocationObservationsTableAnnotationComposer,
+      $$ExplorationLocationObservationsTableCreateCompanionBuilder,
+      $$ExplorationLocationObservationsTableUpdateCompanionBuilder,
+      (
+        ExplorationLocationObservation,
+        BaseReferences<
+          _$AppDatabase,
+          $ExplorationLocationObservationsTable,
+          ExplorationLocationObservation
+        >,
+      ),
+      ExplorationLocationObservation,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -33020,4 +43500,41 @@ class $AppDatabaseManager {
       );
   $$CombatEncountersTableTableManager get combatEncounters =>
       $$CombatEncountersTableTableManager(_db, _db.combatEncounters);
+  $$EveScoutFeedStatesTableTableManager get eveScoutFeedStates =>
+      $$EveScoutFeedStatesTableTableManager(_db, _db.eveScoutFeedStates);
+  $$EveScoutSignaturesTableTableManager get eveScoutSignatures =>
+      $$EveScoutSignaturesTableTableManager(_db, _db.eveScoutSignatures);
+  $$TrackedSignaturesTableTableManager get trackedSignatures =>
+      $$TrackedSignaturesTableTableManager(_db, _db.trackedSignatures);
+  $$TrackedConnectionsTableTableManager get trackedConnections =>
+      $$TrackedConnectionsTableTableManager(_db, _db.trackedConnections);
+  $$ExplorationNotebookScopesTableTableManager get explorationNotebookScopes =>
+      $$ExplorationNotebookScopesTableTableManager(
+        _db,
+        _db.explorationNotebookScopes,
+      );
+  $$ExplorationImportOperationsTableTableManager
+  get explorationImportOperations =>
+      $$ExplorationImportOperationsTableTableManager(
+        _db,
+        _db.explorationImportOperations,
+      );
+  $$ExplorationNotebookPreferencesTableTableManager
+  get explorationNotebookPreferences =>
+      $$ExplorationNotebookPreferencesTableTableManager(
+        _db,
+        _db.explorationNotebookPreferences,
+      );
+  $$ExplorationWindowPreferencesTableTableManager
+  get explorationWindowPreferences =>
+      $$ExplorationWindowPreferencesTableTableManager(
+        _db,
+        _db.explorationWindowPreferences,
+      );
+  $$ExplorationLocationObservationsTableTableManager
+  get explorationLocationObservations =>
+      $$ExplorationLocationObservationsTableTableManager(
+        _db,
+        _db.explorationLocationObservations,
+      );
 }

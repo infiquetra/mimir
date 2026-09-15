@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../../features/exploration/data/exploration_tables.dart';
+
 part 'app_database.g.dart';
 
 /// Characters table for storing EVE Online character data.
@@ -792,6 +794,15 @@ class CombatEncounters extends Table {
     WatchList,
     CombatParsedEncounters,
     CombatEncounters,
+    EveScoutFeedStates,
+    EveScoutSignatures,
+    TrackedSignatures,
+    TrackedConnections,
+    ExplorationNotebookScopes,
+    ExplorationImportOperations,
+    ExplorationNotebookPreferences,
+    ExplorationWindowPreferences,
+    ExplorationLocationObservations,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -801,7 +812,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration {
@@ -809,6 +820,7 @@ class AppDatabase extends _$AppDatabase {
       onCreate: (Migrator m) async {
         await m.createAll();
         await _createCombatEnrichmentTables();
+        await _createExplorationIndexes();
         // Insert default settings row.
         await into(appSettingsTable).insert(AppSettingsTableCompanion.insert());
       },
@@ -947,8 +959,46 @@ class AppDatabase extends _$AppDatabase {
         if (from < 20) {
           await _createCombatEnrichmentTables();
         }
+
+        // Migration from version 20 to 21: Add exploration notebook tables.
+        if (from < 21) {
+          await m.createTable(eveScoutFeedStates);
+          await m.createTable(eveScoutSignatures);
+          await m.createTable(trackedSignatures);
+          await m.createTable(trackedConnections);
+          await m.createTable(explorationNotebookScopes);
+          await m.createTable(explorationImportOperations);
+          await m.createTable(explorationNotebookPreferences);
+          await m.createTable(explorationWindowPreferences);
+          await m.createTable(explorationLocationObservations);
+          await _createExplorationIndexes();
+        }
       },
     );
+  }
+
+  Future<void> _createExplorationIndexes() async {
+    await customStatement('''
+      CREATE UNIQUE INDEX IF NOT EXISTS tracked_signatures_active_scope_code
+      ON tracked_signatures (character_id, system_id, code)
+      WHERE lifecycle = 'active'
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS tracked_signatures_character_system_lifecycle_last_seen
+      ON tracked_signatures (character_id, system_id, lifecycle, last_seen_at_ms)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS tracked_connections_character_lifecycle_verified
+      ON tracked_connections (character_id, lifecycle, verified_at_ms)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS eve_scout_signatures_scope_listed_revision
+      ON eve_scout_signatures (scope_key, listed_snapshot_revision)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS eve_scout_signatures_retired_expiry
+      ON eve_scout_signatures (retired_at_ms, source_expires_at_ms)
+    ''');
   }
 
   Future<void> _createCombatEnrichmentTables() async {
@@ -1038,6 +1088,24 @@ class AppDatabase extends _$AppDatabase {
   /// Delete a character and all related data.
   Future<void> deleteCharacter(int characterId) async {
     await transaction(() async {
+      await (delete(
+        trackedConnections,
+      )..where((e) => e.characterId.equals(characterId))).go();
+      await (delete(
+        trackedSignatures,
+      )..where((e) => e.characterId.equals(characterId))).go();
+      await (delete(
+        explorationImportOperations,
+      )..where((e) => e.characterId.equals(characterId))).go();
+      await (delete(
+        explorationNotebookScopes,
+      )..where((e) => e.characterId.equals(characterId))).go();
+      await (delete(
+        explorationNotebookPreferences,
+      )..where((e) => e.characterId.equals(characterId))).go();
+      await (delete(
+        explorationLocationObservations,
+      )..where((e) => e.characterId.equals(characterId))).go();
       await (delete(
         skillQueueEntries,
       )..where((e) => e.characterId.equals(characterId))).go();
