@@ -6,7 +6,7 @@ import '../../../core/config/eve_config.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/network/esi_client.dart';
 import '../../../core/sde/sde_service.dart';
-import '../../fitting/domain/format_parser.dart';
+import 'aar_fit_import_parser.dart';
 import '../domain/combat_actor_classifier.dart';
 import '../domain/combat_attacker_correlation.dart';
 import '../domain/combat_attacker_correlator.dart';
@@ -164,15 +164,9 @@ class CombatEnrichmentService {
     String rawFit,
   ) async {
     Log.d('COMBAT.ENRICH', 'importPilotFit(${encounter.id}) - START');
-    final parser = FittingFormatParser(_sdeService);
-    final fitting = rawFit.trim().contains(':')
-        ? await parser.parseDna(rawFit.trim())
-        : await parser.parseEft(rawFit);
-    if (fitting == null || fitting.shipTypeId <= 0) {
-      throw const FormatException(
-        'Unable to resolve the pasted fit. Paste an EFT fit with a known ship and modules.',
-      );
-    }
+    final fitting = await AarFitImportParser(
+      sdeService: _sdeService,
+    ).parse(rawFit);
     final evidence = FitEvidence(
       role: FitEvidenceRole.pilot,
       source: EvidenceSource.manualFitImport,

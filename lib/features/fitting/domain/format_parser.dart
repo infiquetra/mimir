@@ -7,9 +7,15 @@ import 'models.dart';
 /// Supports both EFT (text block) and DNA (in-game links).
 class FittingFormatParser {
   final SdeService _sdeService;
+  final Future<int?> Function(String name)? resolveTypeIdByName;
+  final bool rethrowFailures;
   bool _reverseLookupUnavailableLogged = false;
 
-  FittingFormatParser(this._sdeService);
+  FittingFormatParser(
+    this._sdeService, {
+    this.resolveTypeIdByName,
+    this.rethrowFailures = false,
+  });
 
   /// Parse an EFT format string into a [Fitting].
   ///
@@ -171,6 +177,9 @@ class FittingFormatParser {
       );
     } catch (e, stack) {
       Log.e('FITTING', 'Error parsing EFT', e, stack);
+      if (rethrowFailures) {
+        Error.throwWithStackTrace(e, stack);
+      }
       return null;
     }
   }
@@ -215,6 +224,10 @@ class FittingFormatParser {
   }
 
   Future<int?> _resolveTypeIdByName(String name) async {
+    final override = resolveTypeIdByName;
+    if (override != null) {
+      return override(name);
+    }
     final normalized = _normalizeName(name);
     final matches = await _searchTypesByName(name);
     for (final match in matches) {
@@ -226,7 +239,10 @@ class FittingFormatParser {
   Future<List<SdeType>> _searchTypesByName(String name) async {
     try {
       return _sdeService.database.searchTypesByName(name, limit: 20);
-    } catch (e) {
+    } catch (e, stack) {
+      if (rethrowFailures) {
+        Error.throwWithStackTrace(e, stack);
+      }
       if (!_reverseLookupUnavailableLogged) {
         Log.w('FITTING', 'SDE reverse lookup unavailable; parsing shell fit');
         _reverseLookupUnavailableLogged = true;
@@ -325,6 +341,9 @@ class FittingFormatParser {
       );
     } catch (e, stack) {
       Log.e('FITTING', 'Error parsing DNA', e, stack);
+      if (rethrowFailures) {
+        Error.throwWithStackTrace(e, stack);
+      }
       return null;
     }
   }
