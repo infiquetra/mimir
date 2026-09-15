@@ -31,6 +31,30 @@
 
 ## 2026-09-15
 
+### Exploration reference and feed contracts differ from the old blueprint
+
+**Author.** Product.
+**Context.** Grounding the Exploration specification at Mimir `aec65c6` and
+context-library `3813f1a`.
+**Evidence.** Public read-only probes found the legacy EVE-Scout URL returned 404,
+while public v2 signatures returned JSON with a 300-second cache directive. Its
+OpenAPI 2.1.55 and observed payloads contain no connection mass status, orient
+`out_system` toward the hub, and use Turnur ID `30002086`. The SDE build `3503375`
+has no fixed K162 dogma or per-system static assignments; wormhole lifetime values
+need minutes-to-seconds conversion, and applied effect beacons can differ from
+visual sun names. Current local SDE schema 6 lacks a populated universe/gate graph.
+**Mechanism.** Old examples combine static type properties, community observations
+and imagined implementation seams. Those cannot serve as an executable contract.
+**Fix (queued).** Use the verified sources, normalization, provenance and exact effect
+tables in [specification §§3–5](../specs/exploration-module.md#3-functional-requirements).
+Add the offline universe foundation and a cross-window cache with distinct payload
+receipt and successful validation clocks before computing route eligibility.
+**Validation.** Direct HTTP/SDE inspection and two independent specification reviews;
+synthetic arithmetic, route oracles and traceability checked. Runtime implementation
+and its tests remain pending.
+**Generalizable rule.** Verify current wire and static-data semantics before turning
+blueprint examples into defaults, UI claims or route edges.
+
 ### Subagent prompt-wait race conditions require explicit working-state gating
 
 **Author.** Antigravity / Lead Orchestrator

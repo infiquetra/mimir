@@ -26,10 +26,14 @@ Mimir aims to replace the need for multiple disconnected EVE tools (EVEMon, Pyfa
 
 See the [mimir-context-library](https://github.com/infiquetra/mimir-context-library) repository for detailed specifications and roadmap.
 
+### Exploration specification
+
+- [Exploration Module Product specification](docs/specs/exploration-module.md) — tray-launched window, offline reference, Thera/Turnur connections, local signatures and routing; nine workflows, 32 requirements, 40 acceptance criteria and 60 test cases; implementation pending.
+
 ### AAR specifications
 
-- [Fit comparison visuals product specification](docs/specs/aar-fit-comparison-visuals.md) — source snapshots, responsive comparisons, module diffs, tactical stats and materials; 30 acceptance criteria and 46 test cases; implementation pending.
-- [Fit comparison visuals technical design](docs/specs/aar-fit-comparison-visuals-design.md) — independent source/history storage, neutral shared calculations, exact diffs/BOM, responsive provider/UI seams and W0–W7 TDD gates; implementation pending.
+- [Fit comparison visuals product specification](docs/specs/aar-fit-comparison-visuals.md) — source snapshots, responsive comparisons, module diffs, tactical stats and materials; 30 acceptance criteria and 46 test cases; complete.
+- [Fit comparison visuals technical design](docs/specs/aar-fit-comparison-visuals-design.md) — independent source/history storage, neutral shared calculations, exact diffs/BOM, responsive provider/UI seams and W0–W7 TDD gates; complete.
 - [Fit import and capture UI test product contract](docs/specs/aar-fit-import-capture-ui-tests.md) — current controls, user expectations, 24 acceptance criteria, and 36 test scenarios; complete.
 - [Fit import and capture UI test technical design](docs/specs/aar-fit-import-capture-ui-tests-design.md) — strict AAR parsing, atomic fit retention, real screen/storage harness, and U0–U5 TDD gates; complete.
 - [Milestone 5: Per-Attacker Incoming Damage Profile and Defense Matchup](docs/specs/aar-per-attacker-matchup.md) — product contract, acceptance criteria, and test matrix; complete.

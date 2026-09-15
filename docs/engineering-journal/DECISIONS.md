@@ -26,6 +26,27 @@
 
 ## 2026-09-15
 
+### Exploration uses a dedicated window and explicit observation freshness
+
+**Author.** Product.
+**Decision.** Adopt the [Exploration specification](../specs/exploration-module.md).
+The user selected a tray-launched window with separate adaptive module navigation
+and character selection. Deliver reference, public highways, local signatures and
+routing in phases 4a–4d. Keep static facts, public observations and private verified
+links distinct; derive route eligibility from source, age and status. Public mass
+state remains Unknown when absent. Notebook import uses an atomic scoped preview;
+only explicitly verified destinations create local route edges.
+**Rejected alternatives.** Migrating the whole app to the old blueprint's global
+shell; treating K162 as a fixed-capacity type; inventing public mass states; making
+scanner names or system statics into live route edges; sharing private scan data.
+**Rationale.** The current runtime uses independent window engines, and exploration
+decisions depend on both data provenance and time. A route is a result over eligible
+known edges, not proof of traversal or safety.
+**Revisit when.** A separate app-wide navigation initiative is approved, or a verified
+upstream contract adds authoritative mass observations or mapper synchronization.
+**Refs.** [Queued implementation](QUEUED.md#exploration-module);
+[source findings](LEARNINGS.md#exploration-reference-and-feed-contracts-differ-from-the-old-blueprint).
+
 ### Implementation and delivery of fit comparison visuals (Units W0–W7)
 
 **Author.** Antigravity / Lead Orchestrator

@@ -1,4 +1,43 @@
-# Project: Mimir — AAR fit comparison visuals technical design
+# Project: Mimir — Exploration Module Product specification
+Date: 2026-09-15
+Checkpoint: 2026-09-15-exploration-module-product
+
+## Overview
+
+Author the authoritative Exploration Module specification on `feature/exploration-module`
+at `aec65c6`. Fit comparison visuals are implemented and merged.
+
+## Tasks
+
+- [x] [P1] Read grounding documents and current repository guidance.
+- [x] [P1] Verify static data, current services and live EVE-Scout contracts.
+- [x] [SEQ] Define phases 4a–4d, workflows, entities, API/cache and routing rules.
+- [x] [SEQ] Write UI, requirements, acceptance criteria and exact test fixtures.
+- [x] [P2] Review independently and validate source links and test traceability.
+- [x] [SEQ] Update documentation/journal links and preserve implementation-pending status.
+- [x] [CHECKPOINT] Save handoff and commit documentation.
+
+## Notes
+
+[Canonical plan](../.codex/plans/2026-09-15-exploration-module-product.md).
+The user's specification request authorizes this documentation work.
+
+## Review
+
+Completed the [Exploration specification](../docs/specs/exploration-module.md)
+with all eight requested sections, nine workflows, 32 requirements, 40 acceptance
+criteria, eight synthetic fixture groups and 60 domain/provider/UI test cases.
+The user selected a dedicated tray window with adaptive module navigation.
+Verified current public EVE-Scout and primary SDE contracts; two independent
+reviews passed with all findings resolved. Checked twelve route oracles, exact
+effect values, units/resonance arithmetic, JSON examples, local links, Markdown
+tables and full traceability. README/journal preserve implementation-pending
+status and acknowledge earlier AAR work as shipped. No application code changed;
+Flutter runtime suites were not run for this documentation delivery.
+
+---
+
+# Completed: Mimir — AAR fit comparison visuals technical design
 Date: 2026-09-15
 Checkpoint: 2026-09-15-aar-fit-comparison-visuals-design
 

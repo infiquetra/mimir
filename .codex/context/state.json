@@ -1,28 +1,30 @@
 {
-  "last_updated": "2026-09-15T14:22:39Z",
+  "last_updated": "2026-09-15T20:26:39Z",
   "current_work": {
-    "task": "AAR fit comparison visuals: technical architecture and design",
+    "task": "Exploration Module: authoritative Product specification",
     "phase": "complete",
     "progress": "100%",
-    "baseline": "2fe995c",
-    "branch": "develop",
-    "plan": ".codex/plans/2026-09-15-aar-fit-comparison-visuals-design.md",
-    "deliverable": "docs/specs/aar-fit-comparison-visuals-design.md",
-    "checkpoint": ".codex/checkpoints/2026-09-15-aar-fit-comparison-visuals-design.md",
+    "baseline": "aec65c6",
+    "branch": "feature/exploration-module",
+    "plan": ".codex/plans/2026-09-15-exploration-module-product.md",
+    "deliverable": "docs/specs/exploration-module.md",
+    "checkpoint": ".codex/checkpoints/2026-09-15-exploration-module-product.md",
     "next_steps": [
-      "Plan estimates and schedules W0-W7 with explicit shared-file ownership",
-      "Test-Author begins source/history fixtures and mapped RED tests through real storage/screen boundaries",
-      "Implementation and tester signoff remain pending; retain this P2 item in QUEUED.md"
+      "Plan designs and estimates phases 4a-4d, including the offline universe and gate foundation",
+      "Test-Author implements F1-F8 fixtures and D01-D24, P01-P18, U01-U18 with full AC traceability",
+      "Implement the user-selected tray-launched Exploration window with four adaptive module views",
+      "Implementation and tester signoff remain pending; prior AAR initiatives are shipped"
     ]
   },
   "validation": {
-    "independent_review": "domain and integration architecture reviews passed; all findings resolved",
-    "structure": "W0-W7; 6 workflows; 30 ACs mapped bidirectionally to all 46 D/P/U cases",
-    "checks": "BOM/EHP arithmetic, 12 exact feedback strings, full AC traceability, JSON examples, references, table structure, whitespace",
+    "independent_review": "two independent specification reviews passed; all findings resolved",
+    "structure": "8 requested sections; S1-S9; R1-R32; AC1-AC40; F1-F8; 60 D/P/U cases with traceability",
+    "checks": "live public API and primary SDE inspection; 12 route oracles; effect vectors; unit/resonance arithmetic; JSON examples; local links; table structure; whitespace",
     "runtime_tests": "not run; documentation-only delivery"
   },
   "open_issues": [
-    "Feature implementation pending; re-estimate W0-W7 including source projection, generation binding and multiwindow observation",
-    "Sustained repair remains Not modeled; cached inventory and ESI average prices retain explicit limits"
+    "Feature architecture, implementation and tester verification pending",
+    "Per-system statics require a separate sourced dataset or explicit Unavailable state",
+    "Public feed has no mass status; expose Unknown and preserve source freshness limits"
   ]
 }

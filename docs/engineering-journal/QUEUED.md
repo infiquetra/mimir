@@ -31,6 +31,24 @@
 
 ## P2 - Important
 
+### Exploration Module
+
+**Author.** Product.
+**Priority.** P2, user-prioritized after fit comparison visuals shipped.
+**Effort.** Plan must estimate phases 4a–4d against the verified data foundation;
+the older Sprint 21–22 estimates do not include all required additions.
+**Worth it when.** Pilots need offline wormhole reference, public highway access,
+private scan records and routes through their known connections in Mimir.
+**Context.** Product specification complete at baseline `aec65c6`; architecture,
+implementation and tester verification remain pending. The user selected a new
+tray-launched Exploration window with four adaptive module views. Required work
+includes populated universe/gate/SDE data, shared durable public-v2 EVE-Scout
+cache, character-scoped SQLite signatures and deterministic mixed-edge routing.
+Private mapper synchronization remains the separate initiative below.
+**Refs.** [Authoritative specification](../specs/exploration-module.md), including
+32 requirements, 40 acceptance criteria, 60 test cases and eight fixture groups;
+[Product plan](../../.codex/plans/2026-09-15-exploration-module-product.md).
+
 ### Clip reloads in the cap simulation (charge quantities)
 
 **Author.** Qwen Code
