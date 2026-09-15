@@ -4067,6 +4067,2628 @@ class SdeIndustryActivitySkillsCompanion
   }
 }
 
+class $SdeWormholeTypesTable extends SdeWormholeTypes
+    with TableInfo<$SdeWormholeTypesTable, SdeWormholeType> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SdeWormholeTypesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+    'type_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
+  @override
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+    'code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _groupIdMeta = const VerificationMeta(
+    'groupId',
+  );
+  @override
+  late final GeneratedColumn<int> groupId = GeneratedColumn<int>(
+    'group_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(988),
+  );
+  static const VerificationMeta _publishedMeta = const VerificationMeta(
+    'published',
+  );
+  @override
+  late final GeneratedColumn<bool> published = GeneratedColumn<bool>(
+    'published',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("published" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _rawTargetClassMeta = const VerificationMeta(
+    'rawTargetClass',
+  );
+  @override
+  late final GeneratedColumn<int> rawTargetClass = GeneratedColumn<int>(
+    'raw_target_class',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _rawTargetDistributionMeta =
+      const VerificationMeta('rawTargetDistribution');
+  @override
+  late final GeneratedColumn<int> rawTargetDistribution = GeneratedColumn<int>(
+    'raw_target_distribution',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _reliableLifetimeSecondsMeta =
+      const VerificationMeta('reliableLifetimeSeconds');
+  @override
+  late final GeneratedColumn<int> reliableLifetimeSeconds =
+      GeneratedColumn<int>(
+        'reliable_lifetime_seconds',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _maxJumpMassKgMeta = const VerificationMeta(
+    'maxJumpMassKg',
+  );
+  @override
+  late final GeneratedColumn<double> maxJumpMassKg = GeneratedColumn<double>(
+    'max_jump_mass_kg',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _totalMassKgMeta = const VerificationMeta(
+    'totalMassKg',
+  );
+  @override
+  late final GeneratedColumn<double> totalMassKg = GeneratedColumn<double>(
+    'total_mass_kg',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _regenerationKgPerCycleMeta =
+      const VerificationMeta('regenerationKgPerCycle');
+  @override
+  late final GeneratedColumn<double> regenerationKgPerCycle =
+      GeneratedColumn<double>(
+        'regeneration_kg_per_cycle',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    typeId,
+    code,
+    name,
+    groupId,
+    published,
+    rawTargetClass,
+    rawTargetDistribution,
+    reliableLifetimeSeconds,
+    maxJumpMassKg,
+    totalMassKg,
+    regenerationKgPerCycle,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sde_wormhole_types';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SdeWormholeType> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('type_id')) {
+      context.handle(
+        _typeIdMeta,
+        typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta),
+      );
+    }
+    if (data.containsKey('code')) {
+      context.handle(
+        _codeMeta,
+        code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_codeMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('group_id')) {
+      context.handle(
+        _groupIdMeta,
+        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
+      );
+    }
+    if (data.containsKey('published')) {
+      context.handle(
+        _publishedMeta,
+        published.isAcceptableOrUnknown(data['published']!, _publishedMeta),
+      );
+    }
+    if (data.containsKey('raw_target_class')) {
+      context.handle(
+        _rawTargetClassMeta,
+        rawTargetClass.isAcceptableOrUnknown(
+          data['raw_target_class']!,
+          _rawTargetClassMeta,
+        ),
+      );
+    }
+    if (data.containsKey('raw_target_distribution')) {
+      context.handle(
+        _rawTargetDistributionMeta,
+        rawTargetDistribution.isAcceptableOrUnknown(
+          data['raw_target_distribution']!,
+          _rawTargetDistributionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reliable_lifetime_seconds')) {
+      context.handle(
+        _reliableLifetimeSecondsMeta,
+        reliableLifetimeSeconds.isAcceptableOrUnknown(
+          data['reliable_lifetime_seconds']!,
+          _reliableLifetimeSecondsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('max_jump_mass_kg')) {
+      context.handle(
+        _maxJumpMassKgMeta,
+        maxJumpMassKg.isAcceptableOrUnknown(
+          data['max_jump_mass_kg']!,
+          _maxJumpMassKgMeta,
+        ),
+      );
+    }
+    if (data.containsKey('total_mass_kg')) {
+      context.handle(
+        _totalMassKgMeta,
+        totalMassKg.isAcceptableOrUnknown(
+          data['total_mass_kg']!,
+          _totalMassKgMeta,
+        ),
+      );
+    }
+    if (data.containsKey('regeneration_kg_per_cycle')) {
+      context.handle(
+        _regenerationKgPerCycleMeta,
+        regenerationKgPerCycle.isAcceptableOrUnknown(
+          data['regeneration_kg_per_cycle']!,
+          _regenerationKgPerCycleMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {typeId};
+  @override
+  SdeWormholeType map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SdeWormholeType(
+      typeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}type_id'],
+      )!,
+      code: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      groupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}group_id'],
+      )!,
+      published: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}published'],
+      )!,
+      rawTargetClass: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}raw_target_class'],
+      ),
+      rawTargetDistribution: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}raw_target_distribution'],
+      ),
+      reliableLifetimeSeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reliable_lifetime_seconds'],
+      ),
+      maxJumpMassKg: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}max_jump_mass_kg'],
+      ),
+      totalMassKg: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}total_mass_kg'],
+      ),
+      regenerationKgPerCycle: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}regeneration_kg_per_cycle'],
+      ),
+    );
+  }
+
+  @override
+  $SdeWormholeTypesTable createAlias(String alias) {
+    return $SdeWormholeTypesTable(attachedDatabase, alias);
+  }
+}
+
+class SdeWormholeType extends DataClass implements Insertable<SdeWormholeType> {
+  final int typeId;
+  final String code;
+  final String name;
+  final int groupId;
+  final bool published;
+  final int? rawTargetClass;
+  final int? rawTargetDistribution;
+  final int? reliableLifetimeSeconds;
+  final double? maxJumpMassKg;
+  final double? totalMassKg;
+  final double? regenerationKgPerCycle;
+  const SdeWormholeType({
+    required this.typeId,
+    required this.code,
+    required this.name,
+    required this.groupId,
+    required this.published,
+    this.rawTargetClass,
+    this.rawTargetDistribution,
+    this.reliableLifetimeSeconds,
+    this.maxJumpMassKg,
+    this.totalMassKg,
+    this.regenerationKgPerCycle,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['type_id'] = Variable<int>(typeId);
+    map['code'] = Variable<String>(code);
+    map['name'] = Variable<String>(name);
+    map['group_id'] = Variable<int>(groupId);
+    map['published'] = Variable<bool>(published);
+    if (!nullToAbsent || rawTargetClass != null) {
+      map['raw_target_class'] = Variable<int>(rawTargetClass);
+    }
+    if (!nullToAbsent || rawTargetDistribution != null) {
+      map['raw_target_distribution'] = Variable<int>(rawTargetDistribution);
+    }
+    if (!nullToAbsent || reliableLifetimeSeconds != null) {
+      map['reliable_lifetime_seconds'] = Variable<int>(reliableLifetimeSeconds);
+    }
+    if (!nullToAbsent || maxJumpMassKg != null) {
+      map['max_jump_mass_kg'] = Variable<double>(maxJumpMassKg);
+    }
+    if (!nullToAbsent || totalMassKg != null) {
+      map['total_mass_kg'] = Variable<double>(totalMassKg);
+    }
+    if (!nullToAbsent || regenerationKgPerCycle != null) {
+      map['regeneration_kg_per_cycle'] = Variable<double>(
+        regenerationKgPerCycle,
+      );
+    }
+    return map;
+  }
+
+  SdeWormholeTypesCompanion toCompanion(bool nullToAbsent) {
+    return SdeWormholeTypesCompanion(
+      typeId: Value(typeId),
+      code: Value(code),
+      name: Value(name),
+      groupId: Value(groupId),
+      published: Value(published),
+      rawTargetClass: rawTargetClass == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rawTargetClass),
+      rawTargetDistribution: rawTargetDistribution == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rawTargetDistribution),
+      reliableLifetimeSeconds: reliableLifetimeSeconds == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reliableLifetimeSeconds),
+      maxJumpMassKg: maxJumpMassKg == null && nullToAbsent
+          ? const Value.absent()
+          : Value(maxJumpMassKg),
+      totalMassKg: totalMassKg == null && nullToAbsent
+          ? const Value.absent()
+          : Value(totalMassKg),
+      regenerationKgPerCycle: regenerationKgPerCycle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(regenerationKgPerCycle),
+    );
+  }
+
+  factory SdeWormholeType.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SdeWormholeType(
+      typeId: serializer.fromJson<int>(json['typeId']),
+      code: serializer.fromJson<String>(json['code']),
+      name: serializer.fromJson<String>(json['name']),
+      groupId: serializer.fromJson<int>(json['groupId']),
+      published: serializer.fromJson<bool>(json['published']),
+      rawTargetClass: serializer.fromJson<int?>(json['rawTargetClass']),
+      rawTargetDistribution: serializer.fromJson<int?>(
+        json['rawTargetDistribution'],
+      ),
+      reliableLifetimeSeconds: serializer.fromJson<int?>(
+        json['reliableLifetimeSeconds'],
+      ),
+      maxJumpMassKg: serializer.fromJson<double?>(json['maxJumpMassKg']),
+      totalMassKg: serializer.fromJson<double?>(json['totalMassKg']),
+      regenerationKgPerCycle: serializer.fromJson<double?>(
+        json['regenerationKgPerCycle'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'typeId': serializer.toJson<int>(typeId),
+      'code': serializer.toJson<String>(code),
+      'name': serializer.toJson<String>(name),
+      'groupId': serializer.toJson<int>(groupId),
+      'published': serializer.toJson<bool>(published),
+      'rawTargetClass': serializer.toJson<int?>(rawTargetClass),
+      'rawTargetDistribution': serializer.toJson<int?>(rawTargetDistribution),
+      'reliableLifetimeSeconds': serializer.toJson<int?>(
+        reliableLifetimeSeconds,
+      ),
+      'maxJumpMassKg': serializer.toJson<double?>(maxJumpMassKg),
+      'totalMassKg': serializer.toJson<double?>(totalMassKg),
+      'regenerationKgPerCycle': serializer.toJson<double?>(
+        regenerationKgPerCycle,
+      ),
+    };
+  }
+
+  SdeWormholeType copyWith({
+    int? typeId,
+    String? code,
+    String? name,
+    int? groupId,
+    bool? published,
+    Value<int?> rawTargetClass = const Value.absent(),
+    Value<int?> rawTargetDistribution = const Value.absent(),
+    Value<int?> reliableLifetimeSeconds = const Value.absent(),
+    Value<double?> maxJumpMassKg = const Value.absent(),
+    Value<double?> totalMassKg = const Value.absent(),
+    Value<double?> regenerationKgPerCycle = const Value.absent(),
+  }) => SdeWormholeType(
+    typeId: typeId ?? this.typeId,
+    code: code ?? this.code,
+    name: name ?? this.name,
+    groupId: groupId ?? this.groupId,
+    published: published ?? this.published,
+    rawTargetClass: rawTargetClass.present
+        ? rawTargetClass.value
+        : this.rawTargetClass,
+    rawTargetDistribution: rawTargetDistribution.present
+        ? rawTargetDistribution.value
+        : this.rawTargetDistribution,
+    reliableLifetimeSeconds: reliableLifetimeSeconds.present
+        ? reliableLifetimeSeconds.value
+        : this.reliableLifetimeSeconds,
+    maxJumpMassKg: maxJumpMassKg.present
+        ? maxJumpMassKg.value
+        : this.maxJumpMassKg,
+    totalMassKg: totalMassKg.present ? totalMassKg.value : this.totalMassKg,
+    regenerationKgPerCycle: regenerationKgPerCycle.present
+        ? regenerationKgPerCycle.value
+        : this.regenerationKgPerCycle,
+  );
+  SdeWormholeType copyWithCompanion(SdeWormholeTypesCompanion data) {
+    return SdeWormholeType(
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      code: data.code.present ? data.code.value : this.code,
+      name: data.name.present ? data.name.value : this.name,
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      published: data.published.present ? data.published.value : this.published,
+      rawTargetClass: data.rawTargetClass.present
+          ? data.rawTargetClass.value
+          : this.rawTargetClass,
+      rawTargetDistribution: data.rawTargetDistribution.present
+          ? data.rawTargetDistribution.value
+          : this.rawTargetDistribution,
+      reliableLifetimeSeconds: data.reliableLifetimeSeconds.present
+          ? data.reliableLifetimeSeconds.value
+          : this.reliableLifetimeSeconds,
+      maxJumpMassKg: data.maxJumpMassKg.present
+          ? data.maxJumpMassKg.value
+          : this.maxJumpMassKg,
+      totalMassKg: data.totalMassKg.present
+          ? data.totalMassKg.value
+          : this.totalMassKg,
+      regenerationKgPerCycle: data.regenerationKgPerCycle.present
+          ? data.regenerationKgPerCycle.value
+          : this.regenerationKgPerCycle,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeWormholeType(')
+          ..write('typeId: $typeId, ')
+          ..write('code: $code, ')
+          ..write('name: $name, ')
+          ..write('groupId: $groupId, ')
+          ..write('published: $published, ')
+          ..write('rawTargetClass: $rawTargetClass, ')
+          ..write('rawTargetDistribution: $rawTargetDistribution, ')
+          ..write('reliableLifetimeSeconds: $reliableLifetimeSeconds, ')
+          ..write('maxJumpMassKg: $maxJumpMassKg, ')
+          ..write('totalMassKg: $totalMassKg, ')
+          ..write('regenerationKgPerCycle: $regenerationKgPerCycle')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    typeId,
+    code,
+    name,
+    groupId,
+    published,
+    rawTargetClass,
+    rawTargetDistribution,
+    reliableLifetimeSeconds,
+    maxJumpMassKg,
+    totalMassKg,
+    regenerationKgPerCycle,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SdeWormholeType &&
+          other.typeId == this.typeId &&
+          other.code == this.code &&
+          other.name == this.name &&
+          other.groupId == this.groupId &&
+          other.published == this.published &&
+          other.rawTargetClass == this.rawTargetClass &&
+          other.rawTargetDistribution == this.rawTargetDistribution &&
+          other.reliableLifetimeSeconds == this.reliableLifetimeSeconds &&
+          other.maxJumpMassKg == this.maxJumpMassKg &&
+          other.totalMassKg == this.totalMassKg &&
+          other.regenerationKgPerCycle == this.regenerationKgPerCycle);
+}
+
+class SdeWormholeTypesCompanion extends UpdateCompanion<SdeWormholeType> {
+  final Value<int> typeId;
+  final Value<String> code;
+  final Value<String> name;
+  final Value<int> groupId;
+  final Value<bool> published;
+  final Value<int?> rawTargetClass;
+  final Value<int?> rawTargetDistribution;
+  final Value<int?> reliableLifetimeSeconds;
+  final Value<double?> maxJumpMassKg;
+  final Value<double?> totalMassKg;
+  final Value<double?> regenerationKgPerCycle;
+  const SdeWormholeTypesCompanion({
+    this.typeId = const Value.absent(),
+    this.code = const Value.absent(),
+    this.name = const Value.absent(),
+    this.groupId = const Value.absent(),
+    this.published = const Value.absent(),
+    this.rawTargetClass = const Value.absent(),
+    this.rawTargetDistribution = const Value.absent(),
+    this.reliableLifetimeSeconds = const Value.absent(),
+    this.maxJumpMassKg = const Value.absent(),
+    this.totalMassKg = const Value.absent(),
+    this.regenerationKgPerCycle = const Value.absent(),
+  });
+  SdeWormholeTypesCompanion.insert({
+    this.typeId = const Value.absent(),
+    required String code,
+    required String name,
+    this.groupId = const Value.absent(),
+    this.published = const Value.absent(),
+    this.rawTargetClass = const Value.absent(),
+    this.rawTargetDistribution = const Value.absent(),
+    this.reliableLifetimeSeconds = const Value.absent(),
+    this.maxJumpMassKg = const Value.absent(),
+    this.totalMassKg = const Value.absent(),
+    this.regenerationKgPerCycle = const Value.absent(),
+  }) : code = Value(code),
+       name = Value(name);
+  static Insertable<SdeWormholeType> custom({
+    Expression<int>? typeId,
+    Expression<String>? code,
+    Expression<String>? name,
+    Expression<int>? groupId,
+    Expression<bool>? published,
+    Expression<int>? rawTargetClass,
+    Expression<int>? rawTargetDistribution,
+    Expression<int>? reliableLifetimeSeconds,
+    Expression<double>? maxJumpMassKg,
+    Expression<double>? totalMassKg,
+    Expression<double>? regenerationKgPerCycle,
+  }) {
+    return RawValuesInsertable({
+      if (typeId != null) 'type_id': typeId,
+      if (code != null) 'code': code,
+      if (name != null) 'name': name,
+      if (groupId != null) 'group_id': groupId,
+      if (published != null) 'published': published,
+      if (rawTargetClass != null) 'raw_target_class': rawTargetClass,
+      if (rawTargetDistribution != null)
+        'raw_target_distribution': rawTargetDistribution,
+      if (reliableLifetimeSeconds != null)
+        'reliable_lifetime_seconds': reliableLifetimeSeconds,
+      if (maxJumpMassKg != null) 'max_jump_mass_kg': maxJumpMassKg,
+      if (totalMassKg != null) 'total_mass_kg': totalMassKg,
+      if (regenerationKgPerCycle != null)
+        'regeneration_kg_per_cycle': regenerationKgPerCycle,
+    });
+  }
+
+  SdeWormholeTypesCompanion copyWith({
+    Value<int>? typeId,
+    Value<String>? code,
+    Value<String>? name,
+    Value<int>? groupId,
+    Value<bool>? published,
+    Value<int?>? rawTargetClass,
+    Value<int?>? rawTargetDistribution,
+    Value<int?>? reliableLifetimeSeconds,
+    Value<double?>? maxJumpMassKg,
+    Value<double?>? totalMassKg,
+    Value<double?>? regenerationKgPerCycle,
+  }) {
+    return SdeWormholeTypesCompanion(
+      typeId: typeId ?? this.typeId,
+      code: code ?? this.code,
+      name: name ?? this.name,
+      groupId: groupId ?? this.groupId,
+      published: published ?? this.published,
+      rawTargetClass: rawTargetClass ?? this.rawTargetClass,
+      rawTargetDistribution:
+          rawTargetDistribution ?? this.rawTargetDistribution,
+      reliableLifetimeSeconds:
+          reliableLifetimeSeconds ?? this.reliableLifetimeSeconds,
+      maxJumpMassKg: maxJumpMassKg ?? this.maxJumpMassKg,
+      totalMassKg: totalMassKg ?? this.totalMassKg,
+      regenerationKgPerCycle:
+          regenerationKgPerCycle ?? this.regenerationKgPerCycle,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (groupId.present) {
+      map['group_id'] = Variable<int>(groupId.value);
+    }
+    if (published.present) {
+      map['published'] = Variable<bool>(published.value);
+    }
+    if (rawTargetClass.present) {
+      map['raw_target_class'] = Variable<int>(rawTargetClass.value);
+    }
+    if (rawTargetDistribution.present) {
+      map['raw_target_distribution'] = Variable<int>(
+        rawTargetDistribution.value,
+      );
+    }
+    if (reliableLifetimeSeconds.present) {
+      map['reliable_lifetime_seconds'] = Variable<int>(
+        reliableLifetimeSeconds.value,
+      );
+    }
+    if (maxJumpMassKg.present) {
+      map['max_jump_mass_kg'] = Variable<double>(maxJumpMassKg.value);
+    }
+    if (totalMassKg.present) {
+      map['total_mass_kg'] = Variable<double>(totalMassKg.value);
+    }
+    if (regenerationKgPerCycle.present) {
+      map['regeneration_kg_per_cycle'] = Variable<double>(
+        regenerationKgPerCycle.value,
+      );
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeWormholeTypesCompanion(')
+          ..write('typeId: $typeId, ')
+          ..write('code: $code, ')
+          ..write('name: $name, ')
+          ..write('groupId: $groupId, ')
+          ..write('published: $published, ')
+          ..write('rawTargetClass: $rawTargetClass, ')
+          ..write('rawTargetDistribution: $rawTargetDistribution, ')
+          ..write('reliableLifetimeSeconds: $reliableLifetimeSeconds, ')
+          ..write('maxJumpMassKg: $maxJumpMassKg, ')
+          ..write('totalMassKg: $totalMassKg, ')
+          ..write('regenerationKgPerCycle: $regenerationKgPerCycle')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SdeWormholeSystemsTable extends SdeWormholeSystems
+    with TableInfo<$SdeWormholeSystemsTable, SdeWormholeSystem> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SdeWormholeSystemsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _systemIdMeta = const VerificationMeta(
+    'systemId',
+  );
+  @override
+  late final GeneratedColumn<int> systemId = GeneratedColumn<int>(
+    'system_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _constellationIdMeta = const VerificationMeta(
+    'constellationId',
+  );
+  @override
+  late final GeneratedColumn<int> constellationId = GeneratedColumn<int>(
+    'constellation_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _regionIdMeta = const VerificationMeta(
+    'regionId',
+  );
+  @override
+  late final GeneratedColumn<int> regionId = GeneratedColumn<int>(
+    'region_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _constellationNameMeta = const VerificationMeta(
+    'constellationName',
+  );
+  @override
+  late final GeneratedColumn<String> constellationName =
+      GeneratedColumn<String>(
+        'constellation_name',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _regionNameMeta = const VerificationMeta(
+    'regionName',
+  );
+  @override
+  late final GeneratedColumn<String> regionName = GeneratedColumn<String>(
+    'region_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _rawSecurityMeta = const VerificationMeta(
+    'rawSecurity',
+  );
+  @override
+  late final GeneratedColumn<double> rawSecurity = GeneratedColumn<double>(
+    'raw_security',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _rawClassMeta = const VerificationMeta(
+    'rawClass',
+  );
+  @override
+  late final GeneratedColumn<int> rawClass = GeneratedColumn<int>(
+    'raw_class',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _inheritedClassMeta = const VerificationMeta(
+    'inheritedClass',
+  );
+  @override
+  late final GeneratedColumn<int> inheritedClass = GeneratedColumn<int>(
+    'inherited_class',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _inheritanceSourceMeta = const VerificationMeta(
+    'inheritanceSource',
+  );
+  @override
+  late final GeneratedColumn<String> inheritanceSource =
+      GeneratedColumn<String>(
+        'inheritance_source',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _effectBeaconTypeIdMeta =
+      const VerificationMeta('effectBeaconTypeId');
+  @override
+  late final GeneratedColumn<int> effectBeaconTypeId = GeneratedColumn<int>(
+    'effect_beacon_type_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _visualSunTypeIdMeta = const VerificationMeta(
+    'visualSunTypeId',
+  );
+  @override
+  late final GeneratedColumn<int> visualSunTypeId = GeneratedColumn<int>(
+    'visual_sun_type_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    systemId,
+    name,
+    constellationId,
+    regionId,
+    constellationName,
+    regionName,
+    rawSecurity,
+    rawClass,
+    inheritedClass,
+    inheritanceSource,
+    effectBeaconTypeId,
+    visualSunTypeId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sde_wormhole_systems';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SdeWormholeSystem> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('system_id')) {
+      context.handle(
+        _systemIdMeta,
+        systemId.isAcceptableOrUnknown(data['system_id']!, _systemIdMeta),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('constellation_id')) {
+      context.handle(
+        _constellationIdMeta,
+        constellationId.isAcceptableOrUnknown(
+          data['constellation_id']!,
+          _constellationIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('region_id')) {
+      context.handle(
+        _regionIdMeta,
+        regionId.isAcceptableOrUnknown(data['region_id']!, _regionIdMeta),
+      );
+    }
+    if (data.containsKey('constellation_name')) {
+      context.handle(
+        _constellationNameMeta,
+        constellationName.isAcceptableOrUnknown(
+          data['constellation_name']!,
+          _constellationNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('region_name')) {
+      context.handle(
+        _regionNameMeta,
+        regionName.isAcceptableOrUnknown(data['region_name']!, _regionNameMeta),
+      );
+    }
+    if (data.containsKey('raw_security')) {
+      context.handle(
+        _rawSecurityMeta,
+        rawSecurity.isAcceptableOrUnknown(
+          data['raw_security']!,
+          _rawSecurityMeta,
+        ),
+      );
+    }
+    if (data.containsKey('raw_class')) {
+      context.handle(
+        _rawClassMeta,
+        rawClass.isAcceptableOrUnknown(data['raw_class']!, _rawClassMeta),
+      );
+    }
+    if (data.containsKey('inherited_class')) {
+      context.handle(
+        _inheritedClassMeta,
+        inheritedClass.isAcceptableOrUnknown(
+          data['inherited_class']!,
+          _inheritedClassMeta,
+        ),
+      );
+    }
+    if (data.containsKey('inheritance_source')) {
+      context.handle(
+        _inheritanceSourceMeta,
+        inheritanceSource.isAcceptableOrUnknown(
+          data['inheritance_source']!,
+          _inheritanceSourceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('effect_beacon_type_id')) {
+      context.handle(
+        _effectBeaconTypeIdMeta,
+        effectBeaconTypeId.isAcceptableOrUnknown(
+          data['effect_beacon_type_id']!,
+          _effectBeaconTypeIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('visual_sun_type_id')) {
+      context.handle(
+        _visualSunTypeIdMeta,
+        visualSunTypeId.isAcceptableOrUnknown(
+          data['visual_sun_type_id']!,
+          _visualSunTypeIdMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {systemId};
+  @override
+  SdeWormholeSystem map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SdeWormholeSystem(
+      systemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}system_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      constellationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}constellation_id'],
+      ),
+      regionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}region_id'],
+      ),
+      constellationName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}constellation_name'],
+      ),
+      regionName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}region_name'],
+      ),
+      rawSecurity: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}raw_security'],
+      ),
+      rawClass: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}raw_class'],
+      ),
+      inheritedClass: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}inherited_class'],
+      ),
+      inheritanceSource: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}inheritance_source'],
+      ),
+      effectBeaconTypeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}effect_beacon_type_id'],
+      ),
+      visualSunTypeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}visual_sun_type_id'],
+      ),
+    );
+  }
+
+  @override
+  $SdeWormholeSystemsTable createAlias(String alias) {
+    return $SdeWormholeSystemsTable(attachedDatabase, alias);
+  }
+}
+
+class SdeWormholeSystem extends DataClass
+    implements Insertable<SdeWormholeSystem> {
+  final int systemId;
+  final String name;
+  final int? constellationId;
+  final int? regionId;
+  final String? constellationName;
+  final String? regionName;
+  final double? rawSecurity;
+  final int? rawClass;
+  final int? inheritedClass;
+  final String? inheritanceSource;
+  final int? effectBeaconTypeId;
+  final int? visualSunTypeId;
+  const SdeWormholeSystem({
+    required this.systemId,
+    required this.name,
+    this.constellationId,
+    this.regionId,
+    this.constellationName,
+    this.regionName,
+    this.rawSecurity,
+    this.rawClass,
+    this.inheritedClass,
+    this.inheritanceSource,
+    this.effectBeaconTypeId,
+    this.visualSunTypeId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['system_id'] = Variable<int>(systemId);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || constellationId != null) {
+      map['constellation_id'] = Variable<int>(constellationId);
+    }
+    if (!nullToAbsent || regionId != null) {
+      map['region_id'] = Variable<int>(regionId);
+    }
+    if (!nullToAbsent || constellationName != null) {
+      map['constellation_name'] = Variable<String>(constellationName);
+    }
+    if (!nullToAbsent || regionName != null) {
+      map['region_name'] = Variable<String>(regionName);
+    }
+    if (!nullToAbsent || rawSecurity != null) {
+      map['raw_security'] = Variable<double>(rawSecurity);
+    }
+    if (!nullToAbsent || rawClass != null) {
+      map['raw_class'] = Variable<int>(rawClass);
+    }
+    if (!nullToAbsent || inheritedClass != null) {
+      map['inherited_class'] = Variable<int>(inheritedClass);
+    }
+    if (!nullToAbsent || inheritanceSource != null) {
+      map['inheritance_source'] = Variable<String>(inheritanceSource);
+    }
+    if (!nullToAbsent || effectBeaconTypeId != null) {
+      map['effect_beacon_type_id'] = Variable<int>(effectBeaconTypeId);
+    }
+    if (!nullToAbsent || visualSunTypeId != null) {
+      map['visual_sun_type_id'] = Variable<int>(visualSunTypeId);
+    }
+    return map;
+  }
+
+  SdeWormholeSystemsCompanion toCompanion(bool nullToAbsent) {
+    return SdeWormholeSystemsCompanion(
+      systemId: Value(systemId),
+      name: Value(name),
+      constellationId: constellationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(constellationId),
+      regionId: regionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(regionId),
+      constellationName: constellationName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(constellationName),
+      regionName: regionName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(regionName),
+      rawSecurity: rawSecurity == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rawSecurity),
+      rawClass: rawClass == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rawClass),
+      inheritedClass: inheritedClass == null && nullToAbsent
+          ? const Value.absent()
+          : Value(inheritedClass),
+      inheritanceSource: inheritanceSource == null && nullToAbsent
+          ? const Value.absent()
+          : Value(inheritanceSource),
+      effectBeaconTypeId: effectBeaconTypeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(effectBeaconTypeId),
+      visualSunTypeId: visualSunTypeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(visualSunTypeId),
+    );
+  }
+
+  factory SdeWormholeSystem.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SdeWormholeSystem(
+      systemId: serializer.fromJson<int>(json['systemId']),
+      name: serializer.fromJson<String>(json['name']),
+      constellationId: serializer.fromJson<int?>(json['constellationId']),
+      regionId: serializer.fromJson<int?>(json['regionId']),
+      constellationName: serializer.fromJson<String?>(
+        json['constellationName'],
+      ),
+      regionName: serializer.fromJson<String?>(json['regionName']),
+      rawSecurity: serializer.fromJson<double?>(json['rawSecurity']),
+      rawClass: serializer.fromJson<int?>(json['rawClass']),
+      inheritedClass: serializer.fromJson<int?>(json['inheritedClass']),
+      inheritanceSource: serializer.fromJson<String?>(
+        json['inheritanceSource'],
+      ),
+      effectBeaconTypeId: serializer.fromJson<int?>(json['effectBeaconTypeId']),
+      visualSunTypeId: serializer.fromJson<int?>(json['visualSunTypeId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'systemId': serializer.toJson<int>(systemId),
+      'name': serializer.toJson<String>(name),
+      'constellationId': serializer.toJson<int?>(constellationId),
+      'regionId': serializer.toJson<int?>(regionId),
+      'constellationName': serializer.toJson<String?>(constellationName),
+      'regionName': serializer.toJson<String?>(regionName),
+      'rawSecurity': serializer.toJson<double?>(rawSecurity),
+      'rawClass': serializer.toJson<int?>(rawClass),
+      'inheritedClass': serializer.toJson<int?>(inheritedClass),
+      'inheritanceSource': serializer.toJson<String?>(inheritanceSource),
+      'effectBeaconTypeId': serializer.toJson<int?>(effectBeaconTypeId),
+      'visualSunTypeId': serializer.toJson<int?>(visualSunTypeId),
+    };
+  }
+
+  SdeWormholeSystem copyWith({
+    int? systemId,
+    String? name,
+    Value<int?> constellationId = const Value.absent(),
+    Value<int?> regionId = const Value.absent(),
+    Value<String?> constellationName = const Value.absent(),
+    Value<String?> regionName = const Value.absent(),
+    Value<double?> rawSecurity = const Value.absent(),
+    Value<int?> rawClass = const Value.absent(),
+    Value<int?> inheritedClass = const Value.absent(),
+    Value<String?> inheritanceSource = const Value.absent(),
+    Value<int?> effectBeaconTypeId = const Value.absent(),
+    Value<int?> visualSunTypeId = const Value.absent(),
+  }) => SdeWormholeSystem(
+    systemId: systemId ?? this.systemId,
+    name: name ?? this.name,
+    constellationId: constellationId.present
+        ? constellationId.value
+        : this.constellationId,
+    regionId: regionId.present ? regionId.value : this.regionId,
+    constellationName: constellationName.present
+        ? constellationName.value
+        : this.constellationName,
+    regionName: regionName.present ? regionName.value : this.regionName,
+    rawSecurity: rawSecurity.present ? rawSecurity.value : this.rawSecurity,
+    rawClass: rawClass.present ? rawClass.value : this.rawClass,
+    inheritedClass: inheritedClass.present
+        ? inheritedClass.value
+        : this.inheritedClass,
+    inheritanceSource: inheritanceSource.present
+        ? inheritanceSource.value
+        : this.inheritanceSource,
+    effectBeaconTypeId: effectBeaconTypeId.present
+        ? effectBeaconTypeId.value
+        : this.effectBeaconTypeId,
+    visualSunTypeId: visualSunTypeId.present
+        ? visualSunTypeId.value
+        : this.visualSunTypeId,
+  );
+  SdeWormholeSystem copyWithCompanion(SdeWormholeSystemsCompanion data) {
+    return SdeWormholeSystem(
+      systemId: data.systemId.present ? data.systemId.value : this.systemId,
+      name: data.name.present ? data.name.value : this.name,
+      constellationId: data.constellationId.present
+          ? data.constellationId.value
+          : this.constellationId,
+      regionId: data.regionId.present ? data.regionId.value : this.regionId,
+      constellationName: data.constellationName.present
+          ? data.constellationName.value
+          : this.constellationName,
+      regionName: data.regionName.present
+          ? data.regionName.value
+          : this.regionName,
+      rawSecurity: data.rawSecurity.present
+          ? data.rawSecurity.value
+          : this.rawSecurity,
+      rawClass: data.rawClass.present ? data.rawClass.value : this.rawClass,
+      inheritedClass: data.inheritedClass.present
+          ? data.inheritedClass.value
+          : this.inheritedClass,
+      inheritanceSource: data.inheritanceSource.present
+          ? data.inheritanceSource.value
+          : this.inheritanceSource,
+      effectBeaconTypeId: data.effectBeaconTypeId.present
+          ? data.effectBeaconTypeId.value
+          : this.effectBeaconTypeId,
+      visualSunTypeId: data.visualSunTypeId.present
+          ? data.visualSunTypeId.value
+          : this.visualSunTypeId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeWormholeSystem(')
+          ..write('systemId: $systemId, ')
+          ..write('name: $name, ')
+          ..write('constellationId: $constellationId, ')
+          ..write('regionId: $regionId, ')
+          ..write('constellationName: $constellationName, ')
+          ..write('regionName: $regionName, ')
+          ..write('rawSecurity: $rawSecurity, ')
+          ..write('rawClass: $rawClass, ')
+          ..write('inheritedClass: $inheritedClass, ')
+          ..write('inheritanceSource: $inheritanceSource, ')
+          ..write('effectBeaconTypeId: $effectBeaconTypeId, ')
+          ..write('visualSunTypeId: $visualSunTypeId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    systemId,
+    name,
+    constellationId,
+    regionId,
+    constellationName,
+    regionName,
+    rawSecurity,
+    rawClass,
+    inheritedClass,
+    inheritanceSource,
+    effectBeaconTypeId,
+    visualSunTypeId,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SdeWormholeSystem &&
+          other.systemId == this.systemId &&
+          other.name == this.name &&
+          other.constellationId == this.constellationId &&
+          other.regionId == this.regionId &&
+          other.constellationName == this.constellationName &&
+          other.regionName == this.regionName &&
+          other.rawSecurity == this.rawSecurity &&
+          other.rawClass == this.rawClass &&
+          other.inheritedClass == this.inheritedClass &&
+          other.inheritanceSource == this.inheritanceSource &&
+          other.effectBeaconTypeId == this.effectBeaconTypeId &&
+          other.visualSunTypeId == this.visualSunTypeId);
+}
+
+class SdeWormholeSystemsCompanion extends UpdateCompanion<SdeWormholeSystem> {
+  final Value<int> systemId;
+  final Value<String> name;
+  final Value<int?> constellationId;
+  final Value<int?> regionId;
+  final Value<String?> constellationName;
+  final Value<String?> regionName;
+  final Value<double?> rawSecurity;
+  final Value<int?> rawClass;
+  final Value<int?> inheritedClass;
+  final Value<String?> inheritanceSource;
+  final Value<int?> effectBeaconTypeId;
+  final Value<int?> visualSunTypeId;
+  const SdeWormholeSystemsCompanion({
+    this.systemId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.constellationId = const Value.absent(),
+    this.regionId = const Value.absent(),
+    this.constellationName = const Value.absent(),
+    this.regionName = const Value.absent(),
+    this.rawSecurity = const Value.absent(),
+    this.rawClass = const Value.absent(),
+    this.inheritedClass = const Value.absent(),
+    this.inheritanceSource = const Value.absent(),
+    this.effectBeaconTypeId = const Value.absent(),
+    this.visualSunTypeId = const Value.absent(),
+  });
+  SdeWormholeSystemsCompanion.insert({
+    this.systemId = const Value.absent(),
+    required String name,
+    this.constellationId = const Value.absent(),
+    this.regionId = const Value.absent(),
+    this.constellationName = const Value.absent(),
+    this.regionName = const Value.absent(),
+    this.rawSecurity = const Value.absent(),
+    this.rawClass = const Value.absent(),
+    this.inheritedClass = const Value.absent(),
+    this.inheritanceSource = const Value.absent(),
+    this.effectBeaconTypeId = const Value.absent(),
+    this.visualSunTypeId = const Value.absent(),
+  }) : name = Value(name);
+  static Insertable<SdeWormholeSystem> custom({
+    Expression<int>? systemId,
+    Expression<String>? name,
+    Expression<int>? constellationId,
+    Expression<int>? regionId,
+    Expression<String>? constellationName,
+    Expression<String>? regionName,
+    Expression<double>? rawSecurity,
+    Expression<int>? rawClass,
+    Expression<int>? inheritedClass,
+    Expression<String>? inheritanceSource,
+    Expression<int>? effectBeaconTypeId,
+    Expression<int>? visualSunTypeId,
+  }) {
+    return RawValuesInsertable({
+      if (systemId != null) 'system_id': systemId,
+      if (name != null) 'name': name,
+      if (constellationId != null) 'constellation_id': constellationId,
+      if (regionId != null) 'region_id': regionId,
+      if (constellationName != null) 'constellation_name': constellationName,
+      if (regionName != null) 'region_name': regionName,
+      if (rawSecurity != null) 'raw_security': rawSecurity,
+      if (rawClass != null) 'raw_class': rawClass,
+      if (inheritedClass != null) 'inherited_class': inheritedClass,
+      if (inheritanceSource != null) 'inheritance_source': inheritanceSource,
+      if (effectBeaconTypeId != null)
+        'effect_beacon_type_id': effectBeaconTypeId,
+      if (visualSunTypeId != null) 'visual_sun_type_id': visualSunTypeId,
+    });
+  }
+
+  SdeWormholeSystemsCompanion copyWith({
+    Value<int>? systemId,
+    Value<String>? name,
+    Value<int?>? constellationId,
+    Value<int?>? regionId,
+    Value<String?>? constellationName,
+    Value<String?>? regionName,
+    Value<double?>? rawSecurity,
+    Value<int?>? rawClass,
+    Value<int?>? inheritedClass,
+    Value<String?>? inheritanceSource,
+    Value<int?>? effectBeaconTypeId,
+    Value<int?>? visualSunTypeId,
+  }) {
+    return SdeWormholeSystemsCompanion(
+      systemId: systemId ?? this.systemId,
+      name: name ?? this.name,
+      constellationId: constellationId ?? this.constellationId,
+      regionId: regionId ?? this.regionId,
+      constellationName: constellationName ?? this.constellationName,
+      regionName: regionName ?? this.regionName,
+      rawSecurity: rawSecurity ?? this.rawSecurity,
+      rawClass: rawClass ?? this.rawClass,
+      inheritedClass: inheritedClass ?? this.inheritedClass,
+      inheritanceSource: inheritanceSource ?? this.inheritanceSource,
+      effectBeaconTypeId: effectBeaconTypeId ?? this.effectBeaconTypeId,
+      visualSunTypeId: visualSunTypeId ?? this.visualSunTypeId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (systemId.present) {
+      map['system_id'] = Variable<int>(systemId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (constellationId.present) {
+      map['constellation_id'] = Variable<int>(constellationId.value);
+    }
+    if (regionId.present) {
+      map['region_id'] = Variable<int>(regionId.value);
+    }
+    if (constellationName.present) {
+      map['constellation_name'] = Variable<String>(constellationName.value);
+    }
+    if (regionName.present) {
+      map['region_name'] = Variable<String>(regionName.value);
+    }
+    if (rawSecurity.present) {
+      map['raw_security'] = Variable<double>(rawSecurity.value);
+    }
+    if (rawClass.present) {
+      map['raw_class'] = Variable<int>(rawClass.value);
+    }
+    if (inheritedClass.present) {
+      map['inherited_class'] = Variable<int>(inheritedClass.value);
+    }
+    if (inheritanceSource.present) {
+      map['inheritance_source'] = Variable<String>(inheritanceSource.value);
+    }
+    if (effectBeaconTypeId.present) {
+      map['effect_beacon_type_id'] = Variable<int>(effectBeaconTypeId.value);
+    }
+    if (visualSunTypeId.present) {
+      map['visual_sun_type_id'] = Variable<int>(visualSunTypeId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeWormholeSystemsCompanion(')
+          ..write('systemId: $systemId, ')
+          ..write('name: $name, ')
+          ..write('constellationId: $constellationId, ')
+          ..write('regionId: $regionId, ')
+          ..write('constellationName: $constellationName, ')
+          ..write('regionName: $regionName, ')
+          ..write('rawSecurity: $rawSecurity, ')
+          ..write('rawClass: $rawClass, ')
+          ..write('inheritedClass: $inheritedClass, ')
+          ..write('inheritanceSource: $inheritanceSource, ')
+          ..write('effectBeaconTypeId: $effectBeaconTypeId, ')
+          ..write('visualSunTypeId: $visualSunTypeId')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SdeSystemEffectsTable extends SdeSystemEffects
+    with TableInfo<$SdeSystemEffectsTable, SdeSystemEffect> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SdeSystemEffectsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _beaconTypeIdMeta = const VerificationMeta(
+    'beaconTypeId',
+  );
+  @override
+  late final GeneratedColumn<int> beaconTypeId = GeneratedColumn<int>(
+    'beacon_type_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _familyMeta = const VerificationMeta('family');
+  @override
+  late final GeneratedColumn<String> family = GeneratedColumn<String>(
+    'family',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _strengthMeta = const VerificationMeta(
+    'strength',
+  );
+  @override
+  late final GeneratedColumn<int> strength = GeneratedColumn<int>(
+    'strength',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _scopesJsonMeta = const VerificationMeta(
+    'scopesJson',
+  );
+  @override
+  late final GeneratedColumn<String> scopesJson = GeneratedColumn<String>(
+    'scopes_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    beaconTypeId,
+    family,
+    strength,
+    scopesJson,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sde_system_effects';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SdeSystemEffect> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('beacon_type_id')) {
+      context.handle(
+        _beaconTypeIdMeta,
+        beaconTypeId.isAcceptableOrUnknown(
+          data['beacon_type_id']!,
+          _beaconTypeIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('family')) {
+      context.handle(
+        _familyMeta,
+        family.isAcceptableOrUnknown(data['family']!, _familyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_familyMeta);
+    }
+    if (data.containsKey('strength')) {
+      context.handle(
+        _strengthMeta,
+        strength.isAcceptableOrUnknown(data['strength']!, _strengthMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_strengthMeta);
+    }
+    if (data.containsKey('scopes_json')) {
+      context.handle(
+        _scopesJsonMeta,
+        scopesJson.isAcceptableOrUnknown(data['scopes_json']!, _scopesJsonMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {beaconTypeId};
+  @override
+  SdeSystemEffect map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SdeSystemEffect(
+      beaconTypeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}beacon_type_id'],
+      )!,
+      family: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}family'],
+      )!,
+      strength: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}strength'],
+      )!,
+      scopesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scopes_json'],
+      ),
+    );
+  }
+
+  @override
+  $SdeSystemEffectsTable createAlias(String alias) {
+    return $SdeSystemEffectsTable(attachedDatabase, alias);
+  }
+}
+
+class SdeSystemEffect extends DataClass implements Insertable<SdeSystemEffect> {
+  final int beaconTypeId;
+  final String family;
+  final int strength;
+  final String? scopesJson;
+  const SdeSystemEffect({
+    required this.beaconTypeId,
+    required this.family,
+    required this.strength,
+    this.scopesJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['beacon_type_id'] = Variable<int>(beaconTypeId);
+    map['family'] = Variable<String>(family);
+    map['strength'] = Variable<int>(strength);
+    if (!nullToAbsent || scopesJson != null) {
+      map['scopes_json'] = Variable<String>(scopesJson);
+    }
+    return map;
+  }
+
+  SdeSystemEffectsCompanion toCompanion(bool nullToAbsent) {
+    return SdeSystemEffectsCompanion(
+      beaconTypeId: Value(beaconTypeId),
+      family: Value(family),
+      strength: Value(strength),
+      scopesJson: scopesJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(scopesJson),
+    );
+  }
+
+  factory SdeSystemEffect.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SdeSystemEffect(
+      beaconTypeId: serializer.fromJson<int>(json['beaconTypeId']),
+      family: serializer.fromJson<String>(json['family']),
+      strength: serializer.fromJson<int>(json['strength']),
+      scopesJson: serializer.fromJson<String?>(json['scopesJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'beaconTypeId': serializer.toJson<int>(beaconTypeId),
+      'family': serializer.toJson<String>(family),
+      'strength': serializer.toJson<int>(strength),
+      'scopesJson': serializer.toJson<String?>(scopesJson),
+    };
+  }
+
+  SdeSystemEffect copyWith({
+    int? beaconTypeId,
+    String? family,
+    int? strength,
+    Value<String?> scopesJson = const Value.absent(),
+  }) => SdeSystemEffect(
+    beaconTypeId: beaconTypeId ?? this.beaconTypeId,
+    family: family ?? this.family,
+    strength: strength ?? this.strength,
+    scopesJson: scopesJson.present ? scopesJson.value : this.scopesJson,
+  );
+  SdeSystemEffect copyWithCompanion(SdeSystemEffectsCompanion data) {
+    return SdeSystemEffect(
+      beaconTypeId: data.beaconTypeId.present
+          ? data.beaconTypeId.value
+          : this.beaconTypeId,
+      family: data.family.present ? data.family.value : this.family,
+      strength: data.strength.present ? data.strength.value : this.strength,
+      scopesJson: data.scopesJson.present
+          ? data.scopesJson.value
+          : this.scopesJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeSystemEffect(')
+          ..write('beaconTypeId: $beaconTypeId, ')
+          ..write('family: $family, ')
+          ..write('strength: $strength, ')
+          ..write('scopesJson: $scopesJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(beaconTypeId, family, strength, scopesJson);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SdeSystemEffect &&
+          other.beaconTypeId == this.beaconTypeId &&
+          other.family == this.family &&
+          other.strength == this.strength &&
+          other.scopesJson == this.scopesJson);
+}
+
+class SdeSystemEffectsCompanion extends UpdateCompanion<SdeSystemEffect> {
+  final Value<int> beaconTypeId;
+  final Value<String> family;
+  final Value<int> strength;
+  final Value<String?> scopesJson;
+  const SdeSystemEffectsCompanion({
+    this.beaconTypeId = const Value.absent(),
+    this.family = const Value.absent(),
+    this.strength = const Value.absent(),
+    this.scopesJson = const Value.absent(),
+  });
+  SdeSystemEffectsCompanion.insert({
+    this.beaconTypeId = const Value.absent(),
+    required String family,
+    required int strength,
+    this.scopesJson = const Value.absent(),
+  }) : family = Value(family),
+       strength = Value(strength);
+  static Insertable<SdeSystemEffect> custom({
+    Expression<int>? beaconTypeId,
+    Expression<String>? family,
+    Expression<int>? strength,
+    Expression<String>? scopesJson,
+  }) {
+    return RawValuesInsertable({
+      if (beaconTypeId != null) 'beacon_type_id': beaconTypeId,
+      if (family != null) 'family': family,
+      if (strength != null) 'strength': strength,
+      if (scopesJson != null) 'scopes_json': scopesJson,
+    });
+  }
+
+  SdeSystemEffectsCompanion copyWith({
+    Value<int>? beaconTypeId,
+    Value<String>? family,
+    Value<int>? strength,
+    Value<String?>? scopesJson,
+  }) {
+    return SdeSystemEffectsCompanion(
+      beaconTypeId: beaconTypeId ?? this.beaconTypeId,
+      family: family ?? this.family,
+      strength: strength ?? this.strength,
+      scopesJson: scopesJson ?? this.scopesJson,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (beaconTypeId.present) {
+      map['beacon_type_id'] = Variable<int>(beaconTypeId.value);
+    }
+    if (family.present) {
+      map['family'] = Variable<String>(family.value);
+    }
+    if (strength.present) {
+      map['strength'] = Variable<int>(strength.value);
+    }
+    if (scopesJson.present) {
+      map['scopes_json'] = Variable<String>(scopesJson.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeSystemEffectsCompanion(')
+          ..write('beaconTypeId: $beaconTypeId, ')
+          ..write('family: $family, ')
+          ..write('strength: $strength, ')
+          ..write('scopesJson: $scopesJson')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SdeStargatesTable extends SdeStargates
+    with TableInfo<$SdeStargatesTable, SdeStargate> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SdeStargatesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _gateIdMeta = const VerificationMeta('gateId');
+  @override
+  late final GeneratedColumn<int> gateId = GeneratedColumn<int>(
+    'gate_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _fromSystemIdMeta = const VerificationMeta(
+    'fromSystemId',
+  );
+  @override
+  late final GeneratedColumn<int> fromSystemId = GeneratedColumn<int>(
+    'from_system_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _toSystemIdMeta = const VerificationMeta(
+    'toSystemId',
+  );
+  @override
+  late final GeneratedColumn<int> toSystemId = GeneratedColumn<int>(
+    'to_system_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _topologyVersionMeta = const VerificationMeta(
+    'topologyVersion',
+  );
+  @override
+  late final GeneratedColumn<int> topologyVersion = GeneratedColumn<int>(
+    'topology_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _restrictionsJsonMeta = const VerificationMeta(
+    'restrictionsJson',
+  );
+  @override
+  late final GeneratedColumn<String> restrictionsJson = GeneratedColumn<String>(
+    'restrictions_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    gateId,
+    fromSystemId,
+    toSystemId,
+    topologyVersion,
+    restrictionsJson,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sde_stargates';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SdeStargate> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('gate_id')) {
+      context.handle(
+        _gateIdMeta,
+        gateId.isAcceptableOrUnknown(data['gate_id']!, _gateIdMeta),
+      );
+    }
+    if (data.containsKey('from_system_id')) {
+      context.handle(
+        _fromSystemIdMeta,
+        fromSystemId.isAcceptableOrUnknown(
+          data['from_system_id']!,
+          _fromSystemIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_fromSystemIdMeta);
+    }
+    if (data.containsKey('to_system_id')) {
+      context.handle(
+        _toSystemIdMeta,
+        toSystemId.isAcceptableOrUnknown(
+          data['to_system_id']!,
+          _toSystemIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_toSystemIdMeta);
+    }
+    if (data.containsKey('topology_version')) {
+      context.handle(
+        _topologyVersionMeta,
+        topologyVersion.isAcceptableOrUnknown(
+          data['topology_version']!,
+          _topologyVersionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('restrictions_json')) {
+      context.handle(
+        _restrictionsJsonMeta,
+        restrictionsJson.isAcceptableOrUnknown(
+          data['restrictions_json']!,
+          _restrictionsJsonMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {gateId};
+  @override
+  SdeStargate map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SdeStargate(
+      gateId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}gate_id'],
+      )!,
+      fromSystemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}from_system_id'],
+      )!,
+      toSystemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}to_system_id'],
+      )!,
+      topologyVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}topology_version'],
+      )!,
+      restrictionsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}restrictions_json'],
+      ),
+    );
+  }
+
+  @override
+  $SdeStargatesTable createAlias(String alias) {
+    return $SdeStargatesTable(attachedDatabase, alias);
+  }
+}
+
+class SdeStargate extends DataClass implements Insertable<SdeStargate> {
+  final int gateId;
+  final int fromSystemId;
+  final int toSystemId;
+  final int topologyVersion;
+  final String? restrictionsJson;
+  const SdeStargate({
+    required this.gateId,
+    required this.fromSystemId,
+    required this.toSystemId,
+    required this.topologyVersion,
+    this.restrictionsJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['gate_id'] = Variable<int>(gateId);
+    map['from_system_id'] = Variable<int>(fromSystemId);
+    map['to_system_id'] = Variable<int>(toSystemId);
+    map['topology_version'] = Variable<int>(topologyVersion);
+    if (!nullToAbsent || restrictionsJson != null) {
+      map['restrictions_json'] = Variable<String>(restrictionsJson);
+    }
+    return map;
+  }
+
+  SdeStargatesCompanion toCompanion(bool nullToAbsent) {
+    return SdeStargatesCompanion(
+      gateId: Value(gateId),
+      fromSystemId: Value(fromSystemId),
+      toSystemId: Value(toSystemId),
+      topologyVersion: Value(topologyVersion),
+      restrictionsJson: restrictionsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(restrictionsJson),
+    );
+  }
+
+  factory SdeStargate.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SdeStargate(
+      gateId: serializer.fromJson<int>(json['gateId']),
+      fromSystemId: serializer.fromJson<int>(json['fromSystemId']),
+      toSystemId: serializer.fromJson<int>(json['toSystemId']),
+      topologyVersion: serializer.fromJson<int>(json['topologyVersion']),
+      restrictionsJson: serializer.fromJson<String?>(json['restrictionsJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'gateId': serializer.toJson<int>(gateId),
+      'fromSystemId': serializer.toJson<int>(fromSystemId),
+      'toSystemId': serializer.toJson<int>(toSystemId),
+      'topologyVersion': serializer.toJson<int>(topologyVersion),
+      'restrictionsJson': serializer.toJson<String?>(restrictionsJson),
+    };
+  }
+
+  SdeStargate copyWith({
+    int? gateId,
+    int? fromSystemId,
+    int? toSystemId,
+    int? topologyVersion,
+    Value<String?> restrictionsJson = const Value.absent(),
+  }) => SdeStargate(
+    gateId: gateId ?? this.gateId,
+    fromSystemId: fromSystemId ?? this.fromSystemId,
+    toSystemId: toSystemId ?? this.toSystemId,
+    topologyVersion: topologyVersion ?? this.topologyVersion,
+    restrictionsJson: restrictionsJson.present
+        ? restrictionsJson.value
+        : this.restrictionsJson,
+  );
+  SdeStargate copyWithCompanion(SdeStargatesCompanion data) {
+    return SdeStargate(
+      gateId: data.gateId.present ? data.gateId.value : this.gateId,
+      fromSystemId: data.fromSystemId.present
+          ? data.fromSystemId.value
+          : this.fromSystemId,
+      toSystemId: data.toSystemId.present
+          ? data.toSystemId.value
+          : this.toSystemId,
+      topologyVersion: data.topologyVersion.present
+          ? data.topologyVersion.value
+          : this.topologyVersion,
+      restrictionsJson: data.restrictionsJson.present
+          ? data.restrictionsJson.value
+          : this.restrictionsJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeStargate(')
+          ..write('gateId: $gateId, ')
+          ..write('fromSystemId: $fromSystemId, ')
+          ..write('toSystemId: $toSystemId, ')
+          ..write('topologyVersion: $topologyVersion, ')
+          ..write('restrictionsJson: $restrictionsJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    gateId,
+    fromSystemId,
+    toSystemId,
+    topologyVersion,
+    restrictionsJson,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SdeStargate &&
+          other.gateId == this.gateId &&
+          other.fromSystemId == this.fromSystemId &&
+          other.toSystemId == this.toSystemId &&
+          other.topologyVersion == this.topologyVersion &&
+          other.restrictionsJson == this.restrictionsJson);
+}
+
+class SdeStargatesCompanion extends UpdateCompanion<SdeStargate> {
+  final Value<int> gateId;
+  final Value<int> fromSystemId;
+  final Value<int> toSystemId;
+  final Value<int> topologyVersion;
+  final Value<String?> restrictionsJson;
+  const SdeStargatesCompanion({
+    this.gateId = const Value.absent(),
+    this.fromSystemId = const Value.absent(),
+    this.toSystemId = const Value.absent(),
+    this.topologyVersion = const Value.absent(),
+    this.restrictionsJson = const Value.absent(),
+  });
+  SdeStargatesCompanion.insert({
+    this.gateId = const Value.absent(),
+    required int fromSystemId,
+    required int toSystemId,
+    this.topologyVersion = const Value.absent(),
+    this.restrictionsJson = const Value.absent(),
+  }) : fromSystemId = Value(fromSystemId),
+       toSystemId = Value(toSystemId);
+  static Insertable<SdeStargate> custom({
+    Expression<int>? gateId,
+    Expression<int>? fromSystemId,
+    Expression<int>? toSystemId,
+    Expression<int>? topologyVersion,
+    Expression<String>? restrictionsJson,
+  }) {
+    return RawValuesInsertable({
+      if (gateId != null) 'gate_id': gateId,
+      if (fromSystemId != null) 'from_system_id': fromSystemId,
+      if (toSystemId != null) 'to_system_id': toSystemId,
+      if (topologyVersion != null) 'topology_version': topologyVersion,
+      if (restrictionsJson != null) 'restrictions_json': restrictionsJson,
+    });
+  }
+
+  SdeStargatesCompanion copyWith({
+    Value<int>? gateId,
+    Value<int>? fromSystemId,
+    Value<int>? toSystemId,
+    Value<int>? topologyVersion,
+    Value<String?>? restrictionsJson,
+  }) {
+    return SdeStargatesCompanion(
+      gateId: gateId ?? this.gateId,
+      fromSystemId: fromSystemId ?? this.fromSystemId,
+      toSystemId: toSystemId ?? this.toSystemId,
+      topologyVersion: topologyVersion ?? this.topologyVersion,
+      restrictionsJson: restrictionsJson ?? this.restrictionsJson,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (gateId.present) {
+      map['gate_id'] = Variable<int>(gateId.value);
+    }
+    if (fromSystemId.present) {
+      map['from_system_id'] = Variable<int>(fromSystemId.value);
+    }
+    if (toSystemId.present) {
+      map['to_system_id'] = Variable<int>(toSystemId.value);
+    }
+    if (topologyVersion.present) {
+      map['topology_version'] = Variable<int>(topologyVersion.value);
+    }
+    if (restrictionsJson.present) {
+      map['restrictions_json'] = Variable<String>(restrictionsJson.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeStargatesCompanion(')
+          ..write('gateId: $gateId, ')
+          ..write('fromSystemId: $fromSystemId, ')
+          ..write('toSystemId: $toSystemId, ')
+          ..write('topologyVersion: $topologyVersion, ')
+          ..write('restrictionsJson: $restrictionsJson')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SdeSystemStaticsTable extends SdeSystemStatics
+    with TableInfo<$SdeSystemStaticsTable, SdeSystemStatic> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SdeSystemStaticsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _systemIdMeta = const VerificationMeta(
+    'systemId',
+  );
+  @override
+  late final GeneratedColumn<int> systemId = GeneratedColumn<int>(
+    'system_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _assignmentIndexMeta = const VerificationMeta(
+    'assignmentIndex',
+  );
+  @override
+  late final GeneratedColumn<int> assignmentIndex = GeneratedColumn<int>(
+    'assignment_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
+  @override
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+    'code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+    'type_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _meaningMeta = const VerificationMeta(
+    'meaning',
+  );
+  @override
+  late final GeneratedColumn<String> meaning = GeneratedColumn<String>(
+    'meaning',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _confidenceMeta = const VerificationMeta(
+    'confidence',
+  );
+  @override
+  late final GeneratedColumn<String> confidence = GeneratedColumn<String>(
+    'confidence',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    systemId,
+    assignmentIndex,
+    code,
+    typeId,
+    meaning,
+    source,
+    confidence,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sde_system_statics';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SdeSystemStatic> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('system_id')) {
+      context.handle(
+        _systemIdMeta,
+        systemId.isAcceptableOrUnknown(data['system_id']!, _systemIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_systemIdMeta);
+    }
+    if (data.containsKey('assignment_index')) {
+      context.handle(
+        _assignmentIndexMeta,
+        assignmentIndex.isAcceptableOrUnknown(
+          data['assignment_index']!,
+          _assignmentIndexMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_assignmentIndexMeta);
+    }
+    if (data.containsKey('code')) {
+      context.handle(
+        _codeMeta,
+        code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
+    }
+    if (data.containsKey('type_id')) {
+      context.handle(
+        _typeIdMeta,
+        typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta),
+      );
+    }
+    if (data.containsKey('meaning')) {
+      context.handle(
+        _meaningMeta,
+        meaning.isAcceptableOrUnknown(data['meaning']!, _meaningMeta),
+      );
+    }
+    if (data.containsKey('source')) {
+      context.handle(
+        _sourceMeta,
+        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
+      );
+    }
+    if (data.containsKey('confidence')) {
+      context.handle(
+        _confidenceMeta,
+        confidence.isAcceptableOrUnknown(data['confidence']!, _confidenceMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {systemId, assignmentIndex};
+  @override
+  SdeSystemStatic map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SdeSystemStatic(
+      systemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}system_id'],
+      )!,
+      assignmentIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}assignment_index'],
+      )!,
+      code: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code'],
+      ),
+      typeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}type_id'],
+      ),
+      meaning: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}meaning'],
+      )!,
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      )!,
+      confidence: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}confidence'],
+      )!,
+    );
+  }
+
+  @override
+  $SdeSystemStaticsTable createAlias(String alias) {
+    return $SdeSystemStaticsTable(attachedDatabase, alias);
+  }
+}
+
+class SdeSystemStatic extends DataClass implements Insertable<SdeSystemStatic> {
+  final int systemId;
+  final int assignmentIndex;
+  final String? code;
+  final int? typeId;
+  final String meaning;
+  final String source;
+  final String confidence;
+  const SdeSystemStatic({
+    required this.systemId,
+    required this.assignmentIndex,
+    this.code,
+    this.typeId,
+    required this.meaning,
+    required this.source,
+    required this.confidence,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['system_id'] = Variable<int>(systemId);
+    map['assignment_index'] = Variable<int>(assignmentIndex);
+    if (!nullToAbsent || code != null) {
+      map['code'] = Variable<String>(code);
+    }
+    if (!nullToAbsent || typeId != null) {
+      map['type_id'] = Variable<int>(typeId);
+    }
+    map['meaning'] = Variable<String>(meaning);
+    map['source'] = Variable<String>(source);
+    map['confidence'] = Variable<String>(confidence);
+    return map;
+  }
+
+  SdeSystemStaticsCompanion toCompanion(bool nullToAbsent) {
+    return SdeSystemStaticsCompanion(
+      systemId: Value(systemId),
+      assignmentIndex: Value(assignmentIndex),
+      code: code == null && nullToAbsent ? const Value.absent() : Value(code),
+      typeId: typeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(typeId),
+      meaning: Value(meaning),
+      source: Value(source),
+      confidence: Value(confidence),
+    );
+  }
+
+  factory SdeSystemStatic.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SdeSystemStatic(
+      systemId: serializer.fromJson<int>(json['systemId']),
+      assignmentIndex: serializer.fromJson<int>(json['assignmentIndex']),
+      code: serializer.fromJson<String?>(json['code']),
+      typeId: serializer.fromJson<int?>(json['typeId']),
+      meaning: serializer.fromJson<String>(json['meaning']),
+      source: serializer.fromJson<String>(json['source']),
+      confidence: serializer.fromJson<String>(json['confidence']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'systemId': serializer.toJson<int>(systemId),
+      'assignmentIndex': serializer.toJson<int>(assignmentIndex),
+      'code': serializer.toJson<String?>(code),
+      'typeId': serializer.toJson<int?>(typeId),
+      'meaning': serializer.toJson<String>(meaning),
+      'source': serializer.toJson<String>(source),
+      'confidence': serializer.toJson<String>(confidence),
+    };
+  }
+
+  SdeSystemStatic copyWith({
+    int? systemId,
+    int? assignmentIndex,
+    Value<String?> code = const Value.absent(),
+    Value<int?> typeId = const Value.absent(),
+    String? meaning,
+    String? source,
+    String? confidence,
+  }) => SdeSystemStatic(
+    systemId: systemId ?? this.systemId,
+    assignmentIndex: assignmentIndex ?? this.assignmentIndex,
+    code: code.present ? code.value : this.code,
+    typeId: typeId.present ? typeId.value : this.typeId,
+    meaning: meaning ?? this.meaning,
+    source: source ?? this.source,
+    confidence: confidence ?? this.confidence,
+  );
+  SdeSystemStatic copyWithCompanion(SdeSystemStaticsCompanion data) {
+    return SdeSystemStatic(
+      systemId: data.systemId.present ? data.systemId.value : this.systemId,
+      assignmentIndex: data.assignmentIndex.present
+          ? data.assignmentIndex.value
+          : this.assignmentIndex,
+      code: data.code.present ? data.code.value : this.code,
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      meaning: data.meaning.present ? data.meaning.value : this.meaning,
+      source: data.source.present ? data.source.value : this.source,
+      confidence: data.confidence.present
+          ? data.confidence.value
+          : this.confidence,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeSystemStatic(')
+          ..write('systemId: $systemId, ')
+          ..write('assignmentIndex: $assignmentIndex, ')
+          ..write('code: $code, ')
+          ..write('typeId: $typeId, ')
+          ..write('meaning: $meaning, ')
+          ..write('source: $source, ')
+          ..write('confidence: $confidence')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    systemId,
+    assignmentIndex,
+    code,
+    typeId,
+    meaning,
+    source,
+    confidence,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SdeSystemStatic &&
+          other.systemId == this.systemId &&
+          other.assignmentIndex == this.assignmentIndex &&
+          other.code == this.code &&
+          other.typeId == this.typeId &&
+          other.meaning == this.meaning &&
+          other.source == this.source &&
+          other.confidence == this.confidence);
+}
+
+class SdeSystemStaticsCompanion extends UpdateCompanion<SdeSystemStatic> {
+  final Value<int> systemId;
+  final Value<int> assignmentIndex;
+  final Value<String?> code;
+  final Value<int?> typeId;
+  final Value<String> meaning;
+  final Value<String> source;
+  final Value<String> confidence;
+  final Value<int> rowid;
+  const SdeSystemStaticsCompanion({
+    this.systemId = const Value.absent(),
+    this.assignmentIndex = const Value.absent(),
+    this.code = const Value.absent(),
+    this.typeId = const Value.absent(),
+    this.meaning = const Value.absent(),
+    this.source = const Value.absent(),
+    this.confidence = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SdeSystemStaticsCompanion.insert({
+    required int systemId,
+    required int assignmentIndex,
+    this.code = const Value.absent(),
+    this.typeId = const Value.absent(),
+    this.meaning = const Value.absent(),
+    this.source = const Value.absent(),
+    this.confidence = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : systemId = Value(systemId),
+       assignmentIndex = Value(assignmentIndex);
+  static Insertable<SdeSystemStatic> custom({
+    Expression<int>? systemId,
+    Expression<int>? assignmentIndex,
+    Expression<String>? code,
+    Expression<int>? typeId,
+    Expression<String>? meaning,
+    Expression<String>? source,
+    Expression<String>? confidence,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (systemId != null) 'system_id': systemId,
+      if (assignmentIndex != null) 'assignment_index': assignmentIndex,
+      if (code != null) 'code': code,
+      if (typeId != null) 'type_id': typeId,
+      if (meaning != null) 'meaning': meaning,
+      if (source != null) 'source': source,
+      if (confidence != null) 'confidence': confidence,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SdeSystemStaticsCompanion copyWith({
+    Value<int>? systemId,
+    Value<int>? assignmentIndex,
+    Value<String?>? code,
+    Value<int?>? typeId,
+    Value<String>? meaning,
+    Value<String>? source,
+    Value<String>? confidence,
+    Value<int>? rowid,
+  }) {
+    return SdeSystemStaticsCompanion(
+      systemId: systemId ?? this.systemId,
+      assignmentIndex: assignmentIndex ?? this.assignmentIndex,
+      code: code ?? this.code,
+      typeId: typeId ?? this.typeId,
+      meaning: meaning ?? this.meaning,
+      source: source ?? this.source,
+      confidence: confidence ?? this.confidence,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (systemId.present) {
+      map['system_id'] = Variable<int>(systemId.value);
+    }
+    if (assignmentIndex.present) {
+      map['assignment_index'] = Variable<int>(assignmentIndex.value);
+    }
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
+    }
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (meaning.present) {
+      map['meaning'] = Variable<String>(meaning.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (confidence.present) {
+      map['confidence'] = Variable<String>(confidence.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SdeSystemStaticsCompanion(')
+          ..write('systemId: $systemId, ')
+          ..write('assignmentIndex: $assignmentIndex, ')
+          ..write('code: $code, ')
+          ..write('typeId: $typeId, ')
+          ..write('meaning: $meaning, ')
+          ..write('source: $source, ')
+          ..write('confidence: $confidence, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$SdeDatabase extends GeneratedDatabase {
   _$SdeDatabase(QueryExecutor e) : super(e);
   $SdeDatabaseManager get managers => $SdeDatabaseManager(this);
@@ -4093,6 +6715,30 @@ abstract class _$SdeDatabase extends GeneratedDatabase {
       $SdeIndustryActivityProductsTable(this);
   late final $SdeIndustryActivitySkillsTable sdeIndustryActivitySkills =
       $SdeIndustryActivitySkillsTable(this);
+  late final $SdeWormholeTypesTable sdeWormholeTypes = $SdeWormholeTypesTable(
+    this,
+  );
+  late final $SdeWormholeSystemsTable sdeWormholeSystems =
+      $SdeWormholeSystemsTable(this);
+  late final $SdeSystemEffectsTable sdeSystemEffects = $SdeSystemEffectsTable(
+    this,
+  );
+  late final $SdeStargatesTable sdeStargates = $SdeStargatesTable(this);
+  late final $SdeSystemStaticsTable sdeSystemStatics = $SdeSystemStaticsTable(
+    this,
+  );
+  late final Index sdeWormholeTypesCode = Index(
+    'sde_wormhole_types_code',
+    'CREATE INDEX sde_wormhole_types_code ON sde_wormhole_types (code)',
+  );
+  late final Index sdeWormholeSystemsName = Index(
+    'sde_wormhole_systems_name',
+    'CREATE INDEX sde_wormhole_systems_name ON sde_wormhole_systems (name)',
+  );
+  late final Index sdeStargatesFrom = Index(
+    'sde_stargates_from',
+    'CREATE INDEX sde_stargates_from ON sde_stargates (from_system_id)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4111,6 +6757,14 @@ abstract class _$SdeDatabase extends GeneratedDatabase {
     sdeIndustryActivityProbabilities,
     sdeIndustryActivityProducts,
     sdeIndustryActivitySkills,
+    sdeWormholeTypes,
+    sdeWormholeSystems,
+    sdeSystemEffects,
+    sdeStargates,
+    sdeSystemStatics,
+    sdeWormholeTypesCode,
+    sdeWormholeSystemsName,
+    sdeStargatesFrom,
   ];
 }
 
@@ -6549,6 +9203,1323 @@ typedef $$SdeIndustryActivitySkillsTableProcessedTableManager =
       SdeIndustryActivitySkill,
       PrefetchHooks Function()
     >;
+typedef $$SdeWormholeTypesTableCreateCompanionBuilder =
+    SdeWormholeTypesCompanion Function({
+      Value<int> typeId,
+      required String code,
+      required String name,
+      Value<int> groupId,
+      Value<bool> published,
+      Value<int?> rawTargetClass,
+      Value<int?> rawTargetDistribution,
+      Value<int?> reliableLifetimeSeconds,
+      Value<double?> maxJumpMassKg,
+      Value<double?> totalMassKg,
+      Value<double?> regenerationKgPerCycle,
+    });
+typedef $$SdeWormholeTypesTableUpdateCompanionBuilder =
+    SdeWormholeTypesCompanion Function({
+      Value<int> typeId,
+      Value<String> code,
+      Value<String> name,
+      Value<int> groupId,
+      Value<bool> published,
+      Value<int?> rawTargetClass,
+      Value<int?> rawTargetDistribution,
+      Value<int?> reliableLifetimeSeconds,
+      Value<double?> maxJumpMassKg,
+      Value<double?> totalMassKg,
+      Value<double?> regenerationKgPerCycle,
+    });
+
+class $$SdeWormholeTypesTableFilterComposer
+    extends Composer<_$SdeDatabase, $SdeWormholeTypesTable> {
+  $$SdeWormholeTypesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get groupId => $composableBuilder(
+    column: $table.groupId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get published => $composableBuilder(
+    column: $table.published,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get rawTargetClass => $composableBuilder(
+    column: $table.rawTargetClass,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get rawTargetDistribution => $composableBuilder(
+    column: $table.rawTargetDistribution,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reliableLifetimeSeconds => $composableBuilder(
+    column: $table.reliableLifetimeSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get maxJumpMassKg => $composableBuilder(
+    column: $table.maxJumpMassKg,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get totalMassKg => $composableBuilder(
+    column: $table.totalMassKg,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get regenerationKgPerCycle => $composableBuilder(
+    column: $table.regenerationKgPerCycle,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SdeWormholeTypesTableOrderingComposer
+    extends Composer<_$SdeDatabase, $SdeWormholeTypesTable> {
+  $$SdeWormholeTypesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get groupId => $composableBuilder(
+    column: $table.groupId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get published => $composableBuilder(
+    column: $table.published,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get rawTargetClass => $composableBuilder(
+    column: $table.rawTargetClass,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get rawTargetDistribution => $composableBuilder(
+    column: $table.rawTargetDistribution,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reliableLifetimeSeconds => $composableBuilder(
+    column: $table.reliableLifetimeSeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get maxJumpMassKg => $composableBuilder(
+    column: $table.maxJumpMassKg,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get totalMassKg => $composableBuilder(
+    column: $table.totalMassKg,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get regenerationKgPerCycle => $composableBuilder(
+    column: $table.regenerationKgPerCycle,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SdeWormholeTypesTableAnnotationComposer
+    extends Composer<_$SdeDatabase, $SdeWormholeTypesTable> {
+  $$SdeWormholeTypesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get groupId =>
+      $composableBuilder(column: $table.groupId, builder: (column) => column);
+
+  GeneratedColumn<bool> get published =>
+      $composableBuilder(column: $table.published, builder: (column) => column);
+
+  GeneratedColumn<int> get rawTargetClass => $composableBuilder(
+    column: $table.rawTargetClass,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get rawTargetDistribution => $composableBuilder(
+    column: $table.rawTargetDistribution,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get reliableLifetimeSeconds => $composableBuilder(
+    column: $table.reliableLifetimeSeconds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get maxJumpMassKg => $composableBuilder(
+    column: $table.maxJumpMassKg,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get totalMassKg => $composableBuilder(
+    column: $table.totalMassKg,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get regenerationKgPerCycle => $composableBuilder(
+    column: $table.regenerationKgPerCycle,
+    builder: (column) => column,
+  );
+}
+
+class $$SdeWormholeTypesTableTableManager
+    extends
+        RootTableManager<
+          _$SdeDatabase,
+          $SdeWormholeTypesTable,
+          SdeWormholeType,
+          $$SdeWormholeTypesTableFilterComposer,
+          $$SdeWormholeTypesTableOrderingComposer,
+          $$SdeWormholeTypesTableAnnotationComposer,
+          $$SdeWormholeTypesTableCreateCompanionBuilder,
+          $$SdeWormholeTypesTableUpdateCompanionBuilder,
+          (
+            SdeWormholeType,
+            BaseReferences<
+              _$SdeDatabase,
+              $SdeWormholeTypesTable,
+              SdeWormholeType
+            >,
+          ),
+          SdeWormholeType,
+          PrefetchHooks Function()
+        > {
+  $$SdeWormholeTypesTableTableManager(
+    _$SdeDatabase db,
+    $SdeWormholeTypesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SdeWormholeTypesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SdeWormholeTypesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SdeWormholeTypesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> typeId = const Value.absent(),
+                Value<String> code = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<int> groupId = const Value.absent(),
+                Value<bool> published = const Value.absent(),
+                Value<int?> rawTargetClass = const Value.absent(),
+                Value<int?> rawTargetDistribution = const Value.absent(),
+                Value<int?> reliableLifetimeSeconds = const Value.absent(),
+                Value<double?> maxJumpMassKg = const Value.absent(),
+                Value<double?> totalMassKg = const Value.absent(),
+                Value<double?> regenerationKgPerCycle = const Value.absent(),
+              }) => SdeWormholeTypesCompanion(
+                typeId: typeId,
+                code: code,
+                name: name,
+                groupId: groupId,
+                published: published,
+                rawTargetClass: rawTargetClass,
+                rawTargetDistribution: rawTargetDistribution,
+                reliableLifetimeSeconds: reliableLifetimeSeconds,
+                maxJumpMassKg: maxJumpMassKg,
+                totalMassKg: totalMassKg,
+                regenerationKgPerCycle: regenerationKgPerCycle,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> typeId = const Value.absent(),
+                required String code,
+                required String name,
+                Value<int> groupId = const Value.absent(),
+                Value<bool> published = const Value.absent(),
+                Value<int?> rawTargetClass = const Value.absent(),
+                Value<int?> rawTargetDistribution = const Value.absent(),
+                Value<int?> reliableLifetimeSeconds = const Value.absent(),
+                Value<double?> maxJumpMassKg = const Value.absent(),
+                Value<double?> totalMassKg = const Value.absent(),
+                Value<double?> regenerationKgPerCycle = const Value.absent(),
+              }) => SdeWormholeTypesCompanion.insert(
+                typeId: typeId,
+                code: code,
+                name: name,
+                groupId: groupId,
+                published: published,
+                rawTargetClass: rawTargetClass,
+                rawTargetDistribution: rawTargetDistribution,
+                reliableLifetimeSeconds: reliableLifetimeSeconds,
+                maxJumpMassKg: maxJumpMassKg,
+                totalMassKg: totalMassKg,
+                regenerationKgPerCycle: regenerationKgPerCycle,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SdeWormholeTypesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$SdeDatabase,
+      $SdeWormholeTypesTable,
+      SdeWormholeType,
+      $$SdeWormholeTypesTableFilterComposer,
+      $$SdeWormholeTypesTableOrderingComposer,
+      $$SdeWormholeTypesTableAnnotationComposer,
+      $$SdeWormholeTypesTableCreateCompanionBuilder,
+      $$SdeWormholeTypesTableUpdateCompanionBuilder,
+      (
+        SdeWormholeType,
+        BaseReferences<_$SdeDatabase, $SdeWormholeTypesTable, SdeWormholeType>,
+      ),
+      SdeWormholeType,
+      PrefetchHooks Function()
+    >;
+typedef $$SdeWormholeSystemsTableCreateCompanionBuilder =
+    SdeWormholeSystemsCompanion Function({
+      Value<int> systemId,
+      required String name,
+      Value<int?> constellationId,
+      Value<int?> regionId,
+      Value<String?> constellationName,
+      Value<String?> regionName,
+      Value<double?> rawSecurity,
+      Value<int?> rawClass,
+      Value<int?> inheritedClass,
+      Value<String?> inheritanceSource,
+      Value<int?> effectBeaconTypeId,
+      Value<int?> visualSunTypeId,
+    });
+typedef $$SdeWormholeSystemsTableUpdateCompanionBuilder =
+    SdeWormholeSystemsCompanion Function({
+      Value<int> systemId,
+      Value<String> name,
+      Value<int?> constellationId,
+      Value<int?> regionId,
+      Value<String?> constellationName,
+      Value<String?> regionName,
+      Value<double?> rawSecurity,
+      Value<int?> rawClass,
+      Value<int?> inheritedClass,
+      Value<String?> inheritanceSource,
+      Value<int?> effectBeaconTypeId,
+      Value<int?> visualSunTypeId,
+    });
+
+class $$SdeWormholeSystemsTableFilterComposer
+    extends Composer<_$SdeDatabase, $SdeWormholeSystemsTable> {
+  $$SdeWormholeSystemsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get systemId => $composableBuilder(
+    column: $table.systemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get constellationId => $composableBuilder(
+    column: $table.constellationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get regionId => $composableBuilder(
+    column: $table.regionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get constellationName => $composableBuilder(
+    column: $table.constellationName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get regionName => $composableBuilder(
+    column: $table.regionName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get rawSecurity => $composableBuilder(
+    column: $table.rawSecurity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get rawClass => $composableBuilder(
+    column: $table.rawClass,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get inheritedClass => $composableBuilder(
+    column: $table.inheritedClass,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get inheritanceSource => $composableBuilder(
+    column: $table.inheritanceSource,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get effectBeaconTypeId => $composableBuilder(
+    column: $table.effectBeaconTypeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get visualSunTypeId => $composableBuilder(
+    column: $table.visualSunTypeId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SdeWormholeSystemsTableOrderingComposer
+    extends Composer<_$SdeDatabase, $SdeWormholeSystemsTable> {
+  $$SdeWormholeSystemsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get systemId => $composableBuilder(
+    column: $table.systemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get constellationId => $composableBuilder(
+    column: $table.constellationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get regionId => $composableBuilder(
+    column: $table.regionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get constellationName => $composableBuilder(
+    column: $table.constellationName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get regionName => $composableBuilder(
+    column: $table.regionName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get rawSecurity => $composableBuilder(
+    column: $table.rawSecurity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get rawClass => $composableBuilder(
+    column: $table.rawClass,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get inheritedClass => $composableBuilder(
+    column: $table.inheritedClass,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get inheritanceSource => $composableBuilder(
+    column: $table.inheritanceSource,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get effectBeaconTypeId => $composableBuilder(
+    column: $table.effectBeaconTypeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get visualSunTypeId => $composableBuilder(
+    column: $table.visualSunTypeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SdeWormholeSystemsTableAnnotationComposer
+    extends Composer<_$SdeDatabase, $SdeWormholeSystemsTable> {
+  $$SdeWormholeSystemsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get systemId =>
+      $composableBuilder(column: $table.systemId, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get constellationId => $composableBuilder(
+    column: $table.constellationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get regionId =>
+      $composableBuilder(column: $table.regionId, builder: (column) => column);
+
+  GeneratedColumn<String> get constellationName => $composableBuilder(
+    column: $table.constellationName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get regionName => $composableBuilder(
+    column: $table.regionName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get rawSecurity => $composableBuilder(
+    column: $table.rawSecurity,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get rawClass =>
+      $composableBuilder(column: $table.rawClass, builder: (column) => column);
+
+  GeneratedColumn<int> get inheritedClass => $composableBuilder(
+    column: $table.inheritedClass,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get inheritanceSource => $composableBuilder(
+    column: $table.inheritanceSource,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get effectBeaconTypeId => $composableBuilder(
+    column: $table.effectBeaconTypeId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get visualSunTypeId => $composableBuilder(
+    column: $table.visualSunTypeId,
+    builder: (column) => column,
+  );
+}
+
+class $$SdeWormholeSystemsTableTableManager
+    extends
+        RootTableManager<
+          _$SdeDatabase,
+          $SdeWormholeSystemsTable,
+          SdeWormholeSystem,
+          $$SdeWormholeSystemsTableFilterComposer,
+          $$SdeWormholeSystemsTableOrderingComposer,
+          $$SdeWormholeSystemsTableAnnotationComposer,
+          $$SdeWormholeSystemsTableCreateCompanionBuilder,
+          $$SdeWormholeSystemsTableUpdateCompanionBuilder,
+          (
+            SdeWormholeSystem,
+            BaseReferences<
+              _$SdeDatabase,
+              $SdeWormholeSystemsTable,
+              SdeWormholeSystem
+            >,
+          ),
+          SdeWormholeSystem,
+          PrefetchHooks Function()
+        > {
+  $$SdeWormholeSystemsTableTableManager(
+    _$SdeDatabase db,
+    $SdeWormholeSystemsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SdeWormholeSystemsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SdeWormholeSystemsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SdeWormholeSystemsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> systemId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<int?> constellationId = const Value.absent(),
+                Value<int?> regionId = const Value.absent(),
+                Value<String?> constellationName = const Value.absent(),
+                Value<String?> regionName = const Value.absent(),
+                Value<double?> rawSecurity = const Value.absent(),
+                Value<int?> rawClass = const Value.absent(),
+                Value<int?> inheritedClass = const Value.absent(),
+                Value<String?> inheritanceSource = const Value.absent(),
+                Value<int?> effectBeaconTypeId = const Value.absent(),
+                Value<int?> visualSunTypeId = const Value.absent(),
+              }) => SdeWormholeSystemsCompanion(
+                systemId: systemId,
+                name: name,
+                constellationId: constellationId,
+                regionId: regionId,
+                constellationName: constellationName,
+                regionName: regionName,
+                rawSecurity: rawSecurity,
+                rawClass: rawClass,
+                inheritedClass: inheritedClass,
+                inheritanceSource: inheritanceSource,
+                effectBeaconTypeId: effectBeaconTypeId,
+                visualSunTypeId: visualSunTypeId,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> systemId = const Value.absent(),
+                required String name,
+                Value<int?> constellationId = const Value.absent(),
+                Value<int?> regionId = const Value.absent(),
+                Value<String?> constellationName = const Value.absent(),
+                Value<String?> regionName = const Value.absent(),
+                Value<double?> rawSecurity = const Value.absent(),
+                Value<int?> rawClass = const Value.absent(),
+                Value<int?> inheritedClass = const Value.absent(),
+                Value<String?> inheritanceSource = const Value.absent(),
+                Value<int?> effectBeaconTypeId = const Value.absent(),
+                Value<int?> visualSunTypeId = const Value.absent(),
+              }) => SdeWormholeSystemsCompanion.insert(
+                systemId: systemId,
+                name: name,
+                constellationId: constellationId,
+                regionId: regionId,
+                constellationName: constellationName,
+                regionName: regionName,
+                rawSecurity: rawSecurity,
+                rawClass: rawClass,
+                inheritedClass: inheritedClass,
+                inheritanceSource: inheritanceSource,
+                effectBeaconTypeId: effectBeaconTypeId,
+                visualSunTypeId: visualSunTypeId,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SdeWormholeSystemsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$SdeDatabase,
+      $SdeWormholeSystemsTable,
+      SdeWormholeSystem,
+      $$SdeWormholeSystemsTableFilterComposer,
+      $$SdeWormholeSystemsTableOrderingComposer,
+      $$SdeWormholeSystemsTableAnnotationComposer,
+      $$SdeWormholeSystemsTableCreateCompanionBuilder,
+      $$SdeWormholeSystemsTableUpdateCompanionBuilder,
+      (
+        SdeWormholeSystem,
+        BaseReferences<
+          _$SdeDatabase,
+          $SdeWormholeSystemsTable,
+          SdeWormholeSystem
+        >,
+      ),
+      SdeWormholeSystem,
+      PrefetchHooks Function()
+    >;
+typedef $$SdeSystemEffectsTableCreateCompanionBuilder =
+    SdeSystemEffectsCompanion Function({
+      Value<int> beaconTypeId,
+      required String family,
+      required int strength,
+      Value<String?> scopesJson,
+    });
+typedef $$SdeSystemEffectsTableUpdateCompanionBuilder =
+    SdeSystemEffectsCompanion Function({
+      Value<int> beaconTypeId,
+      Value<String> family,
+      Value<int> strength,
+      Value<String?> scopesJson,
+    });
+
+class $$SdeSystemEffectsTableFilterComposer
+    extends Composer<_$SdeDatabase, $SdeSystemEffectsTable> {
+  $$SdeSystemEffectsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get beaconTypeId => $composableBuilder(
+    column: $table.beaconTypeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get family => $composableBuilder(
+    column: $table.family,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get strength => $composableBuilder(
+    column: $table.strength,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scopesJson => $composableBuilder(
+    column: $table.scopesJson,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SdeSystemEffectsTableOrderingComposer
+    extends Composer<_$SdeDatabase, $SdeSystemEffectsTable> {
+  $$SdeSystemEffectsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get beaconTypeId => $composableBuilder(
+    column: $table.beaconTypeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get family => $composableBuilder(
+    column: $table.family,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get strength => $composableBuilder(
+    column: $table.strength,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get scopesJson => $composableBuilder(
+    column: $table.scopesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SdeSystemEffectsTableAnnotationComposer
+    extends Composer<_$SdeDatabase, $SdeSystemEffectsTable> {
+  $$SdeSystemEffectsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get beaconTypeId => $composableBuilder(
+    column: $table.beaconTypeId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get family =>
+      $composableBuilder(column: $table.family, builder: (column) => column);
+
+  GeneratedColumn<int> get strength =>
+      $composableBuilder(column: $table.strength, builder: (column) => column);
+
+  GeneratedColumn<String> get scopesJson => $composableBuilder(
+    column: $table.scopesJson,
+    builder: (column) => column,
+  );
+}
+
+class $$SdeSystemEffectsTableTableManager
+    extends
+        RootTableManager<
+          _$SdeDatabase,
+          $SdeSystemEffectsTable,
+          SdeSystemEffect,
+          $$SdeSystemEffectsTableFilterComposer,
+          $$SdeSystemEffectsTableOrderingComposer,
+          $$SdeSystemEffectsTableAnnotationComposer,
+          $$SdeSystemEffectsTableCreateCompanionBuilder,
+          $$SdeSystemEffectsTableUpdateCompanionBuilder,
+          (
+            SdeSystemEffect,
+            BaseReferences<
+              _$SdeDatabase,
+              $SdeSystemEffectsTable,
+              SdeSystemEffect
+            >,
+          ),
+          SdeSystemEffect,
+          PrefetchHooks Function()
+        > {
+  $$SdeSystemEffectsTableTableManager(
+    _$SdeDatabase db,
+    $SdeSystemEffectsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SdeSystemEffectsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SdeSystemEffectsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SdeSystemEffectsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> beaconTypeId = const Value.absent(),
+                Value<String> family = const Value.absent(),
+                Value<int> strength = const Value.absent(),
+                Value<String?> scopesJson = const Value.absent(),
+              }) => SdeSystemEffectsCompanion(
+                beaconTypeId: beaconTypeId,
+                family: family,
+                strength: strength,
+                scopesJson: scopesJson,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> beaconTypeId = const Value.absent(),
+                required String family,
+                required int strength,
+                Value<String?> scopesJson = const Value.absent(),
+              }) => SdeSystemEffectsCompanion.insert(
+                beaconTypeId: beaconTypeId,
+                family: family,
+                strength: strength,
+                scopesJson: scopesJson,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SdeSystemEffectsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$SdeDatabase,
+      $SdeSystemEffectsTable,
+      SdeSystemEffect,
+      $$SdeSystemEffectsTableFilterComposer,
+      $$SdeSystemEffectsTableOrderingComposer,
+      $$SdeSystemEffectsTableAnnotationComposer,
+      $$SdeSystemEffectsTableCreateCompanionBuilder,
+      $$SdeSystemEffectsTableUpdateCompanionBuilder,
+      (
+        SdeSystemEffect,
+        BaseReferences<_$SdeDatabase, $SdeSystemEffectsTable, SdeSystemEffect>,
+      ),
+      SdeSystemEffect,
+      PrefetchHooks Function()
+    >;
+typedef $$SdeStargatesTableCreateCompanionBuilder =
+    SdeStargatesCompanion Function({
+      Value<int> gateId,
+      required int fromSystemId,
+      required int toSystemId,
+      Value<int> topologyVersion,
+      Value<String?> restrictionsJson,
+    });
+typedef $$SdeStargatesTableUpdateCompanionBuilder =
+    SdeStargatesCompanion Function({
+      Value<int> gateId,
+      Value<int> fromSystemId,
+      Value<int> toSystemId,
+      Value<int> topologyVersion,
+      Value<String?> restrictionsJson,
+    });
+
+class $$SdeStargatesTableFilterComposer
+    extends Composer<_$SdeDatabase, $SdeStargatesTable> {
+  $$SdeStargatesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get gateId => $composableBuilder(
+    column: $table.gateId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get fromSystemId => $composableBuilder(
+    column: $table.fromSystemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get toSystemId => $composableBuilder(
+    column: $table.toSystemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get topologyVersion => $composableBuilder(
+    column: $table.topologyVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get restrictionsJson => $composableBuilder(
+    column: $table.restrictionsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SdeStargatesTableOrderingComposer
+    extends Composer<_$SdeDatabase, $SdeStargatesTable> {
+  $$SdeStargatesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get gateId => $composableBuilder(
+    column: $table.gateId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get fromSystemId => $composableBuilder(
+    column: $table.fromSystemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get toSystemId => $composableBuilder(
+    column: $table.toSystemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get topologyVersion => $composableBuilder(
+    column: $table.topologyVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get restrictionsJson => $composableBuilder(
+    column: $table.restrictionsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SdeStargatesTableAnnotationComposer
+    extends Composer<_$SdeDatabase, $SdeStargatesTable> {
+  $$SdeStargatesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get gateId =>
+      $composableBuilder(column: $table.gateId, builder: (column) => column);
+
+  GeneratedColumn<int> get fromSystemId => $composableBuilder(
+    column: $table.fromSystemId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get toSystemId => $composableBuilder(
+    column: $table.toSystemId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get topologyVersion => $composableBuilder(
+    column: $table.topologyVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get restrictionsJson => $composableBuilder(
+    column: $table.restrictionsJson,
+    builder: (column) => column,
+  );
+}
+
+class $$SdeStargatesTableTableManager
+    extends
+        RootTableManager<
+          _$SdeDatabase,
+          $SdeStargatesTable,
+          SdeStargate,
+          $$SdeStargatesTableFilterComposer,
+          $$SdeStargatesTableOrderingComposer,
+          $$SdeStargatesTableAnnotationComposer,
+          $$SdeStargatesTableCreateCompanionBuilder,
+          $$SdeStargatesTableUpdateCompanionBuilder,
+          (
+            SdeStargate,
+            BaseReferences<_$SdeDatabase, $SdeStargatesTable, SdeStargate>,
+          ),
+          SdeStargate,
+          PrefetchHooks Function()
+        > {
+  $$SdeStargatesTableTableManager(_$SdeDatabase db, $SdeStargatesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SdeStargatesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SdeStargatesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SdeStargatesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> gateId = const Value.absent(),
+                Value<int> fromSystemId = const Value.absent(),
+                Value<int> toSystemId = const Value.absent(),
+                Value<int> topologyVersion = const Value.absent(),
+                Value<String?> restrictionsJson = const Value.absent(),
+              }) => SdeStargatesCompanion(
+                gateId: gateId,
+                fromSystemId: fromSystemId,
+                toSystemId: toSystemId,
+                topologyVersion: topologyVersion,
+                restrictionsJson: restrictionsJson,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> gateId = const Value.absent(),
+                required int fromSystemId,
+                required int toSystemId,
+                Value<int> topologyVersion = const Value.absent(),
+                Value<String?> restrictionsJson = const Value.absent(),
+              }) => SdeStargatesCompanion.insert(
+                gateId: gateId,
+                fromSystemId: fromSystemId,
+                toSystemId: toSystemId,
+                topologyVersion: topologyVersion,
+                restrictionsJson: restrictionsJson,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SdeStargatesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$SdeDatabase,
+      $SdeStargatesTable,
+      SdeStargate,
+      $$SdeStargatesTableFilterComposer,
+      $$SdeStargatesTableOrderingComposer,
+      $$SdeStargatesTableAnnotationComposer,
+      $$SdeStargatesTableCreateCompanionBuilder,
+      $$SdeStargatesTableUpdateCompanionBuilder,
+      (
+        SdeStargate,
+        BaseReferences<_$SdeDatabase, $SdeStargatesTable, SdeStargate>,
+      ),
+      SdeStargate,
+      PrefetchHooks Function()
+    >;
+typedef $$SdeSystemStaticsTableCreateCompanionBuilder =
+    SdeSystemStaticsCompanion Function({
+      required int systemId,
+      required int assignmentIndex,
+      Value<String?> code,
+      Value<int?> typeId,
+      Value<String> meaning,
+      Value<String> source,
+      Value<String> confidence,
+      Value<int> rowid,
+    });
+typedef $$SdeSystemStaticsTableUpdateCompanionBuilder =
+    SdeSystemStaticsCompanion Function({
+      Value<int> systemId,
+      Value<int> assignmentIndex,
+      Value<String?> code,
+      Value<int?> typeId,
+      Value<String> meaning,
+      Value<String> source,
+      Value<String> confidence,
+      Value<int> rowid,
+    });
+
+class $$SdeSystemStaticsTableFilterComposer
+    extends Composer<_$SdeDatabase, $SdeSystemStaticsTable> {
+  $$SdeSystemStaticsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get systemId => $composableBuilder(
+    column: $table.systemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get assignmentIndex => $composableBuilder(
+    column: $table.assignmentIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get meaning => $composableBuilder(
+    column: $table.meaning,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get confidence => $composableBuilder(
+    column: $table.confidence,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SdeSystemStaticsTableOrderingComposer
+    extends Composer<_$SdeDatabase, $SdeSystemStaticsTable> {
+  $$SdeSystemStaticsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get systemId => $composableBuilder(
+    column: $table.systemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get assignmentIndex => $composableBuilder(
+    column: $table.assignmentIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get meaning => $composableBuilder(
+    column: $table.meaning,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get confidence => $composableBuilder(
+    column: $table.confidence,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SdeSystemStaticsTableAnnotationComposer
+    extends Composer<_$SdeDatabase, $SdeSystemStaticsTable> {
+  $$SdeSystemStaticsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get systemId =>
+      $composableBuilder(column: $table.systemId, builder: (column) => column);
+
+  GeneratedColumn<int> get assignmentIndex => $composableBuilder(
+    column: $table.assignmentIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
+
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<String> get meaning =>
+      $composableBuilder(column: $table.meaning, builder: (column) => column);
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<String> get confidence => $composableBuilder(
+    column: $table.confidence,
+    builder: (column) => column,
+  );
+}
+
+class $$SdeSystemStaticsTableTableManager
+    extends
+        RootTableManager<
+          _$SdeDatabase,
+          $SdeSystemStaticsTable,
+          SdeSystemStatic,
+          $$SdeSystemStaticsTableFilterComposer,
+          $$SdeSystemStaticsTableOrderingComposer,
+          $$SdeSystemStaticsTableAnnotationComposer,
+          $$SdeSystemStaticsTableCreateCompanionBuilder,
+          $$SdeSystemStaticsTableUpdateCompanionBuilder,
+          (
+            SdeSystemStatic,
+            BaseReferences<
+              _$SdeDatabase,
+              $SdeSystemStaticsTable,
+              SdeSystemStatic
+            >,
+          ),
+          SdeSystemStatic,
+          PrefetchHooks Function()
+        > {
+  $$SdeSystemStaticsTableTableManager(
+    _$SdeDatabase db,
+    $SdeSystemStaticsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SdeSystemStaticsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SdeSystemStaticsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SdeSystemStaticsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> systemId = const Value.absent(),
+                Value<int> assignmentIndex = const Value.absent(),
+                Value<String?> code = const Value.absent(),
+                Value<int?> typeId = const Value.absent(),
+                Value<String> meaning = const Value.absent(),
+                Value<String> source = const Value.absent(),
+                Value<String> confidence = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SdeSystemStaticsCompanion(
+                systemId: systemId,
+                assignmentIndex: assignmentIndex,
+                code: code,
+                typeId: typeId,
+                meaning: meaning,
+                source: source,
+                confidence: confidence,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int systemId,
+                required int assignmentIndex,
+                Value<String?> code = const Value.absent(),
+                Value<int?> typeId = const Value.absent(),
+                Value<String> meaning = const Value.absent(),
+                Value<String> source = const Value.absent(),
+                Value<String> confidence = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SdeSystemStaticsCompanion.insert(
+                systemId: systemId,
+                assignmentIndex: assignmentIndex,
+                code: code,
+                typeId: typeId,
+                meaning: meaning,
+                source: source,
+                confidence: confidence,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SdeSystemStaticsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$SdeDatabase,
+      $SdeSystemStaticsTable,
+      SdeSystemStatic,
+      $$SdeSystemStaticsTableFilterComposer,
+      $$SdeSystemStaticsTableOrderingComposer,
+      $$SdeSystemStaticsTableAnnotationComposer,
+      $$SdeSystemStaticsTableCreateCompanionBuilder,
+      $$SdeSystemStaticsTableUpdateCompanionBuilder,
+      (
+        SdeSystemStatic,
+        BaseReferences<_$SdeDatabase, $SdeSystemStaticsTable, SdeSystemStatic>,
+      ),
+      SdeSystemStatic,
+      PrefetchHooks Function()
+    >;
 
 class $SdeDatabaseManager {
   final _$SdeDatabase _db;
@@ -6594,4 +10565,14 @@ class $SdeDatabaseManager {
         _db,
         _db.sdeIndustryActivitySkills,
       );
+  $$SdeWormholeTypesTableTableManager get sdeWormholeTypes =>
+      $$SdeWormholeTypesTableTableManager(_db, _db.sdeWormholeTypes);
+  $$SdeWormholeSystemsTableTableManager get sdeWormholeSystems =>
+      $$SdeWormholeSystemsTableTableManager(_db, _db.sdeWormholeSystems);
+  $$SdeSystemEffectsTableTableManager get sdeSystemEffects =>
+      $$SdeSystemEffectsTableTableManager(_db, _db.sdeSystemEffects);
+  $$SdeStargatesTableTableManager get sdeStargates =>
+      $$SdeStargatesTableTableManager(_db, _db.sdeStargates);
+  $$SdeSystemStaticsTableTableManager get sdeSystemStatics =>
+      $$SdeSystemStaticsTableTableManager(_db, _db.sdeSystemStatics);
 }

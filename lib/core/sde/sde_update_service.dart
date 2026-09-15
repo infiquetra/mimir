@@ -386,6 +386,66 @@ class SdeUpdateService {
     await database.setMetadata(_keySkillCount, manifest.skillCount.toString());
     await database.setMetadata(_keyLastCheck, DateTime.now().toIso8601String());
   }
+
+  Future<int?> installedExplorationBuild() async {
+    final value = await database.getMetadata(SdeDatabase.explorationBuildKey);
+    if (value == null || value.isEmpty) return null;
+    return int.tryParse(value);
+  }
+
+  /// Older incoming builds cannot replace a newer installed exploration slice.
+  bool canInstallExplorationBuild(int incoming, int? installed) {
+    if (installed == null) return true;
+    return incoming >= installed;
+  }
+
+  bool validateExplorationChecksum({
+    required String checksum,
+    required Map<String, String> manifestChecksums,
+    required bool corrupt,
+    required String validation,
+  }) {
+    if (corrupt) return false;
+    if (validation.isNotEmpty && validation != 'ok') return false;
+    if (checksum.isEmpty) return true;
+    final expected = manifestChecksums['exploration.json'];
+    if (expected == null || expected.isEmpty) return true;
+    return _validateChecksum(checksum, expected);
+  }
+
+  /// Atomically replace the exploration slice and stamp its version.
+  /// Skills, dogma, and industry tables are not touched. Rechecks CAS
+  /// after acquiring the writer lock so a late older download cannot
+  /// downgrade a newer installed slice.
+  Future<void> replaceExplorationSlice({
+    required String manifestJson,
+    required int sdeBuild,
+    required List<SdeWormholeTypesCompanion> types,
+    required List<SdeWormholeSystemsCompanion> systems,
+    List<SdeSystemEffectsCompanion> effects = const [],
+    List<SdeStargatesCompanion> stargates = const [],
+    List<SdeSystemStaticsCompanion> statics = const [],
+  }) async {
+    await database.transaction(() async {
+      final installed = await installedExplorationBuild();
+      if (!canInstallExplorationBuild(sdeBuild, installed)) {
+        throw StateError(
+          'older exploration build $sdeBuild cannot replace $installed',
+        );
+      }
+      await database.clearExplorationSlice();
+      await database.upsertWormholeTypes(types);
+      await database.upsertWormholeSystems(systems);
+      await database.upsertSystemEffects(effects);
+      await database.upsertStargates(stargates);
+      await database.upsertSystemStatics(statics);
+      await database.setMetadata(
+        SdeDatabase.explorationManifestKey,
+        manifestJson,
+      );
+      await database.setMetadata(SdeDatabase.explorationBuildKey, '$sdeBuild');
+    });
+  }
 }
 
 /// Status information about the installed SDE data.

@@ -1198,11 +1198,52 @@ class SdeService {
 
   /// Get solar system name by system ID.
   ///
-  /// Falls back to "System #`<id>`" if not found.
-  /// This could be enhanced with a local cache of solar system names.
+  /// Prefers the populated exploration universe slice. Falls back to
+  /// "System #`<id>`" only when that system is absent from local data.
   Future<String> getSolarSystemName(int solarSystemId) async {
-    // TODO: Implement local caching of solar system names
-    // For now, return a placeholder. The fleet providers will query ESI.
+    final system = await database.getWormholeSystem(solarSystemId);
+    if (system != null && system.name.isNotEmpty) {
+      return system.name;
+    }
     return 'System #$solarSystemId';
+  }
+
+  Future<double?> getExplorationSystemSecurity(int solarSystemId) async {
+    final system = await database.getWormholeSystem(solarSystemId);
+    return system?.rawSecurity;
+  }
+
+  Future<List<SdeWormholeType>> getAllWormholeTypes() {
+    return database.getAllWormholeTypes();
+  }
+
+  Future<List<SdeWormholeType>> searchWormholeTypes(
+    String query, {
+    int limit = 50,
+  }) {
+    return database.searchWormholeTypesByCode(query, limit: limit);
+  }
+
+  Future<List<SdeWormholeSystem>> getSystemReferences(List<int> ids) {
+    return database.getWormholeSystemsByIds(ids);
+  }
+
+  Future<List<SdeWormholeSystem>> searchSystems(
+    String query, {
+    int limit = 50,
+  }) {
+    return database.searchWormholeSystemsByName(query, limit: limit);
+  }
+
+  Future<List<SdeStargate>> loadGateTopology() {
+    return database.getAllStargates();
+  }
+
+  Future<List<SdeSystemEffect>> getSystemEffects() {
+    return database.getAllSystemEffects();
+  }
+
+  Future<List<SdeSystemStatic>> getSystemStatics(int systemId) {
+    return database.getSystemStatics(systemId);
   }
 }

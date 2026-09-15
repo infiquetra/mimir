@@ -45,7 +45,7 @@ void main() {
       expect(harness.clock(), DateTime.utc(2026, 9, 15, 12));
       expect(harness.explorationClock().now(), kExplorationT0);
       expect(harness.capturedAppSchema, 20);
-      expect(harness.capturedSdeSchema, 6);
+      expect(harness.capturedSdeSchema, 7);
       expect(ExplorationTestHarness.baselineAppSchema, 20);
       expect(ExplorationTestHarness.baselineSdeSchema, 6);
     });

@@ -6,6 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
 import '../database/app_database.dart' show getDatabasePath;
+import 'exploration_tables.dart';
+
+export 'exploration_tables.dart';
 
 part 'sde_database.g.dart';
 
@@ -232,6 +235,11 @@ class SdeIndustryActivitySkills extends Table {
     SdeIndustryActivityProbabilities,
     SdeIndustryActivityProducts,
     SdeIndustryActivitySkills,
+    SdeWormholeTypes,
+    SdeWormholeSystems,
+    SdeSystemEffects,
+    SdeStargates,
+    SdeSystemStatics,
   ],
 )
 class SdeDatabase extends _$SdeDatabase {
@@ -241,7 +249,7 @@ class SdeDatabase extends _$SdeDatabase {
   SdeDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration {
@@ -280,6 +288,18 @@ class SdeDatabase extends _$SdeDatabase {
         if (from < 6) {
           // Version 6: Cache ESI dogma effect modifiers for fitting math.
           await m.createTable(sdeEffectModifiers);
+        }
+        if (from < 7) {
+          // Version 7: Exploration offline reference (wormholes, systems,
+          // effects, stargates, optional statics).
+          await m.createTable(sdeWormholeTypes);
+          await m.createTable(sdeWormholeSystems);
+          await m.createTable(sdeSystemEffects);
+          await m.createTable(sdeStargates);
+          await m.createTable(sdeSystemStatics);
+          await m.createIndex(sdeWormholeTypesCode);
+          await m.createIndex(sdeWormholeSystemsName);
+          await m.createIndex(sdeStargatesFrom);
         }
       },
     );
@@ -796,6 +816,126 @@ class SdeDatabase extends _$SdeDatabase {
           (a) => a.typeId.equals(typeId) & a.activityId.equals(activityId),
         ))
         .getSingleOrNull();
+  }
+
+  // Exploration reference operations (schema 7)
+
+  static const explorationManifestKey = 'exploration_manifest';
+  static const explorationBuildKey = 'exploration_sde_build';
+
+  /// Replace only the exploration slice. Skills, dogma, and industry survive.
+  Future<void> clearExplorationSlice() async {
+    await delete(sdeWormholeTypes).go();
+    await delete(sdeWormholeSystems).go();
+    await delete(sdeSystemEffects).go();
+    await delete(sdeStargates).go();
+    await delete(sdeSystemStatics).go();
+  }
+
+  Future<void> upsertWormholeTypes(List<SdeWormholeTypesCompanion> rows) async {
+    if (rows.isEmpty) return;
+    await batch((b) {
+      b.insertAllOnConflictUpdate(sdeWormholeTypes, rows);
+    });
+  }
+
+  Future<List<SdeWormholeType>> getAllWormholeTypes() {
+    return (select(
+      sdeWormholeTypes,
+    )..orderBy([(t) => OrderingTerm.asc(t.code)])).get();
+  }
+
+  Future<List<SdeWormholeType>> searchWormholeTypesByCode(
+    String query, {
+    int limit = 50,
+  }) {
+    return (select(sdeWormholeTypes)
+          ..where((t) => t.code.like('%$query%') | t.name.like('%$query%'))
+          ..orderBy([(t) => OrderingTerm.asc(t.code)])
+          ..limit(limit))
+        .get();
+  }
+
+  Future<void> upsertWormholeSystems(
+    List<SdeWormholeSystemsCompanion> rows,
+  ) async {
+    if (rows.isEmpty) return;
+    await batch((b) {
+      b.insertAllOnConflictUpdate(sdeWormholeSystems, rows);
+    });
+  }
+
+  Future<SdeWormholeSystem?> getWormholeSystem(int systemId) {
+    return (select(
+      sdeWormholeSystems,
+    )..where((s) => s.systemId.equals(systemId))).getSingleOrNull();
+  }
+
+  Future<List<SdeWormholeSystem>> getWormholeSystemsByIds(
+    List<int> systemIds,
+  ) async {
+    if (systemIds.isEmpty) return [];
+    final result = <SdeWormholeSystem>[];
+    for (var i = 0; i < systemIds.length; i += _inChunkSize) {
+      final chunk = systemIds.skip(i).take(_inChunkSize).toList();
+      final rows = await (select(
+        sdeWormholeSystems,
+      )..where((s) => s.systemId.isIn(chunk))).get();
+      result.addAll(rows);
+    }
+    return result;
+  }
+
+  Future<List<SdeWormholeSystem>> searchWormholeSystemsByName(
+    String query, {
+    int limit = 50,
+  }) {
+    return (select(sdeWormholeSystems)
+          ..where((s) => s.name.like('%$query%'))
+          ..orderBy([(s) => OrderingTerm.asc(s.name)])
+          ..limit(limit))
+        .get();
+  }
+
+  Future<void> upsertSystemEffects(List<SdeSystemEffectsCompanion> rows) async {
+    if (rows.isEmpty) return;
+    await batch((b) {
+      b.insertAllOnConflictUpdate(sdeSystemEffects, rows);
+    });
+  }
+
+  Future<List<SdeSystemEffect>> getAllSystemEffects() {
+    return select(sdeSystemEffects).get();
+  }
+
+  Future<void> upsertStargates(List<SdeStargatesCompanion> rows) async {
+    if (rows.isEmpty) return;
+    await batch((b) {
+      b.insertAllOnConflictUpdate(sdeStargates, rows);
+    });
+  }
+
+  Future<List<SdeStargate>> getStargatesFrom(int systemId) {
+    return (select(
+      sdeStargates,
+    )..where((g) => g.fromSystemId.equals(systemId))).get();
+  }
+
+  Future<List<SdeStargate>> getAllStargates() {
+    return select(sdeStargates).get();
+  }
+
+  Future<void> upsertSystemStatics(List<SdeSystemStaticsCompanion> rows) async {
+    if (rows.isEmpty) return;
+    await batch((b) {
+      b.insertAllOnConflictUpdate(sdeSystemStatics, rows);
+    });
+  }
+
+  Future<List<SdeSystemStatic>> getSystemStatics(int systemId) {
+    return (select(
+      sdeSystemStatics,
+    )..where((s) => s.systemId.equals(systemId))).get();
   }
 }
 
