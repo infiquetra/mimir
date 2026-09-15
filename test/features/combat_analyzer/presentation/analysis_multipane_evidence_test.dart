@@ -34,6 +34,7 @@ import 'package:mimir/features/combat_analyzer/domain/parsed_combat_encounter.da
 import 'package:mimir/features/combat_analyzer/presentation/analysis_multipane_screen.dart';
 import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_attacker_correlation_section.dart';
 import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_evidence_checklist_card.dart';
+import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_incoming_matchups_section.dart';
 import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_matchup_section.dart';
 import 'package:mimir/features/combat_analyzer/presentation/widgets/aar_pre_analysis_gate.dart';
 import 'package:mimir/features/wallet/data/wallet_providers.dart';
@@ -416,6 +417,58 @@ void main() {
           greaterThan(tester.getTopLeft(find.byType(AarMatchupSection)).dy),
         );
         expect(find.text('Incoming Sources'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'U3 report-optional Damage tab shows incoming matchups before analysis',
+      (tester) async {
+        await pumpScreen(tester);
+        expect(find.byType(AarIncomingMatchupsSection), findsOneWidget);
+        expect(find.byType(AarPreAnalysisGate), findsOneWidget);
+        expect(find.byType(AarAttackerCorrelationSection), findsNothing);
+        expect(find.text('Incoming Sources'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'U3 Damage tab replaces correlation ranking and labels outgoing vs victim',
+      (tester) async {
+        holder.bundle = AarDerivationBundle(
+          self: holder.bundle.self,
+          opponent: holder.bundle.opponent,
+          selfMatchup: CombatDamageMatchupAnalyzer.analyze(
+            profile: holder.incoming,
+            defense: null,
+            targetLabel: 'Pilot',
+          ),
+          opponentMatchup: CombatDamageMatchupAnalyzer.analyze(
+            profile: holder.outgoing,
+            defense: null,
+            targetLabel: 'Target Pilot',
+          ),
+        );
+        await pumpScreen(
+          tester,
+          cached: cachedRow(snapshot: _snapshot(score: 49)),
+        );
+        tester.view.physicalSize = const Size(1400, 2400);
+        await tester.pump();
+        final damageTab = find.text('Damage');
+        await tester.ensureVisible(damageTab);
+        await tester.tap(damageTab);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        expect(find.byType(AarIncomingMatchupsSection), findsOneWidget);
+        expect(find.byType(AarAttackerCorrelationSection), findsNothing);
+        expect(find.text('Incoming Sources'), findsNothing);
+        expect(find.textContaining("Your outgoing damage vs"), findsOneWidget);
+        expect(find.byType(AarMatchupSection), findsWidgets);
+        expect(
+          tester.getTopLeft(find.byType(AarIncomingMatchupsSection)).dy,
+          lessThan(tester.getTopLeft(find.byType(AarMatchupSection).last).dy),
+        );
       },
     );
   });
