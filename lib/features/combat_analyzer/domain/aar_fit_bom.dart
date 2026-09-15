@@ -6,6 +6,7 @@ import 'aar_fit_snapshot.dart';
 class FitBomLine {
   const FitBomLine({
     required this.typeId,
+    this.typeName,
     this.requiredCount,
     this.observedDelta,
     this.targetCount,
@@ -14,6 +15,7 @@ class FitBomLine {
   });
 
   final int typeId;
+  final String? typeName;
   final int? requiredCount;
   final int? observedDelta;
   final int? targetCount;
@@ -92,6 +94,7 @@ class FitBillOfMaterials {
         requirements.add(
           FitBomLine(
             typeId: typeId,
+            typeName: _typeName(baseline, target, typeId),
             requiredCount: unknown ? null : targetCount,
             observedDelta: observedDelta,
             targetCount: targetCount,
@@ -109,6 +112,7 @@ class FitBillOfMaterials {
         requirements.add(
           FitBomLine(
             typeId: typeId,
+            typeName: _typeName(baseline, target, typeId),
             requiredCount: unknown ? null : observedDelta,
             observedDelta: observedDelta,
             targetCount: targetCount,
@@ -126,6 +130,7 @@ class FitBillOfMaterials {
         removals.add(
           FitBomLine(
             typeId: typeId,
+            typeName: _typeName(baseline, target, typeId),
             requiredCount: unknown ? null : -observedDelta,
             observedDelta: observedDelta,
             targetCount: targetCount,
@@ -236,6 +241,36 @@ bool _groupProvablyCannotContain(
     return true;
   }
   return false;
+}
+
+String? _typeName(AarFitSnapshot a, AarFitSnapshot b, int typeId) {
+  for (final snapshot in [a, b]) {
+    final fitting = snapshot.fitting;
+    if (fitting.shipTypeId == typeId && fitting.shipName.isNotEmpty) {
+      return fitting.shipName;
+    }
+    for (final module in fitting.allModules) {
+      if (module.typeId == typeId && module.typeName.isNotEmpty) {
+        return module.typeName;
+      }
+    }
+    for (final drone in fitting.drones) {
+      if (drone.typeId == typeId && drone.typeName.isNotEmpty) {
+        return drone.typeName;
+      }
+    }
+    for (final fighter in fitting.fighters) {
+      if (fighter.typeId == typeId && fighter.typeName.isNotEmpty) {
+        return fighter.typeName;
+      }
+    }
+    for (final cargo in fitting.cargo) {
+      if (cargo.typeId == typeId && cargo.typeName.isNotEmpty) {
+        return cargo.typeName;
+      }
+    }
+  }
+  return null;
 }
 
 String _heading({required AarBomMode mode, required bool complete}) {

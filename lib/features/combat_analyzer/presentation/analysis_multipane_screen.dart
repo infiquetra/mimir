@@ -12,6 +12,8 @@ import '../data/combat_analysis_service.dart';
 import '../data/combat_damage_profile_resolver.dart';
 import '../data/combat_providers.dart';
 import '../domain/aar_evidence_assessment.dart';
+import '../domain/aar_fit_comparison.dart';
+import '../domain/aar_fit_snapshot.dart';
 import 'aar_capture_feedback.dart';
 import '../domain/combat_aar_report.dart';
 import '../domain/combat_damage_profile.dart';
@@ -21,6 +23,7 @@ import '../../fitting/domain/models.dart';
 import '../../wallet/data/wallet_providers.dart';
 import 'widgets/aar_derived_stats_panel.dart';
 import 'widgets/aar_evidence_checklist_card.dart';
+import 'widgets/aar_fit_comparison_workspace.dart';
 import 'widgets/aar_incoming_matchups_section.dart';
 import 'widgets/aar_matchup_section.dart';
 import 'widgets/aar_pre_analysis_gate.dart';
@@ -399,6 +402,15 @@ class _AnalysisMultiPaneScreenState
                 AarPreAnalysisGate(
                   assessment: _assessmentOrNull(),
                   onAnalyze: () => _startAnalysis(),
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: AarCompareFitsEntry(
+                    onPressed: () {
+                      Log.d('COMBAT.UI', 'compare fits opened ${encounter.id}');
+                    },
+                  ),
                 ),
                 const SizedBox(height: 16),
                 AarIncomingMatchupsSection(encounter: encounter),
@@ -1039,6 +1051,29 @@ class _AnalysisMultiPaneScreenState
     );
   }
 
+  AarComparisonSources _comparisonSources(
+    ParsedCombatEncounter encounter,
+    CombatEnrichment? enrichment,
+  ) {
+    return AarComparisonSources.resolve(
+      encounterPilotId: encounter.characterId,
+      attachedPilot: enrichment?.pilotFitEvidence == null
+          ? null
+          : AarFitSnapshot.fromFitEvidence(
+              encounterId: encounter.id,
+              evidence: enrichment!.pilotFitEvidence!,
+            ),
+      victim: enrichment?.victimFitEvidence == null
+          ? null
+          : AarFitSnapshot.fromFitEvidence(
+              encounterId: encounter.id,
+              evidence: enrichment!.victimFitEvidence!,
+            ),
+      currentCapture: enrichment?.fitComparison?.currentSnapshot,
+      reference: enrichment?.fitComparison?.userProposal?.target,
+    );
+  }
+
   Widget _buildFitsTab(
     ThemeData theme,
     ParsedCombatEncounter encounter,
@@ -1052,6 +1087,11 @@ class _AnalysisMultiPaneScreenState
 
     return ListView(
       children: [
+        AarFitComparisonWorkspace(
+          encounterId: encounter.id,
+          sources: _comparisonSources(encounter, enrichment),
+        ),
+        const SizedBox(height: 12),
         if (enrichment?.pilotFitEvidence != null) ...[
           _DestroyedFitSection(
             fitting: enrichment!.pilotFitEvidence!.fitting,
