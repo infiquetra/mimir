@@ -57,8 +57,14 @@ void main() {
       tester,
       view: CorporationWalletsView(
         divisionBalances: [
-          WalletDivisionInput(division: 1, balance: ExactDecimal.parse('10.00')),
-          WalletDivisionInput(division: 2, balance: ExactDecimal.parse('20.00')),
+          WalletDivisionInput(
+            division: 1,
+            balance: ExactDecimal.parse('10.00'),
+          ),
+          WalletDivisionInput(
+            division: 2,
+            balance: ExactDecimal.parse('20.00'),
+          ),
         ],
         journalRows: [
           WalletJournalRow(

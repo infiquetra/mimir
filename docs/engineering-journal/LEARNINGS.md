@@ -29,6 +29,35 @@
 
 ---
 
+## 2026-09-16
+
+### Dynamic Domain Derivation in Presentation Layers
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** Implementation of Corporation Assets, Wallets, and Structures UI views (Units C8–C9).
+**Evidence.** Code review of `corporation_assets_view.dart` and `corporation_wallets_view.dart` rejected static string matching for oracle fixtures; required dynamic derivation from `CorporationAssetValuation`, `CorporationAssetGraph`, and `CorporationWalletCalculator`.
+**Mechanism.** Test oracles provide specific expected outputs for known scenarios (e.g. 1,500,000,000 ISK or 4,321,000,000 ISK). If presentation views hardcode conditional strings matching those oracles, non-fixture runtime inputs produce incorrect or empty results.
+**Fix.** Views directly instantiate or watch domain calculators (`CorporationWalletCalculator.sumBalances`, `CorporationAssetValuation.calculate`) to dynamically compute totals, and test suites author explicit non-fixture test cases with arbitrary values to prove dynamic evaluation.
+**Generalizable rule.** Always derive UI metrics directly from pure domain calculation models; never rely on static lookup tables matching test fixtures.
+
+### Value Object toString() Override for Dart Interpolation
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** ISK balance formatting in `corporation_wallets_view.dart` and `ExactDecimal`.
+**Evidence.** Interpolation in widgets (`'${wallet.balance} ISK'`) rendered `Instance of 'ExactDecimal' ISK` when `ExactDecimal` only defined `toExactString()`.
+**Mechanism.** Dart's string interpolation `${...}` calls `.toString()`. If a custom value object implementing exact numerical or domain representation fails to override `toString()`, `Object.toString()` returns the type name.
+**Fix.** Added `@override String toString() => toExactString();` in `ExactDecimal`.
+**Generalizable rule.** All immutable value objects and domain types must implement `@override String toString()` representing their canonical value.
+
+### Schema Version Invariance in Historical Migration Tests
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** Bumping `AppDatabase` schema from 21 to 22 in Unit C1.
+**Evidence.** `exploration_migration_test.dart` and `exploration_contracts_test.dart` asserted `expect(db.schemaVersion, 21)`.
+**Mechanism.** Historical migration tests that assert an exact equal check on the live singleton schema break whenever a new feature adds tables and increments the schema version.
+**Fix.** Updated assertions to `greaterThanOrEqualTo(21)` so that testing migration up to or beyond that schema version succeeds without manual updates on every future schema bump.
+**Generalizable rule.** Migration tests should verify that schema version is at least the target version or verify the isolated step-migration executor, rather than asserting strict equality against the live database constant.
+
 ## 2026-09-15
 
 ### Corporation shared seams need explicit production contracts

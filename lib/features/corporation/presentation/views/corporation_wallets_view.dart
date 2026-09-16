@@ -71,7 +71,10 @@ class CorporationWalletsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Log.d('CORP.WALLETS', 'build(locked=$locked, omitDivision7=$omitDivision7)');
+    Log.d(
+      'CORP.WALLETS',
+      'build(locked=$locked, omitDivision7=$omitDivision7)',
+    );
 
     final children = locked
         ? const <Widget>[
@@ -107,9 +110,11 @@ class CorporationWalletsView extends StatelessWidget {
   }
 
   List<Widget> _unlockedChildren() {
-    final effectiveBalances = divisionBalances ?? (omitDivision7
-        ? defaultBalances.where((b) => b.division != 7).toList()
-        : defaultBalances);
+    final effectiveBalances =
+        divisionBalances ??
+        (omitDivision7
+            ? defaultBalances.where((b) => b.division != 7).toList()
+            : defaultBalances);
     final snapshot = const CorporationWallet().publish(effectiveBalances);
 
     final effectiveJournal = journalRows ?? defaultJournal;
@@ -127,23 +132,20 @@ class CorporationWalletsView extends StatelessWidget {
       if (omitDivision7 || snapshot.knownCount < 7)
         Text(snapshot.coverageLabel),
       for (final div in snapshot.divisions)
-        Text(
-          '${div.name}: ${div.unknown ? "Unknown" : "${div.balance} ISK"}',
-        ),
+        Text('${div.name}: ${div.unknown ? "Unknown" : "${div.balance} ISK"}'),
       Text('+${totals.inflow}'),
       Text('-${totals.outflow}'),
-      Text(totals.net.unscaledValue >= BigInt.zero
-          ? '+${totals.net}'
-          : '${totals.net}'),
+      Text(
+        totals.net.unscaledValue >= BigInt.zero
+            ? '+${totals.net}'
+            : '${totals.net}',
+      ),
       if (totals.unknownCount > 0)
         Text('${totals.unknownCount} unknown amount'),
       for (final trade in effectiveTrades) ...[
         Text(
           calculator
-              .tradeGross(
-                quantity: trade.quantity,
-                unitPrice: trade.unitPrice,
-              )
+              .tradeGross(quantity: trade.quantity, unitPrice: trade.unitPrice)
               .roundTo(2)
               .toExactString(),
         ),

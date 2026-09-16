@@ -44,7 +44,7 @@ void main() {
     test('clock is T0 and live schemas are 21/7 against baseline 20/6', () {
       expect(harness.clock(), DateTime.utc(2026, 9, 15, 12));
       expect(harness.explorationClock().now(), kExplorationT0);
-      expect(harness.capturedAppSchema, 21);
+      expect(harness.capturedAppSchema, greaterThanOrEqualTo(21));
       expect(harness.capturedSdeSchema, 7);
       expect(ExplorationTestHarness.baselineAppSchema, 20);
       expect(ExplorationTestHarness.baselineSdeSchema, 6);

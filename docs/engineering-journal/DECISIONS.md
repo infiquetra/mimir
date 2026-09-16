@@ -24,6 +24,17 @@
 
 ---
 
+## 2026-09-16
+
+### Presentation Views Strictly Evaluate Pure Domain Models Rather Than Mock Lookups
+
+**Author.** Antigravity / Lead Orchestrator
+**Decision.** Mandate that all Corporation presentation views (`CorporationAssetsView`, `CorporationWalletsView`, `CorporationStructuresView`, `OverviewRosterView`) compute their displayed totals, valuations, and fuel warnings dynamically from domain calculators (`CorporationAssetValuation`, `CorporationAssetGraph`, `CorporationWalletCalculator`, `CorporationFuelCalculator`).
+**Rejected alternatives.** Presentation-layer heuristic shortcuts or static mapping dictionaries tied to test oracle values.
+**Rationale.** Ties presentation fidelity directly to pure domain models, ensuring that arbitrary live ESI data renders with exact precision and proper hierarchy, while preventing false-positive test passes on static lookup tables.
+**Revisit when.** Presentation requirements necessitate complex server-side pre-aggregated rollups.
+**Refs.** [Release Evidence](../verification/corporation-module/RELEASE_EVIDENCE.md), [LEARNINGS 2026-09-16](LEARNINGS.md#dynamic-domain-derivation-in-presentation-layers).
+
 ## 2026-09-15
 
 ### Corporation authority is durable, fenced and separate from request eligibility

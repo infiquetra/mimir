@@ -154,8 +154,8 @@ void main() {
   }
 
   group('P02 schema 21', () {
-    test('schemaVersion is 21', () {
-      expect(database.schemaVersion, 21);
+    test('schemaVersion is at least 21', () {
+      expect(database.schemaVersion, greaterThanOrEqualTo(21));
     });
 
     test(
@@ -183,7 +183,7 @@ void main() {
 
         final upgraded = AppDatabase.forTesting(NativeDatabase(file));
         addTearDown(upgraded.close);
-        expect(upgraded.schemaVersion, 21);
+        expect(upgraded.schemaVersion, greaterThanOrEqualTo(21));
         for (final name in _explorationTables) {
           expect(await tableExists(upgraded, name), isTrue, reason: name);
         }
@@ -395,7 +395,7 @@ void main() {
 
         final second = AppDatabase.forTesting(NativeDatabase(file));
         addTearDown(second.close);
-        expect(second.schemaVersion, 21);
+        expect(second.schemaVersion, greaterThanOrEqualTo(21));
         final characters = await second.getAllCharacters();
         expect(characters.single.name, 'Pilot Seven');
         final row = await second

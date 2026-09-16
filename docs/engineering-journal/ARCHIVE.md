@@ -9,6 +9,23 @@
 
 ---
 
+### SHIPPED 2026-09-16: Corporation Module (Phase 4e–4h)
+
+**Author.** Antigravity / Lead Orchestrator
+**Shipped as.** Full end-to-end delivery of the Mimir Corporation Module across units C0 through C10, satisfying all 40 Acceptance Criteria (AC1–AC40) and 60 test cases (D01–D20, P01–P20, U01–U12, Oracles F1–F8) with 1,463 passing tests in the full suite (0 failed, 14 pre-existing skipped):
+- **Contracts, Capabilities & Fixtures (C0):** Immutable domain models (`CorporationAccessPermit`, `CorporationCapability`, `ExactDecimal`, `CorporationProfile`, `CorporationMember`, `CorporationStructure`, `CorporationWallet`, `CorporationJournalEntry`), F1–F8 oracle fixtures, and isolated test harness (`792e3f8`).
+- **Drift Schema 22 & Authority Storage (C1):** Upgraded `AppDatabase` to schema version 22 with 8 corporation tables, generation-fenced character mutations, actual-grant revision tracking, bounded offline leases, and verified migration reopen resilience (`8f95c02`).
+- **Corporation Repositories & Authority Layer (C2):** Guarded repositories (`CorporationRepository`, `CorporationMemberRepository`, `CorporationAssetRepository`, `CorporationStructureRepository`, `CorporationWalletRepository`), CAS multi-window coordination, fail-closed auth revocation, and rate-limit backoff handling (`8f95c02`).
+- **Member Roster & Roles Tracking (C3):** Member tracking domain, title/role mapping, join date formatting with graceful fallback, and activity derivation (`8f95c02`).
+- **Asset Hierarchy & Lossless Valuation Engine (C4):** Recursive asset tree in `CorporationAssetGraph`, location/office grouping, cycle detection, and market valuation via `CorporationAssetValuation` using arbitrary-precision math (`436fc71`).
+- **Structure State, Services & Fuel Alerts (C5):** Structure state classification, service statuses, hourly fuel consumption modeling, and exact 72h Low / 24h Critical threshold alert evaluation (`436fc71`).
+- **Multi-Division Wallets & Journal History (C6):** Multi-division balances with exact lossless summation, permitted division segregation, market transaction attribution, and division 7 edge-case handling (`436fc71`).
+- **SubWindow 15 Shell & Adaptive Navigation (C7):** Registered dedicated Window type ID 15 (`WindowType.corporation`), tray menu integration, independent `SubWindowApp` mounting without global SDE uncompress block, and responsive 4-view adaptive shell (`436fc71`).
+- **Overview, Roster & Assets Presentation (C8):** `OverviewRosterView` with corporate tax/station headers and role-filtered roster; `CorporationAssetsView` with tree-based container nesting, dynamic valuation card, and zero raw numeric IDs (`2a2d309`).
+- **Structures, Alerts & Wallets Presentation (C9):** `CorporationStructuresView` with fuel runtime badges and critical alert banners; `CorporationWalletsView` with tabbed divisions, journal history, and market trade logs (`f6a9fb0`).
+- **Release Evidence, Benchmarks & Closeout (C10):** Full test suite passed (1,463 passing, 0 failed), `flutter analyze` 0 issues, formatting verified, release evidence report generated at `docs/verification/corporation-module/RELEASE_EVIDENCE.md`, and sign-offs from `reviewer` (Muse) and `tester` (Codex).
+**Refs.** [Authoritative specification](../specs/corporation-module.md); [Technical design](../specs/corporation-module-design.md); [.agents plan](../../.agents/plans/2026-09-15-corporation-module.md); LEARNINGS 2026-09-16; DECISIONS 2026-09-16.
+
 ### SHIPPED 2026-09-15: Exploration Module (Phase 4)
 
 **Author.** Antigravity / Lead Orchestrator

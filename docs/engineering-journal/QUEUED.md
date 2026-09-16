@@ -31,25 +31,6 @@
 
 ## P2 - Important
 
-### Corporation Module
-
-**Author.** Product.
-**Priority.** P2, user-prioritized Corporation initiative after Exploration.
-**Effort.** Plan estimates C0–C10 against the technical design and assigns shared
-auth/database/window ownership; older Sprint 23–24 placeholders are not estimates.
-**Worth it when.** Members, personnel officers, directors, structure managers and
-accountants need the corporation information their selected character can access.
-**Context.** Product `0abc4f6` and technical architecture complete on
-`feature/corporation-module` at application baseline `ccfe79b`; implementation and
-tester verification remain pending. Schema 22, full-size performance/native evidence
-and proven fuel rule/wire mappings are explicit implementation gates.
-Dedicated tray window 15 has four adaptive views. Key additions are capability
-and grant-aware Drift caches, bounded offline access, complete paginated data,
-scoped names, qualified fuel forecasts/alerts and exact decimal wallet history.
-**Refs.** [Authoritative Product specification](../specs/corporation-module.md),
-[technical design](../specs/corporation-module-design.md), C0–C10, S1–S10, R1–R32,
-AC1–AC40 and 60 Domain/Provider/UI/Oracle cases with T01–T60 aliases.
-
 ### Clip reloads in the cap simulation (charge quantities)
 
 **Author.** Qwen Code
