@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mimir/core/theme/eve_colors.dart';
-import 'package:mimir/features/intel/data/intel_providers.dart';
+import 'package:mimir/core/logging/logger.dart';
+import 'package:mimir/features/exploration/data/exploration_providers.dart';
+import 'package:mimir/features/exploration/domain/exploration_clock.dart';
+import 'package:mimir/features/exploration/domain/exploration_observation.dart';
 
 class TheraConnectionsCard extends ConsumerWidget {
   const TheraConnectionsCard({super.key});
 
+  static const _log = 'EXPLORATION.UI';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theraAsync = ref.watch(theraConnectionsProvider);
+    final feedAsync = ref.watch(eveScoutFeedProvider);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -17,52 +21,35 @@ class TheraConnectionsCard extends ConsumerWidget {
         children: [
           ListTile(
             leading: const Icon(Icons.hub),
-            title: const Text('Thera Connections'),
-            subtitle: const Text('Live EVE-Scout Feed'),
+            title: const Text('Thera & Turnur connections'),
+            subtitle: const Text('EVE-Scout / Signal Cartel'),
             trailing: IconButton(
               icon: const Icon(Icons.refresh),
-              onPressed: () => ref.invalidate(theraConnectionsProvider),
+              tooltip: 'Refresh connections',
+              onPressed: () {
+                Log.i(_log, 'intel card refresh');
+                ref.invalidate(eveScoutFeedProvider);
+              },
             ),
           ),
           const Divider(height: 1),
-          theraAsync.when(
-            data: (connections) {
+          feedAsync.when(
+            data: (snapshot) {
+              final connections = snapshot.records;
               if (connections.isEmpty) {
                 return const Padding(
                   padding: EdgeInsets.all(16.0),
-                  child: Text('No active Thera connections found.'),
+                  child: Text('No reported connections for this selection.'),
                 );
               }
 
-              // Cap the height so the kill feed — this window's namesake —
-              // stays visible without scrolling past every Thera connection.
               return ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 320),
                 child: ListView.builder(
                   shrinkWrap: true,
                   itemCount: connections.length,
                   itemBuilder: (context, index) {
-                    final conn = connections[index];
-
-                    return ListTile(
-                      dense: true,
-                      leading: const Icon(Icons.compare_arrows),
-                      title: Text(
-                        '${conn.inSystemName} (${conn.inSystemClass.toUpperCase()})',
-                      ),
-                      subtitle: Text(
-                        '${conn.inRegionName} • ${conn.whType} • ${conn.maxShipSize}',
-                      ),
-                      trailing: Text(
-                        '${conn.remainingHours}h',
-                        style: TextStyle(
-                          color: conn.remainingHours <= 2
-                              ? EveColors.error
-                              : EveColors.evePrimary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    );
+                    return _connectionTile(connections[index]);
                   },
                 ),
               );
@@ -74,12 +61,37 @@ class TheraConnectionsCard extends ConsumerWidget {
             error: (e, st) => Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                'Failed to load connections: $e',
+                'Connections unavailable.',
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _connectionTile(PublicConnection connection) {
+    final time = switch (connection.time) {
+      TimeEstimate.stable => 'Stable',
+      TimeEstimate.eol => 'EOL',
+      TimeEstimate.expired => 'Expired',
+      TimeEstimate.unknown => 'Unknown',
+    };
+    return ListTile(
+      dense: true,
+      leading: const Icon(Icons.compare_arrows),
+      title: Text(
+        '${connection.far.systemName} · ${connection.hub.systemName}',
+      ),
+      subtitle: Text(
+        [
+          if (connection.whType != null && connection.whType!.isNotEmpty)
+            connection.whType!,
+          connection.shipSize.name,
+          time,
+          'Unknown',
+        ].join(' • '),
       ),
     );
   }
