@@ -677,22 +677,36 @@ class EsiClient {
     }
   }
 
-  /// Naive X6: still swallows failures through [getCharacterLocation].
+  /// Typed location lookup. Failures stay typed; they are never swallowed as null.
   Future<CharacterLocationResult> getCharacterLocationStrict(
     int characterId,
   ) async {
-    final loc = await getCharacterLocation(characterId);
-    if (loc == null) {
-      return const CharacterLocationFailed(
-        CharacterLocationFailureKind.network,
+    try {
+      final response = await authenticatedGet<Map<String, dynamic>>(
+        '/characters/$characterId/location/',
+        characterId: characterId,
       );
+      return interpretCharacterLocationResponse(
+        statusCode: response.statusCode,
+        body: response.data,
+        observedAt: DateTime.now().toUtc(),
+      );
+    } on DioException catch (error) {
+      return interpretCharacterLocationResponse(
+        statusCode: error.response?.statusCode,
+        body: error.response?.data is Map<String, dynamic>
+            ? error.response!.data as Map<String, dynamic>
+            : null,
+        error: error,
+      );
+    } on EsiException catch (error) {
+      return interpretCharacterLocationResponse(
+        statusCode: error.statusCode,
+        error: error,
+      );
+    } catch (error) {
+      return interpretCharacterLocationResponse(error: error);
     }
-    return CharacterLocationObserved(
-      systemId: loc.solarSystemId,
-      observedAt: DateTime.now().toUtc(),
-      stationId: loc.stationId,
-      structureId: loc.structureId,
-    );
   }
 
   Future<CharacterShip?> getCharacterShip(int characterId) async {
@@ -1336,6 +1350,65 @@ enum CharacterLocationFailureKind {
   malformed,
   noLocation,
   cancelled,
+}
+
+/// Maps an ESI location response or transport error into a typed result.
+CharacterLocationResult interpretCharacterLocationResponse({
+  int? statusCode,
+  Map<String, dynamic>? body,
+  Object? error,
+  DateTime? observedAt,
+}) {
+  if (error != null && statusCode == null) {
+    return CharacterLocationFailed(
+      CharacterLocationFailureKind.network,
+      message: error.toString(),
+    );
+  }
+  if (statusCode == 401 || statusCode == 403) {
+    return const CharacterLocationFailed(CharacterLocationFailureKind.auth);
+  }
+  if (statusCode == 404) {
+    return const CharacterLocationFailed(
+      CharacterLocationFailureKind.noLocation,
+    );
+  }
+  if (statusCode == 200) {
+    if (body == null || body.isEmpty) {
+      return const CharacterLocationFailed(
+        CharacterLocationFailureKind.noLocation,
+      );
+    }
+    final systemId = body['solar_system_id'];
+    if (systemId == null) {
+      return const CharacterLocationFailed(
+        CharacterLocationFailureKind.noLocation,
+      );
+    }
+    if (systemId is! int) {
+      return const CharacterLocationFailed(
+        CharacterLocationFailureKind.malformed,
+      );
+    }
+    return CharacterLocationObserved(
+      systemId: systemId,
+      observedAt: (observedAt ?? DateTime.now()).toUtc(),
+      stationId: body['station_id'] is int ? body['station_id'] as int : null,
+      structureId: body['structure_id'] is int
+          ? body['structure_id'] as int
+          : null,
+    );
+  }
+  if (statusCode != null && statusCode >= 500) {
+    return CharacterLocationFailed(
+      CharacterLocationFailureKind.network,
+      message: 'ESI $statusCode',
+    );
+  }
+  return CharacterLocationFailed(
+    CharacterLocationFailureKind.network,
+    message: error?.toString(),
+  );
 }
 
 sealed class CharacterLocationResult {

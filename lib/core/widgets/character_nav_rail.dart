@@ -34,7 +34,7 @@ class CharacterNavRail extends ConsumerWidget {
     Log.d('NAV', 'CharacterNavRail - building');
     final theme = Theme.of(context);
     final charactersAsync = ref.watch(allCharactersProvider);
-    final activeCharacter = ref.watch(activeCharacterProvider).value;
+    final activeAsync = ref.watch(activeCharacterProvider);
 
     return Container(
       width: width,
@@ -52,41 +52,55 @@ class CharacterNavRail extends ConsumerWidget {
             return _buildEmptyState(context);
           }
 
-          return Column(
-            children: [
-              // Character avatars
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: characters.length,
-                  itemBuilder: (context, index) {
-                    final character = characters[index];
-                    final isActive =
-                        character.characterId == activeCharacter?.characterId;
+          return activeAsync.when(
+            data: (activeCharacter) {
+              return Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: characters.length,
+                      itemBuilder: (context, index) {
+                        final character = characters[index];
+                        final isActive =
+                            character.characterId ==
+                            activeCharacter?.characterId;
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: spacing),
-                      child: _buildCharacterAvatar(
-                        context,
-                        ref,
-                        character,
-                        isActive: isActive,
-                      ),
-                    );
-                  },
-                ),
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: spacing),
+                          child: _buildCharacterAvatar(
+                            context,
+                            ref,
+                            character,
+                            isActive: isActive,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  if (onRefresh != null) ...[
+                    _buildRefreshButton(context),
+                    const SizedBox(height: spacing),
+                  ],
+                  _buildAddCharacterButton(context),
+                  const SizedBox(height: 8),
+                ],
+              );
+            },
+            loading: () => Center(
+              child: CircularProgressIndicator(
+                color: EveColors.photonBlue,
+                strokeWidth: 2,
               ),
-
-              // Refresh button (if callback provided)
-              if (onRefresh != null) ...[
-                _buildRefreshButton(context),
-                const SizedBox(height: spacing),
-              ],
-
-              // Add character button
-              _buildAddCharacterButton(context),
-              const SizedBox(height: 8),
-            ],
+            ),
+            error: (error, _) {
+              Log.e(
+                'NAV',
+                'CharacterNavRail - error loading active character',
+                error,
+              );
+              return _buildErrorState(context);
+            },
           );
         },
         loading: () => Center(
