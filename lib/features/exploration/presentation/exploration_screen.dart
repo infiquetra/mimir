@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/logging/logger.dart';
 import '../../../core/widgets/character_nav_rail.dart';
+import 'public_highways_view.dart';
+import 'wormhole_database_view.dart';
 
 /// Exploration window shell: adaptive character selector and four destinations.
 ///
@@ -119,9 +121,11 @@ class _ExplorationScreenState extends State<ExplorationScreen> {
   Widget _destinationBody() {
     return IndexedStack(
       index: _index,
-      children: [
-        for (final label in ExplorationScreen.destinations)
-          Center(child: Text(label)),
+      children: const [
+        WormholeDatabaseView(),
+        PublicHighwaysView(),
+        Center(child: Text('Signatures')),
+        Center(child: Text('Routes')),
       ],
     );
   }
