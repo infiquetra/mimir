@@ -9,12 +9,11 @@ enum MembershipState {
 }
 
 class OwnerIncarnation {
-  const OwnerIncarnation({
-    required this.characterId,
-    this.uuid = 'incarnation-0',
-  });
+  const OwnerIncarnation({required this.characterId, required this.uuid});
 
   final int characterId;
+
+  /// New UUID when a character is added or re-added; never a reused generation.
   final String uuid;
 }
 
@@ -81,9 +80,13 @@ class CorporationContext {
     this.corporationId = 0,
     this.incarnation,
     this.grant,
-    this.membership = MembershipState.member,
+    MembershipState? membership,
     this.generation = 0,
-  });
+  }) : membership =
+           membership ??
+           (corporationId == 0
+               ? MembershipState.unresolved
+               : MembershipState.member);
 
   final String tenant;
   final int? characterId;
@@ -93,6 +96,9 @@ class CorporationContext {
   final MembershipState membership;
   final int generation;
 
-  /// Naive: corporation 0 is treated as a real member context.
-  bool get isResolvedMember => characterId != null;
+  /// Corporation `0` is a temporary unresolved identifier, not a member.
+  bool get isResolvedMember =>
+      characterId != null &&
+      corporationId != 0 &&
+      membership == MembershipState.member;
 }

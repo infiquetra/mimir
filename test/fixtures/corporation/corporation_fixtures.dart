@@ -251,19 +251,3 @@ class F8Fixtures {
   static const extremeIsk = '-1234567890123456.78';
   static String longName() => 'A' * 80;
 }
-
-class RosterOracle {
-  DateTime? currentJoin(List<dynamic> history, int corporationId) {
-    DateTime? found;
-    for (final row in history) {
-      final map = Map<String, dynamic>.from(row as Map);
-      if (map['corporation_id'] == corporationId) {
-        found = DateTime.parse(map['start_date'] as String).toUtc();
-      }
-    }
-    return found;
-  }
-
-  bool withinSevenDays(DateTime login, DateTime now) =>
-      now.difference(login).inDays <= 7;
-}

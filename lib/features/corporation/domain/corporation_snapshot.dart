@@ -64,33 +64,51 @@ class SnapshotEnvelope<T> {
   final bool complete;
 }
 
-/// Naive freshness: receivedAt + max-age, which double-counts or ignores Age.
+/// Freshness, lease, and 304 coverage. Equality at the lease end locks.
 class SnapshotFreshness {
   const SnapshotFreshness();
 
+  /// RFC-style remaining lifetime from Date, Age, and max-age.
+  ///
+  /// F6: Date = T0−120s, Age = 120, max-age = 3600 → deadline 12:58.
   DateTime deadline({
     required DateTime receivedAt,
     DateTime? dateHeader,
     int? ageSeconds,
     int maxAgeSeconds = 3600,
   }) {
-    return receivedAt.add(Duration(seconds: maxAgeSeconds));
+    var apparentAge = 0;
+    if (dateHeader != null) {
+      final delta = receivedAt.difference(dateHeader).inSeconds;
+      if (delta > 0) apparentAge = delta;
+    }
+    final headerAge = ageSeconds ?? 0;
+    final correctedAge = apparentAge > headerAge ? apparentAge : headerAge;
+    final remaining = maxAgeSeconds - correctedAge;
+    return receivedAt.add(Duration(seconds: remaining > 0 ? remaining : 0));
   }
 
+  /// `now < leaseEndsAt`. Equality locks.
   bool offlineReadAllowed({
     required DateTime now,
     required DateTime leaseEndsAt,
   }) {
-    return !now.isAfter(leaseEndsAt);
+    return now.isBefore(leaseEndsAt);
   }
 
   RefreshOutcome applyNotModified({required bool pageOneOnly}) {
+    if (pageOneOnly) return RefreshOutcome.incomplete;
     return RefreshOutcome.notModifiedRenewedAll;
   }
 
   bool sourcesCompatible(DateTime a, DateTime b) {
-    return a.difference(b).abs().inMinutes <= 5;
+    return a.difference(b).abs() <= const Duration(minutes: 5);
   }
 
-  bool deriveComplete<T>(T payload, List<PageEvidence> pages) => true;
+  bool deriveComplete<T>(T payload, List<PageEvidence> pages) {
+    final missingPages = pages.any((page) => page.xPages == null);
+    if (!missingPages) return true;
+    if (payload is Iterable) return payload.isEmpty;
+    return false;
+  }
 }
