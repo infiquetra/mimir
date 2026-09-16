@@ -253,7 +253,23 @@ void main() {
       await tester.pump();
       expect(find.text('Signature saved.'), findsOneWidget);
 
-      await pumpView(tester, populated(showImport: true), onImport: () {});
+      await pumpView(
+        tester,
+        populated(showImport: true).copyWith(
+          preview: ImportPreview(
+            operationId: 'op-1',
+            scope: const NotebookScope(
+              characterId: kCharacter7,
+              systemId: kAlphaSystemId,
+            ),
+            observedAt: kExplorationT0,
+            added: 2,
+            updated: 0,
+            seenAgain: 1,
+          ),
+        ),
+        onImport: () {},
+      );
       await tester.tap(find.byKey(const Key('import-commit')));
       await tester.pump();
       expect(find.text(F5Fixtures.successMessage), findsOneWidget);

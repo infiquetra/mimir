@@ -120,10 +120,7 @@ class _SignatureNotebookViewState extends State<SignatureNotebookView> {
     if (data.zeroValidSelected || !_canWrite) return;
     widget.onImport?.call();
     final preview = data.preview;
-    _snack(
-      preview?.successMessage ??
-          'Imported 3 signatures: 2 added, 0 updated, 1 seen again.',
-    );
+    _snack(preview?.successMessage ?? 'Signatures imported.');
   }
 
   Future<void> _confirmPermanentDelete() async {
@@ -226,7 +223,10 @@ class _SignatureNotebookViewState extends State<SignatureNotebookView> {
                       onPressed: _canWrite
                           ? () {
                               widget.onTrash?.call();
-                              _snack('Moved 1 signatures to Trash.');
+                              final count = data.selected != null
+                                  ? 1
+                                  : data.signatures.length;
+                              _snack('Moved $count signatures to Trash.');
                             }
                           : null,
                     ),
