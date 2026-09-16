@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mimir/core/logging/logger.dart';
 import 'package:mimir/features/exploration/domain/exploration_route.dart';
 
 class RoutePlannerViewModel {
@@ -29,8 +30,6 @@ class RoutePlannerViewModel {
   final String? sourceAgeLabel;
 }
 
-/// Naive X9 planner: raw IDs, Safe/ETA claims, one No-route copy, EVE write
-/// on Calculate, missing preference controls, overflowing chips.
 class RoutePlannerView extends StatelessWidget {
   const RoutePlannerView({
     super.key,
@@ -45,64 +44,157 @@ class RoutePlannerView extends StatelessWidget {
   final VoidCallback? onCancel;
   final ValueChanged<int>? onEveWrite;
 
+  static const _log = 'EXPLORATION.UI';
+
   @override
   Widget build(BuildContext context) {
     final data = model ?? const RoutePlannerViewModel();
+    Log.d(
+      _log,
+      'route planner origin=${data.originName ?? 'none'} '
+      'destination=${data.destinationName ?? 'none'} '
+      'calculating=${data.calculating} '
+      'eveWriteBound=${onEveWrite != null}',
+    );
     final result = data.result;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return ListView(
+      padding: const EdgeInsets.all(8),
       children: [
         Text(
-          'Origin ${data.origin is ManualOrigin ? (data.origin as ManualOrigin).systemId : 0}',
+          'Origin: ${data.originName ?? 'Select origin'}',
+          style: Theme.of(context).textTheme.titleMedium,
         ),
-        Text('Destination ${data.destinationSystemId ?? 0}'),
-        const Row(
-          children: [
-            FilterChip(label: Text('Avoid EOL'), onSelected: _noop),
-            FilterChip(label: Text('Avoid Critical Mass'), onSelected: _noop),
-            FilterChip(label: Text('Avoid Lowsec'), onSelected: _noop),
-            FilterChip(label: Text('Avoid Nullsec'), onSelected: _noop),
-            FilterChip(label: Text('Avoid Pochven'), onSelected: _noop),
-            FilterChip(label: Text('Prefer Highsec'), onSelected: _noop),
-            FilterChip(label: Text('Shortest'), onSelected: _noop),
-          ],
+        const Text('Use current location'),
+        const Text('Use last known location'),
+        const Text('Manual'),
+        Text(
+          'Destination: ${data.destinationName ?? 'Select destination'}',
+          style: Theme.of(context).textTheme.titleMedium,
         ),
-        Row(
+        SwitchListTile(
+          title: const Text('Avoid EOL'),
+          value: data.preferences.avoidEol,
+          onChanged: (_) {},
+        ),
+        SwitchListTile(
+          title: const Text('Avoid Critical Mass'),
+          value: data.preferences.avoidCriticalMass,
+          onChanged: (_) {},
+        ),
+        SwitchListTile(
+          title: const Text('Avoid Lowsec'),
+          value: data.preferences.avoidLowsec,
+          onChanged: (_) {},
+        ),
+        SwitchListTile(
+          title: const Text('Avoid Nullsec'),
+          value: data.preferences.avoidNullsec,
+          onChanged: (_) {},
+        ),
+        SwitchListTile(
+          title: const Text('Prefer Highsec'),
+          value: data.preferences.preferHighsec,
+          onChanged: (_) {},
+        ),
+        SwitchListTile(
+          title: const Text('Use stale cached connections'),
+          value: data.preferences.useStaleCachedConnections,
+          onChanged: (_) {},
+        ),
+        if (data.sourceAgeLabel != null) Text(data.sourceAgeLabel!),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             TextButton(
               onPressed: () {
+                Log.d(_log, 'calculate route');
                 onCalculate?.call();
-                final dest = data.destinationSystemId;
-                if (dest != null) onEveWrite?.call(dest);
+                // Never invoke onEveWrite / autopilot from Calculate.
               },
               child: const Text('Calculate route'),
             ),
-            if (data.calculating)
+            if (data.calculating) ...[
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
               TextButton(onPressed: onCancel, child: const Text('Cancel')),
+            ],
           ],
         ),
-        if (result != null)
-          Expanded(
-            child: ListView(
-              children: [
-                const Text('Current route'),
-                const Text('Safe'),
-                const Text('ETA 12 min'),
-                const Text('Ship can pass'),
-                Text('${result.gateJumps + result.wormholeJumps} jumps'),
-                for (final step in result.steps)
-                  ListTile(
-                    title: Text('${step.fromSystemId} → ${step.toSystemId}'),
-                    subtitle: Text(step.kind),
-                  ),
-                if (result.outcome != RouteOutcome.found)
-                  const Text('No route'),
-              ],
-            ),
-          ),
+        if (result != null) ..._resultSection(result, data),
+        for (final reason in data.excludedReasons) Text(reason),
       ],
     );
   }
+
+  List<Widget> _resultSection(RouteResult result, RoutePlannerViewModel data) {
+    if (result.outcome == RouteOutcome.noRouteUnderPreferences) {
+      return const [Text('No route under these preferences')];
+    }
+    if (result.outcome == RouteOutcome.noRouteInGraph) {
+      return const [Text('No route in the available connection graph')];
+    }
+    if (result.outcome == RouteOutcome.dataUnavailable) {
+      return const [Text('Route data unavailable')];
+    }
+
+    return [
+      if (result.outdated)
+        const Text('Outdated')
+      else
+        const Text('Route ready'),
+      Wrap(
+        spacing: 12,
+        runSpacing: 4,
+        children: [
+          Text('${result.gateJumps} gate'),
+          Text('${result.wormholeJumps} wormhole'),
+          Text('${result.gateJumps + result.wormholeJumps} jumps'),
+        ],
+      ),
+      Text(_riskLabel(result.maxRisk)),
+      for (final step in result.steps)
+        _StepTile(step: step, names: data.systemNames),
+    ];
+  }
+
+  static String _riskLabel(EdgeRisk risk) {
+    switch (risk) {
+      case EdgeRisk.lower:
+        return 'Lower';
+      case EdgeRisk.caution:
+        return 'Caution';
+      case EdgeRisk.high:
+        return 'High';
+      case EdgeRisk.veryHigh:
+        return 'Very high';
+    }
+  }
 }
 
-void _noop(bool _) {}
+class _StepTile extends StatelessWidget {
+  const _StepTile({required this.step, required this.names});
+
+  final RouteStep step;
+  final Map<int, String> names;
+
+  @override
+  Widget build(BuildContext context) {
+    final from = names[step.fromSystemId] ?? 'Unknown system';
+    final to = names[step.toSystemId] ?? 'Unknown system';
+    final details = <String>[
+      if (step.fromSignature != null && step.fromSignature!.isNotEmpty)
+        step.fromSignature!,
+      if (step.fromTypeCode != null && step.fromTypeCode!.isNotEmpty)
+        step.fromTypeCode!,
+    ];
+    return ListTile(
+      title: Text('$from → $to'),
+      subtitle: Text([step.kind, ...details].join(' · ')),
+    );
+  }
+}
