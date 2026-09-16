@@ -1,16 +1,19 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mimir/core/di/providers.dart';
+import 'package:mimir/features/exploration/data/exploration_providers.dart'
+    show eveScoutFeedRepositoryProvider, eveScoutTransportProvider;
 import '../../../core/network/esi_client.dart';
 import '../../characters/data/character_repository.dart';
-import '../../exploration/data/eve_scout_feed_repository.dart';
-import '../../exploration/data/eve_scout_transport.dart';
 import '../../exploration/domain/eve_scout_normalizer.dart';
 import '../domain/killmail_models.dart';
 import '../domain/thera_models.dart';
 import 'eve_scout_client.dart';
 import 'intel_repository.dart';
 import 'zkillboard_client.dart';
+
+export 'package:mimir/features/exploration/data/exploration_providers.dart'
+    show eveScoutFeedRepositoryProvider, eveScoutTransportProvider;
 
 final intelRepositoryProvider = Provider<IntelRepository>((ref) {
   final db = ref.watch(databaseProvider);
@@ -33,17 +36,6 @@ final recentKillsProvider = StreamProvider.autoDispose<List<ZKillmail>>((ref) {
 final intelConfigProvider = StreamProvider.autoDispose<List<dynamic>>((ref) {
   final repo = ref.watch(intelRepositoryProvider);
   return repo.watchConfig();
-});
-
-final eveScoutTransportProvider = Provider<EveScoutTransport>((ref) {
-  return HttpEveScoutTransport();
-});
-
-final eveScoutFeedRepositoryProvider = Provider<EveScoutFeedRepository>((ref) {
-  return EveScoutFeedRepository(
-    database: ref.watch(databaseProvider),
-    transport: ref.watch(eveScoutTransportProvider),
-  );
 });
 
 final eveScoutClientProvider = Provider<EveScoutClient>((ref) {
