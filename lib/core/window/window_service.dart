@@ -219,6 +219,8 @@ class WindowService {
   void _log(WindowType type, String message) {
     if (type == WindowType.exploration) {
       Log.d('EXPLORATION.WINDOW', '$message type=${type.name}');
+    } else if (type == WindowType.corporation) {
+      Log.d('CORPORATION.WINDOW', '$message type=${type.name}');
     } else {
       debugPrint('WindowService: $message ${type.name}');
     }

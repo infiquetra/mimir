@@ -94,7 +94,7 @@ extension WindowTypeExtension on WindowType {
       case WindowType.exploration:
         return 'Exploration';
       case WindowType.corporation:
-        return 'Corp';
+        return 'Corporation - Mimir';
     }
   }
 
@@ -134,7 +134,7 @@ extension WindowTypeExtension on WindowType {
       case WindowType.exploration:
         return 14;
       case WindowType.corporation:
-        return 99;
+        return 15;
     }
   }
 
@@ -171,6 +171,8 @@ extension WindowTypeExtension on WindowType {
         return WindowType.combatAnalyzer;
       case 14:
         return WindowType.exploration;
+      case 15:
+        return WindowType.corporation;
       default:
         return WindowType.dashboard;
     }
@@ -210,7 +212,7 @@ extension WindowTypeExtension on WindowType {
       case WindowType.exploration:
         return (width: 1440.0, height: 900.0);
       case WindowType.corporation:
-        return (width: 800.0, height: 600.0);
+        return (width: 1200.0, height: 800.0);
     }
   }
 
@@ -251,7 +253,7 @@ extension WindowTypeExtension on WindowType {
       case WindowType.exploration:
         return 'assets/icons/eve/exploration.png';
       case WindowType.corporation:
-        return 'assets/icons/eve/dashboard.png';
+        return 'assets/icons/eve/corporation.png';
     }
   }
 }

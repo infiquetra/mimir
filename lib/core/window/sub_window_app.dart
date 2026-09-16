@@ -55,9 +55,9 @@ class SubWindowApp extends ConsumerStatefulWidget {
   /// the [WindowType.windowId].
   final String windowArgs;
 
-  /// Exploration mounts independently of the global SDE barrier.
+  /// Exploration and corporation mount independently of the global SDE barrier.
   static bool waitsForGlobalSde(WindowType type) =>
-      type != WindowType.exploration;
+      type != WindowType.exploration && type != WindowType.corporation;
 
   @override
   ConsumerState<SubWindowApp> createState() => _SubWindowAppState();
@@ -78,6 +78,12 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
       _visibility = WindowVisibilityService(windowKey: 'exploration')..attach();
       Log.i(
         'EXPLORATION.WINDOW',
+        'SubWindowApp mounted without global SDE wait',
+      );
+    } else if (_windowType == WindowType.corporation) {
+      _visibility = WindowVisibilityService(windowKey: 'corporation')..attach();
+      Log.i(
+        'CORPORATION.WINDOW',
         'SubWindowApp mounted without global SDE wait',
       );
     }
@@ -398,7 +404,9 @@ class _SubWindowScaffold extends StatelessWidget {
           // Content with character nav rail on left.
           // Exploration owns its adaptive character selector.
           Expanded(
-            child: windowType == WindowType.exploration
+            child:
+                windowType == WindowType.exploration ||
+                    windowType == WindowType.corporation
                 ? child
                 : Row(
                     children: [

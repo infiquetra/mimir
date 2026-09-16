@@ -8,7 +8,7 @@ class CorporationCharacterOption {
   final String name;
 }
 
-/// Naive C7: local selection only; does not call [AppDatabase.selectCharacterWithRevision].
+/// Selects the corporation owner through [AppDatabase.selectCharacterWithRevision].
 class CorporationCharacterSelectorController {
   CorporationCharacterSelectorController(this.database);
 
@@ -17,11 +17,12 @@ class CorporationCharacterSelectorController {
   String transientFilter = '';
 
   Future<void> select(int characterId) async {
+    await database.selectCharacterWithRevision(characterId);
     activeCharacterId = characterId;
+    transientFilter = '';
   }
 }
 
-/// Naive C7: decorative Chars control; taps do not invoke [onSelected].
 class CorporationCharacterSelector extends StatelessWidget {
   const CorporationCharacterSelector({
     this.characters = const [],
@@ -36,12 +37,31 @@ class CorporationCharacterSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Text('Chars'),
-        for (final character in characters)
-          TextButton(onPressed: () {}, child: Text(character.name)),
-      ],
+    return Semantics(
+      container: true,
+      label: 'Corporation character selector',
+      child: Row(
+        children: [
+          for (final character in characters)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+                child: TextButton(
+                  onPressed: () => onSelected?.call(character.id),
+                  child: Text(
+                    character.name,
+                    style: TextStyle(
+                      fontWeight: character.id == activeId
+                          ? FontWeight.w700
+                          : FontWeight.w400,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

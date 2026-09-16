@@ -254,6 +254,18 @@ class TrayService extends TrayListener {
     );
     Log.d('TRAY', 'Added menu item: $explorationLabel (key=exploration)');
 
+    final corporationLabel = windowService.isWindowOpen(WindowType.corporation)
+        ? '◆ Corporation'
+        : 'Corporation';
+    menuItems.add(
+      MenuItem(
+        key: 'corporation',
+        label: corporationLabel,
+        icon: 'assets/icons/tray/corporation.png',
+      ),
+    );
+    Log.d('TRAY', 'Added menu item: $corporationLabel (key=corporation)');
+
     menuItems.add(MenuItem.separator());
     Log.d('TRAY', 'Added separator');
 
@@ -382,6 +394,12 @@ class TrayService extends TrayListener {
           Log.i('TRAY', 'Opening exploration window');
           Log.i('EXPLORATION.WINDOW', 'tray openWindow');
           await windowService.openWindow(WindowType.exploration);
+          await refreshMenu();
+          break;
+        case 'corporation':
+          Log.i('TRAY', 'Opening corporation window');
+          Log.i('CORPORATION.WINDOW', 'tray openWindow');
+          await windowService.openWindow(WindowType.corporation);
           await refreshMenu();
           break;
         case 'onboarding':
