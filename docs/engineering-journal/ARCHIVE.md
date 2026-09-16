@@ -9,6 +9,23 @@
 
 ---
 
+### SHIPPED 2026-09-15: Exploration Module (Phase 4)
+
+**Author.** Antigravity / Lead Orchestrator
+**Shipped as.** Full end-to-end delivery of the Mimir Phase 4 Exploration Module across units X0 through X10, satisfying all 40 Acceptance Criteria (AC1–AC40) and 60 test cases (D01–D24, P01–P18, U01–U18, Oracles F1–F8) with 1,258 passing tests in the full suite (0 failed, 14 pre-existing skipped):
+- **Contracts, Fixtures & Seams (X0):** Immutable value types (`WormholeTypeReference`, `SystemReference`, `TrackedSignature`, `ExplorationConnection`, `DirectedExplorationEdge`, `GraphSnapshot`, `RouteRequest`, `RouteResult`), F1–F8 oracle fixtures, and isolated test harness (`ExplorationTestHarness`) (`b12e44e` / `fd2a704`).
+- **Offline Reference & SDE Schema 7 (X1):** Drift SDE schema upgraded to version 7 with atomic CAS exploration slice import (`replaceExplorationSlice`), version protection preserving prior reference data on failed/downgrade attempts, and `ReferenceDeriver` search and projection (`651baf6`).
+- **User Data Storage & Schema 21 (X2):** AppDatabase schema version 21 with 9 exploration tables, partial unique index for active signature deduplication per `(character, system, code)`, millisecond UTC timestamps (`last_seen_at_ms`), cascading character deletion cleanup, and verified migration reopen resilience (`c89ca43`).
+- **Shared Public Feed & Intel Migration (X3):** Pure EVE-Scout signature normalizer (`EveScoutNormalizer`), `EveScoutFeedRepository` with SQLite CAS lease coordination (60s active lease, 300s cache TTL, 5s revision poll), ETag conditional validation, and seamless migration of `IntelTheraProvider` (`c97c698`).
+- **Signature Notebook & Verification (X4):** Multi-format scanner import parser (512 KiB and 5,000-line paste limits), `ScannerMergePlanner` with episode coalescing, `ExplorationNotebookRepository` transactional state mutations, soft deletion, and irreversible purge confirmation (`cbcadf5`).
+- **Pure Graph & Multi-Criteria Route Engine (X5):** Tuple-cost Dijkstra solver in `ExplorationRouteEngine`, insertion-permutation tie-breaking (w01/w02), strict safety exclusions (EOL, Critical mass, Lowsec, Nullsec), `NearestEntranceFinder`, and `ExplorationDeadlinePlanner` (`2075532`).
+- **Reactive Providers & Origin Services (X6):** 23 Riverpod providers using strict `.when()` handling, `ExplorationOriginService` with millisecond freshness boundary (60s + 1ms), character switching reactivity, and generation-fenced mutations (`00b83c0` / `ebf21da`).
+- **Dedicated Sub-Window & Responsive Shell (X7):** Window type ID 14 (`exploration`), tray menu integration, independent `SubWindowApp` mounting without global SDE initialization blocks, and responsive 4-tab shell (`effa786`).
+- **Reference & Public Highways Presentation (X8):** `WormholeDatabaseView` with zero raw numeric IDs, `PublicHighwaysView` with real-time freshness badges, and responsive desktop/compact layouts (`7b48a9a`).
+- **Notebook & Route Planner Presentation (X9):** `SignatureNotebookView` with character write protection, paste import sheet, exact §6.6 snackbars with real interpolated counts, connection controls, and `RoutePlannerView` with 6 preference toggles, 3 distinct R26 no-route diagnostics, outdated route flags, and zero safety promises (`fc4b24b` / `ef71b66`).
+- **Verification, Benchmarks & Closeout (X10):** Full test suite passed (1,258 passing), `flutter analyze` 0 issues, format clean, performance harness verified (indexed search p95 ≤ 100ms; pure routing solver p95 = 26.90ms over 10k nodes/30k edges), public API header re-probe validated, visual checklist documented in `.gemini/visual-validation/checklists/exploration.yaml`, and sign-offs from `reviewer` (Muse) and `tester` (Codex).
+**Refs.** [Authoritative specification](../specs/exploration-module.md); [Technical design](../specs/exploration-module-design.md); [.agents plan](../../.agents/plans/2026-09-15-exploration-module.md); LEARNINGS 2026-09-15; DECISIONS 2026-09-15.
+
 ### SHIPPED 2026-09-15: Fit Comparison Visuals for AAR Reports
 
 **Author.** Antigravity / Lead Orchestrator

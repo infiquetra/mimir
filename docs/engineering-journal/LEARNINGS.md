@@ -31,6 +31,16 @@
 
 ## 2026-09-15
 
+### Zero-fabrication UI feedback requires runtime interpolation, not static templates
+
+**Author.** Antigravity / Lead Orchestrator
+**Context.** During Unit X9 review of `SignatureNotebookView` and `RoutePlannerView`, user feedback snackbars and notifications needed to report accurate counts for imported signatures and trashed entries.
+**Evidence.** Code review by `reviewer` flagged that static or pre-rendered feedback messages (e.g. `Imported 2 signatures (1 updated)` when only 1 signature was imported, or hardcoded trash messages) violate Mimir's zero-fabrication contract.
+**Mechanism.** When operations operate on dynamic selections or batch-parsed clipboard inputs, feedback strings must interpolate the actual outcome counts returned by the merge planner or repository transaction (e.g. `preview.successMessage` or `Moved ${count} signatures to Trash`).
+**Fix.** Updated `SignatureNotebookView._onImport` and trash action to consume the actual mutation result metadata (`ef71b66`), ensuring snackbar text strictly mirrors real database modifications.
+**Validation.** 25/25 widget tests in `signature_notebook_view_test.dart` and `route_planner_view_test.dart` passing with exact count assertions; signed off by `tester`.
+**Generalizable rule.** User notifications and snackbars in companion tools must reflect executed fact, not intended or synthetic counts.
+
 ### Exploration freshness requires millisecond storage and cross-engine observation
 
 **Author.** Technical Architect.

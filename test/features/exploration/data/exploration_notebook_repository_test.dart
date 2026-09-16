@@ -11,8 +11,7 @@ library;
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mimir/core/database/app_database.dart'
-    hide TrackedSignature;
+import 'package:mimir/core/database/app_database.dart' hide TrackedSignature;
 import 'package:mimir/features/exploration/data/exploration_notebook_repository.dart';
 import 'package:mimir/features/exploration/domain/exploration_notebook.dart';
 import 'package:mimir/features/exploration/domain/scanner_import.dart';
