@@ -22,15 +22,18 @@ class CorporationStructure {
   final List<StructureServiceState> services;
 }
 
-/// Naive C5: elapsed timers become Abandoned; only Directors see structures.
 class CorporationStructureView {
   const CorporationStructureView();
 
+  /// Elapsed timers stay "awaiting update"; they never invent Abandoned or
+  /// reinforcement transitions.
   String timerCaption(DateTime? timer, DateTime now) {
     if (timer == null) return 'Unknown';
-    if (!timer.isAfter(now)) return 'Abandoned';
-    return 'Active';
+    if (timer.isAfter(now)) return 'Active';
+    return 'Awaiting updated state';
   }
 
-  bool visibleWithoutAssets(RoleEvidence roles) => roles.isDirector;
+  bool visibleWithoutAssets(RoleEvidence roles) {
+    return roles.isStationManager || roles.isDirector;
+  }
 }

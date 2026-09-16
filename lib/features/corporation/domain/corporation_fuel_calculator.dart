@@ -24,14 +24,16 @@ class FuelScenarioDraft {
   double? previewRate;
   int? previewQuantity;
 
+  /// Preview only. Does not mutate the saved scenario.
   void calculate({required int quantity, required double rate}) {
-    savedRate = rate;
-    savedQuantity = quantity;
     previewRate = rate;
     previewQuantity = quantity;
   }
 
-  void cancel() {}
+  void cancel() {
+    previewRate = null;
+    previewQuantity = null;
+  }
 
   void save() {
     if (previewRate != null) savedRate = previewRate!;
@@ -39,18 +41,23 @@ class FuelScenarioDraft {
   }
 }
 
-/// Naive C5 fuel: all block types count, no 25% bonus, 5m+1ms still compatible,
-/// Calculate writes the saved scenario.
 class CorporationFuelCalculator {
   const CorporationFuelCalculator();
 
-  static const blockTypes = {4051, 4246, 4247, 4312};
+  static const blockTypes = FuelOracle.blockTypes;
+  static const _maxSkew = Duration(minutes: 5);
 
   int? observedBlocks(List<FuelBayRow> rows) {
     var total = 0;
+    var qualifying = false;
     for (final row in rows) {
-      if (blockTypes.contains(row.typeId)) total += row.quantity;
+      if (!blockTypes.contains(row.typeId)) continue;
+      if (row.flag != FuelOracle.structureFuelFlag) continue;
+      if (row.nested || row.inShip) continue;
+      qualifying = true;
+      total += row.quantity;
     }
+    if (!qualifying) return null;
     return total;
   }
 
@@ -60,33 +67,45 @@ class CorporationFuelCalculator {
     double reduction = 0.25,
     bool unsupportedConsumer = false,
   }) {
-    final hourly = 12.0 * onlineConsumers;
-    final daily = hourly * 24;
-    final hours = quantity / hourly;
-    return FuelModelResult(
-      hourlyRate: hourly,
-      dailyRate: daily,
-      hours: hours,
-      daysLabel: (hours / 24).toStringAsFixed(2),
-      modeled: true,
-    );
+    if (unsupportedConsumer || onlineConsumers <= 0) {
+      return const FuelModelResult(modeled: false);
+    }
+    final hourly = FuelOracle.baseHourly * (1 - reduction) * onlineConsumers;
+    return _fromRate(quantity: quantity, rate: hourly);
   }
 
   FuelModelResult manual({required int quantity, required double rate}) {
-    return modeled(quantity: quantity, onlineConsumers: 2);
+    if (rate == 0 || !rate.isFinite || rate < 0) {
+      return const FuelModelResult(modeled: false);
+    }
+    return _fromRate(quantity: quantity, rate: rate);
   }
 
-  bool compatible(DateTime a, DateTime b) =>
-      a.difference(b).abs().inMinutes <= 5;
+  /// Exact millisecond skew: 5m inclusive, 5m+1ms rejected.
+  bool compatible(DateTime a, DateTime b) {
+    return a.difference(b).abs() <= _maxSkew;
+  }
 
   Duration reportedRemaining(DateTime expiresAt, DateTime now) =>
       expiresAt.difference(now);
 
   String severity(Duration? remaining) {
-    if (remaining == null) return 'Normal';
-    if (remaining >= const Duration(hours: 72)) return 'Normal';
-    if (remaining >= const Duration(hours: 24)) return 'Low';
-    if (remaining > Duration.zero) return 'Critical';
-    return 'Reported expiry passed';
+    if (remaining == null) return 'Unknown';
+    if (remaining <= Duration.zero) return 'Reported expiry passed';
+    if (remaining <= const Duration(hours: 24)) return 'Critical';
+    if (remaining <= const Duration(hours: 72)) return 'Low';
+    return 'Normal';
+  }
+
+  FuelModelResult _fromRate({required int quantity, required double rate}) {
+    final daily = rate * 24;
+    final hours = quantity / rate;
+    return FuelModelResult(
+      hourlyRate: rate,
+      dailyRate: daily,
+      hours: hours,
+      daysLabel: (hours / 24).toStringAsFixed(2),
+      modeled: true,
+    );
   }
 }
