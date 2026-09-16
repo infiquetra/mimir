@@ -31,6 +31,30 @@
 
 ## 2026-09-15
 
+### Corporation ESI contracts require role and source-specific adapters
+
+**Author.** Product.
+**Context.** Corporation specification at Mimir `ccfe79b`, context-library
+`3813f1a`, and current ESI OpenAPI effective version `2026-08-18`.
+**Evidence.** Primary OpenAPI inspection shows a member-accessible basic roster,
+Director-only assets/division names, Station Manager structures, and Accountant
+or Junior Accountant wallet reads. Structure caching is one hour, not the older
+placeholder's 15 minutes. The current profile uses percentage-valued
+`tax_rates.isk/loyalty_point`; Mimir's existing adapter expects fractional
+`tax_rate` and a required CEO. The private structure response has expiry/services,
+but no fuel quantities, service type IDs or hourly rate.
+**Mechanism.** In-game role descriptions, public profile versions and independent
+private endpoints expose different information. Existing shared name caches and
+the 403-as-scope-error shortcut cannot enforce corporation-specific access.
+**Fix (queued).** [Product §§4–5](../specs/corporation-module.md#4-data-models-entities-and-validation)
+define pinned adapters, explicit capability evidence, complete publication,
+separate source/validation clocks and supported fuel rules with unknown states.
+**Validation.** Read-only primary API/SDE inspection and independent contract
+reviews; exact synthetic accounting/fuel/cache fixtures. Runtime tests remain
+implementation work, not evidence from this documentation delivery.
+**Generalizable rule.** Verify each endpoint's scope, role and response semantics
+before converting a user role or cached observation into access or a derived value.
+
 ### Zero-fabrication UI feedback requires runtime interpolation, not static templates
 
 **Author.** Antigravity / Lead Orchestrator

@@ -26,6 +26,28 @@
 
 ## 2026-09-15
 
+### Corporation data follows character capabilities and bounded offline authority
+
+**Author.** Product.
+**Decision.** Adopt the [Corporation Product specification](../specs/corporation-module.md).
+Use tray window 15 with four adaptive views. Gate each private endpoint by the
+selected character's actual scopes, applicable roles and server authorization;
+private offline access expires within one hour and known denial takes precedence.
+Scope private payloads/names/derivatives by owner and grant generation. Ordinary
+token refresh preserves generation; same-owner reauthorization can rebind retained
+unaffected history only after fresh authorization. Fuel quantities, reported expiry
+and dated modeled stock endurance remain distinct. Wallet accounting uses exact
+decimal values and explicit history coverage.
+**Rejected alternatives.** One Director toggle for all panels, automatic alt-token
+fallback, indefinite private-cache visibility, service-name guesses for fuel burn,
+and journal/trade totals used as a current wallet balance.
+**Rationale.** The endpoint permissions differ from in-game role descriptions,
+and independent cached observations cannot justify precise current-state claims.
+**Revisit when.** CCP changes the pinned contract or a separate shared-corporation
+authorization/management feature is approved.
+**Refs.** [Queued implementation](QUEUED.md#corporation-module);
+[verified contract findings](LEARNINGS.md#corporation-esi-contracts-require-role-and-source-specific-adapters).
+
 ### Exploration uses versioned data, scoped transactions and tuple routing
 
 **Author.** Technical Architect.

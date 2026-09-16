@@ -27,6 +27,10 @@ Mimir aims to replace the need for multiple disconnected EVE tools (EVEMon, Pyfa
 
 See the [mimir-context-library](https://github.com/infiquetra/mimir-context-library) repository for detailed specifications and roadmap.
 
+### Corporation specification
+
+- [Corporation Module Product specification](docs/specs/corporation-module.md) — role-aware profile/roster, assets/hangars, structures/fuel and wallets in dedicated window 15; 32 requirements, 40 acceptance criteria and 60 mapped tests; implementation pending.
+
 ### Exploration specification
 
 - [Exploration Module Product specification](docs/specs/exploration-module.md) — tray-launched window, offline reference, Thera/Turnur connections, local signatures and routing; nine workflows, 32 requirements, 40 acceptance criteria and 60 test cases; complete (shipped 2026-09-15).

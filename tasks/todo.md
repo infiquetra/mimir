@@ -1,4 +1,42 @@
-# Project: Mimir — Exploration Module technical architecture
+# Project: Mimir — Corporation Module Product specification
+Date: 2026-09-15
+Checkpoint: 2026-09-15-corporation-module-product
+
+## Overview
+
+Write and commit the authoritative Phase 4e–4h Product specification on
+`feature/corporation-module`, grounded at `ccfe79b`.
+
+## Tasks
+
+- [x] Read requested sources and repository guidance.
+- [x] [P1] Verify current architecture and primary ESI permission/data contracts.
+- [x] [SEQ] Write workflows, requirements, models, API/cache and responsive UI.
+- [x] [SEQ] Define acceptance criteria and exact test fixtures/oracles.
+- [x] [P2] Independently review and validate the specification.
+- [x] [SEQ] Update documentation/journal links and preserve implementation-pending status.
+- [x] [CHECKPOINT] Save handoff and commit documentation.
+
+## Notes
+
+[Canonical plan](../.codex/plans/2026-09-15-corporation-module-product.md).
+The user explicitly authorizes writing and committing this specification.
+
+## Review
+
+Completed the [Corporation Product specification](../docs/specs/corporation-module.md)
+with phases 4e–4h, S1–S10, R1–R32, AC1–AC40, eight fixture groups and 60 mapped
+Domain/Provider/UI/Oracle cases (T01–T60). It defines Window 15, actual ESI scopes
+and roles, one-hour bounded private offline access, generation-aware retention,
+asset graph/valuation, source-qualified fuel models and exact wallet accounting.
+Two independent reviews passed with findings resolved. Verified source contracts,
+arithmetic, identifiers/traceability, JSON examples, local links, tables and
+whitespace. README/journal preserve implementation-pending status. No application
+code changed and no Flutter runtime suites ran for this documentation delivery.
+
+---
+
+# Completed: Mimir — Exploration Module technical architecture
 Date: 2026-09-15
 Checkpoint: 2026-09-15-exploration-module-design
 
