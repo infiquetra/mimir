@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../../features/corporation/data/corporation_tables.dart';
 import '../../features/exploration/data/exploration_tables.dart';
 
 part 'app_database.g.dart';
@@ -803,6 +804,35 @@ class CombatEncounters extends Table {
     ExplorationNotebookPreferences,
     ExplorationWindowPreferences,
     ExplorationLocationObservations,
+    CharacterAuthorizationStates,
+    CorporationContextStates,
+    OAuthAuthorizationAttempts,
+    CorporationCapabilities,
+    CorporationSnapshotHeads,
+    CorporationSnapshotPages,
+    EsiRequestLeases,
+    EsiRateBuckets,
+    CorporationProfiles,
+    CorporationMembers,
+    CorporationMemberTracking,
+    CorporationRoleAssignments,
+    CorporationTitles,
+    CorporationMemberTitles,
+    CorporationOwnStandings,
+    CorporationDivisionNames,
+    CorporationAssets,
+    CorporationPrivateNames,
+    CorporationStructures,
+    CorporationStructureServices,
+    CorporationFuelScenarios,
+    CorporationFuelAlertStates,
+    CorporationFuelAlertEpisodes,
+    CorporationWalletBalances,
+    CorporationWalletJournal,
+    CorporationWalletTransactions,
+    CorporationHistoryCoverage,
+    CorporationMonitoringPreferences,
+    ExactMarketPrices,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -812,7 +842,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 22;
 
   @override
   MigrationStrategy get migration {
@@ -821,6 +851,7 @@ class AppDatabase extends _$AppDatabase {
         await m.createAll();
         await _createCombatEnrichmentTables();
         await _createExplorationIndexes();
+        await _createCorporationIndexes();
         // Insert default settings row.
         await into(appSettingsTable).insert(AppSettingsTableCompanion.insert());
       },
@@ -973,6 +1004,43 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(explorationLocationObservations);
           await _createExplorationIndexes();
         }
+
+        // Migration from version 21 to 22: Add corporation module tables.
+        if (from < 22) {
+          if (AppDatabase.debugFailCorporationMigration) {
+            throw StateError('injected corporation migration failure');
+          }
+          await m.createTable(characterAuthorizationStates);
+          await m.createTable(corporationContextStates);
+          await m.createTable(oAuthAuthorizationAttempts);
+          await m.createTable(corporationCapabilities);
+          await m.createTable(corporationSnapshotHeads);
+          await m.createTable(corporationSnapshotPages);
+          await m.createTable(esiRequestLeases);
+          await m.createTable(esiRateBuckets);
+          await m.createTable(corporationProfiles);
+          await m.createTable(corporationMembers);
+          await m.createTable(corporationMemberTracking);
+          await m.createTable(corporationRoleAssignments);
+          await m.createTable(corporationTitles);
+          await m.createTable(corporationMemberTitles);
+          await m.createTable(corporationOwnStandings);
+          await m.createTable(corporationDivisionNames);
+          await m.createTable(corporationAssets);
+          await m.createTable(corporationPrivateNames);
+          await m.createTable(corporationStructures);
+          await m.createTable(corporationStructureServices);
+          await m.createTable(corporationFuelScenarios);
+          await m.createTable(corporationFuelAlertStates);
+          await m.createTable(corporationFuelAlertEpisodes);
+          await m.createTable(corporationWalletBalances);
+          await m.createTable(corporationWalletJournal);
+          await m.createTable(corporationWalletTransactions);
+          await m.createTable(corporationHistoryCoverage);
+          await m.createTable(corporationMonitoringPreferences);
+          await m.createTable(exactMarketPrices);
+          await _createCorporationIndexes();
+        }
       },
     );
   }
@@ -998,6 +1066,33 @@ class AppDatabase extends _$AppDatabase {
     await customStatement('''
       CREATE INDEX IF NOT EXISTS eve_scout_signatures_retired_expiry
       ON eve_scout_signatures (retired_at_ms, source_expires_at_ms)
+    ''');
+  }
+
+  Future<void> _createCorporationIndexes() async {
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS corporation_assets_snapshot_item
+      ON corporation_assets (snapshot_id, item_key)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS corporation_assets_snapshot_location
+      ON corporation_assets (snapshot_id, location_key)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS corporation_wallet_journal_owner_date
+      ON corporation_wallet_journal (owner_key, occurred_at_ms)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS corporation_capabilities_endpoint_until
+      ON corporation_capabilities (endpoint_until_ms)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS esi_request_leases_deadline
+      ON esi_request_leases (lease_until_ms)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS corporation_fuel_alert_states_owner
+      ON corporation_fuel_alert_states (character_id, incarnation, corporation_id)
     ''');
   }
 
@@ -1071,30 +1166,161 @@ class AppDatabase extends _$AppDatabase {
   }
 
   /// Set a character as the active one (deactivates others).
-  Future<void> setActiveCharacter(int characterId) async {
+  Future<void> setActiveCharacter(int characterId) {
+    return selectCharacterWithRevision(characterId);
+  }
+
+  /// Activate [characterId] and bump corporation context generation/revision.
+  Future<void> selectCharacterWithRevision(int characterId) async {
     await transaction(() async {
-      // Deactivate all characters.
       await (update(characters)..where((c) => c.isActive.equals(true))).write(
         const CharactersCompanion(isActive: Value(false)),
       );
-
-      // Activate the selected character.
       await (update(characters)
             ..where((c) => c.characterId.equals(characterId)))
           .write(const CharactersCompanion(isActive: Value(true)));
+
+      final existing = await customSelect(
+        'SELECT context_generation, selection_revision FROM corporation_context_states WHERE tenant = ?',
+        variables: [Variable.withString('tranquility')],
+      ).getSingleOrNull();
+      if (existing == null) {
+        await customStatement(
+          '''
+          INSERT INTO corporation_context_states (
+            tenant, selected_character_id, context_generation, selection_revision
+          ) VALUES ('tranquility', ?, 1, 1)
+          ''',
+          [characterId],
+        );
+      } else {
+        await customStatement(
+          '''
+          UPDATE corporation_context_states SET
+            selected_character_id = ?,
+            context_generation = context_generation + 1,
+            selection_revision = selection_revision + 1
+          WHERE tenant = 'tranquility'
+          ''',
+          [characterId],
+        );
+      }
     });
   }
 
-  /// Naive C1: ignores corporation context generation.
-  Future<void> selectCharacterWithRevision(int characterId) {
-    return setActiveCharacter(characterId);
-  }
-
-  /// Naive C1: does not delete corporation-owned private rows.
+  /// Delete private corporation rows for one owner. Public caches and
+  /// character identity rows are retained.
   Future<void> deleteCorporationPrivateOwner({
     required String tenant,
     required int characterId,
-  }) async {}
+  }) async {
+    await transaction(() async {
+      await customStatement(
+        'DELETE FROM character_authorization_states WHERE tenant = ? AND character_id = ?',
+        [tenant, characterId],
+      );
+      await customStatement(
+        'DELETE FROM oauth_authorization_attempts WHERE intended_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_capabilities WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_snapshot_heads WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_snapshot_pages WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM esi_request_leases WHERE character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM esi_rate_buckets WHERE character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_members WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_member_tracking WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_role_assignments WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_titles WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_member_titles WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_own_standings WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_division_names WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_assets WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_private_names WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_structures WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_structure_services WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_fuel_scenarios WHERE character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_fuel_alert_states WHERE character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_fuel_alert_episodes WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_wallet_balances WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_wallet_journal WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_wallet_transactions WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_history_coverage WHERE owner_character_id = ?',
+        [characterId],
+      );
+      await customStatement(
+        'DELETE FROM corporation_monitoring_preferences WHERE tenant = ? AND character_id = ?',
+        [tenant, characterId],
+      );
+    });
+  }
 
   /// Test seam for injected migration failure. Schema 21 ignores it.
   @visibleForTesting
@@ -1121,6 +1347,10 @@ class AppDatabase extends _$AppDatabase {
       await (delete(
         explorationLocationObservations,
       )..where((e) => e.characterId.equals(characterId))).go();
+      await deleteCorporationPrivateOwner(
+        tenant: 'tranquility',
+        characterId: characterId,
+      );
       await (delete(
         skillQueueEntries,
       )..where((e) => e.characterId.equals(characterId))).go();

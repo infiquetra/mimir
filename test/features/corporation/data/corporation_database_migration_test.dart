@@ -122,6 +122,16 @@ void main() {
         await seedSentinelCharacter(seeded, characterId: kAdaId, name: 'Ada');
         await seeded.close();
 
+        final reset = AppDatabase.forTesting(NativeDatabase(file));
+        for (final name in CorporationTableNames.all) {
+          await reset.customStatement('DROP TABLE IF EXISTS $name');
+        }
+        for (final name in CorporationTableNames.indices) {
+          await reset.customStatement('DROP INDEX IF EXISTS $name');
+        }
+        await reset.customStatement('PRAGMA user_version = 21');
+        await reset.close();
+
         AppDatabase.debugFailCorporationMigration = true;
         await expectLater(() async {
           final failing = AppDatabase.forTesting(NativeDatabase(file));
@@ -130,18 +140,33 @@ void main() {
         }, throwsA(isA<Object>()));
 
         AppDatabase.debugFailCorporationMigration = false;
-        final reopened = AppDatabase.forTesting(NativeDatabase(file));
-        addTearDown(reopened.close);
-        expect(await sqliteUserVersion(reopened), 21);
-        expect(
-          await corporationTableExists(
-            reopened,
-            CorporationTableNames.corporationAssets,
-          ),
-          isFalse,
+        final probe = NativeDatabase(file);
+        addTearDown(probe.close);
+        await probe.ensureOpen(_FrozenSchema21());
+        final version = await probe.runSelect('PRAGMA user_version', []);
+        expect(version.single['user_version'], 21);
+        final assets = await probe.runSelect(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'corporation_assets'",
+          const [],
         );
-        expect(await reopened.getCharacter(kAdaId), isNotNull);
+        expect(assets, isEmpty);
+        final ada = await probe.runSelect(
+          'SELECT character_id FROM characters WHERE character_id = ?',
+          [kAdaId],
+        );
+        expect(ada, isNotEmpty);
       },
     );
   });
+}
+
+class _FrozenSchema21 implements QueryExecutorUser {
+  @override
+  int get schemaVersion => 21;
+
+  @override
+  Future<void> beforeOpen(
+    QueryExecutor executor,
+    OpeningDetails details,
+  ) async {}
 }

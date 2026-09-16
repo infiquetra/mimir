@@ -26455,6 +26455,17820 @@ class ExplorationLocationObservationsCompanion
   }
 }
 
+class $CharacterAuthorizationStatesTable extends CharacterAuthorizationStates
+    with
+        TableInfo<
+          $CharacterAuthorizationStatesTable,
+          CharacterAuthorizationState
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CharacterAuthorizationStatesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _tenantMeta = const VerificationMeta('tenant');
+  @override
+  late final GeneratedColumn<String> tenant = GeneratedColumn<String>(
+    'tenant',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _incarnationMeta = const VerificationMeta(
+    'incarnation',
+  );
+  @override
+  late final GeneratedColumn<String> incarnation = GeneratedColumn<String>(
+    'incarnation',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _grantEpochMeta = const VerificationMeta(
+    'grantEpoch',
+  );
+  @override
+  late final GeneratedColumn<int> grantEpoch = GeneratedColumn<int>(
+    'grant_epoch',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _tokenRevisionMeta = const VerificationMeta(
+    'tokenRevision',
+  );
+  @override
+  late final GeneratedColumn<int> tokenRevision = GeneratedColumn<int>(
+    'token_revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _grantedScopesJsonMeta = const VerificationMeta(
+    'grantedScopesJson',
+  );
+  @override
+  late final GeneratedColumn<String> grantedScopesJson =
+      GeneratedColumn<String>(
+        'granted_scopes_json',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _credentialStateMeta = const VerificationMeta(
+    'credentialState',
+  );
+  @override
+  late final GeneratedColumn<String> credentialState = GeneratedColumn<String>(
+    'credential_state',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _invalidationRevisionMeta =
+      const VerificationMeta('invalidationRevision');
+  @override
+  late final GeneratedColumn<int> invalidationRevision = GeneratedColumn<int>(
+    'invalidation_revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastConfirmedCorporationIdMeta =
+      const VerificationMeta('lastConfirmedCorporationId');
+  @override
+  late final GeneratedColumn<int> lastConfirmedCorporationId =
+      GeneratedColumn<int>(
+        'last_confirmed_corporation_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _membershipStateMeta = const VerificationMeta(
+    'membershipState',
+  );
+  @override
+  late final GeneratedColumn<String> membershipState = GeneratedColumn<String>(
+    'membership_state',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _membershipSourceAtMsMeta =
+      const VerificationMeta('membershipSourceAtMs');
+  @override
+  late final GeneratedColumn<int> membershipSourceAtMs = GeneratedColumn<int>(
+    'membership_source_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  @override
+  late final GeneratedColumn<int> revision = GeneratedColumn<int>(
+    'revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    tenant,
+    characterId,
+    incarnation,
+    grantEpoch,
+    tokenRevision,
+    grantedScopesJson,
+    credentialState,
+    invalidationRevision,
+    lastConfirmedCorporationId,
+    membershipState,
+    membershipSourceAtMs,
+    revision,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'character_authorization_states';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CharacterAuthorizationState> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('tenant')) {
+      context.handle(
+        _tenantMeta,
+        tenant.isAcceptableOrUnknown(data['tenant']!, _tenantMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tenantMeta);
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('incarnation')) {
+      context.handle(
+        _incarnationMeta,
+        incarnation.isAcceptableOrUnknown(
+          data['incarnation']!,
+          _incarnationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('grant_epoch')) {
+      context.handle(
+        _grantEpochMeta,
+        grantEpoch.isAcceptableOrUnknown(data['grant_epoch']!, _grantEpochMeta),
+      );
+    }
+    if (data.containsKey('token_revision')) {
+      context.handle(
+        _tokenRevisionMeta,
+        tokenRevision.isAcceptableOrUnknown(
+          data['token_revision']!,
+          _tokenRevisionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('granted_scopes_json')) {
+      context.handle(
+        _grantedScopesJsonMeta,
+        grantedScopesJson.isAcceptableOrUnknown(
+          data['granted_scopes_json']!,
+          _grantedScopesJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('credential_state')) {
+      context.handle(
+        _credentialStateMeta,
+        credentialState.isAcceptableOrUnknown(
+          data['credential_state']!,
+          _credentialStateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('invalidation_revision')) {
+      context.handle(
+        _invalidationRevisionMeta,
+        invalidationRevision.isAcceptableOrUnknown(
+          data['invalidation_revision']!,
+          _invalidationRevisionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_confirmed_corporation_id')) {
+      context.handle(
+        _lastConfirmedCorporationIdMeta,
+        lastConfirmedCorporationId.isAcceptableOrUnknown(
+          data['last_confirmed_corporation_id']!,
+          _lastConfirmedCorporationIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('membership_state')) {
+      context.handle(
+        _membershipStateMeta,
+        membershipState.isAcceptableOrUnknown(
+          data['membership_state']!,
+          _membershipStateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('membership_source_at_ms')) {
+      context.handle(
+        _membershipSourceAtMsMeta,
+        membershipSourceAtMs.isAcceptableOrUnknown(
+          data['membership_source_at_ms']!,
+          _membershipSourceAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {tenant, characterId};
+  @override
+  CharacterAuthorizationState map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CharacterAuthorizationState(
+      tenant: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tenant'],
+      )!,
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      )!,
+      incarnation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}incarnation'],
+      ),
+      grantEpoch: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}grant_epoch'],
+      ),
+      tokenRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}token_revision'],
+      ),
+      grantedScopesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}granted_scopes_json'],
+      ),
+      credentialState: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}credential_state'],
+      ),
+      invalidationRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}invalidation_revision'],
+      ),
+      lastConfirmedCorporationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_confirmed_corporation_id'],
+      ),
+      membershipState: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}membership_state'],
+      ),
+      membershipSourceAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}membership_source_at_ms'],
+      ),
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}revision'],
+      ),
+    );
+  }
+
+  @override
+  $CharacterAuthorizationStatesTable createAlias(String alias) {
+    return $CharacterAuthorizationStatesTable(attachedDatabase, alias);
+  }
+}
+
+class CharacterAuthorizationState extends DataClass
+    implements Insertable<CharacterAuthorizationState> {
+  final String tenant;
+  final int characterId;
+  final String? incarnation;
+  final int? grantEpoch;
+  final int? tokenRevision;
+  final String? grantedScopesJson;
+  final String? credentialState;
+  final int? invalidationRevision;
+  final int? lastConfirmedCorporationId;
+  final String? membershipState;
+  final int? membershipSourceAtMs;
+  final int? revision;
+  const CharacterAuthorizationState({
+    required this.tenant,
+    required this.characterId,
+    this.incarnation,
+    this.grantEpoch,
+    this.tokenRevision,
+    this.grantedScopesJson,
+    this.credentialState,
+    this.invalidationRevision,
+    this.lastConfirmedCorporationId,
+    this.membershipState,
+    this.membershipSourceAtMs,
+    this.revision,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['tenant'] = Variable<String>(tenant);
+    map['character_id'] = Variable<int>(characterId);
+    if (!nullToAbsent || incarnation != null) {
+      map['incarnation'] = Variable<String>(incarnation);
+    }
+    if (!nullToAbsent || grantEpoch != null) {
+      map['grant_epoch'] = Variable<int>(grantEpoch);
+    }
+    if (!nullToAbsent || tokenRevision != null) {
+      map['token_revision'] = Variable<int>(tokenRevision);
+    }
+    if (!nullToAbsent || grantedScopesJson != null) {
+      map['granted_scopes_json'] = Variable<String>(grantedScopesJson);
+    }
+    if (!nullToAbsent || credentialState != null) {
+      map['credential_state'] = Variable<String>(credentialState);
+    }
+    if (!nullToAbsent || invalidationRevision != null) {
+      map['invalidation_revision'] = Variable<int>(invalidationRevision);
+    }
+    if (!nullToAbsent || lastConfirmedCorporationId != null) {
+      map['last_confirmed_corporation_id'] = Variable<int>(
+        lastConfirmedCorporationId,
+      );
+    }
+    if (!nullToAbsent || membershipState != null) {
+      map['membership_state'] = Variable<String>(membershipState);
+    }
+    if (!nullToAbsent || membershipSourceAtMs != null) {
+      map['membership_source_at_ms'] = Variable<int>(membershipSourceAtMs);
+    }
+    if (!nullToAbsent || revision != null) {
+      map['revision'] = Variable<int>(revision);
+    }
+    return map;
+  }
+
+  CharacterAuthorizationStatesCompanion toCompanion(bool nullToAbsent) {
+    return CharacterAuthorizationStatesCompanion(
+      tenant: Value(tenant),
+      characterId: Value(characterId),
+      incarnation: incarnation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(incarnation),
+      grantEpoch: grantEpoch == null && nullToAbsent
+          ? const Value.absent()
+          : Value(grantEpoch),
+      tokenRevision: tokenRevision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tokenRevision),
+      grantedScopesJson: grantedScopesJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(grantedScopesJson),
+      credentialState: credentialState == null && nullToAbsent
+          ? const Value.absent()
+          : Value(credentialState),
+      invalidationRevision: invalidationRevision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(invalidationRevision),
+      lastConfirmedCorporationId:
+          lastConfirmedCorporationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastConfirmedCorporationId),
+      membershipState: membershipState == null && nullToAbsent
+          ? const Value.absent()
+          : Value(membershipState),
+      membershipSourceAtMs: membershipSourceAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(membershipSourceAtMs),
+      revision: revision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(revision),
+    );
+  }
+
+  factory CharacterAuthorizationState.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CharacterAuthorizationState(
+      tenant: serializer.fromJson<String>(json['tenant']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      incarnation: serializer.fromJson<String?>(json['incarnation']),
+      grantEpoch: serializer.fromJson<int?>(json['grantEpoch']),
+      tokenRevision: serializer.fromJson<int?>(json['tokenRevision']),
+      grantedScopesJson: serializer.fromJson<String?>(
+        json['grantedScopesJson'],
+      ),
+      credentialState: serializer.fromJson<String?>(json['credentialState']),
+      invalidationRevision: serializer.fromJson<int?>(
+        json['invalidationRevision'],
+      ),
+      lastConfirmedCorporationId: serializer.fromJson<int?>(
+        json['lastConfirmedCorporationId'],
+      ),
+      membershipState: serializer.fromJson<String?>(json['membershipState']),
+      membershipSourceAtMs: serializer.fromJson<int?>(
+        json['membershipSourceAtMs'],
+      ),
+      revision: serializer.fromJson<int?>(json['revision']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'tenant': serializer.toJson<String>(tenant),
+      'characterId': serializer.toJson<int>(characterId),
+      'incarnation': serializer.toJson<String?>(incarnation),
+      'grantEpoch': serializer.toJson<int?>(grantEpoch),
+      'tokenRevision': serializer.toJson<int?>(tokenRevision),
+      'grantedScopesJson': serializer.toJson<String?>(grantedScopesJson),
+      'credentialState': serializer.toJson<String?>(credentialState),
+      'invalidationRevision': serializer.toJson<int?>(invalidationRevision),
+      'lastConfirmedCorporationId': serializer.toJson<int?>(
+        lastConfirmedCorporationId,
+      ),
+      'membershipState': serializer.toJson<String?>(membershipState),
+      'membershipSourceAtMs': serializer.toJson<int?>(membershipSourceAtMs),
+      'revision': serializer.toJson<int?>(revision),
+    };
+  }
+
+  CharacterAuthorizationState copyWith({
+    String? tenant,
+    int? characterId,
+    Value<String?> incarnation = const Value.absent(),
+    Value<int?> grantEpoch = const Value.absent(),
+    Value<int?> tokenRevision = const Value.absent(),
+    Value<String?> grantedScopesJson = const Value.absent(),
+    Value<String?> credentialState = const Value.absent(),
+    Value<int?> invalidationRevision = const Value.absent(),
+    Value<int?> lastConfirmedCorporationId = const Value.absent(),
+    Value<String?> membershipState = const Value.absent(),
+    Value<int?> membershipSourceAtMs = const Value.absent(),
+    Value<int?> revision = const Value.absent(),
+  }) => CharacterAuthorizationState(
+    tenant: tenant ?? this.tenant,
+    characterId: characterId ?? this.characterId,
+    incarnation: incarnation.present ? incarnation.value : this.incarnation,
+    grantEpoch: grantEpoch.present ? grantEpoch.value : this.grantEpoch,
+    tokenRevision: tokenRevision.present
+        ? tokenRevision.value
+        : this.tokenRevision,
+    grantedScopesJson: grantedScopesJson.present
+        ? grantedScopesJson.value
+        : this.grantedScopesJson,
+    credentialState: credentialState.present
+        ? credentialState.value
+        : this.credentialState,
+    invalidationRevision: invalidationRevision.present
+        ? invalidationRevision.value
+        : this.invalidationRevision,
+    lastConfirmedCorporationId: lastConfirmedCorporationId.present
+        ? lastConfirmedCorporationId.value
+        : this.lastConfirmedCorporationId,
+    membershipState: membershipState.present
+        ? membershipState.value
+        : this.membershipState,
+    membershipSourceAtMs: membershipSourceAtMs.present
+        ? membershipSourceAtMs.value
+        : this.membershipSourceAtMs,
+    revision: revision.present ? revision.value : this.revision,
+  );
+  CharacterAuthorizationState copyWithCompanion(
+    CharacterAuthorizationStatesCompanion data,
+  ) {
+    return CharacterAuthorizationState(
+      tenant: data.tenant.present ? data.tenant.value : this.tenant,
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      incarnation: data.incarnation.present
+          ? data.incarnation.value
+          : this.incarnation,
+      grantEpoch: data.grantEpoch.present
+          ? data.grantEpoch.value
+          : this.grantEpoch,
+      tokenRevision: data.tokenRevision.present
+          ? data.tokenRevision.value
+          : this.tokenRevision,
+      grantedScopesJson: data.grantedScopesJson.present
+          ? data.grantedScopesJson.value
+          : this.grantedScopesJson,
+      credentialState: data.credentialState.present
+          ? data.credentialState.value
+          : this.credentialState,
+      invalidationRevision: data.invalidationRevision.present
+          ? data.invalidationRevision.value
+          : this.invalidationRevision,
+      lastConfirmedCorporationId: data.lastConfirmedCorporationId.present
+          ? data.lastConfirmedCorporationId.value
+          : this.lastConfirmedCorporationId,
+      membershipState: data.membershipState.present
+          ? data.membershipState.value
+          : this.membershipState,
+      membershipSourceAtMs: data.membershipSourceAtMs.present
+          ? data.membershipSourceAtMs.value
+          : this.membershipSourceAtMs,
+      revision: data.revision.present ? data.revision.value : this.revision,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CharacterAuthorizationState(')
+          ..write('tenant: $tenant, ')
+          ..write('characterId: $characterId, ')
+          ..write('incarnation: $incarnation, ')
+          ..write('grantEpoch: $grantEpoch, ')
+          ..write('tokenRevision: $tokenRevision, ')
+          ..write('grantedScopesJson: $grantedScopesJson, ')
+          ..write('credentialState: $credentialState, ')
+          ..write('invalidationRevision: $invalidationRevision, ')
+          ..write('lastConfirmedCorporationId: $lastConfirmedCorporationId, ')
+          ..write('membershipState: $membershipState, ')
+          ..write('membershipSourceAtMs: $membershipSourceAtMs, ')
+          ..write('revision: $revision')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    tenant,
+    characterId,
+    incarnation,
+    grantEpoch,
+    tokenRevision,
+    grantedScopesJson,
+    credentialState,
+    invalidationRevision,
+    lastConfirmedCorporationId,
+    membershipState,
+    membershipSourceAtMs,
+    revision,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CharacterAuthorizationState &&
+          other.tenant == this.tenant &&
+          other.characterId == this.characterId &&
+          other.incarnation == this.incarnation &&
+          other.grantEpoch == this.grantEpoch &&
+          other.tokenRevision == this.tokenRevision &&
+          other.grantedScopesJson == this.grantedScopesJson &&
+          other.credentialState == this.credentialState &&
+          other.invalidationRevision == this.invalidationRevision &&
+          other.lastConfirmedCorporationId == this.lastConfirmedCorporationId &&
+          other.membershipState == this.membershipState &&
+          other.membershipSourceAtMs == this.membershipSourceAtMs &&
+          other.revision == this.revision);
+}
+
+class CharacterAuthorizationStatesCompanion
+    extends UpdateCompanion<CharacterAuthorizationState> {
+  final Value<String> tenant;
+  final Value<int> characterId;
+  final Value<String?> incarnation;
+  final Value<int?> grantEpoch;
+  final Value<int?> tokenRevision;
+  final Value<String?> grantedScopesJson;
+  final Value<String?> credentialState;
+  final Value<int?> invalidationRevision;
+  final Value<int?> lastConfirmedCorporationId;
+  final Value<String?> membershipState;
+  final Value<int?> membershipSourceAtMs;
+  final Value<int?> revision;
+  final Value<int> rowid;
+  const CharacterAuthorizationStatesCompanion({
+    this.tenant = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.incarnation = const Value.absent(),
+    this.grantEpoch = const Value.absent(),
+    this.tokenRevision = const Value.absent(),
+    this.grantedScopesJson = const Value.absent(),
+    this.credentialState = const Value.absent(),
+    this.invalidationRevision = const Value.absent(),
+    this.lastConfirmedCorporationId = const Value.absent(),
+    this.membershipState = const Value.absent(),
+    this.membershipSourceAtMs = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CharacterAuthorizationStatesCompanion.insert({
+    required String tenant,
+    required int characterId,
+    this.incarnation = const Value.absent(),
+    this.grantEpoch = const Value.absent(),
+    this.tokenRevision = const Value.absent(),
+    this.grantedScopesJson = const Value.absent(),
+    this.credentialState = const Value.absent(),
+    this.invalidationRevision = const Value.absent(),
+    this.lastConfirmedCorporationId = const Value.absent(),
+    this.membershipState = const Value.absent(),
+    this.membershipSourceAtMs = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : tenant = Value(tenant),
+       characterId = Value(characterId);
+  static Insertable<CharacterAuthorizationState> custom({
+    Expression<String>? tenant,
+    Expression<int>? characterId,
+    Expression<String>? incarnation,
+    Expression<int>? grantEpoch,
+    Expression<int>? tokenRevision,
+    Expression<String>? grantedScopesJson,
+    Expression<String>? credentialState,
+    Expression<int>? invalidationRevision,
+    Expression<int>? lastConfirmedCorporationId,
+    Expression<String>? membershipState,
+    Expression<int>? membershipSourceAtMs,
+    Expression<int>? revision,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (tenant != null) 'tenant': tenant,
+      if (characterId != null) 'character_id': characterId,
+      if (incarnation != null) 'incarnation': incarnation,
+      if (grantEpoch != null) 'grant_epoch': grantEpoch,
+      if (tokenRevision != null) 'token_revision': tokenRevision,
+      if (grantedScopesJson != null) 'granted_scopes_json': grantedScopesJson,
+      if (credentialState != null) 'credential_state': credentialState,
+      if (invalidationRevision != null)
+        'invalidation_revision': invalidationRevision,
+      if (lastConfirmedCorporationId != null)
+        'last_confirmed_corporation_id': lastConfirmedCorporationId,
+      if (membershipState != null) 'membership_state': membershipState,
+      if (membershipSourceAtMs != null)
+        'membership_source_at_ms': membershipSourceAtMs,
+      if (revision != null) 'revision': revision,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CharacterAuthorizationStatesCompanion copyWith({
+    Value<String>? tenant,
+    Value<int>? characterId,
+    Value<String?>? incarnation,
+    Value<int?>? grantEpoch,
+    Value<int?>? tokenRevision,
+    Value<String?>? grantedScopesJson,
+    Value<String?>? credentialState,
+    Value<int?>? invalidationRevision,
+    Value<int?>? lastConfirmedCorporationId,
+    Value<String?>? membershipState,
+    Value<int?>? membershipSourceAtMs,
+    Value<int?>? revision,
+    Value<int>? rowid,
+  }) {
+    return CharacterAuthorizationStatesCompanion(
+      tenant: tenant ?? this.tenant,
+      characterId: characterId ?? this.characterId,
+      incarnation: incarnation ?? this.incarnation,
+      grantEpoch: grantEpoch ?? this.grantEpoch,
+      tokenRevision: tokenRevision ?? this.tokenRevision,
+      grantedScopesJson: grantedScopesJson ?? this.grantedScopesJson,
+      credentialState: credentialState ?? this.credentialState,
+      invalidationRevision: invalidationRevision ?? this.invalidationRevision,
+      lastConfirmedCorporationId:
+          lastConfirmedCorporationId ?? this.lastConfirmedCorporationId,
+      membershipState: membershipState ?? this.membershipState,
+      membershipSourceAtMs: membershipSourceAtMs ?? this.membershipSourceAtMs,
+      revision: revision ?? this.revision,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (tenant.present) {
+      map['tenant'] = Variable<String>(tenant.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (incarnation.present) {
+      map['incarnation'] = Variable<String>(incarnation.value);
+    }
+    if (grantEpoch.present) {
+      map['grant_epoch'] = Variable<int>(grantEpoch.value);
+    }
+    if (tokenRevision.present) {
+      map['token_revision'] = Variable<int>(tokenRevision.value);
+    }
+    if (grantedScopesJson.present) {
+      map['granted_scopes_json'] = Variable<String>(grantedScopesJson.value);
+    }
+    if (credentialState.present) {
+      map['credential_state'] = Variable<String>(credentialState.value);
+    }
+    if (invalidationRevision.present) {
+      map['invalidation_revision'] = Variable<int>(invalidationRevision.value);
+    }
+    if (lastConfirmedCorporationId.present) {
+      map['last_confirmed_corporation_id'] = Variable<int>(
+        lastConfirmedCorporationId.value,
+      );
+    }
+    if (membershipState.present) {
+      map['membership_state'] = Variable<String>(membershipState.value);
+    }
+    if (membershipSourceAtMs.present) {
+      map['membership_source_at_ms'] = Variable<int>(
+        membershipSourceAtMs.value,
+      );
+    }
+    if (revision.present) {
+      map['revision'] = Variable<int>(revision.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CharacterAuthorizationStatesCompanion(')
+          ..write('tenant: $tenant, ')
+          ..write('characterId: $characterId, ')
+          ..write('incarnation: $incarnation, ')
+          ..write('grantEpoch: $grantEpoch, ')
+          ..write('tokenRevision: $tokenRevision, ')
+          ..write('grantedScopesJson: $grantedScopesJson, ')
+          ..write('credentialState: $credentialState, ')
+          ..write('invalidationRevision: $invalidationRevision, ')
+          ..write('lastConfirmedCorporationId: $lastConfirmedCorporationId, ')
+          ..write('membershipState: $membershipState, ')
+          ..write('membershipSourceAtMs: $membershipSourceAtMs, ')
+          ..write('revision: $revision, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationContextStatesTable extends CorporationContextStates
+    with TableInfo<$CorporationContextStatesTable, CorporationContextState> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationContextStatesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _tenantMeta = const VerificationMeta('tenant');
+  @override
+  late final GeneratedColumn<String> tenant = GeneratedColumn<String>(
+    'tenant',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _selectedCharacterIdMeta =
+      const VerificationMeta('selectedCharacterId');
+  @override
+  late final GeneratedColumn<int> selectedCharacterId = GeneratedColumn<int>(
+    'selected_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _selectedIncarnationMeta =
+      const VerificationMeta('selectedIncarnation');
+  @override
+  late final GeneratedColumn<String> selectedIncarnation =
+      GeneratedColumn<String>(
+        'selected_incarnation',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _resolvedCorporationIdMeta =
+      const VerificationMeta('resolvedCorporationId');
+  @override
+  late final GeneratedColumn<int> resolvedCorporationId = GeneratedColumn<int>(
+    'resolved_corporation_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _membershipStateMeta = const VerificationMeta(
+    'membershipState',
+  );
+  @override
+  late final GeneratedColumn<String> membershipState = GeneratedColumn<String>(
+    'membership_state',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _contextGenerationMeta = const VerificationMeta(
+    'contextGeneration',
+  );
+  @override
+  late final GeneratedColumn<int> contextGeneration = GeneratedColumn<int>(
+    'context_generation',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _selectionRevisionMeta = const VerificationMeta(
+    'selectionRevision',
+  );
+  @override
+  late final GeneratedColumn<int> selectionRevision = GeneratedColumn<int>(
+    'selection_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    tenant,
+    selectedCharacterId,
+    selectedIncarnation,
+    resolvedCorporationId,
+    membershipState,
+    contextGeneration,
+    selectionRevision,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_context_states';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationContextState> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('tenant')) {
+      context.handle(
+        _tenantMeta,
+        tenant.isAcceptableOrUnknown(data['tenant']!, _tenantMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tenantMeta);
+    }
+    if (data.containsKey('selected_character_id')) {
+      context.handle(
+        _selectedCharacterIdMeta,
+        selectedCharacterId.isAcceptableOrUnknown(
+          data['selected_character_id']!,
+          _selectedCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('selected_incarnation')) {
+      context.handle(
+        _selectedIncarnationMeta,
+        selectedIncarnation.isAcceptableOrUnknown(
+          data['selected_incarnation']!,
+          _selectedIncarnationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('resolved_corporation_id')) {
+      context.handle(
+        _resolvedCorporationIdMeta,
+        resolvedCorporationId.isAcceptableOrUnknown(
+          data['resolved_corporation_id']!,
+          _resolvedCorporationIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('membership_state')) {
+      context.handle(
+        _membershipStateMeta,
+        membershipState.isAcceptableOrUnknown(
+          data['membership_state']!,
+          _membershipStateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('context_generation')) {
+      context.handle(
+        _contextGenerationMeta,
+        contextGeneration.isAcceptableOrUnknown(
+          data['context_generation']!,
+          _contextGenerationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('selection_revision')) {
+      context.handle(
+        _selectionRevisionMeta,
+        selectionRevision.isAcceptableOrUnknown(
+          data['selection_revision']!,
+          _selectionRevisionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {tenant};
+  @override
+  CorporationContextState map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationContextState(
+      tenant: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tenant'],
+      )!,
+      selectedCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}selected_character_id'],
+      ),
+      selectedIncarnation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}selected_incarnation'],
+      ),
+      resolvedCorporationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}resolved_corporation_id'],
+      ),
+      membershipState: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}membership_state'],
+      ),
+      contextGeneration: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}context_generation'],
+      )!,
+      selectionRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}selection_revision'],
+      )!,
+    );
+  }
+
+  @override
+  $CorporationContextStatesTable createAlias(String alias) {
+    return $CorporationContextStatesTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationContextState extends DataClass
+    implements Insertable<CorporationContextState> {
+  final String tenant;
+  final int? selectedCharacterId;
+  final String? selectedIncarnation;
+  final int? resolvedCorporationId;
+  final String? membershipState;
+  final int contextGeneration;
+  final int selectionRevision;
+  const CorporationContextState({
+    required this.tenant,
+    this.selectedCharacterId,
+    this.selectedIncarnation,
+    this.resolvedCorporationId,
+    this.membershipState,
+    required this.contextGeneration,
+    required this.selectionRevision,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['tenant'] = Variable<String>(tenant);
+    if (!nullToAbsent || selectedCharacterId != null) {
+      map['selected_character_id'] = Variable<int>(selectedCharacterId);
+    }
+    if (!nullToAbsent || selectedIncarnation != null) {
+      map['selected_incarnation'] = Variable<String>(selectedIncarnation);
+    }
+    if (!nullToAbsent || resolvedCorporationId != null) {
+      map['resolved_corporation_id'] = Variable<int>(resolvedCorporationId);
+    }
+    if (!nullToAbsent || membershipState != null) {
+      map['membership_state'] = Variable<String>(membershipState);
+    }
+    map['context_generation'] = Variable<int>(contextGeneration);
+    map['selection_revision'] = Variable<int>(selectionRevision);
+    return map;
+  }
+
+  CorporationContextStatesCompanion toCompanion(bool nullToAbsent) {
+    return CorporationContextStatesCompanion(
+      tenant: Value(tenant),
+      selectedCharacterId: selectedCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(selectedCharacterId),
+      selectedIncarnation: selectedIncarnation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(selectedIncarnation),
+      resolvedCorporationId: resolvedCorporationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(resolvedCorporationId),
+      membershipState: membershipState == null && nullToAbsent
+          ? const Value.absent()
+          : Value(membershipState),
+      contextGeneration: Value(contextGeneration),
+      selectionRevision: Value(selectionRevision),
+    );
+  }
+
+  factory CorporationContextState.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationContextState(
+      tenant: serializer.fromJson<String>(json['tenant']),
+      selectedCharacterId: serializer.fromJson<int?>(
+        json['selectedCharacterId'],
+      ),
+      selectedIncarnation: serializer.fromJson<String?>(
+        json['selectedIncarnation'],
+      ),
+      resolvedCorporationId: serializer.fromJson<int?>(
+        json['resolvedCorporationId'],
+      ),
+      membershipState: serializer.fromJson<String?>(json['membershipState']),
+      contextGeneration: serializer.fromJson<int>(json['contextGeneration']),
+      selectionRevision: serializer.fromJson<int>(json['selectionRevision']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'tenant': serializer.toJson<String>(tenant),
+      'selectedCharacterId': serializer.toJson<int?>(selectedCharacterId),
+      'selectedIncarnation': serializer.toJson<String?>(selectedIncarnation),
+      'resolvedCorporationId': serializer.toJson<int?>(resolvedCorporationId),
+      'membershipState': serializer.toJson<String?>(membershipState),
+      'contextGeneration': serializer.toJson<int>(contextGeneration),
+      'selectionRevision': serializer.toJson<int>(selectionRevision),
+    };
+  }
+
+  CorporationContextState copyWith({
+    String? tenant,
+    Value<int?> selectedCharacterId = const Value.absent(),
+    Value<String?> selectedIncarnation = const Value.absent(),
+    Value<int?> resolvedCorporationId = const Value.absent(),
+    Value<String?> membershipState = const Value.absent(),
+    int? contextGeneration,
+    int? selectionRevision,
+  }) => CorporationContextState(
+    tenant: tenant ?? this.tenant,
+    selectedCharacterId: selectedCharacterId.present
+        ? selectedCharacterId.value
+        : this.selectedCharacterId,
+    selectedIncarnation: selectedIncarnation.present
+        ? selectedIncarnation.value
+        : this.selectedIncarnation,
+    resolvedCorporationId: resolvedCorporationId.present
+        ? resolvedCorporationId.value
+        : this.resolvedCorporationId,
+    membershipState: membershipState.present
+        ? membershipState.value
+        : this.membershipState,
+    contextGeneration: contextGeneration ?? this.contextGeneration,
+    selectionRevision: selectionRevision ?? this.selectionRevision,
+  );
+  CorporationContextState copyWithCompanion(
+    CorporationContextStatesCompanion data,
+  ) {
+    return CorporationContextState(
+      tenant: data.tenant.present ? data.tenant.value : this.tenant,
+      selectedCharacterId: data.selectedCharacterId.present
+          ? data.selectedCharacterId.value
+          : this.selectedCharacterId,
+      selectedIncarnation: data.selectedIncarnation.present
+          ? data.selectedIncarnation.value
+          : this.selectedIncarnation,
+      resolvedCorporationId: data.resolvedCorporationId.present
+          ? data.resolvedCorporationId.value
+          : this.resolvedCorporationId,
+      membershipState: data.membershipState.present
+          ? data.membershipState.value
+          : this.membershipState,
+      contextGeneration: data.contextGeneration.present
+          ? data.contextGeneration.value
+          : this.contextGeneration,
+      selectionRevision: data.selectionRevision.present
+          ? data.selectionRevision.value
+          : this.selectionRevision,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationContextState(')
+          ..write('tenant: $tenant, ')
+          ..write('selectedCharacterId: $selectedCharacterId, ')
+          ..write('selectedIncarnation: $selectedIncarnation, ')
+          ..write('resolvedCorporationId: $resolvedCorporationId, ')
+          ..write('membershipState: $membershipState, ')
+          ..write('contextGeneration: $contextGeneration, ')
+          ..write('selectionRevision: $selectionRevision')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    tenant,
+    selectedCharacterId,
+    selectedIncarnation,
+    resolvedCorporationId,
+    membershipState,
+    contextGeneration,
+    selectionRevision,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationContextState &&
+          other.tenant == this.tenant &&
+          other.selectedCharacterId == this.selectedCharacterId &&
+          other.selectedIncarnation == this.selectedIncarnation &&
+          other.resolvedCorporationId == this.resolvedCorporationId &&
+          other.membershipState == this.membershipState &&
+          other.contextGeneration == this.contextGeneration &&
+          other.selectionRevision == this.selectionRevision);
+}
+
+class CorporationContextStatesCompanion
+    extends UpdateCompanion<CorporationContextState> {
+  final Value<String> tenant;
+  final Value<int?> selectedCharacterId;
+  final Value<String?> selectedIncarnation;
+  final Value<int?> resolvedCorporationId;
+  final Value<String?> membershipState;
+  final Value<int> contextGeneration;
+  final Value<int> selectionRevision;
+  final Value<int> rowid;
+  const CorporationContextStatesCompanion({
+    this.tenant = const Value.absent(),
+    this.selectedCharacterId = const Value.absent(),
+    this.selectedIncarnation = const Value.absent(),
+    this.resolvedCorporationId = const Value.absent(),
+    this.membershipState = const Value.absent(),
+    this.contextGeneration = const Value.absent(),
+    this.selectionRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationContextStatesCompanion.insert({
+    required String tenant,
+    this.selectedCharacterId = const Value.absent(),
+    this.selectedIncarnation = const Value.absent(),
+    this.resolvedCorporationId = const Value.absent(),
+    this.membershipState = const Value.absent(),
+    this.contextGeneration = const Value.absent(),
+    this.selectionRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : tenant = Value(tenant);
+  static Insertable<CorporationContextState> custom({
+    Expression<String>? tenant,
+    Expression<int>? selectedCharacterId,
+    Expression<String>? selectedIncarnation,
+    Expression<int>? resolvedCorporationId,
+    Expression<String>? membershipState,
+    Expression<int>? contextGeneration,
+    Expression<int>? selectionRevision,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (tenant != null) 'tenant': tenant,
+      if (selectedCharacterId != null)
+        'selected_character_id': selectedCharacterId,
+      if (selectedIncarnation != null)
+        'selected_incarnation': selectedIncarnation,
+      if (resolvedCorporationId != null)
+        'resolved_corporation_id': resolvedCorporationId,
+      if (membershipState != null) 'membership_state': membershipState,
+      if (contextGeneration != null) 'context_generation': contextGeneration,
+      if (selectionRevision != null) 'selection_revision': selectionRevision,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationContextStatesCompanion copyWith({
+    Value<String>? tenant,
+    Value<int?>? selectedCharacterId,
+    Value<String?>? selectedIncarnation,
+    Value<int?>? resolvedCorporationId,
+    Value<String?>? membershipState,
+    Value<int>? contextGeneration,
+    Value<int>? selectionRevision,
+    Value<int>? rowid,
+  }) {
+    return CorporationContextStatesCompanion(
+      tenant: tenant ?? this.tenant,
+      selectedCharacterId: selectedCharacterId ?? this.selectedCharacterId,
+      selectedIncarnation: selectedIncarnation ?? this.selectedIncarnation,
+      resolvedCorporationId:
+          resolvedCorporationId ?? this.resolvedCorporationId,
+      membershipState: membershipState ?? this.membershipState,
+      contextGeneration: contextGeneration ?? this.contextGeneration,
+      selectionRevision: selectionRevision ?? this.selectionRevision,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (tenant.present) {
+      map['tenant'] = Variable<String>(tenant.value);
+    }
+    if (selectedCharacterId.present) {
+      map['selected_character_id'] = Variable<int>(selectedCharacterId.value);
+    }
+    if (selectedIncarnation.present) {
+      map['selected_incarnation'] = Variable<String>(selectedIncarnation.value);
+    }
+    if (resolvedCorporationId.present) {
+      map['resolved_corporation_id'] = Variable<int>(
+        resolvedCorporationId.value,
+      );
+    }
+    if (membershipState.present) {
+      map['membership_state'] = Variable<String>(membershipState.value);
+    }
+    if (contextGeneration.present) {
+      map['context_generation'] = Variable<int>(contextGeneration.value);
+    }
+    if (selectionRevision.present) {
+      map['selection_revision'] = Variable<int>(selectionRevision.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationContextStatesCompanion(')
+          ..write('tenant: $tenant, ')
+          ..write('selectedCharacterId: $selectedCharacterId, ')
+          ..write('selectedIncarnation: $selectedIncarnation, ')
+          ..write('resolvedCorporationId: $resolvedCorporationId, ')
+          ..write('membershipState: $membershipState, ')
+          ..write('contextGeneration: $contextGeneration, ')
+          ..write('selectionRevision: $selectionRevision, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $OAuthAuthorizationAttemptsTable extends OAuthAuthorizationAttempts
+    with
+        TableInfo<$OAuthAuthorizationAttemptsTable, OAuthAuthorizationAttempt> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $OAuthAuthorizationAttemptsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _operationUuidMeta = const VerificationMeta(
+    'operationUuid',
+  );
+  @override
+  late final GeneratedColumn<String> operationUuid = GeneratedColumn<String>(
+    'operation_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _intendedCharacterIdMeta =
+      const VerificationMeta('intendedCharacterId');
+  @override
+  late final GeneratedColumn<int> intendedCharacterId = GeneratedColumn<int>(
+    'intended_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _intendedIncarnationMeta =
+      const VerificationMeta('intendedIncarnation');
+  @override
+  late final GeneratedColumn<String> intendedIncarnation =
+      GeneratedColumn<String>(
+        'intended_incarnation',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _priorGrantEpochMeta = const VerificationMeta(
+    'priorGrantEpoch',
+  );
+  @override
+  late final GeneratedColumn<int> priorGrantEpoch = GeneratedColumn<int>(
+    'prior_grant_epoch',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _priorTokenRevisionMeta =
+      const VerificationMeta('priorTokenRevision');
+  @override
+  late final GeneratedColumn<int> priorTokenRevision = GeneratedColumn<int>(
+    'prior_token_revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _requestedScopesJsonMeta =
+      const VerificationMeta('requestedScopesJson');
+  @override
+  late final GeneratedColumn<String> requestedScopesJson =
+      GeneratedColumn<String>(
+        'requested_scopes_json',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _modeMeta = const VerificationMeta('mode');
+  @override
+  late final GeneratedColumn<String> mode = GeneratedColumn<String>(
+    'mode',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _stateDigestMeta = const VerificationMeta(
+    'stateDigest',
+  );
+  @override
+  late final GeneratedColumn<String> stateDigest = GeneratedColumn<String>(
+    'state_digest',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMsMeta = const VerificationMeta(
+    'createdAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> createdAtMs = GeneratedColumn<int>(
+    'created_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _expiresAtMsMeta = const VerificationMeta(
+    'expiresAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> expiresAtMs = GeneratedColumn<int>(
+    'expires_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    operationUuid,
+    intendedCharacterId,
+    intendedIncarnation,
+    priorGrantEpoch,
+    priorTokenRevision,
+    requestedScopesJson,
+    mode,
+    stateDigest,
+    createdAtMs,
+    expiresAtMs,
+    status,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'oauth_authorization_attempts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<OAuthAuthorizationAttempt> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('operation_uuid')) {
+      context.handle(
+        _operationUuidMeta,
+        operationUuid.isAcceptableOrUnknown(
+          data['operation_uuid']!,
+          _operationUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_operationUuidMeta);
+    }
+    if (data.containsKey('intended_character_id')) {
+      context.handle(
+        _intendedCharacterIdMeta,
+        intendedCharacterId.isAcceptableOrUnknown(
+          data['intended_character_id']!,
+          _intendedCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('intended_incarnation')) {
+      context.handle(
+        _intendedIncarnationMeta,
+        intendedIncarnation.isAcceptableOrUnknown(
+          data['intended_incarnation']!,
+          _intendedIncarnationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('prior_grant_epoch')) {
+      context.handle(
+        _priorGrantEpochMeta,
+        priorGrantEpoch.isAcceptableOrUnknown(
+          data['prior_grant_epoch']!,
+          _priorGrantEpochMeta,
+        ),
+      );
+    }
+    if (data.containsKey('prior_token_revision')) {
+      context.handle(
+        _priorTokenRevisionMeta,
+        priorTokenRevision.isAcceptableOrUnknown(
+          data['prior_token_revision']!,
+          _priorTokenRevisionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('requested_scopes_json')) {
+      context.handle(
+        _requestedScopesJsonMeta,
+        requestedScopesJson.isAcceptableOrUnknown(
+          data['requested_scopes_json']!,
+          _requestedScopesJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('mode')) {
+      context.handle(
+        _modeMeta,
+        mode.isAcceptableOrUnknown(data['mode']!, _modeMeta),
+      );
+    }
+    if (data.containsKey('state_digest')) {
+      context.handle(
+        _stateDigestMeta,
+        stateDigest.isAcceptableOrUnknown(
+          data['state_digest']!,
+          _stateDigestMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at_ms')) {
+      context.handle(
+        _createdAtMsMeta,
+        createdAtMs.isAcceptableOrUnknown(
+          data['created_at_ms']!,
+          _createdAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('expires_at_ms')) {
+      context.handle(
+        _expiresAtMsMeta,
+        expiresAtMs.isAcceptableOrUnknown(
+          data['expires_at_ms']!,
+          _expiresAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {operationUuid};
+  @override
+  OAuthAuthorizationAttempt map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return OAuthAuthorizationAttempt(
+      operationUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}operation_uuid'],
+      )!,
+      intendedCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}intended_character_id'],
+      ),
+      intendedIncarnation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}intended_incarnation'],
+      ),
+      priorGrantEpoch: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}prior_grant_epoch'],
+      ),
+      priorTokenRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}prior_token_revision'],
+      ),
+      requestedScopesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}requested_scopes_json'],
+      ),
+      mode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mode'],
+      ),
+      stateDigest: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}state_digest'],
+      ),
+      createdAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at_ms'],
+      ),
+      expiresAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}expires_at_ms'],
+      ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      ),
+    );
+  }
+
+  @override
+  $OAuthAuthorizationAttemptsTable createAlias(String alias) {
+    return $OAuthAuthorizationAttemptsTable(attachedDatabase, alias);
+  }
+}
+
+class OAuthAuthorizationAttempt extends DataClass
+    implements Insertable<OAuthAuthorizationAttempt> {
+  final String operationUuid;
+  final int? intendedCharacterId;
+  final String? intendedIncarnation;
+  final int? priorGrantEpoch;
+  final int? priorTokenRevision;
+  final String? requestedScopesJson;
+  final String? mode;
+  final String? stateDigest;
+  final int? createdAtMs;
+  final int? expiresAtMs;
+  final String? status;
+  const OAuthAuthorizationAttempt({
+    required this.operationUuid,
+    this.intendedCharacterId,
+    this.intendedIncarnation,
+    this.priorGrantEpoch,
+    this.priorTokenRevision,
+    this.requestedScopesJson,
+    this.mode,
+    this.stateDigest,
+    this.createdAtMs,
+    this.expiresAtMs,
+    this.status,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['operation_uuid'] = Variable<String>(operationUuid);
+    if (!nullToAbsent || intendedCharacterId != null) {
+      map['intended_character_id'] = Variable<int>(intendedCharacterId);
+    }
+    if (!nullToAbsent || intendedIncarnation != null) {
+      map['intended_incarnation'] = Variable<String>(intendedIncarnation);
+    }
+    if (!nullToAbsent || priorGrantEpoch != null) {
+      map['prior_grant_epoch'] = Variable<int>(priorGrantEpoch);
+    }
+    if (!nullToAbsent || priorTokenRevision != null) {
+      map['prior_token_revision'] = Variable<int>(priorTokenRevision);
+    }
+    if (!nullToAbsent || requestedScopesJson != null) {
+      map['requested_scopes_json'] = Variable<String>(requestedScopesJson);
+    }
+    if (!nullToAbsent || mode != null) {
+      map['mode'] = Variable<String>(mode);
+    }
+    if (!nullToAbsent || stateDigest != null) {
+      map['state_digest'] = Variable<String>(stateDigest);
+    }
+    if (!nullToAbsent || createdAtMs != null) {
+      map['created_at_ms'] = Variable<int>(createdAtMs);
+    }
+    if (!nullToAbsent || expiresAtMs != null) {
+      map['expires_at_ms'] = Variable<int>(expiresAtMs);
+    }
+    if (!nullToAbsent || status != null) {
+      map['status'] = Variable<String>(status);
+    }
+    return map;
+  }
+
+  OAuthAuthorizationAttemptsCompanion toCompanion(bool nullToAbsent) {
+    return OAuthAuthorizationAttemptsCompanion(
+      operationUuid: Value(operationUuid),
+      intendedCharacterId: intendedCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(intendedCharacterId),
+      intendedIncarnation: intendedIncarnation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(intendedIncarnation),
+      priorGrantEpoch: priorGrantEpoch == null && nullToAbsent
+          ? const Value.absent()
+          : Value(priorGrantEpoch),
+      priorTokenRevision: priorTokenRevision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(priorTokenRevision),
+      requestedScopesJson: requestedScopesJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(requestedScopesJson),
+      mode: mode == null && nullToAbsent ? const Value.absent() : Value(mode),
+      stateDigest: stateDigest == null && nullToAbsent
+          ? const Value.absent()
+          : Value(stateDigest),
+      createdAtMs: createdAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAtMs),
+      expiresAtMs: expiresAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(expiresAtMs),
+      status: status == null && nullToAbsent
+          ? const Value.absent()
+          : Value(status),
+    );
+  }
+
+  factory OAuthAuthorizationAttempt.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return OAuthAuthorizationAttempt(
+      operationUuid: serializer.fromJson<String>(json['operationUuid']),
+      intendedCharacterId: serializer.fromJson<int?>(
+        json['intendedCharacterId'],
+      ),
+      intendedIncarnation: serializer.fromJson<String?>(
+        json['intendedIncarnation'],
+      ),
+      priorGrantEpoch: serializer.fromJson<int?>(json['priorGrantEpoch']),
+      priorTokenRevision: serializer.fromJson<int?>(json['priorTokenRevision']),
+      requestedScopesJson: serializer.fromJson<String?>(
+        json['requestedScopesJson'],
+      ),
+      mode: serializer.fromJson<String?>(json['mode']),
+      stateDigest: serializer.fromJson<String?>(json['stateDigest']),
+      createdAtMs: serializer.fromJson<int?>(json['createdAtMs']),
+      expiresAtMs: serializer.fromJson<int?>(json['expiresAtMs']),
+      status: serializer.fromJson<String?>(json['status']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'operationUuid': serializer.toJson<String>(operationUuid),
+      'intendedCharacterId': serializer.toJson<int?>(intendedCharacterId),
+      'intendedIncarnation': serializer.toJson<String?>(intendedIncarnation),
+      'priorGrantEpoch': serializer.toJson<int?>(priorGrantEpoch),
+      'priorTokenRevision': serializer.toJson<int?>(priorTokenRevision),
+      'requestedScopesJson': serializer.toJson<String?>(requestedScopesJson),
+      'mode': serializer.toJson<String?>(mode),
+      'stateDigest': serializer.toJson<String?>(stateDigest),
+      'createdAtMs': serializer.toJson<int?>(createdAtMs),
+      'expiresAtMs': serializer.toJson<int?>(expiresAtMs),
+      'status': serializer.toJson<String?>(status),
+    };
+  }
+
+  OAuthAuthorizationAttempt copyWith({
+    String? operationUuid,
+    Value<int?> intendedCharacterId = const Value.absent(),
+    Value<String?> intendedIncarnation = const Value.absent(),
+    Value<int?> priorGrantEpoch = const Value.absent(),
+    Value<int?> priorTokenRevision = const Value.absent(),
+    Value<String?> requestedScopesJson = const Value.absent(),
+    Value<String?> mode = const Value.absent(),
+    Value<String?> stateDigest = const Value.absent(),
+    Value<int?> createdAtMs = const Value.absent(),
+    Value<int?> expiresAtMs = const Value.absent(),
+    Value<String?> status = const Value.absent(),
+  }) => OAuthAuthorizationAttempt(
+    operationUuid: operationUuid ?? this.operationUuid,
+    intendedCharacterId: intendedCharacterId.present
+        ? intendedCharacterId.value
+        : this.intendedCharacterId,
+    intendedIncarnation: intendedIncarnation.present
+        ? intendedIncarnation.value
+        : this.intendedIncarnation,
+    priorGrantEpoch: priorGrantEpoch.present
+        ? priorGrantEpoch.value
+        : this.priorGrantEpoch,
+    priorTokenRevision: priorTokenRevision.present
+        ? priorTokenRevision.value
+        : this.priorTokenRevision,
+    requestedScopesJson: requestedScopesJson.present
+        ? requestedScopesJson.value
+        : this.requestedScopesJson,
+    mode: mode.present ? mode.value : this.mode,
+    stateDigest: stateDigest.present ? stateDigest.value : this.stateDigest,
+    createdAtMs: createdAtMs.present ? createdAtMs.value : this.createdAtMs,
+    expiresAtMs: expiresAtMs.present ? expiresAtMs.value : this.expiresAtMs,
+    status: status.present ? status.value : this.status,
+  );
+  OAuthAuthorizationAttempt copyWithCompanion(
+    OAuthAuthorizationAttemptsCompanion data,
+  ) {
+    return OAuthAuthorizationAttempt(
+      operationUuid: data.operationUuid.present
+          ? data.operationUuid.value
+          : this.operationUuid,
+      intendedCharacterId: data.intendedCharacterId.present
+          ? data.intendedCharacterId.value
+          : this.intendedCharacterId,
+      intendedIncarnation: data.intendedIncarnation.present
+          ? data.intendedIncarnation.value
+          : this.intendedIncarnation,
+      priorGrantEpoch: data.priorGrantEpoch.present
+          ? data.priorGrantEpoch.value
+          : this.priorGrantEpoch,
+      priorTokenRevision: data.priorTokenRevision.present
+          ? data.priorTokenRevision.value
+          : this.priorTokenRevision,
+      requestedScopesJson: data.requestedScopesJson.present
+          ? data.requestedScopesJson.value
+          : this.requestedScopesJson,
+      mode: data.mode.present ? data.mode.value : this.mode,
+      stateDigest: data.stateDigest.present
+          ? data.stateDigest.value
+          : this.stateDigest,
+      createdAtMs: data.createdAtMs.present
+          ? data.createdAtMs.value
+          : this.createdAtMs,
+      expiresAtMs: data.expiresAtMs.present
+          ? data.expiresAtMs.value
+          : this.expiresAtMs,
+      status: data.status.present ? data.status.value : this.status,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OAuthAuthorizationAttempt(')
+          ..write('operationUuid: $operationUuid, ')
+          ..write('intendedCharacterId: $intendedCharacterId, ')
+          ..write('intendedIncarnation: $intendedIncarnation, ')
+          ..write('priorGrantEpoch: $priorGrantEpoch, ')
+          ..write('priorTokenRevision: $priorTokenRevision, ')
+          ..write('requestedScopesJson: $requestedScopesJson, ')
+          ..write('mode: $mode, ')
+          ..write('stateDigest: $stateDigest, ')
+          ..write('createdAtMs: $createdAtMs, ')
+          ..write('expiresAtMs: $expiresAtMs, ')
+          ..write('status: $status')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    operationUuid,
+    intendedCharacterId,
+    intendedIncarnation,
+    priorGrantEpoch,
+    priorTokenRevision,
+    requestedScopesJson,
+    mode,
+    stateDigest,
+    createdAtMs,
+    expiresAtMs,
+    status,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is OAuthAuthorizationAttempt &&
+          other.operationUuid == this.operationUuid &&
+          other.intendedCharacterId == this.intendedCharacterId &&
+          other.intendedIncarnation == this.intendedIncarnation &&
+          other.priorGrantEpoch == this.priorGrantEpoch &&
+          other.priorTokenRevision == this.priorTokenRevision &&
+          other.requestedScopesJson == this.requestedScopesJson &&
+          other.mode == this.mode &&
+          other.stateDigest == this.stateDigest &&
+          other.createdAtMs == this.createdAtMs &&
+          other.expiresAtMs == this.expiresAtMs &&
+          other.status == this.status);
+}
+
+class OAuthAuthorizationAttemptsCompanion
+    extends UpdateCompanion<OAuthAuthorizationAttempt> {
+  final Value<String> operationUuid;
+  final Value<int?> intendedCharacterId;
+  final Value<String?> intendedIncarnation;
+  final Value<int?> priorGrantEpoch;
+  final Value<int?> priorTokenRevision;
+  final Value<String?> requestedScopesJson;
+  final Value<String?> mode;
+  final Value<String?> stateDigest;
+  final Value<int?> createdAtMs;
+  final Value<int?> expiresAtMs;
+  final Value<String?> status;
+  final Value<int> rowid;
+  const OAuthAuthorizationAttemptsCompanion({
+    this.operationUuid = const Value.absent(),
+    this.intendedCharacterId = const Value.absent(),
+    this.intendedIncarnation = const Value.absent(),
+    this.priorGrantEpoch = const Value.absent(),
+    this.priorTokenRevision = const Value.absent(),
+    this.requestedScopesJson = const Value.absent(),
+    this.mode = const Value.absent(),
+    this.stateDigest = const Value.absent(),
+    this.createdAtMs = const Value.absent(),
+    this.expiresAtMs = const Value.absent(),
+    this.status = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  OAuthAuthorizationAttemptsCompanion.insert({
+    required String operationUuid,
+    this.intendedCharacterId = const Value.absent(),
+    this.intendedIncarnation = const Value.absent(),
+    this.priorGrantEpoch = const Value.absent(),
+    this.priorTokenRevision = const Value.absent(),
+    this.requestedScopesJson = const Value.absent(),
+    this.mode = const Value.absent(),
+    this.stateDigest = const Value.absent(),
+    this.createdAtMs = const Value.absent(),
+    this.expiresAtMs = const Value.absent(),
+    this.status = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : operationUuid = Value(operationUuid);
+  static Insertable<OAuthAuthorizationAttempt> custom({
+    Expression<String>? operationUuid,
+    Expression<int>? intendedCharacterId,
+    Expression<String>? intendedIncarnation,
+    Expression<int>? priorGrantEpoch,
+    Expression<int>? priorTokenRevision,
+    Expression<String>? requestedScopesJson,
+    Expression<String>? mode,
+    Expression<String>? stateDigest,
+    Expression<int>? createdAtMs,
+    Expression<int>? expiresAtMs,
+    Expression<String>? status,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (operationUuid != null) 'operation_uuid': operationUuid,
+      if (intendedCharacterId != null)
+        'intended_character_id': intendedCharacterId,
+      if (intendedIncarnation != null)
+        'intended_incarnation': intendedIncarnation,
+      if (priorGrantEpoch != null) 'prior_grant_epoch': priorGrantEpoch,
+      if (priorTokenRevision != null)
+        'prior_token_revision': priorTokenRevision,
+      if (requestedScopesJson != null)
+        'requested_scopes_json': requestedScopesJson,
+      if (mode != null) 'mode': mode,
+      if (stateDigest != null) 'state_digest': stateDigest,
+      if (createdAtMs != null) 'created_at_ms': createdAtMs,
+      if (expiresAtMs != null) 'expires_at_ms': expiresAtMs,
+      if (status != null) 'status': status,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  OAuthAuthorizationAttemptsCompanion copyWith({
+    Value<String>? operationUuid,
+    Value<int?>? intendedCharacterId,
+    Value<String?>? intendedIncarnation,
+    Value<int?>? priorGrantEpoch,
+    Value<int?>? priorTokenRevision,
+    Value<String?>? requestedScopesJson,
+    Value<String?>? mode,
+    Value<String?>? stateDigest,
+    Value<int?>? createdAtMs,
+    Value<int?>? expiresAtMs,
+    Value<String?>? status,
+    Value<int>? rowid,
+  }) {
+    return OAuthAuthorizationAttemptsCompanion(
+      operationUuid: operationUuid ?? this.operationUuid,
+      intendedCharacterId: intendedCharacterId ?? this.intendedCharacterId,
+      intendedIncarnation: intendedIncarnation ?? this.intendedIncarnation,
+      priorGrantEpoch: priorGrantEpoch ?? this.priorGrantEpoch,
+      priorTokenRevision: priorTokenRevision ?? this.priorTokenRevision,
+      requestedScopesJson: requestedScopesJson ?? this.requestedScopesJson,
+      mode: mode ?? this.mode,
+      stateDigest: stateDigest ?? this.stateDigest,
+      createdAtMs: createdAtMs ?? this.createdAtMs,
+      expiresAtMs: expiresAtMs ?? this.expiresAtMs,
+      status: status ?? this.status,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (operationUuid.present) {
+      map['operation_uuid'] = Variable<String>(operationUuid.value);
+    }
+    if (intendedCharacterId.present) {
+      map['intended_character_id'] = Variable<int>(intendedCharacterId.value);
+    }
+    if (intendedIncarnation.present) {
+      map['intended_incarnation'] = Variable<String>(intendedIncarnation.value);
+    }
+    if (priorGrantEpoch.present) {
+      map['prior_grant_epoch'] = Variable<int>(priorGrantEpoch.value);
+    }
+    if (priorTokenRevision.present) {
+      map['prior_token_revision'] = Variable<int>(priorTokenRevision.value);
+    }
+    if (requestedScopesJson.present) {
+      map['requested_scopes_json'] = Variable<String>(
+        requestedScopesJson.value,
+      );
+    }
+    if (mode.present) {
+      map['mode'] = Variable<String>(mode.value);
+    }
+    if (stateDigest.present) {
+      map['state_digest'] = Variable<String>(stateDigest.value);
+    }
+    if (createdAtMs.present) {
+      map['created_at_ms'] = Variable<int>(createdAtMs.value);
+    }
+    if (expiresAtMs.present) {
+      map['expires_at_ms'] = Variable<int>(expiresAtMs.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OAuthAuthorizationAttemptsCompanion(')
+          ..write('operationUuid: $operationUuid, ')
+          ..write('intendedCharacterId: $intendedCharacterId, ')
+          ..write('intendedIncarnation: $intendedIncarnation, ')
+          ..write('priorGrantEpoch: $priorGrantEpoch, ')
+          ..write('priorTokenRevision: $priorTokenRevision, ')
+          ..write('requestedScopesJson: $requestedScopesJson, ')
+          ..write('mode: $mode, ')
+          ..write('stateDigest: $stateDigest, ')
+          ..write('createdAtMs: $createdAtMs, ')
+          ..write('expiresAtMs: $expiresAtMs, ')
+          ..write('status: $status, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationCapabilitiesTable extends CorporationCapabilities
+    with TableInfo<$CorporationCapabilitiesTable, CorporationCapability> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationCapabilitiesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerKeyMeta = const VerificationMeta(
+    'ownerKey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerKey = GeneratedColumn<String>(
+    'owner_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _capabilityMeta = const VerificationMeta(
+    'capability',
+  );
+  @override
+  late final GeneratedColumn<String> capability = GeneratedColumn<String>(
+    'capability',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _endpointUntilMsMeta = const VerificationMeta(
+    'endpointUntilMs',
+  );
+  @override
+  late final GeneratedColumn<int> endpointUntilMs = GeneratedColumn<int>(
+    'endpoint_until_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _endpointSuccessAtMsMeta =
+      const VerificationMeta('endpointSuccessAtMs');
+  @override
+  late final GeneratedColumn<int> endpointSuccessAtMs = GeneratedColumn<int>(
+    'endpoint_success_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _roleEvidenceJsonMeta = const VerificationMeta(
+    'roleEvidenceJson',
+  );
+  @override
+  late final GeneratedColumn<String> roleEvidenceJson = GeneratedColumn<String>(
+    'role_evidence_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _denialRevisionMeta = const VerificationMeta(
+    'denialRevision',
+  );
+  @override
+  late final GeneratedColumn<int> denialRevision = GeneratedColumn<int>(
+    'denial_revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nextProbeAtMsMeta = const VerificationMeta(
+    'nextProbeAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> nextProbeAtMs = GeneratedColumn<int>(
+    'next_probe_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _priorSuccessHintMeta = const VerificationMeta(
+    'priorSuccessHint',
+  );
+  @override
+  late final GeneratedColumn<String> priorSuccessHint = GeneratedColumn<String>(
+    'prior_success_hint',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  @override
+  late final GeneratedColumn<int> revision = GeneratedColumn<int>(
+    'revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _tenantMeta = const VerificationMeta('tenant');
+  @override
+  late final GeneratedColumn<String> tenant = GeneratedColumn<String>(
+    'tenant',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _corporationIdMeta = const VerificationMeta(
+    'corporationId',
+  );
+  @override
+  late final GeneratedColumn<int> corporationId = GeneratedColumn<int>(
+    'corporation_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _grantEpochMeta = const VerificationMeta(
+    'grantEpoch',
+  );
+  @override
+  late final GeneratedColumn<int> grantEpoch = GeneratedColumn<int>(
+    'grant_epoch',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerKey,
+    ownerCharacterId,
+    capability,
+    endpointUntilMs,
+    endpointSuccessAtMs,
+    roleEvidenceJson,
+    denialRevision,
+    nextProbeAtMs,
+    priorSuccessHint,
+    revision,
+    tenant,
+    corporationId,
+    grantEpoch,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_capabilities';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationCapability> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_key')) {
+      context.handle(
+        _ownerKeyMeta,
+        ownerKey.isAcceptableOrUnknown(data['owner_key']!, _ownerKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerKeyMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerCharacterIdMeta);
+    }
+    if (data.containsKey('capability')) {
+      context.handle(
+        _capabilityMeta,
+        capability.isAcceptableOrUnknown(data['capability']!, _capabilityMeta),
+      );
+    }
+    if (data.containsKey('endpoint_until_ms')) {
+      context.handle(
+        _endpointUntilMsMeta,
+        endpointUntilMs.isAcceptableOrUnknown(
+          data['endpoint_until_ms']!,
+          _endpointUntilMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('endpoint_success_at_ms')) {
+      context.handle(
+        _endpointSuccessAtMsMeta,
+        endpointSuccessAtMs.isAcceptableOrUnknown(
+          data['endpoint_success_at_ms']!,
+          _endpointSuccessAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('role_evidence_json')) {
+      context.handle(
+        _roleEvidenceJsonMeta,
+        roleEvidenceJson.isAcceptableOrUnknown(
+          data['role_evidence_json']!,
+          _roleEvidenceJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('denial_revision')) {
+      context.handle(
+        _denialRevisionMeta,
+        denialRevision.isAcceptableOrUnknown(
+          data['denial_revision']!,
+          _denialRevisionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('next_probe_at_ms')) {
+      context.handle(
+        _nextProbeAtMsMeta,
+        nextProbeAtMs.isAcceptableOrUnknown(
+          data['next_probe_at_ms']!,
+          _nextProbeAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('prior_success_hint')) {
+      context.handle(
+        _priorSuccessHintMeta,
+        priorSuccessHint.isAcceptableOrUnknown(
+          data['prior_success_hint']!,
+          _priorSuccessHintMeta,
+        ),
+      );
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    }
+    if (data.containsKey('tenant')) {
+      context.handle(
+        _tenantMeta,
+        tenant.isAcceptableOrUnknown(data['tenant']!, _tenantMeta),
+      );
+    }
+    if (data.containsKey('corporation_id')) {
+      context.handle(
+        _corporationIdMeta,
+        corporationId.isAcceptableOrUnknown(
+          data['corporation_id']!,
+          _corporationIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('grant_epoch')) {
+      context.handle(
+        _grantEpochMeta,
+        grantEpoch.isAcceptableOrUnknown(data['grant_epoch']!, _grantEpochMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerKey};
+  @override
+  CorporationCapability map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationCapability(
+      ownerKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_key'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      )!,
+      capability: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}capability'],
+      ),
+      endpointUntilMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}endpoint_until_ms'],
+      ),
+      endpointSuccessAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}endpoint_success_at_ms'],
+      ),
+      roleEvidenceJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role_evidence_json'],
+      ),
+      denialRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}denial_revision'],
+      ),
+      nextProbeAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}next_probe_at_ms'],
+      ),
+      priorSuccessHint: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}prior_success_hint'],
+      ),
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}revision'],
+      ),
+      tenant: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tenant'],
+      ),
+      corporationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}corporation_id'],
+      ),
+      grantEpoch: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}grant_epoch'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationCapabilitiesTable createAlias(String alias) {
+    return $CorporationCapabilitiesTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationCapability extends DataClass
+    implements Insertable<CorporationCapability> {
+  final String ownerKey;
+  final int ownerCharacterId;
+  final String? capability;
+  final int? endpointUntilMs;
+  final int? endpointSuccessAtMs;
+  final String? roleEvidenceJson;
+  final int? denialRevision;
+  final int? nextProbeAtMs;
+  final String? priorSuccessHint;
+  final int? revision;
+  final String? tenant;
+  final int? corporationId;
+  final int? grantEpoch;
+  const CorporationCapability({
+    required this.ownerKey,
+    required this.ownerCharacterId,
+    this.capability,
+    this.endpointUntilMs,
+    this.endpointSuccessAtMs,
+    this.roleEvidenceJson,
+    this.denialRevision,
+    this.nextProbeAtMs,
+    this.priorSuccessHint,
+    this.revision,
+    this.tenant,
+    this.corporationId,
+    this.grantEpoch,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_key'] = Variable<String>(ownerKey);
+    map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    if (!nullToAbsent || capability != null) {
+      map['capability'] = Variable<String>(capability);
+    }
+    if (!nullToAbsent || endpointUntilMs != null) {
+      map['endpoint_until_ms'] = Variable<int>(endpointUntilMs);
+    }
+    if (!nullToAbsent || endpointSuccessAtMs != null) {
+      map['endpoint_success_at_ms'] = Variable<int>(endpointSuccessAtMs);
+    }
+    if (!nullToAbsent || roleEvidenceJson != null) {
+      map['role_evidence_json'] = Variable<String>(roleEvidenceJson);
+    }
+    if (!nullToAbsent || denialRevision != null) {
+      map['denial_revision'] = Variable<int>(denialRevision);
+    }
+    if (!nullToAbsent || nextProbeAtMs != null) {
+      map['next_probe_at_ms'] = Variable<int>(nextProbeAtMs);
+    }
+    if (!nullToAbsent || priorSuccessHint != null) {
+      map['prior_success_hint'] = Variable<String>(priorSuccessHint);
+    }
+    if (!nullToAbsent || revision != null) {
+      map['revision'] = Variable<int>(revision);
+    }
+    if (!nullToAbsent || tenant != null) {
+      map['tenant'] = Variable<String>(tenant);
+    }
+    if (!nullToAbsent || corporationId != null) {
+      map['corporation_id'] = Variable<int>(corporationId);
+    }
+    if (!nullToAbsent || grantEpoch != null) {
+      map['grant_epoch'] = Variable<int>(grantEpoch);
+    }
+    return map;
+  }
+
+  CorporationCapabilitiesCompanion toCompanion(bool nullToAbsent) {
+    return CorporationCapabilitiesCompanion(
+      ownerKey: Value(ownerKey),
+      ownerCharacterId: Value(ownerCharacterId),
+      capability: capability == null && nullToAbsent
+          ? const Value.absent()
+          : Value(capability),
+      endpointUntilMs: endpointUntilMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endpointUntilMs),
+      endpointSuccessAtMs: endpointSuccessAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endpointSuccessAtMs),
+      roleEvidenceJson: roleEvidenceJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(roleEvidenceJson),
+      denialRevision: denialRevision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(denialRevision),
+      nextProbeAtMs: nextProbeAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextProbeAtMs),
+      priorSuccessHint: priorSuccessHint == null && nullToAbsent
+          ? const Value.absent()
+          : Value(priorSuccessHint),
+      revision: revision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(revision),
+      tenant: tenant == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tenant),
+      corporationId: corporationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(corporationId),
+      grantEpoch: grantEpoch == null && nullToAbsent
+          ? const Value.absent()
+          : Value(grantEpoch),
+    );
+  }
+
+  factory CorporationCapability.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationCapability(
+      ownerKey: serializer.fromJson<String>(json['ownerKey']),
+      ownerCharacterId: serializer.fromJson<int>(json['ownerCharacterId']),
+      capability: serializer.fromJson<String?>(json['capability']),
+      endpointUntilMs: serializer.fromJson<int?>(json['endpointUntilMs']),
+      endpointSuccessAtMs: serializer.fromJson<int?>(
+        json['endpointSuccessAtMs'],
+      ),
+      roleEvidenceJson: serializer.fromJson<String?>(json['roleEvidenceJson']),
+      denialRevision: serializer.fromJson<int?>(json['denialRevision']),
+      nextProbeAtMs: serializer.fromJson<int?>(json['nextProbeAtMs']),
+      priorSuccessHint: serializer.fromJson<String?>(json['priorSuccessHint']),
+      revision: serializer.fromJson<int?>(json['revision']),
+      tenant: serializer.fromJson<String?>(json['tenant']),
+      corporationId: serializer.fromJson<int?>(json['corporationId']),
+      grantEpoch: serializer.fromJson<int?>(json['grantEpoch']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerKey': serializer.toJson<String>(ownerKey),
+      'ownerCharacterId': serializer.toJson<int>(ownerCharacterId),
+      'capability': serializer.toJson<String?>(capability),
+      'endpointUntilMs': serializer.toJson<int?>(endpointUntilMs),
+      'endpointSuccessAtMs': serializer.toJson<int?>(endpointSuccessAtMs),
+      'roleEvidenceJson': serializer.toJson<String?>(roleEvidenceJson),
+      'denialRevision': serializer.toJson<int?>(denialRevision),
+      'nextProbeAtMs': serializer.toJson<int?>(nextProbeAtMs),
+      'priorSuccessHint': serializer.toJson<String?>(priorSuccessHint),
+      'revision': serializer.toJson<int?>(revision),
+      'tenant': serializer.toJson<String?>(tenant),
+      'corporationId': serializer.toJson<int?>(corporationId),
+      'grantEpoch': serializer.toJson<int?>(grantEpoch),
+    };
+  }
+
+  CorporationCapability copyWith({
+    String? ownerKey,
+    int? ownerCharacterId,
+    Value<String?> capability = const Value.absent(),
+    Value<int?> endpointUntilMs = const Value.absent(),
+    Value<int?> endpointSuccessAtMs = const Value.absent(),
+    Value<String?> roleEvidenceJson = const Value.absent(),
+    Value<int?> denialRevision = const Value.absent(),
+    Value<int?> nextProbeAtMs = const Value.absent(),
+    Value<String?> priorSuccessHint = const Value.absent(),
+    Value<int?> revision = const Value.absent(),
+    Value<String?> tenant = const Value.absent(),
+    Value<int?> corporationId = const Value.absent(),
+    Value<int?> grantEpoch = const Value.absent(),
+  }) => CorporationCapability(
+    ownerKey: ownerKey ?? this.ownerKey,
+    ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+    capability: capability.present ? capability.value : this.capability,
+    endpointUntilMs: endpointUntilMs.present
+        ? endpointUntilMs.value
+        : this.endpointUntilMs,
+    endpointSuccessAtMs: endpointSuccessAtMs.present
+        ? endpointSuccessAtMs.value
+        : this.endpointSuccessAtMs,
+    roleEvidenceJson: roleEvidenceJson.present
+        ? roleEvidenceJson.value
+        : this.roleEvidenceJson,
+    denialRevision: denialRevision.present
+        ? denialRevision.value
+        : this.denialRevision,
+    nextProbeAtMs: nextProbeAtMs.present
+        ? nextProbeAtMs.value
+        : this.nextProbeAtMs,
+    priorSuccessHint: priorSuccessHint.present
+        ? priorSuccessHint.value
+        : this.priorSuccessHint,
+    revision: revision.present ? revision.value : this.revision,
+    tenant: tenant.present ? tenant.value : this.tenant,
+    corporationId: corporationId.present
+        ? corporationId.value
+        : this.corporationId,
+    grantEpoch: grantEpoch.present ? grantEpoch.value : this.grantEpoch,
+  );
+  CorporationCapability copyWithCompanion(
+    CorporationCapabilitiesCompanion data,
+  ) {
+    return CorporationCapability(
+      ownerKey: data.ownerKey.present ? data.ownerKey.value : this.ownerKey,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      capability: data.capability.present
+          ? data.capability.value
+          : this.capability,
+      endpointUntilMs: data.endpointUntilMs.present
+          ? data.endpointUntilMs.value
+          : this.endpointUntilMs,
+      endpointSuccessAtMs: data.endpointSuccessAtMs.present
+          ? data.endpointSuccessAtMs.value
+          : this.endpointSuccessAtMs,
+      roleEvidenceJson: data.roleEvidenceJson.present
+          ? data.roleEvidenceJson.value
+          : this.roleEvidenceJson,
+      denialRevision: data.denialRevision.present
+          ? data.denialRevision.value
+          : this.denialRevision,
+      nextProbeAtMs: data.nextProbeAtMs.present
+          ? data.nextProbeAtMs.value
+          : this.nextProbeAtMs,
+      priorSuccessHint: data.priorSuccessHint.present
+          ? data.priorSuccessHint.value
+          : this.priorSuccessHint,
+      revision: data.revision.present ? data.revision.value : this.revision,
+      tenant: data.tenant.present ? data.tenant.value : this.tenant,
+      corporationId: data.corporationId.present
+          ? data.corporationId.value
+          : this.corporationId,
+      grantEpoch: data.grantEpoch.present
+          ? data.grantEpoch.value
+          : this.grantEpoch,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationCapability(')
+          ..write('ownerKey: $ownerKey, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('capability: $capability, ')
+          ..write('endpointUntilMs: $endpointUntilMs, ')
+          ..write('endpointSuccessAtMs: $endpointSuccessAtMs, ')
+          ..write('roleEvidenceJson: $roleEvidenceJson, ')
+          ..write('denialRevision: $denialRevision, ')
+          ..write('nextProbeAtMs: $nextProbeAtMs, ')
+          ..write('priorSuccessHint: $priorSuccessHint, ')
+          ..write('revision: $revision, ')
+          ..write('tenant: $tenant, ')
+          ..write('corporationId: $corporationId, ')
+          ..write('grantEpoch: $grantEpoch')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    ownerKey,
+    ownerCharacterId,
+    capability,
+    endpointUntilMs,
+    endpointSuccessAtMs,
+    roleEvidenceJson,
+    denialRevision,
+    nextProbeAtMs,
+    priorSuccessHint,
+    revision,
+    tenant,
+    corporationId,
+    grantEpoch,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationCapability &&
+          other.ownerKey == this.ownerKey &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.capability == this.capability &&
+          other.endpointUntilMs == this.endpointUntilMs &&
+          other.endpointSuccessAtMs == this.endpointSuccessAtMs &&
+          other.roleEvidenceJson == this.roleEvidenceJson &&
+          other.denialRevision == this.denialRevision &&
+          other.nextProbeAtMs == this.nextProbeAtMs &&
+          other.priorSuccessHint == this.priorSuccessHint &&
+          other.revision == this.revision &&
+          other.tenant == this.tenant &&
+          other.corporationId == this.corporationId &&
+          other.grantEpoch == this.grantEpoch);
+}
+
+class CorporationCapabilitiesCompanion
+    extends UpdateCompanion<CorporationCapability> {
+  final Value<String> ownerKey;
+  final Value<int> ownerCharacterId;
+  final Value<String?> capability;
+  final Value<int?> endpointUntilMs;
+  final Value<int?> endpointSuccessAtMs;
+  final Value<String?> roleEvidenceJson;
+  final Value<int?> denialRevision;
+  final Value<int?> nextProbeAtMs;
+  final Value<String?> priorSuccessHint;
+  final Value<int?> revision;
+  final Value<String?> tenant;
+  final Value<int?> corporationId;
+  final Value<int?> grantEpoch;
+  final Value<int> rowid;
+  const CorporationCapabilitiesCompanion({
+    this.ownerKey = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.capability = const Value.absent(),
+    this.endpointUntilMs = const Value.absent(),
+    this.endpointSuccessAtMs = const Value.absent(),
+    this.roleEvidenceJson = const Value.absent(),
+    this.denialRevision = const Value.absent(),
+    this.nextProbeAtMs = const Value.absent(),
+    this.priorSuccessHint = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.tenant = const Value.absent(),
+    this.corporationId = const Value.absent(),
+    this.grantEpoch = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationCapabilitiesCompanion.insert({
+    required String ownerKey,
+    required int ownerCharacterId,
+    this.capability = const Value.absent(),
+    this.endpointUntilMs = const Value.absent(),
+    this.endpointSuccessAtMs = const Value.absent(),
+    this.roleEvidenceJson = const Value.absent(),
+    this.denialRevision = const Value.absent(),
+    this.nextProbeAtMs = const Value.absent(),
+    this.priorSuccessHint = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.tenant = const Value.absent(),
+    this.corporationId = const Value.absent(),
+    this.grantEpoch = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : ownerKey = Value(ownerKey),
+       ownerCharacterId = Value(ownerCharacterId);
+  static Insertable<CorporationCapability> custom({
+    Expression<String>? ownerKey,
+    Expression<int>? ownerCharacterId,
+    Expression<String>? capability,
+    Expression<int>? endpointUntilMs,
+    Expression<int>? endpointSuccessAtMs,
+    Expression<String>? roleEvidenceJson,
+    Expression<int>? denialRevision,
+    Expression<int>? nextProbeAtMs,
+    Expression<String>? priorSuccessHint,
+    Expression<int>? revision,
+    Expression<String>? tenant,
+    Expression<int>? corporationId,
+    Expression<int>? grantEpoch,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerKey != null) 'owner_key': ownerKey,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (capability != null) 'capability': capability,
+      if (endpointUntilMs != null) 'endpoint_until_ms': endpointUntilMs,
+      if (endpointSuccessAtMs != null)
+        'endpoint_success_at_ms': endpointSuccessAtMs,
+      if (roleEvidenceJson != null) 'role_evidence_json': roleEvidenceJson,
+      if (denialRevision != null) 'denial_revision': denialRevision,
+      if (nextProbeAtMs != null) 'next_probe_at_ms': nextProbeAtMs,
+      if (priorSuccessHint != null) 'prior_success_hint': priorSuccessHint,
+      if (revision != null) 'revision': revision,
+      if (tenant != null) 'tenant': tenant,
+      if (corporationId != null) 'corporation_id': corporationId,
+      if (grantEpoch != null) 'grant_epoch': grantEpoch,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationCapabilitiesCompanion copyWith({
+    Value<String>? ownerKey,
+    Value<int>? ownerCharacterId,
+    Value<String?>? capability,
+    Value<int?>? endpointUntilMs,
+    Value<int?>? endpointSuccessAtMs,
+    Value<String?>? roleEvidenceJson,
+    Value<int?>? denialRevision,
+    Value<int?>? nextProbeAtMs,
+    Value<String?>? priorSuccessHint,
+    Value<int?>? revision,
+    Value<String?>? tenant,
+    Value<int?>? corporationId,
+    Value<int?>? grantEpoch,
+    Value<int>? rowid,
+  }) {
+    return CorporationCapabilitiesCompanion(
+      ownerKey: ownerKey ?? this.ownerKey,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      capability: capability ?? this.capability,
+      endpointUntilMs: endpointUntilMs ?? this.endpointUntilMs,
+      endpointSuccessAtMs: endpointSuccessAtMs ?? this.endpointSuccessAtMs,
+      roleEvidenceJson: roleEvidenceJson ?? this.roleEvidenceJson,
+      denialRevision: denialRevision ?? this.denialRevision,
+      nextProbeAtMs: nextProbeAtMs ?? this.nextProbeAtMs,
+      priorSuccessHint: priorSuccessHint ?? this.priorSuccessHint,
+      revision: revision ?? this.revision,
+      tenant: tenant ?? this.tenant,
+      corporationId: corporationId ?? this.corporationId,
+      grantEpoch: grantEpoch ?? this.grantEpoch,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerKey.present) {
+      map['owner_key'] = Variable<String>(ownerKey.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (capability.present) {
+      map['capability'] = Variable<String>(capability.value);
+    }
+    if (endpointUntilMs.present) {
+      map['endpoint_until_ms'] = Variable<int>(endpointUntilMs.value);
+    }
+    if (endpointSuccessAtMs.present) {
+      map['endpoint_success_at_ms'] = Variable<int>(endpointSuccessAtMs.value);
+    }
+    if (roleEvidenceJson.present) {
+      map['role_evidence_json'] = Variable<String>(roleEvidenceJson.value);
+    }
+    if (denialRevision.present) {
+      map['denial_revision'] = Variable<int>(denialRevision.value);
+    }
+    if (nextProbeAtMs.present) {
+      map['next_probe_at_ms'] = Variable<int>(nextProbeAtMs.value);
+    }
+    if (priorSuccessHint.present) {
+      map['prior_success_hint'] = Variable<String>(priorSuccessHint.value);
+    }
+    if (revision.present) {
+      map['revision'] = Variable<int>(revision.value);
+    }
+    if (tenant.present) {
+      map['tenant'] = Variable<String>(tenant.value);
+    }
+    if (corporationId.present) {
+      map['corporation_id'] = Variable<int>(corporationId.value);
+    }
+    if (grantEpoch.present) {
+      map['grant_epoch'] = Variable<int>(grantEpoch.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationCapabilitiesCompanion(')
+          ..write('ownerKey: $ownerKey, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('capability: $capability, ')
+          ..write('endpointUntilMs: $endpointUntilMs, ')
+          ..write('endpointSuccessAtMs: $endpointSuccessAtMs, ')
+          ..write('roleEvidenceJson: $roleEvidenceJson, ')
+          ..write('denialRevision: $denialRevision, ')
+          ..write('nextProbeAtMs: $nextProbeAtMs, ')
+          ..write('priorSuccessHint: $priorSuccessHint, ')
+          ..write('revision: $revision, ')
+          ..write('tenant: $tenant, ')
+          ..write('corporationId: $corporationId, ')
+          ..write('grantEpoch: $grantEpoch, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationSnapshotHeadsTable extends CorporationSnapshotHeads
+    with TableInfo<$CorporationSnapshotHeadsTable, CorporationSnapshotHead> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationSnapshotHeadsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerKeyMeta = const VerificationMeta(
+    'ownerKey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerKey = GeneratedColumn<String>(
+    'owner_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _requestVariantMeta = const VerificationMeta(
+    'requestVariant',
+  );
+  @override
+  late final GeneratedColumn<String> requestVariant = GeneratedColumn<String>(
+    'request_variant',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _compatibilityDateMeta = const VerificationMeta(
+    'compatibilityDate',
+  );
+  @override
+  late final GeneratedColumn<String> compatibilityDate =
+      GeneratedColumn<String>(
+        'compatibility_date',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _acceptedSnapshotIdMeta =
+      const VerificationMeta('acceptedSnapshotId');
+  @override
+  late final GeneratedColumn<String> acceptedSnapshotId =
+      GeneratedColumn<String>(
+        'accepted_snapshot_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _acceptedRevisionMeta = const VerificationMeta(
+    'acceptedRevision',
+  );
+  @override
+  late final GeneratedColumn<int> acceptedRevision = GeneratedColumn<int>(
+    'accepted_revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _coverageMeta = const VerificationMeta(
+    'coverage',
+  );
+  @override
+  late final GeneratedColumn<String> coverage = GeneratedColumn<String>(
+    'coverage',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _payloadReceivedAtMsMeta =
+      const VerificationMeta('payloadReceivedAtMs');
+  @override
+  late final GeneratedColumn<int> payloadReceivedAtMs = GeneratedColumn<int>(
+    'payload_received_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _validatedAtMsMeta = const VerificationMeta(
+    'validatedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> validatedAtMs = GeneratedColumn<int>(
+    'validated_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _httpDeadlineAtMsMeta = const VerificationMeta(
+    'httpDeadlineAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> httpDeadlineAtMs = GeneratedColumn<int>(
+    'http_deadline_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _etagMeta = const VerificationMeta('etag');
+  @override
+  late final GeneratedColumn<String> etag = GeneratedColumn<String>(
+    'etag',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastErrorMeta = const VerificationMeta(
+    'lastError',
+  );
+  @override
+  late final GeneratedColumn<String> lastError = GeneratedColumn<String>(
+    'last_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _refreshRoundIdMeta = const VerificationMeta(
+    'refreshRoundId',
+  );
+  @override
+  late final GeneratedColumn<String> refreshRoundId = GeneratedColumn<String>(
+    'refresh_round_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerKey,
+    requestVariant,
+    compatibilityDate,
+    ownerCharacterId,
+    acceptedSnapshotId,
+    acceptedRevision,
+    coverage,
+    payloadReceivedAtMs,
+    validatedAtMs,
+    httpDeadlineAtMs,
+    etag,
+    lastError,
+    refreshRoundId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_snapshot_heads';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationSnapshotHead> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_key')) {
+      context.handle(
+        _ownerKeyMeta,
+        ownerKey.isAcceptableOrUnknown(data['owner_key']!, _ownerKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerKeyMeta);
+    }
+    if (data.containsKey('request_variant')) {
+      context.handle(
+        _requestVariantMeta,
+        requestVariant.isAcceptableOrUnknown(
+          data['request_variant']!,
+          _requestVariantMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_requestVariantMeta);
+    }
+    if (data.containsKey('compatibility_date')) {
+      context.handle(
+        _compatibilityDateMeta,
+        compatibilityDate.isAcceptableOrUnknown(
+          data['compatibility_date']!,
+          _compatibilityDateMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_compatibilityDateMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('accepted_snapshot_id')) {
+      context.handle(
+        _acceptedSnapshotIdMeta,
+        acceptedSnapshotId.isAcceptableOrUnknown(
+          data['accepted_snapshot_id']!,
+          _acceptedSnapshotIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('accepted_revision')) {
+      context.handle(
+        _acceptedRevisionMeta,
+        acceptedRevision.isAcceptableOrUnknown(
+          data['accepted_revision']!,
+          _acceptedRevisionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('coverage')) {
+      context.handle(
+        _coverageMeta,
+        coverage.isAcceptableOrUnknown(data['coverage']!, _coverageMeta),
+      );
+    }
+    if (data.containsKey('payload_received_at_ms')) {
+      context.handle(
+        _payloadReceivedAtMsMeta,
+        payloadReceivedAtMs.isAcceptableOrUnknown(
+          data['payload_received_at_ms']!,
+          _payloadReceivedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('validated_at_ms')) {
+      context.handle(
+        _validatedAtMsMeta,
+        validatedAtMs.isAcceptableOrUnknown(
+          data['validated_at_ms']!,
+          _validatedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('http_deadline_at_ms')) {
+      context.handle(
+        _httpDeadlineAtMsMeta,
+        httpDeadlineAtMs.isAcceptableOrUnknown(
+          data['http_deadline_at_ms']!,
+          _httpDeadlineAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('etag')) {
+      context.handle(
+        _etagMeta,
+        etag.isAcceptableOrUnknown(data['etag']!, _etagMeta),
+      );
+    }
+    if (data.containsKey('last_error')) {
+      context.handle(
+        _lastErrorMeta,
+        lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta),
+      );
+    }
+    if (data.containsKey('refresh_round_id')) {
+      context.handle(
+        _refreshRoundIdMeta,
+        refreshRoundId.isAcceptableOrUnknown(
+          data['refresh_round_id']!,
+          _refreshRoundIdMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {
+    ownerKey,
+    requestVariant,
+    compatibilityDate,
+  };
+  @override
+  CorporationSnapshotHead map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationSnapshotHead(
+      ownerKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_key'],
+      )!,
+      requestVariant: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}request_variant'],
+      )!,
+      compatibilityDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}compatibility_date'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      ),
+      acceptedSnapshotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}accepted_snapshot_id'],
+      ),
+      acceptedRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}accepted_revision'],
+      ),
+      coverage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}coverage'],
+      ),
+      payloadReceivedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}payload_received_at_ms'],
+      ),
+      validatedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}validated_at_ms'],
+      ),
+      httpDeadlineAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}http_deadline_at_ms'],
+      ),
+      etag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}etag'],
+      ),
+      lastError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_error'],
+      ),
+      refreshRoundId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}refresh_round_id'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationSnapshotHeadsTable createAlias(String alias) {
+    return $CorporationSnapshotHeadsTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationSnapshotHead extends DataClass
+    implements Insertable<CorporationSnapshotHead> {
+  final String ownerKey;
+  final String requestVariant;
+  final String compatibilityDate;
+  final int? ownerCharacterId;
+  final String? acceptedSnapshotId;
+  final int? acceptedRevision;
+  final String? coverage;
+  final int? payloadReceivedAtMs;
+  final int? validatedAtMs;
+  final int? httpDeadlineAtMs;
+  final String? etag;
+  final String? lastError;
+  final String? refreshRoundId;
+  const CorporationSnapshotHead({
+    required this.ownerKey,
+    required this.requestVariant,
+    required this.compatibilityDate,
+    this.ownerCharacterId,
+    this.acceptedSnapshotId,
+    this.acceptedRevision,
+    this.coverage,
+    this.payloadReceivedAtMs,
+    this.validatedAtMs,
+    this.httpDeadlineAtMs,
+    this.etag,
+    this.lastError,
+    this.refreshRoundId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_key'] = Variable<String>(ownerKey);
+    map['request_variant'] = Variable<String>(requestVariant);
+    map['compatibility_date'] = Variable<String>(compatibilityDate);
+    if (!nullToAbsent || ownerCharacterId != null) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    }
+    if (!nullToAbsent || acceptedSnapshotId != null) {
+      map['accepted_snapshot_id'] = Variable<String>(acceptedSnapshotId);
+    }
+    if (!nullToAbsent || acceptedRevision != null) {
+      map['accepted_revision'] = Variable<int>(acceptedRevision);
+    }
+    if (!nullToAbsent || coverage != null) {
+      map['coverage'] = Variable<String>(coverage);
+    }
+    if (!nullToAbsent || payloadReceivedAtMs != null) {
+      map['payload_received_at_ms'] = Variable<int>(payloadReceivedAtMs);
+    }
+    if (!nullToAbsent || validatedAtMs != null) {
+      map['validated_at_ms'] = Variable<int>(validatedAtMs);
+    }
+    if (!nullToAbsent || httpDeadlineAtMs != null) {
+      map['http_deadline_at_ms'] = Variable<int>(httpDeadlineAtMs);
+    }
+    if (!nullToAbsent || etag != null) {
+      map['etag'] = Variable<String>(etag);
+    }
+    if (!nullToAbsent || lastError != null) {
+      map['last_error'] = Variable<String>(lastError);
+    }
+    if (!nullToAbsent || refreshRoundId != null) {
+      map['refresh_round_id'] = Variable<String>(refreshRoundId);
+    }
+    return map;
+  }
+
+  CorporationSnapshotHeadsCompanion toCompanion(bool nullToAbsent) {
+    return CorporationSnapshotHeadsCompanion(
+      ownerKey: Value(ownerKey),
+      requestVariant: Value(requestVariant),
+      compatibilityDate: Value(compatibilityDate),
+      ownerCharacterId: ownerCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerCharacterId),
+      acceptedSnapshotId: acceptedSnapshotId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(acceptedSnapshotId),
+      acceptedRevision: acceptedRevision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(acceptedRevision),
+      coverage: coverage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverage),
+      payloadReceivedAtMs: payloadReceivedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(payloadReceivedAtMs),
+      validatedAtMs: validatedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(validatedAtMs),
+      httpDeadlineAtMs: httpDeadlineAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(httpDeadlineAtMs),
+      etag: etag == null && nullToAbsent ? const Value.absent() : Value(etag),
+      lastError: lastError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastError),
+      refreshRoundId: refreshRoundId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(refreshRoundId),
+    );
+  }
+
+  factory CorporationSnapshotHead.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationSnapshotHead(
+      ownerKey: serializer.fromJson<String>(json['ownerKey']),
+      requestVariant: serializer.fromJson<String>(json['requestVariant']),
+      compatibilityDate: serializer.fromJson<String>(json['compatibilityDate']),
+      ownerCharacterId: serializer.fromJson<int?>(json['ownerCharacterId']),
+      acceptedSnapshotId: serializer.fromJson<String?>(
+        json['acceptedSnapshotId'],
+      ),
+      acceptedRevision: serializer.fromJson<int?>(json['acceptedRevision']),
+      coverage: serializer.fromJson<String?>(json['coverage']),
+      payloadReceivedAtMs: serializer.fromJson<int?>(
+        json['payloadReceivedAtMs'],
+      ),
+      validatedAtMs: serializer.fromJson<int?>(json['validatedAtMs']),
+      httpDeadlineAtMs: serializer.fromJson<int?>(json['httpDeadlineAtMs']),
+      etag: serializer.fromJson<String?>(json['etag']),
+      lastError: serializer.fromJson<String?>(json['lastError']),
+      refreshRoundId: serializer.fromJson<String?>(json['refreshRoundId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerKey': serializer.toJson<String>(ownerKey),
+      'requestVariant': serializer.toJson<String>(requestVariant),
+      'compatibilityDate': serializer.toJson<String>(compatibilityDate),
+      'ownerCharacterId': serializer.toJson<int?>(ownerCharacterId),
+      'acceptedSnapshotId': serializer.toJson<String?>(acceptedSnapshotId),
+      'acceptedRevision': serializer.toJson<int?>(acceptedRevision),
+      'coverage': serializer.toJson<String?>(coverage),
+      'payloadReceivedAtMs': serializer.toJson<int?>(payloadReceivedAtMs),
+      'validatedAtMs': serializer.toJson<int?>(validatedAtMs),
+      'httpDeadlineAtMs': serializer.toJson<int?>(httpDeadlineAtMs),
+      'etag': serializer.toJson<String?>(etag),
+      'lastError': serializer.toJson<String?>(lastError),
+      'refreshRoundId': serializer.toJson<String?>(refreshRoundId),
+    };
+  }
+
+  CorporationSnapshotHead copyWith({
+    String? ownerKey,
+    String? requestVariant,
+    String? compatibilityDate,
+    Value<int?> ownerCharacterId = const Value.absent(),
+    Value<String?> acceptedSnapshotId = const Value.absent(),
+    Value<int?> acceptedRevision = const Value.absent(),
+    Value<String?> coverage = const Value.absent(),
+    Value<int?> payloadReceivedAtMs = const Value.absent(),
+    Value<int?> validatedAtMs = const Value.absent(),
+    Value<int?> httpDeadlineAtMs = const Value.absent(),
+    Value<String?> etag = const Value.absent(),
+    Value<String?> lastError = const Value.absent(),
+    Value<String?> refreshRoundId = const Value.absent(),
+  }) => CorporationSnapshotHead(
+    ownerKey: ownerKey ?? this.ownerKey,
+    requestVariant: requestVariant ?? this.requestVariant,
+    compatibilityDate: compatibilityDate ?? this.compatibilityDate,
+    ownerCharacterId: ownerCharacterId.present
+        ? ownerCharacterId.value
+        : this.ownerCharacterId,
+    acceptedSnapshotId: acceptedSnapshotId.present
+        ? acceptedSnapshotId.value
+        : this.acceptedSnapshotId,
+    acceptedRevision: acceptedRevision.present
+        ? acceptedRevision.value
+        : this.acceptedRevision,
+    coverage: coverage.present ? coverage.value : this.coverage,
+    payloadReceivedAtMs: payloadReceivedAtMs.present
+        ? payloadReceivedAtMs.value
+        : this.payloadReceivedAtMs,
+    validatedAtMs: validatedAtMs.present
+        ? validatedAtMs.value
+        : this.validatedAtMs,
+    httpDeadlineAtMs: httpDeadlineAtMs.present
+        ? httpDeadlineAtMs.value
+        : this.httpDeadlineAtMs,
+    etag: etag.present ? etag.value : this.etag,
+    lastError: lastError.present ? lastError.value : this.lastError,
+    refreshRoundId: refreshRoundId.present
+        ? refreshRoundId.value
+        : this.refreshRoundId,
+  );
+  CorporationSnapshotHead copyWithCompanion(
+    CorporationSnapshotHeadsCompanion data,
+  ) {
+    return CorporationSnapshotHead(
+      ownerKey: data.ownerKey.present ? data.ownerKey.value : this.ownerKey,
+      requestVariant: data.requestVariant.present
+          ? data.requestVariant.value
+          : this.requestVariant,
+      compatibilityDate: data.compatibilityDate.present
+          ? data.compatibilityDate.value
+          : this.compatibilityDate,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      acceptedSnapshotId: data.acceptedSnapshotId.present
+          ? data.acceptedSnapshotId.value
+          : this.acceptedSnapshotId,
+      acceptedRevision: data.acceptedRevision.present
+          ? data.acceptedRevision.value
+          : this.acceptedRevision,
+      coverage: data.coverage.present ? data.coverage.value : this.coverage,
+      payloadReceivedAtMs: data.payloadReceivedAtMs.present
+          ? data.payloadReceivedAtMs.value
+          : this.payloadReceivedAtMs,
+      validatedAtMs: data.validatedAtMs.present
+          ? data.validatedAtMs.value
+          : this.validatedAtMs,
+      httpDeadlineAtMs: data.httpDeadlineAtMs.present
+          ? data.httpDeadlineAtMs.value
+          : this.httpDeadlineAtMs,
+      etag: data.etag.present ? data.etag.value : this.etag,
+      lastError: data.lastError.present ? data.lastError.value : this.lastError,
+      refreshRoundId: data.refreshRoundId.present
+          ? data.refreshRoundId.value
+          : this.refreshRoundId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationSnapshotHead(')
+          ..write('ownerKey: $ownerKey, ')
+          ..write('requestVariant: $requestVariant, ')
+          ..write('compatibilityDate: $compatibilityDate, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('acceptedSnapshotId: $acceptedSnapshotId, ')
+          ..write('acceptedRevision: $acceptedRevision, ')
+          ..write('coverage: $coverage, ')
+          ..write('payloadReceivedAtMs: $payloadReceivedAtMs, ')
+          ..write('validatedAtMs: $validatedAtMs, ')
+          ..write('httpDeadlineAtMs: $httpDeadlineAtMs, ')
+          ..write('etag: $etag, ')
+          ..write('lastError: $lastError, ')
+          ..write('refreshRoundId: $refreshRoundId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    ownerKey,
+    requestVariant,
+    compatibilityDate,
+    ownerCharacterId,
+    acceptedSnapshotId,
+    acceptedRevision,
+    coverage,
+    payloadReceivedAtMs,
+    validatedAtMs,
+    httpDeadlineAtMs,
+    etag,
+    lastError,
+    refreshRoundId,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationSnapshotHead &&
+          other.ownerKey == this.ownerKey &&
+          other.requestVariant == this.requestVariant &&
+          other.compatibilityDate == this.compatibilityDate &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.acceptedSnapshotId == this.acceptedSnapshotId &&
+          other.acceptedRevision == this.acceptedRevision &&
+          other.coverage == this.coverage &&
+          other.payloadReceivedAtMs == this.payloadReceivedAtMs &&
+          other.validatedAtMs == this.validatedAtMs &&
+          other.httpDeadlineAtMs == this.httpDeadlineAtMs &&
+          other.etag == this.etag &&
+          other.lastError == this.lastError &&
+          other.refreshRoundId == this.refreshRoundId);
+}
+
+class CorporationSnapshotHeadsCompanion
+    extends UpdateCompanion<CorporationSnapshotHead> {
+  final Value<String> ownerKey;
+  final Value<String> requestVariant;
+  final Value<String> compatibilityDate;
+  final Value<int?> ownerCharacterId;
+  final Value<String?> acceptedSnapshotId;
+  final Value<int?> acceptedRevision;
+  final Value<String?> coverage;
+  final Value<int?> payloadReceivedAtMs;
+  final Value<int?> validatedAtMs;
+  final Value<int?> httpDeadlineAtMs;
+  final Value<String?> etag;
+  final Value<String?> lastError;
+  final Value<String?> refreshRoundId;
+  final Value<int> rowid;
+  const CorporationSnapshotHeadsCompanion({
+    this.ownerKey = const Value.absent(),
+    this.requestVariant = const Value.absent(),
+    this.compatibilityDate = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.acceptedSnapshotId = const Value.absent(),
+    this.acceptedRevision = const Value.absent(),
+    this.coverage = const Value.absent(),
+    this.payloadReceivedAtMs = const Value.absent(),
+    this.validatedAtMs = const Value.absent(),
+    this.httpDeadlineAtMs = const Value.absent(),
+    this.etag = const Value.absent(),
+    this.lastError = const Value.absent(),
+    this.refreshRoundId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationSnapshotHeadsCompanion.insert({
+    required String ownerKey,
+    required String requestVariant,
+    required String compatibilityDate,
+    this.ownerCharacterId = const Value.absent(),
+    this.acceptedSnapshotId = const Value.absent(),
+    this.acceptedRevision = const Value.absent(),
+    this.coverage = const Value.absent(),
+    this.payloadReceivedAtMs = const Value.absent(),
+    this.validatedAtMs = const Value.absent(),
+    this.httpDeadlineAtMs = const Value.absent(),
+    this.etag = const Value.absent(),
+    this.lastError = const Value.absent(),
+    this.refreshRoundId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : ownerKey = Value(ownerKey),
+       requestVariant = Value(requestVariant),
+       compatibilityDate = Value(compatibilityDate);
+  static Insertable<CorporationSnapshotHead> custom({
+    Expression<String>? ownerKey,
+    Expression<String>? requestVariant,
+    Expression<String>? compatibilityDate,
+    Expression<int>? ownerCharacterId,
+    Expression<String>? acceptedSnapshotId,
+    Expression<int>? acceptedRevision,
+    Expression<String>? coverage,
+    Expression<int>? payloadReceivedAtMs,
+    Expression<int>? validatedAtMs,
+    Expression<int>? httpDeadlineAtMs,
+    Expression<String>? etag,
+    Expression<String>? lastError,
+    Expression<String>? refreshRoundId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerKey != null) 'owner_key': ownerKey,
+      if (requestVariant != null) 'request_variant': requestVariant,
+      if (compatibilityDate != null) 'compatibility_date': compatibilityDate,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (acceptedSnapshotId != null)
+        'accepted_snapshot_id': acceptedSnapshotId,
+      if (acceptedRevision != null) 'accepted_revision': acceptedRevision,
+      if (coverage != null) 'coverage': coverage,
+      if (payloadReceivedAtMs != null)
+        'payload_received_at_ms': payloadReceivedAtMs,
+      if (validatedAtMs != null) 'validated_at_ms': validatedAtMs,
+      if (httpDeadlineAtMs != null) 'http_deadline_at_ms': httpDeadlineAtMs,
+      if (etag != null) 'etag': etag,
+      if (lastError != null) 'last_error': lastError,
+      if (refreshRoundId != null) 'refresh_round_id': refreshRoundId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationSnapshotHeadsCompanion copyWith({
+    Value<String>? ownerKey,
+    Value<String>? requestVariant,
+    Value<String>? compatibilityDate,
+    Value<int?>? ownerCharacterId,
+    Value<String?>? acceptedSnapshotId,
+    Value<int?>? acceptedRevision,
+    Value<String?>? coverage,
+    Value<int?>? payloadReceivedAtMs,
+    Value<int?>? validatedAtMs,
+    Value<int?>? httpDeadlineAtMs,
+    Value<String?>? etag,
+    Value<String?>? lastError,
+    Value<String?>? refreshRoundId,
+    Value<int>? rowid,
+  }) {
+    return CorporationSnapshotHeadsCompanion(
+      ownerKey: ownerKey ?? this.ownerKey,
+      requestVariant: requestVariant ?? this.requestVariant,
+      compatibilityDate: compatibilityDate ?? this.compatibilityDate,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      acceptedSnapshotId: acceptedSnapshotId ?? this.acceptedSnapshotId,
+      acceptedRevision: acceptedRevision ?? this.acceptedRevision,
+      coverage: coverage ?? this.coverage,
+      payloadReceivedAtMs: payloadReceivedAtMs ?? this.payloadReceivedAtMs,
+      validatedAtMs: validatedAtMs ?? this.validatedAtMs,
+      httpDeadlineAtMs: httpDeadlineAtMs ?? this.httpDeadlineAtMs,
+      etag: etag ?? this.etag,
+      lastError: lastError ?? this.lastError,
+      refreshRoundId: refreshRoundId ?? this.refreshRoundId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerKey.present) {
+      map['owner_key'] = Variable<String>(ownerKey.value);
+    }
+    if (requestVariant.present) {
+      map['request_variant'] = Variable<String>(requestVariant.value);
+    }
+    if (compatibilityDate.present) {
+      map['compatibility_date'] = Variable<String>(compatibilityDate.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (acceptedSnapshotId.present) {
+      map['accepted_snapshot_id'] = Variable<String>(acceptedSnapshotId.value);
+    }
+    if (acceptedRevision.present) {
+      map['accepted_revision'] = Variable<int>(acceptedRevision.value);
+    }
+    if (coverage.present) {
+      map['coverage'] = Variable<String>(coverage.value);
+    }
+    if (payloadReceivedAtMs.present) {
+      map['payload_received_at_ms'] = Variable<int>(payloadReceivedAtMs.value);
+    }
+    if (validatedAtMs.present) {
+      map['validated_at_ms'] = Variable<int>(validatedAtMs.value);
+    }
+    if (httpDeadlineAtMs.present) {
+      map['http_deadline_at_ms'] = Variable<int>(httpDeadlineAtMs.value);
+    }
+    if (etag.present) {
+      map['etag'] = Variable<String>(etag.value);
+    }
+    if (lastError.present) {
+      map['last_error'] = Variable<String>(lastError.value);
+    }
+    if (refreshRoundId.present) {
+      map['refresh_round_id'] = Variable<String>(refreshRoundId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationSnapshotHeadsCompanion(')
+          ..write('ownerKey: $ownerKey, ')
+          ..write('requestVariant: $requestVariant, ')
+          ..write('compatibilityDate: $compatibilityDate, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('acceptedSnapshotId: $acceptedSnapshotId, ')
+          ..write('acceptedRevision: $acceptedRevision, ')
+          ..write('coverage: $coverage, ')
+          ..write('payloadReceivedAtMs: $payloadReceivedAtMs, ')
+          ..write('validatedAtMs: $validatedAtMs, ')
+          ..write('httpDeadlineAtMs: $httpDeadlineAtMs, ')
+          ..write('etag: $etag, ')
+          ..write('lastError: $lastError, ')
+          ..write('refreshRoundId: $refreshRoundId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationSnapshotPagesTable extends CorporationSnapshotPages
+    with TableInfo<$CorporationSnapshotPagesTable, CorporationSnapshotPage> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationSnapshotPagesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _snapshotIdMeta = const VerificationMeta(
+    'snapshotId',
+  );
+  @override
+  late final GeneratedColumn<String> snapshotId = GeneratedColumn<String>(
+    'snapshot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pageKeyMeta = const VerificationMeta(
+    'pageKey',
+  );
+  @override
+  late final GeneratedColumn<String> pageKey = GeneratedColumn<String>(
+    'page_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _etagMeta = const VerificationMeta('etag');
+  @override
+  late final GeneratedColumn<String> etag = GeneratedColumn<String>(
+    'etag',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastModifiedMeta = const VerificationMeta(
+    'lastModified',
+  );
+  @override
+  late final GeneratedColumn<String> lastModified = GeneratedColumn<String>(
+    'last_modified',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dateAtMsMeta = const VerificationMeta(
+    'dateAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> dateAtMs = GeneratedColumn<int>(
+    'date_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _ageSecondsMeta = const VerificationMeta(
+    'ageSeconds',
+  );
+  @override
+  late final GeneratedColumn<int> ageSeconds = GeneratedColumn<int>(
+    'age_seconds',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _xPagesMeta = const VerificationMeta('xPages');
+  @override
+  late final GeneratedColumn<int> xPages = GeneratedColumn<int>(
+    'x_pages',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _contentDigestMeta = const VerificationMeta(
+    'contentDigest',
+  );
+  @override
+  late final GeneratedColumn<String> contentDigest = GeneratedColumn<String>(
+    'content_digest',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _validatedAtMsMeta = const VerificationMeta(
+    'validatedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> validatedAtMs = GeneratedColumn<int>(
+    'validated_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nextCursorMeta = const VerificationMeta(
+    'nextCursor',
+  );
+  @override
+  late final GeneratedColumn<String> nextCursor = GeneratedColumn<String>(
+    'next_cursor',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _completeMeta = const VerificationMeta(
+    'complete',
+  );
+  @override
+  late final GeneratedColumn<bool> complete = GeneratedColumn<bool>(
+    'complete',
+    aliasedName,
+    true,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("complete" IN (0, 1))',
+    ),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    snapshotId,
+    pageKey,
+    ownerCharacterId,
+    status,
+    etag,
+    lastModified,
+    dateAtMs,
+    ageSeconds,
+    xPages,
+    contentDigest,
+    validatedAtMs,
+    nextCursor,
+    complete,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_snapshot_pages';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationSnapshotPage> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('snapshot_id')) {
+      context.handle(
+        _snapshotIdMeta,
+        snapshotId.isAcceptableOrUnknown(data['snapshot_id']!, _snapshotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_snapshotIdMeta);
+    }
+    if (data.containsKey('page_key')) {
+      context.handle(
+        _pageKeyMeta,
+        pageKey.isAcceptableOrUnknown(data['page_key']!, _pageKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pageKeyMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('etag')) {
+      context.handle(
+        _etagMeta,
+        etag.isAcceptableOrUnknown(data['etag']!, _etagMeta),
+      );
+    }
+    if (data.containsKey('last_modified')) {
+      context.handle(
+        _lastModifiedMeta,
+        lastModified.isAcceptableOrUnknown(
+          data['last_modified']!,
+          _lastModifiedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('date_at_ms')) {
+      context.handle(
+        _dateAtMsMeta,
+        dateAtMs.isAcceptableOrUnknown(data['date_at_ms']!, _dateAtMsMeta),
+      );
+    }
+    if (data.containsKey('age_seconds')) {
+      context.handle(
+        _ageSecondsMeta,
+        ageSeconds.isAcceptableOrUnknown(data['age_seconds']!, _ageSecondsMeta),
+      );
+    }
+    if (data.containsKey('x_pages')) {
+      context.handle(
+        _xPagesMeta,
+        xPages.isAcceptableOrUnknown(data['x_pages']!, _xPagesMeta),
+      );
+    }
+    if (data.containsKey('content_digest')) {
+      context.handle(
+        _contentDigestMeta,
+        contentDigest.isAcceptableOrUnknown(
+          data['content_digest']!,
+          _contentDigestMeta,
+        ),
+      );
+    }
+    if (data.containsKey('validated_at_ms')) {
+      context.handle(
+        _validatedAtMsMeta,
+        validatedAtMs.isAcceptableOrUnknown(
+          data['validated_at_ms']!,
+          _validatedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('next_cursor')) {
+      context.handle(
+        _nextCursorMeta,
+        nextCursor.isAcceptableOrUnknown(data['next_cursor']!, _nextCursorMeta),
+      );
+    }
+    if (data.containsKey('complete')) {
+      context.handle(
+        _completeMeta,
+        complete.isAcceptableOrUnknown(data['complete']!, _completeMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {snapshotId, pageKey};
+  @override
+  CorporationSnapshotPage map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationSnapshotPage(
+      snapshotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}snapshot_id'],
+      )!,
+      pageKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}page_key'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      ),
+      etag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}etag'],
+      ),
+      lastModified: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_modified'],
+      ),
+      dateAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}date_at_ms'],
+      ),
+      ageSeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}age_seconds'],
+      ),
+      xPages: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}x_pages'],
+      ),
+      contentDigest: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_digest'],
+      ),
+      validatedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}validated_at_ms'],
+      ),
+      nextCursor: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}next_cursor'],
+      ),
+      complete: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}complete'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationSnapshotPagesTable createAlias(String alias) {
+    return $CorporationSnapshotPagesTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationSnapshotPage extends DataClass
+    implements Insertable<CorporationSnapshotPage> {
+  final String snapshotId;
+  final String pageKey;
+  final int? ownerCharacterId;
+  final String? status;
+  final String? etag;
+  final String? lastModified;
+  final int? dateAtMs;
+  final int? ageSeconds;
+  final int? xPages;
+  final String? contentDigest;
+  final int? validatedAtMs;
+  final String? nextCursor;
+  final bool? complete;
+  const CorporationSnapshotPage({
+    required this.snapshotId,
+    required this.pageKey,
+    this.ownerCharacterId,
+    this.status,
+    this.etag,
+    this.lastModified,
+    this.dateAtMs,
+    this.ageSeconds,
+    this.xPages,
+    this.contentDigest,
+    this.validatedAtMs,
+    this.nextCursor,
+    this.complete,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['snapshot_id'] = Variable<String>(snapshotId);
+    map['page_key'] = Variable<String>(pageKey);
+    if (!nullToAbsent || ownerCharacterId != null) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    }
+    if (!nullToAbsent || status != null) {
+      map['status'] = Variable<String>(status);
+    }
+    if (!nullToAbsent || etag != null) {
+      map['etag'] = Variable<String>(etag);
+    }
+    if (!nullToAbsent || lastModified != null) {
+      map['last_modified'] = Variable<String>(lastModified);
+    }
+    if (!nullToAbsent || dateAtMs != null) {
+      map['date_at_ms'] = Variable<int>(dateAtMs);
+    }
+    if (!nullToAbsent || ageSeconds != null) {
+      map['age_seconds'] = Variable<int>(ageSeconds);
+    }
+    if (!nullToAbsent || xPages != null) {
+      map['x_pages'] = Variable<int>(xPages);
+    }
+    if (!nullToAbsent || contentDigest != null) {
+      map['content_digest'] = Variable<String>(contentDigest);
+    }
+    if (!nullToAbsent || validatedAtMs != null) {
+      map['validated_at_ms'] = Variable<int>(validatedAtMs);
+    }
+    if (!nullToAbsent || nextCursor != null) {
+      map['next_cursor'] = Variable<String>(nextCursor);
+    }
+    if (!nullToAbsent || complete != null) {
+      map['complete'] = Variable<bool>(complete);
+    }
+    return map;
+  }
+
+  CorporationSnapshotPagesCompanion toCompanion(bool nullToAbsent) {
+    return CorporationSnapshotPagesCompanion(
+      snapshotId: Value(snapshotId),
+      pageKey: Value(pageKey),
+      ownerCharacterId: ownerCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerCharacterId),
+      status: status == null && nullToAbsent
+          ? const Value.absent()
+          : Value(status),
+      etag: etag == null && nullToAbsent ? const Value.absent() : Value(etag),
+      lastModified: lastModified == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastModified),
+      dateAtMs: dateAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dateAtMs),
+      ageSeconds: ageSeconds == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ageSeconds),
+      xPages: xPages == null && nullToAbsent
+          ? const Value.absent()
+          : Value(xPages),
+      contentDigest: contentDigest == null && nullToAbsent
+          ? const Value.absent()
+          : Value(contentDigest),
+      validatedAtMs: validatedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(validatedAtMs),
+      nextCursor: nextCursor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextCursor),
+      complete: complete == null && nullToAbsent
+          ? const Value.absent()
+          : Value(complete),
+    );
+  }
+
+  factory CorporationSnapshotPage.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationSnapshotPage(
+      snapshotId: serializer.fromJson<String>(json['snapshotId']),
+      pageKey: serializer.fromJson<String>(json['pageKey']),
+      ownerCharacterId: serializer.fromJson<int?>(json['ownerCharacterId']),
+      status: serializer.fromJson<String?>(json['status']),
+      etag: serializer.fromJson<String?>(json['etag']),
+      lastModified: serializer.fromJson<String?>(json['lastModified']),
+      dateAtMs: serializer.fromJson<int?>(json['dateAtMs']),
+      ageSeconds: serializer.fromJson<int?>(json['ageSeconds']),
+      xPages: serializer.fromJson<int?>(json['xPages']),
+      contentDigest: serializer.fromJson<String?>(json['contentDigest']),
+      validatedAtMs: serializer.fromJson<int?>(json['validatedAtMs']),
+      nextCursor: serializer.fromJson<String?>(json['nextCursor']),
+      complete: serializer.fromJson<bool?>(json['complete']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'snapshotId': serializer.toJson<String>(snapshotId),
+      'pageKey': serializer.toJson<String>(pageKey),
+      'ownerCharacterId': serializer.toJson<int?>(ownerCharacterId),
+      'status': serializer.toJson<String?>(status),
+      'etag': serializer.toJson<String?>(etag),
+      'lastModified': serializer.toJson<String?>(lastModified),
+      'dateAtMs': serializer.toJson<int?>(dateAtMs),
+      'ageSeconds': serializer.toJson<int?>(ageSeconds),
+      'xPages': serializer.toJson<int?>(xPages),
+      'contentDigest': serializer.toJson<String?>(contentDigest),
+      'validatedAtMs': serializer.toJson<int?>(validatedAtMs),
+      'nextCursor': serializer.toJson<String?>(nextCursor),
+      'complete': serializer.toJson<bool?>(complete),
+    };
+  }
+
+  CorporationSnapshotPage copyWith({
+    String? snapshotId,
+    String? pageKey,
+    Value<int?> ownerCharacterId = const Value.absent(),
+    Value<String?> status = const Value.absent(),
+    Value<String?> etag = const Value.absent(),
+    Value<String?> lastModified = const Value.absent(),
+    Value<int?> dateAtMs = const Value.absent(),
+    Value<int?> ageSeconds = const Value.absent(),
+    Value<int?> xPages = const Value.absent(),
+    Value<String?> contentDigest = const Value.absent(),
+    Value<int?> validatedAtMs = const Value.absent(),
+    Value<String?> nextCursor = const Value.absent(),
+    Value<bool?> complete = const Value.absent(),
+  }) => CorporationSnapshotPage(
+    snapshotId: snapshotId ?? this.snapshotId,
+    pageKey: pageKey ?? this.pageKey,
+    ownerCharacterId: ownerCharacterId.present
+        ? ownerCharacterId.value
+        : this.ownerCharacterId,
+    status: status.present ? status.value : this.status,
+    etag: etag.present ? etag.value : this.etag,
+    lastModified: lastModified.present ? lastModified.value : this.lastModified,
+    dateAtMs: dateAtMs.present ? dateAtMs.value : this.dateAtMs,
+    ageSeconds: ageSeconds.present ? ageSeconds.value : this.ageSeconds,
+    xPages: xPages.present ? xPages.value : this.xPages,
+    contentDigest: contentDigest.present
+        ? contentDigest.value
+        : this.contentDigest,
+    validatedAtMs: validatedAtMs.present
+        ? validatedAtMs.value
+        : this.validatedAtMs,
+    nextCursor: nextCursor.present ? nextCursor.value : this.nextCursor,
+    complete: complete.present ? complete.value : this.complete,
+  );
+  CorporationSnapshotPage copyWithCompanion(
+    CorporationSnapshotPagesCompanion data,
+  ) {
+    return CorporationSnapshotPage(
+      snapshotId: data.snapshotId.present
+          ? data.snapshotId.value
+          : this.snapshotId,
+      pageKey: data.pageKey.present ? data.pageKey.value : this.pageKey,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      status: data.status.present ? data.status.value : this.status,
+      etag: data.etag.present ? data.etag.value : this.etag,
+      lastModified: data.lastModified.present
+          ? data.lastModified.value
+          : this.lastModified,
+      dateAtMs: data.dateAtMs.present ? data.dateAtMs.value : this.dateAtMs,
+      ageSeconds: data.ageSeconds.present
+          ? data.ageSeconds.value
+          : this.ageSeconds,
+      xPages: data.xPages.present ? data.xPages.value : this.xPages,
+      contentDigest: data.contentDigest.present
+          ? data.contentDigest.value
+          : this.contentDigest,
+      validatedAtMs: data.validatedAtMs.present
+          ? data.validatedAtMs.value
+          : this.validatedAtMs,
+      nextCursor: data.nextCursor.present
+          ? data.nextCursor.value
+          : this.nextCursor,
+      complete: data.complete.present ? data.complete.value : this.complete,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationSnapshotPage(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('pageKey: $pageKey, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('status: $status, ')
+          ..write('etag: $etag, ')
+          ..write('lastModified: $lastModified, ')
+          ..write('dateAtMs: $dateAtMs, ')
+          ..write('ageSeconds: $ageSeconds, ')
+          ..write('xPages: $xPages, ')
+          ..write('contentDigest: $contentDigest, ')
+          ..write('validatedAtMs: $validatedAtMs, ')
+          ..write('nextCursor: $nextCursor, ')
+          ..write('complete: $complete')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    snapshotId,
+    pageKey,
+    ownerCharacterId,
+    status,
+    etag,
+    lastModified,
+    dateAtMs,
+    ageSeconds,
+    xPages,
+    contentDigest,
+    validatedAtMs,
+    nextCursor,
+    complete,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationSnapshotPage &&
+          other.snapshotId == this.snapshotId &&
+          other.pageKey == this.pageKey &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.status == this.status &&
+          other.etag == this.etag &&
+          other.lastModified == this.lastModified &&
+          other.dateAtMs == this.dateAtMs &&
+          other.ageSeconds == this.ageSeconds &&
+          other.xPages == this.xPages &&
+          other.contentDigest == this.contentDigest &&
+          other.validatedAtMs == this.validatedAtMs &&
+          other.nextCursor == this.nextCursor &&
+          other.complete == this.complete);
+}
+
+class CorporationSnapshotPagesCompanion
+    extends UpdateCompanion<CorporationSnapshotPage> {
+  final Value<String> snapshotId;
+  final Value<String> pageKey;
+  final Value<int?> ownerCharacterId;
+  final Value<String?> status;
+  final Value<String?> etag;
+  final Value<String?> lastModified;
+  final Value<int?> dateAtMs;
+  final Value<int?> ageSeconds;
+  final Value<int?> xPages;
+  final Value<String?> contentDigest;
+  final Value<int?> validatedAtMs;
+  final Value<String?> nextCursor;
+  final Value<bool?> complete;
+  final Value<int> rowid;
+  const CorporationSnapshotPagesCompanion({
+    this.snapshotId = const Value.absent(),
+    this.pageKey = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.status = const Value.absent(),
+    this.etag = const Value.absent(),
+    this.lastModified = const Value.absent(),
+    this.dateAtMs = const Value.absent(),
+    this.ageSeconds = const Value.absent(),
+    this.xPages = const Value.absent(),
+    this.contentDigest = const Value.absent(),
+    this.validatedAtMs = const Value.absent(),
+    this.nextCursor = const Value.absent(),
+    this.complete = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationSnapshotPagesCompanion.insert({
+    required String snapshotId,
+    required String pageKey,
+    this.ownerCharacterId = const Value.absent(),
+    this.status = const Value.absent(),
+    this.etag = const Value.absent(),
+    this.lastModified = const Value.absent(),
+    this.dateAtMs = const Value.absent(),
+    this.ageSeconds = const Value.absent(),
+    this.xPages = const Value.absent(),
+    this.contentDigest = const Value.absent(),
+    this.validatedAtMs = const Value.absent(),
+    this.nextCursor = const Value.absent(),
+    this.complete = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : snapshotId = Value(snapshotId),
+       pageKey = Value(pageKey);
+  static Insertable<CorporationSnapshotPage> custom({
+    Expression<String>? snapshotId,
+    Expression<String>? pageKey,
+    Expression<int>? ownerCharacterId,
+    Expression<String>? status,
+    Expression<String>? etag,
+    Expression<String>? lastModified,
+    Expression<int>? dateAtMs,
+    Expression<int>? ageSeconds,
+    Expression<int>? xPages,
+    Expression<String>? contentDigest,
+    Expression<int>? validatedAtMs,
+    Expression<String>? nextCursor,
+    Expression<bool>? complete,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (snapshotId != null) 'snapshot_id': snapshotId,
+      if (pageKey != null) 'page_key': pageKey,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (status != null) 'status': status,
+      if (etag != null) 'etag': etag,
+      if (lastModified != null) 'last_modified': lastModified,
+      if (dateAtMs != null) 'date_at_ms': dateAtMs,
+      if (ageSeconds != null) 'age_seconds': ageSeconds,
+      if (xPages != null) 'x_pages': xPages,
+      if (contentDigest != null) 'content_digest': contentDigest,
+      if (validatedAtMs != null) 'validated_at_ms': validatedAtMs,
+      if (nextCursor != null) 'next_cursor': nextCursor,
+      if (complete != null) 'complete': complete,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationSnapshotPagesCompanion copyWith({
+    Value<String>? snapshotId,
+    Value<String>? pageKey,
+    Value<int?>? ownerCharacterId,
+    Value<String?>? status,
+    Value<String?>? etag,
+    Value<String?>? lastModified,
+    Value<int?>? dateAtMs,
+    Value<int?>? ageSeconds,
+    Value<int?>? xPages,
+    Value<String?>? contentDigest,
+    Value<int?>? validatedAtMs,
+    Value<String?>? nextCursor,
+    Value<bool?>? complete,
+    Value<int>? rowid,
+  }) {
+    return CorporationSnapshotPagesCompanion(
+      snapshotId: snapshotId ?? this.snapshotId,
+      pageKey: pageKey ?? this.pageKey,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      status: status ?? this.status,
+      etag: etag ?? this.etag,
+      lastModified: lastModified ?? this.lastModified,
+      dateAtMs: dateAtMs ?? this.dateAtMs,
+      ageSeconds: ageSeconds ?? this.ageSeconds,
+      xPages: xPages ?? this.xPages,
+      contentDigest: contentDigest ?? this.contentDigest,
+      validatedAtMs: validatedAtMs ?? this.validatedAtMs,
+      nextCursor: nextCursor ?? this.nextCursor,
+      complete: complete ?? this.complete,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (snapshotId.present) {
+      map['snapshot_id'] = Variable<String>(snapshotId.value);
+    }
+    if (pageKey.present) {
+      map['page_key'] = Variable<String>(pageKey.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (etag.present) {
+      map['etag'] = Variable<String>(etag.value);
+    }
+    if (lastModified.present) {
+      map['last_modified'] = Variable<String>(lastModified.value);
+    }
+    if (dateAtMs.present) {
+      map['date_at_ms'] = Variable<int>(dateAtMs.value);
+    }
+    if (ageSeconds.present) {
+      map['age_seconds'] = Variable<int>(ageSeconds.value);
+    }
+    if (xPages.present) {
+      map['x_pages'] = Variable<int>(xPages.value);
+    }
+    if (contentDigest.present) {
+      map['content_digest'] = Variable<String>(contentDigest.value);
+    }
+    if (validatedAtMs.present) {
+      map['validated_at_ms'] = Variable<int>(validatedAtMs.value);
+    }
+    if (nextCursor.present) {
+      map['next_cursor'] = Variable<String>(nextCursor.value);
+    }
+    if (complete.present) {
+      map['complete'] = Variable<bool>(complete.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationSnapshotPagesCompanion(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('pageKey: $pageKey, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('status: $status, ')
+          ..write('etag: $etag, ')
+          ..write('lastModified: $lastModified, ')
+          ..write('dateAtMs: $dateAtMs, ')
+          ..write('ageSeconds: $ageSeconds, ')
+          ..write('xPages: $xPages, ')
+          ..write('contentDigest: $contentDigest, ')
+          ..write('validatedAtMs: $validatedAtMs, ')
+          ..write('nextCursor: $nextCursor, ')
+          ..write('complete: $complete, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $EsiRequestLeasesTable extends EsiRequestLeases
+    with TableInfo<$EsiRequestLeasesTable, EsiRequestLease> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EsiRequestLeasesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _resourceKeyMeta = const VerificationMeta(
+    'resourceKey',
+  );
+  @override
+  late final GeneratedColumn<String> resourceKey = GeneratedColumn<String>(
+    'resource_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tenantMeta = const VerificationMeta('tenant');
+  @override
+  late final GeneratedColumn<String> tenant = GeneratedColumn<String>(
+    'tenant',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _applicationMeta = const VerificationMeta(
+    'application',
+  );
+  @override
+  late final GeneratedColumn<String> application = GeneratedColumn<String>(
+    'application',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _rateGroupMeta = const VerificationMeta(
+    'rateGroup',
+  );
+  @override
+  late final GeneratedColumn<String> rateGroup = GeneratedColumn<String>(
+    'rate_group',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _callerClassMeta = const VerificationMeta(
+    'callerClass',
+  );
+  @override
+  late final GeneratedColumn<String> callerClass = GeneratedColumn<String>(
+    'caller_class',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _jobTokenMeta = const VerificationMeta(
+    'jobToken',
+  );
+  @override
+  late final GeneratedColumn<String> jobToken = GeneratedColumn<String>(
+    'job_token',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _jobEpochMeta = const VerificationMeta(
+    'jobEpoch',
+  );
+  @override
+  late final GeneratedColumn<int> jobEpoch = GeneratedColumn<int>(
+    'job_epoch',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _ownerProcessMeta = const VerificationMeta(
+    'ownerProcess',
+  );
+  @override
+  late final GeneratedColumn<String> ownerProcess = GeneratedColumn<String>(
+    'owner_process',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _leaseUntilMsMeta = const VerificationMeta(
+    'leaseUntilMs',
+  );
+  @override
+  late final GeneratedColumn<int> leaseUntilMs = GeneratedColumn<int>(
+    'lease_until_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _heartbeatAtMsMeta = const VerificationMeta(
+    'heartbeatAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> heartbeatAtMs = GeneratedColumn<int>(
+    'heartbeat_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nextAttemptAtMsMeta = const VerificationMeta(
+    'nextAttemptAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> nextAttemptAtMs = GeneratedColumn<int>(
+    'next_attempt_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _backoffSecondsMeta = const VerificationMeta(
+    'backoffSeconds',
+  );
+  @override
+  late final GeneratedColumn<int> backoffSeconds = GeneratedColumn<int>(
+    'backoff_seconds',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _expectedAuthorityMeta = const VerificationMeta(
+    'expectedAuthority',
+  );
+  @override
+  late final GeneratedColumn<String> expectedAuthority =
+      GeneratedColumn<String>(
+        'expected_authority',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _acceptedRevisionMeta = const VerificationMeta(
+    'acceptedRevision',
+  );
+  @override
+  late final GeneratedColumn<int> acceptedRevision = GeneratedColumn<int>(
+    'accepted_revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    resourceKey,
+    tenant,
+    application,
+    characterId,
+    rateGroup,
+    callerClass,
+    jobToken,
+    jobEpoch,
+    ownerProcess,
+    leaseUntilMs,
+    heartbeatAtMs,
+    nextAttemptAtMs,
+    backoffSeconds,
+    expectedAuthority,
+    acceptedRevision,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'esi_request_leases';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<EsiRequestLease> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('resource_key')) {
+      context.handle(
+        _resourceKeyMeta,
+        resourceKey.isAcceptableOrUnknown(
+          data['resource_key']!,
+          _resourceKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_resourceKeyMeta);
+    }
+    if (data.containsKey('tenant')) {
+      context.handle(
+        _tenantMeta,
+        tenant.isAcceptableOrUnknown(data['tenant']!, _tenantMeta),
+      );
+    }
+    if (data.containsKey('application')) {
+      context.handle(
+        _applicationMeta,
+        application.isAcceptableOrUnknown(
+          data['application']!,
+          _applicationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('rate_group')) {
+      context.handle(
+        _rateGroupMeta,
+        rateGroup.isAcceptableOrUnknown(data['rate_group']!, _rateGroupMeta),
+      );
+    }
+    if (data.containsKey('caller_class')) {
+      context.handle(
+        _callerClassMeta,
+        callerClass.isAcceptableOrUnknown(
+          data['caller_class']!,
+          _callerClassMeta,
+        ),
+      );
+    }
+    if (data.containsKey('job_token')) {
+      context.handle(
+        _jobTokenMeta,
+        jobToken.isAcceptableOrUnknown(data['job_token']!, _jobTokenMeta),
+      );
+    }
+    if (data.containsKey('job_epoch')) {
+      context.handle(
+        _jobEpochMeta,
+        jobEpoch.isAcceptableOrUnknown(data['job_epoch']!, _jobEpochMeta),
+      );
+    }
+    if (data.containsKey('owner_process')) {
+      context.handle(
+        _ownerProcessMeta,
+        ownerProcess.isAcceptableOrUnknown(
+          data['owner_process']!,
+          _ownerProcessMeta,
+        ),
+      );
+    }
+    if (data.containsKey('lease_until_ms')) {
+      context.handle(
+        _leaseUntilMsMeta,
+        leaseUntilMs.isAcceptableOrUnknown(
+          data['lease_until_ms']!,
+          _leaseUntilMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('heartbeat_at_ms')) {
+      context.handle(
+        _heartbeatAtMsMeta,
+        heartbeatAtMs.isAcceptableOrUnknown(
+          data['heartbeat_at_ms']!,
+          _heartbeatAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('next_attempt_at_ms')) {
+      context.handle(
+        _nextAttemptAtMsMeta,
+        nextAttemptAtMs.isAcceptableOrUnknown(
+          data['next_attempt_at_ms']!,
+          _nextAttemptAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('backoff_seconds')) {
+      context.handle(
+        _backoffSecondsMeta,
+        backoffSeconds.isAcceptableOrUnknown(
+          data['backoff_seconds']!,
+          _backoffSecondsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('expected_authority')) {
+      context.handle(
+        _expectedAuthorityMeta,
+        expectedAuthority.isAcceptableOrUnknown(
+          data['expected_authority']!,
+          _expectedAuthorityMeta,
+        ),
+      );
+    }
+    if (data.containsKey('accepted_revision')) {
+      context.handle(
+        _acceptedRevisionMeta,
+        acceptedRevision.isAcceptableOrUnknown(
+          data['accepted_revision']!,
+          _acceptedRevisionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {resourceKey};
+  @override
+  EsiRequestLease map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return EsiRequestLease(
+      resourceKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}resource_key'],
+      )!,
+      tenant: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tenant'],
+      ),
+      application: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}application'],
+      ),
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      ),
+      rateGroup: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}rate_group'],
+      ),
+      callerClass: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}caller_class'],
+      ),
+      jobToken: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}job_token'],
+      ),
+      jobEpoch: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}job_epoch'],
+      ),
+      ownerProcess: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_process'],
+      ),
+      leaseUntilMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}lease_until_ms'],
+      ),
+      heartbeatAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}heartbeat_at_ms'],
+      ),
+      nextAttemptAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}next_attempt_at_ms'],
+      ),
+      backoffSeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}backoff_seconds'],
+      ),
+      expectedAuthority: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}expected_authority'],
+      ),
+      acceptedRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}accepted_revision'],
+      ),
+    );
+  }
+
+  @override
+  $EsiRequestLeasesTable createAlias(String alias) {
+    return $EsiRequestLeasesTable(attachedDatabase, alias);
+  }
+}
+
+class EsiRequestLease extends DataClass implements Insertable<EsiRequestLease> {
+  final String resourceKey;
+  final String? tenant;
+  final String? application;
+  final int? characterId;
+  final String? rateGroup;
+  final String? callerClass;
+  final String? jobToken;
+  final int? jobEpoch;
+  final String? ownerProcess;
+  final int? leaseUntilMs;
+  final int? heartbeatAtMs;
+  final int? nextAttemptAtMs;
+  final int? backoffSeconds;
+  final String? expectedAuthority;
+  final int? acceptedRevision;
+  const EsiRequestLease({
+    required this.resourceKey,
+    this.tenant,
+    this.application,
+    this.characterId,
+    this.rateGroup,
+    this.callerClass,
+    this.jobToken,
+    this.jobEpoch,
+    this.ownerProcess,
+    this.leaseUntilMs,
+    this.heartbeatAtMs,
+    this.nextAttemptAtMs,
+    this.backoffSeconds,
+    this.expectedAuthority,
+    this.acceptedRevision,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['resource_key'] = Variable<String>(resourceKey);
+    if (!nullToAbsent || tenant != null) {
+      map['tenant'] = Variable<String>(tenant);
+    }
+    if (!nullToAbsent || application != null) {
+      map['application'] = Variable<String>(application);
+    }
+    if (!nullToAbsent || characterId != null) {
+      map['character_id'] = Variable<int>(characterId);
+    }
+    if (!nullToAbsent || rateGroup != null) {
+      map['rate_group'] = Variable<String>(rateGroup);
+    }
+    if (!nullToAbsent || callerClass != null) {
+      map['caller_class'] = Variable<String>(callerClass);
+    }
+    if (!nullToAbsent || jobToken != null) {
+      map['job_token'] = Variable<String>(jobToken);
+    }
+    if (!nullToAbsent || jobEpoch != null) {
+      map['job_epoch'] = Variable<int>(jobEpoch);
+    }
+    if (!nullToAbsent || ownerProcess != null) {
+      map['owner_process'] = Variable<String>(ownerProcess);
+    }
+    if (!nullToAbsent || leaseUntilMs != null) {
+      map['lease_until_ms'] = Variable<int>(leaseUntilMs);
+    }
+    if (!nullToAbsent || heartbeatAtMs != null) {
+      map['heartbeat_at_ms'] = Variable<int>(heartbeatAtMs);
+    }
+    if (!nullToAbsent || nextAttemptAtMs != null) {
+      map['next_attempt_at_ms'] = Variable<int>(nextAttemptAtMs);
+    }
+    if (!nullToAbsent || backoffSeconds != null) {
+      map['backoff_seconds'] = Variable<int>(backoffSeconds);
+    }
+    if (!nullToAbsent || expectedAuthority != null) {
+      map['expected_authority'] = Variable<String>(expectedAuthority);
+    }
+    if (!nullToAbsent || acceptedRevision != null) {
+      map['accepted_revision'] = Variable<int>(acceptedRevision);
+    }
+    return map;
+  }
+
+  EsiRequestLeasesCompanion toCompanion(bool nullToAbsent) {
+    return EsiRequestLeasesCompanion(
+      resourceKey: Value(resourceKey),
+      tenant: tenant == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tenant),
+      application: application == null && nullToAbsent
+          ? const Value.absent()
+          : Value(application),
+      characterId: characterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(characterId),
+      rateGroup: rateGroup == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rateGroup),
+      callerClass: callerClass == null && nullToAbsent
+          ? const Value.absent()
+          : Value(callerClass),
+      jobToken: jobToken == null && nullToAbsent
+          ? const Value.absent()
+          : Value(jobToken),
+      jobEpoch: jobEpoch == null && nullToAbsent
+          ? const Value.absent()
+          : Value(jobEpoch),
+      ownerProcess: ownerProcess == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerProcess),
+      leaseUntilMs: leaseUntilMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(leaseUntilMs),
+      heartbeatAtMs: heartbeatAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(heartbeatAtMs),
+      nextAttemptAtMs: nextAttemptAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextAttemptAtMs),
+      backoffSeconds: backoffSeconds == null && nullToAbsent
+          ? const Value.absent()
+          : Value(backoffSeconds),
+      expectedAuthority: expectedAuthority == null && nullToAbsent
+          ? const Value.absent()
+          : Value(expectedAuthority),
+      acceptedRevision: acceptedRevision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(acceptedRevision),
+    );
+  }
+
+  factory EsiRequestLease.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return EsiRequestLease(
+      resourceKey: serializer.fromJson<String>(json['resourceKey']),
+      tenant: serializer.fromJson<String?>(json['tenant']),
+      application: serializer.fromJson<String?>(json['application']),
+      characterId: serializer.fromJson<int?>(json['characterId']),
+      rateGroup: serializer.fromJson<String?>(json['rateGroup']),
+      callerClass: serializer.fromJson<String?>(json['callerClass']),
+      jobToken: serializer.fromJson<String?>(json['jobToken']),
+      jobEpoch: serializer.fromJson<int?>(json['jobEpoch']),
+      ownerProcess: serializer.fromJson<String?>(json['ownerProcess']),
+      leaseUntilMs: serializer.fromJson<int?>(json['leaseUntilMs']),
+      heartbeatAtMs: serializer.fromJson<int?>(json['heartbeatAtMs']),
+      nextAttemptAtMs: serializer.fromJson<int?>(json['nextAttemptAtMs']),
+      backoffSeconds: serializer.fromJson<int?>(json['backoffSeconds']),
+      expectedAuthority: serializer.fromJson<String?>(
+        json['expectedAuthority'],
+      ),
+      acceptedRevision: serializer.fromJson<int?>(json['acceptedRevision']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'resourceKey': serializer.toJson<String>(resourceKey),
+      'tenant': serializer.toJson<String?>(tenant),
+      'application': serializer.toJson<String?>(application),
+      'characterId': serializer.toJson<int?>(characterId),
+      'rateGroup': serializer.toJson<String?>(rateGroup),
+      'callerClass': serializer.toJson<String?>(callerClass),
+      'jobToken': serializer.toJson<String?>(jobToken),
+      'jobEpoch': serializer.toJson<int?>(jobEpoch),
+      'ownerProcess': serializer.toJson<String?>(ownerProcess),
+      'leaseUntilMs': serializer.toJson<int?>(leaseUntilMs),
+      'heartbeatAtMs': serializer.toJson<int?>(heartbeatAtMs),
+      'nextAttemptAtMs': serializer.toJson<int?>(nextAttemptAtMs),
+      'backoffSeconds': serializer.toJson<int?>(backoffSeconds),
+      'expectedAuthority': serializer.toJson<String?>(expectedAuthority),
+      'acceptedRevision': serializer.toJson<int?>(acceptedRevision),
+    };
+  }
+
+  EsiRequestLease copyWith({
+    String? resourceKey,
+    Value<String?> tenant = const Value.absent(),
+    Value<String?> application = const Value.absent(),
+    Value<int?> characterId = const Value.absent(),
+    Value<String?> rateGroup = const Value.absent(),
+    Value<String?> callerClass = const Value.absent(),
+    Value<String?> jobToken = const Value.absent(),
+    Value<int?> jobEpoch = const Value.absent(),
+    Value<String?> ownerProcess = const Value.absent(),
+    Value<int?> leaseUntilMs = const Value.absent(),
+    Value<int?> heartbeatAtMs = const Value.absent(),
+    Value<int?> nextAttemptAtMs = const Value.absent(),
+    Value<int?> backoffSeconds = const Value.absent(),
+    Value<String?> expectedAuthority = const Value.absent(),
+    Value<int?> acceptedRevision = const Value.absent(),
+  }) => EsiRequestLease(
+    resourceKey: resourceKey ?? this.resourceKey,
+    tenant: tenant.present ? tenant.value : this.tenant,
+    application: application.present ? application.value : this.application,
+    characterId: characterId.present ? characterId.value : this.characterId,
+    rateGroup: rateGroup.present ? rateGroup.value : this.rateGroup,
+    callerClass: callerClass.present ? callerClass.value : this.callerClass,
+    jobToken: jobToken.present ? jobToken.value : this.jobToken,
+    jobEpoch: jobEpoch.present ? jobEpoch.value : this.jobEpoch,
+    ownerProcess: ownerProcess.present ? ownerProcess.value : this.ownerProcess,
+    leaseUntilMs: leaseUntilMs.present ? leaseUntilMs.value : this.leaseUntilMs,
+    heartbeatAtMs: heartbeatAtMs.present
+        ? heartbeatAtMs.value
+        : this.heartbeatAtMs,
+    nextAttemptAtMs: nextAttemptAtMs.present
+        ? nextAttemptAtMs.value
+        : this.nextAttemptAtMs,
+    backoffSeconds: backoffSeconds.present
+        ? backoffSeconds.value
+        : this.backoffSeconds,
+    expectedAuthority: expectedAuthority.present
+        ? expectedAuthority.value
+        : this.expectedAuthority,
+    acceptedRevision: acceptedRevision.present
+        ? acceptedRevision.value
+        : this.acceptedRevision,
+  );
+  EsiRequestLease copyWithCompanion(EsiRequestLeasesCompanion data) {
+    return EsiRequestLease(
+      resourceKey: data.resourceKey.present
+          ? data.resourceKey.value
+          : this.resourceKey,
+      tenant: data.tenant.present ? data.tenant.value : this.tenant,
+      application: data.application.present
+          ? data.application.value
+          : this.application,
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      rateGroup: data.rateGroup.present ? data.rateGroup.value : this.rateGroup,
+      callerClass: data.callerClass.present
+          ? data.callerClass.value
+          : this.callerClass,
+      jobToken: data.jobToken.present ? data.jobToken.value : this.jobToken,
+      jobEpoch: data.jobEpoch.present ? data.jobEpoch.value : this.jobEpoch,
+      ownerProcess: data.ownerProcess.present
+          ? data.ownerProcess.value
+          : this.ownerProcess,
+      leaseUntilMs: data.leaseUntilMs.present
+          ? data.leaseUntilMs.value
+          : this.leaseUntilMs,
+      heartbeatAtMs: data.heartbeatAtMs.present
+          ? data.heartbeatAtMs.value
+          : this.heartbeatAtMs,
+      nextAttemptAtMs: data.nextAttemptAtMs.present
+          ? data.nextAttemptAtMs.value
+          : this.nextAttemptAtMs,
+      backoffSeconds: data.backoffSeconds.present
+          ? data.backoffSeconds.value
+          : this.backoffSeconds,
+      expectedAuthority: data.expectedAuthority.present
+          ? data.expectedAuthority.value
+          : this.expectedAuthority,
+      acceptedRevision: data.acceptedRevision.present
+          ? data.acceptedRevision.value
+          : this.acceptedRevision,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EsiRequestLease(')
+          ..write('resourceKey: $resourceKey, ')
+          ..write('tenant: $tenant, ')
+          ..write('application: $application, ')
+          ..write('characterId: $characterId, ')
+          ..write('rateGroup: $rateGroup, ')
+          ..write('callerClass: $callerClass, ')
+          ..write('jobToken: $jobToken, ')
+          ..write('jobEpoch: $jobEpoch, ')
+          ..write('ownerProcess: $ownerProcess, ')
+          ..write('leaseUntilMs: $leaseUntilMs, ')
+          ..write('heartbeatAtMs: $heartbeatAtMs, ')
+          ..write('nextAttemptAtMs: $nextAttemptAtMs, ')
+          ..write('backoffSeconds: $backoffSeconds, ')
+          ..write('expectedAuthority: $expectedAuthority, ')
+          ..write('acceptedRevision: $acceptedRevision')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    resourceKey,
+    tenant,
+    application,
+    characterId,
+    rateGroup,
+    callerClass,
+    jobToken,
+    jobEpoch,
+    ownerProcess,
+    leaseUntilMs,
+    heartbeatAtMs,
+    nextAttemptAtMs,
+    backoffSeconds,
+    expectedAuthority,
+    acceptedRevision,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is EsiRequestLease &&
+          other.resourceKey == this.resourceKey &&
+          other.tenant == this.tenant &&
+          other.application == this.application &&
+          other.characterId == this.characterId &&
+          other.rateGroup == this.rateGroup &&
+          other.callerClass == this.callerClass &&
+          other.jobToken == this.jobToken &&
+          other.jobEpoch == this.jobEpoch &&
+          other.ownerProcess == this.ownerProcess &&
+          other.leaseUntilMs == this.leaseUntilMs &&
+          other.heartbeatAtMs == this.heartbeatAtMs &&
+          other.nextAttemptAtMs == this.nextAttemptAtMs &&
+          other.backoffSeconds == this.backoffSeconds &&
+          other.expectedAuthority == this.expectedAuthority &&
+          other.acceptedRevision == this.acceptedRevision);
+}
+
+class EsiRequestLeasesCompanion extends UpdateCompanion<EsiRequestLease> {
+  final Value<String> resourceKey;
+  final Value<String?> tenant;
+  final Value<String?> application;
+  final Value<int?> characterId;
+  final Value<String?> rateGroup;
+  final Value<String?> callerClass;
+  final Value<String?> jobToken;
+  final Value<int?> jobEpoch;
+  final Value<String?> ownerProcess;
+  final Value<int?> leaseUntilMs;
+  final Value<int?> heartbeatAtMs;
+  final Value<int?> nextAttemptAtMs;
+  final Value<int?> backoffSeconds;
+  final Value<String?> expectedAuthority;
+  final Value<int?> acceptedRevision;
+  final Value<int> rowid;
+  const EsiRequestLeasesCompanion({
+    this.resourceKey = const Value.absent(),
+    this.tenant = const Value.absent(),
+    this.application = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.rateGroup = const Value.absent(),
+    this.callerClass = const Value.absent(),
+    this.jobToken = const Value.absent(),
+    this.jobEpoch = const Value.absent(),
+    this.ownerProcess = const Value.absent(),
+    this.leaseUntilMs = const Value.absent(),
+    this.heartbeatAtMs = const Value.absent(),
+    this.nextAttemptAtMs = const Value.absent(),
+    this.backoffSeconds = const Value.absent(),
+    this.expectedAuthority = const Value.absent(),
+    this.acceptedRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  EsiRequestLeasesCompanion.insert({
+    required String resourceKey,
+    this.tenant = const Value.absent(),
+    this.application = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.rateGroup = const Value.absent(),
+    this.callerClass = const Value.absent(),
+    this.jobToken = const Value.absent(),
+    this.jobEpoch = const Value.absent(),
+    this.ownerProcess = const Value.absent(),
+    this.leaseUntilMs = const Value.absent(),
+    this.heartbeatAtMs = const Value.absent(),
+    this.nextAttemptAtMs = const Value.absent(),
+    this.backoffSeconds = const Value.absent(),
+    this.expectedAuthority = const Value.absent(),
+    this.acceptedRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : resourceKey = Value(resourceKey);
+  static Insertable<EsiRequestLease> custom({
+    Expression<String>? resourceKey,
+    Expression<String>? tenant,
+    Expression<String>? application,
+    Expression<int>? characterId,
+    Expression<String>? rateGroup,
+    Expression<String>? callerClass,
+    Expression<String>? jobToken,
+    Expression<int>? jobEpoch,
+    Expression<String>? ownerProcess,
+    Expression<int>? leaseUntilMs,
+    Expression<int>? heartbeatAtMs,
+    Expression<int>? nextAttemptAtMs,
+    Expression<int>? backoffSeconds,
+    Expression<String>? expectedAuthority,
+    Expression<int>? acceptedRevision,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (resourceKey != null) 'resource_key': resourceKey,
+      if (tenant != null) 'tenant': tenant,
+      if (application != null) 'application': application,
+      if (characterId != null) 'character_id': characterId,
+      if (rateGroup != null) 'rate_group': rateGroup,
+      if (callerClass != null) 'caller_class': callerClass,
+      if (jobToken != null) 'job_token': jobToken,
+      if (jobEpoch != null) 'job_epoch': jobEpoch,
+      if (ownerProcess != null) 'owner_process': ownerProcess,
+      if (leaseUntilMs != null) 'lease_until_ms': leaseUntilMs,
+      if (heartbeatAtMs != null) 'heartbeat_at_ms': heartbeatAtMs,
+      if (nextAttemptAtMs != null) 'next_attempt_at_ms': nextAttemptAtMs,
+      if (backoffSeconds != null) 'backoff_seconds': backoffSeconds,
+      if (expectedAuthority != null) 'expected_authority': expectedAuthority,
+      if (acceptedRevision != null) 'accepted_revision': acceptedRevision,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  EsiRequestLeasesCompanion copyWith({
+    Value<String>? resourceKey,
+    Value<String?>? tenant,
+    Value<String?>? application,
+    Value<int?>? characterId,
+    Value<String?>? rateGroup,
+    Value<String?>? callerClass,
+    Value<String?>? jobToken,
+    Value<int?>? jobEpoch,
+    Value<String?>? ownerProcess,
+    Value<int?>? leaseUntilMs,
+    Value<int?>? heartbeatAtMs,
+    Value<int?>? nextAttemptAtMs,
+    Value<int?>? backoffSeconds,
+    Value<String?>? expectedAuthority,
+    Value<int?>? acceptedRevision,
+    Value<int>? rowid,
+  }) {
+    return EsiRequestLeasesCompanion(
+      resourceKey: resourceKey ?? this.resourceKey,
+      tenant: tenant ?? this.tenant,
+      application: application ?? this.application,
+      characterId: characterId ?? this.characterId,
+      rateGroup: rateGroup ?? this.rateGroup,
+      callerClass: callerClass ?? this.callerClass,
+      jobToken: jobToken ?? this.jobToken,
+      jobEpoch: jobEpoch ?? this.jobEpoch,
+      ownerProcess: ownerProcess ?? this.ownerProcess,
+      leaseUntilMs: leaseUntilMs ?? this.leaseUntilMs,
+      heartbeatAtMs: heartbeatAtMs ?? this.heartbeatAtMs,
+      nextAttemptAtMs: nextAttemptAtMs ?? this.nextAttemptAtMs,
+      backoffSeconds: backoffSeconds ?? this.backoffSeconds,
+      expectedAuthority: expectedAuthority ?? this.expectedAuthority,
+      acceptedRevision: acceptedRevision ?? this.acceptedRevision,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (resourceKey.present) {
+      map['resource_key'] = Variable<String>(resourceKey.value);
+    }
+    if (tenant.present) {
+      map['tenant'] = Variable<String>(tenant.value);
+    }
+    if (application.present) {
+      map['application'] = Variable<String>(application.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (rateGroup.present) {
+      map['rate_group'] = Variable<String>(rateGroup.value);
+    }
+    if (callerClass.present) {
+      map['caller_class'] = Variable<String>(callerClass.value);
+    }
+    if (jobToken.present) {
+      map['job_token'] = Variable<String>(jobToken.value);
+    }
+    if (jobEpoch.present) {
+      map['job_epoch'] = Variable<int>(jobEpoch.value);
+    }
+    if (ownerProcess.present) {
+      map['owner_process'] = Variable<String>(ownerProcess.value);
+    }
+    if (leaseUntilMs.present) {
+      map['lease_until_ms'] = Variable<int>(leaseUntilMs.value);
+    }
+    if (heartbeatAtMs.present) {
+      map['heartbeat_at_ms'] = Variable<int>(heartbeatAtMs.value);
+    }
+    if (nextAttemptAtMs.present) {
+      map['next_attempt_at_ms'] = Variable<int>(nextAttemptAtMs.value);
+    }
+    if (backoffSeconds.present) {
+      map['backoff_seconds'] = Variable<int>(backoffSeconds.value);
+    }
+    if (expectedAuthority.present) {
+      map['expected_authority'] = Variable<String>(expectedAuthority.value);
+    }
+    if (acceptedRevision.present) {
+      map['accepted_revision'] = Variable<int>(acceptedRevision.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EsiRequestLeasesCompanion(')
+          ..write('resourceKey: $resourceKey, ')
+          ..write('tenant: $tenant, ')
+          ..write('application: $application, ')
+          ..write('characterId: $characterId, ')
+          ..write('rateGroup: $rateGroup, ')
+          ..write('callerClass: $callerClass, ')
+          ..write('jobToken: $jobToken, ')
+          ..write('jobEpoch: $jobEpoch, ')
+          ..write('ownerProcess: $ownerProcess, ')
+          ..write('leaseUntilMs: $leaseUntilMs, ')
+          ..write('heartbeatAtMs: $heartbeatAtMs, ')
+          ..write('nextAttemptAtMs: $nextAttemptAtMs, ')
+          ..write('backoffSeconds: $backoffSeconds, ')
+          ..write('expectedAuthority: $expectedAuthority, ')
+          ..write('acceptedRevision: $acceptedRevision, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $EsiRateBucketsTable extends EsiRateBuckets
+    with TableInfo<$EsiRateBucketsTable, EsiRateBucket> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EsiRateBucketsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _tenantMeta = const VerificationMeta('tenant');
+  @override
+  late final GeneratedColumn<String> tenant = GeneratedColumn<String>(
+    'tenant',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _applicationMeta = const VerificationMeta(
+    'application',
+  );
+  @override
+  late final GeneratedColumn<String> application = GeneratedColumn<String>(
+    'application',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _rateGroupMeta = const VerificationMeta(
+    'rateGroup',
+  );
+  @override
+  late final GeneratedColumn<String> rateGroup = GeneratedColumn<String>(
+    'rate_group',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _limitMeta = const VerificationMeta('limit');
+  @override
+  late final GeneratedColumn<int> limit = GeneratedColumn<int>(
+    'limit',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _remainingMeta = const VerificationMeta(
+    'remaining',
+  );
+  @override
+  late final GeneratedColumn<int> remaining = GeneratedColumn<int>(
+    'remaining',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _usedMeta = const VerificationMeta('used');
+  @override
+  late final GeneratedColumn<int> used = GeneratedColumn<int>(
+    'used',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _observedAtMsMeta = const VerificationMeta(
+    'observedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> observedAtMs = GeneratedColumn<int>(
+    'observed_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _retryAfterAtMsMeta = const VerificationMeta(
+    'retryAfterAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> retryAfterAtMs = GeneratedColumn<int>(
+    'retry_after_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _errorUntilMsMeta = const VerificationMeta(
+    'errorUntilMs',
+  );
+  @override
+  late final GeneratedColumn<int> errorUntilMs = GeneratedColumn<int>(
+    'error_until_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    tenant,
+    application,
+    characterId,
+    rateGroup,
+    limit,
+    remaining,
+    used,
+    observedAtMs,
+    retryAfterAtMs,
+    errorUntilMs,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'esi_rate_buckets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<EsiRateBucket> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('tenant')) {
+      context.handle(
+        _tenantMeta,
+        tenant.isAcceptableOrUnknown(data['tenant']!, _tenantMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tenantMeta);
+    }
+    if (data.containsKey('application')) {
+      context.handle(
+        _applicationMeta,
+        application.isAcceptableOrUnknown(
+          data['application']!,
+          _applicationMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_applicationMeta);
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('rate_group')) {
+      context.handle(
+        _rateGroupMeta,
+        rateGroup.isAcceptableOrUnknown(data['rate_group']!, _rateGroupMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_rateGroupMeta);
+    }
+    if (data.containsKey('limit')) {
+      context.handle(
+        _limitMeta,
+        limit.isAcceptableOrUnknown(data['limit']!, _limitMeta),
+      );
+    }
+    if (data.containsKey('remaining')) {
+      context.handle(
+        _remainingMeta,
+        remaining.isAcceptableOrUnknown(data['remaining']!, _remainingMeta),
+      );
+    }
+    if (data.containsKey('used')) {
+      context.handle(
+        _usedMeta,
+        used.isAcceptableOrUnknown(data['used']!, _usedMeta),
+      );
+    }
+    if (data.containsKey('observed_at_ms')) {
+      context.handle(
+        _observedAtMsMeta,
+        observedAtMs.isAcceptableOrUnknown(
+          data['observed_at_ms']!,
+          _observedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('retry_after_at_ms')) {
+      context.handle(
+        _retryAfterAtMsMeta,
+        retryAfterAtMs.isAcceptableOrUnknown(
+          data['retry_after_at_ms']!,
+          _retryAfterAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('error_until_ms')) {
+      context.handle(
+        _errorUntilMsMeta,
+        errorUntilMs.isAcceptableOrUnknown(
+          data['error_until_ms']!,
+          _errorUntilMsMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {
+    tenant,
+    application,
+    characterId,
+    rateGroup,
+  };
+  @override
+  EsiRateBucket map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return EsiRateBucket(
+      tenant: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tenant'],
+      )!,
+      application: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}application'],
+      )!,
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      )!,
+      rateGroup: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}rate_group'],
+      )!,
+      limit: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}limit'],
+      ),
+      remaining: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}remaining'],
+      ),
+      used: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}used'],
+      ),
+      observedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}observed_at_ms'],
+      ),
+      retryAfterAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}retry_after_at_ms'],
+      ),
+      errorUntilMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}error_until_ms'],
+      ),
+    );
+  }
+
+  @override
+  $EsiRateBucketsTable createAlias(String alias) {
+    return $EsiRateBucketsTable(attachedDatabase, alias);
+  }
+}
+
+class EsiRateBucket extends DataClass implements Insertable<EsiRateBucket> {
+  final String tenant;
+  final String application;
+  final int characterId;
+  final String rateGroup;
+  final int? limit;
+  final int? remaining;
+  final int? used;
+  final int? observedAtMs;
+  final int? retryAfterAtMs;
+  final int? errorUntilMs;
+  const EsiRateBucket({
+    required this.tenant,
+    required this.application,
+    required this.characterId,
+    required this.rateGroup,
+    this.limit,
+    this.remaining,
+    this.used,
+    this.observedAtMs,
+    this.retryAfterAtMs,
+    this.errorUntilMs,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['tenant'] = Variable<String>(tenant);
+    map['application'] = Variable<String>(application);
+    map['character_id'] = Variable<int>(characterId);
+    map['rate_group'] = Variable<String>(rateGroup);
+    if (!nullToAbsent || limit != null) {
+      map['limit'] = Variable<int>(limit);
+    }
+    if (!nullToAbsent || remaining != null) {
+      map['remaining'] = Variable<int>(remaining);
+    }
+    if (!nullToAbsent || used != null) {
+      map['used'] = Variable<int>(used);
+    }
+    if (!nullToAbsent || observedAtMs != null) {
+      map['observed_at_ms'] = Variable<int>(observedAtMs);
+    }
+    if (!nullToAbsent || retryAfterAtMs != null) {
+      map['retry_after_at_ms'] = Variable<int>(retryAfterAtMs);
+    }
+    if (!nullToAbsent || errorUntilMs != null) {
+      map['error_until_ms'] = Variable<int>(errorUntilMs);
+    }
+    return map;
+  }
+
+  EsiRateBucketsCompanion toCompanion(bool nullToAbsent) {
+    return EsiRateBucketsCompanion(
+      tenant: Value(tenant),
+      application: Value(application),
+      characterId: Value(characterId),
+      rateGroup: Value(rateGroup),
+      limit: limit == null && nullToAbsent
+          ? const Value.absent()
+          : Value(limit),
+      remaining: remaining == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remaining),
+      used: used == null && nullToAbsent ? const Value.absent() : Value(used),
+      observedAtMs: observedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(observedAtMs),
+      retryAfterAtMs: retryAfterAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(retryAfterAtMs),
+      errorUntilMs: errorUntilMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(errorUntilMs),
+    );
+  }
+
+  factory EsiRateBucket.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return EsiRateBucket(
+      tenant: serializer.fromJson<String>(json['tenant']),
+      application: serializer.fromJson<String>(json['application']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      rateGroup: serializer.fromJson<String>(json['rateGroup']),
+      limit: serializer.fromJson<int?>(json['limit']),
+      remaining: serializer.fromJson<int?>(json['remaining']),
+      used: serializer.fromJson<int?>(json['used']),
+      observedAtMs: serializer.fromJson<int?>(json['observedAtMs']),
+      retryAfterAtMs: serializer.fromJson<int?>(json['retryAfterAtMs']),
+      errorUntilMs: serializer.fromJson<int?>(json['errorUntilMs']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'tenant': serializer.toJson<String>(tenant),
+      'application': serializer.toJson<String>(application),
+      'characterId': serializer.toJson<int>(characterId),
+      'rateGroup': serializer.toJson<String>(rateGroup),
+      'limit': serializer.toJson<int?>(limit),
+      'remaining': serializer.toJson<int?>(remaining),
+      'used': serializer.toJson<int?>(used),
+      'observedAtMs': serializer.toJson<int?>(observedAtMs),
+      'retryAfterAtMs': serializer.toJson<int?>(retryAfterAtMs),
+      'errorUntilMs': serializer.toJson<int?>(errorUntilMs),
+    };
+  }
+
+  EsiRateBucket copyWith({
+    String? tenant,
+    String? application,
+    int? characterId,
+    String? rateGroup,
+    Value<int?> limit = const Value.absent(),
+    Value<int?> remaining = const Value.absent(),
+    Value<int?> used = const Value.absent(),
+    Value<int?> observedAtMs = const Value.absent(),
+    Value<int?> retryAfterAtMs = const Value.absent(),
+    Value<int?> errorUntilMs = const Value.absent(),
+  }) => EsiRateBucket(
+    tenant: tenant ?? this.tenant,
+    application: application ?? this.application,
+    characterId: characterId ?? this.characterId,
+    rateGroup: rateGroup ?? this.rateGroup,
+    limit: limit.present ? limit.value : this.limit,
+    remaining: remaining.present ? remaining.value : this.remaining,
+    used: used.present ? used.value : this.used,
+    observedAtMs: observedAtMs.present ? observedAtMs.value : this.observedAtMs,
+    retryAfterAtMs: retryAfterAtMs.present
+        ? retryAfterAtMs.value
+        : this.retryAfterAtMs,
+    errorUntilMs: errorUntilMs.present ? errorUntilMs.value : this.errorUntilMs,
+  );
+  EsiRateBucket copyWithCompanion(EsiRateBucketsCompanion data) {
+    return EsiRateBucket(
+      tenant: data.tenant.present ? data.tenant.value : this.tenant,
+      application: data.application.present
+          ? data.application.value
+          : this.application,
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      rateGroup: data.rateGroup.present ? data.rateGroup.value : this.rateGroup,
+      limit: data.limit.present ? data.limit.value : this.limit,
+      remaining: data.remaining.present ? data.remaining.value : this.remaining,
+      used: data.used.present ? data.used.value : this.used,
+      observedAtMs: data.observedAtMs.present
+          ? data.observedAtMs.value
+          : this.observedAtMs,
+      retryAfterAtMs: data.retryAfterAtMs.present
+          ? data.retryAfterAtMs.value
+          : this.retryAfterAtMs,
+      errorUntilMs: data.errorUntilMs.present
+          ? data.errorUntilMs.value
+          : this.errorUntilMs,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EsiRateBucket(')
+          ..write('tenant: $tenant, ')
+          ..write('application: $application, ')
+          ..write('characterId: $characterId, ')
+          ..write('rateGroup: $rateGroup, ')
+          ..write('limit: $limit, ')
+          ..write('remaining: $remaining, ')
+          ..write('used: $used, ')
+          ..write('observedAtMs: $observedAtMs, ')
+          ..write('retryAfterAtMs: $retryAfterAtMs, ')
+          ..write('errorUntilMs: $errorUntilMs')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    tenant,
+    application,
+    characterId,
+    rateGroup,
+    limit,
+    remaining,
+    used,
+    observedAtMs,
+    retryAfterAtMs,
+    errorUntilMs,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is EsiRateBucket &&
+          other.tenant == this.tenant &&
+          other.application == this.application &&
+          other.characterId == this.characterId &&
+          other.rateGroup == this.rateGroup &&
+          other.limit == this.limit &&
+          other.remaining == this.remaining &&
+          other.used == this.used &&
+          other.observedAtMs == this.observedAtMs &&
+          other.retryAfterAtMs == this.retryAfterAtMs &&
+          other.errorUntilMs == this.errorUntilMs);
+}
+
+class EsiRateBucketsCompanion extends UpdateCompanion<EsiRateBucket> {
+  final Value<String> tenant;
+  final Value<String> application;
+  final Value<int> characterId;
+  final Value<String> rateGroup;
+  final Value<int?> limit;
+  final Value<int?> remaining;
+  final Value<int?> used;
+  final Value<int?> observedAtMs;
+  final Value<int?> retryAfterAtMs;
+  final Value<int?> errorUntilMs;
+  final Value<int> rowid;
+  const EsiRateBucketsCompanion({
+    this.tenant = const Value.absent(),
+    this.application = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.rateGroup = const Value.absent(),
+    this.limit = const Value.absent(),
+    this.remaining = const Value.absent(),
+    this.used = const Value.absent(),
+    this.observedAtMs = const Value.absent(),
+    this.retryAfterAtMs = const Value.absent(),
+    this.errorUntilMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  EsiRateBucketsCompanion.insert({
+    required String tenant,
+    required String application,
+    required int characterId,
+    required String rateGroup,
+    this.limit = const Value.absent(),
+    this.remaining = const Value.absent(),
+    this.used = const Value.absent(),
+    this.observedAtMs = const Value.absent(),
+    this.retryAfterAtMs = const Value.absent(),
+    this.errorUntilMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : tenant = Value(tenant),
+       application = Value(application),
+       characterId = Value(characterId),
+       rateGroup = Value(rateGroup);
+  static Insertable<EsiRateBucket> custom({
+    Expression<String>? tenant,
+    Expression<String>? application,
+    Expression<int>? characterId,
+    Expression<String>? rateGroup,
+    Expression<int>? limit,
+    Expression<int>? remaining,
+    Expression<int>? used,
+    Expression<int>? observedAtMs,
+    Expression<int>? retryAfterAtMs,
+    Expression<int>? errorUntilMs,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (tenant != null) 'tenant': tenant,
+      if (application != null) 'application': application,
+      if (characterId != null) 'character_id': characterId,
+      if (rateGroup != null) 'rate_group': rateGroup,
+      if (limit != null) 'limit': limit,
+      if (remaining != null) 'remaining': remaining,
+      if (used != null) 'used': used,
+      if (observedAtMs != null) 'observed_at_ms': observedAtMs,
+      if (retryAfterAtMs != null) 'retry_after_at_ms': retryAfterAtMs,
+      if (errorUntilMs != null) 'error_until_ms': errorUntilMs,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  EsiRateBucketsCompanion copyWith({
+    Value<String>? tenant,
+    Value<String>? application,
+    Value<int>? characterId,
+    Value<String>? rateGroup,
+    Value<int?>? limit,
+    Value<int?>? remaining,
+    Value<int?>? used,
+    Value<int?>? observedAtMs,
+    Value<int?>? retryAfterAtMs,
+    Value<int?>? errorUntilMs,
+    Value<int>? rowid,
+  }) {
+    return EsiRateBucketsCompanion(
+      tenant: tenant ?? this.tenant,
+      application: application ?? this.application,
+      characterId: characterId ?? this.characterId,
+      rateGroup: rateGroup ?? this.rateGroup,
+      limit: limit ?? this.limit,
+      remaining: remaining ?? this.remaining,
+      used: used ?? this.used,
+      observedAtMs: observedAtMs ?? this.observedAtMs,
+      retryAfterAtMs: retryAfterAtMs ?? this.retryAfterAtMs,
+      errorUntilMs: errorUntilMs ?? this.errorUntilMs,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (tenant.present) {
+      map['tenant'] = Variable<String>(tenant.value);
+    }
+    if (application.present) {
+      map['application'] = Variable<String>(application.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (rateGroup.present) {
+      map['rate_group'] = Variable<String>(rateGroup.value);
+    }
+    if (limit.present) {
+      map['limit'] = Variable<int>(limit.value);
+    }
+    if (remaining.present) {
+      map['remaining'] = Variable<int>(remaining.value);
+    }
+    if (used.present) {
+      map['used'] = Variable<int>(used.value);
+    }
+    if (observedAtMs.present) {
+      map['observed_at_ms'] = Variable<int>(observedAtMs.value);
+    }
+    if (retryAfterAtMs.present) {
+      map['retry_after_at_ms'] = Variable<int>(retryAfterAtMs.value);
+    }
+    if (errorUntilMs.present) {
+      map['error_until_ms'] = Variable<int>(errorUntilMs.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EsiRateBucketsCompanion(')
+          ..write('tenant: $tenant, ')
+          ..write('application: $application, ')
+          ..write('characterId: $characterId, ')
+          ..write('rateGroup: $rateGroup, ')
+          ..write('limit: $limit, ')
+          ..write('remaining: $remaining, ')
+          ..write('used: $used, ')
+          ..write('observedAtMs: $observedAtMs, ')
+          ..write('retryAfterAtMs: $retryAfterAtMs, ')
+          ..write('errorUntilMs: $errorUntilMs, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationProfilesTable extends CorporationProfiles
+    with TableInfo<$CorporationProfilesTable, CorporationProfile> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationProfilesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _tenantMeta = const VerificationMeta('tenant');
+  @override
+  late final GeneratedColumn<String> tenant = GeneratedColumn<String>(
+    'tenant',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _corporationIdMeta = const VerificationMeta(
+    'corporationId',
+  );
+  @override
+  late final GeneratedColumn<int> corporationId = GeneratedColumn<int>(
+    'corporation_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _adapterMeta = const VerificationMeta(
+    'adapter',
+  );
+  @override
+  late final GeneratedColumn<String> adapter = GeneratedColumn<String>(
+    'adapter',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _tickerMeta = const VerificationMeta('ticker');
+  @override
+  late final GeneratedColumn<String> ticker = GeneratedColumn<String>(
+    'ticker',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _stateMeta = const VerificationMeta('state');
+  @override
+  late final GeneratedColumn<String> state = GeneratedColumn<String>(
+    'state',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _friendlyFireMeta = const VerificationMeta(
+    'friendlyFire',
+  );
+  @override
+  late final GeneratedColumn<String> friendlyFire = GeneratedColumn<String>(
+    'friendly_fire',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _ceoIdMeta = const VerificationMeta('ceoId');
+  @override
+  late final GeneratedColumn<int> ceoId = GeneratedColumn<int>(
+    'ceo_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _allianceIdMeta = const VerificationMeta(
+    'allianceId',
+  );
+  @override
+  late final GeneratedColumn<int> allianceId = GeneratedColumn<int>(
+    'alliance_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _memberCountMeta = const VerificationMeta(
+    'memberCount',
+  );
+  @override
+  late final GeneratedColumn<int> memberCount = GeneratedColumn<int>(
+    'member_count',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _taxIskMeta = const VerificationMeta('taxIsk');
+  @override
+  late final GeneratedColumn<String> taxIsk = GeneratedColumn<String>(
+    'tax_isk',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _taxLpMeta = const VerificationMeta('taxLp');
+  @override
+  late final GeneratedColumn<String> taxLp = GeneratedColumn<String>(
+    'tax_lp',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _urlMeta = const VerificationMeta('url');
+  @override
+  late final GeneratedColumn<String> url = GeneratedColumn<String>(
+    'url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _payloadReceivedAtMsMeta =
+      const VerificationMeta('payloadReceivedAtMs');
+  @override
+  late final GeneratedColumn<int> payloadReceivedAtMs = GeneratedColumn<int>(
+    'payload_received_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _validatedAtMsMeta = const VerificationMeta(
+    'validatedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> validatedAtMs = GeneratedColumn<int>(
+    'validated_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    tenant,
+    corporationId,
+    adapter,
+    name,
+    ticker,
+    state,
+    type,
+    friendlyFire,
+    ceoId,
+    allianceId,
+    memberCount,
+    taxIsk,
+    taxLp,
+    description,
+    url,
+    payloadReceivedAtMs,
+    validatedAtMs,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_profiles';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationProfile> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('tenant')) {
+      context.handle(
+        _tenantMeta,
+        tenant.isAcceptableOrUnknown(data['tenant']!, _tenantMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tenantMeta);
+    }
+    if (data.containsKey('corporation_id')) {
+      context.handle(
+        _corporationIdMeta,
+        corporationId.isAcceptableOrUnknown(
+          data['corporation_id']!,
+          _corporationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_corporationIdMeta);
+    }
+    if (data.containsKey('adapter')) {
+      context.handle(
+        _adapterMeta,
+        adapter.isAcceptableOrUnknown(data['adapter']!, _adapterMeta),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
+    if (data.containsKey('ticker')) {
+      context.handle(
+        _tickerMeta,
+        ticker.isAcceptableOrUnknown(data['ticker']!, _tickerMeta),
+      );
+    }
+    if (data.containsKey('state')) {
+      context.handle(
+        _stateMeta,
+        state.isAcceptableOrUnknown(data['state']!, _stateMeta),
+      );
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    }
+    if (data.containsKey('friendly_fire')) {
+      context.handle(
+        _friendlyFireMeta,
+        friendlyFire.isAcceptableOrUnknown(
+          data['friendly_fire']!,
+          _friendlyFireMeta,
+        ),
+      );
+    }
+    if (data.containsKey('ceo_id')) {
+      context.handle(
+        _ceoIdMeta,
+        ceoId.isAcceptableOrUnknown(data['ceo_id']!, _ceoIdMeta),
+      );
+    }
+    if (data.containsKey('alliance_id')) {
+      context.handle(
+        _allianceIdMeta,
+        allianceId.isAcceptableOrUnknown(data['alliance_id']!, _allianceIdMeta),
+      );
+    }
+    if (data.containsKey('member_count')) {
+      context.handle(
+        _memberCountMeta,
+        memberCount.isAcceptableOrUnknown(
+          data['member_count']!,
+          _memberCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('tax_isk')) {
+      context.handle(
+        _taxIskMeta,
+        taxIsk.isAcceptableOrUnknown(data['tax_isk']!, _taxIskMeta),
+      );
+    }
+    if (data.containsKey('tax_lp')) {
+      context.handle(
+        _taxLpMeta,
+        taxLp.isAcceptableOrUnknown(data['tax_lp']!, _taxLpMeta),
+      );
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('url')) {
+      context.handle(
+        _urlMeta,
+        url.isAcceptableOrUnknown(data['url']!, _urlMeta),
+      );
+    }
+    if (data.containsKey('payload_received_at_ms')) {
+      context.handle(
+        _payloadReceivedAtMsMeta,
+        payloadReceivedAtMs.isAcceptableOrUnknown(
+          data['payload_received_at_ms']!,
+          _payloadReceivedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('validated_at_ms')) {
+      context.handle(
+        _validatedAtMsMeta,
+        validatedAtMs.isAcceptableOrUnknown(
+          data['validated_at_ms']!,
+          _validatedAtMsMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {tenant, corporationId};
+  @override
+  CorporationProfile map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationProfile(
+      tenant: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tenant'],
+      )!,
+      corporationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}corporation_id'],
+      )!,
+      adapter: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}adapter'],
+      ),
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      ),
+      ticker: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ticker'],
+      ),
+      state: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}state'],
+      ),
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      ),
+      friendlyFire: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}friendly_fire'],
+      ),
+      ceoId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}ceo_id'],
+      ),
+      allianceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}alliance_id'],
+      ),
+      memberCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}member_count'],
+      ),
+      taxIsk: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tax_isk'],
+      ),
+      taxLp: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tax_lp'],
+      ),
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      url: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}url'],
+      ),
+      payloadReceivedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}payload_received_at_ms'],
+      ),
+      validatedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}validated_at_ms'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationProfilesTable createAlias(String alias) {
+    return $CorporationProfilesTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationProfile extends DataClass
+    implements Insertable<CorporationProfile> {
+  final String tenant;
+  final int corporationId;
+  final String? adapter;
+  final String? name;
+  final String? ticker;
+  final String? state;
+  final String? type;
+  final String? friendlyFire;
+  final int? ceoId;
+  final int? allianceId;
+  final int? memberCount;
+  final String? taxIsk;
+  final String? taxLp;
+  final String? description;
+  final String? url;
+  final int? payloadReceivedAtMs;
+  final int? validatedAtMs;
+  const CorporationProfile({
+    required this.tenant,
+    required this.corporationId,
+    this.adapter,
+    this.name,
+    this.ticker,
+    this.state,
+    this.type,
+    this.friendlyFire,
+    this.ceoId,
+    this.allianceId,
+    this.memberCount,
+    this.taxIsk,
+    this.taxLp,
+    this.description,
+    this.url,
+    this.payloadReceivedAtMs,
+    this.validatedAtMs,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['tenant'] = Variable<String>(tenant);
+    map['corporation_id'] = Variable<int>(corporationId);
+    if (!nullToAbsent || adapter != null) {
+      map['adapter'] = Variable<String>(adapter);
+    }
+    if (!nullToAbsent || name != null) {
+      map['name'] = Variable<String>(name);
+    }
+    if (!nullToAbsent || ticker != null) {
+      map['ticker'] = Variable<String>(ticker);
+    }
+    if (!nullToAbsent || state != null) {
+      map['state'] = Variable<String>(state);
+    }
+    if (!nullToAbsent || type != null) {
+      map['type'] = Variable<String>(type);
+    }
+    if (!nullToAbsent || friendlyFire != null) {
+      map['friendly_fire'] = Variable<String>(friendlyFire);
+    }
+    if (!nullToAbsent || ceoId != null) {
+      map['ceo_id'] = Variable<int>(ceoId);
+    }
+    if (!nullToAbsent || allianceId != null) {
+      map['alliance_id'] = Variable<int>(allianceId);
+    }
+    if (!nullToAbsent || memberCount != null) {
+      map['member_count'] = Variable<int>(memberCount);
+    }
+    if (!nullToAbsent || taxIsk != null) {
+      map['tax_isk'] = Variable<String>(taxIsk);
+    }
+    if (!nullToAbsent || taxLp != null) {
+      map['tax_lp'] = Variable<String>(taxLp);
+    }
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    if (!nullToAbsent || url != null) {
+      map['url'] = Variable<String>(url);
+    }
+    if (!nullToAbsent || payloadReceivedAtMs != null) {
+      map['payload_received_at_ms'] = Variable<int>(payloadReceivedAtMs);
+    }
+    if (!nullToAbsent || validatedAtMs != null) {
+      map['validated_at_ms'] = Variable<int>(validatedAtMs);
+    }
+    return map;
+  }
+
+  CorporationProfilesCompanion toCompanion(bool nullToAbsent) {
+    return CorporationProfilesCompanion(
+      tenant: Value(tenant),
+      corporationId: Value(corporationId),
+      adapter: adapter == null && nullToAbsent
+          ? const Value.absent()
+          : Value(adapter),
+      name: name == null && nullToAbsent ? const Value.absent() : Value(name),
+      ticker: ticker == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ticker),
+      state: state == null && nullToAbsent
+          ? const Value.absent()
+          : Value(state),
+      type: type == null && nullToAbsent ? const Value.absent() : Value(type),
+      friendlyFire: friendlyFire == null && nullToAbsent
+          ? const Value.absent()
+          : Value(friendlyFire),
+      ceoId: ceoId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ceoId),
+      allianceId: allianceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(allianceId),
+      memberCount: memberCount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(memberCount),
+      taxIsk: taxIsk == null && nullToAbsent
+          ? const Value.absent()
+          : Value(taxIsk),
+      taxLp: taxLp == null && nullToAbsent
+          ? const Value.absent()
+          : Value(taxLp),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      url: url == null && nullToAbsent ? const Value.absent() : Value(url),
+      payloadReceivedAtMs: payloadReceivedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(payloadReceivedAtMs),
+      validatedAtMs: validatedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(validatedAtMs),
+    );
+  }
+
+  factory CorporationProfile.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationProfile(
+      tenant: serializer.fromJson<String>(json['tenant']),
+      corporationId: serializer.fromJson<int>(json['corporationId']),
+      adapter: serializer.fromJson<String?>(json['adapter']),
+      name: serializer.fromJson<String?>(json['name']),
+      ticker: serializer.fromJson<String?>(json['ticker']),
+      state: serializer.fromJson<String?>(json['state']),
+      type: serializer.fromJson<String?>(json['type']),
+      friendlyFire: serializer.fromJson<String?>(json['friendlyFire']),
+      ceoId: serializer.fromJson<int?>(json['ceoId']),
+      allianceId: serializer.fromJson<int?>(json['allianceId']),
+      memberCount: serializer.fromJson<int?>(json['memberCount']),
+      taxIsk: serializer.fromJson<String?>(json['taxIsk']),
+      taxLp: serializer.fromJson<String?>(json['taxLp']),
+      description: serializer.fromJson<String?>(json['description']),
+      url: serializer.fromJson<String?>(json['url']),
+      payloadReceivedAtMs: serializer.fromJson<int?>(
+        json['payloadReceivedAtMs'],
+      ),
+      validatedAtMs: serializer.fromJson<int?>(json['validatedAtMs']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'tenant': serializer.toJson<String>(tenant),
+      'corporationId': serializer.toJson<int>(corporationId),
+      'adapter': serializer.toJson<String?>(adapter),
+      'name': serializer.toJson<String?>(name),
+      'ticker': serializer.toJson<String?>(ticker),
+      'state': serializer.toJson<String?>(state),
+      'type': serializer.toJson<String?>(type),
+      'friendlyFire': serializer.toJson<String?>(friendlyFire),
+      'ceoId': serializer.toJson<int?>(ceoId),
+      'allianceId': serializer.toJson<int?>(allianceId),
+      'memberCount': serializer.toJson<int?>(memberCount),
+      'taxIsk': serializer.toJson<String?>(taxIsk),
+      'taxLp': serializer.toJson<String?>(taxLp),
+      'description': serializer.toJson<String?>(description),
+      'url': serializer.toJson<String?>(url),
+      'payloadReceivedAtMs': serializer.toJson<int?>(payloadReceivedAtMs),
+      'validatedAtMs': serializer.toJson<int?>(validatedAtMs),
+    };
+  }
+
+  CorporationProfile copyWith({
+    String? tenant,
+    int? corporationId,
+    Value<String?> adapter = const Value.absent(),
+    Value<String?> name = const Value.absent(),
+    Value<String?> ticker = const Value.absent(),
+    Value<String?> state = const Value.absent(),
+    Value<String?> type = const Value.absent(),
+    Value<String?> friendlyFire = const Value.absent(),
+    Value<int?> ceoId = const Value.absent(),
+    Value<int?> allianceId = const Value.absent(),
+    Value<int?> memberCount = const Value.absent(),
+    Value<String?> taxIsk = const Value.absent(),
+    Value<String?> taxLp = const Value.absent(),
+    Value<String?> description = const Value.absent(),
+    Value<String?> url = const Value.absent(),
+    Value<int?> payloadReceivedAtMs = const Value.absent(),
+    Value<int?> validatedAtMs = const Value.absent(),
+  }) => CorporationProfile(
+    tenant: tenant ?? this.tenant,
+    corporationId: corporationId ?? this.corporationId,
+    adapter: adapter.present ? adapter.value : this.adapter,
+    name: name.present ? name.value : this.name,
+    ticker: ticker.present ? ticker.value : this.ticker,
+    state: state.present ? state.value : this.state,
+    type: type.present ? type.value : this.type,
+    friendlyFire: friendlyFire.present ? friendlyFire.value : this.friendlyFire,
+    ceoId: ceoId.present ? ceoId.value : this.ceoId,
+    allianceId: allianceId.present ? allianceId.value : this.allianceId,
+    memberCount: memberCount.present ? memberCount.value : this.memberCount,
+    taxIsk: taxIsk.present ? taxIsk.value : this.taxIsk,
+    taxLp: taxLp.present ? taxLp.value : this.taxLp,
+    description: description.present ? description.value : this.description,
+    url: url.present ? url.value : this.url,
+    payloadReceivedAtMs: payloadReceivedAtMs.present
+        ? payloadReceivedAtMs.value
+        : this.payloadReceivedAtMs,
+    validatedAtMs: validatedAtMs.present
+        ? validatedAtMs.value
+        : this.validatedAtMs,
+  );
+  CorporationProfile copyWithCompanion(CorporationProfilesCompanion data) {
+    return CorporationProfile(
+      tenant: data.tenant.present ? data.tenant.value : this.tenant,
+      corporationId: data.corporationId.present
+          ? data.corporationId.value
+          : this.corporationId,
+      adapter: data.adapter.present ? data.adapter.value : this.adapter,
+      name: data.name.present ? data.name.value : this.name,
+      ticker: data.ticker.present ? data.ticker.value : this.ticker,
+      state: data.state.present ? data.state.value : this.state,
+      type: data.type.present ? data.type.value : this.type,
+      friendlyFire: data.friendlyFire.present
+          ? data.friendlyFire.value
+          : this.friendlyFire,
+      ceoId: data.ceoId.present ? data.ceoId.value : this.ceoId,
+      allianceId: data.allianceId.present
+          ? data.allianceId.value
+          : this.allianceId,
+      memberCount: data.memberCount.present
+          ? data.memberCount.value
+          : this.memberCount,
+      taxIsk: data.taxIsk.present ? data.taxIsk.value : this.taxIsk,
+      taxLp: data.taxLp.present ? data.taxLp.value : this.taxLp,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      url: data.url.present ? data.url.value : this.url,
+      payloadReceivedAtMs: data.payloadReceivedAtMs.present
+          ? data.payloadReceivedAtMs.value
+          : this.payloadReceivedAtMs,
+      validatedAtMs: data.validatedAtMs.present
+          ? data.validatedAtMs.value
+          : this.validatedAtMs,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationProfile(')
+          ..write('tenant: $tenant, ')
+          ..write('corporationId: $corporationId, ')
+          ..write('adapter: $adapter, ')
+          ..write('name: $name, ')
+          ..write('ticker: $ticker, ')
+          ..write('state: $state, ')
+          ..write('type: $type, ')
+          ..write('friendlyFire: $friendlyFire, ')
+          ..write('ceoId: $ceoId, ')
+          ..write('allianceId: $allianceId, ')
+          ..write('memberCount: $memberCount, ')
+          ..write('taxIsk: $taxIsk, ')
+          ..write('taxLp: $taxLp, ')
+          ..write('description: $description, ')
+          ..write('url: $url, ')
+          ..write('payloadReceivedAtMs: $payloadReceivedAtMs, ')
+          ..write('validatedAtMs: $validatedAtMs')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    tenant,
+    corporationId,
+    adapter,
+    name,
+    ticker,
+    state,
+    type,
+    friendlyFire,
+    ceoId,
+    allianceId,
+    memberCount,
+    taxIsk,
+    taxLp,
+    description,
+    url,
+    payloadReceivedAtMs,
+    validatedAtMs,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationProfile &&
+          other.tenant == this.tenant &&
+          other.corporationId == this.corporationId &&
+          other.adapter == this.adapter &&
+          other.name == this.name &&
+          other.ticker == this.ticker &&
+          other.state == this.state &&
+          other.type == this.type &&
+          other.friendlyFire == this.friendlyFire &&
+          other.ceoId == this.ceoId &&
+          other.allianceId == this.allianceId &&
+          other.memberCount == this.memberCount &&
+          other.taxIsk == this.taxIsk &&
+          other.taxLp == this.taxLp &&
+          other.description == this.description &&
+          other.url == this.url &&
+          other.payloadReceivedAtMs == this.payloadReceivedAtMs &&
+          other.validatedAtMs == this.validatedAtMs);
+}
+
+class CorporationProfilesCompanion extends UpdateCompanion<CorporationProfile> {
+  final Value<String> tenant;
+  final Value<int> corporationId;
+  final Value<String?> adapter;
+  final Value<String?> name;
+  final Value<String?> ticker;
+  final Value<String?> state;
+  final Value<String?> type;
+  final Value<String?> friendlyFire;
+  final Value<int?> ceoId;
+  final Value<int?> allianceId;
+  final Value<int?> memberCount;
+  final Value<String?> taxIsk;
+  final Value<String?> taxLp;
+  final Value<String?> description;
+  final Value<String?> url;
+  final Value<int?> payloadReceivedAtMs;
+  final Value<int?> validatedAtMs;
+  final Value<int> rowid;
+  const CorporationProfilesCompanion({
+    this.tenant = const Value.absent(),
+    this.corporationId = const Value.absent(),
+    this.adapter = const Value.absent(),
+    this.name = const Value.absent(),
+    this.ticker = const Value.absent(),
+    this.state = const Value.absent(),
+    this.type = const Value.absent(),
+    this.friendlyFire = const Value.absent(),
+    this.ceoId = const Value.absent(),
+    this.allianceId = const Value.absent(),
+    this.memberCount = const Value.absent(),
+    this.taxIsk = const Value.absent(),
+    this.taxLp = const Value.absent(),
+    this.description = const Value.absent(),
+    this.url = const Value.absent(),
+    this.payloadReceivedAtMs = const Value.absent(),
+    this.validatedAtMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationProfilesCompanion.insert({
+    required String tenant,
+    required int corporationId,
+    this.adapter = const Value.absent(),
+    this.name = const Value.absent(),
+    this.ticker = const Value.absent(),
+    this.state = const Value.absent(),
+    this.type = const Value.absent(),
+    this.friendlyFire = const Value.absent(),
+    this.ceoId = const Value.absent(),
+    this.allianceId = const Value.absent(),
+    this.memberCount = const Value.absent(),
+    this.taxIsk = const Value.absent(),
+    this.taxLp = const Value.absent(),
+    this.description = const Value.absent(),
+    this.url = const Value.absent(),
+    this.payloadReceivedAtMs = const Value.absent(),
+    this.validatedAtMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : tenant = Value(tenant),
+       corporationId = Value(corporationId);
+  static Insertable<CorporationProfile> custom({
+    Expression<String>? tenant,
+    Expression<int>? corporationId,
+    Expression<String>? adapter,
+    Expression<String>? name,
+    Expression<String>? ticker,
+    Expression<String>? state,
+    Expression<String>? type,
+    Expression<String>? friendlyFire,
+    Expression<int>? ceoId,
+    Expression<int>? allianceId,
+    Expression<int>? memberCount,
+    Expression<String>? taxIsk,
+    Expression<String>? taxLp,
+    Expression<String>? description,
+    Expression<String>? url,
+    Expression<int>? payloadReceivedAtMs,
+    Expression<int>? validatedAtMs,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (tenant != null) 'tenant': tenant,
+      if (corporationId != null) 'corporation_id': corporationId,
+      if (adapter != null) 'adapter': adapter,
+      if (name != null) 'name': name,
+      if (ticker != null) 'ticker': ticker,
+      if (state != null) 'state': state,
+      if (type != null) 'type': type,
+      if (friendlyFire != null) 'friendly_fire': friendlyFire,
+      if (ceoId != null) 'ceo_id': ceoId,
+      if (allianceId != null) 'alliance_id': allianceId,
+      if (memberCount != null) 'member_count': memberCount,
+      if (taxIsk != null) 'tax_isk': taxIsk,
+      if (taxLp != null) 'tax_lp': taxLp,
+      if (description != null) 'description': description,
+      if (url != null) 'url': url,
+      if (payloadReceivedAtMs != null)
+        'payload_received_at_ms': payloadReceivedAtMs,
+      if (validatedAtMs != null) 'validated_at_ms': validatedAtMs,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationProfilesCompanion copyWith({
+    Value<String>? tenant,
+    Value<int>? corporationId,
+    Value<String?>? adapter,
+    Value<String?>? name,
+    Value<String?>? ticker,
+    Value<String?>? state,
+    Value<String?>? type,
+    Value<String?>? friendlyFire,
+    Value<int?>? ceoId,
+    Value<int?>? allianceId,
+    Value<int?>? memberCount,
+    Value<String?>? taxIsk,
+    Value<String?>? taxLp,
+    Value<String?>? description,
+    Value<String?>? url,
+    Value<int?>? payloadReceivedAtMs,
+    Value<int?>? validatedAtMs,
+    Value<int>? rowid,
+  }) {
+    return CorporationProfilesCompanion(
+      tenant: tenant ?? this.tenant,
+      corporationId: corporationId ?? this.corporationId,
+      adapter: adapter ?? this.adapter,
+      name: name ?? this.name,
+      ticker: ticker ?? this.ticker,
+      state: state ?? this.state,
+      type: type ?? this.type,
+      friendlyFire: friendlyFire ?? this.friendlyFire,
+      ceoId: ceoId ?? this.ceoId,
+      allianceId: allianceId ?? this.allianceId,
+      memberCount: memberCount ?? this.memberCount,
+      taxIsk: taxIsk ?? this.taxIsk,
+      taxLp: taxLp ?? this.taxLp,
+      description: description ?? this.description,
+      url: url ?? this.url,
+      payloadReceivedAtMs: payloadReceivedAtMs ?? this.payloadReceivedAtMs,
+      validatedAtMs: validatedAtMs ?? this.validatedAtMs,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (tenant.present) {
+      map['tenant'] = Variable<String>(tenant.value);
+    }
+    if (corporationId.present) {
+      map['corporation_id'] = Variable<int>(corporationId.value);
+    }
+    if (adapter.present) {
+      map['adapter'] = Variable<String>(adapter.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (ticker.present) {
+      map['ticker'] = Variable<String>(ticker.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(state.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (friendlyFire.present) {
+      map['friendly_fire'] = Variable<String>(friendlyFire.value);
+    }
+    if (ceoId.present) {
+      map['ceo_id'] = Variable<int>(ceoId.value);
+    }
+    if (allianceId.present) {
+      map['alliance_id'] = Variable<int>(allianceId.value);
+    }
+    if (memberCount.present) {
+      map['member_count'] = Variable<int>(memberCount.value);
+    }
+    if (taxIsk.present) {
+      map['tax_isk'] = Variable<String>(taxIsk.value);
+    }
+    if (taxLp.present) {
+      map['tax_lp'] = Variable<String>(taxLp.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (url.present) {
+      map['url'] = Variable<String>(url.value);
+    }
+    if (payloadReceivedAtMs.present) {
+      map['payload_received_at_ms'] = Variable<int>(payloadReceivedAtMs.value);
+    }
+    if (validatedAtMs.present) {
+      map['validated_at_ms'] = Variable<int>(validatedAtMs.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationProfilesCompanion(')
+          ..write('tenant: $tenant, ')
+          ..write('corporationId: $corporationId, ')
+          ..write('adapter: $adapter, ')
+          ..write('name: $name, ')
+          ..write('ticker: $ticker, ')
+          ..write('state: $state, ')
+          ..write('type: $type, ')
+          ..write('friendlyFire: $friendlyFire, ')
+          ..write('ceoId: $ceoId, ')
+          ..write('allianceId: $allianceId, ')
+          ..write('memberCount: $memberCount, ')
+          ..write('taxIsk: $taxIsk, ')
+          ..write('taxLp: $taxLp, ')
+          ..write('description: $description, ')
+          ..write('url: $url, ')
+          ..write('payloadReceivedAtMs: $payloadReceivedAtMs, ')
+          ..write('validatedAtMs: $validatedAtMs, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationMembersTable extends CorporationMembers
+    with TableInfo<$CorporationMembersTable, CorporationMember> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationMembersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _snapshotIdMeta = const VerificationMeta(
+    'snapshotId',
+  );
+  @override
+  late final GeneratedColumn<String> snapshotId = GeneratedColumn<String>(
+    'snapshot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _memberIdMeta = const VerificationMeta(
+    'memberId',
+  );
+  @override
+  late final GeneratedColumn<int> memberId = GeneratedColumn<int>(
+    'member_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _joinEvidenceMeta = const VerificationMeta(
+    'joinEvidence',
+  );
+  @override
+  late final GeneratedColumn<String> joinEvidence = GeneratedColumn<String>(
+    'join_evidence',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    snapshotId,
+    memberId,
+    ownerCharacterId,
+    joinEvidence,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_members';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationMember> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('snapshot_id')) {
+      context.handle(
+        _snapshotIdMeta,
+        snapshotId.isAcceptableOrUnknown(data['snapshot_id']!, _snapshotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_snapshotIdMeta);
+    }
+    if (data.containsKey('member_id')) {
+      context.handle(
+        _memberIdMeta,
+        memberId.isAcceptableOrUnknown(data['member_id']!, _memberIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_memberIdMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('join_evidence')) {
+      context.handle(
+        _joinEvidenceMeta,
+        joinEvidence.isAcceptableOrUnknown(
+          data['join_evidence']!,
+          _joinEvidenceMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {snapshotId, memberId};
+  @override
+  CorporationMember map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationMember(
+      snapshotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}snapshot_id'],
+      )!,
+      memberId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}member_id'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      ),
+      joinEvidence: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}join_evidence'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationMembersTable createAlias(String alias) {
+    return $CorporationMembersTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationMember extends DataClass
+    implements Insertable<CorporationMember> {
+  final String snapshotId;
+  final int memberId;
+  final int? ownerCharacterId;
+  final String? joinEvidence;
+  const CorporationMember({
+    required this.snapshotId,
+    required this.memberId,
+    this.ownerCharacterId,
+    this.joinEvidence,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['snapshot_id'] = Variable<String>(snapshotId);
+    map['member_id'] = Variable<int>(memberId);
+    if (!nullToAbsent || ownerCharacterId != null) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    }
+    if (!nullToAbsent || joinEvidence != null) {
+      map['join_evidence'] = Variable<String>(joinEvidence);
+    }
+    return map;
+  }
+
+  CorporationMembersCompanion toCompanion(bool nullToAbsent) {
+    return CorporationMembersCompanion(
+      snapshotId: Value(snapshotId),
+      memberId: Value(memberId),
+      ownerCharacterId: ownerCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerCharacterId),
+      joinEvidence: joinEvidence == null && nullToAbsent
+          ? const Value.absent()
+          : Value(joinEvidence),
+    );
+  }
+
+  factory CorporationMember.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationMember(
+      snapshotId: serializer.fromJson<String>(json['snapshotId']),
+      memberId: serializer.fromJson<int>(json['memberId']),
+      ownerCharacterId: serializer.fromJson<int?>(json['ownerCharacterId']),
+      joinEvidence: serializer.fromJson<String?>(json['joinEvidence']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'snapshotId': serializer.toJson<String>(snapshotId),
+      'memberId': serializer.toJson<int>(memberId),
+      'ownerCharacterId': serializer.toJson<int?>(ownerCharacterId),
+      'joinEvidence': serializer.toJson<String?>(joinEvidence),
+    };
+  }
+
+  CorporationMember copyWith({
+    String? snapshotId,
+    int? memberId,
+    Value<int?> ownerCharacterId = const Value.absent(),
+    Value<String?> joinEvidence = const Value.absent(),
+  }) => CorporationMember(
+    snapshotId: snapshotId ?? this.snapshotId,
+    memberId: memberId ?? this.memberId,
+    ownerCharacterId: ownerCharacterId.present
+        ? ownerCharacterId.value
+        : this.ownerCharacterId,
+    joinEvidence: joinEvidence.present ? joinEvidence.value : this.joinEvidence,
+  );
+  CorporationMember copyWithCompanion(CorporationMembersCompanion data) {
+    return CorporationMember(
+      snapshotId: data.snapshotId.present
+          ? data.snapshotId.value
+          : this.snapshotId,
+      memberId: data.memberId.present ? data.memberId.value : this.memberId,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      joinEvidence: data.joinEvidence.present
+          ? data.joinEvidence.value
+          : this.joinEvidence,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationMember(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('memberId: $memberId, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('joinEvidence: $joinEvidence')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(snapshotId, memberId, ownerCharacterId, joinEvidence);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationMember &&
+          other.snapshotId == this.snapshotId &&
+          other.memberId == this.memberId &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.joinEvidence == this.joinEvidence);
+}
+
+class CorporationMembersCompanion extends UpdateCompanion<CorporationMember> {
+  final Value<String> snapshotId;
+  final Value<int> memberId;
+  final Value<int?> ownerCharacterId;
+  final Value<String?> joinEvidence;
+  final Value<int> rowid;
+  const CorporationMembersCompanion({
+    this.snapshotId = const Value.absent(),
+    this.memberId = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.joinEvidence = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationMembersCompanion.insert({
+    required String snapshotId,
+    required int memberId,
+    this.ownerCharacterId = const Value.absent(),
+    this.joinEvidence = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : snapshotId = Value(snapshotId),
+       memberId = Value(memberId);
+  static Insertable<CorporationMember> custom({
+    Expression<String>? snapshotId,
+    Expression<int>? memberId,
+    Expression<int>? ownerCharacterId,
+    Expression<String>? joinEvidence,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (snapshotId != null) 'snapshot_id': snapshotId,
+      if (memberId != null) 'member_id': memberId,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (joinEvidence != null) 'join_evidence': joinEvidence,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationMembersCompanion copyWith({
+    Value<String>? snapshotId,
+    Value<int>? memberId,
+    Value<int?>? ownerCharacterId,
+    Value<String?>? joinEvidence,
+    Value<int>? rowid,
+  }) {
+    return CorporationMembersCompanion(
+      snapshotId: snapshotId ?? this.snapshotId,
+      memberId: memberId ?? this.memberId,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      joinEvidence: joinEvidence ?? this.joinEvidence,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (snapshotId.present) {
+      map['snapshot_id'] = Variable<String>(snapshotId.value);
+    }
+    if (memberId.present) {
+      map['member_id'] = Variable<int>(memberId.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (joinEvidence.present) {
+      map['join_evidence'] = Variable<String>(joinEvidence.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationMembersCompanion(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('memberId: $memberId, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('joinEvidence: $joinEvidence, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationMemberTrackingTable extends CorporationMemberTracking
+    with
+        TableInfo<
+          $CorporationMemberTrackingTable,
+          CorporationMemberTrackingData
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationMemberTrackingTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _snapshotIdMeta = const VerificationMeta(
+    'snapshotId',
+  );
+  @override
+  late final GeneratedColumn<String> snapshotId = GeneratedColumn<String>(
+    'snapshot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _memberIdMeta = const VerificationMeta(
+    'memberId',
+  );
+  @override
+  late final GeneratedColumn<int> memberId = GeneratedColumn<int>(
+    'member_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _startAtMsMeta = const VerificationMeta(
+    'startAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> startAtMs = GeneratedColumn<int>(
+    'start_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastLoginAtMsMeta = const VerificationMeta(
+    'lastLoginAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> lastLoginAtMs = GeneratedColumn<int>(
+    'last_login_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastLogoutAtMsMeta = const VerificationMeta(
+    'lastLogoutAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> lastLogoutAtMs = GeneratedColumn<int>(
+    'last_logout_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _locationIdMeta = const VerificationMeta(
+    'locationId',
+  );
+  @override
+  late final GeneratedColumn<int> locationId = GeneratedColumn<int>(
+    'location_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _shipTypeIdMeta = const VerificationMeta(
+    'shipTypeId',
+  );
+  @override
+  late final GeneratedColumn<int> shipTypeId = GeneratedColumn<int>(
+    'ship_type_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _diagnosticsJsonMeta = const VerificationMeta(
+    'diagnosticsJson',
+  );
+  @override
+  late final GeneratedColumn<String> diagnosticsJson = GeneratedColumn<String>(
+    'diagnostics_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    snapshotId,
+    memberId,
+    ownerCharacterId,
+    startAtMs,
+    lastLoginAtMs,
+    lastLogoutAtMs,
+    locationId,
+    shipTypeId,
+    diagnosticsJson,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_member_tracking';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationMemberTrackingData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('snapshot_id')) {
+      context.handle(
+        _snapshotIdMeta,
+        snapshotId.isAcceptableOrUnknown(data['snapshot_id']!, _snapshotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_snapshotIdMeta);
+    }
+    if (data.containsKey('member_id')) {
+      context.handle(
+        _memberIdMeta,
+        memberId.isAcceptableOrUnknown(data['member_id']!, _memberIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_memberIdMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('start_at_ms')) {
+      context.handle(
+        _startAtMsMeta,
+        startAtMs.isAcceptableOrUnknown(data['start_at_ms']!, _startAtMsMeta),
+      );
+    }
+    if (data.containsKey('last_login_at_ms')) {
+      context.handle(
+        _lastLoginAtMsMeta,
+        lastLoginAtMs.isAcceptableOrUnknown(
+          data['last_login_at_ms']!,
+          _lastLoginAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_logout_at_ms')) {
+      context.handle(
+        _lastLogoutAtMsMeta,
+        lastLogoutAtMs.isAcceptableOrUnknown(
+          data['last_logout_at_ms']!,
+          _lastLogoutAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('location_id')) {
+      context.handle(
+        _locationIdMeta,
+        locationId.isAcceptableOrUnknown(data['location_id']!, _locationIdMeta),
+      );
+    }
+    if (data.containsKey('ship_type_id')) {
+      context.handle(
+        _shipTypeIdMeta,
+        shipTypeId.isAcceptableOrUnknown(
+          data['ship_type_id']!,
+          _shipTypeIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('diagnostics_json')) {
+      context.handle(
+        _diagnosticsJsonMeta,
+        diagnosticsJson.isAcceptableOrUnknown(
+          data['diagnostics_json']!,
+          _diagnosticsJsonMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {snapshotId, memberId};
+  @override
+  CorporationMemberTrackingData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationMemberTrackingData(
+      snapshotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}snapshot_id'],
+      )!,
+      memberId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}member_id'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      ),
+      startAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}start_at_ms'],
+      ),
+      lastLoginAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_login_at_ms'],
+      ),
+      lastLogoutAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_logout_at_ms'],
+      ),
+      locationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}location_id'],
+      ),
+      shipTypeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}ship_type_id'],
+      ),
+      diagnosticsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}diagnostics_json'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationMemberTrackingTable createAlias(String alias) {
+    return $CorporationMemberTrackingTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationMemberTrackingData extends DataClass
+    implements Insertable<CorporationMemberTrackingData> {
+  final String snapshotId;
+  final int memberId;
+  final int? ownerCharacterId;
+  final int? startAtMs;
+  final int? lastLoginAtMs;
+  final int? lastLogoutAtMs;
+  final int? locationId;
+  final int? shipTypeId;
+  final String? diagnosticsJson;
+  const CorporationMemberTrackingData({
+    required this.snapshotId,
+    required this.memberId,
+    this.ownerCharacterId,
+    this.startAtMs,
+    this.lastLoginAtMs,
+    this.lastLogoutAtMs,
+    this.locationId,
+    this.shipTypeId,
+    this.diagnosticsJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['snapshot_id'] = Variable<String>(snapshotId);
+    map['member_id'] = Variable<int>(memberId);
+    if (!nullToAbsent || ownerCharacterId != null) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    }
+    if (!nullToAbsent || startAtMs != null) {
+      map['start_at_ms'] = Variable<int>(startAtMs);
+    }
+    if (!nullToAbsent || lastLoginAtMs != null) {
+      map['last_login_at_ms'] = Variable<int>(lastLoginAtMs);
+    }
+    if (!nullToAbsent || lastLogoutAtMs != null) {
+      map['last_logout_at_ms'] = Variable<int>(lastLogoutAtMs);
+    }
+    if (!nullToAbsent || locationId != null) {
+      map['location_id'] = Variable<int>(locationId);
+    }
+    if (!nullToAbsent || shipTypeId != null) {
+      map['ship_type_id'] = Variable<int>(shipTypeId);
+    }
+    if (!nullToAbsent || diagnosticsJson != null) {
+      map['diagnostics_json'] = Variable<String>(diagnosticsJson);
+    }
+    return map;
+  }
+
+  CorporationMemberTrackingCompanion toCompanion(bool nullToAbsent) {
+    return CorporationMemberTrackingCompanion(
+      snapshotId: Value(snapshotId),
+      memberId: Value(memberId),
+      ownerCharacterId: ownerCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerCharacterId),
+      startAtMs: startAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(startAtMs),
+      lastLoginAtMs: lastLoginAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastLoginAtMs),
+      lastLogoutAtMs: lastLogoutAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastLogoutAtMs),
+      locationId: locationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(locationId),
+      shipTypeId: shipTypeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shipTypeId),
+      diagnosticsJson: diagnosticsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(diagnosticsJson),
+    );
+  }
+
+  factory CorporationMemberTrackingData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationMemberTrackingData(
+      snapshotId: serializer.fromJson<String>(json['snapshotId']),
+      memberId: serializer.fromJson<int>(json['memberId']),
+      ownerCharacterId: serializer.fromJson<int?>(json['ownerCharacterId']),
+      startAtMs: serializer.fromJson<int?>(json['startAtMs']),
+      lastLoginAtMs: serializer.fromJson<int?>(json['lastLoginAtMs']),
+      lastLogoutAtMs: serializer.fromJson<int?>(json['lastLogoutAtMs']),
+      locationId: serializer.fromJson<int?>(json['locationId']),
+      shipTypeId: serializer.fromJson<int?>(json['shipTypeId']),
+      diagnosticsJson: serializer.fromJson<String?>(json['diagnosticsJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'snapshotId': serializer.toJson<String>(snapshotId),
+      'memberId': serializer.toJson<int>(memberId),
+      'ownerCharacterId': serializer.toJson<int?>(ownerCharacterId),
+      'startAtMs': serializer.toJson<int?>(startAtMs),
+      'lastLoginAtMs': serializer.toJson<int?>(lastLoginAtMs),
+      'lastLogoutAtMs': serializer.toJson<int?>(lastLogoutAtMs),
+      'locationId': serializer.toJson<int?>(locationId),
+      'shipTypeId': serializer.toJson<int?>(shipTypeId),
+      'diagnosticsJson': serializer.toJson<String?>(diagnosticsJson),
+    };
+  }
+
+  CorporationMemberTrackingData copyWith({
+    String? snapshotId,
+    int? memberId,
+    Value<int?> ownerCharacterId = const Value.absent(),
+    Value<int?> startAtMs = const Value.absent(),
+    Value<int?> lastLoginAtMs = const Value.absent(),
+    Value<int?> lastLogoutAtMs = const Value.absent(),
+    Value<int?> locationId = const Value.absent(),
+    Value<int?> shipTypeId = const Value.absent(),
+    Value<String?> diagnosticsJson = const Value.absent(),
+  }) => CorporationMemberTrackingData(
+    snapshotId: snapshotId ?? this.snapshotId,
+    memberId: memberId ?? this.memberId,
+    ownerCharacterId: ownerCharacterId.present
+        ? ownerCharacterId.value
+        : this.ownerCharacterId,
+    startAtMs: startAtMs.present ? startAtMs.value : this.startAtMs,
+    lastLoginAtMs: lastLoginAtMs.present
+        ? lastLoginAtMs.value
+        : this.lastLoginAtMs,
+    lastLogoutAtMs: lastLogoutAtMs.present
+        ? lastLogoutAtMs.value
+        : this.lastLogoutAtMs,
+    locationId: locationId.present ? locationId.value : this.locationId,
+    shipTypeId: shipTypeId.present ? shipTypeId.value : this.shipTypeId,
+    diagnosticsJson: diagnosticsJson.present
+        ? diagnosticsJson.value
+        : this.diagnosticsJson,
+  );
+  CorporationMemberTrackingData copyWithCompanion(
+    CorporationMemberTrackingCompanion data,
+  ) {
+    return CorporationMemberTrackingData(
+      snapshotId: data.snapshotId.present
+          ? data.snapshotId.value
+          : this.snapshotId,
+      memberId: data.memberId.present ? data.memberId.value : this.memberId,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      startAtMs: data.startAtMs.present ? data.startAtMs.value : this.startAtMs,
+      lastLoginAtMs: data.lastLoginAtMs.present
+          ? data.lastLoginAtMs.value
+          : this.lastLoginAtMs,
+      lastLogoutAtMs: data.lastLogoutAtMs.present
+          ? data.lastLogoutAtMs.value
+          : this.lastLogoutAtMs,
+      locationId: data.locationId.present
+          ? data.locationId.value
+          : this.locationId,
+      shipTypeId: data.shipTypeId.present
+          ? data.shipTypeId.value
+          : this.shipTypeId,
+      diagnosticsJson: data.diagnosticsJson.present
+          ? data.diagnosticsJson.value
+          : this.diagnosticsJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationMemberTrackingData(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('memberId: $memberId, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('startAtMs: $startAtMs, ')
+          ..write('lastLoginAtMs: $lastLoginAtMs, ')
+          ..write('lastLogoutAtMs: $lastLogoutAtMs, ')
+          ..write('locationId: $locationId, ')
+          ..write('shipTypeId: $shipTypeId, ')
+          ..write('diagnosticsJson: $diagnosticsJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    snapshotId,
+    memberId,
+    ownerCharacterId,
+    startAtMs,
+    lastLoginAtMs,
+    lastLogoutAtMs,
+    locationId,
+    shipTypeId,
+    diagnosticsJson,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationMemberTrackingData &&
+          other.snapshotId == this.snapshotId &&
+          other.memberId == this.memberId &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.startAtMs == this.startAtMs &&
+          other.lastLoginAtMs == this.lastLoginAtMs &&
+          other.lastLogoutAtMs == this.lastLogoutAtMs &&
+          other.locationId == this.locationId &&
+          other.shipTypeId == this.shipTypeId &&
+          other.diagnosticsJson == this.diagnosticsJson);
+}
+
+class CorporationMemberTrackingCompanion
+    extends UpdateCompanion<CorporationMemberTrackingData> {
+  final Value<String> snapshotId;
+  final Value<int> memberId;
+  final Value<int?> ownerCharacterId;
+  final Value<int?> startAtMs;
+  final Value<int?> lastLoginAtMs;
+  final Value<int?> lastLogoutAtMs;
+  final Value<int?> locationId;
+  final Value<int?> shipTypeId;
+  final Value<String?> diagnosticsJson;
+  final Value<int> rowid;
+  const CorporationMemberTrackingCompanion({
+    this.snapshotId = const Value.absent(),
+    this.memberId = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.startAtMs = const Value.absent(),
+    this.lastLoginAtMs = const Value.absent(),
+    this.lastLogoutAtMs = const Value.absent(),
+    this.locationId = const Value.absent(),
+    this.shipTypeId = const Value.absent(),
+    this.diagnosticsJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationMemberTrackingCompanion.insert({
+    required String snapshotId,
+    required int memberId,
+    this.ownerCharacterId = const Value.absent(),
+    this.startAtMs = const Value.absent(),
+    this.lastLoginAtMs = const Value.absent(),
+    this.lastLogoutAtMs = const Value.absent(),
+    this.locationId = const Value.absent(),
+    this.shipTypeId = const Value.absent(),
+    this.diagnosticsJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : snapshotId = Value(snapshotId),
+       memberId = Value(memberId);
+  static Insertable<CorporationMemberTrackingData> custom({
+    Expression<String>? snapshotId,
+    Expression<int>? memberId,
+    Expression<int>? ownerCharacterId,
+    Expression<int>? startAtMs,
+    Expression<int>? lastLoginAtMs,
+    Expression<int>? lastLogoutAtMs,
+    Expression<int>? locationId,
+    Expression<int>? shipTypeId,
+    Expression<String>? diagnosticsJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (snapshotId != null) 'snapshot_id': snapshotId,
+      if (memberId != null) 'member_id': memberId,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (startAtMs != null) 'start_at_ms': startAtMs,
+      if (lastLoginAtMs != null) 'last_login_at_ms': lastLoginAtMs,
+      if (lastLogoutAtMs != null) 'last_logout_at_ms': lastLogoutAtMs,
+      if (locationId != null) 'location_id': locationId,
+      if (shipTypeId != null) 'ship_type_id': shipTypeId,
+      if (diagnosticsJson != null) 'diagnostics_json': diagnosticsJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationMemberTrackingCompanion copyWith({
+    Value<String>? snapshotId,
+    Value<int>? memberId,
+    Value<int?>? ownerCharacterId,
+    Value<int?>? startAtMs,
+    Value<int?>? lastLoginAtMs,
+    Value<int?>? lastLogoutAtMs,
+    Value<int?>? locationId,
+    Value<int?>? shipTypeId,
+    Value<String?>? diagnosticsJson,
+    Value<int>? rowid,
+  }) {
+    return CorporationMemberTrackingCompanion(
+      snapshotId: snapshotId ?? this.snapshotId,
+      memberId: memberId ?? this.memberId,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      startAtMs: startAtMs ?? this.startAtMs,
+      lastLoginAtMs: lastLoginAtMs ?? this.lastLoginAtMs,
+      lastLogoutAtMs: lastLogoutAtMs ?? this.lastLogoutAtMs,
+      locationId: locationId ?? this.locationId,
+      shipTypeId: shipTypeId ?? this.shipTypeId,
+      diagnosticsJson: diagnosticsJson ?? this.diagnosticsJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (snapshotId.present) {
+      map['snapshot_id'] = Variable<String>(snapshotId.value);
+    }
+    if (memberId.present) {
+      map['member_id'] = Variable<int>(memberId.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (startAtMs.present) {
+      map['start_at_ms'] = Variable<int>(startAtMs.value);
+    }
+    if (lastLoginAtMs.present) {
+      map['last_login_at_ms'] = Variable<int>(lastLoginAtMs.value);
+    }
+    if (lastLogoutAtMs.present) {
+      map['last_logout_at_ms'] = Variable<int>(lastLogoutAtMs.value);
+    }
+    if (locationId.present) {
+      map['location_id'] = Variable<int>(locationId.value);
+    }
+    if (shipTypeId.present) {
+      map['ship_type_id'] = Variable<int>(shipTypeId.value);
+    }
+    if (diagnosticsJson.present) {
+      map['diagnostics_json'] = Variable<String>(diagnosticsJson.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationMemberTrackingCompanion(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('memberId: $memberId, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('startAtMs: $startAtMs, ')
+          ..write('lastLoginAtMs: $lastLoginAtMs, ')
+          ..write('lastLogoutAtMs: $lastLogoutAtMs, ')
+          ..write('locationId: $locationId, ')
+          ..write('shipTypeId: $shipTypeId, ')
+          ..write('diagnosticsJson: $diagnosticsJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationRoleAssignmentsTable extends CorporationRoleAssignments
+    with
+        TableInfo<$CorporationRoleAssignmentsTable, CorporationRoleAssignment> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationRoleAssignmentsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _snapshotIdMeta = const VerificationMeta(
+    'snapshotId',
+  );
+  @override
+  late final GeneratedColumn<String> snapshotId = GeneratedColumn<String>(
+    'snapshot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _subjectIdMeta = const VerificationMeta(
+    'subjectId',
+  );
+  @override
+  late final GeneratedColumn<int> subjectId = GeneratedColumn<int>(
+    'subject_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _generalJsonMeta = const VerificationMeta(
+    'generalJson',
+  );
+  @override
+  late final GeneratedColumn<String> generalJson = GeneratedColumn<String>(
+    'general_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _hqJsonMeta = const VerificationMeta('hqJson');
+  @override
+  late final GeneratedColumn<String> hqJson = GeneratedColumn<String>(
+    'hq_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _baseJsonMeta = const VerificationMeta(
+    'baseJson',
+  );
+  @override
+  late final GeneratedColumn<String> baseJson = GeneratedColumn<String>(
+    'base_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _otherJsonMeta = const VerificationMeta(
+    'otherJson',
+  );
+  @override
+  late final GeneratedColumn<String> otherJson = GeneratedColumn<String>(
+    'other_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _grantableJsonMeta = const VerificationMeta(
+    'grantableJson',
+  );
+  @override
+  late final GeneratedColumn<String> grantableJson = GeneratedColumn<String>(
+    'grantable_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _generalKnownMeta = const VerificationMeta(
+    'generalKnown',
+  );
+  @override
+  late final GeneratedColumn<bool> generalKnown = GeneratedColumn<bool>(
+    'general_known',
+    aliasedName,
+    true,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("general_known" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _grantableKnownMeta = const VerificationMeta(
+    'grantableKnown',
+  );
+  @override
+  late final GeneratedColumn<bool> grantableKnown = GeneratedColumn<bool>(
+    'grantable_known',
+    aliasedName,
+    true,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("grantable_known" IN (0, 1))',
+    ),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    snapshotId,
+    subjectId,
+    ownerCharacterId,
+    generalJson,
+    hqJson,
+    baseJson,
+    otherJson,
+    grantableJson,
+    generalKnown,
+    grantableKnown,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_role_assignments';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationRoleAssignment> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('snapshot_id')) {
+      context.handle(
+        _snapshotIdMeta,
+        snapshotId.isAcceptableOrUnknown(data['snapshot_id']!, _snapshotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_snapshotIdMeta);
+    }
+    if (data.containsKey('subject_id')) {
+      context.handle(
+        _subjectIdMeta,
+        subjectId.isAcceptableOrUnknown(data['subject_id']!, _subjectIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_subjectIdMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('general_json')) {
+      context.handle(
+        _generalJsonMeta,
+        generalJson.isAcceptableOrUnknown(
+          data['general_json']!,
+          _generalJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('hq_json')) {
+      context.handle(
+        _hqJsonMeta,
+        hqJson.isAcceptableOrUnknown(data['hq_json']!, _hqJsonMeta),
+      );
+    }
+    if (data.containsKey('base_json')) {
+      context.handle(
+        _baseJsonMeta,
+        baseJson.isAcceptableOrUnknown(data['base_json']!, _baseJsonMeta),
+      );
+    }
+    if (data.containsKey('other_json')) {
+      context.handle(
+        _otherJsonMeta,
+        otherJson.isAcceptableOrUnknown(data['other_json']!, _otherJsonMeta),
+      );
+    }
+    if (data.containsKey('grantable_json')) {
+      context.handle(
+        _grantableJsonMeta,
+        grantableJson.isAcceptableOrUnknown(
+          data['grantable_json']!,
+          _grantableJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('general_known')) {
+      context.handle(
+        _generalKnownMeta,
+        generalKnown.isAcceptableOrUnknown(
+          data['general_known']!,
+          _generalKnownMeta,
+        ),
+      );
+    }
+    if (data.containsKey('grantable_known')) {
+      context.handle(
+        _grantableKnownMeta,
+        grantableKnown.isAcceptableOrUnknown(
+          data['grantable_known']!,
+          _grantableKnownMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {snapshotId, subjectId};
+  @override
+  CorporationRoleAssignment map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationRoleAssignment(
+      snapshotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}snapshot_id'],
+      )!,
+      subjectId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}subject_id'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      ),
+      generalJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}general_json'],
+      ),
+      hqJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hq_json'],
+      ),
+      baseJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}base_json'],
+      ),
+      otherJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}other_json'],
+      ),
+      grantableJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}grantable_json'],
+      ),
+      generalKnown: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}general_known'],
+      ),
+      grantableKnown: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}grantable_known'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationRoleAssignmentsTable createAlias(String alias) {
+    return $CorporationRoleAssignmentsTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationRoleAssignment extends DataClass
+    implements Insertable<CorporationRoleAssignment> {
+  final String snapshotId;
+  final int subjectId;
+  final int? ownerCharacterId;
+  final String? generalJson;
+  final String? hqJson;
+  final String? baseJson;
+  final String? otherJson;
+  final String? grantableJson;
+  final bool? generalKnown;
+  final bool? grantableKnown;
+  const CorporationRoleAssignment({
+    required this.snapshotId,
+    required this.subjectId,
+    this.ownerCharacterId,
+    this.generalJson,
+    this.hqJson,
+    this.baseJson,
+    this.otherJson,
+    this.grantableJson,
+    this.generalKnown,
+    this.grantableKnown,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['snapshot_id'] = Variable<String>(snapshotId);
+    map['subject_id'] = Variable<int>(subjectId);
+    if (!nullToAbsent || ownerCharacterId != null) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    }
+    if (!nullToAbsent || generalJson != null) {
+      map['general_json'] = Variable<String>(generalJson);
+    }
+    if (!nullToAbsent || hqJson != null) {
+      map['hq_json'] = Variable<String>(hqJson);
+    }
+    if (!nullToAbsent || baseJson != null) {
+      map['base_json'] = Variable<String>(baseJson);
+    }
+    if (!nullToAbsent || otherJson != null) {
+      map['other_json'] = Variable<String>(otherJson);
+    }
+    if (!nullToAbsent || grantableJson != null) {
+      map['grantable_json'] = Variable<String>(grantableJson);
+    }
+    if (!nullToAbsent || generalKnown != null) {
+      map['general_known'] = Variable<bool>(generalKnown);
+    }
+    if (!nullToAbsent || grantableKnown != null) {
+      map['grantable_known'] = Variable<bool>(grantableKnown);
+    }
+    return map;
+  }
+
+  CorporationRoleAssignmentsCompanion toCompanion(bool nullToAbsent) {
+    return CorporationRoleAssignmentsCompanion(
+      snapshotId: Value(snapshotId),
+      subjectId: Value(subjectId),
+      ownerCharacterId: ownerCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerCharacterId),
+      generalJson: generalJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(generalJson),
+      hqJson: hqJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(hqJson),
+      baseJson: baseJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(baseJson),
+      otherJson: otherJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(otherJson),
+      grantableJson: grantableJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(grantableJson),
+      generalKnown: generalKnown == null && nullToAbsent
+          ? const Value.absent()
+          : Value(generalKnown),
+      grantableKnown: grantableKnown == null && nullToAbsent
+          ? const Value.absent()
+          : Value(grantableKnown),
+    );
+  }
+
+  factory CorporationRoleAssignment.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationRoleAssignment(
+      snapshotId: serializer.fromJson<String>(json['snapshotId']),
+      subjectId: serializer.fromJson<int>(json['subjectId']),
+      ownerCharacterId: serializer.fromJson<int?>(json['ownerCharacterId']),
+      generalJson: serializer.fromJson<String?>(json['generalJson']),
+      hqJson: serializer.fromJson<String?>(json['hqJson']),
+      baseJson: serializer.fromJson<String?>(json['baseJson']),
+      otherJson: serializer.fromJson<String?>(json['otherJson']),
+      grantableJson: serializer.fromJson<String?>(json['grantableJson']),
+      generalKnown: serializer.fromJson<bool?>(json['generalKnown']),
+      grantableKnown: serializer.fromJson<bool?>(json['grantableKnown']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'snapshotId': serializer.toJson<String>(snapshotId),
+      'subjectId': serializer.toJson<int>(subjectId),
+      'ownerCharacterId': serializer.toJson<int?>(ownerCharacterId),
+      'generalJson': serializer.toJson<String?>(generalJson),
+      'hqJson': serializer.toJson<String?>(hqJson),
+      'baseJson': serializer.toJson<String?>(baseJson),
+      'otherJson': serializer.toJson<String?>(otherJson),
+      'grantableJson': serializer.toJson<String?>(grantableJson),
+      'generalKnown': serializer.toJson<bool?>(generalKnown),
+      'grantableKnown': serializer.toJson<bool?>(grantableKnown),
+    };
+  }
+
+  CorporationRoleAssignment copyWith({
+    String? snapshotId,
+    int? subjectId,
+    Value<int?> ownerCharacterId = const Value.absent(),
+    Value<String?> generalJson = const Value.absent(),
+    Value<String?> hqJson = const Value.absent(),
+    Value<String?> baseJson = const Value.absent(),
+    Value<String?> otherJson = const Value.absent(),
+    Value<String?> grantableJson = const Value.absent(),
+    Value<bool?> generalKnown = const Value.absent(),
+    Value<bool?> grantableKnown = const Value.absent(),
+  }) => CorporationRoleAssignment(
+    snapshotId: snapshotId ?? this.snapshotId,
+    subjectId: subjectId ?? this.subjectId,
+    ownerCharacterId: ownerCharacterId.present
+        ? ownerCharacterId.value
+        : this.ownerCharacterId,
+    generalJson: generalJson.present ? generalJson.value : this.generalJson,
+    hqJson: hqJson.present ? hqJson.value : this.hqJson,
+    baseJson: baseJson.present ? baseJson.value : this.baseJson,
+    otherJson: otherJson.present ? otherJson.value : this.otherJson,
+    grantableJson: grantableJson.present
+        ? grantableJson.value
+        : this.grantableJson,
+    generalKnown: generalKnown.present ? generalKnown.value : this.generalKnown,
+    grantableKnown: grantableKnown.present
+        ? grantableKnown.value
+        : this.grantableKnown,
+  );
+  CorporationRoleAssignment copyWithCompanion(
+    CorporationRoleAssignmentsCompanion data,
+  ) {
+    return CorporationRoleAssignment(
+      snapshotId: data.snapshotId.present
+          ? data.snapshotId.value
+          : this.snapshotId,
+      subjectId: data.subjectId.present ? data.subjectId.value : this.subjectId,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      generalJson: data.generalJson.present
+          ? data.generalJson.value
+          : this.generalJson,
+      hqJson: data.hqJson.present ? data.hqJson.value : this.hqJson,
+      baseJson: data.baseJson.present ? data.baseJson.value : this.baseJson,
+      otherJson: data.otherJson.present ? data.otherJson.value : this.otherJson,
+      grantableJson: data.grantableJson.present
+          ? data.grantableJson.value
+          : this.grantableJson,
+      generalKnown: data.generalKnown.present
+          ? data.generalKnown.value
+          : this.generalKnown,
+      grantableKnown: data.grantableKnown.present
+          ? data.grantableKnown.value
+          : this.grantableKnown,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationRoleAssignment(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('subjectId: $subjectId, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('generalJson: $generalJson, ')
+          ..write('hqJson: $hqJson, ')
+          ..write('baseJson: $baseJson, ')
+          ..write('otherJson: $otherJson, ')
+          ..write('grantableJson: $grantableJson, ')
+          ..write('generalKnown: $generalKnown, ')
+          ..write('grantableKnown: $grantableKnown')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    snapshotId,
+    subjectId,
+    ownerCharacterId,
+    generalJson,
+    hqJson,
+    baseJson,
+    otherJson,
+    grantableJson,
+    generalKnown,
+    grantableKnown,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationRoleAssignment &&
+          other.snapshotId == this.snapshotId &&
+          other.subjectId == this.subjectId &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.generalJson == this.generalJson &&
+          other.hqJson == this.hqJson &&
+          other.baseJson == this.baseJson &&
+          other.otherJson == this.otherJson &&
+          other.grantableJson == this.grantableJson &&
+          other.generalKnown == this.generalKnown &&
+          other.grantableKnown == this.grantableKnown);
+}
+
+class CorporationRoleAssignmentsCompanion
+    extends UpdateCompanion<CorporationRoleAssignment> {
+  final Value<String> snapshotId;
+  final Value<int> subjectId;
+  final Value<int?> ownerCharacterId;
+  final Value<String?> generalJson;
+  final Value<String?> hqJson;
+  final Value<String?> baseJson;
+  final Value<String?> otherJson;
+  final Value<String?> grantableJson;
+  final Value<bool?> generalKnown;
+  final Value<bool?> grantableKnown;
+  final Value<int> rowid;
+  const CorporationRoleAssignmentsCompanion({
+    this.snapshotId = const Value.absent(),
+    this.subjectId = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.generalJson = const Value.absent(),
+    this.hqJson = const Value.absent(),
+    this.baseJson = const Value.absent(),
+    this.otherJson = const Value.absent(),
+    this.grantableJson = const Value.absent(),
+    this.generalKnown = const Value.absent(),
+    this.grantableKnown = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationRoleAssignmentsCompanion.insert({
+    required String snapshotId,
+    required int subjectId,
+    this.ownerCharacterId = const Value.absent(),
+    this.generalJson = const Value.absent(),
+    this.hqJson = const Value.absent(),
+    this.baseJson = const Value.absent(),
+    this.otherJson = const Value.absent(),
+    this.grantableJson = const Value.absent(),
+    this.generalKnown = const Value.absent(),
+    this.grantableKnown = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : snapshotId = Value(snapshotId),
+       subjectId = Value(subjectId);
+  static Insertable<CorporationRoleAssignment> custom({
+    Expression<String>? snapshotId,
+    Expression<int>? subjectId,
+    Expression<int>? ownerCharacterId,
+    Expression<String>? generalJson,
+    Expression<String>? hqJson,
+    Expression<String>? baseJson,
+    Expression<String>? otherJson,
+    Expression<String>? grantableJson,
+    Expression<bool>? generalKnown,
+    Expression<bool>? grantableKnown,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (snapshotId != null) 'snapshot_id': snapshotId,
+      if (subjectId != null) 'subject_id': subjectId,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (generalJson != null) 'general_json': generalJson,
+      if (hqJson != null) 'hq_json': hqJson,
+      if (baseJson != null) 'base_json': baseJson,
+      if (otherJson != null) 'other_json': otherJson,
+      if (grantableJson != null) 'grantable_json': grantableJson,
+      if (generalKnown != null) 'general_known': generalKnown,
+      if (grantableKnown != null) 'grantable_known': grantableKnown,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationRoleAssignmentsCompanion copyWith({
+    Value<String>? snapshotId,
+    Value<int>? subjectId,
+    Value<int?>? ownerCharacterId,
+    Value<String?>? generalJson,
+    Value<String?>? hqJson,
+    Value<String?>? baseJson,
+    Value<String?>? otherJson,
+    Value<String?>? grantableJson,
+    Value<bool?>? generalKnown,
+    Value<bool?>? grantableKnown,
+    Value<int>? rowid,
+  }) {
+    return CorporationRoleAssignmentsCompanion(
+      snapshotId: snapshotId ?? this.snapshotId,
+      subjectId: subjectId ?? this.subjectId,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      generalJson: generalJson ?? this.generalJson,
+      hqJson: hqJson ?? this.hqJson,
+      baseJson: baseJson ?? this.baseJson,
+      otherJson: otherJson ?? this.otherJson,
+      grantableJson: grantableJson ?? this.grantableJson,
+      generalKnown: generalKnown ?? this.generalKnown,
+      grantableKnown: grantableKnown ?? this.grantableKnown,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (snapshotId.present) {
+      map['snapshot_id'] = Variable<String>(snapshotId.value);
+    }
+    if (subjectId.present) {
+      map['subject_id'] = Variable<int>(subjectId.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (generalJson.present) {
+      map['general_json'] = Variable<String>(generalJson.value);
+    }
+    if (hqJson.present) {
+      map['hq_json'] = Variable<String>(hqJson.value);
+    }
+    if (baseJson.present) {
+      map['base_json'] = Variable<String>(baseJson.value);
+    }
+    if (otherJson.present) {
+      map['other_json'] = Variable<String>(otherJson.value);
+    }
+    if (grantableJson.present) {
+      map['grantable_json'] = Variable<String>(grantableJson.value);
+    }
+    if (generalKnown.present) {
+      map['general_known'] = Variable<bool>(generalKnown.value);
+    }
+    if (grantableKnown.present) {
+      map['grantable_known'] = Variable<bool>(grantableKnown.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationRoleAssignmentsCompanion(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('subjectId: $subjectId, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('generalJson: $generalJson, ')
+          ..write('hqJson: $hqJson, ')
+          ..write('baseJson: $baseJson, ')
+          ..write('otherJson: $otherJson, ')
+          ..write('grantableJson: $grantableJson, ')
+          ..write('generalKnown: $generalKnown, ')
+          ..write('grantableKnown: $grantableKnown, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationTitlesTable extends CorporationTitles
+    with TableInfo<$CorporationTitlesTable, CorporationTitle> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationTitlesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _snapshotIdMeta = const VerificationMeta(
+    'snapshotId',
+  );
+  @override
+  late final GeneratedColumn<String> snapshotId = GeneratedColumn<String>(
+    'snapshot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleIdMeta = const VerificationMeta(
+    'titleId',
+  );
+  @override
+  late final GeneratedColumn<int> titleId = GeneratedColumn<int>(
+    'title_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _rolesJsonMeta = const VerificationMeta(
+    'rolesJson',
+  );
+  @override
+  late final GeneratedColumn<String> rolesJson = GeneratedColumn<String>(
+    'roles_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    snapshotId,
+    titleId,
+    ownerCharacterId,
+    name,
+    rolesJson,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_titles';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationTitle> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('snapshot_id')) {
+      context.handle(
+        _snapshotIdMeta,
+        snapshotId.isAcceptableOrUnknown(data['snapshot_id']!, _snapshotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_snapshotIdMeta);
+    }
+    if (data.containsKey('title_id')) {
+      context.handle(
+        _titleIdMeta,
+        titleId.isAcceptableOrUnknown(data['title_id']!, _titleIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleIdMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
+    if (data.containsKey('roles_json')) {
+      context.handle(
+        _rolesJsonMeta,
+        rolesJson.isAcceptableOrUnknown(data['roles_json']!, _rolesJsonMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {snapshotId, titleId};
+  @override
+  CorporationTitle map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationTitle(
+      snapshotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}snapshot_id'],
+      )!,
+      titleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}title_id'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      ),
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      ),
+      rolesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}roles_json'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationTitlesTable createAlias(String alias) {
+    return $CorporationTitlesTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationTitle extends DataClass
+    implements Insertable<CorporationTitle> {
+  final String snapshotId;
+  final int titleId;
+  final int? ownerCharacterId;
+  final String? name;
+  final String? rolesJson;
+  const CorporationTitle({
+    required this.snapshotId,
+    required this.titleId,
+    this.ownerCharacterId,
+    this.name,
+    this.rolesJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['snapshot_id'] = Variable<String>(snapshotId);
+    map['title_id'] = Variable<int>(titleId);
+    if (!nullToAbsent || ownerCharacterId != null) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    }
+    if (!nullToAbsent || name != null) {
+      map['name'] = Variable<String>(name);
+    }
+    if (!nullToAbsent || rolesJson != null) {
+      map['roles_json'] = Variable<String>(rolesJson);
+    }
+    return map;
+  }
+
+  CorporationTitlesCompanion toCompanion(bool nullToAbsent) {
+    return CorporationTitlesCompanion(
+      snapshotId: Value(snapshotId),
+      titleId: Value(titleId),
+      ownerCharacterId: ownerCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerCharacterId),
+      name: name == null && nullToAbsent ? const Value.absent() : Value(name),
+      rolesJson: rolesJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rolesJson),
+    );
+  }
+
+  factory CorporationTitle.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationTitle(
+      snapshotId: serializer.fromJson<String>(json['snapshotId']),
+      titleId: serializer.fromJson<int>(json['titleId']),
+      ownerCharacterId: serializer.fromJson<int?>(json['ownerCharacterId']),
+      name: serializer.fromJson<String?>(json['name']),
+      rolesJson: serializer.fromJson<String?>(json['rolesJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'snapshotId': serializer.toJson<String>(snapshotId),
+      'titleId': serializer.toJson<int>(titleId),
+      'ownerCharacterId': serializer.toJson<int?>(ownerCharacterId),
+      'name': serializer.toJson<String?>(name),
+      'rolesJson': serializer.toJson<String?>(rolesJson),
+    };
+  }
+
+  CorporationTitle copyWith({
+    String? snapshotId,
+    int? titleId,
+    Value<int?> ownerCharacterId = const Value.absent(),
+    Value<String?> name = const Value.absent(),
+    Value<String?> rolesJson = const Value.absent(),
+  }) => CorporationTitle(
+    snapshotId: snapshotId ?? this.snapshotId,
+    titleId: titleId ?? this.titleId,
+    ownerCharacterId: ownerCharacterId.present
+        ? ownerCharacterId.value
+        : this.ownerCharacterId,
+    name: name.present ? name.value : this.name,
+    rolesJson: rolesJson.present ? rolesJson.value : this.rolesJson,
+  );
+  CorporationTitle copyWithCompanion(CorporationTitlesCompanion data) {
+    return CorporationTitle(
+      snapshotId: data.snapshotId.present
+          ? data.snapshotId.value
+          : this.snapshotId,
+      titleId: data.titleId.present ? data.titleId.value : this.titleId,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      name: data.name.present ? data.name.value : this.name,
+      rolesJson: data.rolesJson.present ? data.rolesJson.value : this.rolesJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationTitle(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('titleId: $titleId, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('name: $name, ')
+          ..write('rolesJson: $rolesJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(snapshotId, titleId, ownerCharacterId, name, rolesJson);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationTitle &&
+          other.snapshotId == this.snapshotId &&
+          other.titleId == this.titleId &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.name == this.name &&
+          other.rolesJson == this.rolesJson);
+}
+
+class CorporationTitlesCompanion extends UpdateCompanion<CorporationTitle> {
+  final Value<String> snapshotId;
+  final Value<int> titleId;
+  final Value<int?> ownerCharacterId;
+  final Value<String?> name;
+  final Value<String?> rolesJson;
+  final Value<int> rowid;
+  const CorporationTitlesCompanion({
+    this.snapshotId = const Value.absent(),
+    this.titleId = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.rolesJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationTitlesCompanion.insert({
+    required String snapshotId,
+    required int titleId,
+    this.ownerCharacterId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.rolesJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : snapshotId = Value(snapshotId),
+       titleId = Value(titleId);
+  static Insertable<CorporationTitle> custom({
+    Expression<String>? snapshotId,
+    Expression<int>? titleId,
+    Expression<int>? ownerCharacterId,
+    Expression<String>? name,
+    Expression<String>? rolesJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (snapshotId != null) 'snapshot_id': snapshotId,
+      if (titleId != null) 'title_id': titleId,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (name != null) 'name': name,
+      if (rolesJson != null) 'roles_json': rolesJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationTitlesCompanion copyWith({
+    Value<String>? snapshotId,
+    Value<int>? titleId,
+    Value<int?>? ownerCharacterId,
+    Value<String?>? name,
+    Value<String?>? rolesJson,
+    Value<int>? rowid,
+  }) {
+    return CorporationTitlesCompanion(
+      snapshotId: snapshotId ?? this.snapshotId,
+      titleId: titleId ?? this.titleId,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      name: name ?? this.name,
+      rolesJson: rolesJson ?? this.rolesJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (snapshotId.present) {
+      map['snapshot_id'] = Variable<String>(snapshotId.value);
+    }
+    if (titleId.present) {
+      map['title_id'] = Variable<int>(titleId.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (rolesJson.present) {
+      map['roles_json'] = Variable<String>(rolesJson.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationTitlesCompanion(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('titleId: $titleId, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('name: $name, ')
+          ..write('rolesJson: $rolesJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationMemberTitlesTable extends CorporationMemberTitles
+    with TableInfo<$CorporationMemberTitlesTable, CorporationMemberTitle> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationMemberTitlesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _snapshotIdMeta = const VerificationMeta(
+    'snapshotId',
+  );
+  @override
+  late final GeneratedColumn<String> snapshotId = GeneratedColumn<String>(
+    'snapshot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _memberIdMeta = const VerificationMeta(
+    'memberId',
+  );
+  @override
+  late final GeneratedColumn<int> memberId = GeneratedColumn<int>(
+    'member_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleIdMeta = const VerificationMeta(
+    'titleId',
+  );
+  @override
+  late final GeneratedColumn<int> titleId = GeneratedColumn<int>(
+    'title_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    snapshotId,
+    memberId,
+    titleId,
+    ownerCharacterId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_member_titles';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationMemberTitle> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('snapshot_id')) {
+      context.handle(
+        _snapshotIdMeta,
+        snapshotId.isAcceptableOrUnknown(data['snapshot_id']!, _snapshotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_snapshotIdMeta);
+    }
+    if (data.containsKey('member_id')) {
+      context.handle(
+        _memberIdMeta,
+        memberId.isAcceptableOrUnknown(data['member_id']!, _memberIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_memberIdMeta);
+    }
+    if (data.containsKey('title_id')) {
+      context.handle(
+        _titleIdMeta,
+        titleId.isAcceptableOrUnknown(data['title_id']!, _titleIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleIdMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {snapshotId, memberId, titleId};
+  @override
+  CorporationMemberTitle map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationMemberTitle(
+      snapshotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}snapshot_id'],
+      )!,
+      memberId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}member_id'],
+      )!,
+      titleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}title_id'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationMemberTitlesTable createAlias(String alias) {
+    return $CorporationMemberTitlesTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationMemberTitle extends DataClass
+    implements Insertable<CorporationMemberTitle> {
+  final String snapshotId;
+  final int memberId;
+  final int titleId;
+  final int? ownerCharacterId;
+  const CorporationMemberTitle({
+    required this.snapshotId,
+    required this.memberId,
+    required this.titleId,
+    this.ownerCharacterId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['snapshot_id'] = Variable<String>(snapshotId);
+    map['member_id'] = Variable<int>(memberId);
+    map['title_id'] = Variable<int>(titleId);
+    if (!nullToAbsent || ownerCharacterId != null) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    }
+    return map;
+  }
+
+  CorporationMemberTitlesCompanion toCompanion(bool nullToAbsent) {
+    return CorporationMemberTitlesCompanion(
+      snapshotId: Value(snapshotId),
+      memberId: Value(memberId),
+      titleId: Value(titleId),
+      ownerCharacterId: ownerCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerCharacterId),
+    );
+  }
+
+  factory CorporationMemberTitle.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationMemberTitle(
+      snapshotId: serializer.fromJson<String>(json['snapshotId']),
+      memberId: serializer.fromJson<int>(json['memberId']),
+      titleId: serializer.fromJson<int>(json['titleId']),
+      ownerCharacterId: serializer.fromJson<int?>(json['ownerCharacterId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'snapshotId': serializer.toJson<String>(snapshotId),
+      'memberId': serializer.toJson<int>(memberId),
+      'titleId': serializer.toJson<int>(titleId),
+      'ownerCharacterId': serializer.toJson<int?>(ownerCharacterId),
+    };
+  }
+
+  CorporationMemberTitle copyWith({
+    String? snapshotId,
+    int? memberId,
+    int? titleId,
+    Value<int?> ownerCharacterId = const Value.absent(),
+  }) => CorporationMemberTitle(
+    snapshotId: snapshotId ?? this.snapshotId,
+    memberId: memberId ?? this.memberId,
+    titleId: titleId ?? this.titleId,
+    ownerCharacterId: ownerCharacterId.present
+        ? ownerCharacterId.value
+        : this.ownerCharacterId,
+  );
+  CorporationMemberTitle copyWithCompanion(
+    CorporationMemberTitlesCompanion data,
+  ) {
+    return CorporationMemberTitle(
+      snapshotId: data.snapshotId.present
+          ? data.snapshotId.value
+          : this.snapshotId,
+      memberId: data.memberId.present ? data.memberId.value : this.memberId,
+      titleId: data.titleId.present ? data.titleId.value : this.titleId,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationMemberTitle(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('memberId: $memberId, ')
+          ..write('titleId: $titleId, ')
+          ..write('ownerCharacterId: $ownerCharacterId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(snapshotId, memberId, titleId, ownerCharacterId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationMemberTitle &&
+          other.snapshotId == this.snapshotId &&
+          other.memberId == this.memberId &&
+          other.titleId == this.titleId &&
+          other.ownerCharacterId == this.ownerCharacterId);
+}
+
+class CorporationMemberTitlesCompanion
+    extends UpdateCompanion<CorporationMemberTitle> {
+  final Value<String> snapshotId;
+  final Value<int> memberId;
+  final Value<int> titleId;
+  final Value<int?> ownerCharacterId;
+  final Value<int> rowid;
+  const CorporationMemberTitlesCompanion({
+    this.snapshotId = const Value.absent(),
+    this.memberId = const Value.absent(),
+    this.titleId = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationMemberTitlesCompanion.insert({
+    required String snapshotId,
+    required int memberId,
+    required int titleId,
+    this.ownerCharacterId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : snapshotId = Value(snapshotId),
+       memberId = Value(memberId),
+       titleId = Value(titleId);
+  static Insertable<CorporationMemberTitle> custom({
+    Expression<String>? snapshotId,
+    Expression<int>? memberId,
+    Expression<int>? titleId,
+    Expression<int>? ownerCharacterId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (snapshotId != null) 'snapshot_id': snapshotId,
+      if (memberId != null) 'member_id': memberId,
+      if (titleId != null) 'title_id': titleId,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationMemberTitlesCompanion copyWith({
+    Value<String>? snapshotId,
+    Value<int>? memberId,
+    Value<int>? titleId,
+    Value<int?>? ownerCharacterId,
+    Value<int>? rowid,
+  }) {
+    return CorporationMemberTitlesCompanion(
+      snapshotId: snapshotId ?? this.snapshotId,
+      memberId: memberId ?? this.memberId,
+      titleId: titleId ?? this.titleId,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (snapshotId.present) {
+      map['snapshot_id'] = Variable<String>(snapshotId.value);
+    }
+    if (memberId.present) {
+      map['member_id'] = Variable<int>(memberId.value);
+    }
+    if (titleId.present) {
+      map['title_id'] = Variable<int>(titleId.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationMemberTitlesCompanion(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('memberId: $memberId, ')
+          ..write('titleId: $titleId, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationOwnStandingsTable extends CorporationOwnStandings
+    with TableInfo<$CorporationOwnStandingsTable, CorporationOwnStanding> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationOwnStandingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _snapshotIdMeta = const VerificationMeta(
+    'snapshotId',
+  );
+  @override
+  late final GeneratedColumn<String> snapshotId = GeneratedColumn<String>(
+    'snapshot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceKindMeta = const VerificationMeta(
+    'sourceKind',
+  );
+  @override
+  late final GeneratedColumn<String> sourceKind = GeneratedColumn<String>(
+    'source_kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _entityIdMeta = const VerificationMeta(
+    'entityId',
+  );
+  @override
+  late final GeneratedColumn<int> entityId = GeneratedColumn<int>(
+    'entity_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _standingMeta = const VerificationMeta(
+    'standing',
+  );
+  @override
+  late final GeneratedColumn<String> standing = GeneratedColumn<String>(
+    'standing',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    snapshotId,
+    sourceKind,
+    entityId,
+    ownerCharacterId,
+    standing,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_own_standings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationOwnStanding> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('snapshot_id')) {
+      context.handle(
+        _snapshotIdMeta,
+        snapshotId.isAcceptableOrUnknown(data['snapshot_id']!, _snapshotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_snapshotIdMeta);
+    }
+    if (data.containsKey('source_kind')) {
+      context.handle(
+        _sourceKindMeta,
+        sourceKind.isAcceptableOrUnknown(data['source_kind']!, _sourceKindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceKindMeta);
+    }
+    if (data.containsKey('entity_id')) {
+      context.handle(
+        _entityIdMeta,
+        entityId.isAcceptableOrUnknown(data['entity_id']!, _entityIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_entityIdMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('standing')) {
+      context.handle(
+        _standingMeta,
+        standing.isAcceptableOrUnknown(data['standing']!, _standingMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {snapshotId, sourceKind, entityId};
+  @override
+  CorporationOwnStanding map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationOwnStanding(
+      snapshotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}snapshot_id'],
+      )!,
+      sourceKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_kind'],
+      )!,
+      entityId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}entity_id'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      ),
+      standing: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}standing'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationOwnStandingsTable createAlias(String alias) {
+    return $CorporationOwnStandingsTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationOwnStanding extends DataClass
+    implements Insertable<CorporationOwnStanding> {
+  final String snapshotId;
+  final String sourceKind;
+  final int entityId;
+  final int? ownerCharacterId;
+  final String? standing;
+  const CorporationOwnStanding({
+    required this.snapshotId,
+    required this.sourceKind,
+    required this.entityId,
+    this.ownerCharacterId,
+    this.standing,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['snapshot_id'] = Variable<String>(snapshotId);
+    map['source_kind'] = Variable<String>(sourceKind);
+    map['entity_id'] = Variable<int>(entityId);
+    if (!nullToAbsent || ownerCharacterId != null) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    }
+    if (!nullToAbsent || standing != null) {
+      map['standing'] = Variable<String>(standing);
+    }
+    return map;
+  }
+
+  CorporationOwnStandingsCompanion toCompanion(bool nullToAbsent) {
+    return CorporationOwnStandingsCompanion(
+      snapshotId: Value(snapshotId),
+      sourceKind: Value(sourceKind),
+      entityId: Value(entityId),
+      ownerCharacterId: ownerCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerCharacterId),
+      standing: standing == null && nullToAbsent
+          ? const Value.absent()
+          : Value(standing),
+    );
+  }
+
+  factory CorporationOwnStanding.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationOwnStanding(
+      snapshotId: serializer.fromJson<String>(json['snapshotId']),
+      sourceKind: serializer.fromJson<String>(json['sourceKind']),
+      entityId: serializer.fromJson<int>(json['entityId']),
+      ownerCharacterId: serializer.fromJson<int?>(json['ownerCharacterId']),
+      standing: serializer.fromJson<String?>(json['standing']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'snapshotId': serializer.toJson<String>(snapshotId),
+      'sourceKind': serializer.toJson<String>(sourceKind),
+      'entityId': serializer.toJson<int>(entityId),
+      'ownerCharacterId': serializer.toJson<int?>(ownerCharacterId),
+      'standing': serializer.toJson<String?>(standing),
+    };
+  }
+
+  CorporationOwnStanding copyWith({
+    String? snapshotId,
+    String? sourceKind,
+    int? entityId,
+    Value<int?> ownerCharacterId = const Value.absent(),
+    Value<String?> standing = const Value.absent(),
+  }) => CorporationOwnStanding(
+    snapshotId: snapshotId ?? this.snapshotId,
+    sourceKind: sourceKind ?? this.sourceKind,
+    entityId: entityId ?? this.entityId,
+    ownerCharacterId: ownerCharacterId.present
+        ? ownerCharacterId.value
+        : this.ownerCharacterId,
+    standing: standing.present ? standing.value : this.standing,
+  );
+  CorporationOwnStanding copyWithCompanion(
+    CorporationOwnStandingsCompanion data,
+  ) {
+    return CorporationOwnStanding(
+      snapshotId: data.snapshotId.present
+          ? data.snapshotId.value
+          : this.snapshotId,
+      sourceKind: data.sourceKind.present
+          ? data.sourceKind.value
+          : this.sourceKind,
+      entityId: data.entityId.present ? data.entityId.value : this.entityId,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      standing: data.standing.present ? data.standing.value : this.standing,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationOwnStanding(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('sourceKind: $sourceKind, ')
+          ..write('entityId: $entityId, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('standing: $standing')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(snapshotId, sourceKind, entityId, ownerCharacterId, standing);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationOwnStanding &&
+          other.snapshotId == this.snapshotId &&
+          other.sourceKind == this.sourceKind &&
+          other.entityId == this.entityId &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.standing == this.standing);
+}
+
+class CorporationOwnStandingsCompanion
+    extends UpdateCompanion<CorporationOwnStanding> {
+  final Value<String> snapshotId;
+  final Value<String> sourceKind;
+  final Value<int> entityId;
+  final Value<int?> ownerCharacterId;
+  final Value<String?> standing;
+  final Value<int> rowid;
+  const CorporationOwnStandingsCompanion({
+    this.snapshotId = const Value.absent(),
+    this.sourceKind = const Value.absent(),
+    this.entityId = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.standing = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationOwnStandingsCompanion.insert({
+    required String snapshotId,
+    required String sourceKind,
+    required int entityId,
+    this.ownerCharacterId = const Value.absent(),
+    this.standing = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : snapshotId = Value(snapshotId),
+       sourceKind = Value(sourceKind),
+       entityId = Value(entityId);
+  static Insertable<CorporationOwnStanding> custom({
+    Expression<String>? snapshotId,
+    Expression<String>? sourceKind,
+    Expression<int>? entityId,
+    Expression<int>? ownerCharacterId,
+    Expression<String>? standing,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (snapshotId != null) 'snapshot_id': snapshotId,
+      if (sourceKind != null) 'source_kind': sourceKind,
+      if (entityId != null) 'entity_id': entityId,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (standing != null) 'standing': standing,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationOwnStandingsCompanion copyWith({
+    Value<String>? snapshotId,
+    Value<String>? sourceKind,
+    Value<int>? entityId,
+    Value<int?>? ownerCharacterId,
+    Value<String?>? standing,
+    Value<int>? rowid,
+  }) {
+    return CorporationOwnStandingsCompanion(
+      snapshotId: snapshotId ?? this.snapshotId,
+      sourceKind: sourceKind ?? this.sourceKind,
+      entityId: entityId ?? this.entityId,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      standing: standing ?? this.standing,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (snapshotId.present) {
+      map['snapshot_id'] = Variable<String>(snapshotId.value);
+    }
+    if (sourceKind.present) {
+      map['source_kind'] = Variable<String>(sourceKind.value);
+    }
+    if (entityId.present) {
+      map['entity_id'] = Variable<int>(entityId.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (standing.present) {
+      map['standing'] = Variable<String>(standing.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationOwnStandingsCompanion(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('sourceKind: $sourceKind, ')
+          ..write('entityId: $entityId, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('standing: $standing, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationDivisionNamesTable extends CorporationDivisionNames
+    with TableInfo<$CorporationDivisionNamesTable, CorporationDivisionName> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationDivisionNamesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _snapshotIdMeta = const VerificationMeta(
+    'snapshotId',
+  );
+  @override
+  late final GeneratedColumn<String> snapshotId = GeneratedColumn<String>(
+    'snapshot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _divisionMeta = const VerificationMeta(
+    'division',
+  );
+  @override
+  late final GeneratedColumn<int> division = GeneratedColumn<int>(
+    'division',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    snapshotId,
+    kind,
+    division,
+    ownerCharacterId,
+    name,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_division_names';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationDivisionName> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('snapshot_id')) {
+      context.handle(
+        _snapshotIdMeta,
+        snapshotId.isAcceptableOrUnknown(data['snapshot_id']!, _snapshotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_snapshotIdMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('division')) {
+      context.handle(
+        _divisionMeta,
+        division.isAcceptableOrUnknown(data['division']!, _divisionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_divisionMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {snapshotId, kind, division};
+  @override
+  CorporationDivisionName map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationDivisionName(
+      snapshotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}snapshot_id'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      division: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}division'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      ),
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationDivisionNamesTable createAlias(String alias) {
+    return $CorporationDivisionNamesTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationDivisionName extends DataClass
+    implements Insertable<CorporationDivisionName> {
+  final String snapshotId;
+  final String kind;
+  final int division;
+  final int? ownerCharacterId;
+  final String? name;
+  const CorporationDivisionName({
+    required this.snapshotId,
+    required this.kind,
+    required this.division,
+    this.ownerCharacterId,
+    this.name,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['snapshot_id'] = Variable<String>(snapshotId);
+    map['kind'] = Variable<String>(kind);
+    map['division'] = Variable<int>(division);
+    if (!nullToAbsent || ownerCharacterId != null) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    }
+    if (!nullToAbsent || name != null) {
+      map['name'] = Variable<String>(name);
+    }
+    return map;
+  }
+
+  CorporationDivisionNamesCompanion toCompanion(bool nullToAbsent) {
+    return CorporationDivisionNamesCompanion(
+      snapshotId: Value(snapshotId),
+      kind: Value(kind),
+      division: Value(division),
+      ownerCharacterId: ownerCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerCharacterId),
+      name: name == null && nullToAbsent ? const Value.absent() : Value(name),
+    );
+  }
+
+  factory CorporationDivisionName.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationDivisionName(
+      snapshotId: serializer.fromJson<String>(json['snapshotId']),
+      kind: serializer.fromJson<String>(json['kind']),
+      division: serializer.fromJson<int>(json['division']),
+      ownerCharacterId: serializer.fromJson<int?>(json['ownerCharacterId']),
+      name: serializer.fromJson<String?>(json['name']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'snapshotId': serializer.toJson<String>(snapshotId),
+      'kind': serializer.toJson<String>(kind),
+      'division': serializer.toJson<int>(division),
+      'ownerCharacterId': serializer.toJson<int?>(ownerCharacterId),
+      'name': serializer.toJson<String?>(name),
+    };
+  }
+
+  CorporationDivisionName copyWith({
+    String? snapshotId,
+    String? kind,
+    int? division,
+    Value<int?> ownerCharacterId = const Value.absent(),
+    Value<String?> name = const Value.absent(),
+  }) => CorporationDivisionName(
+    snapshotId: snapshotId ?? this.snapshotId,
+    kind: kind ?? this.kind,
+    division: division ?? this.division,
+    ownerCharacterId: ownerCharacterId.present
+        ? ownerCharacterId.value
+        : this.ownerCharacterId,
+    name: name.present ? name.value : this.name,
+  );
+  CorporationDivisionName copyWithCompanion(
+    CorporationDivisionNamesCompanion data,
+  ) {
+    return CorporationDivisionName(
+      snapshotId: data.snapshotId.present
+          ? data.snapshotId.value
+          : this.snapshotId,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      division: data.division.present ? data.division.value : this.division,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      name: data.name.present ? data.name.value : this.name,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationDivisionName(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('kind: $kind, ')
+          ..write('division: $division, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('name: $name')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(snapshotId, kind, division, ownerCharacterId, name);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationDivisionName &&
+          other.snapshotId == this.snapshotId &&
+          other.kind == this.kind &&
+          other.division == this.division &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.name == this.name);
+}
+
+class CorporationDivisionNamesCompanion
+    extends UpdateCompanion<CorporationDivisionName> {
+  final Value<String> snapshotId;
+  final Value<String> kind;
+  final Value<int> division;
+  final Value<int?> ownerCharacterId;
+  final Value<String?> name;
+  final Value<int> rowid;
+  const CorporationDivisionNamesCompanion({
+    this.snapshotId = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.division = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationDivisionNamesCompanion.insert({
+    required String snapshotId,
+    required String kind,
+    required int division,
+    this.ownerCharacterId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : snapshotId = Value(snapshotId),
+       kind = Value(kind),
+       division = Value(division);
+  static Insertable<CorporationDivisionName> custom({
+    Expression<String>? snapshotId,
+    Expression<String>? kind,
+    Expression<int>? division,
+    Expression<int>? ownerCharacterId,
+    Expression<String>? name,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (snapshotId != null) 'snapshot_id': snapshotId,
+      if (kind != null) 'kind': kind,
+      if (division != null) 'division': division,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (name != null) 'name': name,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationDivisionNamesCompanion copyWith({
+    Value<String>? snapshotId,
+    Value<String>? kind,
+    Value<int>? division,
+    Value<int?>? ownerCharacterId,
+    Value<String?>? name,
+    Value<int>? rowid,
+  }) {
+    return CorporationDivisionNamesCompanion(
+      snapshotId: snapshotId ?? this.snapshotId,
+      kind: kind ?? this.kind,
+      division: division ?? this.division,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      name: name ?? this.name,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (snapshotId.present) {
+      map['snapshot_id'] = Variable<String>(snapshotId.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (division.present) {
+      map['division'] = Variable<int>(division.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationDivisionNamesCompanion(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('kind: $kind, ')
+          ..write('division: $division, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('name: $name, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationAssetsTable extends CorporationAssets
+    with TableInfo<$CorporationAssetsTable, CorporationAsset> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationAssetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _snapshotIdMeta = const VerificationMeta(
+    'snapshotId',
+  );
+  @override
+  late final GeneratedColumn<String> snapshotId = GeneratedColumn<String>(
+    'snapshot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _itemKeyMeta = const VerificationMeta(
+    'itemKey',
+  );
+  @override
+  late final GeneratedColumn<String> itemKey = GeneratedColumn<String>(
+    'item_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+    'type_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _quantityMeta = const VerificationMeta(
+    'quantity',
+  );
+  @override
+  late final GeneratedColumn<String> quantity = GeneratedColumn<String>(
+    'quantity',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _quantityUnknownMeta = const VerificationMeta(
+    'quantityUnknown',
+  );
+  @override
+  late final GeneratedColumn<bool> quantityUnknown = GeneratedColumn<bool>(
+    'quantity_unknown',
+    aliasedName,
+    true,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("quantity_unknown" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _isSingletonMeta = const VerificationMeta(
+    'isSingleton',
+  );
+  @override
+  late final GeneratedColumn<bool> isSingleton = GeneratedColumn<bool>(
+    'is_singleton',
+    aliasedName,
+    true,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_singleton" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _isBlueprintCopyMeta = const VerificationMeta(
+    'isBlueprintCopy',
+  );
+  @override
+  late final GeneratedColumn<bool> isBlueprintCopy = GeneratedColumn<bool>(
+    'is_blueprint_copy',
+    aliasedName,
+    true,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_blueprint_copy" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _locationKeyMeta = const VerificationMeta(
+    'locationKey',
+  );
+  @override
+  late final GeneratedColumn<String> locationKey = GeneratedColumn<String>(
+    'location_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _locationTypeMeta = const VerificationMeta(
+    'locationType',
+  );
+  @override
+  late final GeneratedColumn<String> locationType = GeneratedColumn<String>(
+    'location_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _parentKeyMeta = const VerificationMeta(
+    'parentKey',
+  );
+  @override
+  late final GeneratedColumn<String> parentKey = GeneratedColumn<String>(
+    'parent_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _locationFlagMeta = const VerificationMeta(
+    'locationFlag',
+  );
+  @override
+  late final GeneratedColumn<String> locationFlag = GeneratedColumn<String>(
+    'location_flag',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    snapshotId,
+    itemKey,
+    ownerCharacterId,
+    typeId,
+    quantity,
+    quantityUnknown,
+    isSingleton,
+    isBlueprintCopy,
+    locationKey,
+    locationType,
+    parentKey,
+    locationFlag,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_assets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationAsset> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('snapshot_id')) {
+      context.handle(
+        _snapshotIdMeta,
+        snapshotId.isAcceptableOrUnknown(data['snapshot_id']!, _snapshotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_snapshotIdMeta);
+    }
+    if (data.containsKey('item_key')) {
+      context.handle(
+        _itemKeyMeta,
+        itemKey.isAcceptableOrUnknown(data['item_key']!, _itemKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_itemKeyMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('type_id')) {
+      context.handle(
+        _typeIdMeta,
+        typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta),
+      );
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(
+        _quantityMeta,
+        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
+      );
+    }
+    if (data.containsKey('quantity_unknown')) {
+      context.handle(
+        _quantityUnknownMeta,
+        quantityUnknown.isAcceptableOrUnknown(
+          data['quantity_unknown']!,
+          _quantityUnknownMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_singleton')) {
+      context.handle(
+        _isSingletonMeta,
+        isSingleton.isAcceptableOrUnknown(
+          data['is_singleton']!,
+          _isSingletonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_blueprint_copy')) {
+      context.handle(
+        _isBlueprintCopyMeta,
+        isBlueprintCopy.isAcceptableOrUnknown(
+          data['is_blueprint_copy']!,
+          _isBlueprintCopyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('location_key')) {
+      context.handle(
+        _locationKeyMeta,
+        locationKey.isAcceptableOrUnknown(
+          data['location_key']!,
+          _locationKeyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('location_type')) {
+      context.handle(
+        _locationTypeMeta,
+        locationType.isAcceptableOrUnknown(
+          data['location_type']!,
+          _locationTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('parent_key')) {
+      context.handle(
+        _parentKeyMeta,
+        parentKey.isAcceptableOrUnknown(data['parent_key']!, _parentKeyMeta),
+      );
+    }
+    if (data.containsKey('location_flag')) {
+      context.handle(
+        _locationFlagMeta,
+        locationFlag.isAcceptableOrUnknown(
+          data['location_flag']!,
+          _locationFlagMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {snapshotId, itemKey};
+  @override
+  CorporationAsset map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationAsset(
+      snapshotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}snapshot_id'],
+      )!,
+      itemKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}item_key'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      ),
+      typeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}type_id'],
+      ),
+      quantity: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}quantity'],
+      ),
+      quantityUnknown: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}quantity_unknown'],
+      ),
+      isSingleton: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_singleton'],
+      ),
+      isBlueprintCopy: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_blueprint_copy'],
+      ),
+      locationKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}location_key'],
+      ),
+      locationType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}location_type'],
+      ),
+      parentKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}parent_key'],
+      ),
+      locationFlag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}location_flag'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationAssetsTable createAlias(String alias) {
+    return $CorporationAssetsTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationAsset extends DataClass
+    implements Insertable<CorporationAsset> {
+  final String snapshotId;
+  final String itemKey;
+  final int? ownerCharacterId;
+  final int? typeId;
+  final String? quantity;
+  final bool? quantityUnknown;
+  final bool? isSingleton;
+  final bool? isBlueprintCopy;
+  final String? locationKey;
+  final String? locationType;
+  final String? parentKey;
+  final String? locationFlag;
+  const CorporationAsset({
+    required this.snapshotId,
+    required this.itemKey,
+    this.ownerCharacterId,
+    this.typeId,
+    this.quantity,
+    this.quantityUnknown,
+    this.isSingleton,
+    this.isBlueprintCopy,
+    this.locationKey,
+    this.locationType,
+    this.parentKey,
+    this.locationFlag,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['snapshot_id'] = Variable<String>(snapshotId);
+    map['item_key'] = Variable<String>(itemKey);
+    if (!nullToAbsent || ownerCharacterId != null) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    }
+    if (!nullToAbsent || typeId != null) {
+      map['type_id'] = Variable<int>(typeId);
+    }
+    if (!nullToAbsent || quantity != null) {
+      map['quantity'] = Variable<String>(quantity);
+    }
+    if (!nullToAbsent || quantityUnknown != null) {
+      map['quantity_unknown'] = Variable<bool>(quantityUnknown);
+    }
+    if (!nullToAbsent || isSingleton != null) {
+      map['is_singleton'] = Variable<bool>(isSingleton);
+    }
+    if (!nullToAbsent || isBlueprintCopy != null) {
+      map['is_blueprint_copy'] = Variable<bool>(isBlueprintCopy);
+    }
+    if (!nullToAbsent || locationKey != null) {
+      map['location_key'] = Variable<String>(locationKey);
+    }
+    if (!nullToAbsent || locationType != null) {
+      map['location_type'] = Variable<String>(locationType);
+    }
+    if (!nullToAbsent || parentKey != null) {
+      map['parent_key'] = Variable<String>(parentKey);
+    }
+    if (!nullToAbsent || locationFlag != null) {
+      map['location_flag'] = Variable<String>(locationFlag);
+    }
+    return map;
+  }
+
+  CorporationAssetsCompanion toCompanion(bool nullToAbsent) {
+    return CorporationAssetsCompanion(
+      snapshotId: Value(snapshotId),
+      itemKey: Value(itemKey),
+      ownerCharacterId: ownerCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerCharacterId),
+      typeId: typeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(typeId),
+      quantity: quantity == null && nullToAbsent
+          ? const Value.absent()
+          : Value(quantity),
+      quantityUnknown: quantityUnknown == null && nullToAbsent
+          ? const Value.absent()
+          : Value(quantityUnknown),
+      isSingleton: isSingleton == null && nullToAbsent
+          ? const Value.absent()
+          : Value(isSingleton),
+      isBlueprintCopy: isBlueprintCopy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(isBlueprintCopy),
+      locationKey: locationKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(locationKey),
+      locationType: locationType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(locationType),
+      parentKey: parentKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentKey),
+      locationFlag: locationFlag == null && nullToAbsent
+          ? const Value.absent()
+          : Value(locationFlag),
+    );
+  }
+
+  factory CorporationAsset.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationAsset(
+      snapshotId: serializer.fromJson<String>(json['snapshotId']),
+      itemKey: serializer.fromJson<String>(json['itemKey']),
+      ownerCharacterId: serializer.fromJson<int?>(json['ownerCharacterId']),
+      typeId: serializer.fromJson<int?>(json['typeId']),
+      quantity: serializer.fromJson<String?>(json['quantity']),
+      quantityUnknown: serializer.fromJson<bool?>(json['quantityUnknown']),
+      isSingleton: serializer.fromJson<bool?>(json['isSingleton']),
+      isBlueprintCopy: serializer.fromJson<bool?>(json['isBlueprintCopy']),
+      locationKey: serializer.fromJson<String?>(json['locationKey']),
+      locationType: serializer.fromJson<String?>(json['locationType']),
+      parentKey: serializer.fromJson<String?>(json['parentKey']),
+      locationFlag: serializer.fromJson<String?>(json['locationFlag']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'snapshotId': serializer.toJson<String>(snapshotId),
+      'itemKey': serializer.toJson<String>(itemKey),
+      'ownerCharacterId': serializer.toJson<int?>(ownerCharacterId),
+      'typeId': serializer.toJson<int?>(typeId),
+      'quantity': serializer.toJson<String?>(quantity),
+      'quantityUnknown': serializer.toJson<bool?>(quantityUnknown),
+      'isSingleton': serializer.toJson<bool?>(isSingleton),
+      'isBlueprintCopy': serializer.toJson<bool?>(isBlueprintCopy),
+      'locationKey': serializer.toJson<String?>(locationKey),
+      'locationType': serializer.toJson<String?>(locationType),
+      'parentKey': serializer.toJson<String?>(parentKey),
+      'locationFlag': serializer.toJson<String?>(locationFlag),
+    };
+  }
+
+  CorporationAsset copyWith({
+    String? snapshotId,
+    String? itemKey,
+    Value<int?> ownerCharacterId = const Value.absent(),
+    Value<int?> typeId = const Value.absent(),
+    Value<String?> quantity = const Value.absent(),
+    Value<bool?> quantityUnknown = const Value.absent(),
+    Value<bool?> isSingleton = const Value.absent(),
+    Value<bool?> isBlueprintCopy = const Value.absent(),
+    Value<String?> locationKey = const Value.absent(),
+    Value<String?> locationType = const Value.absent(),
+    Value<String?> parentKey = const Value.absent(),
+    Value<String?> locationFlag = const Value.absent(),
+  }) => CorporationAsset(
+    snapshotId: snapshotId ?? this.snapshotId,
+    itemKey: itemKey ?? this.itemKey,
+    ownerCharacterId: ownerCharacterId.present
+        ? ownerCharacterId.value
+        : this.ownerCharacterId,
+    typeId: typeId.present ? typeId.value : this.typeId,
+    quantity: quantity.present ? quantity.value : this.quantity,
+    quantityUnknown: quantityUnknown.present
+        ? quantityUnknown.value
+        : this.quantityUnknown,
+    isSingleton: isSingleton.present ? isSingleton.value : this.isSingleton,
+    isBlueprintCopy: isBlueprintCopy.present
+        ? isBlueprintCopy.value
+        : this.isBlueprintCopy,
+    locationKey: locationKey.present ? locationKey.value : this.locationKey,
+    locationType: locationType.present ? locationType.value : this.locationType,
+    parentKey: parentKey.present ? parentKey.value : this.parentKey,
+    locationFlag: locationFlag.present ? locationFlag.value : this.locationFlag,
+  );
+  CorporationAsset copyWithCompanion(CorporationAssetsCompanion data) {
+    return CorporationAsset(
+      snapshotId: data.snapshotId.present
+          ? data.snapshotId.value
+          : this.snapshotId,
+      itemKey: data.itemKey.present ? data.itemKey.value : this.itemKey,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      quantityUnknown: data.quantityUnknown.present
+          ? data.quantityUnknown.value
+          : this.quantityUnknown,
+      isSingleton: data.isSingleton.present
+          ? data.isSingleton.value
+          : this.isSingleton,
+      isBlueprintCopy: data.isBlueprintCopy.present
+          ? data.isBlueprintCopy.value
+          : this.isBlueprintCopy,
+      locationKey: data.locationKey.present
+          ? data.locationKey.value
+          : this.locationKey,
+      locationType: data.locationType.present
+          ? data.locationType.value
+          : this.locationType,
+      parentKey: data.parentKey.present ? data.parentKey.value : this.parentKey,
+      locationFlag: data.locationFlag.present
+          ? data.locationFlag.value
+          : this.locationFlag,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationAsset(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('itemKey: $itemKey, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('typeId: $typeId, ')
+          ..write('quantity: $quantity, ')
+          ..write('quantityUnknown: $quantityUnknown, ')
+          ..write('isSingleton: $isSingleton, ')
+          ..write('isBlueprintCopy: $isBlueprintCopy, ')
+          ..write('locationKey: $locationKey, ')
+          ..write('locationType: $locationType, ')
+          ..write('parentKey: $parentKey, ')
+          ..write('locationFlag: $locationFlag')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    snapshotId,
+    itemKey,
+    ownerCharacterId,
+    typeId,
+    quantity,
+    quantityUnknown,
+    isSingleton,
+    isBlueprintCopy,
+    locationKey,
+    locationType,
+    parentKey,
+    locationFlag,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationAsset &&
+          other.snapshotId == this.snapshotId &&
+          other.itemKey == this.itemKey &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.typeId == this.typeId &&
+          other.quantity == this.quantity &&
+          other.quantityUnknown == this.quantityUnknown &&
+          other.isSingleton == this.isSingleton &&
+          other.isBlueprintCopy == this.isBlueprintCopy &&
+          other.locationKey == this.locationKey &&
+          other.locationType == this.locationType &&
+          other.parentKey == this.parentKey &&
+          other.locationFlag == this.locationFlag);
+}
+
+class CorporationAssetsCompanion extends UpdateCompanion<CorporationAsset> {
+  final Value<String> snapshotId;
+  final Value<String> itemKey;
+  final Value<int?> ownerCharacterId;
+  final Value<int?> typeId;
+  final Value<String?> quantity;
+  final Value<bool?> quantityUnknown;
+  final Value<bool?> isSingleton;
+  final Value<bool?> isBlueprintCopy;
+  final Value<String?> locationKey;
+  final Value<String?> locationType;
+  final Value<String?> parentKey;
+  final Value<String?> locationFlag;
+  final Value<int> rowid;
+  const CorporationAssetsCompanion({
+    this.snapshotId = const Value.absent(),
+    this.itemKey = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.typeId = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.quantityUnknown = const Value.absent(),
+    this.isSingleton = const Value.absent(),
+    this.isBlueprintCopy = const Value.absent(),
+    this.locationKey = const Value.absent(),
+    this.locationType = const Value.absent(),
+    this.parentKey = const Value.absent(),
+    this.locationFlag = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationAssetsCompanion.insert({
+    required String snapshotId,
+    required String itemKey,
+    this.ownerCharacterId = const Value.absent(),
+    this.typeId = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.quantityUnknown = const Value.absent(),
+    this.isSingleton = const Value.absent(),
+    this.isBlueprintCopy = const Value.absent(),
+    this.locationKey = const Value.absent(),
+    this.locationType = const Value.absent(),
+    this.parentKey = const Value.absent(),
+    this.locationFlag = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : snapshotId = Value(snapshotId),
+       itemKey = Value(itemKey);
+  static Insertable<CorporationAsset> custom({
+    Expression<String>? snapshotId,
+    Expression<String>? itemKey,
+    Expression<int>? ownerCharacterId,
+    Expression<int>? typeId,
+    Expression<String>? quantity,
+    Expression<bool>? quantityUnknown,
+    Expression<bool>? isSingleton,
+    Expression<bool>? isBlueprintCopy,
+    Expression<String>? locationKey,
+    Expression<String>? locationType,
+    Expression<String>? parentKey,
+    Expression<String>? locationFlag,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (snapshotId != null) 'snapshot_id': snapshotId,
+      if (itemKey != null) 'item_key': itemKey,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (typeId != null) 'type_id': typeId,
+      if (quantity != null) 'quantity': quantity,
+      if (quantityUnknown != null) 'quantity_unknown': quantityUnknown,
+      if (isSingleton != null) 'is_singleton': isSingleton,
+      if (isBlueprintCopy != null) 'is_blueprint_copy': isBlueprintCopy,
+      if (locationKey != null) 'location_key': locationKey,
+      if (locationType != null) 'location_type': locationType,
+      if (parentKey != null) 'parent_key': parentKey,
+      if (locationFlag != null) 'location_flag': locationFlag,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationAssetsCompanion copyWith({
+    Value<String>? snapshotId,
+    Value<String>? itemKey,
+    Value<int?>? ownerCharacterId,
+    Value<int?>? typeId,
+    Value<String?>? quantity,
+    Value<bool?>? quantityUnknown,
+    Value<bool?>? isSingleton,
+    Value<bool?>? isBlueprintCopy,
+    Value<String?>? locationKey,
+    Value<String?>? locationType,
+    Value<String?>? parentKey,
+    Value<String?>? locationFlag,
+    Value<int>? rowid,
+  }) {
+    return CorporationAssetsCompanion(
+      snapshotId: snapshotId ?? this.snapshotId,
+      itemKey: itemKey ?? this.itemKey,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      typeId: typeId ?? this.typeId,
+      quantity: quantity ?? this.quantity,
+      quantityUnknown: quantityUnknown ?? this.quantityUnknown,
+      isSingleton: isSingleton ?? this.isSingleton,
+      isBlueprintCopy: isBlueprintCopy ?? this.isBlueprintCopy,
+      locationKey: locationKey ?? this.locationKey,
+      locationType: locationType ?? this.locationType,
+      parentKey: parentKey ?? this.parentKey,
+      locationFlag: locationFlag ?? this.locationFlag,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (snapshotId.present) {
+      map['snapshot_id'] = Variable<String>(snapshotId.value);
+    }
+    if (itemKey.present) {
+      map['item_key'] = Variable<String>(itemKey.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<String>(quantity.value);
+    }
+    if (quantityUnknown.present) {
+      map['quantity_unknown'] = Variable<bool>(quantityUnknown.value);
+    }
+    if (isSingleton.present) {
+      map['is_singleton'] = Variable<bool>(isSingleton.value);
+    }
+    if (isBlueprintCopy.present) {
+      map['is_blueprint_copy'] = Variable<bool>(isBlueprintCopy.value);
+    }
+    if (locationKey.present) {
+      map['location_key'] = Variable<String>(locationKey.value);
+    }
+    if (locationType.present) {
+      map['location_type'] = Variable<String>(locationType.value);
+    }
+    if (parentKey.present) {
+      map['parent_key'] = Variable<String>(parentKey.value);
+    }
+    if (locationFlag.present) {
+      map['location_flag'] = Variable<String>(locationFlag.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationAssetsCompanion(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('itemKey: $itemKey, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('typeId: $typeId, ')
+          ..write('quantity: $quantity, ')
+          ..write('quantityUnknown: $quantityUnknown, ')
+          ..write('isSingleton: $isSingleton, ')
+          ..write('isBlueprintCopy: $isBlueprintCopy, ')
+          ..write('locationKey: $locationKey, ')
+          ..write('locationType: $locationType, ')
+          ..write('parentKey: $parentKey, ')
+          ..write('locationFlag: $locationFlag, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationPrivateNamesTable extends CorporationPrivateNames
+    with TableInfo<$CorporationPrivateNamesTable, CorporationPrivateName> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationPrivateNamesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerKeyMeta = const VerificationMeta(
+    'ownerKey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerKey = GeneratedColumn<String>(
+    'owner_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameSourceMeta = const VerificationMeta(
+    'nameSource',
+  );
+  @override
+  late final GeneratedColumn<String> nameSource = GeneratedColumn<String>(
+    'name_source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _entityKeyMeta = const VerificationMeta(
+    'entityKey',
+  );
+  @override
+  late final GeneratedColumn<String> entityKey = GeneratedColumn<String>(
+    'entity_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _observedAtMsMeta = const VerificationMeta(
+    'observedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> observedAtMs = GeneratedColumn<int>(
+    'observed_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerKey,
+    nameSource,
+    entityKey,
+    ownerCharacterId,
+    name,
+    observedAtMs,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_private_names';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationPrivateName> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_key')) {
+      context.handle(
+        _ownerKeyMeta,
+        ownerKey.isAcceptableOrUnknown(data['owner_key']!, _ownerKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerKeyMeta);
+    }
+    if (data.containsKey('name_source')) {
+      context.handle(
+        _nameSourceMeta,
+        nameSource.isAcceptableOrUnknown(data['name_source']!, _nameSourceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameSourceMeta);
+    }
+    if (data.containsKey('entity_key')) {
+      context.handle(
+        _entityKeyMeta,
+        entityKey.isAcceptableOrUnknown(data['entity_key']!, _entityKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_entityKeyMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
+    if (data.containsKey('observed_at_ms')) {
+      context.handle(
+        _observedAtMsMeta,
+        observedAtMs.isAcceptableOrUnknown(
+          data['observed_at_ms']!,
+          _observedAtMsMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerKey, nameSource, entityKey};
+  @override
+  CorporationPrivateName map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationPrivateName(
+      ownerKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_key'],
+      )!,
+      nameSource: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name_source'],
+      )!,
+      entityKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entity_key'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      ),
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      ),
+      observedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}observed_at_ms'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationPrivateNamesTable createAlias(String alias) {
+    return $CorporationPrivateNamesTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationPrivateName extends DataClass
+    implements Insertable<CorporationPrivateName> {
+  final String ownerKey;
+  final String nameSource;
+  final String entityKey;
+  final int? ownerCharacterId;
+  final String? name;
+  final int? observedAtMs;
+  const CorporationPrivateName({
+    required this.ownerKey,
+    required this.nameSource,
+    required this.entityKey,
+    this.ownerCharacterId,
+    this.name,
+    this.observedAtMs,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_key'] = Variable<String>(ownerKey);
+    map['name_source'] = Variable<String>(nameSource);
+    map['entity_key'] = Variable<String>(entityKey);
+    if (!nullToAbsent || ownerCharacterId != null) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    }
+    if (!nullToAbsent || name != null) {
+      map['name'] = Variable<String>(name);
+    }
+    if (!nullToAbsent || observedAtMs != null) {
+      map['observed_at_ms'] = Variable<int>(observedAtMs);
+    }
+    return map;
+  }
+
+  CorporationPrivateNamesCompanion toCompanion(bool nullToAbsent) {
+    return CorporationPrivateNamesCompanion(
+      ownerKey: Value(ownerKey),
+      nameSource: Value(nameSource),
+      entityKey: Value(entityKey),
+      ownerCharacterId: ownerCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerCharacterId),
+      name: name == null && nullToAbsent ? const Value.absent() : Value(name),
+      observedAtMs: observedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(observedAtMs),
+    );
+  }
+
+  factory CorporationPrivateName.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationPrivateName(
+      ownerKey: serializer.fromJson<String>(json['ownerKey']),
+      nameSource: serializer.fromJson<String>(json['nameSource']),
+      entityKey: serializer.fromJson<String>(json['entityKey']),
+      ownerCharacterId: serializer.fromJson<int?>(json['ownerCharacterId']),
+      name: serializer.fromJson<String?>(json['name']),
+      observedAtMs: serializer.fromJson<int?>(json['observedAtMs']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerKey': serializer.toJson<String>(ownerKey),
+      'nameSource': serializer.toJson<String>(nameSource),
+      'entityKey': serializer.toJson<String>(entityKey),
+      'ownerCharacterId': serializer.toJson<int?>(ownerCharacterId),
+      'name': serializer.toJson<String?>(name),
+      'observedAtMs': serializer.toJson<int?>(observedAtMs),
+    };
+  }
+
+  CorporationPrivateName copyWith({
+    String? ownerKey,
+    String? nameSource,
+    String? entityKey,
+    Value<int?> ownerCharacterId = const Value.absent(),
+    Value<String?> name = const Value.absent(),
+    Value<int?> observedAtMs = const Value.absent(),
+  }) => CorporationPrivateName(
+    ownerKey: ownerKey ?? this.ownerKey,
+    nameSource: nameSource ?? this.nameSource,
+    entityKey: entityKey ?? this.entityKey,
+    ownerCharacterId: ownerCharacterId.present
+        ? ownerCharacterId.value
+        : this.ownerCharacterId,
+    name: name.present ? name.value : this.name,
+    observedAtMs: observedAtMs.present ? observedAtMs.value : this.observedAtMs,
+  );
+  CorporationPrivateName copyWithCompanion(
+    CorporationPrivateNamesCompanion data,
+  ) {
+    return CorporationPrivateName(
+      ownerKey: data.ownerKey.present ? data.ownerKey.value : this.ownerKey,
+      nameSource: data.nameSource.present
+          ? data.nameSource.value
+          : this.nameSource,
+      entityKey: data.entityKey.present ? data.entityKey.value : this.entityKey,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      name: data.name.present ? data.name.value : this.name,
+      observedAtMs: data.observedAtMs.present
+          ? data.observedAtMs.value
+          : this.observedAtMs,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationPrivateName(')
+          ..write('ownerKey: $ownerKey, ')
+          ..write('nameSource: $nameSource, ')
+          ..write('entityKey: $entityKey, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('name: $name, ')
+          ..write('observedAtMs: $observedAtMs')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    ownerKey,
+    nameSource,
+    entityKey,
+    ownerCharacterId,
+    name,
+    observedAtMs,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationPrivateName &&
+          other.ownerKey == this.ownerKey &&
+          other.nameSource == this.nameSource &&
+          other.entityKey == this.entityKey &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.name == this.name &&
+          other.observedAtMs == this.observedAtMs);
+}
+
+class CorporationPrivateNamesCompanion
+    extends UpdateCompanion<CorporationPrivateName> {
+  final Value<String> ownerKey;
+  final Value<String> nameSource;
+  final Value<String> entityKey;
+  final Value<int?> ownerCharacterId;
+  final Value<String?> name;
+  final Value<int?> observedAtMs;
+  final Value<int> rowid;
+  const CorporationPrivateNamesCompanion({
+    this.ownerKey = const Value.absent(),
+    this.nameSource = const Value.absent(),
+    this.entityKey = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.observedAtMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationPrivateNamesCompanion.insert({
+    required String ownerKey,
+    required String nameSource,
+    required String entityKey,
+    this.ownerCharacterId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.observedAtMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : ownerKey = Value(ownerKey),
+       nameSource = Value(nameSource),
+       entityKey = Value(entityKey);
+  static Insertable<CorporationPrivateName> custom({
+    Expression<String>? ownerKey,
+    Expression<String>? nameSource,
+    Expression<String>? entityKey,
+    Expression<int>? ownerCharacterId,
+    Expression<String>? name,
+    Expression<int>? observedAtMs,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerKey != null) 'owner_key': ownerKey,
+      if (nameSource != null) 'name_source': nameSource,
+      if (entityKey != null) 'entity_key': entityKey,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (name != null) 'name': name,
+      if (observedAtMs != null) 'observed_at_ms': observedAtMs,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationPrivateNamesCompanion copyWith({
+    Value<String>? ownerKey,
+    Value<String>? nameSource,
+    Value<String>? entityKey,
+    Value<int?>? ownerCharacterId,
+    Value<String?>? name,
+    Value<int?>? observedAtMs,
+    Value<int>? rowid,
+  }) {
+    return CorporationPrivateNamesCompanion(
+      ownerKey: ownerKey ?? this.ownerKey,
+      nameSource: nameSource ?? this.nameSource,
+      entityKey: entityKey ?? this.entityKey,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      name: name ?? this.name,
+      observedAtMs: observedAtMs ?? this.observedAtMs,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerKey.present) {
+      map['owner_key'] = Variable<String>(ownerKey.value);
+    }
+    if (nameSource.present) {
+      map['name_source'] = Variable<String>(nameSource.value);
+    }
+    if (entityKey.present) {
+      map['entity_key'] = Variable<String>(entityKey.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (observedAtMs.present) {
+      map['observed_at_ms'] = Variable<int>(observedAtMs.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationPrivateNamesCompanion(')
+          ..write('ownerKey: $ownerKey, ')
+          ..write('nameSource: $nameSource, ')
+          ..write('entityKey: $entityKey, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('name: $name, ')
+          ..write('observedAtMs: $observedAtMs, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationStructuresTable extends CorporationStructures
+    with TableInfo<$CorporationStructuresTable, CorporationStructure> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationStructuresTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _snapshotIdMeta = const VerificationMeta(
+    'snapshotId',
+  );
+  @override
+  late final GeneratedColumn<String> snapshotId = GeneratedColumn<String>(
+    'snapshot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _structureKeyMeta = const VerificationMeta(
+    'structureKey',
+  );
+  @override
+  late final GeneratedColumn<String> structureKey = GeneratedColumn<String>(
+    'structure_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+    'type_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _systemIdMeta = const VerificationMeta(
+    'systemId',
+  );
+  @override
+  late final GeneratedColumn<int> systemId = GeneratedColumn<int>(
+    'system_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _stateMeta = const VerificationMeta('state');
+  @override
+  late final GeneratedColumn<String> state = GeneratedColumn<String>(
+    'state',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _stateStartAtMsMeta = const VerificationMeta(
+    'stateStartAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> stateStartAtMs = GeneratedColumn<int>(
+    'state_start_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _stateEndAtMsMeta = const VerificationMeta(
+    'stateEndAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> stateEndAtMs = GeneratedColumn<int>(
+    'state_end_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _unanchorAtMsMeta = const VerificationMeta(
+    'unanchorAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> unanchorAtMs = GeneratedColumn<int>(
+    'unanchor_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _fuelExpiresAtMsMeta = const VerificationMeta(
+    'fuelExpiresAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> fuelExpiresAtMs = GeneratedColumn<int>(
+    'fuel_expires_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _servicesPresentMeta = const VerificationMeta(
+    'servicesPresent',
+  );
+  @override
+  late final GeneratedColumn<bool> servicesPresent = GeneratedColumn<bool>(
+    'services_present',
+    aliasedName,
+    true,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("services_present" IN (0, 1))',
+    ),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    snapshotId,
+    structureKey,
+    ownerCharacterId,
+    name,
+    typeId,
+    systemId,
+    state,
+    stateStartAtMs,
+    stateEndAtMs,
+    unanchorAtMs,
+    fuelExpiresAtMs,
+    servicesPresent,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_structures';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationStructure> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('snapshot_id')) {
+      context.handle(
+        _snapshotIdMeta,
+        snapshotId.isAcceptableOrUnknown(data['snapshot_id']!, _snapshotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_snapshotIdMeta);
+    }
+    if (data.containsKey('structure_key')) {
+      context.handle(
+        _structureKeyMeta,
+        structureKey.isAcceptableOrUnknown(
+          data['structure_key']!,
+          _structureKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_structureKeyMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
+    if (data.containsKey('type_id')) {
+      context.handle(
+        _typeIdMeta,
+        typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta),
+      );
+    }
+    if (data.containsKey('system_id')) {
+      context.handle(
+        _systemIdMeta,
+        systemId.isAcceptableOrUnknown(data['system_id']!, _systemIdMeta),
+      );
+    }
+    if (data.containsKey('state')) {
+      context.handle(
+        _stateMeta,
+        state.isAcceptableOrUnknown(data['state']!, _stateMeta),
+      );
+    }
+    if (data.containsKey('state_start_at_ms')) {
+      context.handle(
+        _stateStartAtMsMeta,
+        stateStartAtMs.isAcceptableOrUnknown(
+          data['state_start_at_ms']!,
+          _stateStartAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('state_end_at_ms')) {
+      context.handle(
+        _stateEndAtMsMeta,
+        stateEndAtMs.isAcceptableOrUnknown(
+          data['state_end_at_ms']!,
+          _stateEndAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('unanchor_at_ms')) {
+      context.handle(
+        _unanchorAtMsMeta,
+        unanchorAtMs.isAcceptableOrUnknown(
+          data['unanchor_at_ms']!,
+          _unanchorAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('fuel_expires_at_ms')) {
+      context.handle(
+        _fuelExpiresAtMsMeta,
+        fuelExpiresAtMs.isAcceptableOrUnknown(
+          data['fuel_expires_at_ms']!,
+          _fuelExpiresAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('services_present')) {
+      context.handle(
+        _servicesPresentMeta,
+        servicesPresent.isAcceptableOrUnknown(
+          data['services_present']!,
+          _servicesPresentMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {snapshotId, structureKey};
+  @override
+  CorporationStructure map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationStructure(
+      snapshotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}snapshot_id'],
+      )!,
+      structureKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}structure_key'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      ),
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      ),
+      typeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}type_id'],
+      ),
+      systemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}system_id'],
+      ),
+      state: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}state'],
+      ),
+      stateStartAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}state_start_at_ms'],
+      ),
+      stateEndAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}state_end_at_ms'],
+      ),
+      unanchorAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}unanchor_at_ms'],
+      ),
+      fuelExpiresAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}fuel_expires_at_ms'],
+      ),
+      servicesPresent: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}services_present'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationStructuresTable createAlias(String alias) {
+    return $CorporationStructuresTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationStructure extends DataClass
+    implements Insertable<CorporationStructure> {
+  final String snapshotId;
+  final String structureKey;
+  final int? ownerCharacterId;
+  final String? name;
+  final int? typeId;
+  final int? systemId;
+  final String? state;
+  final int? stateStartAtMs;
+  final int? stateEndAtMs;
+  final int? unanchorAtMs;
+  final int? fuelExpiresAtMs;
+  final bool? servicesPresent;
+  const CorporationStructure({
+    required this.snapshotId,
+    required this.structureKey,
+    this.ownerCharacterId,
+    this.name,
+    this.typeId,
+    this.systemId,
+    this.state,
+    this.stateStartAtMs,
+    this.stateEndAtMs,
+    this.unanchorAtMs,
+    this.fuelExpiresAtMs,
+    this.servicesPresent,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['snapshot_id'] = Variable<String>(snapshotId);
+    map['structure_key'] = Variable<String>(structureKey);
+    if (!nullToAbsent || ownerCharacterId != null) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    }
+    if (!nullToAbsent || name != null) {
+      map['name'] = Variable<String>(name);
+    }
+    if (!nullToAbsent || typeId != null) {
+      map['type_id'] = Variable<int>(typeId);
+    }
+    if (!nullToAbsent || systemId != null) {
+      map['system_id'] = Variable<int>(systemId);
+    }
+    if (!nullToAbsent || state != null) {
+      map['state'] = Variable<String>(state);
+    }
+    if (!nullToAbsent || stateStartAtMs != null) {
+      map['state_start_at_ms'] = Variable<int>(stateStartAtMs);
+    }
+    if (!nullToAbsent || stateEndAtMs != null) {
+      map['state_end_at_ms'] = Variable<int>(stateEndAtMs);
+    }
+    if (!nullToAbsent || unanchorAtMs != null) {
+      map['unanchor_at_ms'] = Variable<int>(unanchorAtMs);
+    }
+    if (!nullToAbsent || fuelExpiresAtMs != null) {
+      map['fuel_expires_at_ms'] = Variable<int>(fuelExpiresAtMs);
+    }
+    if (!nullToAbsent || servicesPresent != null) {
+      map['services_present'] = Variable<bool>(servicesPresent);
+    }
+    return map;
+  }
+
+  CorporationStructuresCompanion toCompanion(bool nullToAbsent) {
+    return CorporationStructuresCompanion(
+      snapshotId: Value(snapshotId),
+      structureKey: Value(structureKey),
+      ownerCharacterId: ownerCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerCharacterId),
+      name: name == null && nullToAbsent ? const Value.absent() : Value(name),
+      typeId: typeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(typeId),
+      systemId: systemId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(systemId),
+      state: state == null && nullToAbsent
+          ? const Value.absent()
+          : Value(state),
+      stateStartAtMs: stateStartAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(stateStartAtMs),
+      stateEndAtMs: stateEndAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(stateEndAtMs),
+      unanchorAtMs: unanchorAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(unanchorAtMs),
+      fuelExpiresAtMs: fuelExpiresAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fuelExpiresAtMs),
+      servicesPresent: servicesPresent == null && nullToAbsent
+          ? const Value.absent()
+          : Value(servicesPresent),
+    );
+  }
+
+  factory CorporationStructure.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationStructure(
+      snapshotId: serializer.fromJson<String>(json['snapshotId']),
+      structureKey: serializer.fromJson<String>(json['structureKey']),
+      ownerCharacterId: serializer.fromJson<int?>(json['ownerCharacterId']),
+      name: serializer.fromJson<String?>(json['name']),
+      typeId: serializer.fromJson<int?>(json['typeId']),
+      systemId: serializer.fromJson<int?>(json['systemId']),
+      state: serializer.fromJson<String?>(json['state']),
+      stateStartAtMs: serializer.fromJson<int?>(json['stateStartAtMs']),
+      stateEndAtMs: serializer.fromJson<int?>(json['stateEndAtMs']),
+      unanchorAtMs: serializer.fromJson<int?>(json['unanchorAtMs']),
+      fuelExpiresAtMs: serializer.fromJson<int?>(json['fuelExpiresAtMs']),
+      servicesPresent: serializer.fromJson<bool?>(json['servicesPresent']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'snapshotId': serializer.toJson<String>(snapshotId),
+      'structureKey': serializer.toJson<String>(structureKey),
+      'ownerCharacterId': serializer.toJson<int?>(ownerCharacterId),
+      'name': serializer.toJson<String?>(name),
+      'typeId': serializer.toJson<int?>(typeId),
+      'systemId': serializer.toJson<int?>(systemId),
+      'state': serializer.toJson<String?>(state),
+      'stateStartAtMs': serializer.toJson<int?>(stateStartAtMs),
+      'stateEndAtMs': serializer.toJson<int?>(stateEndAtMs),
+      'unanchorAtMs': serializer.toJson<int?>(unanchorAtMs),
+      'fuelExpiresAtMs': serializer.toJson<int?>(fuelExpiresAtMs),
+      'servicesPresent': serializer.toJson<bool?>(servicesPresent),
+    };
+  }
+
+  CorporationStructure copyWith({
+    String? snapshotId,
+    String? structureKey,
+    Value<int?> ownerCharacterId = const Value.absent(),
+    Value<String?> name = const Value.absent(),
+    Value<int?> typeId = const Value.absent(),
+    Value<int?> systemId = const Value.absent(),
+    Value<String?> state = const Value.absent(),
+    Value<int?> stateStartAtMs = const Value.absent(),
+    Value<int?> stateEndAtMs = const Value.absent(),
+    Value<int?> unanchorAtMs = const Value.absent(),
+    Value<int?> fuelExpiresAtMs = const Value.absent(),
+    Value<bool?> servicesPresent = const Value.absent(),
+  }) => CorporationStructure(
+    snapshotId: snapshotId ?? this.snapshotId,
+    structureKey: structureKey ?? this.structureKey,
+    ownerCharacterId: ownerCharacterId.present
+        ? ownerCharacterId.value
+        : this.ownerCharacterId,
+    name: name.present ? name.value : this.name,
+    typeId: typeId.present ? typeId.value : this.typeId,
+    systemId: systemId.present ? systemId.value : this.systemId,
+    state: state.present ? state.value : this.state,
+    stateStartAtMs: stateStartAtMs.present
+        ? stateStartAtMs.value
+        : this.stateStartAtMs,
+    stateEndAtMs: stateEndAtMs.present ? stateEndAtMs.value : this.stateEndAtMs,
+    unanchorAtMs: unanchorAtMs.present ? unanchorAtMs.value : this.unanchorAtMs,
+    fuelExpiresAtMs: fuelExpiresAtMs.present
+        ? fuelExpiresAtMs.value
+        : this.fuelExpiresAtMs,
+    servicesPresent: servicesPresent.present
+        ? servicesPresent.value
+        : this.servicesPresent,
+  );
+  CorporationStructure copyWithCompanion(CorporationStructuresCompanion data) {
+    return CorporationStructure(
+      snapshotId: data.snapshotId.present
+          ? data.snapshotId.value
+          : this.snapshotId,
+      structureKey: data.structureKey.present
+          ? data.structureKey.value
+          : this.structureKey,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      name: data.name.present ? data.name.value : this.name,
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      systemId: data.systemId.present ? data.systemId.value : this.systemId,
+      state: data.state.present ? data.state.value : this.state,
+      stateStartAtMs: data.stateStartAtMs.present
+          ? data.stateStartAtMs.value
+          : this.stateStartAtMs,
+      stateEndAtMs: data.stateEndAtMs.present
+          ? data.stateEndAtMs.value
+          : this.stateEndAtMs,
+      unanchorAtMs: data.unanchorAtMs.present
+          ? data.unanchorAtMs.value
+          : this.unanchorAtMs,
+      fuelExpiresAtMs: data.fuelExpiresAtMs.present
+          ? data.fuelExpiresAtMs.value
+          : this.fuelExpiresAtMs,
+      servicesPresent: data.servicesPresent.present
+          ? data.servicesPresent.value
+          : this.servicesPresent,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationStructure(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('structureKey: $structureKey, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('name: $name, ')
+          ..write('typeId: $typeId, ')
+          ..write('systemId: $systemId, ')
+          ..write('state: $state, ')
+          ..write('stateStartAtMs: $stateStartAtMs, ')
+          ..write('stateEndAtMs: $stateEndAtMs, ')
+          ..write('unanchorAtMs: $unanchorAtMs, ')
+          ..write('fuelExpiresAtMs: $fuelExpiresAtMs, ')
+          ..write('servicesPresent: $servicesPresent')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    snapshotId,
+    structureKey,
+    ownerCharacterId,
+    name,
+    typeId,
+    systemId,
+    state,
+    stateStartAtMs,
+    stateEndAtMs,
+    unanchorAtMs,
+    fuelExpiresAtMs,
+    servicesPresent,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationStructure &&
+          other.snapshotId == this.snapshotId &&
+          other.structureKey == this.structureKey &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.name == this.name &&
+          other.typeId == this.typeId &&
+          other.systemId == this.systemId &&
+          other.state == this.state &&
+          other.stateStartAtMs == this.stateStartAtMs &&
+          other.stateEndAtMs == this.stateEndAtMs &&
+          other.unanchorAtMs == this.unanchorAtMs &&
+          other.fuelExpiresAtMs == this.fuelExpiresAtMs &&
+          other.servicesPresent == this.servicesPresent);
+}
+
+class CorporationStructuresCompanion
+    extends UpdateCompanion<CorporationStructure> {
+  final Value<String> snapshotId;
+  final Value<String> structureKey;
+  final Value<int?> ownerCharacterId;
+  final Value<String?> name;
+  final Value<int?> typeId;
+  final Value<int?> systemId;
+  final Value<String?> state;
+  final Value<int?> stateStartAtMs;
+  final Value<int?> stateEndAtMs;
+  final Value<int?> unanchorAtMs;
+  final Value<int?> fuelExpiresAtMs;
+  final Value<bool?> servicesPresent;
+  final Value<int> rowid;
+  const CorporationStructuresCompanion({
+    this.snapshotId = const Value.absent(),
+    this.structureKey = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.typeId = const Value.absent(),
+    this.systemId = const Value.absent(),
+    this.state = const Value.absent(),
+    this.stateStartAtMs = const Value.absent(),
+    this.stateEndAtMs = const Value.absent(),
+    this.unanchorAtMs = const Value.absent(),
+    this.fuelExpiresAtMs = const Value.absent(),
+    this.servicesPresent = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationStructuresCompanion.insert({
+    required String snapshotId,
+    required String structureKey,
+    this.ownerCharacterId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.typeId = const Value.absent(),
+    this.systemId = const Value.absent(),
+    this.state = const Value.absent(),
+    this.stateStartAtMs = const Value.absent(),
+    this.stateEndAtMs = const Value.absent(),
+    this.unanchorAtMs = const Value.absent(),
+    this.fuelExpiresAtMs = const Value.absent(),
+    this.servicesPresent = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : snapshotId = Value(snapshotId),
+       structureKey = Value(structureKey);
+  static Insertable<CorporationStructure> custom({
+    Expression<String>? snapshotId,
+    Expression<String>? structureKey,
+    Expression<int>? ownerCharacterId,
+    Expression<String>? name,
+    Expression<int>? typeId,
+    Expression<int>? systemId,
+    Expression<String>? state,
+    Expression<int>? stateStartAtMs,
+    Expression<int>? stateEndAtMs,
+    Expression<int>? unanchorAtMs,
+    Expression<int>? fuelExpiresAtMs,
+    Expression<bool>? servicesPresent,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (snapshotId != null) 'snapshot_id': snapshotId,
+      if (structureKey != null) 'structure_key': structureKey,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (name != null) 'name': name,
+      if (typeId != null) 'type_id': typeId,
+      if (systemId != null) 'system_id': systemId,
+      if (state != null) 'state': state,
+      if (stateStartAtMs != null) 'state_start_at_ms': stateStartAtMs,
+      if (stateEndAtMs != null) 'state_end_at_ms': stateEndAtMs,
+      if (unanchorAtMs != null) 'unanchor_at_ms': unanchorAtMs,
+      if (fuelExpiresAtMs != null) 'fuel_expires_at_ms': fuelExpiresAtMs,
+      if (servicesPresent != null) 'services_present': servicesPresent,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationStructuresCompanion copyWith({
+    Value<String>? snapshotId,
+    Value<String>? structureKey,
+    Value<int?>? ownerCharacterId,
+    Value<String?>? name,
+    Value<int?>? typeId,
+    Value<int?>? systemId,
+    Value<String?>? state,
+    Value<int?>? stateStartAtMs,
+    Value<int?>? stateEndAtMs,
+    Value<int?>? unanchorAtMs,
+    Value<int?>? fuelExpiresAtMs,
+    Value<bool?>? servicesPresent,
+    Value<int>? rowid,
+  }) {
+    return CorporationStructuresCompanion(
+      snapshotId: snapshotId ?? this.snapshotId,
+      structureKey: structureKey ?? this.structureKey,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      name: name ?? this.name,
+      typeId: typeId ?? this.typeId,
+      systemId: systemId ?? this.systemId,
+      state: state ?? this.state,
+      stateStartAtMs: stateStartAtMs ?? this.stateStartAtMs,
+      stateEndAtMs: stateEndAtMs ?? this.stateEndAtMs,
+      unanchorAtMs: unanchorAtMs ?? this.unanchorAtMs,
+      fuelExpiresAtMs: fuelExpiresAtMs ?? this.fuelExpiresAtMs,
+      servicesPresent: servicesPresent ?? this.servicesPresent,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (snapshotId.present) {
+      map['snapshot_id'] = Variable<String>(snapshotId.value);
+    }
+    if (structureKey.present) {
+      map['structure_key'] = Variable<String>(structureKey.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (systemId.present) {
+      map['system_id'] = Variable<int>(systemId.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(state.value);
+    }
+    if (stateStartAtMs.present) {
+      map['state_start_at_ms'] = Variable<int>(stateStartAtMs.value);
+    }
+    if (stateEndAtMs.present) {
+      map['state_end_at_ms'] = Variable<int>(stateEndAtMs.value);
+    }
+    if (unanchorAtMs.present) {
+      map['unanchor_at_ms'] = Variable<int>(unanchorAtMs.value);
+    }
+    if (fuelExpiresAtMs.present) {
+      map['fuel_expires_at_ms'] = Variable<int>(fuelExpiresAtMs.value);
+    }
+    if (servicesPresent.present) {
+      map['services_present'] = Variable<bool>(servicesPresent.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationStructuresCompanion(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('structureKey: $structureKey, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('name: $name, ')
+          ..write('typeId: $typeId, ')
+          ..write('systemId: $systemId, ')
+          ..write('state: $state, ')
+          ..write('stateStartAtMs: $stateStartAtMs, ')
+          ..write('stateEndAtMs: $stateEndAtMs, ')
+          ..write('unanchorAtMs: $unanchorAtMs, ')
+          ..write('fuelExpiresAtMs: $fuelExpiresAtMs, ')
+          ..write('servicesPresent: $servicesPresent, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationStructureServicesTable extends CorporationStructureServices
+    with
+        TableInfo<
+          $CorporationStructureServicesTable,
+          CorporationStructureService
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationStructureServicesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _snapshotIdMeta = const VerificationMeta(
+    'snapshotId',
+  );
+  @override
+  late final GeneratedColumn<String> snapshotId = GeneratedColumn<String>(
+    'snapshot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _structureKeyMeta = const VerificationMeta(
+    'structureKey',
+  );
+  @override
+  late final GeneratedColumn<String> structureKey = GeneratedColumn<String>(
+    'structure_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ordinalMeta = const VerificationMeta(
+    'ordinal',
+  );
+  @override
+  late final GeneratedColumn<int> ordinal = GeneratedColumn<int>(
+    'ordinal',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _stateMeta = const VerificationMeta('state');
+  @override
+  late final GeneratedColumn<String> state = GeneratedColumn<String>(
+    'state',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    snapshotId,
+    structureKey,
+    ordinal,
+    ownerCharacterId,
+    label,
+    state,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_structure_services';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationStructureService> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('snapshot_id')) {
+      context.handle(
+        _snapshotIdMeta,
+        snapshotId.isAcceptableOrUnknown(data['snapshot_id']!, _snapshotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_snapshotIdMeta);
+    }
+    if (data.containsKey('structure_key')) {
+      context.handle(
+        _structureKeyMeta,
+        structureKey.isAcceptableOrUnknown(
+          data['structure_key']!,
+          _structureKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_structureKeyMeta);
+    }
+    if (data.containsKey('ordinal')) {
+      context.handle(
+        _ordinalMeta,
+        ordinal.isAcceptableOrUnknown(data['ordinal']!, _ordinalMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ordinalMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    }
+    if (data.containsKey('state')) {
+      context.handle(
+        _stateMeta,
+        state.isAcceptableOrUnknown(data['state']!, _stateMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {snapshotId, structureKey, ordinal};
+  @override
+  CorporationStructureService map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationStructureService(
+      snapshotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}snapshot_id'],
+      )!,
+      structureKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}structure_key'],
+      )!,
+      ordinal: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}ordinal'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      ),
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      ),
+      state: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}state'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationStructureServicesTable createAlias(String alias) {
+    return $CorporationStructureServicesTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationStructureService extends DataClass
+    implements Insertable<CorporationStructureService> {
+  final String snapshotId;
+  final String structureKey;
+  final int ordinal;
+  final int? ownerCharacterId;
+  final String? label;
+  final String? state;
+  const CorporationStructureService({
+    required this.snapshotId,
+    required this.structureKey,
+    required this.ordinal,
+    this.ownerCharacterId,
+    this.label,
+    this.state,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['snapshot_id'] = Variable<String>(snapshotId);
+    map['structure_key'] = Variable<String>(structureKey);
+    map['ordinal'] = Variable<int>(ordinal);
+    if (!nullToAbsent || ownerCharacterId != null) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    }
+    if (!nullToAbsent || label != null) {
+      map['label'] = Variable<String>(label);
+    }
+    if (!nullToAbsent || state != null) {
+      map['state'] = Variable<String>(state);
+    }
+    return map;
+  }
+
+  CorporationStructureServicesCompanion toCompanion(bool nullToAbsent) {
+    return CorporationStructureServicesCompanion(
+      snapshotId: Value(snapshotId),
+      structureKey: Value(structureKey),
+      ordinal: Value(ordinal),
+      ownerCharacterId: ownerCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerCharacterId),
+      label: label == null && nullToAbsent
+          ? const Value.absent()
+          : Value(label),
+      state: state == null && nullToAbsent
+          ? const Value.absent()
+          : Value(state),
+    );
+  }
+
+  factory CorporationStructureService.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationStructureService(
+      snapshotId: serializer.fromJson<String>(json['snapshotId']),
+      structureKey: serializer.fromJson<String>(json['structureKey']),
+      ordinal: serializer.fromJson<int>(json['ordinal']),
+      ownerCharacterId: serializer.fromJson<int?>(json['ownerCharacterId']),
+      label: serializer.fromJson<String?>(json['label']),
+      state: serializer.fromJson<String?>(json['state']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'snapshotId': serializer.toJson<String>(snapshotId),
+      'structureKey': serializer.toJson<String>(structureKey),
+      'ordinal': serializer.toJson<int>(ordinal),
+      'ownerCharacterId': serializer.toJson<int?>(ownerCharacterId),
+      'label': serializer.toJson<String?>(label),
+      'state': serializer.toJson<String?>(state),
+    };
+  }
+
+  CorporationStructureService copyWith({
+    String? snapshotId,
+    String? structureKey,
+    int? ordinal,
+    Value<int?> ownerCharacterId = const Value.absent(),
+    Value<String?> label = const Value.absent(),
+    Value<String?> state = const Value.absent(),
+  }) => CorporationStructureService(
+    snapshotId: snapshotId ?? this.snapshotId,
+    structureKey: structureKey ?? this.structureKey,
+    ordinal: ordinal ?? this.ordinal,
+    ownerCharacterId: ownerCharacterId.present
+        ? ownerCharacterId.value
+        : this.ownerCharacterId,
+    label: label.present ? label.value : this.label,
+    state: state.present ? state.value : this.state,
+  );
+  CorporationStructureService copyWithCompanion(
+    CorporationStructureServicesCompanion data,
+  ) {
+    return CorporationStructureService(
+      snapshotId: data.snapshotId.present
+          ? data.snapshotId.value
+          : this.snapshotId,
+      structureKey: data.structureKey.present
+          ? data.structureKey.value
+          : this.structureKey,
+      ordinal: data.ordinal.present ? data.ordinal.value : this.ordinal,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      label: data.label.present ? data.label.value : this.label,
+      state: data.state.present ? data.state.value : this.state,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationStructureService(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('structureKey: $structureKey, ')
+          ..write('ordinal: $ordinal, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('label: $label, ')
+          ..write('state: $state')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    snapshotId,
+    structureKey,
+    ordinal,
+    ownerCharacterId,
+    label,
+    state,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationStructureService &&
+          other.snapshotId == this.snapshotId &&
+          other.structureKey == this.structureKey &&
+          other.ordinal == this.ordinal &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.label == this.label &&
+          other.state == this.state);
+}
+
+class CorporationStructureServicesCompanion
+    extends UpdateCompanion<CorporationStructureService> {
+  final Value<String> snapshotId;
+  final Value<String> structureKey;
+  final Value<int> ordinal;
+  final Value<int?> ownerCharacterId;
+  final Value<String?> label;
+  final Value<String?> state;
+  final Value<int> rowid;
+  const CorporationStructureServicesCompanion({
+    this.snapshotId = const Value.absent(),
+    this.structureKey = const Value.absent(),
+    this.ordinal = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.label = const Value.absent(),
+    this.state = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationStructureServicesCompanion.insert({
+    required String snapshotId,
+    required String structureKey,
+    required int ordinal,
+    this.ownerCharacterId = const Value.absent(),
+    this.label = const Value.absent(),
+    this.state = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : snapshotId = Value(snapshotId),
+       structureKey = Value(structureKey),
+       ordinal = Value(ordinal);
+  static Insertable<CorporationStructureService> custom({
+    Expression<String>? snapshotId,
+    Expression<String>? structureKey,
+    Expression<int>? ordinal,
+    Expression<int>? ownerCharacterId,
+    Expression<String>? label,
+    Expression<String>? state,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (snapshotId != null) 'snapshot_id': snapshotId,
+      if (structureKey != null) 'structure_key': structureKey,
+      if (ordinal != null) 'ordinal': ordinal,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (label != null) 'label': label,
+      if (state != null) 'state': state,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationStructureServicesCompanion copyWith({
+    Value<String>? snapshotId,
+    Value<String>? structureKey,
+    Value<int>? ordinal,
+    Value<int?>? ownerCharacterId,
+    Value<String?>? label,
+    Value<String?>? state,
+    Value<int>? rowid,
+  }) {
+    return CorporationStructureServicesCompanion(
+      snapshotId: snapshotId ?? this.snapshotId,
+      structureKey: structureKey ?? this.structureKey,
+      ordinal: ordinal ?? this.ordinal,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      label: label ?? this.label,
+      state: state ?? this.state,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (snapshotId.present) {
+      map['snapshot_id'] = Variable<String>(snapshotId.value);
+    }
+    if (structureKey.present) {
+      map['structure_key'] = Variable<String>(structureKey.value);
+    }
+    if (ordinal.present) {
+      map['ordinal'] = Variable<int>(ordinal.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(state.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationStructureServicesCompanion(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('structureKey: $structureKey, ')
+          ..write('ordinal: $ordinal, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('label: $label, ')
+          ..write('state: $state, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationFuelScenariosTable extends CorporationFuelScenarios
+    with TableInfo<$CorporationFuelScenariosTable, CorporationFuelScenario> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationFuelScenariosTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _incarnationMeta = const VerificationMeta(
+    'incarnation',
+  );
+  @override
+  late final GeneratedColumn<String> incarnation = GeneratedColumn<String>(
+    'incarnation',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _corporationIdMeta = const VerificationMeta(
+    'corporationId',
+  );
+  @override
+  late final GeneratedColumn<int> corporationId = GeneratedColumn<int>(
+    'corporation_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _structureKeyMeta = const VerificationMeta(
+    'structureKey',
+  );
+  @override
+  late final GeneratedColumn<String> structureKey = GeneratedColumn<String>(
+    'structure_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _grantEpochMeta = const VerificationMeta(
+    'grantEpoch',
+  );
+  @override
+  late final GeneratedColumn<int> grantEpoch = GeneratedColumn<int>(
+    'grant_epoch',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _quantityMeta = const VerificationMeta(
+    'quantity',
+  );
+  @override
+  late final GeneratedColumn<String> quantity = GeneratedColumn<String>(
+    'quantity',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _rateMeta = const VerificationMeta('rate');
+  @override
+  late final GeneratedColumn<String> rate = GeneratedColumn<String>(
+    'rate',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _savedAtMsMeta = const VerificationMeta(
+    'savedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> savedAtMs = GeneratedColumn<int>(
+    'saved_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  @override
+  late final GeneratedColumn<int> revision = GeneratedColumn<int>(
+    'revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _quarantineStateMeta = const VerificationMeta(
+    'quarantineState',
+  );
+  @override
+  late final GeneratedColumn<String> quarantineState = GeneratedColumn<String>(
+    'quarantine_state',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    characterId,
+    incarnation,
+    corporationId,
+    structureKey,
+    grantEpoch,
+    quantity,
+    rate,
+    savedAtMs,
+    revision,
+    quarantineState,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_fuel_scenarios';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationFuelScenario> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('incarnation')) {
+      context.handle(
+        _incarnationMeta,
+        incarnation.isAcceptableOrUnknown(
+          data['incarnation']!,
+          _incarnationMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_incarnationMeta);
+    }
+    if (data.containsKey('corporation_id')) {
+      context.handle(
+        _corporationIdMeta,
+        corporationId.isAcceptableOrUnknown(
+          data['corporation_id']!,
+          _corporationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_corporationIdMeta);
+    }
+    if (data.containsKey('structure_key')) {
+      context.handle(
+        _structureKeyMeta,
+        structureKey.isAcceptableOrUnknown(
+          data['structure_key']!,
+          _structureKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_structureKeyMeta);
+    }
+    if (data.containsKey('grant_epoch')) {
+      context.handle(
+        _grantEpochMeta,
+        grantEpoch.isAcceptableOrUnknown(data['grant_epoch']!, _grantEpochMeta),
+      );
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(
+        _quantityMeta,
+        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
+      );
+    }
+    if (data.containsKey('rate')) {
+      context.handle(
+        _rateMeta,
+        rate.isAcceptableOrUnknown(data['rate']!, _rateMeta),
+      );
+    }
+    if (data.containsKey('saved_at_ms')) {
+      context.handle(
+        _savedAtMsMeta,
+        savedAtMs.isAcceptableOrUnknown(data['saved_at_ms']!, _savedAtMsMeta),
+      );
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    }
+    if (data.containsKey('quarantine_state')) {
+      context.handle(
+        _quarantineStateMeta,
+        quarantineState.isAcceptableOrUnknown(
+          data['quarantine_state']!,
+          _quarantineStateMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {
+    characterId,
+    incarnation,
+    corporationId,
+    structureKey,
+  };
+  @override
+  CorporationFuelScenario map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationFuelScenario(
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      )!,
+      incarnation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}incarnation'],
+      )!,
+      corporationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}corporation_id'],
+      )!,
+      structureKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}structure_key'],
+      )!,
+      grantEpoch: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}grant_epoch'],
+      ),
+      quantity: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}quantity'],
+      ),
+      rate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}rate'],
+      ),
+      savedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}saved_at_ms'],
+      ),
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}revision'],
+      ),
+      quarantineState: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}quarantine_state'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationFuelScenariosTable createAlias(String alias) {
+    return $CorporationFuelScenariosTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationFuelScenario extends DataClass
+    implements Insertable<CorporationFuelScenario> {
+  final int characterId;
+  final String incarnation;
+  final int corporationId;
+  final String structureKey;
+  final int? grantEpoch;
+  final String? quantity;
+  final String? rate;
+  final int? savedAtMs;
+  final int? revision;
+  final String? quarantineState;
+  const CorporationFuelScenario({
+    required this.characterId,
+    required this.incarnation,
+    required this.corporationId,
+    required this.structureKey,
+    this.grantEpoch,
+    this.quantity,
+    this.rate,
+    this.savedAtMs,
+    this.revision,
+    this.quarantineState,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['character_id'] = Variable<int>(characterId);
+    map['incarnation'] = Variable<String>(incarnation);
+    map['corporation_id'] = Variable<int>(corporationId);
+    map['structure_key'] = Variable<String>(structureKey);
+    if (!nullToAbsent || grantEpoch != null) {
+      map['grant_epoch'] = Variable<int>(grantEpoch);
+    }
+    if (!nullToAbsent || quantity != null) {
+      map['quantity'] = Variable<String>(quantity);
+    }
+    if (!nullToAbsent || rate != null) {
+      map['rate'] = Variable<String>(rate);
+    }
+    if (!nullToAbsent || savedAtMs != null) {
+      map['saved_at_ms'] = Variable<int>(savedAtMs);
+    }
+    if (!nullToAbsent || revision != null) {
+      map['revision'] = Variable<int>(revision);
+    }
+    if (!nullToAbsent || quarantineState != null) {
+      map['quarantine_state'] = Variable<String>(quarantineState);
+    }
+    return map;
+  }
+
+  CorporationFuelScenariosCompanion toCompanion(bool nullToAbsent) {
+    return CorporationFuelScenariosCompanion(
+      characterId: Value(characterId),
+      incarnation: Value(incarnation),
+      corporationId: Value(corporationId),
+      structureKey: Value(structureKey),
+      grantEpoch: grantEpoch == null && nullToAbsent
+          ? const Value.absent()
+          : Value(grantEpoch),
+      quantity: quantity == null && nullToAbsent
+          ? const Value.absent()
+          : Value(quantity),
+      rate: rate == null && nullToAbsent ? const Value.absent() : Value(rate),
+      savedAtMs: savedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(savedAtMs),
+      revision: revision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(revision),
+      quarantineState: quarantineState == null && nullToAbsent
+          ? const Value.absent()
+          : Value(quarantineState),
+    );
+  }
+
+  factory CorporationFuelScenario.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationFuelScenario(
+      characterId: serializer.fromJson<int>(json['characterId']),
+      incarnation: serializer.fromJson<String>(json['incarnation']),
+      corporationId: serializer.fromJson<int>(json['corporationId']),
+      structureKey: serializer.fromJson<String>(json['structureKey']),
+      grantEpoch: serializer.fromJson<int?>(json['grantEpoch']),
+      quantity: serializer.fromJson<String?>(json['quantity']),
+      rate: serializer.fromJson<String?>(json['rate']),
+      savedAtMs: serializer.fromJson<int?>(json['savedAtMs']),
+      revision: serializer.fromJson<int?>(json['revision']),
+      quarantineState: serializer.fromJson<String?>(json['quarantineState']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'characterId': serializer.toJson<int>(characterId),
+      'incarnation': serializer.toJson<String>(incarnation),
+      'corporationId': serializer.toJson<int>(corporationId),
+      'structureKey': serializer.toJson<String>(structureKey),
+      'grantEpoch': serializer.toJson<int?>(grantEpoch),
+      'quantity': serializer.toJson<String?>(quantity),
+      'rate': serializer.toJson<String?>(rate),
+      'savedAtMs': serializer.toJson<int?>(savedAtMs),
+      'revision': serializer.toJson<int?>(revision),
+      'quarantineState': serializer.toJson<String?>(quarantineState),
+    };
+  }
+
+  CorporationFuelScenario copyWith({
+    int? characterId,
+    String? incarnation,
+    int? corporationId,
+    String? structureKey,
+    Value<int?> grantEpoch = const Value.absent(),
+    Value<String?> quantity = const Value.absent(),
+    Value<String?> rate = const Value.absent(),
+    Value<int?> savedAtMs = const Value.absent(),
+    Value<int?> revision = const Value.absent(),
+    Value<String?> quarantineState = const Value.absent(),
+  }) => CorporationFuelScenario(
+    characterId: characterId ?? this.characterId,
+    incarnation: incarnation ?? this.incarnation,
+    corporationId: corporationId ?? this.corporationId,
+    structureKey: structureKey ?? this.structureKey,
+    grantEpoch: grantEpoch.present ? grantEpoch.value : this.grantEpoch,
+    quantity: quantity.present ? quantity.value : this.quantity,
+    rate: rate.present ? rate.value : this.rate,
+    savedAtMs: savedAtMs.present ? savedAtMs.value : this.savedAtMs,
+    revision: revision.present ? revision.value : this.revision,
+    quarantineState: quarantineState.present
+        ? quarantineState.value
+        : this.quarantineState,
+  );
+  CorporationFuelScenario copyWithCompanion(
+    CorporationFuelScenariosCompanion data,
+  ) {
+    return CorporationFuelScenario(
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      incarnation: data.incarnation.present
+          ? data.incarnation.value
+          : this.incarnation,
+      corporationId: data.corporationId.present
+          ? data.corporationId.value
+          : this.corporationId,
+      structureKey: data.structureKey.present
+          ? data.structureKey.value
+          : this.structureKey,
+      grantEpoch: data.grantEpoch.present
+          ? data.grantEpoch.value
+          : this.grantEpoch,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      rate: data.rate.present ? data.rate.value : this.rate,
+      savedAtMs: data.savedAtMs.present ? data.savedAtMs.value : this.savedAtMs,
+      revision: data.revision.present ? data.revision.value : this.revision,
+      quarantineState: data.quarantineState.present
+          ? data.quarantineState.value
+          : this.quarantineState,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationFuelScenario(')
+          ..write('characterId: $characterId, ')
+          ..write('incarnation: $incarnation, ')
+          ..write('corporationId: $corporationId, ')
+          ..write('structureKey: $structureKey, ')
+          ..write('grantEpoch: $grantEpoch, ')
+          ..write('quantity: $quantity, ')
+          ..write('rate: $rate, ')
+          ..write('savedAtMs: $savedAtMs, ')
+          ..write('revision: $revision, ')
+          ..write('quarantineState: $quarantineState')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    characterId,
+    incarnation,
+    corporationId,
+    structureKey,
+    grantEpoch,
+    quantity,
+    rate,
+    savedAtMs,
+    revision,
+    quarantineState,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationFuelScenario &&
+          other.characterId == this.characterId &&
+          other.incarnation == this.incarnation &&
+          other.corporationId == this.corporationId &&
+          other.structureKey == this.structureKey &&
+          other.grantEpoch == this.grantEpoch &&
+          other.quantity == this.quantity &&
+          other.rate == this.rate &&
+          other.savedAtMs == this.savedAtMs &&
+          other.revision == this.revision &&
+          other.quarantineState == this.quarantineState);
+}
+
+class CorporationFuelScenariosCompanion
+    extends UpdateCompanion<CorporationFuelScenario> {
+  final Value<int> characterId;
+  final Value<String> incarnation;
+  final Value<int> corporationId;
+  final Value<String> structureKey;
+  final Value<int?> grantEpoch;
+  final Value<String?> quantity;
+  final Value<String?> rate;
+  final Value<int?> savedAtMs;
+  final Value<int?> revision;
+  final Value<String?> quarantineState;
+  final Value<int> rowid;
+  const CorporationFuelScenariosCompanion({
+    this.characterId = const Value.absent(),
+    this.incarnation = const Value.absent(),
+    this.corporationId = const Value.absent(),
+    this.structureKey = const Value.absent(),
+    this.grantEpoch = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.rate = const Value.absent(),
+    this.savedAtMs = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.quarantineState = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationFuelScenariosCompanion.insert({
+    required int characterId,
+    required String incarnation,
+    required int corporationId,
+    required String structureKey,
+    this.grantEpoch = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.rate = const Value.absent(),
+    this.savedAtMs = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.quarantineState = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : characterId = Value(characterId),
+       incarnation = Value(incarnation),
+       corporationId = Value(corporationId),
+       structureKey = Value(structureKey);
+  static Insertable<CorporationFuelScenario> custom({
+    Expression<int>? characterId,
+    Expression<String>? incarnation,
+    Expression<int>? corporationId,
+    Expression<String>? structureKey,
+    Expression<int>? grantEpoch,
+    Expression<String>? quantity,
+    Expression<String>? rate,
+    Expression<int>? savedAtMs,
+    Expression<int>? revision,
+    Expression<String>? quarantineState,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (characterId != null) 'character_id': characterId,
+      if (incarnation != null) 'incarnation': incarnation,
+      if (corporationId != null) 'corporation_id': corporationId,
+      if (structureKey != null) 'structure_key': structureKey,
+      if (grantEpoch != null) 'grant_epoch': grantEpoch,
+      if (quantity != null) 'quantity': quantity,
+      if (rate != null) 'rate': rate,
+      if (savedAtMs != null) 'saved_at_ms': savedAtMs,
+      if (revision != null) 'revision': revision,
+      if (quarantineState != null) 'quarantine_state': quarantineState,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationFuelScenariosCompanion copyWith({
+    Value<int>? characterId,
+    Value<String>? incarnation,
+    Value<int>? corporationId,
+    Value<String>? structureKey,
+    Value<int?>? grantEpoch,
+    Value<String?>? quantity,
+    Value<String?>? rate,
+    Value<int?>? savedAtMs,
+    Value<int?>? revision,
+    Value<String?>? quarantineState,
+    Value<int>? rowid,
+  }) {
+    return CorporationFuelScenariosCompanion(
+      characterId: characterId ?? this.characterId,
+      incarnation: incarnation ?? this.incarnation,
+      corporationId: corporationId ?? this.corporationId,
+      structureKey: structureKey ?? this.structureKey,
+      grantEpoch: grantEpoch ?? this.grantEpoch,
+      quantity: quantity ?? this.quantity,
+      rate: rate ?? this.rate,
+      savedAtMs: savedAtMs ?? this.savedAtMs,
+      revision: revision ?? this.revision,
+      quarantineState: quarantineState ?? this.quarantineState,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (incarnation.present) {
+      map['incarnation'] = Variable<String>(incarnation.value);
+    }
+    if (corporationId.present) {
+      map['corporation_id'] = Variable<int>(corporationId.value);
+    }
+    if (structureKey.present) {
+      map['structure_key'] = Variable<String>(structureKey.value);
+    }
+    if (grantEpoch.present) {
+      map['grant_epoch'] = Variable<int>(grantEpoch.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<String>(quantity.value);
+    }
+    if (rate.present) {
+      map['rate'] = Variable<String>(rate.value);
+    }
+    if (savedAtMs.present) {
+      map['saved_at_ms'] = Variable<int>(savedAtMs.value);
+    }
+    if (revision.present) {
+      map['revision'] = Variable<int>(revision.value);
+    }
+    if (quarantineState.present) {
+      map['quarantine_state'] = Variable<String>(quarantineState.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationFuelScenariosCompanion(')
+          ..write('characterId: $characterId, ')
+          ..write('incarnation: $incarnation, ')
+          ..write('corporationId: $corporationId, ')
+          ..write('structureKey: $structureKey, ')
+          ..write('grantEpoch: $grantEpoch, ')
+          ..write('quantity: $quantity, ')
+          ..write('rate: $rate, ')
+          ..write('savedAtMs: $savedAtMs, ')
+          ..write('revision: $revision, ')
+          ..write('quarantineState: $quarantineState, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationFuelAlertStatesTable extends CorporationFuelAlertStates
+    with
+        TableInfo<$CorporationFuelAlertStatesTable, CorporationFuelAlertState> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationFuelAlertStatesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _incarnationMeta = const VerificationMeta(
+    'incarnation',
+  );
+  @override
+  late final GeneratedColumn<String> incarnation = GeneratedColumn<String>(
+    'incarnation',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _corporationIdMeta = const VerificationMeta(
+    'corporationId',
+  );
+  @override
+  late final GeneratedColumn<int> corporationId = GeneratedColumn<int>(
+    'corporation_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _structureKeyMeta = const VerificationMeta(
+    'structureKey',
+  );
+  @override
+  late final GeneratedColumn<String> structureKey = GeneratedColumn<String>(
+    'structure_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _grantEpochMeta = const VerificationMeta(
+    'grantEpoch',
+  );
+  @override
+  late final GeneratedColumn<int> grantEpoch = GeneratedColumn<int>(
+    'grant_epoch',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _rearmStateMeta = const VerificationMeta(
+    'rearmState',
+  );
+  @override
+  late final GeneratedColumn<String> rearmState = GeneratedColumn<String>(
+    'rearm_state',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _episodeOrdinalMeta = const VerificationMeta(
+    'episodeOrdinal',
+  );
+  @override
+  late final GeneratedColumn<int> episodeOrdinal = GeneratedColumn<int>(
+    'episode_ordinal',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastSourceRevisionMeta =
+      const VerificationMeta('lastSourceRevision');
+  @override
+  late final GeneratedColumn<int> lastSourceRevision = GeneratedColumn<int>(
+    'last_source_revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastSeverityMeta = const VerificationMeta(
+    'lastSeverity',
+  );
+  @override
+  late final GeneratedColumn<String> lastSeverity = GeneratedColumn<String>(
+    'last_severity',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _accessInvalidationMeta =
+      const VerificationMeta('accessInvalidation');
+  @override
+  late final GeneratedColumn<int> accessInvalidation = GeneratedColumn<int>(
+    'access_invalidation',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    characterId,
+    incarnation,
+    corporationId,
+    structureKey,
+    grantEpoch,
+    rearmState,
+    episodeOrdinal,
+    lastSourceRevision,
+    lastSeverity,
+    accessInvalidation,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_fuel_alert_states';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationFuelAlertState> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('incarnation')) {
+      context.handle(
+        _incarnationMeta,
+        incarnation.isAcceptableOrUnknown(
+          data['incarnation']!,
+          _incarnationMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_incarnationMeta);
+    }
+    if (data.containsKey('corporation_id')) {
+      context.handle(
+        _corporationIdMeta,
+        corporationId.isAcceptableOrUnknown(
+          data['corporation_id']!,
+          _corporationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_corporationIdMeta);
+    }
+    if (data.containsKey('structure_key')) {
+      context.handle(
+        _structureKeyMeta,
+        structureKey.isAcceptableOrUnknown(
+          data['structure_key']!,
+          _structureKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_structureKeyMeta);
+    }
+    if (data.containsKey('grant_epoch')) {
+      context.handle(
+        _grantEpochMeta,
+        grantEpoch.isAcceptableOrUnknown(data['grant_epoch']!, _grantEpochMeta),
+      );
+    }
+    if (data.containsKey('rearm_state')) {
+      context.handle(
+        _rearmStateMeta,
+        rearmState.isAcceptableOrUnknown(data['rearm_state']!, _rearmStateMeta),
+      );
+    }
+    if (data.containsKey('episode_ordinal')) {
+      context.handle(
+        _episodeOrdinalMeta,
+        episodeOrdinal.isAcceptableOrUnknown(
+          data['episode_ordinal']!,
+          _episodeOrdinalMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_source_revision')) {
+      context.handle(
+        _lastSourceRevisionMeta,
+        lastSourceRevision.isAcceptableOrUnknown(
+          data['last_source_revision']!,
+          _lastSourceRevisionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_severity')) {
+      context.handle(
+        _lastSeverityMeta,
+        lastSeverity.isAcceptableOrUnknown(
+          data['last_severity']!,
+          _lastSeverityMeta,
+        ),
+      );
+    }
+    if (data.containsKey('access_invalidation')) {
+      context.handle(
+        _accessInvalidationMeta,
+        accessInvalidation.isAcceptableOrUnknown(
+          data['access_invalidation']!,
+          _accessInvalidationMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {
+    characterId,
+    incarnation,
+    corporationId,
+    structureKey,
+  };
+  @override
+  CorporationFuelAlertState map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationFuelAlertState(
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      )!,
+      incarnation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}incarnation'],
+      )!,
+      corporationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}corporation_id'],
+      )!,
+      structureKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}structure_key'],
+      )!,
+      grantEpoch: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}grant_epoch'],
+      ),
+      rearmState: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}rearm_state'],
+      ),
+      episodeOrdinal: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}episode_ordinal'],
+      ),
+      lastSourceRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_source_revision'],
+      ),
+      lastSeverity: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_severity'],
+      ),
+      accessInvalidation: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}access_invalidation'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationFuelAlertStatesTable createAlias(String alias) {
+    return $CorporationFuelAlertStatesTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationFuelAlertState extends DataClass
+    implements Insertable<CorporationFuelAlertState> {
+  final int characterId;
+  final String incarnation;
+  final int corporationId;
+  final String structureKey;
+  final int? grantEpoch;
+  final String? rearmState;
+  final int? episodeOrdinal;
+  final int? lastSourceRevision;
+  final String? lastSeverity;
+  final int? accessInvalidation;
+  const CorporationFuelAlertState({
+    required this.characterId,
+    required this.incarnation,
+    required this.corporationId,
+    required this.structureKey,
+    this.grantEpoch,
+    this.rearmState,
+    this.episodeOrdinal,
+    this.lastSourceRevision,
+    this.lastSeverity,
+    this.accessInvalidation,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['character_id'] = Variable<int>(characterId);
+    map['incarnation'] = Variable<String>(incarnation);
+    map['corporation_id'] = Variable<int>(corporationId);
+    map['structure_key'] = Variable<String>(structureKey);
+    if (!nullToAbsent || grantEpoch != null) {
+      map['grant_epoch'] = Variable<int>(grantEpoch);
+    }
+    if (!nullToAbsent || rearmState != null) {
+      map['rearm_state'] = Variable<String>(rearmState);
+    }
+    if (!nullToAbsent || episodeOrdinal != null) {
+      map['episode_ordinal'] = Variable<int>(episodeOrdinal);
+    }
+    if (!nullToAbsent || lastSourceRevision != null) {
+      map['last_source_revision'] = Variable<int>(lastSourceRevision);
+    }
+    if (!nullToAbsent || lastSeverity != null) {
+      map['last_severity'] = Variable<String>(lastSeverity);
+    }
+    if (!nullToAbsent || accessInvalidation != null) {
+      map['access_invalidation'] = Variable<int>(accessInvalidation);
+    }
+    return map;
+  }
+
+  CorporationFuelAlertStatesCompanion toCompanion(bool nullToAbsent) {
+    return CorporationFuelAlertStatesCompanion(
+      characterId: Value(characterId),
+      incarnation: Value(incarnation),
+      corporationId: Value(corporationId),
+      structureKey: Value(structureKey),
+      grantEpoch: grantEpoch == null && nullToAbsent
+          ? const Value.absent()
+          : Value(grantEpoch),
+      rearmState: rearmState == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rearmState),
+      episodeOrdinal: episodeOrdinal == null && nullToAbsent
+          ? const Value.absent()
+          : Value(episodeOrdinal),
+      lastSourceRevision: lastSourceRevision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSourceRevision),
+      lastSeverity: lastSeverity == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSeverity),
+      accessInvalidation: accessInvalidation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(accessInvalidation),
+    );
+  }
+
+  factory CorporationFuelAlertState.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationFuelAlertState(
+      characterId: serializer.fromJson<int>(json['characterId']),
+      incarnation: serializer.fromJson<String>(json['incarnation']),
+      corporationId: serializer.fromJson<int>(json['corporationId']),
+      structureKey: serializer.fromJson<String>(json['structureKey']),
+      grantEpoch: serializer.fromJson<int?>(json['grantEpoch']),
+      rearmState: serializer.fromJson<String?>(json['rearmState']),
+      episodeOrdinal: serializer.fromJson<int?>(json['episodeOrdinal']),
+      lastSourceRevision: serializer.fromJson<int?>(json['lastSourceRevision']),
+      lastSeverity: serializer.fromJson<String?>(json['lastSeverity']),
+      accessInvalidation: serializer.fromJson<int?>(json['accessInvalidation']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'characterId': serializer.toJson<int>(characterId),
+      'incarnation': serializer.toJson<String>(incarnation),
+      'corporationId': serializer.toJson<int>(corporationId),
+      'structureKey': serializer.toJson<String>(structureKey),
+      'grantEpoch': serializer.toJson<int?>(grantEpoch),
+      'rearmState': serializer.toJson<String?>(rearmState),
+      'episodeOrdinal': serializer.toJson<int?>(episodeOrdinal),
+      'lastSourceRevision': serializer.toJson<int?>(lastSourceRevision),
+      'lastSeverity': serializer.toJson<String?>(lastSeverity),
+      'accessInvalidation': serializer.toJson<int?>(accessInvalidation),
+    };
+  }
+
+  CorporationFuelAlertState copyWith({
+    int? characterId,
+    String? incarnation,
+    int? corporationId,
+    String? structureKey,
+    Value<int?> grantEpoch = const Value.absent(),
+    Value<String?> rearmState = const Value.absent(),
+    Value<int?> episodeOrdinal = const Value.absent(),
+    Value<int?> lastSourceRevision = const Value.absent(),
+    Value<String?> lastSeverity = const Value.absent(),
+    Value<int?> accessInvalidation = const Value.absent(),
+  }) => CorporationFuelAlertState(
+    characterId: characterId ?? this.characterId,
+    incarnation: incarnation ?? this.incarnation,
+    corporationId: corporationId ?? this.corporationId,
+    structureKey: structureKey ?? this.structureKey,
+    grantEpoch: grantEpoch.present ? grantEpoch.value : this.grantEpoch,
+    rearmState: rearmState.present ? rearmState.value : this.rearmState,
+    episodeOrdinal: episodeOrdinal.present
+        ? episodeOrdinal.value
+        : this.episodeOrdinal,
+    lastSourceRevision: lastSourceRevision.present
+        ? lastSourceRevision.value
+        : this.lastSourceRevision,
+    lastSeverity: lastSeverity.present ? lastSeverity.value : this.lastSeverity,
+    accessInvalidation: accessInvalidation.present
+        ? accessInvalidation.value
+        : this.accessInvalidation,
+  );
+  CorporationFuelAlertState copyWithCompanion(
+    CorporationFuelAlertStatesCompanion data,
+  ) {
+    return CorporationFuelAlertState(
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      incarnation: data.incarnation.present
+          ? data.incarnation.value
+          : this.incarnation,
+      corporationId: data.corporationId.present
+          ? data.corporationId.value
+          : this.corporationId,
+      structureKey: data.structureKey.present
+          ? data.structureKey.value
+          : this.structureKey,
+      grantEpoch: data.grantEpoch.present
+          ? data.grantEpoch.value
+          : this.grantEpoch,
+      rearmState: data.rearmState.present
+          ? data.rearmState.value
+          : this.rearmState,
+      episodeOrdinal: data.episodeOrdinal.present
+          ? data.episodeOrdinal.value
+          : this.episodeOrdinal,
+      lastSourceRevision: data.lastSourceRevision.present
+          ? data.lastSourceRevision.value
+          : this.lastSourceRevision,
+      lastSeverity: data.lastSeverity.present
+          ? data.lastSeverity.value
+          : this.lastSeverity,
+      accessInvalidation: data.accessInvalidation.present
+          ? data.accessInvalidation.value
+          : this.accessInvalidation,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationFuelAlertState(')
+          ..write('characterId: $characterId, ')
+          ..write('incarnation: $incarnation, ')
+          ..write('corporationId: $corporationId, ')
+          ..write('structureKey: $structureKey, ')
+          ..write('grantEpoch: $grantEpoch, ')
+          ..write('rearmState: $rearmState, ')
+          ..write('episodeOrdinal: $episodeOrdinal, ')
+          ..write('lastSourceRevision: $lastSourceRevision, ')
+          ..write('lastSeverity: $lastSeverity, ')
+          ..write('accessInvalidation: $accessInvalidation')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    characterId,
+    incarnation,
+    corporationId,
+    structureKey,
+    grantEpoch,
+    rearmState,
+    episodeOrdinal,
+    lastSourceRevision,
+    lastSeverity,
+    accessInvalidation,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationFuelAlertState &&
+          other.characterId == this.characterId &&
+          other.incarnation == this.incarnation &&
+          other.corporationId == this.corporationId &&
+          other.structureKey == this.structureKey &&
+          other.grantEpoch == this.grantEpoch &&
+          other.rearmState == this.rearmState &&
+          other.episodeOrdinal == this.episodeOrdinal &&
+          other.lastSourceRevision == this.lastSourceRevision &&
+          other.lastSeverity == this.lastSeverity &&
+          other.accessInvalidation == this.accessInvalidation);
+}
+
+class CorporationFuelAlertStatesCompanion
+    extends UpdateCompanion<CorporationFuelAlertState> {
+  final Value<int> characterId;
+  final Value<String> incarnation;
+  final Value<int> corporationId;
+  final Value<String> structureKey;
+  final Value<int?> grantEpoch;
+  final Value<String?> rearmState;
+  final Value<int?> episodeOrdinal;
+  final Value<int?> lastSourceRevision;
+  final Value<String?> lastSeverity;
+  final Value<int?> accessInvalidation;
+  final Value<int> rowid;
+  const CorporationFuelAlertStatesCompanion({
+    this.characterId = const Value.absent(),
+    this.incarnation = const Value.absent(),
+    this.corporationId = const Value.absent(),
+    this.structureKey = const Value.absent(),
+    this.grantEpoch = const Value.absent(),
+    this.rearmState = const Value.absent(),
+    this.episodeOrdinal = const Value.absent(),
+    this.lastSourceRevision = const Value.absent(),
+    this.lastSeverity = const Value.absent(),
+    this.accessInvalidation = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationFuelAlertStatesCompanion.insert({
+    required int characterId,
+    required String incarnation,
+    required int corporationId,
+    required String structureKey,
+    this.grantEpoch = const Value.absent(),
+    this.rearmState = const Value.absent(),
+    this.episodeOrdinal = const Value.absent(),
+    this.lastSourceRevision = const Value.absent(),
+    this.lastSeverity = const Value.absent(),
+    this.accessInvalidation = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : characterId = Value(characterId),
+       incarnation = Value(incarnation),
+       corporationId = Value(corporationId),
+       structureKey = Value(structureKey);
+  static Insertable<CorporationFuelAlertState> custom({
+    Expression<int>? characterId,
+    Expression<String>? incarnation,
+    Expression<int>? corporationId,
+    Expression<String>? structureKey,
+    Expression<int>? grantEpoch,
+    Expression<String>? rearmState,
+    Expression<int>? episodeOrdinal,
+    Expression<int>? lastSourceRevision,
+    Expression<String>? lastSeverity,
+    Expression<int>? accessInvalidation,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (characterId != null) 'character_id': characterId,
+      if (incarnation != null) 'incarnation': incarnation,
+      if (corporationId != null) 'corporation_id': corporationId,
+      if (structureKey != null) 'structure_key': structureKey,
+      if (grantEpoch != null) 'grant_epoch': grantEpoch,
+      if (rearmState != null) 'rearm_state': rearmState,
+      if (episodeOrdinal != null) 'episode_ordinal': episodeOrdinal,
+      if (lastSourceRevision != null)
+        'last_source_revision': lastSourceRevision,
+      if (lastSeverity != null) 'last_severity': lastSeverity,
+      if (accessInvalidation != null) 'access_invalidation': accessInvalidation,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationFuelAlertStatesCompanion copyWith({
+    Value<int>? characterId,
+    Value<String>? incarnation,
+    Value<int>? corporationId,
+    Value<String>? structureKey,
+    Value<int?>? grantEpoch,
+    Value<String?>? rearmState,
+    Value<int?>? episodeOrdinal,
+    Value<int?>? lastSourceRevision,
+    Value<String?>? lastSeverity,
+    Value<int?>? accessInvalidation,
+    Value<int>? rowid,
+  }) {
+    return CorporationFuelAlertStatesCompanion(
+      characterId: characterId ?? this.characterId,
+      incarnation: incarnation ?? this.incarnation,
+      corporationId: corporationId ?? this.corporationId,
+      structureKey: structureKey ?? this.structureKey,
+      grantEpoch: grantEpoch ?? this.grantEpoch,
+      rearmState: rearmState ?? this.rearmState,
+      episodeOrdinal: episodeOrdinal ?? this.episodeOrdinal,
+      lastSourceRevision: lastSourceRevision ?? this.lastSourceRevision,
+      lastSeverity: lastSeverity ?? this.lastSeverity,
+      accessInvalidation: accessInvalidation ?? this.accessInvalidation,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (incarnation.present) {
+      map['incarnation'] = Variable<String>(incarnation.value);
+    }
+    if (corporationId.present) {
+      map['corporation_id'] = Variable<int>(corporationId.value);
+    }
+    if (structureKey.present) {
+      map['structure_key'] = Variable<String>(structureKey.value);
+    }
+    if (grantEpoch.present) {
+      map['grant_epoch'] = Variable<int>(grantEpoch.value);
+    }
+    if (rearmState.present) {
+      map['rearm_state'] = Variable<String>(rearmState.value);
+    }
+    if (episodeOrdinal.present) {
+      map['episode_ordinal'] = Variable<int>(episodeOrdinal.value);
+    }
+    if (lastSourceRevision.present) {
+      map['last_source_revision'] = Variable<int>(lastSourceRevision.value);
+    }
+    if (lastSeverity.present) {
+      map['last_severity'] = Variable<String>(lastSeverity.value);
+    }
+    if (accessInvalidation.present) {
+      map['access_invalidation'] = Variable<int>(accessInvalidation.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationFuelAlertStatesCompanion(')
+          ..write('characterId: $characterId, ')
+          ..write('incarnation: $incarnation, ')
+          ..write('corporationId: $corporationId, ')
+          ..write('structureKey: $structureKey, ')
+          ..write('grantEpoch: $grantEpoch, ')
+          ..write('rearmState: $rearmState, ')
+          ..write('episodeOrdinal: $episodeOrdinal, ')
+          ..write('lastSourceRevision: $lastSourceRevision, ')
+          ..write('lastSeverity: $lastSeverity, ')
+          ..write('accessInvalidation: $accessInvalidation, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationFuelAlertEpisodesTable extends CorporationFuelAlertEpisodes
+    with
+        TableInfo<
+          $CorporationFuelAlertEpisodesTable,
+          CorporationFuelAlertEpisode
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationFuelAlertEpisodesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerKeyMeta = const VerificationMeta(
+    'ownerKey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerKey = GeneratedColumn<String>(
+    'owner_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _episodeUuidMeta = const VerificationMeta(
+    'episodeUuid',
+  );
+  @override
+  late final GeneratedColumn<String> episodeUuid = GeneratedColumn<String>(
+    'episode_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sourceRevisionMeta = const VerificationMeta(
+    'sourceRevision',
+  );
+  @override
+  late final GeneratedColumn<int> sourceRevision = GeneratedColumn<int>(
+    'source_revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMsMeta = const VerificationMeta(
+    'createdAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> createdAtMs = GeneratedColumn<int>(
+    'created_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _severityMeta = const VerificationMeta(
+    'severity',
+  );
+  @override
+  late final GeneratedColumn<String> severity = GeneratedColumn<String>(
+    'severity',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _acknowledgedAtMsMeta = const VerificationMeta(
+    'acknowledgedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> acknowledgedAtMs = GeneratedColumn<int>(
+    'acknowledged_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _closedAtMsMeta = const VerificationMeta(
+    'closedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> closedAtMs = GeneratedColumn<int>(
+    'closed_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _deliveryClaimMeta = const VerificationMeta(
+    'deliveryClaim',
+  );
+  @override
+  late final GeneratedColumn<String> deliveryClaim = GeneratedColumn<String>(
+    'delivery_claim',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _handoffStateMeta = const VerificationMeta(
+    'handoffState',
+  );
+  @override
+  late final GeneratedColumn<String> handoffState = GeneratedColumn<String>(
+    'handoff_state',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerKey,
+    episodeUuid,
+    ownerCharacterId,
+    sourceRevision,
+    createdAtMs,
+    severity,
+    acknowledgedAtMs,
+    closedAtMs,
+    deliveryClaim,
+    handoffState,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_fuel_alert_episodes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationFuelAlertEpisode> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_key')) {
+      context.handle(
+        _ownerKeyMeta,
+        ownerKey.isAcceptableOrUnknown(data['owner_key']!, _ownerKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerKeyMeta);
+    }
+    if (data.containsKey('episode_uuid')) {
+      context.handle(
+        _episodeUuidMeta,
+        episodeUuid.isAcceptableOrUnknown(
+          data['episode_uuid']!,
+          _episodeUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_episodeUuidMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('source_revision')) {
+      context.handle(
+        _sourceRevisionMeta,
+        sourceRevision.isAcceptableOrUnknown(
+          data['source_revision']!,
+          _sourceRevisionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at_ms')) {
+      context.handle(
+        _createdAtMsMeta,
+        createdAtMs.isAcceptableOrUnknown(
+          data['created_at_ms']!,
+          _createdAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('severity')) {
+      context.handle(
+        _severityMeta,
+        severity.isAcceptableOrUnknown(data['severity']!, _severityMeta),
+      );
+    }
+    if (data.containsKey('acknowledged_at_ms')) {
+      context.handle(
+        _acknowledgedAtMsMeta,
+        acknowledgedAtMs.isAcceptableOrUnknown(
+          data['acknowledged_at_ms']!,
+          _acknowledgedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('closed_at_ms')) {
+      context.handle(
+        _closedAtMsMeta,
+        closedAtMs.isAcceptableOrUnknown(
+          data['closed_at_ms']!,
+          _closedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('delivery_claim')) {
+      context.handle(
+        _deliveryClaimMeta,
+        deliveryClaim.isAcceptableOrUnknown(
+          data['delivery_claim']!,
+          _deliveryClaimMeta,
+        ),
+      );
+    }
+    if (data.containsKey('handoff_state')) {
+      context.handle(
+        _handoffStateMeta,
+        handoffState.isAcceptableOrUnknown(
+          data['handoff_state']!,
+          _handoffStateMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerKey, episodeUuid};
+  @override
+  CorporationFuelAlertEpisode map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationFuelAlertEpisode(
+      ownerKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_key'],
+      )!,
+      episodeUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}episode_uuid'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      ),
+      sourceRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}source_revision'],
+      ),
+      createdAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at_ms'],
+      ),
+      severity: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}severity'],
+      ),
+      acknowledgedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}acknowledged_at_ms'],
+      ),
+      closedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}closed_at_ms'],
+      ),
+      deliveryClaim: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}delivery_claim'],
+      ),
+      handoffState: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}handoff_state'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationFuelAlertEpisodesTable createAlias(String alias) {
+    return $CorporationFuelAlertEpisodesTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationFuelAlertEpisode extends DataClass
+    implements Insertable<CorporationFuelAlertEpisode> {
+  final String ownerKey;
+  final String episodeUuid;
+  final int? ownerCharacterId;
+  final int? sourceRevision;
+  final int? createdAtMs;
+  final String? severity;
+  final int? acknowledgedAtMs;
+  final int? closedAtMs;
+  final String? deliveryClaim;
+  final String? handoffState;
+  const CorporationFuelAlertEpisode({
+    required this.ownerKey,
+    required this.episodeUuid,
+    this.ownerCharacterId,
+    this.sourceRevision,
+    this.createdAtMs,
+    this.severity,
+    this.acknowledgedAtMs,
+    this.closedAtMs,
+    this.deliveryClaim,
+    this.handoffState,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_key'] = Variable<String>(ownerKey);
+    map['episode_uuid'] = Variable<String>(episodeUuid);
+    if (!nullToAbsent || ownerCharacterId != null) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    }
+    if (!nullToAbsent || sourceRevision != null) {
+      map['source_revision'] = Variable<int>(sourceRevision);
+    }
+    if (!nullToAbsent || createdAtMs != null) {
+      map['created_at_ms'] = Variable<int>(createdAtMs);
+    }
+    if (!nullToAbsent || severity != null) {
+      map['severity'] = Variable<String>(severity);
+    }
+    if (!nullToAbsent || acknowledgedAtMs != null) {
+      map['acknowledged_at_ms'] = Variable<int>(acknowledgedAtMs);
+    }
+    if (!nullToAbsent || closedAtMs != null) {
+      map['closed_at_ms'] = Variable<int>(closedAtMs);
+    }
+    if (!nullToAbsent || deliveryClaim != null) {
+      map['delivery_claim'] = Variable<String>(deliveryClaim);
+    }
+    if (!nullToAbsent || handoffState != null) {
+      map['handoff_state'] = Variable<String>(handoffState);
+    }
+    return map;
+  }
+
+  CorporationFuelAlertEpisodesCompanion toCompanion(bool nullToAbsent) {
+    return CorporationFuelAlertEpisodesCompanion(
+      ownerKey: Value(ownerKey),
+      episodeUuid: Value(episodeUuid),
+      ownerCharacterId: ownerCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerCharacterId),
+      sourceRevision: sourceRevision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceRevision),
+      createdAtMs: createdAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAtMs),
+      severity: severity == null && nullToAbsent
+          ? const Value.absent()
+          : Value(severity),
+      acknowledgedAtMs: acknowledgedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(acknowledgedAtMs),
+      closedAtMs: closedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closedAtMs),
+      deliveryClaim: deliveryClaim == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deliveryClaim),
+      handoffState: handoffState == null && nullToAbsent
+          ? const Value.absent()
+          : Value(handoffState),
+    );
+  }
+
+  factory CorporationFuelAlertEpisode.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationFuelAlertEpisode(
+      ownerKey: serializer.fromJson<String>(json['ownerKey']),
+      episodeUuid: serializer.fromJson<String>(json['episodeUuid']),
+      ownerCharacterId: serializer.fromJson<int?>(json['ownerCharacterId']),
+      sourceRevision: serializer.fromJson<int?>(json['sourceRevision']),
+      createdAtMs: serializer.fromJson<int?>(json['createdAtMs']),
+      severity: serializer.fromJson<String?>(json['severity']),
+      acknowledgedAtMs: serializer.fromJson<int?>(json['acknowledgedAtMs']),
+      closedAtMs: serializer.fromJson<int?>(json['closedAtMs']),
+      deliveryClaim: serializer.fromJson<String?>(json['deliveryClaim']),
+      handoffState: serializer.fromJson<String?>(json['handoffState']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerKey': serializer.toJson<String>(ownerKey),
+      'episodeUuid': serializer.toJson<String>(episodeUuid),
+      'ownerCharacterId': serializer.toJson<int?>(ownerCharacterId),
+      'sourceRevision': serializer.toJson<int?>(sourceRevision),
+      'createdAtMs': serializer.toJson<int?>(createdAtMs),
+      'severity': serializer.toJson<String?>(severity),
+      'acknowledgedAtMs': serializer.toJson<int?>(acknowledgedAtMs),
+      'closedAtMs': serializer.toJson<int?>(closedAtMs),
+      'deliveryClaim': serializer.toJson<String?>(deliveryClaim),
+      'handoffState': serializer.toJson<String?>(handoffState),
+    };
+  }
+
+  CorporationFuelAlertEpisode copyWith({
+    String? ownerKey,
+    String? episodeUuid,
+    Value<int?> ownerCharacterId = const Value.absent(),
+    Value<int?> sourceRevision = const Value.absent(),
+    Value<int?> createdAtMs = const Value.absent(),
+    Value<String?> severity = const Value.absent(),
+    Value<int?> acknowledgedAtMs = const Value.absent(),
+    Value<int?> closedAtMs = const Value.absent(),
+    Value<String?> deliveryClaim = const Value.absent(),
+    Value<String?> handoffState = const Value.absent(),
+  }) => CorporationFuelAlertEpisode(
+    ownerKey: ownerKey ?? this.ownerKey,
+    episodeUuid: episodeUuid ?? this.episodeUuid,
+    ownerCharacterId: ownerCharacterId.present
+        ? ownerCharacterId.value
+        : this.ownerCharacterId,
+    sourceRevision: sourceRevision.present
+        ? sourceRevision.value
+        : this.sourceRevision,
+    createdAtMs: createdAtMs.present ? createdAtMs.value : this.createdAtMs,
+    severity: severity.present ? severity.value : this.severity,
+    acknowledgedAtMs: acknowledgedAtMs.present
+        ? acknowledgedAtMs.value
+        : this.acknowledgedAtMs,
+    closedAtMs: closedAtMs.present ? closedAtMs.value : this.closedAtMs,
+    deliveryClaim: deliveryClaim.present
+        ? deliveryClaim.value
+        : this.deliveryClaim,
+    handoffState: handoffState.present ? handoffState.value : this.handoffState,
+  );
+  CorporationFuelAlertEpisode copyWithCompanion(
+    CorporationFuelAlertEpisodesCompanion data,
+  ) {
+    return CorporationFuelAlertEpisode(
+      ownerKey: data.ownerKey.present ? data.ownerKey.value : this.ownerKey,
+      episodeUuid: data.episodeUuid.present
+          ? data.episodeUuid.value
+          : this.episodeUuid,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      sourceRevision: data.sourceRevision.present
+          ? data.sourceRevision.value
+          : this.sourceRevision,
+      createdAtMs: data.createdAtMs.present
+          ? data.createdAtMs.value
+          : this.createdAtMs,
+      severity: data.severity.present ? data.severity.value : this.severity,
+      acknowledgedAtMs: data.acknowledgedAtMs.present
+          ? data.acknowledgedAtMs.value
+          : this.acknowledgedAtMs,
+      closedAtMs: data.closedAtMs.present
+          ? data.closedAtMs.value
+          : this.closedAtMs,
+      deliveryClaim: data.deliveryClaim.present
+          ? data.deliveryClaim.value
+          : this.deliveryClaim,
+      handoffState: data.handoffState.present
+          ? data.handoffState.value
+          : this.handoffState,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationFuelAlertEpisode(')
+          ..write('ownerKey: $ownerKey, ')
+          ..write('episodeUuid: $episodeUuid, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('sourceRevision: $sourceRevision, ')
+          ..write('createdAtMs: $createdAtMs, ')
+          ..write('severity: $severity, ')
+          ..write('acknowledgedAtMs: $acknowledgedAtMs, ')
+          ..write('closedAtMs: $closedAtMs, ')
+          ..write('deliveryClaim: $deliveryClaim, ')
+          ..write('handoffState: $handoffState')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    ownerKey,
+    episodeUuid,
+    ownerCharacterId,
+    sourceRevision,
+    createdAtMs,
+    severity,
+    acknowledgedAtMs,
+    closedAtMs,
+    deliveryClaim,
+    handoffState,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationFuelAlertEpisode &&
+          other.ownerKey == this.ownerKey &&
+          other.episodeUuid == this.episodeUuid &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.sourceRevision == this.sourceRevision &&
+          other.createdAtMs == this.createdAtMs &&
+          other.severity == this.severity &&
+          other.acknowledgedAtMs == this.acknowledgedAtMs &&
+          other.closedAtMs == this.closedAtMs &&
+          other.deliveryClaim == this.deliveryClaim &&
+          other.handoffState == this.handoffState);
+}
+
+class CorporationFuelAlertEpisodesCompanion
+    extends UpdateCompanion<CorporationFuelAlertEpisode> {
+  final Value<String> ownerKey;
+  final Value<String> episodeUuid;
+  final Value<int?> ownerCharacterId;
+  final Value<int?> sourceRevision;
+  final Value<int?> createdAtMs;
+  final Value<String?> severity;
+  final Value<int?> acknowledgedAtMs;
+  final Value<int?> closedAtMs;
+  final Value<String?> deliveryClaim;
+  final Value<String?> handoffState;
+  final Value<int> rowid;
+  const CorporationFuelAlertEpisodesCompanion({
+    this.ownerKey = const Value.absent(),
+    this.episodeUuid = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.sourceRevision = const Value.absent(),
+    this.createdAtMs = const Value.absent(),
+    this.severity = const Value.absent(),
+    this.acknowledgedAtMs = const Value.absent(),
+    this.closedAtMs = const Value.absent(),
+    this.deliveryClaim = const Value.absent(),
+    this.handoffState = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationFuelAlertEpisodesCompanion.insert({
+    required String ownerKey,
+    required String episodeUuid,
+    this.ownerCharacterId = const Value.absent(),
+    this.sourceRevision = const Value.absent(),
+    this.createdAtMs = const Value.absent(),
+    this.severity = const Value.absent(),
+    this.acknowledgedAtMs = const Value.absent(),
+    this.closedAtMs = const Value.absent(),
+    this.deliveryClaim = const Value.absent(),
+    this.handoffState = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : ownerKey = Value(ownerKey),
+       episodeUuid = Value(episodeUuid);
+  static Insertable<CorporationFuelAlertEpisode> custom({
+    Expression<String>? ownerKey,
+    Expression<String>? episodeUuid,
+    Expression<int>? ownerCharacterId,
+    Expression<int>? sourceRevision,
+    Expression<int>? createdAtMs,
+    Expression<String>? severity,
+    Expression<int>? acknowledgedAtMs,
+    Expression<int>? closedAtMs,
+    Expression<String>? deliveryClaim,
+    Expression<String>? handoffState,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerKey != null) 'owner_key': ownerKey,
+      if (episodeUuid != null) 'episode_uuid': episodeUuid,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (sourceRevision != null) 'source_revision': sourceRevision,
+      if (createdAtMs != null) 'created_at_ms': createdAtMs,
+      if (severity != null) 'severity': severity,
+      if (acknowledgedAtMs != null) 'acknowledged_at_ms': acknowledgedAtMs,
+      if (closedAtMs != null) 'closed_at_ms': closedAtMs,
+      if (deliveryClaim != null) 'delivery_claim': deliveryClaim,
+      if (handoffState != null) 'handoff_state': handoffState,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationFuelAlertEpisodesCompanion copyWith({
+    Value<String>? ownerKey,
+    Value<String>? episodeUuid,
+    Value<int?>? ownerCharacterId,
+    Value<int?>? sourceRevision,
+    Value<int?>? createdAtMs,
+    Value<String?>? severity,
+    Value<int?>? acknowledgedAtMs,
+    Value<int?>? closedAtMs,
+    Value<String?>? deliveryClaim,
+    Value<String?>? handoffState,
+    Value<int>? rowid,
+  }) {
+    return CorporationFuelAlertEpisodesCompanion(
+      ownerKey: ownerKey ?? this.ownerKey,
+      episodeUuid: episodeUuid ?? this.episodeUuid,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      sourceRevision: sourceRevision ?? this.sourceRevision,
+      createdAtMs: createdAtMs ?? this.createdAtMs,
+      severity: severity ?? this.severity,
+      acknowledgedAtMs: acknowledgedAtMs ?? this.acknowledgedAtMs,
+      closedAtMs: closedAtMs ?? this.closedAtMs,
+      deliveryClaim: deliveryClaim ?? this.deliveryClaim,
+      handoffState: handoffState ?? this.handoffState,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerKey.present) {
+      map['owner_key'] = Variable<String>(ownerKey.value);
+    }
+    if (episodeUuid.present) {
+      map['episode_uuid'] = Variable<String>(episodeUuid.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (sourceRevision.present) {
+      map['source_revision'] = Variable<int>(sourceRevision.value);
+    }
+    if (createdAtMs.present) {
+      map['created_at_ms'] = Variable<int>(createdAtMs.value);
+    }
+    if (severity.present) {
+      map['severity'] = Variable<String>(severity.value);
+    }
+    if (acknowledgedAtMs.present) {
+      map['acknowledged_at_ms'] = Variable<int>(acknowledgedAtMs.value);
+    }
+    if (closedAtMs.present) {
+      map['closed_at_ms'] = Variable<int>(closedAtMs.value);
+    }
+    if (deliveryClaim.present) {
+      map['delivery_claim'] = Variable<String>(deliveryClaim.value);
+    }
+    if (handoffState.present) {
+      map['handoff_state'] = Variable<String>(handoffState.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationFuelAlertEpisodesCompanion(')
+          ..write('ownerKey: $ownerKey, ')
+          ..write('episodeUuid: $episodeUuid, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('sourceRevision: $sourceRevision, ')
+          ..write('createdAtMs: $createdAtMs, ')
+          ..write('severity: $severity, ')
+          ..write('acknowledgedAtMs: $acknowledgedAtMs, ')
+          ..write('closedAtMs: $closedAtMs, ')
+          ..write('deliveryClaim: $deliveryClaim, ')
+          ..write('handoffState: $handoffState, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationWalletBalancesTable extends CorporationWalletBalances
+    with TableInfo<$CorporationWalletBalancesTable, CorporationWalletBalance> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationWalletBalancesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _snapshotIdMeta = const VerificationMeta(
+    'snapshotId',
+  );
+  @override
+  late final GeneratedColumn<String> snapshotId = GeneratedColumn<String>(
+    'snapshot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _divisionMeta = const VerificationMeta(
+    'division',
+  );
+  @override
+  late final GeneratedColumn<int> division = GeneratedColumn<int>(
+    'division',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _balanceMeta = const VerificationMeta(
+    'balance',
+  );
+  @override
+  late final GeneratedColumn<String> balance = GeneratedColumn<String>(
+    'balance',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    snapshotId,
+    division,
+    ownerCharacterId,
+    balance,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_wallet_balances';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationWalletBalance> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('snapshot_id')) {
+      context.handle(
+        _snapshotIdMeta,
+        snapshotId.isAcceptableOrUnknown(data['snapshot_id']!, _snapshotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_snapshotIdMeta);
+    }
+    if (data.containsKey('division')) {
+      context.handle(
+        _divisionMeta,
+        division.isAcceptableOrUnknown(data['division']!, _divisionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_divisionMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerCharacterIdMeta);
+    }
+    if (data.containsKey('balance')) {
+      context.handle(
+        _balanceMeta,
+        balance.isAcceptableOrUnknown(data['balance']!, _balanceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_balanceMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {snapshotId, division};
+  @override
+  CorporationWalletBalance map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationWalletBalance(
+      snapshotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}snapshot_id'],
+      )!,
+      division: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}division'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      )!,
+      balance: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}balance'],
+      )!,
+    );
+  }
+
+  @override
+  $CorporationWalletBalancesTable createAlias(String alias) {
+    return $CorporationWalletBalancesTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationWalletBalance extends DataClass
+    implements Insertable<CorporationWalletBalance> {
+  final String snapshotId;
+  final int division;
+  final int ownerCharacterId;
+  final String balance;
+  const CorporationWalletBalance({
+    required this.snapshotId,
+    required this.division,
+    required this.ownerCharacterId,
+    required this.balance,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['snapshot_id'] = Variable<String>(snapshotId);
+    map['division'] = Variable<int>(division);
+    map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    map['balance'] = Variable<String>(balance);
+    return map;
+  }
+
+  CorporationWalletBalancesCompanion toCompanion(bool nullToAbsent) {
+    return CorporationWalletBalancesCompanion(
+      snapshotId: Value(snapshotId),
+      division: Value(division),
+      ownerCharacterId: Value(ownerCharacterId),
+      balance: Value(balance),
+    );
+  }
+
+  factory CorporationWalletBalance.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationWalletBalance(
+      snapshotId: serializer.fromJson<String>(json['snapshotId']),
+      division: serializer.fromJson<int>(json['division']),
+      ownerCharacterId: serializer.fromJson<int>(json['ownerCharacterId']),
+      balance: serializer.fromJson<String>(json['balance']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'snapshotId': serializer.toJson<String>(snapshotId),
+      'division': serializer.toJson<int>(division),
+      'ownerCharacterId': serializer.toJson<int>(ownerCharacterId),
+      'balance': serializer.toJson<String>(balance),
+    };
+  }
+
+  CorporationWalletBalance copyWith({
+    String? snapshotId,
+    int? division,
+    int? ownerCharacterId,
+    String? balance,
+  }) => CorporationWalletBalance(
+    snapshotId: snapshotId ?? this.snapshotId,
+    division: division ?? this.division,
+    ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+    balance: balance ?? this.balance,
+  );
+  CorporationWalletBalance copyWithCompanion(
+    CorporationWalletBalancesCompanion data,
+  ) {
+    return CorporationWalletBalance(
+      snapshotId: data.snapshotId.present
+          ? data.snapshotId.value
+          : this.snapshotId,
+      division: data.division.present ? data.division.value : this.division,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      balance: data.balance.present ? data.balance.value : this.balance,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationWalletBalance(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('division: $division, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('balance: $balance')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(snapshotId, division, ownerCharacterId, balance);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationWalletBalance &&
+          other.snapshotId == this.snapshotId &&
+          other.division == this.division &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.balance == this.balance);
+}
+
+class CorporationWalletBalancesCompanion
+    extends UpdateCompanion<CorporationWalletBalance> {
+  final Value<String> snapshotId;
+  final Value<int> division;
+  final Value<int> ownerCharacterId;
+  final Value<String> balance;
+  final Value<int> rowid;
+  const CorporationWalletBalancesCompanion({
+    this.snapshotId = const Value.absent(),
+    this.division = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.balance = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationWalletBalancesCompanion.insert({
+    required String snapshotId,
+    required int division,
+    required int ownerCharacterId,
+    required String balance,
+    this.rowid = const Value.absent(),
+  }) : snapshotId = Value(snapshotId),
+       division = Value(division),
+       ownerCharacterId = Value(ownerCharacterId),
+       balance = Value(balance);
+  static Insertable<CorporationWalletBalance> custom({
+    Expression<String>? snapshotId,
+    Expression<int>? division,
+    Expression<int>? ownerCharacterId,
+    Expression<String>? balance,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (snapshotId != null) 'snapshot_id': snapshotId,
+      if (division != null) 'division': division,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (balance != null) 'balance': balance,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationWalletBalancesCompanion copyWith({
+    Value<String>? snapshotId,
+    Value<int>? division,
+    Value<int>? ownerCharacterId,
+    Value<String>? balance,
+    Value<int>? rowid,
+  }) {
+    return CorporationWalletBalancesCompanion(
+      snapshotId: snapshotId ?? this.snapshotId,
+      division: division ?? this.division,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      balance: balance ?? this.balance,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (snapshotId.present) {
+      map['snapshot_id'] = Variable<String>(snapshotId.value);
+    }
+    if (division.present) {
+      map['division'] = Variable<int>(division.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (balance.present) {
+      map['balance'] = Variable<String>(balance.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationWalletBalancesCompanion(')
+          ..write('snapshotId: $snapshotId, ')
+          ..write('division: $division, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('balance: $balance, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationWalletJournalTable extends CorporationWalletJournal
+    with
+        TableInfo<
+          $CorporationWalletJournalTable,
+          CorporationWalletJournalData
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationWalletJournalTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerKeyMeta = const VerificationMeta(
+    'ownerKey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerKey = GeneratedColumn<String>(
+    'owner_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _journalKeyMeta = const VerificationMeta(
+    'journalKey',
+  );
+  @override
+  late final GeneratedColumn<String> journalKey = GeneratedColumn<String>(
+    'journal_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<String> amount = GeneratedColumn<String>(
+    'amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _balanceMeta = const VerificationMeta(
+    'balance',
+  );
+  @override
+  late final GeneratedColumn<String> balance = GeneratedColumn<String>(
+    'balance',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _occurredAtMsMeta = const VerificationMeta(
+    'occurredAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> occurredAtMs = GeneratedColumn<int>(
+    'occurred_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _refTypeMeta = const VerificationMeta(
+    'refType',
+  );
+  @override
+  late final GeneratedColumn<String> refType = GeneratedColumn<String>(
+    'ref_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _reasonMeta = const VerificationMeta('reason');
+  @override
+  late final GeneratedColumn<String> reason = GeneratedColumn<String>(
+    'reason',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastObservedRevisionMeta =
+      const VerificationMeta('lastObservedRevision');
+  @override
+  late final GeneratedColumn<int> lastObservedRevision = GeneratedColumn<int>(
+    'last_observed_revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerKey,
+    journalKey,
+    ownerCharacterId,
+    amount,
+    balance,
+    occurredAtMs,
+    refType,
+    reason,
+    lastObservedRevision,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_wallet_journal';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationWalletJournalData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_key')) {
+      context.handle(
+        _ownerKeyMeta,
+        ownerKey.isAcceptableOrUnknown(data['owner_key']!, _ownerKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerKeyMeta);
+    }
+    if (data.containsKey('journal_key')) {
+      context.handle(
+        _journalKeyMeta,
+        journalKey.isAcceptableOrUnknown(data['journal_key']!, _journalKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_journalKeyMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerCharacterIdMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    }
+    if (data.containsKey('balance')) {
+      context.handle(
+        _balanceMeta,
+        balance.isAcceptableOrUnknown(data['balance']!, _balanceMeta),
+      );
+    }
+    if (data.containsKey('occurred_at_ms')) {
+      context.handle(
+        _occurredAtMsMeta,
+        occurredAtMs.isAcceptableOrUnknown(
+          data['occurred_at_ms']!,
+          _occurredAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('ref_type')) {
+      context.handle(
+        _refTypeMeta,
+        refType.isAcceptableOrUnknown(data['ref_type']!, _refTypeMeta),
+      );
+    }
+    if (data.containsKey('reason')) {
+      context.handle(
+        _reasonMeta,
+        reason.isAcceptableOrUnknown(data['reason']!, _reasonMeta),
+      );
+    }
+    if (data.containsKey('last_observed_revision')) {
+      context.handle(
+        _lastObservedRevisionMeta,
+        lastObservedRevision.isAcceptableOrUnknown(
+          data['last_observed_revision']!,
+          _lastObservedRevisionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerKey, journalKey};
+  @override
+  CorporationWalletJournalData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationWalletJournalData(
+      ownerKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_key'],
+      )!,
+      journalKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}journal_key'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}amount'],
+      ),
+      balance: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}balance'],
+      ),
+      occurredAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}occurred_at_ms'],
+      ),
+      refType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ref_type'],
+      ),
+      reason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reason'],
+      ),
+      lastObservedRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_observed_revision'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationWalletJournalTable createAlias(String alias) {
+    return $CorporationWalletJournalTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationWalletJournalData extends DataClass
+    implements Insertable<CorporationWalletJournalData> {
+  final String ownerKey;
+  final String journalKey;
+  final int ownerCharacterId;
+  final String? amount;
+  final String? balance;
+  final int? occurredAtMs;
+  final String? refType;
+  final String? reason;
+  final int? lastObservedRevision;
+  const CorporationWalletJournalData({
+    required this.ownerKey,
+    required this.journalKey,
+    required this.ownerCharacterId,
+    this.amount,
+    this.balance,
+    this.occurredAtMs,
+    this.refType,
+    this.reason,
+    this.lastObservedRevision,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_key'] = Variable<String>(ownerKey);
+    map['journal_key'] = Variable<String>(journalKey);
+    map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    if (!nullToAbsent || amount != null) {
+      map['amount'] = Variable<String>(amount);
+    }
+    if (!nullToAbsent || balance != null) {
+      map['balance'] = Variable<String>(balance);
+    }
+    if (!nullToAbsent || occurredAtMs != null) {
+      map['occurred_at_ms'] = Variable<int>(occurredAtMs);
+    }
+    if (!nullToAbsent || refType != null) {
+      map['ref_type'] = Variable<String>(refType);
+    }
+    if (!nullToAbsent || reason != null) {
+      map['reason'] = Variable<String>(reason);
+    }
+    if (!nullToAbsent || lastObservedRevision != null) {
+      map['last_observed_revision'] = Variable<int>(lastObservedRevision);
+    }
+    return map;
+  }
+
+  CorporationWalletJournalCompanion toCompanion(bool nullToAbsent) {
+    return CorporationWalletJournalCompanion(
+      ownerKey: Value(ownerKey),
+      journalKey: Value(journalKey),
+      ownerCharacterId: Value(ownerCharacterId),
+      amount: amount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(amount),
+      balance: balance == null && nullToAbsent
+          ? const Value.absent()
+          : Value(balance),
+      occurredAtMs: occurredAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(occurredAtMs),
+      refType: refType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(refType),
+      reason: reason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reason),
+      lastObservedRevision: lastObservedRevision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastObservedRevision),
+    );
+  }
+
+  factory CorporationWalletJournalData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationWalletJournalData(
+      ownerKey: serializer.fromJson<String>(json['ownerKey']),
+      journalKey: serializer.fromJson<String>(json['journalKey']),
+      ownerCharacterId: serializer.fromJson<int>(json['ownerCharacterId']),
+      amount: serializer.fromJson<String?>(json['amount']),
+      balance: serializer.fromJson<String?>(json['balance']),
+      occurredAtMs: serializer.fromJson<int?>(json['occurredAtMs']),
+      refType: serializer.fromJson<String?>(json['refType']),
+      reason: serializer.fromJson<String?>(json['reason']),
+      lastObservedRevision: serializer.fromJson<int?>(
+        json['lastObservedRevision'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerKey': serializer.toJson<String>(ownerKey),
+      'journalKey': serializer.toJson<String>(journalKey),
+      'ownerCharacterId': serializer.toJson<int>(ownerCharacterId),
+      'amount': serializer.toJson<String?>(amount),
+      'balance': serializer.toJson<String?>(balance),
+      'occurredAtMs': serializer.toJson<int?>(occurredAtMs),
+      'refType': serializer.toJson<String?>(refType),
+      'reason': serializer.toJson<String?>(reason),
+      'lastObservedRevision': serializer.toJson<int?>(lastObservedRevision),
+    };
+  }
+
+  CorporationWalletJournalData copyWith({
+    String? ownerKey,
+    String? journalKey,
+    int? ownerCharacterId,
+    Value<String?> amount = const Value.absent(),
+    Value<String?> balance = const Value.absent(),
+    Value<int?> occurredAtMs = const Value.absent(),
+    Value<String?> refType = const Value.absent(),
+    Value<String?> reason = const Value.absent(),
+    Value<int?> lastObservedRevision = const Value.absent(),
+  }) => CorporationWalletJournalData(
+    ownerKey: ownerKey ?? this.ownerKey,
+    journalKey: journalKey ?? this.journalKey,
+    ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+    amount: amount.present ? amount.value : this.amount,
+    balance: balance.present ? balance.value : this.balance,
+    occurredAtMs: occurredAtMs.present ? occurredAtMs.value : this.occurredAtMs,
+    refType: refType.present ? refType.value : this.refType,
+    reason: reason.present ? reason.value : this.reason,
+    lastObservedRevision: lastObservedRevision.present
+        ? lastObservedRevision.value
+        : this.lastObservedRevision,
+  );
+  CorporationWalletJournalData copyWithCompanion(
+    CorporationWalletJournalCompanion data,
+  ) {
+    return CorporationWalletJournalData(
+      ownerKey: data.ownerKey.present ? data.ownerKey.value : this.ownerKey,
+      journalKey: data.journalKey.present
+          ? data.journalKey.value
+          : this.journalKey,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      balance: data.balance.present ? data.balance.value : this.balance,
+      occurredAtMs: data.occurredAtMs.present
+          ? data.occurredAtMs.value
+          : this.occurredAtMs,
+      refType: data.refType.present ? data.refType.value : this.refType,
+      reason: data.reason.present ? data.reason.value : this.reason,
+      lastObservedRevision: data.lastObservedRevision.present
+          ? data.lastObservedRevision.value
+          : this.lastObservedRevision,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationWalletJournalData(')
+          ..write('ownerKey: $ownerKey, ')
+          ..write('journalKey: $journalKey, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('amount: $amount, ')
+          ..write('balance: $balance, ')
+          ..write('occurredAtMs: $occurredAtMs, ')
+          ..write('refType: $refType, ')
+          ..write('reason: $reason, ')
+          ..write('lastObservedRevision: $lastObservedRevision')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    ownerKey,
+    journalKey,
+    ownerCharacterId,
+    amount,
+    balance,
+    occurredAtMs,
+    refType,
+    reason,
+    lastObservedRevision,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationWalletJournalData &&
+          other.ownerKey == this.ownerKey &&
+          other.journalKey == this.journalKey &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.amount == this.amount &&
+          other.balance == this.balance &&
+          other.occurredAtMs == this.occurredAtMs &&
+          other.refType == this.refType &&
+          other.reason == this.reason &&
+          other.lastObservedRevision == this.lastObservedRevision);
+}
+
+class CorporationWalletJournalCompanion
+    extends UpdateCompanion<CorporationWalletJournalData> {
+  final Value<String> ownerKey;
+  final Value<String> journalKey;
+  final Value<int> ownerCharacterId;
+  final Value<String?> amount;
+  final Value<String?> balance;
+  final Value<int?> occurredAtMs;
+  final Value<String?> refType;
+  final Value<String?> reason;
+  final Value<int?> lastObservedRevision;
+  final Value<int> rowid;
+  const CorporationWalletJournalCompanion({
+    this.ownerKey = const Value.absent(),
+    this.journalKey = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.balance = const Value.absent(),
+    this.occurredAtMs = const Value.absent(),
+    this.refType = const Value.absent(),
+    this.reason = const Value.absent(),
+    this.lastObservedRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationWalletJournalCompanion.insert({
+    required String ownerKey,
+    required String journalKey,
+    required int ownerCharacterId,
+    this.amount = const Value.absent(),
+    this.balance = const Value.absent(),
+    this.occurredAtMs = const Value.absent(),
+    this.refType = const Value.absent(),
+    this.reason = const Value.absent(),
+    this.lastObservedRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : ownerKey = Value(ownerKey),
+       journalKey = Value(journalKey),
+       ownerCharacterId = Value(ownerCharacterId);
+  static Insertable<CorporationWalletJournalData> custom({
+    Expression<String>? ownerKey,
+    Expression<String>? journalKey,
+    Expression<int>? ownerCharacterId,
+    Expression<String>? amount,
+    Expression<String>? balance,
+    Expression<int>? occurredAtMs,
+    Expression<String>? refType,
+    Expression<String>? reason,
+    Expression<int>? lastObservedRevision,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerKey != null) 'owner_key': ownerKey,
+      if (journalKey != null) 'journal_key': journalKey,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (amount != null) 'amount': amount,
+      if (balance != null) 'balance': balance,
+      if (occurredAtMs != null) 'occurred_at_ms': occurredAtMs,
+      if (refType != null) 'ref_type': refType,
+      if (reason != null) 'reason': reason,
+      if (lastObservedRevision != null)
+        'last_observed_revision': lastObservedRevision,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationWalletJournalCompanion copyWith({
+    Value<String>? ownerKey,
+    Value<String>? journalKey,
+    Value<int>? ownerCharacterId,
+    Value<String?>? amount,
+    Value<String?>? balance,
+    Value<int?>? occurredAtMs,
+    Value<String?>? refType,
+    Value<String?>? reason,
+    Value<int?>? lastObservedRevision,
+    Value<int>? rowid,
+  }) {
+    return CorporationWalletJournalCompanion(
+      ownerKey: ownerKey ?? this.ownerKey,
+      journalKey: journalKey ?? this.journalKey,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      amount: amount ?? this.amount,
+      balance: balance ?? this.balance,
+      occurredAtMs: occurredAtMs ?? this.occurredAtMs,
+      refType: refType ?? this.refType,
+      reason: reason ?? this.reason,
+      lastObservedRevision: lastObservedRevision ?? this.lastObservedRevision,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerKey.present) {
+      map['owner_key'] = Variable<String>(ownerKey.value);
+    }
+    if (journalKey.present) {
+      map['journal_key'] = Variable<String>(journalKey.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<String>(amount.value);
+    }
+    if (balance.present) {
+      map['balance'] = Variable<String>(balance.value);
+    }
+    if (occurredAtMs.present) {
+      map['occurred_at_ms'] = Variable<int>(occurredAtMs.value);
+    }
+    if (refType.present) {
+      map['ref_type'] = Variable<String>(refType.value);
+    }
+    if (reason.present) {
+      map['reason'] = Variable<String>(reason.value);
+    }
+    if (lastObservedRevision.present) {
+      map['last_observed_revision'] = Variable<int>(lastObservedRevision.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationWalletJournalCompanion(')
+          ..write('ownerKey: $ownerKey, ')
+          ..write('journalKey: $journalKey, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('amount: $amount, ')
+          ..write('balance: $balance, ')
+          ..write('occurredAtMs: $occurredAtMs, ')
+          ..write('refType: $refType, ')
+          ..write('reason: $reason, ')
+          ..write('lastObservedRevision: $lastObservedRevision, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationWalletTransactionsTable extends CorporationWalletTransactions
+    with
+        TableInfo<
+          $CorporationWalletTransactionsTable,
+          CorporationWalletTransaction
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationWalletTransactionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerKeyMeta = const VerificationMeta(
+    'ownerKey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerKey = GeneratedColumn<String>(
+    'owner_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _transactionKeyMeta = const VerificationMeta(
+    'transactionKey',
+  );
+  @override
+  late final GeneratedColumn<String> transactionKey = GeneratedColumn<String>(
+    'transaction_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _occurredAtMsMeta = const VerificationMeta(
+    'occurredAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> occurredAtMs = GeneratedColumn<int>(
+    'occurred_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+    'type_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _quantityMeta = const VerificationMeta(
+    'quantity',
+  );
+  @override
+  late final GeneratedColumn<int> quantity = GeneratedColumn<int>(
+    'quantity',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _unitPriceMeta = const VerificationMeta(
+    'unitPrice',
+  );
+  @override
+  late final GeneratedColumn<String> unitPrice = GeneratedColumn<String>(
+    'unit_price',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _buySellMeta = const VerificationMeta(
+    'buySell',
+  );
+  @override
+  late final GeneratedColumn<String> buySell = GeneratedColumn<String>(
+    'buy_sell',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _journalKeyMeta = const VerificationMeta(
+    'journalKey',
+  );
+  @override
+  late final GeneratedColumn<String> journalKey = GeneratedColumn<String>(
+    'journal_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastObservedRevisionMeta =
+      const VerificationMeta('lastObservedRevision');
+  @override
+  late final GeneratedColumn<int> lastObservedRevision = GeneratedColumn<int>(
+    'last_observed_revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerKey,
+    transactionKey,
+    ownerCharacterId,
+    occurredAtMs,
+    typeId,
+    quantity,
+    unitPrice,
+    buySell,
+    journalKey,
+    lastObservedRevision,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_wallet_transactions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationWalletTransaction> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_key')) {
+      context.handle(
+        _ownerKeyMeta,
+        ownerKey.isAcceptableOrUnknown(data['owner_key']!, _ownerKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerKeyMeta);
+    }
+    if (data.containsKey('transaction_key')) {
+      context.handle(
+        _transactionKeyMeta,
+        transactionKey.isAcceptableOrUnknown(
+          data['transaction_key']!,
+          _transactionKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_transactionKeyMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('occurred_at_ms')) {
+      context.handle(
+        _occurredAtMsMeta,
+        occurredAtMs.isAcceptableOrUnknown(
+          data['occurred_at_ms']!,
+          _occurredAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('type_id')) {
+      context.handle(
+        _typeIdMeta,
+        typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta),
+      );
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(
+        _quantityMeta,
+        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
+      );
+    }
+    if (data.containsKey('unit_price')) {
+      context.handle(
+        _unitPriceMeta,
+        unitPrice.isAcceptableOrUnknown(data['unit_price']!, _unitPriceMeta),
+      );
+    }
+    if (data.containsKey('buy_sell')) {
+      context.handle(
+        _buySellMeta,
+        buySell.isAcceptableOrUnknown(data['buy_sell']!, _buySellMeta),
+      );
+    }
+    if (data.containsKey('journal_key')) {
+      context.handle(
+        _journalKeyMeta,
+        journalKey.isAcceptableOrUnknown(data['journal_key']!, _journalKeyMeta),
+      );
+    }
+    if (data.containsKey('last_observed_revision')) {
+      context.handle(
+        _lastObservedRevisionMeta,
+        lastObservedRevision.isAcceptableOrUnknown(
+          data['last_observed_revision']!,
+          _lastObservedRevisionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerKey, transactionKey};
+  @override
+  CorporationWalletTransaction map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationWalletTransaction(
+      ownerKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_key'],
+      )!,
+      transactionKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}transaction_key'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      ),
+      occurredAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}occurred_at_ms'],
+      ),
+      typeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}type_id'],
+      ),
+      quantity: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity'],
+      ),
+      unitPrice: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}unit_price'],
+      ),
+      buySell: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}buy_sell'],
+      ),
+      journalKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}journal_key'],
+      ),
+      lastObservedRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_observed_revision'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationWalletTransactionsTable createAlias(String alias) {
+    return $CorporationWalletTransactionsTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationWalletTransaction extends DataClass
+    implements Insertable<CorporationWalletTransaction> {
+  final String ownerKey;
+  final String transactionKey;
+  final int? ownerCharacterId;
+  final int? occurredAtMs;
+  final int? typeId;
+  final int? quantity;
+  final String? unitPrice;
+  final String? buySell;
+  final String? journalKey;
+  final int? lastObservedRevision;
+  const CorporationWalletTransaction({
+    required this.ownerKey,
+    required this.transactionKey,
+    this.ownerCharacterId,
+    this.occurredAtMs,
+    this.typeId,
+    this.quantity,
+    this.unitPrice,
+    this.buySell,
+    this.journalKey,
+    this.lastObservedRevision,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_key'] = Variable<String>(ownerKey);
+    map['transaction_key'] = Variable<String>(transactionKey);
+    if (!nullToAbsent || ownerCharacterId != null) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    }
+    if (!nullToAbsent || occurredAtMs != null) {
+      map['occurred_at_ms'] = Variable<int>(occurredAtMs);
+    }
+    if (!nullToAbsent || typeId != null) {
+      map['type_id'] = Variable<int>(typeId);
+    }
+    if (!nullToAbsent || quantity != null) {
+      map['quantity'] = Variable<int>(quantity);
+    }
+    if (!nullToAbsent || unitPrice != null) {
+      map['unit_price'] = Variable<String>(unitPrice);
+    }
+    if (!nullToAbsent || buySell != null) {
+      map['buy_sell'] = Variable<String>(buySell);
+    }
+    if (!nullToAbsent || journalKey != null) {
+      map['journal_key'] = Variable<String>(journalKey);
+    }
+    if (!nullToAbsent || lastObservedRevision != null) {
+      map['last_observed_revision'] = Variable<int>(lastObservedRevision);
+    }
+    return map;
+  }
+
+  CorporationWalletTransactionsCompanion toCompanion(bool nullToAbsent) {
+    return CorporationWalletTransactionsCompanion(
+      ownerKey: Value(ownerKey),
+      transactionKey: Value(transactionKey),
+      ownerCharacterId: ownerCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerCharacterId),
+      occurredAtMs: occurredAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(occurredAtMs),
+      typeId: typeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(typeId),
+      quantity: quantity == null && nullToAbsent
+          ? const Value.absent()
+          : Value(quantity),
+      unitPrice: unitPrice == null && nullToAbsent
+          ? const Value.absent()
+          : Value(unitPrice),
+      buySell: buySell == null && nullToAbsent
+          ? const Value.absent()
+          : Value(buySell),
+      journalKey: journalKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(journalKey),
+      lastObservedRevision: lastObservedRevision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastObservedRevision),
+    );
+  }
+
+  factory CorporationWalletTransaction.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationWalletTransaction(
+      ownerKey: serializer.fromJson<String>(json['ownerKey']),
+      transactionKey: serializer.fromJson<String>(json['transactionKey']),
+      ownerCharacterId: serializer.fromJson<int?>(json['ownerCharacterId']),
+      occurredAtMs: serializer.fromJson<int?>(json['occurredAtMs']),
+      typeId: serializer.fromJson<int?>(json['typeId']),
+      quantity: serializer.fromJson<int?>(json['quantity']),
+      unitPrice: serializer.fromJson<String?>(json['unitPrice']),
+      buySell: serializer.fromJson<String?>(json['buySell']),
+      journalKey: serializer.fromJson<String?>(json['journalKey']),
+      lastObservedRevision: serializer.fromJson<int?>(
+        json['lastObservedRevision'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerKey': serializer.toJson<String>(ownerKey),
+      'transactionKey': serializer.toJson<String>(transactionKey),
+      'ownerCharacterId': serializer.toJson<int?>(ownerCharacterId),
+      'occurredAtMs': serializer.toJson<int?>(occurredAtMs),
+      'typeId': serializer.toJson<int?>(typeId),
+      'quantity': serializer.toJson<int?>(quantity),
+      'unitPrice': serializer.toJson<String?>(unitPrice),
+      'buySell': serializer.toJson<String?>(buySell),
+      'journalKey': serializer.toJson<String?>(journalKey),
+      'lastObservedRevision': serializer.toJson<int?>(lastObservedRevision),
+    };
+  }
+
+  CorporationWalletTransaction copyWith({
+    String? ownerKey,
+    String? transactionKey,
+    Value<int?> ownerCharacterId = const Value.absent(),
+    Value<int?> occurredAtMs = const Value.absent(),
+    Value<int?> typeId = const Value.absent(),
+    Value<int?> quantity = const Value.absent(),
+    Value<String?> unitPrice = const Value.absent(),
+    Value<String?> buySell = const Value.absent(),
+    Value<String?> journalKey = const Value.absent(),
+    Value<int?> lastObservedRevision = const Value.absent(),
+  }) => CorporationWalletTransaction(
+    ownerKey: ownerKey ?? this.ownerKey,
+    transactionKey: transactionKey ?? this.transactionKey,
+    ownerCharacterId: ownerCharacterId.present
+        ? ownerCharacterId.value
+        : this.ownerCharacterId,
+    occurredAtMs: occurredAtMs.present ? occurredAtMs.value : this.occurredAtMs,
+    typeId: typeId.present ? typeId.value : this.typeId,
+    quantity: quantity.present ? quantity.value : this.quantity,
+    unitPrice: unitPrice.present ? unitPrice.value : this.unitPrice,
+    buySell: buySell.present ? buySell.value : this.buySell,
+    journalKey: journalKey.present ? journalKey.value : this.journalKey,
+    lastObservedRevision: lastObservedRevision.present
+        ? lastObservedRevision.value
+        : this.lastObservedRevision,
+  );
+  CorporationWalletTransaction copyWithCompanion(
+    CorporationWalletTransactionsCompanion data,
+  ) {
+    return CorporationWalletTransaction(
+      ownerKey: data.ownerKey.present ? data.ownerKey.value : this.ownerKey,
+      transactionKey: data.transactionKey.present
+          ? data.transactionKey.value
+          : this.transactionKey,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      occurredAtMs: data.occurredAtMs.present
+          ? data.occurredAtMs.value
+          : this.occurredAtMs,
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      unitPrice: data.unitPrice.present ? data.unitPrice.value : this.unitPrice,
+      buySell: data.buySell.present ? data.buySell.value : this.buySell,
+      journalKey: data.journalKey.present
+          ? data.journalKey.value
+          : this.journalKey,
+      lastObservedRevision: data.lastObservedRevision.present
+          ? data.lastObservedRevision.value
+          : this.lastObservedRevision,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationWalletTransaction(')
+          ..write('ownerKey: $ownerKey, ')
+          ..write('transactionKey: $transactionKey, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('occurredAtMs: $occurredAtMs, ')
+          ..write('typeId: $typeId, ')
+          ..write('quantity: $quantity, ')
+          ..write('unitPrice: $unitPrice, ')
+          ..write('buySell: $buySell, ')
+          ..write('journalKey: $journalKey, ')
+          ..write('lastObservedRevision: $lastObservedRevision')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    ownerKey,
+    transactionKey,
+    ownerCharacterId,
+    occurredAtMs,
+    typeId,
+    quantity,
+    unitPrice,
+    buySell,
+    journalKey,
+    lastObservedRevision,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationWalletTransaction &&
+          other.ownerKey == this.ownerKey &&
+          other.transactionKey == this.transactionKey &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.occurredAtMs == this.occurredAtMs &&
+          other.typeId == this.typeId &&
+          other.quantity == this.quantity &&
+          other.unitPrice == this.unitPrice &&
+          other.buySell == this.buySell &&
+          other.journalKey == this.journalKey &&
+          other.lastObservedRevision == this.lastObservedRevision);
+}
+
+class CorporationWalletTransactionsCompanion
+    extends UpdateCompanion<CorporationWalletTransaction> {
+  final Value<String> ownerKey;
+  final Value<String> transactionKey;
+  final Value<int?> ownerCharacterId;
+  final Value<int?> occurredAtMs;
+  final Value<int?> typeId;
+  final Value<int?> quantity;
+  final Value<String?> unitPrice;
+  final Value<String?> buySell;
+  final Value<String?> journalKey;
+  final Value<int?> lastObservedRevision;
+  final Value<int> rowid;
+  const CorporationWalletTransactionsCompanion({
+    this.ownerKey = const Value.absent(),
+    this.transactionKey = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.occurredAtMs = const Value.absent(),
+    this.typeId = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.unitPrice = const Value.absent(),
+    this.buySell = const Value.absent(),
+    this.journalKey = const Value.absent(),
+    this.lastObservedRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationWalletTransactionsCompanion.insert({
+    required String ownerKey,
+    required String transactionKey,
+    this.ownerCharacterId = const Value.absent(),
+    this.occurredAtMs = const Value.absent(),
+    this.typeId = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.unitPrice = const Value.absent(),
+    this.buySell = const Value.absent(),
+    this.journalKey = const Value.absent(),
+    this.lastObservedRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : ownerKey = Value(ownerKey),
+       transactionKey = Value(transactionKey);
+  static Insertable<CorporationWalletTransaction> custom({
+    Expression<String>? ownerKey,
+    Expression<String>? transactionKey,
+    Expression<int>? ownerCharacterId,
+    Expression<int>? occurredAtMs,
+    Expression<int>? typeId,
+    Expression<int>? quantity,
+    Expression<String>? unitPrice,
+    Expression<String>? buySell,
+    Expression<String>? journalKey,
+    Expression<int>? lastObservedRevision,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerKey != null) 'owner_key': ownerKey,
+      if (transactionKey != null) 'transaction_key': transactionKey,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (occurredAtMs != null) 'occurred_at_ms': occurredAtMs,
+      if (typeId != null) 'type_id': typeId,
+      if (quantity != null) 'quantity': quantity,
+      if (unitPrice != null) 'unit_price': unitPrice,
+      if (buySell != null) 'buy_sell': buySell,
+      if (journalKey != null) 'journal_key': journalKey,
+      if (lastObservedRevision != null)
+        'last_observed_revision': lastObservedRevision,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationWalletTransactionsCompanion copyWith({
+    Value<String>? ownerKey,
+    Value<String>? transactionKey,
+    Value<int?>? ownerCharacterId,
+    Value<int?>? occurredAtMs,
+    Value<int?>? typeId,
+    Value<int?>? quantity,
+    Value<String?>? unitPrice,
+    Value<String?>? buySell,
+    Value<String?>? journalKey,
+    Value<int?>? lastObservedRevision,
+    Value<int>? rowid,
+  }) {
+    return CorporationWalletTransactionsCompanion(
+      ownerKey: ownerKey ?? this.ownerKey,
+      transactionKey: transactionKey ?? this.transactionKey,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      occurredAtMs: occurredAtMs ?? this.occurredAtMs,
+      typeId: typeId ?? this.typeId,
+      quantity: quantity ?? this.quantity,
+      unitPrice: unitPrice ?? this.unitPrice,
+      buySell: buySell ?? this.buySell,
+      journalKey: journalKey ?? this.journalKey,
+      lastObservedRevision: lastObservedRevision ?? this.lastObservedRevision,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerKey.present) {
+      map['owner_key'] = Variable<String>(ownerKey.value);
+    }
+    if (transactionKey.present) {
+      map['transaction_key'] = Variable<String>(transactionKey.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (occurredAtMs.present) {
+      map['occurred_at_ms'] = Variable<int>(occurredAtMs.value);
+    }
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<int>(quantity.value);
+    }
+    if (unitPrice.present) {
+      map['unit_price'] = Variable<String>(unitPrice.value);
+    }
+    if (buySell.present) {
+      map['buy_sell'] = Variable<String>(buySell.value);
+    }
+    if (journalKey.present) {
+      map['journal_key'] = Variable<String>(journalKey.value);
+    }
+    if (lastObservedRevision.present) {
+      map['last_observed_revision'] = Variable<int>(lastObservedRevision.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationWalletTransactionsCompanion(')
+          ..write('ownerKey: $ownerKey, ')
+          ..write('transactionKey: $transactionKey, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('occurredAtMs: $occurredAtMs, ')
+          ..write('typeId: $typeId, ')
+          ..write('quantity: $quantity, ')
+          ..write('unitPrice: $unitPrice, ')
+          ..write('buySell: $buySell, ')
+          ..write('journalKey: $journalKey, ')
+          ..write('lastObservedRevision: $lastObservedRevision, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationHistoryCoverageTable extends CorporationHistoryCoverage
+    with
+        TableInfo<
+          $CorporationHistoryCoverageTable,
+          CorporationHistoryCoverageData
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationHistoryCoverageTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerKeyMeta = const VerificationMeta(
+    'ownerKey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerKey = GeneratedColumn<String>(
+    'owner_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _coverageKeyMeta = const VerificationMeta(
+    'coverageKey',
+  );
+  @override
+  late final GeneratedColumn<String> coverageKey = GeneratedColumn<String>(
+    'coverage_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerCharacterIdMeta = const VerificationMeta(
+    'ownerCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerCharacterId = GeneratedColumn<int>(
+    'owner_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _intervalStartAtMsMeta = const VerificationMeta(
+    'intervalStartAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> intervalStartAtMs = GeneratedColumn<int>(
+    'interval_start_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _intervalEndAtMsMeta = const VerificationMeta(
+    'intervalEndAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> intervalEndAtMs = GeneratedColumn<int>(
+    'interval_end_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pageChainJsonMeta = const VerificationMeta(
+    'pageChainJson',
+  );
+  @override
+  late final GeneratedColumn<String> pageChainJson = GeneratedColumn<String>(
+    'page_chain_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _terminationMeta = const VerificationMeta(
+    'termination',
+  );
+  @override
+  late final GeneratedColumn<String> termination = GeneratedColumn<String>(
+    'termination',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _earliestRowAtMsMeta = const VerificationMeta(
+    'earliestRowAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> earliestRowAtMs = GeneratedColumn<int>(
+    'earliest_row_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _latestRowAtMsMeta = const VerificationMeta(
+    'latestRowAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> latestRowAtMs = GeneratedColumn<int>(
+    'latest_row_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerKey,
+    coverageKey,
+    ownerCharacterId,
+    intervalStartAtMs,
+    intervalEndAtMs,
+    pageChainJson,
+    termination,
+    earliestRowAtMs,
+    latestRowAtMs,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_history_coverage';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationHistoryCoverageData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_key')) {
+      context.handle(
+        _ownerKeyMeta,
+        ownerKey.isAcceptableOrUnknown(data['owner_key']!, _ownerKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerKeyMeta);
+    }
+    if (data.containsKey('coverage_key')) {
+      context.handle(
+        _coverageKeyMeta,
+        coverageKey.isAcceptableOrUnknown(
+          data['coverage_key']!,
+          _coverageKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_coverageKeyMeta);
+    }
+    if (data.containsKey('owner_character_id')) {
+      context.handle(
+        _ownerCharacterIdMeta,
+        ownerCharacterId.isAcceptableOrUnknown(
+          data['owner_character_id']!,
+          _ownerCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('interval_start_at_ms')) {
+      context.handle(
+        _intervalStartAtMsMeta,
+        intervalStartAtMs.isAcceptableOrUnknown(
+          data['interval_start_at_ms']!,
+          _intervalStartAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('interval_end_at_ms')) {
+      context.handle(
+        _intervalEndAtMsMeta,
+        intervalEndAtMs.isAcceptableOrUnknown(
+          data['interval_end_at_ms']!,
+          _intervalEndAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('page_chain_json')) {
+      context.handle(
+        _pageChainJsonMeta,
+        pageChainJson.isAcceptableOrUnknown(
+          data['page_chain_json']!,
+          _pageChainJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('termination')) {
+      context.handle(
+        _terminationMeta,
+        termination.isAcceptableOrUnknown(
+          data['termination']!,
+          _terminationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('earliest_row_at_ms')) {
+      context.handle(
+        _earliestRowAtMsMeta,
+        earliestRowAtMs.isAcceptableOrUnknown(
+          data['earliest_row_at_ms']!,
+          _earliestRowAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('latest_row_at_ms')) {
+      context.handle(
+        _latestRowAtMsMeta,
+        latestRowAtMs.isAcceptableOrUnknown(
+          data['latest_row_at_ms']!,
+          _latestRowAtMsMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerKey, coverageKey};
+  @override
+  CorporationHistoryCoverageData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationHistoryCoverageData(
+      ownerKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_key'],
+      )!,
+      coverageKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}coverage_key'],
+      )!,
+      ownerCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_character_id'],
+      ),
+      intervalStartAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}interval_start_at_ms'],
+      ),
+      intervalEndAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}interval_end_at_ms'],
+      ),
+      pageChainJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}page_chain_json'],
+      ),
+      termination: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}termination'],
+      ),
+      earliestRowAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}earliest_row_at_ms'],
+      ),
+      latestRowAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}latest_row_at_ms'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationHistoryCoverageTable createAlias(String alias) {
+    return $CorporationHistoryCoverageTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationHistoryCoverageData extends DataClass
+    implements Insertable<CorporationHistoryCoverageData> {
+  final String ownerKey;
+  final String coverageKey;
+  final int? ownerCharacterId;
+  final int? intervalStartAtMs;
+  final int? intervalEndAtMs;
+  final String? pageChainJson;
+  final String? termination;
+  final int? earliestRowAtMs;
+  final int? latestRowAtMs;
+  const CorporationHistoryCoverageData({
+    required this.ownerKey,
+    required this.coverageKey,
+    this.ownerCharacterId,
+    this.intervalStartAtMs,
+    this.intervalEndAtMs,
+    this.pageChainJson,
+    this.termination,
+    this.earliestRowAtMs,
+    this.latestRowAtMs,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_key'] = Variable<String>(ownerKey);
+    map['coverage_key'] = Variable<String>(coverageKey);
+    if (!nullToAbsent || ownerCharacterId != null) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId);
+    }
+    if (!nullToAbsent || intervalStartAtMs != null) {
+      map['interval_start_at_ms'] = Variable<int>(intervalStartAtMs);
+    }
+    if (!nullToAbsent || intervalEndAtMs != null) {
+      map['interval_end_at_ms'] = Variable<int>(intervalEndAtMs);
+    }
+    if (!nullToAbsent || pageChainJson != null) {
+      map['page_chain_json'] = Variable<String>(pageChainJson);
+    }
+    if (!nullToAbsent || termination != null) {
+      map['termination'] = Variable<String>(termination);
+    }
+    if (!nullToAbsent || earliestRowAtMs != null) {
+      map['earliest_row_at_ms'] = Variable<int>(earliestRowAtMs);
+    }
+    if (!nullToAbsent || latestRowAtMs != null) {
+      map['latest_row_at_ms'] = Variable<int>(latestRowAtMs);
+    }
+    return map;
+  }
+
+  CorporationHistoryCoverageCompanion toCompanion(bool nullToAbsent) {
+    return CorporationHistoryCoverageCompanion(
+      ownerKey: Value(ownerKey),
+      coverageKey: Value(coverageKey),
+      ownerCharacterId: ownerCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerCharacterId),
+      intervalStartAtMs: intervalStartAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(intervalStartAtMs),
+      intervalEndAtMs: intervalEndAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(intervalEndAtMs),
+      pageChainJson: pageChainJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pageChainJson),
+      termination: termination == null && nullToAbsent
+          ? const Value.absent()
+          : Value(termination),
+      earliestRowAtMs: earliestRowAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(earliestRowAtMs),
+      latestRowAtMs: latestRowAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(latestRowAtMs),
+    );
+  }
+
+  factory CorporationHistoryCoverageData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationHistoryCoverageData(
+      ownerKey: serializer.fromJson<String>(json['ownerKey']),
+      coverageKey: serializer.fromJson<String>(json['coverageKey']),
+      ownerCharacterId: serializer.fromJson<int?>(json['ownerCharacterId']),
+      intervalStartAtMs: serializer.fromJson<int?>(json['intervalStartAtMs']),
+      intervalEndAtMs: serializer.fromJson<int?>(json['intervalEndAtMs']),
+      pageChainJson: serializer.fromJson<String?>(json['pageChainJson']),
+      termination: serializer.fromJson<String?>(json['termination']),
+      earliestRowAtMs: serializer.fromJson<int?>(json['earliestRowAtMs']),
+      latestRowAtMs: serializer.fromJson<int?>(json['latestRowAtMs']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerKey': serializer.toJson<String>(ownerKey),
+      'coverageKey': serializer.toJson<String>(coverageKey),
+      'ownerCharacterId': serializer.toJson<int?>(ownerCharacterId),
+      'intervalStartAtMs': serializer.toJson<int?>(intervalStartAtMs),
+      'intervalEndAtMs': serializer.toJson<int?>(intervalEndAtMs),
+      'pageChainJson': serializer.toJson<String?>(pageChainJson),
+      'termination': serializer.toJson<String?>(termination),
+      'earliestRowAtMs': serializer.toJson<int?>(earliestRowAtMs),
+      'latestRowAtMs': serializer.toJson<int?>(latestRowAtMs),
+    };
+  }
+
+  CorporationHistoryCoverageData copyWith({
+    String? ownerKey,
+    String? coverageKey,
+    Value<int?> ownerCharacterId = const Value.absent(),
+    Value<int?> intervalStartAtMs = const Value.absent(),
+    Value<int?> intervalEndAtMs = const Value.absent(),
+    Value<String?> pageChainJson = const Value.absent(),
+    Value<String?> termination = const Value.absent(),
+    Value<int?> earliestRowAtMs = const Value.absent(),
+    Value<int?> latestRowAtMs = const Value.absent(),
+  }) => CorporationHistoryCoverageData(
+    ownerKey: ownerKey ?? this.ownerKey,
+    coverageKey: coverageKey ?? this.coverageKey,
+    ownerCharacterId: ownerCharacterId.present
+        ? ownerCharacterId.value
+        : this.ownerCharacterId,
+    intervalStartAtMs: intervalStartAtMs.present
+        ? intervalStartAtMs.value
+        : this.intervalStartAtMs,
+    intervalEndAtMs: intervalEndAtMs.present
+        ? intervalEndAtMs.value
+        : this.intervalEndAtMs,
+    pageChainJson: pageChainJson.present
+        ? pageChainJson.value
+        : this.pageChainJson,
+    termination: termination.present ? termination.value : this.termination,
+    earliestRowAtMs: earliestRowAtMs.present
+        ? earliestRowAtMs.value
+        : this.earliestRowAtMs,
+    latestRowAtMs: latestRowAtMs.present
+        ? latestRowAtMs.value
+        : this.latestRowAtMs,
+  );
+  CorporationHistoryCoverageData copyWithCompanion(
+    CorporationHistoryCoverageCompanion data,
+  ) {
+    return CorporationHistoryCoverageData(
+      ownerKey: data.ownerKey.present ? data.ownerKey.value : this.ownerKey,
+      coverageKey: data.coverageKey.present
+          ? data.coverageKey.value
+          : this.coverageKey,
+      ownerCharacterId: data.ownerCharacterId.present
+          ? data.ownerCharacterId.value
+          : this.ownerCharacterId,
+      intervalStartAtMs: data.intervalStartAtMs.present
+          ? data.intervalStartAtMs.value
+          : this.intervalStartAtMs,
+      intervalEndAtMs: data.intervalEndAtMs.present
+          ? data.intervalEndAtMs.value
+          : this.intervalEndAtMs,
+      pageChainJson: data.pageChainJson.present
+          ? data.pageChainJson.value
+          : this.pageChainJson,
+      termination: data.termination.present
+          ? data.termination.value
+          : this.termination,
+      earliestRowAtMs: data.earliestRowAtMs.present
+          ? data.earliestRowAtMs.value
+          : this.earliestRowAtMs,
+      latestRowAtMs: data.latestRowAtMs.present
+          ? data.latestRowAtMs.value
+          : this.latestRowAtMs,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationHistoryCoverageData(')
+          ..write('ownerKey: $ownerKey, ')
+          ..write('coverageKey: $coverageKey, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('intervalStartAtMs: $intervalStartAtMs, ')
+          ..write('intervalEndAtMs: $intervalEndAtMs, ')
+          ..write('pageChainJson: $pageChainJson, ')
+          ..write('termination: $termination, ')
+          ..write('earliestRowAtMs: $earliestRowAtMs, ')
+          ..write('latestRowAtMs: $latestRowAtMs')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    ownerKey,
+    coverageKey,
+    ownerCharacterId,
+    intervalStartAtMs,
+    intervalEndAtMs,
+    pageChainJson,
+    termination,
+    earliestRowAtMs,
+    latestRowAtMs,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationHistoryCoverageData &&
+          other.ownerKey == this.ownerKey &&
+          other.coverageKey == this.coverageKey &&
+          other.ownerCharacterId == this.ownerCharacterId &&
+          other.intervalStartAtMs == this.intervalStartAtMs &&
+          other.intervalEndAtMs == this.intervalEndAtMs &&
+          other.pageChainJson == this.pageChainJson &&
+          other.termination == this.termination &&
+          other.earliestRowAtMs == this.earliestRowAtMs &&
+          other.latestRowAtMs == this.latestRowAtMs);
+}
+
+class CorporationHistoryCoverageCompanion
+    extends UpdateCompanion<CorporationHistoryCoverageData> {
+  final Value<String> ownerKey;
+  final Value<String> coverageKey;
+  final Value<int?> ownerCharacterId;
+  final Value<int?> intervalStartAtMs;
+  final Value<int?> intervalEndAtMs;
+  final Value<String?> pageChainJson;
+  final Value<String?> termination;
+  final Value<int?> earliestRowAtMs;
+  final Value<int?> latestRowAtMs;
+  final Value<int> rowid;
+  const CorporationHistoryCoverageCompanion({
+    this.ownerKey = const Value.absent(),
+    this.coverageKey = const Value.absent(),
+    this.ownerCharacterId = const Value.absent(),
+    this.intervalStartAtMs = const Value.absent(),
+    this.intervalEndAtMs = const Value.absent(),
+    this.pageChainJson = const Value.absent(),
+    this.termination = const Value.absent(),
+    this.earliestRowAtMs = const Value.absent(),
+    this.latestRowAtMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationHistoryCoverageCompanion.insert({
+    required String ownerKey,
+    required String coverageKey,
+    this.ownerCharacterId = const Value.absent(),
+    this.intervalStartAtMs = const Value.absent(),
+    this.intervalEndAtMs = const Value.absent(),
+    this.pageChainJson = const Value.absent(),
+    this.termination = const Value.absent(),
+    this.earliestRowAtMs = const Value.absent(),
+    this.latestRowAtMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : ownerKey = Value(ownerKey),
+       coverageKey = Value(coverageKey);
+  static Insertable<CorporationHistoryCoverageData> custom({
+    Expression<String>? ownerKey,
+    Expression<String>? coverageKey,
+    Expression<int>? ownerCharacterId,
+    Expression<int>? intervalStartAtMs,
+    Expression<int>? intervalEndAtMs,
+    Expression<String>? pageChainJson,
+    Expression<String>? termination,
+    Expression<int>? earliestRowAtMs,
+    Expression<int>? latestRowAtMs,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerKey != null) 'owner_key': ownerKey,
+      if (coverageKey != null) 'coverage_key': coverageKey,
+      if (ownerCharacterId != null) 'owner_character_id': ownerCharacterId,
+      if (intervalStartAtMs != null) 'interval_start_at_ms': intervalStartAtMs,
+      if (intervalEndAtMs != null) 'interval_end_at_ms': intervalEndAtMs,
+      if (pageChainJson != null) 'page_chain_json': pageChainJson,
+      if (termination != null) 'termination': termination,
+      if (earliestRowAtMs != null) 'earliest_row_at_ms': earliestRowAtMs,
+      if (latestRowAtMs != null) 'latest_row_at_ms': latestRowAtMs,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationHistoryCoverageCompanion copyWith({
+    Value<String>? ownerKey,
+    Value<String>? coverageKey,
+    Value<int?>? ownerCharacterId,
+    Value<int?>? intervalStartAtMs,
+    Value<int?>? intervalEndAtMs,
+    Value<String?>? pageChainJson,
+    Value<String?>? termination,
+    Value<int?>? earliestRowAtMs,
+    Value<int?>? latestRowAtMs,
+    Value<int>? rowid,
+  }) {
+    return CorporationHistoryCoverageCompanion(
+      ownerKey: ownerKey ?? this.ownerKey,
+      coverageKey: coverageKey ?? this.coverageKey,
+      ownerCharacterId: ownerCharacterId ?? this.ownerCharacterId,
+      intervalStartAtMs: intervalStartAtMs ?? this.intervalStartAtMs,
+      intervalEndAtMs: intervalEndAtMs ?? this.intervalEndAtMs,
+      pageChainJson: pageChainJson ?? this.pageChainJson,
+      termination: termination ?? this.termination,
+      earliestRowAtMs: earliestRowAtMs ?? this.earliestRowAtMs,
+      latestRowAtMs: latestRowAtMs ?? this.latestRowAtMs,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerKey.present) {
+      map['owner_key'] = Variable<String>(ownerKey.value);
+    }
+    if (coverageKey.present) {
+      map['coverage_key'] = Variable<String>(coverageKey.value);
+    }
+    if (ownerCharacterId.present) {
+      map['owner_character_id'] = Variable<int>(ownerCharacterId.value);
+    }
+    if (intervalStartAtMs.present) {
+      map['interval_start_at_ms'] = Variable<int>(intervalStartAtMs.value);
+    }
+    if (intervalEndAtMs.present) {
+      map['interval_end_at_ms'] = Variable<int>(intervalEndAtMs.value);
+    }
+    if (pageChainJson.present) {
+      map['page_chain_json'] = Variable<String>(pageChainJson.value);
+    }
+    if (termination.present) {
+      map['termination'] = Variable<String>(termination.value);
+    }
+    if (earliestRowAtMs.present) {
+      map['earliest_row_at_ms'] = Variable<int>(earliestRowAtMs.value);
+    }
+    if (latestRowAtMs.present) {
+      map['latest_row_at_ms'] = Variable<int>(latestRowAtMs.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationHistoryCoverageCompanion(')
+          ..write('ownerKey: $ownerKey, ')
+          ..write('coverageKey: $coverageKey, ')
+          ..write('ownerCharacterId: $ownerCharacterId, ')
+          ..write('intervalStartAtMs: $intervalStartAtMs, ')
+          ..write('intervalEndAtMs: $intervalEndAtMs, ')
+          ..write('pageChainJson: $pageChainJson, ')
+          ..write('termination: $termination, ')
+          ..write('earliestRowAtMs: $earliestRowAtMs, ')
+          ..write('latestRowAtMs: $latestRowAtMs, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CorporationMonitoringPreferencesTable
+    extends CorporationMonitoringPreferences
+    with
+        TableInfo<
+          $CorporationMonitoringPreferencesTable,
+          CorporationMonitoringPreference
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CorporationMonitoringPreferencesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _tenantMeta = const VerificationMeta('tenant');
+  @override
+  late final GeneratedColumn<String> tenant = GeneratedColumn<String>(
+    'tenant',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _incarnationMeta = const VerificationMeta(
+    'incarnation',
+  );
+  @override
+  late final GeneratedColumn<String> incarnation = GeneratedColumn<String>(
+    'incarnation',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _optInMeta = const VerificationMeta('optIn');
+  @override
+  late final GeneratedColumn<bool> optIn = GeneratedColumn<bool>(
+    'opt_in',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("opt_in" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _preferenceRevisionMeta =
+      const VerificationMeta('preferenceRevision');
+  @override
+  late final GeneratedColumn<int> preferenceRevision = GeneratedColumn<int>(
+    'preference_revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _osPermissionMeta = const VerificationMeta(
+    'osPermission',
+  );
+  @override
+  late final GeneratedColumn<String> osPermission = GeneratedColumn<String>(
+    'os_permission',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    tenant,
+    characterId,
+    incarnation,
+    optIn,
+    preferenceRevision,
+    osPermission,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'corporation_monitoring_preferences';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CorporationMonitoringPreference> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('tenant')) {
+      context.handle(
+        _tenantMeta,
+        tenant.isAcceptableOrUnknown(data['tenant']!, _tenantMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tenantMeta);
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('incarnation')) {
+      context.handle(
+        _incarnationMeta,
+        incarnation.isAcceptableOrUnknown(
+          data['incarnation']!,
+          _incarnationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('opt_in')) {
+      context.handle(
+        _optInMeta,
+        optIn.isAcceptableOrUnknown(data['opt_in']!, _optInMeta),
+      );
+    }
+    if (data.containsKey('preference_revision')) {
+      context.handle(
+        _preferenceRevisionMeta,
+        preferenceRevision.isAcceptableOrUnknown(
+          data['preference_revision']!,
+          _preferenceRevisionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('os_permission')) {
+      context.handle(
+        _osPermissionMeta,
+        osPermission.isAcceptableOrUnknown(
+          data['os_permission']!,
+          _osPermissionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {tenant, characterId};
+  @override
+  CorporationMonitoringPreference map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CorporationMonitoringPreference(
+      tenant: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tenant'],
+      )!,
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      )!,
+      incarnation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}incarnation'],
+      ),
+      optIn: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}opt_in'],
+      )!,
+      preferenceRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}preference_revision'],
+      ),
+      osPermission: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}os_permission'],
+      ),
+    );
+  }
+
+  @override
+  $CorporationMonitoringPreferencesTable createAlias(String alias) {
+    return $CorporationMonitoringPreferencesTable(attachedDatabase, alias);
+  }
+}
+
+class CorporationMonitoringPreference extends DataClass
+    implements Insertable<CorporationMonitoringPreference> {
+  final String tenant;
+  final int characterId;
+  final String? incarnation;
+  final bool optIn;
+  final int? preferenceRevision;
+  final String? osPermission;
+  const CorporationMonitoringPreference({
+    required this.tenant,
+    required this.characterId,
+    this.incarnation,
+    required this.optIn,
+    this.preferenceRevision,
+    this.osPermission,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['tenant'] = Variable<String>(tenant);
+    map['character_id'] = Variable<int>(characterId);
+    if (!nullToAbsent || incarnation != null) {
+      map['incarnation'] = Variable<String>(incarnation);
+    }
+    map['opt_in'] = Variable<bool>(optIn);
+    if (!nullToAbsent || preferenceRevision != null) {
+      map['preference_revision'] = Variable<int>(preferenceRevision);
+    }
+    if (!nullToAbsent || osPermission != null) {
+      map['os_permission'] = Variable<String>(osPermission);
+    }
+    return map;
+  }
+
+  CorporationMonitoringPreferencesCompanion toCompanion(bool nullToAbsent) {
+    return CorporationMonitoringPreferencesCompanion(
+      tenant: Value(tenant),
+      characterId: Value(characterId),
+      incarnation: incarnation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(incarnation),
+      optIn: Value(optIn),
+      preferenceRevision: preferenceRevision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(preferenceRevision),
+      osPermission: osPermission == null && nullToAbsent
+          ? const Value.absent()
+          : Value(osPermission),
+    );
+  }
+
+  factory CorporationMonitoringPreference.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CorporationMonitoringPreference(
+      tenant: serializer.fromJson<String>(json['tenant']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      incarnation: serializer.fromJson<String?>(json['incarnation']),
+      optIn: serializer.fromJson<bool>(json['optIn']),
+      preferenceRevision: serializer.fromJson<int?>(json['preferenceRevision']),
+      osPermission: serializer.fromJson<String?>(json['osPermission']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'tenant': serializer.toJson<String>(tenant),
+      'characterId': serializer.toJson<int>(characterId),
+      'incarnation': serializer.toJson<String?>(incarnation),
+      'optIn': serializer.toJson<bool>(optIn),
+      'preferenceRevision': serializer.toJson<int?>(preferenceRevision),
+      'osPermission': serializer.toJson<String?>(osPermission),
+    };
+  }
+
+  CorporationMonitoringPreference copyWith({
+    String? tenant,
+    int? characterId,
+    Value<String?> incarnation = const Value.absent(),
+    bool? optIn,
+    Value<int?> preferenceRevision = const Value.absent(),
+    Value<String?> osPermission = const Value.absent(),
+  }) => CorporationMonitoringPreference(
+    tenant: tenant ?? this.tenant,
+    characterId: characterId ?? this.characterId,
+    incarnation: incarnation.present ? incarnation.value : this.incarnation,
+    optIn: optIn ?? this.optIn,
+    preferenceRevision: preferenceRevision.present
+        ? preferenceRevision.value
+        : this.preferenceRevision,
+    osPermission: osPermission.present ? osPermission.value : this.osPermission,
+  );
+  CorporationMonitoringPreference copyWithCompanion(
+    CorporationMonitoringPreferencesCompanion data,
+  ) {
+    return CorporationMonitoringPreference(
+      tenant: data.tenant.present ? data.tenant.value : this.tenant,
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      incarnation: data.incarnation.present
+          ? data.incarnation.value
+          : this.incarnation,
+      optIn: data.optIn.present ? data.optIn.value : this.optIn,
+      preferenceRevision: data.preferenceRevision.present
+          ? data.preferenceRevision.value
+          : this.preferenceRevision,
+      osPermission: data.osPermission.present
+          ? data.osPermission.value
+          : this.osPermission,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationMonitoringPreference(')
+          ..write('tenant: $tenant, ')
+          ..write('characterId: $characterId, ')
+          ..write('incarnation: $incarnation, ')
+          ..write('optIn: $optIn, ')
+          ..write('preferenceRevision: $preferenceRevision, ')
+          ..write('osPermission: $osPermission')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    tenant,
+    characterId,
+    incarnation,
+    optIn,
+    preferenceRevision,
+    osPermission,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CorporationMonitoringPreference &&
+          other.tenant == this.tenant &&
+          other.characterId == this.characterId &&
+          other.incarnation == this.incarnation &&
+          other.optIn == this.optIn &&
+          other.preferenceRevision == this.preferenceRevision &&
+          other.osPermission == this.osPermission);
+}
+
+class CorporationMonitoringPreferencesCompanion
+    extends UpdateCompanion<CorporationMonitoringPreference> {
+  final Value<String> tenant;
+  final Value<int> characterId;
+  final Value<String?> incarnation;
+  final Value<bool> optIn;
+  final Value<int?> preferenceRevision;
+  final Value<String?> osPermission;
+  final Value<int> rowid;
+  const CorporationMonitoringPreferencesCompanion({
+    this.tenant = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.incarnation = const Value.absent(),
+    this.optIn = const Value.absent(),
+    this.preferenceRevision = const Value.absent(),
+    this.osPermission = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CorporationMonitoringPreferencesCompanion.insert({
+    required String tenant,
+    required int characterId,
+    this.incarnation = const Value.absent(),
+    this.optIn = const Value.absent(),
+    this.preferenceRevision = const Value.absent(),
+    this.osPermission = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : tenant = Value(tenant),
+       characterId = Value(characterId);
+  static Insertable<CorporationMonitoringPreference> custom({
+    Expression<String>? tenant,
+    Expression<int>? characterId,
+    Expression<String>? incarnation,
+    Expression<bool>? optIn,
+    Expression<int>? preferenceRevision,
+    Expression<String>? osPermission,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (tenant != null) 'tenant': tenant,
+      if (characterId != null) 'character_id': characterId,
+      if (incarnation != null) 'incarnation': incarnation,
+      if (optIn != null) 'opt_in': optIn,
+      if (preferenceRevision != null) 'preference_revision': preferenceRevision,
+      if (osPermission != null) 'os_permission': osPermission,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CorporationMonitoringPreferencesCompanion copyWith({
+    Value<String>? tenant,
+    Value<int>? characterId,
+    Value<String?>? incarnation,
+    Value<bool>? optIn,
+    Value<int?>? preferenceRevision,
+    Value<String?>? osPermission,
+    Value<int>? rowid,
+  }) {
+    return CorporationMonitoringPreferencesCompanion(
+      tenant: tenant ?? this.tenant,
+      characterId: characterId ?? this.characterId,
+      incarnation: incarnation ?? this.incarnation,
+      optIn: optIn ?? this.optIn,
+      preferenceRevision: preferenceRevision ?? this.preferenceRevision,
+      osPermission: osPermission ?? this.osPermission,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (tenant.present) {
+      map['tenant'] = Variable<String>(tenant.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (incarnation.present) {
+      map['incarnation'] = Variable<String>(incarnation.value);
+    }
+    if (optIn.present) {
+      map['opt_in'] = Variable<bool>(optIn.value);
+    }
+    if (preferenceRevision.present) {
+      map['preference_revision'] = Variable<int>(preferenceRevision.value);
+    }
+    if (osPermission.present) {
+      map['os_permission'] = Variable<String>(osPermission.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CorporationMonitoringPreferencesCompanion(')
+          ..write('tenant: $tenant, ')
+          ..write('characterId: $characterId, ')
+          ..write('incarnation: $incarnation, ')
+          ..write('optIn: $optIn, ')
+          ..write('preferenceRevision: $preferenceRevision, ')
+          ..write('osPermission: $osPermission, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ExactMarketPricesTable extends ExactMarketPrices
+    with TableInfo<$ExactMarketPricesTable, ExactMarketPrice> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ExactMarketPricesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _tenantMeta = const VerificationMeta('tenant');
+  @override
+  late final GeneratedColumn<String> tenant = GeneratedColumn<String>(
+    'tenant',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _typeIdMeta = const VerificationMeta('typeId');
+  @override
+  late final GeneratedColumn<int> typeId = GeneratedColumn<int>(
+    'type_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _averagePriceMeta = const VerificationMeta(
+    'averagePrice',
+  );
+  @override
+  late final GeneratedColumn<String> averagePrice = GeneratedColumn<String>(
+    'average_price',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _adjustedPriceMeta = const VerificationMeta(
+    'adjustedPrice',
+  );
+  @override
+  late final GeneratedColumn<String> adjustedPrice = GeneratedColumn<String>(
+    'adjusted_price',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _payloadReceivedAtMsMeta =
+      const VerificationMeta('payloadReceivedAtMs');
+  @override
+  late final GeneratedColumn<int> payloadReceivedAtMs = GeneratedColumn<int>(
+    'payload_received_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _validatedAtMsMeta = const VerificationMeta(
+    'validatedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> validatedAtMs = GeneratedColumn<int>(
+    'validated_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _snapshotRevisionMeta = const VerificationMeta(
+    'snapshotRevision',
+  );
+  @override
+  late final GeneratedColumn<int> snapshotRevision = GeneratedColumn<int>(
+    'snapshot_revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    tenant,
+    typeId,
+    averagePrice,
+    adjustedPrice,
+    payloadReceivedAtMs,
+    validatedAtMs,
+    snapshotRevision,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'exact_market_prices';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ExactMarketPrice> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('tenant')) {
+      context.handle(
+        _tenantMeta,
+        tenant.isAcceptableOrUnknown(data['tenant']!, _tenantMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tenantMeta);
+    }
+    if (data.containsKey('type_id')) {
+      context.handle(
+        _typeIdMeta,
+        typeId.isAcceptableOrUnknown(data['type_id']!, _typeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeIdMeta);
+    }
+    if (data.containsKey('average_price')) {
+      context.handle(
+        _averagePriceMeta,
+        averagePrice.isAcceptableOrUnknown(
+          data['average_price']!,
+          _averagePriceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('adjusted_price')) {
+      context.handle(
+        _adjustedPriceMeta,
+        adjustedPrice.isAcceptableOrUnknown(
+          data['adjusted_price']!,
+          _adjustedPriceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('payload_received_at_ms')) {
+      context.handle(
+        _payloadReceivedAtMsMeta,
+        payloadReceivedAtMs.isAcceptableOrUnknown(
+          data['payload_received_at_ms']!,
+          _payloadReceivedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('validated_at_ms')) {
+      context.handle(
+        _validatedAtMsMeta,
+        validatedAtMs.isAcceptableOrUnknown(
+          data['validated_at_ms']!,
+          _validatedAtMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('snapshot_revision')) {
+      context.handle(
+        _snapshotRevisionMeta,
+        snapshotRevision.isAcceptableOrUnknown(
+          data['snapshot_revision']!,
+          _snapshotRevisionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {tenant, typeId};
+  @override
+  ExactMarketPrice map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ExactMarketPrice(
+      tenant: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tenant'],
+      )!,
+      typeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}type_id'],
+      )!,
+      averagePrice: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}average_price'],
+      ),
+      adjustedPrice: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}adjusted_price'],
+      ),
+      payloadReceivedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}payload_received_at_ms'],
+      ),
+      validatedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}validated_at_ms'],
+      ),
+      snapshotRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}snapshot_revision'],
+      ),
+    );
+  }
+
+  @override
+  $ExactMarketPricesTable createAlias(String alias) {
+    return $ExactMarketPricesTable(attachedDatabase, alias);
+  }
+}
+
+class ExactMarketPrice extends DataClass
+    implements Insertable<ExactMarketPrice> {
+  final String tenant;
+  final int typeId;
+  final String? averagePrice;
+  final String? adjustedPrice;
+  final int? payloadReceivedAtMs;
+  final int? validatedAtMs;
+  final int? snapshotRevision;
+  const ExactMarketPrice({
+    required this.tenant,
+    required this.typeId,
+    this.averagePrice,
+    this.adjustedPrice,
+    this.payloadReceivedAtMs,
+    this.validatedAtMs,
+    this.snapshotRevision,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['tenant'] = Variable<String>(tenant);
+    map['type_id'] = Variable<int>(typeId);
+    if (!nullToAbsent || averagePrice != null) {
+      map['average_price'] = Variable<String>(averagePrice);
+    }
+    if (!nullToAbsent || adjustedPrice != null) {
+      map['adjusted_price'] = Variable<String>(adjustedPrice);
+    }
+    if (!nullToAbsent || payloadReceivedAtMs != null) {
+      map['payload_received_at_ms'] = Variable<int>(payloadReceivedAtMs);
+    }
+    if (!nullToAbsent || validatedAtMs != null) {
+      map['validated_at_ms'] = Variable<int>(validatedAtMs);
+    }
+    if (!nullToAbsent || snapshotRevision != null) {
+      map['snapshot_revision'] = Variable<int>(snapshotRevision);
+    }
+    return map;
+  }
+
+  ExactMarketPricesCompanion toCompanion(bool nullToAbsent) {
+    return ExactMarketPricesCompanion(
+      tenant: Value(tenant),
+      typeId: Value(typeId),
+      averagePrice: averagePrice == null && nullToAbsent
+          ? const Value.absent()
+          : Value(averagePrice),
+      adjustedPrice: adjustedPrice == null && nullToAbsent
+          ? const Value.absent()
+          : Value(adjustedPrice),
+      payloadReceivedAtMs: payloadReceivedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(payloadReceivedAtMs),
+      validatedAtMs: validatedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(validatedAtMs),
+      snapshotRevision: snapshotRevision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(snapshotRevision),
+    );
+  }
+
+  factory ExactMarketPrice.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ExactMarketPrice(
+      tenant: serializer.fromJson<String>(json['tenant']),
+      typeId: serializer.fromJson<int>(json['typeId']),
+      averagePrice: serializer.fromJson<String?>(json['averagePrice']),
+      adjustedPrice: serializer.fromJson<String?>(json['adjustedPrice']),
+      payloadReceivedAtMs: serializer.fromJson<int?>(
+        json['payloadReceivedAtMs'],
+      ),
+      validatedAtMs: serializer.fromJson<int?>(json['validatedAtMs']),
+      snapshotRevision: serializer.fromJson<int?>(json['snapshotRevision']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'tenant': serializer.toJson<String>(tenant),
+      'typeId': serializer.toJson<int>(typeId),
+      'averagePrice': serializer.toJson<String?>(averagePrice),
+      'adjustedPrice': serializer.toJson<String?>(adjustedPrice),
+      'payloadReceivedAtMs': serializer.toJson<int?>(payloadReceivedAtMs),
+      'validatedAtMs': serializer.toJson<int?>(validatedAtMs),
+      'snapshotRevision': serializer.toJson<int?>(snapshotRevision),
+    };
+  }
+
+  ExactMarketPrice copyWith({
+    String? tenant,
+    int? typeId,
+    Value<String?> averagePrice = const Value.absent(),
+    Value<String?> adjustedPrice = const Value.absent(),
+    Value<int?> payloadReceivedAtMs = const Value.absent(),
+    Value<int?> validatedAtMs = const Value.absent(),
+    Value<int?> snapshotRevision = const Value.absent(),
+  }) => ExactMarketPrice(
+    tenant: tenant ?? this.tenant,
+    typeId: typeId ?? this.typeId,
+    averagePrice: averagePrice.present ? averagePrice.value : this.averagePrice,
+    adjustedPrice: adjustedPrice.present
+        ? adjustedPrice.value
+        : this.adjustedPrice,
+    payloadReceivedAtMs: payloadReceivedAtMs.present
+        ? payloadReceivedAtMs.value
+        : this.payloadReceivedAtMs,
+    validatedAtMs: validatedAtMs.present
+        ? validatedAtMs.value
+        : this.validatedAtMs,
+    snapshotRevision: snapshotRevision.present
+        ? snapshotRevision.value
+        : this.snapshotRevision,
+  );
+  ExactMarketPrice copyWithCompanion(ExactMarketPricesCompanion data) {
+    return ExactMarketPrice(
+      tenant: data.tenant.present ? data.tenant.value : this.tenant,
+      typeId: data.typeId.present ? data.typeId.value : this.typeId,
+      averagePrice: data.averagePrice.present
+          ? data.averagePrice.value
+          : this.averagePrice,
+      adjustedPrice: data.adjustedPrice.present
+          ? data.adjustedPrice.value
+          : this.adjustedPrice,
+      payloadReceivedAtMs: data.payloadReceivedAtMs.present
+          ? data.payloadReceivedAtMs.value
+          : this.payloadReceivedAtMs,
+      validatedAtMs: data.validatedAtMs.present
+          ? data.validatedAtMs.value
+          : this.validatedAtMs,
+      snapshotRevision: data.snapshotRevision.present
+          ? data.snapshotRevision.value
+          : this.snapshotRevision,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExactMarketPrice(')
+          ..write('tenant: $tenant, ')
+          ..write('typeId: $typeId, ')
+          ..write('averagePrice: $averagePrice, ')
+          ..write('adjustedPrice: $adjustedPrice, ')
+          ..write('payloadReceivedAtMs: $payloadReceivedAtMs, ')
+          ..write('validatedAtMs: $validatedAtMs, ')
+          ..write('snapshotRevision: $snapshotRevision')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    tenant,
+    typeId,
+    averagePrice,
+    adjustedPrice,
+    payloadReceivedAtMs,
+    validatedAtMs,
+    snapshotRevision,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ExactMarketPrice &&
+          other.tenant == this.tenant &&
+          other.typeId == this.typeId &&
+          other.averagePrice == this.averagePrice &&
+          other.adjustedPrice == this.adjustedPrice &&
+          other.payloadReceivedAtMs == this.payloadReceivedAtMs &&
+          other.validatedAtMs == this.validatedAtMs &&
+          other.snapshotRevision == this.snapshotRevision);
+}
+
+class ExactMarketPricesCompanion extends UpdateCompanion<ExactMarketPrice> {
+  final Value<String> tenant;
+  final Value<int> typeId;
+  final Value<String?> averagePrice;
+  final Value<String?> adjustedPrice;
+  final Value<int?> payloadReceivedAtMs;
+  final Value<int?> validatedAtMs;
+  final Value<int?> snapshotRevision;
+  final Value<int> rowid;
+  const ExactMarketPricesCompanion({
+    this.tenant = const Value.absent(),
+    this.typeId = const Value.absent(),
+    this.averagePrice = const Value.absent(),
+    this.adjustedPrice = const Value.absent(),
+    this.payloadReceivedAtMs = const Value.absent(),
+    this.validatedAtMs = const Value.absent(),
+    this.snapshotRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ExactMarketPricesCompanion.insert({
+    required String tenant,
+    required int typeId,
+    this.averagePrice = const Value.absent(),
+    this.adjustedPrice = const Value.absent(),
+    this.payloadReceivedAtMs = const Value.absent(),
+    this.validatedAtMs = const Value.absent(),
+    this.snapshotRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : tenant = Value(tenant),
+       typeId = Value(typeId);
+  static Insertable<ExactMarketPrice> custom({
+    Expression<String>? tenant,
+    Expression<int>? typeId,
+    Expression<String>? averagePrice,
+    Expression<String>? adjustedPrice,
+    Expression<int>? payloadReceivedAtMs,
+    Expression<int>? validatedAtMs,
+    Expression<int>? snapshotRevision,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (tenant != null) 'tenant': tenant,
+      if (typeId != null) 'type_id': typeId,
+      if (averagePrice != null) 'average_price': averagePrice,
+      if (adjustedPrice != null) 'adjusted_price': adjustedPrice,
+      if (payloadReceivedAtMs != null)
+        'payload_received_at_ms': payloadReceivedAtMs,
+      if (validatedAtMs != null) 'validated_at_ms': validatedAtMs,
+      if (snapshotRevision != null) 'snapshot_revision': snapshotRevision,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ExactMarketPricesCompanion copyWith({
+    Value<String>? tenant,
+    Value<int>? typeId,
+    Value<String?>? averagePrice,
+    Value<String?>? adjustedPrice,
+    Value<int?>? payloadReceivedAtMs,
+    Value<int?>? validatedAtMs,
+    Value<int?>? snapshotRevision,
+    Value<int>? rowid,
+  }) {
+    return ExactMarketPricesCompanion(
+      tenant: tenant ?? this.tenant,
+      typeId: typeId ?? this.typeId,
+      averagePrice: averagePrice ?? this.averagePrice,
+      adjustedPrice: adjustedPrice ?? this.adjustedPrice,
+      payloadReceivedAtMs: payloadReceivedAtMs ?? this.payloadReceivedAtMs,
+      validatedAtMs: validatedAtMs ?? this.validatedAtMs,
+      snapshotRevision: snapshotRevision ?? this.snapshotRevision,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (tenant.present) {
+      map['tenant'] = Variable<String>(tenant.value);
+    }
+    if (typeId.present) {
+      map['type_id'] = Variable<int>(typeId.value);
+    }
+    if (averagePrice.present) {
+      map['average_price'] = Variable<String>(averagePrice.value);
+    }
+    if (adjustedPrice.present) {
+      map['adjusted_price'] = Variable<String>(adjustedPrice.value);
+    }
+    if (payloadReceivedAtMs.present) {
+      map['payload_received_at_ms'] = Variable<int>(payloadReceivedAtMs.value);
+    }
+    if (validatedAtMs.present) {
+      map['validated_at_ms'] = Variable<int>(validatedAtMs.value);
+    }
+    if (snapshotRevision.present) {
+      map['snapshot_revision'] = Variable<int>(snapshotRevision.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExactMarketPricesCompanion(')
+          ..write('tenant: $tenant, ')
+          ..write('typeId: $typeId, ')
+          ..write('averagePrice: $averagePrice, ')
+          ..write('adjustedPrice: $adjustedPrice, ')
+          ..write('payloadReceivedAtMs: $payloadReceivedAtMs, ')
+          ..write('validatedAtMs: $validatedAtMs, ')
+          ..write('snapshotRevision: $snapshotRevision, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -26525,6 +44339,66 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $ExplorationWindowPreferencesTable(this);
   late final $ExplorationLocationObservationsTable
   explorationLocationObservations = $ExplorationLocationObservationsTable(this);
+  late final $CharacterAuthorizationStatesTable characterAuthorizationStates =
+      $CharacterAuthorizationStatesTable(this);
+  late final $CorporationContextStatesTable corporationContextStates =
+      $CorporationContextStatesTable(this);
+  late final $OAuthAuthorizationAttemptsTable oAuthAuthorizationAttempts =
+      $OAuthAuthorizationAttemptsTable(this);
+  late final $CorporationCapabilitiesTable corporationCapabilities =
+      $CorporationCapabilitiesTable(this);
+  late final $CorporationSnapshotHeadsTable corporationSnapshotHeads =
+      $CorporationSnapshotHeadsTable(this);
+  late final $CorporationSnapshotPagesTable corporationSnapshotPages =
+      $CorporationSnapshotPagesTable(this);
+  late final $EsiRequestLeasesTable esiRequestLeases = $EsiRequestLeasesTable(
+    this,
+  );
+  late final $EsiRateBucketsTable esiRateBuckets = $EsiRateBucketsTable(this);
+  late final $CorporationProfilesTable corporationProfiles =
+      $CorporationProfilesTable(this);
+  late final $CorporationMembersTable corporationMembers =
+      $CorporationMembersTable(this);
+  late final $CorporationMemberTrackingTable corporationMemberTracking =
+      $CorporationMemberTrackingTable(this);
+  late final $CorporationRoleAssignmentsTable corporationRoleAssignments =
+      $CorporationRoleAssignmentsTable(this);
+  late final $CorporationTitlesTable corporationTitles =
+      $CorporationTitlesTable(this);
+  late final $CorporationMemberTitlesTable corporationMemberTitles =
+      $CorporationMemberTitlesTable(this);
+  late final $CorporationOwnStandingsTable corporationOwnStandings =
+      $CorporationOwnStandingsTable(this);
+  late final $CorporationDivisionNamesTable corporationDivisionNames =
+      $CorporationDivisionNamesTable(this);
+  late final $CorporationAssetsTable corporationAssets =
+      $CorporationAssetsTable(this);
+  late final $CorporationPrivateNamesTable corporationPrivateNames =
+      $CorporationPrivateNamesTable(this);
+  late final $CorporationStructuresTable corporationStructures =
+      $CorporationStructuresTable(this);
+  late final $CorporationStructureServicesTable corporationStructureServices =
+      $CorporationStructureServicesTable(this);
+  late final $CorporationFuelScenariosTable corporationFuelScenarios =
+      $CorporationFuelScenariosTable(this);
+  late final $CorporationFuelAlertStatesTable corporationFuelAlertStates =
+      $CorporationFuelAlertStatesTable(this);
+  late final $CorporationFuelAlertEpisodesTable corporationFuelAlertEpisodes =
+      $CorporationFuelAlertEpisodesTable(this);
+  late final $CorporationWalletBalancesTable corporationWalletBalances =
+      $CorporationWalletBalancesTable(this);
+  late final $CorporationWalletJournalTable corporationWalletJournal =
+      $CorporationWalletJournalTable(this);
+  late final $CorporationWalletTransactionsTable corporationWalletTransactions =
+      $CorporationWalletTransactionsTable(this);
+  late final $CorporationHistoryCoverageTable corporationHistoryCoverage =
+      $CorporationHistoryCoverageTable(this);
+  late final $CorporationMonitoringPreferencesTable
+  corporationMonitoringPreferences = $CorporationMonitoringPreferencesTable(
+    this,
+  );
+  late final $ExactMarketPricesTable exactMarketPrices =
+      $ExactMarketPricesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -26572,6 +44446,35 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     explorationNotebookPreferences,
     explorationWindowPreferences,
     explorationLocationObservations,
+    characterAuthorizationStates,
+    corporationContextStates,
+    oAuthAuthorizationAttempts,
+    corporationCapabilities,
+    corporationSnapshotHeads,
+    corporationSnapshotPages,
+    esiRequestLeases,
+    esiRateBuckets,
+    corporationProfiles,
+    corporationMembers,
+    corporationMemberTracking,
+    corporationRoleAssignments,
+    corporationTitles,
+    corporationMemberTitles,
+    corporationOwnStandings,
+    corporationDivisionNames,
+    corporationAssets,
+    corporationPrivateNames,
+    corporationStructures,
+    corporationStructureServices,
+    corporationFuelScenarios,
+    corporationFuelAlertStates,
+    corporationFuelAlertEpisodes,
+    corporationWalletBalances,
+    corporationWalletJournal,
+    corporationWalletTransactions,
+    corporationHistoryCoverage,
+    corporationMonitoringPreferences,
+    exactMarketPrices,
   ];
 }
 
@@ -43427,6 +61330,8907 @@ typedef $$ExplorationLocationObservationsTableProcessedTableManager =
       ExplorationLocationObservation,
       PrefetchHooks Function()
     >;
+typedef $$CharacterAuthorizationStatesTableCreateCompanionBuilder =
+    CharacterAuthorizationStatesCompanion Function({
+      required String tenant,
+      required int characterId,
+      Value<String?> incarnation,
+      Value<int?> grantEpoch,
+      Value<int?> tokenRevision,
+      Value<String?> grantedScopesJson,
+      Value<String?> credentialState,
+      Value<int?> invalidationRevision,
+      Value<int?> lastConfirmedCorporationId,
+      Value<String?> membershipState,
+      Value<int?> membershipSourceAtMs,
+      Value<int?> revision,
+      Value<int> rowid,
+    });
+typedef $$CharacterAuthorizationStatesTableUpdateCompanionBuilder =
+    CharacterAuthorizationStatesCompanion Function({
+      Value<String> tenant,
+      Value<int> characterId,
+      Value<String?> incarnation,
+      Value<int?> grantEpoch,
+      Value<int?> tokenRevision,
+      Value<String?> grantedScopesJson,
+      Value<String?> credentialState,
+      Value<int?> invalidationRevision,
+      Value<int?> lastConfirmedCorporationId,
+      Value<String?> membershipState,
+      Value<int?> membershipSourceAtMs,
+      Value<int?> revision,
+      Value<int> rowid,
+    });
+
+class $$CharacterAuthorizationStatesTableFilterComposer
+    extends Composer<_$AppDatabase, $CharacterAuthorizationStatesTable> {
+  $$CharacterAuthorizationStatesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get tenant => $composableBuilder(
+    column: $table.tenant,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get incarnation => $composableBuilder(
+    column: $table.incarnation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get grantEpoch => $composableBuilder(
+    column: $table.grantEpoch,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get tokenRevision => $composableBuilder(
+    column: $table.tokenRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get grantedScopesJson => $composableBuilder(
+    column: $table.grantedScopesJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get credentialState => $composableBuilder(
+    column: $table.credentialState,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get invalidationRevision => $composableBuilder(
+    column: $table.invalidationRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastConfirmedCorporationId => $composableBuilder(
+    column: $table.lastConfirmedCorporationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get membershipState => $composableBuilder(
+    column: $table.membershipState,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get membershipSourceAtMs => $composableBuilder(
+    column: $table.membershipSourceAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CharacterAuthorizationStatesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CharacterAuthorizationStatesTable> {
+  $$CharacterAuthorizationStatesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get tenant => $composableBuilder(
+    column: $table.tenant,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get incarnation => $composableBuilder(
+    column: $table.incarnation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get grantEpoch => $composableBuilder(
+    column: $table.grantEpoch,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get tokenRevision => $composableBuilder(
+    column: $table.tokenRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get grantedScopesJson => $composableBuilder(
+    column: $table.grantedScopesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get credentialState => $composableBuilder(
+    column: $table.credentialState,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get invalidationRevision => $composableBuilder(
+    column: $table.invalidationRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastConfirmedCorporationId => $composableBuilder(
+    column: $table.lastConfirmedCorporationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get membershipState => $composableBuilder(
+    column: $table.membershipState,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get membershipSourceAtMs => $composableBuilder(
+    column: $table.membershipSourceAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CharacterAuthorizationStatesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CharacterAuthorizationStatesTable> {
+  $$CharacterAuthorizationStatesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get tenant =>
+      $composableBuilder(column: $table.tenant, builder: (column) => column);
+
+  GeneratedColumn<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get incarnation => $composableBuilder(
+    column: $table.incarnation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get grantEpoch => $composableBuilder(
+    column: $table.grantEpoch,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get tokenRevision => $composableBuilder(
+    column: $table.tokenRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get grantedScopesJson => $composableBuilder(
+    column: $table.grantedScopesJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get credentialState => $composableBuilder(
+    column: $table.credentialState,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get invalidationRevision => $composableBuilder(
+    column: $table.invalidationRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastConfirmedCorporationId => $composableBuilder(
+    column: $table.lastConfirmedCorporationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get membershipState => $composableBuilder(
+    column: $table.membershipState,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get membershipSourceAtMs => $composableBuilder(
+    column: $table.membershipSourceAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+}
+
+class $$CharacterAuthorizationStatesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CharacterAuthorizationStatesTable,
+          CharacterAuthorizationState,
+          $$CharacterAuthorizationStatesTableFilterComposer,
+          $$CharacterAuthorizationStatesTableOrderingComposer,
+          $$CharacterAuthorizationStatesTableAnnotationComposer,
+          $$CharacterAuthorizationStatesTableCreateCompanionBuilder,
+          $$CharacterAuthorizationStatesTableUpdateCompanionBuilder,
+          (
+            CharacterAuthorizationState,
+            BaseReferences<
+              _$AppDatabase,
+              $CharacterAuthorizationStatesTable,
+              CharacterAuthorizationState
+            >,
+          ),
+          CharacterAuthorizationState,
+          PrefetchHooks Function()
+        > {
+  $$CharacterAuthorizationStatesTableTableManager(
+    _$AppDatabase db,
+    $CharacterAuthorizationStatesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CharacterAuthorizationStatesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CharacterAuthorizationStatesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CharacterAuthorizationStatesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> tenant = const Value.absent(),
+                Value<int> characterId = const Value.absent(),
+                Value<String?> incarnation = const Value.absent(),
+                Value<int?> grantEpoch = const Value.absent(),
+                Value<int?> tokenRevision = const Value.absent(),
+                Value<String?> grantedScopesJson = const Value.absent(),
+                Value<String?> credentialState = const Value.absent(),
+                Value<int?> invalidationRevision = const Value.absent(),
+                Value<int?> lastConfirmedCorporationId = const Value.absent(),
+                Value<String?> membershipState = const Value.absent(),
+                Value<int?> membershipSourceAtMs = const Value.absent(),
+                Value<int?> revision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CharacterAuthorizationStatesCompanion(
+                tenant: tenant,
+                characterId: characterId,
+                incarnation: incarnation,
+                grantEpoch: grantEpoch,
+                tokenRevision: tokenRevision,
+                grantedScopesJson: grantedScopesJson,
+                credentialState: credentialState,
+                invalidationRevision: invalidationRevision,
+                lastConfirmedCorporationId: lastConfirmedCorporationId,
+                membershipState: membershipState,
+                membershipSourceAtMs: membershipSourceAtMs,
+                revision: revision,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String tenant,
+                required int characterId,
+                Value<String?> incarnation = const Value.absent(),
+                Value<int?> grantEpoch = const Value.absent(),
+                Value<int?> tokenRevision = const Value.absent(),
+                Value<String?> grantedScopesJson = const Value.absent(),
+                Value<String?> credentialState = const Value.absent(),
+                Value<int?> invalidationRevision = const Value.absent(),
+                Value<int?> lastConfirmedCorporationId = const Value.absent(),
+                Value<String?> membershipState = const Value.absent(),
+                Value<int?> membershipSourceAtMs = const Value.absent(),
+                Value<int?> revision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CharacterAuthorizationStatesCompanion.insert(
+                tenant: tenant,
+                characterId: characterId,
+                incarnation: incarnation,
+                grantEpoch: grantEpoch,
+                tokenRevision: tokenRevision,
+                grantedScopesJson: grantedScopesJson,
+                credentialState: credentialState,
+                invalidationRevision: invalidationRevision,
+                lastConfirmedCorporationId: lastConfirmedCorporationId,
+                membershipState: membershipState,
+                membershipSourceAtMs: membershipSourceAtMs,
+                revision: revision,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CharacterAuthorizationStatesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CharacterAuthorizationStatesTable,
+      CharacterAuthorizationState,
+      $$CharacterAuthorizationStatesTableFilterComposer,
+      $$CharacterAuthorizationStatesTableOrderingComposer,
+      $$CharacterAuthorizationStatesTableAnnotationComposer,
+      $$CharacterAuthorizationStatesTableCreateCompanionBuilder,
+      $$CharacterAuthorizationStatesTableUpdateCompanionBuilder,
+      (
+        CharacterAuthorizationState,
+        BaseReferences<
+          _$AppDatabase,
+          $CharacterAuthorizationStatesTable,
+          CharacterAuthorizationState
+        >,
+      ),
+      CharacterAuthorizationState,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationContextStatesTableCreateCompanionBuilder =
+    CorporationContextStatesCompanion Function({
+      required String tenant,
+      Value<int?> selectedCharacterId,
+      Value<String?> selectedIncarnation,
+      Value<int?> resolvedCorporationId,
+      Value<String?> membershipState,
+      Value<int> contextGeneration,
+      Value<int> selectionRevision,
+      Value<int> rowid,
+    });
+typedef $$CorporationContextStatesTableUpdateCompanionBuilder =
+    CorporationContextStatesCompanion Function({
+      Value<String> tenant,
+      Value<int?> selectedCharacterId,
+      Value<String?> selectedIncarnation,
+      Value<int?> resolvedCorporationId,
+      Value<String?> membershipState,
+      Value<int> contextGeneration,
+      Value<int> selectionRevision,
+      Value<int> rowid,
+    });
+
+class $$CorporationContextStatesTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationContextStatesTable> {
+  $$CorporationContextStatesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get tenant => $composableBuilder(
+    column: $table.tenant,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get selectedCharacterId => $composableBuilder(
+    column: $table.selectedCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get selectedIncarnation => $composableBuilder(
+    column: $table.selectedIncarnation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get resolvedCorporationId => $composableBuilder(
+    column: $table.resolvedCorporationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get membershipState => $composableBuilder(
+    column: $table.membershipState,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get contextGeneration => $composableBuilder(
+    column: $table.contextGeneration,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get selectionRevision => $composableBuilder(
+    column: $table.selectionRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationContextStatesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationContextStatesTable> {
+  $$CorporationContextStatesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get tenant => $composableBuilder(
+    column: $table.tenant,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get selectedCharacterId => $composableBuilder(
+    column: $table.selectedCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get selectedIncarnation => $composableBuilder(
+    column: $table.selectedIncarnation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get resolvedCorporationId => $composableBuilder(
+    column: $table.resolvedCorporationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get membershipState => $composableBuilder(
+    column: $table.membershipState,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get contextGeneration => $composableBuilder(
+    column: $table.contextGeneration,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get selectionRevision => $composableBuilder(
+    column: $table.selectionRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationContextStatesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationContextStatesTable> {
+  $$CorporationContextStatesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get tenant =>
+      $composableBuilder(column: $table.tenant, builder: (column) => column);
+
+  GeneratedColumn<int> get selectedCharacterId => $composableBuilder(
+    column: $table.selectedCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get selectedIncarnation => $composableBuilder(
+    column: $table.selectedIncarnation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get resolvedCorporationId => $composableBuilder(
+    column: $table.resolvedCorporationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get membershipState => $composableBuilder(
+    column: $table.membershipState,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get contextGeneration => $composableBuilder(
+    column: $table.contextGeneration,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get selectionRevision => $composableBuilder(
+    column: $table.selectionRevision,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationContextStatesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationContextStatesTable,
+          CorporationContextState,
+          $$CorporationContextStatesTableFilterComposer,
+          $$CorporationContextStatesTableOrderingComposer,
+          $$CorporationContextStatesTableAnnotationComposer,
+          $$CorporationContextStatesTableCreateCompanionBuilder,
+          $$CorporationContextStatesTableUpdateCompanionBuilder,
+          (
+            CorporationContextState,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationContextStatesTable,
+              CorporationContextState
+            >,
+          ),
+          CorporationContextState,
+          PrefetchHooks Function()
+        > {
+  $$CorporationContextStatesTableTableManager(
+    _$AppDatabase db,
+    $CorporationContextStatesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationContextStatesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationContextStatesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationContextStatesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> tenant = const Value.absent(),
+                Value<int?> selectedCharacterId = const Value.absent(),
+                Value<String?> selectedIncarnation = const Value.absent(),
+                Value<int?> resolvedCorporationId = const Value.absent(),
+                Value<String?> membershipState = const Value.absent(),
+                Value<int> contextGeneration = const Value.absent(),
+                Value<int> selectionRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationContextStatesCompanion(
+                tenant: tenant,
+                selectedCharacterId: selectedCharacterId,
+                selectedIncarnation: selectedIncarnation,
+                resolvedCorporationId: resolvedCorporationId,
+                membershipState: membershipState,
+                contextGeneration: contextGeneration,
+                selectionRevision: selectionRevision,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String tenant,
+                Value<int?> selectedCharacterId = const Value.absent(),
+                Value<String?> selectedIncarnation = const Value.absent(),
+                Value<int?> resolvedCorporationId = const Value.absent(),
+                Value<String?> membershipState = const Value.absent(),
+                Value<int> contextGeneration = const Value.absent(),
+                Value<int> selectionRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationContextStatesCompanion.insert(
+                tenant: tenant,
+                selectedCharacterId: selectedCharacterId,
+                selectedIncarnation: selectedIncarnation,
+                resolvedCorporationId: resolvedCorporationId,
+                membershipState: membershipState,
+                contextGeneration: contextGeneration,
+                selectionRevision: selectionRevision,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationContextStatesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationContextStatesTable,
+      CorporationContextState,
+      $$CorporationContextStatesTableFilterComposer,
+      $$CorporationContextStatesTableOrderingComposer,
+      $$CorporationContextStatesTableAnnotationComposer,
+      $$CorporationContextStatesTableCreateCompanionBuilder,
+      $$CorporationContextStatesTableUpdateCompanionBuilder,
+      (
+        CorporationContextState,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationContextStatesTable,
+          CorporationContextState
+        >,
+      ),
+      CorporationContextState,
+      PrefetchHooks Function()
+    >;
+typedef $$OAuthAuthorizationAttemptsTableCreateCompanionBuilder =
+    OAuthAuthorizationAttemptsCompanion Function({
+      required String operationUuid,
+      Value<int?> intendedCharacterId,
+      Value<String?> intendedIncarnation,
+      Value<int?> priorGrantEpoch,
+      Value<int?> priorTokenRevision,
+      Value<String?> requestedScopesJson,
+      Value<String?> mode,
+      Value<String?> stateDigest,
+      Value<int?> createdAtMs,
+      Value<int?> expiresAtMs,
+      Value<String?> status,
+      Value<int> rowid,
+    });
+typedef $$OAuthAuthorizationAttemptsTableUpdateCompanionBuilder =
+    OAuthAuthorizationAttemptsCompanion Function({
+      Value<String> operationUuid,
+      Value<int?> intendedCharacterId,
+      Value<String?> intendedIncarnation,
+      Value<int?> priorGrantEpoch,
+      Value<int?> priorTokenRevision,
+      Value<String?> requestedScopesJson,
+      Value<String?> mode,
+      Value<String?> stateDigest,
+      Value<int?> createdAtMs,
+      Value<int?> expiresAtMs,
+      Value<String?> status,
+      Value<int> rowid,
+    });
+
+class $$OAuthAuthorizationAttemptsTableFilterComposer
+    extends Composer<_$AppDatabase, $OAuthAuthorizationAttemptsTable> {
+  $$OAuthAuthorizationAttemptsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get operationUuid => $composableBuilder(
+    column: $table.operationUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get intendedCharacterId => $composableBuilder(
+    column: $table.intendedCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get intendedIncarnation => $composableBuilder(
+    column: $table.intendedIncarnation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get priorGrantEpoch => $composableBuilder(
+    column: $table.priorGrantEpoch,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get priorTokenRevision => $composableBuilder(
+    column: $table.priorTokenRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get requestedScopesJson => $composableBuilder(
+    column: $table.requestedScopesJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mode => $composableBuilder(
+    column: $table.mode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get stateDigest => $composableBuilder(
+    column: $table.stateDigest,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAtMs => $composableBuilder(
+    column: $table.createdAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get expiresAtMs => $composableBuilder(
+    column: $table.expiresAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$OAuthAuthorizationAttemptsTableOrderingComposer
+    extends Composer<_$AppDatabase, $OAuthAuthorizationAttemptsTable> {
+  $$OAuthAuthorizationAttemptsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get operationUuid => $composableBuilder(
+    column: $table.operationUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get intendedCharacterId => $composableBuilder(
+    column: $table.intendedCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get intendedIncarnation => $composableBuilder(
+    column: $table.intendedIncarnation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get priorGrantEpoch => $composableBuilder(
+    column: $table.priorGrantEpoch,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get priorTokenRevision => $composableBuilder(
+    column: $table.priorTokenRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get requestedScopesJson => $composableBuilder(
+    column: $table.requestedScopesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mode => $composableBuilder(
+    column: $table.mode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get stateDigest => $composableBuilder(
+    column: $table.stateDigest,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAtMs => $composableBuilder(
+    column: $table.createdAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get expiresAtMs => $composableBuilder(
+    column: $table.expiresAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$OAuthAuthorizationAttemptsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $OAuthAuthorizationAttemptsTable> {
+  $$OAuthAuthorizationAttemptsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get operationUuid => $composableBuilder(
+    column: $table.operationUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get intendedCharacterId => $composableBuilder(
+    column: $table.intendedCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get intendedIncarnation => $composableBuilder(
+    column: $table.intendedIncarnation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get priorGrantEpoch => $composableBuilder(
+    column: $table.priorGrantEpoch,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get priorTokenRevision => $composableBuilder(
+    column: $table.priorTokenRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get requestedScopesJson => $composableBuilder(
+    column: $table.requestedScopesJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get mode =>
+      $composableBuilder(column: $table.mode, builder: (column) => column);
+
+  GeneratedColumn<String> get stateDigest => $composableBuilder(
+    column: $table.stateDigest,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAtMs => $composableBuilder(
+    column: $table.createdAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get expiresAtMs => $composableBuilder(
+    column: $table.expiresAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+}
+
+class $$OAuthAuthorizationAttemptsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $OAuthAuthorizationAttemptsTable,
+          OAuthAuthorizationAttempt,
+          $$OAuthAuthorizationAttemptsTableFilterComposer,
+          $$OAuthAuthorizationAttemptsTableOrderingComposer,
+          $$OAuthAuthorizationAttemptsTableAnnotationComposer,
+          $$OAuthAuthorizationAttemptsTableCreateCompanionBuilder,
+          $$OAuthAuthorizationAttemptsTableUpdateCompanionBuilder,
+          (
+            OAuthAuthorizationAttempt,
+            BaseReferences<
+              _$AppDatabase,
+              $OAuthAuthorizationAttemptsTable,
+              OAuthAuthorizationAttempt
+            >,
+          ),
+          OAuthAuthorizationAttempt,
+          PrefetchHooks Function()
+        > {
+  $$OAuthAuthorizationAttemptsTableTableManager(
+    _$AppDatabase db,
+    $OAuthAuthorizationAttemptsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$OAuthAuthorizationAttemptsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$OAuthAuthorizationAttemptsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$OAuthAuthorizationAttemptsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> operationUuid = const Value.absent(),
+                Value<int?> intendedCharacterId = const Value.absent(),
+                Value<String?> intendedIncarnation = const Value.absent(),
+                Value<int?> priorGrantEpoch = const Value.absent(),
+                Value<int?> priorTokenRevision = const Value.absent(),
+                Value<String?> requestedScopesJson = const Value.absent(),
+                Value<String?> mode = const Value.absent(),
+                Value<String?> stateDigest = const Value.absent(),
+                Value<int?> createdAtMs = const Value.absent(),
+                Value<int?> expiresAtMs = const Value.absent(),
+                Value<String?> status = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => OAuthAuthorizationAttemptsCompanion(
+                operationUuid: operationUuid,
+                intendedCharacterId: intendedCharacterId,
+                intendedIncarnation: intendedIncarnation,
+                priorGrantEpoch: priorGrantEpoch,
+                priorTokenRevision: priorTokenRevision,
+                requestedScopesJson: requestedScopesJson,
+                mode: mode,
+                stateDigest: stateDigest,
+                createdAtMs: createdAtMs,
+                expiresAtMs: expiresAtMs,
+                status: status,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String operationUuid,
+                Value<int?> intendedCharacterId = const Value.absent(),
+                Value<String?> intendedIncarnation = const Value.absent(),
+                Value<int?> priorGrantEpoch = const Value.absent(),
+                Value<int?> priorTokenRevision = const Value.absent(),
+                Value<String?> requestedScopesJson = const Value.absent(),
+                Value<String?> mode = const Value.absent(),
+                Value<String?> stateDigest = const Value.absent(),
+                Value<int?> createdAtMs = const Value.absent(),
+                Value<int?> expiresAtMs = const Value.absent(),
+                Value<String?> status = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => OAuthAuthorizationAttemptsCompanion.insert(
+                operationUuid: operationUuid,
+                intendedCharacterId: intendedCharacterId,
+                intendedIncarnation: intendedIncarnation,
+                priorGrantEpoch: priorGrantEpoch,
+                priorTokenRevision: priorTokenRevision,
+                requestedScopesJson: requestedScopesJson,
+                mode: mode,
+                stateDigest: stateDigest,
+                createdAtMs: createdAtMs,
+                expiresAtMs: expiresAtMs,
+                status: status,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$OAuthAuthorizationAttemptsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $OAuthAuthorizationAttemptsTable,
+      OAuthAuthorizationAttempt,
+      $$OAuthAuthorizationAttemptsTableFilterComposer,
+      $$OAuthAuthorizationAttemptsTableOrderingComposer,
+      $$OAuthAuthorizationAttemptsTableAnnotationComposer,
+      $$OAuthAuthorizationAttemptsTableCreateCompanionBuilder,
+      $$OAuthAuthorizationAttemptsTableUpdateCompanionBuilder,
+      (
+        OAuthAuthorizationAttempt,
+        BaseReferences<
+          _$AppDatabase,
+          $OAuthAuthorizationAttemptsTable,
+          OAuthAuthorizationAttempt
+        >,
+      ),
+      OAuthAuthorizationAttempt,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationCapabilitiesTableCreateCompanionBuilder =
+    CorporationCapabilitiesCompanion Function({
+      required String ownerKey,
+      required int ownerCharacterId,
+      Value<String?> capability,
+      Value<int?> endpointUntilMs,
+      Value<int?> endpointSuccessAtMs,
+      Value<String?> roleEvidenceJson,
+      Value<int?> denialRevision,
+      Value<int?> nextProbeAtMs,
+      Value<String?> priorSuccessHint,
+      Value<int?> revision,
+      Value<String?> tenant,
+      Value<int?> corporationId,
+      Value<int?> grantEpoch,
+      Value<int> rowid,
+    });
+typedef $$CorporationCapabilitiesTableUpdateCompanionBuilder =
+    CorporationCapabilitiesCompanion Function({
+      Value<String> ownerKey,
+      Value<int> ownerCharacterId,
+      Value<String?> capability,
+      Value<int?> endpointUntilMs,
+      Value<int?> endpointSuccessAtMs,
+      Value<String?> roleEvidenceJson,
+      Value<int?> denialRevision,
+      Value<int?> nextProbeAtMs,
+      Value<String?> priorSuccessHint,
+      Value<int?> revision,
+      Value<String?> tenant,
+      Value<int?> corporationId,
+      Value<int?> grantEpoch,
+      Value<int> rowid,
+    });
+
+class $$CorporationCapabilitiesTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationCapabilitiesTable> {
+  $$CorporationCapabilitiesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerKey => $composableBuilder(
+    column: $table.ownerKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get capability => $composableBuilder(
+    column: $table.capability,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get endpointUntilMs => $composableBuilder(
+    column: $table.endpointUntilMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get endpointSuccessAtMs => $composableBuilder(
+    column: $table.endpointSuccessAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get roleEvidenceJson => $composableBuilder(
+    column: $table.roleEvidenceJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get denialRevision => $composableBuilder(
+    column: $table.denialRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get nextProbeAtMs => $composableBuilder(
+    column: $table.nextProbeAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get priorSuccessHint => $composableBuilder(
+    column: $table.priorSuccessHint,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tenant => $composableBuilder(
+    column: $table.tenant,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get corporationId => $composableBuilder(
+    column: $table.corporationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get grantEpoch => $composableBuilder(
+    column: $table.grantEpoch,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationCapabilitiesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationCapabilitiesTable> {
+  $$CorporationCapabilitiesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerKey => $composableBuilder(
+    column: $table.ownerKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get capability => $composableBuilder(
+    column: $table.capability,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get endpointUntilMs => $composableBuilder(
+    column: $table.endpointUntilMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get endpointSuccessAtMs => $composableBuilder(
+    column: $table.endpointSuccessAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get roleEvidenceJson => $composableBuilder(
+    column: $table.roleEvidenceJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get denialRevision => $composableBuilder(
+    column: $table.denialRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get nextProbeAtMs => $composableBuilder(
+    column: $table.nextProbeAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get priorSuccessHint => $composableBuilder(
+    column: $table.priorSuccessHint,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tenant => $composableBuilder(
+    column: $table.tenant,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get corporationId => $composableBuilder(
+    column: $table.corporationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get grantEpoch => $composableBuilder(
+    column: $table.grantEpoch,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationCapabilitiesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationCapabilitiesTable> {
+  $$CorporationCapabilitiesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerKey =>
+      $composableBuilder(column: $table.ownerKey, builder: (column) => column);
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get capability => $composableBuilder(
+    column: $table.capability,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get endpointUntilMs => $composableBuilder(
+    column: $table.endpointUntilMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get endpointSuccessAtMs => $composableBuilder(
+    column: $table.endpointSuccessAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get roleEvidenceJson => $composableBuilder(
+    column: $table.roleEvidenceJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get denialRevision => $composableBuilder(
+    column: $table.denialRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get nextProbeAtMs => $composableBuilder(
+    column: $table.nextProbeAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get priorSuccessHint => $composableBuilder(
+    column: $table.priorSuccessHint,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+
+  GeneratedColumn<String> get tenant =>
+      $composableBuilder(column: $table.tenant, builder: (column) => column);
+
+  GeneratedColumn<int> get corporationId => $composableBuilder(
+    column: $table.corporationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get grantEpoch => $composableBuilder(
+    column: $table.grantEpoch,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationCapabilitiesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationCapabilitiesTable,
+          CorporationCapability,
+          $$CorporationCapabilitiesTableFilterComposer,
+          $$CorporationCapabilitiesTableOrderingComposer,
+          $$CorporationCapabilitiesTableAnnotationComposer,
+          $$CorporationCapabilitiesTableCreateCompanionBuilder,
+          $$CorporationCapabilitiesTableUpdateCompanionBuilder,
+          (
+            CorporationCapability,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationCapabilitiesTable,
+              CorporationCapability
+            >,
+          ),
+          CorporationCapability,
+          PrefetchHooks Function()
+        > {
+  $$CorporationCapabilitiesTableTableManager(
+    _$AppDatabase db,
+    $CorporationCapabilitiesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationCapabilitiesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationCapabilitiesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationCapabilitiesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerKey = const Value.absent(),
+                Value<int> ownerCharacterId = const Value.absent(),
+                Value<String?> capability = const Value.absent(),
+                Value<int?> endpointUntilMs = const Value.absent(),
+                Value<int?> endpointSuccessAtMs = const Value.absent(),
+                Value<String?> roleEvidenceJson = const Value.absent(),
+                Value<int?> denialRevision = const Value.absent(),
+                Value<int?> nextProbeAtMs = const Value.absent(),
+                Value<String?> priorSuccessHint = const Value.absent(),
+                Value<int?> revision = const Value.absent(),
+                Value<String?> tenant = const Value.absent(),
+                Value<int?> corporationId = const Value.absent(),
+                Value<int?> grantEpoch = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationCapabilitiesCompanion(
+                ownerKey: ownerKey,
+                ownerCharacterId: ownerCharacterId,
+                capability: capability,
+                endpointUntilMs: endpointUntilMs,
+                endpointSuccessAtMs: endpointSuccessAtMs,
+                roleEvidenceJson: roleEvidenceJson,
+                denialRevision: denialRevision,
+                nextProbeAtMs: nextProbeAtMs,
+                priorSuccessHint: priorSuccessHint,
+                revision: revision,
+                tenant: tenant,
+                corporationId: corporationId,
+                grantEpoch: grantEpoch,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerKey,
+                required int ownerCharacterId,
+                Value<String?> capability = const Value.absent(),
+                Value<int?> endpointUntilMs = const Value.absent(),
+                Value<int?> endpointSuccessAtMs = const Value.absent(),
+                Value<String?> roleEvidenceJson = const Value.absent(),
+                Value<int?> denialRevision = const Value.absent(),
+                Value<int?> nextProbeAtMs = const Value.absent(),
+                Value<String?> priorSuccessHint = const Value.absent(),
+                Value<int?> revision = const Value.absent(),
+                Value<String?> tenant = const Value.absent(),
+                Value<int?> corporationId = const Value.absent(),
+                Value<int?> grantEpoch = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationCapabilitiesCompanion.insert(
+                ownerKey: ownerKey,
+                ownerCharacterId: ownerCharacterId,
+                capability: capability,
+                endpointUntilMs: endpointUntilMs,
+                endpointSuccessAtMs: endpointSuccessAtMs,
+                roleEvidenceJson: roleEvidenceJson,
+                denialRevision: denialRevision,
+                nextProbeAtMs: nextProbeAtMs,
+                priorSuccessHint: priorSuccessHint,
+                revision: revision,
+                tenant: tenant,
+                corporationId: corporationId,
+                grantEpoch: grantEpoch,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationCapabilitiesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationCapabilitiesTable,
+      CorporationCapability,
+      $$CorporationCapabilitiesTableFilterComposer,
+      $$CorporationCapabilitiesTableOrderingComposer,
+      $$CorporationCapabilitiesTableAnnotationComposer,
+      $$CorporationCapabilitiesTableCreateCompanionBuilder,
+      $$CorporationCapabilitiesTableUpdateCompanionBuilder,
+      (
+        CorporationCapability,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationCapabilitiesTable,
+          CorporationCapability
+        >,
+      ),
+      CorporationCapability,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationSnapshotHeadsTableCreateCompanionBuilder =
+    CorporationSnapshotHeadsCompanion Function({
+      required String ownerKey,
+      required String requestVariant,
+      required String compatibilityDate,
+      Value<int?> ownerCharacterId,
+      Value<String?> acceptedSnapshotId,
+      Value<int?> acceptedRevision,
+      Value<String?> coverage,
+      Value<int?> payloadReceivedAtMs,
+      Value<int?> validatedAtMs,
+      Value<int?> httpDeadlineAtMs,
+      Value<String?> etag,
+      Value<String?> lastError,
+      Value<String?> refreshRoundId,
+      Value<int> rowid,
+    });
+typedef $$CorporationSnapshotHeadsTableUpdateCompanionBuilder =
+    CorporationSnapshotHeadsCompanion Function({
+      Value<String> ownerKey,
+      Value<String> requestVariant,
+      Value<String> compatibilityDate,
+      Value<int?> ownerCharacterId,
+      Value<String?> acceptedSnapshotId,
+      Value<int?> acceptedRevision,
+      Value<String?> coverage,
+      Value<int?> payloadReceivedAtMs,
+      Value<int?> validatedAtMs,
+      Value<int?> httpDeadlineAtMs,
+      Value<String?> etag,
+      Value<String?> lastError,
+      Value<String?> refreshRoundId,
+      Value<int> rowid,
+    });
+
+class $$CorporationSnapshotHeadsTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationSnapshotHeadsTable> {
+  $$CorporationSnapshotHeadsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerKey => $composableBuilder(
+    column: $table.ownerKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get requestVariant => $composableBuilder(
+    column: $table.requestVariant,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get compatibilityDate => $composableBuilder(
+    column: $table.compatibilityDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get acceptedSnapshotId => $composableBuilder(
+    column: $table.acceptedSnapshotId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get acceptedRevision => $composableBuilder(
+    column: $table.acceptedRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get coverage => $composableBuilder(
+    column: $table.coverage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get payloadReceivedAtMs => $composableBuilder(
+    column: $table.payloadReceivedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get validatedAtMs => $composableBuilder(
+    column: $table.validatedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get httpDeadlineAtMs => $composableBuilder(
+    column: $table.httpDeadlineAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get etag => $composableBuilder(
+    column: $table.etag,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get refreshRoundId => $composableBuilder(
+    column: $table.refreshRoundId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationSnapshotHeadsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationSnapshotHeadsTable> {
+  $$CorporationSnapshotHeadsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerKey => $composableBuilder(
+    column: $table.ownerKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get requestVariant => $composableBuilder(
+    column: $table.requestVariant,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get compatibilityDate => $composableBuilder(
+    column: $table.compatibilityDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get acceptedSnapshotId => $composableBuilder(
+    column: $table.acceptedSnapshotId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get acceptedRevision => $composableBuilder(
+    column: $table.acceptedRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get coverage => $composableBuilder(
+    column: $table.coverage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get payloadReceivedAtMs => $composableBuilder(
+    column: $table.payloadReceivedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get validatedAtMs => $composableBuilder(
+    column: $table.validatedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get httpDeadlineAtMs => $composableBuilder(
+    column: $table.httpDeadlineAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get etag => $composableBuilder(
+    column: $table.etag,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get refreshRoundId => $composableBuilder(
+    column: $table.refreshRoundId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationSnapshotHeadsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationSnapshotHeadsTable> {
+  $$CorporationSnapshotHeadsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerKey =>
+      $composableBuilder(column: $table.ownerKey, builder: (column) => column);
+
+  GeneratedColumn<String> get requestVariant => $composableBuilder(
+    column: $table.requestVariant,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get compatibilityDate => $composableBuilder(
+    column: $table.compatibilityDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get acceptedSnapshotId => $composableBuilder(
+    column: $table.acceptedSnapshotId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get acceptedRevision => $composableBuilder(
+    column: $table.acceptedRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get coverage =>
+      $composableBuilder(column: $table.coverage, builder: (column) => column);
+
+  GeneratedColumn<int> get payloadReceivedAtMs => $composableBuilder(
+    column: $table.payloadReceivedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get validatedAtMs => $composableBuilder(
+    column: $table.validatedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get httpDeadlineAtMs => $composableBuilder(
+    column: $table.httpDeadlineAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get etag =>
+      $composableBuilder(column: $table.etag, builder: (column) => column);
+
+  GeneratedColumn<String> get lastError =>
+      $composableBuilder(column: $table.lastError, builder: (column) => column);
+
+  GeneratedColumn<String> get refreshRoundId => $composableBuilder(
+    column: $table.refreshRoundId,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationSnapshotHeadsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationSnapshotHeadsTable,
+          CorporationSnapshotHead,
+          $$CorporationSnapshotHeadsTableFilterComposer,
+          $$CorporationSnapshotHeadsTableOrderingComposer,
+          $$CorporationSnapshotHeadsTableAnnotationComposer,
+          $$CorporationSnapshotHeadsTableCreateCompanionBuilder,
+          $$CorporationSnapshotHeadsTableUpdateCompanionBuilder,
+          (
+            CorporationSnapshotHead,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationSnapshotHeadsTable,
+              CorporationSnapshotHead
+            >,
+          ),
+          CorporationSnapshotHead,
+          PrefetchHooks Function()
+        > {
+  $$CorporationSnapshotHeadsTableTableManager(
+    _$AppDatabase db,
+    $CorporationSnapshotHeadsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationSnapshotHeadsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationSnapshotHeadsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationSnapshotHeadsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerKey = const Value.absent(),
+                Value<String> requestVariant = const Value.absent(),
+                Value<String> compatibilityDate = const Value.absent(),
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> acceptedSnapshotId = const Value.absent(),
+                Value<int?> acceptedRevision = const Value.absent(),
+                Value<String?> coverage = const Value.absent(),
+                Value<int?> payloadReceivedAtMs = const Value.absent(),
+                Value<int?> validatedAtMs = const Value.absent(),
+                Value<int?> httpDeadlineAtMs = const Value.absent(),
+                Value<String?> etag = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                Value<String?> refreshRoundId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationSnapshotHeadsCompanion(
+                ownerKey: ownerKey,
+                requestVariant: requestVariant,
+                compatibilityDate: compatibilityDate,
+                ownerCharacterId: ownerCharacterId,
+                acceptedSnapshotId: acceptedSnapshotId,
+                acceptedRevision: acceptedRevision,
+                coverage: coverage,
+                payloadReceivedAtMs: payloadReceivedAtMs,
+                validatedAtMs: validatedAtMs,
+                httpDeadlineAtMs: httpDeadlineAtMs,
+                etag: etag,
+                lastError: lastError,
+                refreshRoundId: refreshRoundId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerKey,
+                required String requestVariant,
+                required String compatibilityDate,
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> acceptedSnapshotId = const Value.absent(),
+                Value<int?> acceptedRevision = const Value.absent(),
+                Value<String?> coverage = const Value.absent(),
+                Value<int?> payloadReceivedAtMs = const Value.absent(),
+                Value<int?> validatedAtMs = const Value.absent(),
+                Value<int?> httpDeadlineAtMs = const Value.absent(),
+                Value<String?> etag = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                Value<String?> refreshRoundId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationSnapshotHeadsCompanion.insert(
+                ownerKey: ownerKey,
+                requestVariant: requestVariant,
+                compatibilityDate: compatibilityDate,
+                ownerCharacterId: ownerCharacterId,
+                acceptedSnapshotId: acceptedSnapshotId,
+                acceptedRevision: acceptedRevision,
+                coverage: coverage,
+                payloadReceivedAtMs: payloadReceivedAtMs,
+                validatedAtMs: validatedAtMs,
+                httpDeadlineAtMs: httpDeadlineAtMs,
+                etag: etag,
+                lastError: lastError,
+                refreshRoundId: refreshRoundId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationSnapshotHeadsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationSnapshotHeadsTable,
+      CorporationSnapshotHead,
+      $$CorporationSnapshotHeadsTableFilterComposer,
+      $$CorporationSnapshotHeadsTableOrderingComposer,
+      $$CorporationSnapshotHeadsTableAnnotationComposer,
+      $$CorporationSnapshotHeadsTableCreateCompanionBuilder,
+      $$CorporationSnapshotHeadsTableUpdateCompanionBuilder,
+      (
+        CorporationSnapshotHead,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationSnapshotHeadsTable,
+          CorporationSnapshotHead
+        >,
+      ),
+      CorporationSnapshotHead,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationSnapshotPagesTableCreateCompanionBuilder =
+    CorporationSnapshotPagesCompanion Function({
+      required String snapshotId,
+      required String pageKey,
+      Value<int?> ownerCharacterId,
+      Value<String?> status,
+      Value<String?> etag,
+      Value<String?> lastModified,
+      Value<int?> dateAtMs,
+      Value<int?> ageSeconds,
+      Value<int?> xPages,
+      Value<String?> contentDigest,
+      Value<int?> validatedAtMs,
+      Value<String?> nextCursor,
+      Value<bool?> complete,
+      Value<int> rowid,
+    });
+typedef $$CorporationSnapshotPagesTableUpdateCompanionBuilder =
+    CorporationSnapshotPagesCompanion Function({
+      Value<String> snapshotId,
+      Value<String> pageKey,
+      Value<int?> ownerCharacterId,
+      Value<String?> status,
+      Value<String?> etag,
+      Value<String?> lastModified,
+      Value<int?> dateAtMs,
+      Value<int?> ageSeconds,
+      Value<int?> xPages,
+      Value<String?> contentDigest,
+      Value<int?> validatedAtMs,
+      Value<String?> nextCursor,
+      Value<bool?> complete,
+      Value<int> rowid,
+    });
+
+class $$CorporationSnapshotPagesTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationSnapshotPagesTable> {
+  $$CorporationSnapshotPagesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pageKey => $composableBuilder(
+    column: $table.pageKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get etag => $composableBuilder(
+    column: $table.etag,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastModified => $composableBuilder(
+    column: $table.lastModified,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dateAtMs => $composableBuilder(
+    column: $table.dateAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ageSeconds => $composableBuilder(
+    column: $table.ageSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get xPages => $composableBuilder(
+    column: $table.xPages,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentDigest => $composableBuilder(
+    column: $table.contentDigest,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get validatedAtMs => $composableBuilder(
+    column: $table.validatedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nextCursor => $composableBuilder(
+    column: $table.nextCursor,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get complete => $composableBuilder(
+    column: $table.complete,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationSnapshotPagesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationSnapshotPagesTable> {
+  $$CorporationSnapshotPagesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pageKey => $composableBuilder(
+    column: $table.pageKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get etag => $composableBuilder(
+    column: $table.etag,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastModified => $composableBuilder(
+    column: $table.lastModified,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dateAtMs => $composableBuilder(
+    column: $table.dateAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ageSeconds => $composableBuilder(
+    column: $table.ageSeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get xPages => $composableBuilder(
+    column: $table.xPages,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentDigest => $composableBuilder(
+    column: $table.contentDigest,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get validatedAtMs => $composableBuilder(
+    column: $table.validatedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nextCursor => $composableBuilder(
+    column: $table.nextCursor,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get complete => $composableBuilder(
+    column: $table.complete,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationSnapshotPagesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationSnapshotPagesTable> {
+  $$CorporationSnapshotPagesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get pageKey =>
+      $composableBuilder(column: $table.pageKey, builder: (column) => column);
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get etag =>
+      $composableBuilder(column: $table.etag, builder: (column) => column);
+
+  GeneratedColumn<String> get lastModified => $composableBuilder(
+    column: $table.lastModified,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get dateAtMs =>
+      $composableBuilder(column: $table.dateAtMs, builder: (column) => column);
+
+  GeneratedColumn<int> get ageSeconds => $composableBuilder(
+    column: $table.ageSeconds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get xPages =>
+      $composableBuilder(column: $table.xPages, builder: (column) => column);
+
+  GeneratedColumn<String> get contentDigest => $composableBuilder(
+    column: $table.contentDigest,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get validatedAtMs => $composableBuilder(
+    column: $table.validatedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get nextCursor => $composableBuilder(
+    column: $table.nextCursor,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get complete =>
+      $composableBuilder(column: $table.complete, builder: (column) => column);
+}
+
+class $$CorporationSnapshotPagesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationSnapshotPagesTable,
+          CorporationSnapshotPage,
+          $$CorporationSnapshotPagesTableFilterComposer,
+          $$CorporationSnapshotPagesTableOrderingComposer,
+          $$CorporationSnapshotPagesTableAnnotationComposer,
+          $$CorporationSnapshotPagesTableCreateCompanionBuilder,
+          $$CorporationSnapshotPagesTableUpdateCompanionBuilder,
+          (
+            CorporationSnapshotPage,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationSnapshotPagesTable,
+              CorporationSnapshotPage
+            >,
+          ),
+          CorporationSnapshotPage,
+          PrefetchHooks Function()
+        > {
+  $$CorporationSnapshotPagesTableTableManager(
+    _$AppDatabase db,
+    $CorporationSnapshotPagesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationSnapshotPagesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationSnapshotPagesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationSnapshotPagesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> snapshotId = const Value.absent(),
+                Value<String> pageKey = const Value.absent(),
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> status = const Value.absent(),
+                Value<String?> etag = const Value.absent(),
+                Value<String?> lastModified = const Value.absent(),
+                Value<int?> dateAtMs = const Value.absent(),
+                Value<int?> ageSeconds = const Value.absent(),
+                Value<int?> xPages = const Value.absent(),
+                Value<String?> contentDigest = const Value.absent(),
+                Value<int?> validatedAtMs = const Value.absent(),
+                Value<String?> nextCursor = const Value.absent(),
+                Value<bool?> complete = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationSnapshotPagesCompanion(
+                snapshotId: snapshotId,
+                pageKey: pageKey,
+                ownerCharacterId: ownerCharacterId,
+                status: status,
+                etag: etag,
+                lastModified: lastModified,
+                dateAtMs: dateAtMs,
+                ageSeconds: ageSeconds,
+                xPages: xPages,
+                contentDigest: contentDigest,
+                validatedAtMs: validatedAtMs,
+                nextCursor: nextCursor,
+                complete: complete,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String snapshotId,
+                required String pageKey,
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> status = const Value.absent(),
+                Value<String?> etag = const Value.absent(),
+                Value<String?> lastModified = const Value.absent(),
+                Value<int?> dateAtMs = const Value.absent(),
+                Value<int?> ageSeconds = const Value.absent(),
+                Value<int?> xPages = const Value.absent(),
+                Value<String?> contentDigest = const Value.absent(),
+                Value<int?> validatedAtMs = const Value.absent(),
+                Value<String?> nextCursor = const Value.absent(),
+                Value<bool?> complete = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationSnapshotPagesCompanion.insert(
+                snapshotId: snapshotId,
+                pageKey: pageKey,
+                ownerCharacterId: ownerCharacterId,
+                status: status,
+                etag: etag,
+                lastModified: lastModified,
+                dateAtMs: dateAtMs,
+                ageSeconds: ageSeconds,
+                xPages: xPages,
+                contentDigest: contentDigest,
+                validatedAtMs: validatedAtMs,
+                nextCursor: nextCursor,
+                complete: complete,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationSnapshotPagesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationSnapshotPagesTable,
+      CorporationSnapshotPage,
+      $$CorporationSnapshotPagesTableFilterComposer,
+      $$CorporationSnapshotPagesTableOrderingComposer,
+      $$CorporationSnapshotPagesTableAnnotationComposer,
+      $$CorporationSnapshotPagesTableCreateCompanionBuilder,
+      $$CorporationSnapshotPagesTableUpdateCompanionBuilder,
+      (
+        CorporationSnapshotPage,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationSnapshotPagesTable,
+          CorporationSnapshotPage
+        >,
+      ),
+      CorporationSnapshotPage,
+      PrefetchHooks Function()
+    >;
+typedef $$EsiRequestLeasesTableCreateCompanionBuilder =
+    EsiRequestLeasesCompanion Function({
+      required String resourceKey,
+      Value<String?> tenant,
+      Value<String?> application,
+      Value<int?> characterId,
+      Value<String?> rateGroup,
+      Value<String?> callerClass,
+      Value<String?> jobToken,
+      Value<int?> jobEpoch,
+      Value<String?> ownerProcess,
+      Value<int?> leaseUntilMs,
+      Value<int?> heartbeatAtMs,
+      Value<int?> nextAttemptAtMs,
+      Value<int?> backoffSeconds,
+      Value<String?> expectedAuthority,
+      Value<int?> acceptedRevision,
+      Value<int> rowid,
+    });
+typedef $$EsiRequestLeasesTableUpdateCompanionBuilder =
+    EsiRequestLeasesCompanion Function({
+      Value<String> resourceKey,
+      Value<String?> tenant,
+      Value<String?> application,
+      Value<int?> characterId,
+      Value<String?> rateGroup,
+      Value<String?> callerClass,
+      Value<String?> jobToken,
+      Value<int?> jobEpoch,
+      Value<String?> ownerProcess,
+      Value<int?> leaseUntilMs,
+      Value<int?> heartbeatAtMs,
+      Value<int?> nextAttemptAtMs,
+      Value<int?> backoffSeconds,
+      Value<String?> expectedAuthority,
+      Value<int?> acceptedRevision,
+      Value<int> rowid,
+    });
+
+class $$EsiRequestLeasesTableFilterComposer
+    extends Composer<_$AppDatabase, $EsiRequestLeasesTable> {
+  $$EsiRequestLeasesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get resourceKey => $composableBuilder(
+    column: $table.resourceKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tenant => $composableBuilder(
+    column: $table.tenant,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get application => $composableBuilder(
+    column: $table.application,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rateGroup => $composableBuilder(
+    column: $table.rateGroup,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get callerClass => $composableBuilder(
+    column: $table.callerClass,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get jobToken => $composableBuilder(
+    column: $table.jobToken,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get jobEpoch => $composableBuilder(
+    column: $table.jobEpoch,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ownerProcess => $composableBuilder(
+    column: $table.ownerProcess,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get leaseUntilMs => $composableBuilder(
+    column: $table.leaseUntilMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get heartbeatAtMs => $composableBuilder(
+    column: $table.heartbeatAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get nextAttemptAtMs => $composableBuilder(
+    column: $table.nextAttemptAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get backoffSeconds => $composableBuilder(
+    column: $table.backoffSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get expectedAuthority => $composableBuilder(
+    column: $table.expectedAuthority,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get acceptedRevision => $composableBuilder(
+    column: $table.acceptedRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$EsiRequestLeasesTableOrderingComposer
+    extends Composer<_$AppDatabase, $EsiRequestLeasesTable> {
+  $$EsiRequestLeasesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get resourceKey => $composableBuilder(
+    column: $table.resourceKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tenant => $composableBuilder(
+    column: $table.tenant,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get application => $composableBuilder(
+    column: $table.application,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rateGroup => $composableBuilder(
+    column: $table.rateGroup,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get callerClass => $composableBuilder(
+    column: $table.callerClass,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get jobToken => $composableBuilder(
+    column: $table.jobToken,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get jobEpoch => $composableBuilder(
+    column: $table.jobEpoch,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ownerProcess => $composableBuilder(
+    column: $table.ownerProcess,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get leaseUntilMs => $composableBuilder(
+    column: $table.leaseUntilMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get heartbeatAtMs => $composableBuilder(
+    column: $table.heartbeatAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get nextAttemptAtMs => $composableBuilder(
+    column: $table.nextAttemptAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get backoffSeconds => $composableBuilder(
+    column: $table.backoffSeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get expectedAuthority => $composableBuilder(
+    column: $table.expectedAuthority,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get acceptedRevision => $composableBuilder(
+    column: $table.acceptedRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$EsiRequestLeasesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $EsiRequestLeasesTable> {
+  $$EsiRequestLeasesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get resourceKey => $composableBuilder(
+    column: $table.resourceKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get tenant =>
+      $composableBuilder(column: $table.tenant, builder: (column) => column);
+
+  GeneratedColumn<String> get application => $composableBuilder(
+    column: $table.application,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get rateGroup =>
+      $composableBuilder(column: $table.rateGroup, builder: (column) => column);
+
+  GeneratedColumn<String> get callerClass => $composableBuilder(
+    column: $table.callerClass,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get jobToken =>
+      $composableBuilder(column: $table.jobToken, builder: (column) => column);
+
+  GeneratedColumn<int> get jobEpoch =>
+      $composableBuilder(column: $table.jobEpoch, builder: (column) => column);
+
+  GeneratedColumn<String> get ownerProcess => $composableBuilder(
+    column: $table.ownerProcess,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get leaseUntilMs => $composableBuilder(
+    column: $table.leaseUntilMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get heartbeatAtMs => $composableBuilder(
+    column: $table.heartbeatAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get nextAttemptAtMs => $composableBuilder(
+    column: $table.nextAttemptAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get backoffSeconds => $composableBuilder(
+    column: $table.backoffSeconds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get expectedAuthority => $composableBuilder(
+    column: $table.expectedAuthority,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get acceptedRevision => $composableBuilder(
+    column: $table.acceptedRevision,
+    builder: (column) => column,
+  );
+}
+
+class $$EsiRequestLeasesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $EsiRequestLeasesTable,
+          EsiRequestLease,
+          $$EsiRequestLeasesTableFilterComposer,
+          $$EsiRequestLeasesTableOrderingComposer,
+          $$EsiRequestLeasesTableAnnotationComposer,
+          $$EsiRequestLeasesTableCreateCompanionBuilder,
+          $$EsiRequestLeasesTableUpdateCompanionBuilder,
+          (
+            EsiRequestLease,
+            BaseReferences<
+              _$AppDatabase,
+              $EsiRequestLeasesTable,
+              EsiRequestLease
+            >,
+          ),
+          EsiRequestLease,
+          PrefetchHooks Function()
+        > {
+  $$EsiRequestLeasesTableTableManager(
+    _$AppDatabase db,
+    $EsiRequestLeasesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EsiRequestLeasesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EsiRequestLeasesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$EsiRequestLeasesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> resourceKey = const Value.absent(),
+                Value<String?> tenant = const Value.absent(),
+                Value<String?> application = const Value.absent(),
+                Value<int?> characterId = const Value.absent(),
+                Value<String?> rateGroup = const Value.absent(),
+                Value<String?> callerClass = const Value.absent(),
+                Value<String?> jobToken = const Value.absent(),
+                Value<int?> jobEpoch = const Value.absent(),
+                Value<String?> ownerProcess = const Value.absent(),
+                Value<int?> leaseUntilMs = const Value.absent(),
+                Value<int?> heartbeatAtMs = const Value.absent(),
+                Value<int?> nextAttemptAtMs = const Value.absent(),
+                Value<int?> backoffSeconds = const Value.absent(),
+                Value<String?> expectedAuthority = const Value.absent(),
+                Value<int?> acceptedRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EsiRequestLeasesCompanion(
+                resourceKey: resourceKey,
+                tenant: tenant,
+                application: application,
+                characterId: characterId,
+                rateGroup: rateGroup,
+                callerClass: callerClass,
+                jobToken: jobToken,
+                jobEpoch: jobEpoch,
+                ownerProcess: ownerProcess,
+                leaseUntilMs: leaseUntilMs,
+                heartbeatAtMs: heartbeatAtMs,
+                nextAttemptAtMs: nextAttemptAtMs,
+                backoffSeconds: backoffSeconds,
+                expectedAuthority: expectedAuthority,
+                acceptedRevision: acceptedRevision,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String resourceKey,
+                Value<String?> tenant = const Value.absent(),
+                Value<String?> application = const Value.absent(),
+                Value<int?> characterId = const Value.absent(),
+                Value<String?> rateGroup = const Value.absent(),
+                Value<String?> callerClass = const Value.absent(),
+                Value<String?> jobToken = const Value.absent(),
+                Value<int?> jobEpoch = const Value.absent(),
+                Value<String?> ownerProcess = const Value.absent(),
+                Value<int?> leaseUntilMs = const Value.absent(),
+                Value<int?> heartbeatAtMs = const Value.absent(),
+                Value<int?> nextAttemptAtMs = const Value.absent(),
+                Value<int?> backoffSeconds = const Value.absent(),
+                Value<String?> expectedAuthority = const Value.absent(),
+                Value<int?> acceptedRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EsiRequestLeasesCompanion.insert(
+                resourceKey: resourceKey,
+                tenant: tenant,
+                application: application,
+                characterId: characterId,
+                rateGroup: rateGroup,
+                callerClass: callerClass,
+                jobToken: jobToken,
+                jobEpoch: jobEpoch,
+                ownerProcess: ownerProcess,
+                leaseUntilMs: leaseUntilMs,
+                heartbeatAtMs: heartbeatAtMs,
+                nextAttemptAtMs: nextAttemptAtMs,
+                backoffSeconds: backoffSeconds,
+                expectedAuthority: expectedAuthority,
+                acceptedRevision: acceptedRevision,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$EsiRequestLeasesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $EsiRequestLeasesTable,
+      EsiRequestLease,
+      $$EsiRequestLeasesTableFilterComposer,
+      $$EsiRequestLeasesTableOrderingComposer,
+      $$EsiRequestLeasesTableAnnotationComposer,
+      $$EsiRequestLeasesTableCreateCompanionBuilder,
+      $$EsiRequestLeasesTableUpdateCompanionBuilder,
+      (
+        EsiRequestLease,
+        BaseReferences<_$AppDatabase, $EsiRequestLeasesTable, EsiRequestLease>,
+      ),
+      EsiRequestLease,
+      PrefetchHooks Function()
+    >;
+typedef $$EsiRateBucketsTableCreateCompanionBuilder =
+    EsiRateBucketsCompanion Function({
+      required String tenant,
+      required String application,
+      required int characterId,
+      required String rateGroup,
+      Value<int?> limit,
+      Value<int?> remaining,
+      Value<int?> used,
+      Value<int?> observedAtMs,
+      Value<int?> retryAfterAtMs,
+      Value<int?> errorUntilMs,
+      Value<int> rowid,
+    });
+typedef $$EsiRateBucketsTableUpdateCompanionBuilder =
+    EsiRateBucketsCompanion Function({
+      Value<String> tenant,
+      Value<String> application,
+      Value<int> characterId,
+      Value<String> rateGroup,
+      Value<int?> limit,
+      Value<int?> remaining,
+      Value<int?> used,
+      Value<int?> observedAtMs,
+      Value<int?> retryAfterAtMs,
+      Value<int?> errorUntilMs,
+      Value<int> rowid,
+    });
+
+class $$EsiRateBucketsTableFilterComposer
+    extends Composer<_$AppDatabase, $EsiRateBucketsTable> {
+  $$EsiRateBucketsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get tenant => $composableBuilder(
+    column: $table.tenant,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get application => $composableBuilder(
+    column: $table.application,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rateGroup => $composableBuilder(
+    column: $table.rateGroup,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get limit => $composableBuilder(
+    column: $table.limit,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get remaining => $composableBuilder(
+    column: $table.remaining,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get used => $composableBuilder(
+    column: $table.used,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get observedAtMs => $composableBuilder(
+    column: $table.observedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get retryAfterAtMs => $composableBuilder(
+    column: $table.retryAfterAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get errorUntilMs => $composableBuilder(
+    column: $table.errorUntilMs,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$EsiRateBucketsTableOrderingComposer
+    extends Composer<_$AppDatabase, $EsiRateBucketsTable> {
+  $$EsiRateBucketsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get tenant => $composableBuilder(
+    column: $table.tenant,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get application => $composableBuilder(
+    column: $table.application,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rateGroup => $composableBuilder(
+    column: $table.rateGroup,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get limit => $composableBuilder(
+    column: $table.limit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get remaining => $composableBuilder(
+    column: $table.remaining,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get used => $composableBuilder(
+    column: $table.used,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get observedAtMs => $composableBuilder(
+    column: $table.observedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get retryAfterAtMs => $composableBuilder(
+    column: $table.retryAfterAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get errorUntilMs => $composableBuilder(
+    column: $table.errorUntilMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$EsiRateBucketsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $EsiRateBucketsTable> {
+  $$EsiRateBucketsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get tenant =>
+      $composableBuilder(column: $table.tenant, builder: (column) => column);
+
+  GeneratedColumn<String> get application => $composableBuilder(
+    column: $table.application,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get rateGroup =>
+      $composableBuilder(column: $table.rateGroup, builder: (column) => column);
+
+  GeneratedColumn<int> get limit =>
+      $composableBuilder(column: $table.limit, builder: (column) => column);
+
+  GeneratedColumn<int> get remaining =>
+      $composableBuilder(column: $table.remaining, builder: (column) => column);
+
+  GeneratedColumn<int> get used =>
+      $composableBuilder(column: $table.used, builder: (column) => column);
+
+  GeneratedColumn<int> get observedAtMs => $composableBuilder(
+    column: $table.observedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get retryAfterAtMs => $composableBuilder(
+    column: $table.retryAfterAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get errorUntilMs => $composableBuilder(
+    column: $table.errorUntilMs,
+    builder: (column) => column,
+  );
+}
+
+class $$EsiRateBucketsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $EsiRateBucketsTable,
+          EsiRateBucket,
+          $$EsiRateBucketsTableFilterComposer,
+          $$EsiRateBucketsTableOrderingComposer,
+          $$EsiRateBucketsTableAnnotationComposer,
+          $$EsiRateBucketsTableCreateCompanionBuilder,
+          $$EsiRateBucketsTableUpdateCompanionBuilder,
+          (
+            EsiRateBucket,
+            BaseReferences<_$AppDatabase, $EsiRateBucketsTable, EsiRateBucket>,
+          ),
+          EsiRateBucket,
+          PrefetchHooks Function()
+        > {
+  $$EsiRateBucketsTableTableManager(
+    _$AppDatabase db,
+    $EsiRateBucketsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EsiRateBucketsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EsiRateBucketsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$EsiRateBucketsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> tenant = const Value.absent(),
+                Value<String> application = const Value.absent(),
+                Value<int> characterId = const Value.absent(),
+                Value<String> rateGroup = const Value.absent(),
+                Value<int?> limit = const Value.absent(),
+                Value<int?> remaining = const Value.absent(),
+                Value<int?> used = const Value.absent(),
+                Value<int?> observedAtMs = const Value.absent(),
+                Value<int?> retryAfterAtMs = const Value.absent(),
+                Value<int?> errorUntilMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EsiRateBucketsCompanion(
+                tenant: tenant,
+                application: application,
+                characterId: characterId,
+                rateGroup: rateGroup,
+                limit: limit,
+                remaining: remaining,
+                used: used,
+                observedAtMs: observedAtMs,
+                retryAfterAtMs: retryAfterAtMs,
+                errorUntilMs: errorUntilMs,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String tenant,
+                required String application,
+                required int characterId,
+                required String rateGroup,
+                Value<int?> limit = const Value.absent(),
+                Value<int?> remaining = const Value.absent(),
+                Value<int?> used = const Value.absent(),
+                Value<int?> observedAtMs = const Value.absent(),
+                Value<int?> retryAfterAtMs = const Value.absent(),
+                Value<int?> errorUntilMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EsiRateBucketsCompanion.insert(
+                tenant: tenant,
+                application: application,
+                characterId: characterId,
+                rateGroup: rateGroup,
+                limit: limit,
+                remaining: remaining,
+                used: used,
+                observedAtMs: observedAtMs,
+                retryAfterAtMs: retryAfterAtMs,
+                errorUntilMs: errorUntilMs,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$EsiRateBucketsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $EsiRateBucketsTable,
+      EsiRateBucket,
+      $$EsiRateBucketsTableFilterComposer,
+      $$EsiRateBucketsTableOrderingComposer,
+      $$EsiRateBucketsTableAnnotationComposer,
+      $$EsiRateBucketsTableCreateCompanionBuilder,
+      $$EsiRateBucketsTableUpdateCompanionBuilder,
+      (
+        EsiRateBucket,
+        BaseReferences<_$AppDatabase, $EsiRateBucketsTable, EsiRateBucket>,
+      ),
+      EsiRateBucket,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationProfilesTableCreateCompanionBuilder =
+    CorporationProfilesCompanion Function({
+      required String tenant,
+      required int corporationId,
+      Value<String?> adapter,
+      Value<String?> name,
+      Value<String?> ticker,
+      Value<String?> state,
+      Value<String?> type,
+      Value<String?> friendlyFire,
+      Value<int?> ceoId,
+      Value<int?> allianceId,
+      Value<int?> memberCount,
+      Value<String?> taxIsk,
+      Value<String?> taxLp,
+      Value<String?> description,
+      Value<String?> url,
+      Value<int?> payloadReceivedAtMs,
+      Value<int?> validatedAtMs,
+      Value<int> rowid,
+    });
+typedef $$CorporationProfilesTableUpdateCompanionBuilder =
+    CorporationProfilesCompanion Function({
+      Value<String> tenant,
+      Value<int> corporationId,
+      Value<String?> adapter,
+      Value<String?> name,
+      Value<String?> ticker,
+      Value<String?> state,
+      Value<String?> type,
+      Value<String?> friendlyFire,
+      Value<int?> ceoId,
+      Value<int?> allianceId,
+      Value<int?> memberCount,
+      Value<String?> taxIsk,
+      Value<String?> taxLp,
+      Value<String?> description,
+      Value<String?> url,
+      Value<int?> payloadReceivedAtMs,
+      Value<int?> validatedAtMs,
+      Value<int> rowid,
+    });
+
+class $$CorporationProfilesTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationProfilesTable> {
+  $$CorporationProfilesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get tenant => $composableBuilder(
+    column: $table.tenant,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get corporationId => $composableBuilder(
+    column: $table.corporationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get adapter => $composableBuilder(
+    column: $table.adapter,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ticker => $composableBuilder(
+    column: $table.ticker,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get friendlyFire => $composableBuilder(
+    column: $table.friendlyFire,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ceoId => $composableBuilder(
+    column: $table.ceoId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get allianceId => $composableBuilder(
+    column: $table.allianceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get memberCount => $composableBuilder(
+    column: $table.memberCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get taxIsk => $composableBuilder(
+    column: $table.taxIsk,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get taxLp => $composableBuilder(
+    column: $table.taxLp,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get url => $composableBuilder(
+    column: $table.url,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get payloadReceivedAtMs => $composableBuilder(
+    column: $table.payloadReceivedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get validatedAtMs => $composableBuilder(
+    column: $table.validatedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationProfilesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationProfilesTable> {
+  $$CorporationProfilesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get tenant => $composableBuilder(
+    column: $table.tenant,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get corporationId => $composableBuilder(
+    column: $table.corporationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get adapter => $composableBuilder(
+    column: $table.adapter,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ticker => $composableBuilder(
+    column: $table.ticker,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get friendlyFire => $composableBuilder(
+    column: $table.friendlyFire,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ceoId => $composableBuilder(
+    column: $table.ceoId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get allianceId => $composableBuilder(
+    column: $table.allianceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get memberCount => $composableBuilder(
+    column: $table.memberCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get taxIsk => $composableBuilder(
+    column: $table.taxIsk,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get taxLp => $composableBuilder(
+    column: $table.taxLp,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get url => $composableBuilder(
+    column: $table.url,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get payloadReceivedAtMs => $composableBuilder(
+    column: $table.payloadReceivedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get validatedAtMs => $composableBuilder(
+    column: $table.validatedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationProfilesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationProfilesTable> {
+  $$CorporationProfilesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get tenant =>
+      $composableBuilder(column: $table.tenant, builder: (column) => column);
+
+  GeneratedColumn<int> get corporationId => $composableBuilder(
+    column: $table.corporationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get adapter =>
+      $composableBuilder(column: $table.adapter, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get ticker =>
+      $composableBuilder(column: $table.ticker, builder: (column) => column);
+
+  GeneratedColumn<String> get state =>
+      $composableBuilder(column: $table.state, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get friendlyFire => $composableBuilder(
+    column: $table.friendlyFire,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get ceoId =>
+      $composableBuilder(column: $table.ceoId, builder: (column) => column);
+
+  GeneratedColumn<int> get allianceId => $composableBuilder(
+    column: $table.allianceId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get memberCount => $composableBuilder(
+    column: $table.memberCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get taxIsk =>
+      $composableBuilder(column: $table.taxIsk, builder: (column) => column);
+
+  GeneratedColumn<String> get taxLp =>
+      $composableBuilder(column: $table.taxLp, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get url =>
+      $composableBuilder(column: $table.url, builder: (column) => column);
+
+  GeneratedColumn<int> get payloadReceivedAtMs => $composableBuilder(
+    column: $table.payloadReceivedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get validatedAtMs => $composableBuilder(
+    column: $table.validatedAtMs,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationProfilesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationProfilesTable,
+          CorporationProfile,
+          $$CorporationProfilesTableFilterComposer,
+          $$CorporationProfilesTableOrderingComposer,
+          $$CorporationProfilesTableAnnotationComposer,
+          $$CorporationProfilesTableCreateCompanionBuilder,
+          $$CorporationProfilesTableUpdateCompanionBuilder,
+          (
+            CorporationProfile,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationProfilesTable,
+              CorporationProfile
+            >,
+          ),
+          CorporationProfile,
+          PrefetchHooks Function()
+        > {
+  $$CorporationProfilesTableTableManager(
+    _$AppDatabase db,
+    $CorporationProfilesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationProfilesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CorporationProfilesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationProfilesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> tenant = const Value.absent(),
+                Value<int> corporationId = const Value.absent(),
+                Value<String?> adapter = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<String?> ticker = const Value.absent(),
+                Value<String?> state = const Value.absent(),
+                Value<String?> type = const Value.absent(),
+                Value<String?> friendlyFire = const Value.absent(),
+                Value<int?> ceoId = const Value.absent(),
+                Value<int?> allianceId = const Value.absent(),
+                Value<int?> memberCount = const Value.absent(),
+                Value<String?> taxIsk = const Value.absent(),
+                Value<String?> taxLp = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<String?> url = const Value.absent(),
+                Value<int?> payloadReceivedAtMs = const Value.absent(),
+                Value<int?> validatedAtMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationProfilesCompanion(
+                tenant: tenant,
+                corporationId: corporationId,
+                adapter: adapter,
+                name: name,
+                ticker: ticker,
+                state: state,
+                type: type,
+                friendlyFire: friendlyFire,
+                ceoId: ceoId,
+                allianceId: allianceId,
+                memberCount: memberCount,
+                taxIsk: taxIsk,
+                taxLp: taxLp,
+                description: description,
+                url: url,
+                payloadReceivedAtMs: payloadReceivedAtMs,
+                validatedAtMs: validatedAtMs,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String tenant,
+                required int corporationId,
+                Value<String?> adapter = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<String?> ticker = const Value.absent(),
+                Value<String?> state = const Value.absent(),
+                Value<String?> type = const Value.absent(),
+                Value<String?> friendlyFire = const Value.absent(),
+                Value<int?> ceoId = const Value.absent(),
+                Value<int?> allianceId = const Value.absent(),
+                Value<int?> memberCount = const Value.absent(),
+                Value<String?> taxIsk = const Value.absent(),
+                Value<String?> taxLp = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<String?> url = const Value.absent(),
+                Value<int?> payloadReceivedAtMs = const Value.absent(),
+                Value<int?> validatedAtMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationProfilesCompanion.insert(
+                tenant: tenant,
+                corporationId: corporationId,
+                adapter: adapter,
+                name: name,
+                ticker: ticker,
+                state: state,
+                type: type,
+                friendlyFire: friendlyFire,
+                ceoId: ceoId,
+                allianceId: allianceId,
+                memberCount: memberCount,
+                taxIsk: taxIsk,
+                taxLp: taxLp,
+                description: description,
+                url: url,
+                payloadReceivedAtMs: payloadReceivedAtMs,
+                validatedAtMs: validatedAtMs,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationProfilesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationProfilesTable,
+      CorporationProfile,
+      $$CorporationProfilesTableFilterComposer,
+      $$CorporationProfilesTableOrderingComposer,
+      $$CorporationProfilesTableAnnotationComposer,
+      $$CorporationProfilesTableCreateCompanionBuilder,
+      $$CorporationProfilesTableUpdateCompanionBuilder,
+      (
+        CorporationProfile,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationProfilesTable,
+          CorporationProfile
+        >,
+      ),
+      CorporationProfile,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationMembersTableCreateCompanionBuilder =
+    CorporationMembersCompanion Function({
+      required String snapshotId,
+      required int memberId,
+      Value<int?> ownerCharacterId,
+      Value<String?> joinEvidence,
+      Value<int> rowid,
+    });
+typedef $$CorporationMembersTableUpdateCompanionBuilder =
+    CorporationMembersCompanion Function({
+      Value<String> snapshotId,
+      Value<int> memberId,
+      Value<int?> ownerCharacterId,
+      Value<String?> joinEvidence,
+      Value<int> rowid,
+    });
+
+class $$CorporationMembersTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationMembersTable> {
+  $$CorporationMembersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get memberId => $composableBuilder(
+    column: $table.memberId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get joinEvidence => $composableBuilder(
+    column: $table.joinEvidence,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationMembersTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationMembersTable> {
+  $$CorporationMembersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get memberId => $composableBuilder(
+    column: $table.memberId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get joinEvidence => $composableBuilder(
+    column: $table.joinEvidence,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationMembersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationMembersTable> {
+  $$CorporationMembersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get memberId =>
+      $composableBuilder(column: $table.memberId, builder: (column) => column);
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get joinEvidence => $composableBuilder(
+    column: $table.joinEvidence,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationMembersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationMembersTable,
+          CorporationMember,
+          $$CorporationMembersTableFilterComposer,
+          $$CorporationMembersTableOrderingComposer,
+          $$CorporationMembersTableAnnotationComposer,
+          $$CorporationMembersTableCreateCompanionBuilder,
+          $$CorporationMembersTableUpdateCompanionBuilder,
+          (
+            CorporationMember,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationMembersTable,
+              CorporationMember
+            >,
+          ),
+          CorporationMember,
+          PrefetchHooks Function()
+        > {
+  $$CorporationMembersTableTableManager(
+    _$AppDatabase db,
+    $CorporationMembersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationMembersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CorporationMembersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CorporationMembersTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> snapshotId = const Value.absent(),
+                Value<int> memberId = const Value.absent(),
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> joinEvidence = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationMembersCompanion(
+                snapshotId: snapshotId,
+                memberId: memberId,
+                ownerCharacterId: ownerCharacterId,
+                joinEvidence: joinEvidence,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String snapshotId,
+                required int memberId,
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> joinEvidence = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationMembersCompanion.insert(
+                snapshotId: snapshotId,
+                memberId: memberId,
+                ownerCharacterId: ownerCharacterId,
+                joinEvidence: joinEvidence,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationMembersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationMembersTable,
+      CorporationMember,
+      $$CorporationMembersTableFilterComposer,
+      $$CorporationMembersTableOrderingComposer,
+      $$CorporationMembersTableAnnotationComposer,
+      $$CorporationMembersTableCreateCompanionBuilder,
+      $$CorporationMembersTableUpdateCompanionBuilder,
+      (
+        CorporationMember,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationMembersTable,
+          CorporationMember
+        >,
+      ),
+      CorporationMember,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationMemberTrackingTableCreateCompanionBuilder =
+    CorporationMemberTrackingCompanion Function({
+      required String snapshotId,
+      required int memberId,
+      Value<int?> ownerCharacterId,
+      Value<int?> startAtMs,
+      Value<int?> lastLoginAtMs,
+      Value<int?> lastLogoutAtMs,
+      Value<int?> locationId,
+      Value<int?> shipTypeId,
+      Value<String?> diagnosticsJson,
+      Value<int> rowid,
+    });
+typedef $$CorporationMemberTrackingTableUpdateCompanionBuilder =
+    CorporationMemberTrackingCompanion Function({
+      Value<String> snapshotId,
+      Value<int> memberId,
+      Value<int?> ownerCharacterId,
+      Value<int?> startAtMs,
+      Value<int?> lastLoginAtMs,
+      Value<int?> lastLogoutAtMs,
+      Value<int?> locationId,
+      Value<int?> shipTypeId,
+      Value<String?> diagnosticsJson,
+      Value<int> rowid,
+    });
+
+class $$CorporationMemberTrackingTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationMemberTrackingTable> {
+  $$CorporationMemberTrackingTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get memberId => $composableBuilder(
+    column: $table.memberId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get startAtMs => $composableBuilder(
+    column: $table.startAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastLoginAtMs => $composableBuilder(
+    column: $table.lastLoginAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastLogoutAtMs => $composableBuilder(
+    column: $table.lastLogoutAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get locationId => $composableBuilder(
+    column: $table.locationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get shipTypeId => $composableBuilder(
+    column: $table.shipTypeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get diagnosticsJson => $composableBuilder(
+    column: $table.diagnosticsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationMemberTrackingTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationMemberTrackingTable> {
+  $$CorporationMemberTrackingTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get memberId => $composableBuilder(
+    column: $table.memberId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get startAtMs => $composableBuilder(
+    column: $table.startAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastLoginAtMs => $composableBuilder(
+    column: $table.lastLoginAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastLogoutAtMs => $composableBuilder(
+    column: $table.lastLogoutAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get locationId => $composableBuilder(
+    column: $table.locationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get shipTypeId => $composableBuilder(
+    column: $table.shipTypeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get diagnosticsJson => $composableBuilder(
+    column: $table.diagnosticsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationMemberTrackingTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationMemberTrackingTable> {
+  $$CorporationMemberTrackingTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get memberId =>
+      $composableBuilder(column: $table.memberId, builder: (column) => column);
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get startAtMs =>
+      $composableBuilder(column: $table.startAtMs, builder: (column) => column);
+
+  GeneratedColumn<int> get lastLoginAtMs => $composableBuilder(
+    column: $table.lastLoginAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastLogoutAtMs => $composableBuilder(
+    column: $table.lastLogoutAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get locationId => $composableBuilder(
+    column: $table.locationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get shipTypeId => $composableBuilder(
+    column: $table.shipTypeId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get diagnosticsJson => $composableBuilder(
+    column: $table.diagnosticsJson,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationMemberTrackingTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationMemberTrackingTable,
+          CorporationMemberTrackingData,
+          $$CorporationMemberTrackingTableFilterComposer,
+          $$CorporationMemberTrackingTableOrderingComposer,
+          $$CorporationMemberTrackingTableAnnotationComposer,
+          $$CorporationMemberTrackingTableCreateCompanionBuilder,
+          $$CorporationMemberTrackingTableUpdateCompanionBuilder,
+          (
+            CorporationMemberTrackingData,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationMemberTrackingTable,
+              CorporationMemberTrackingData
+            >,
+          ),
+          CorporationMemberTrackingData,
+          PrefetchHooks Function()
+        > {
+  $$CorporationMemberTrackingTableTableManager(
+    _$AppDatabase db,
+    $CorporationMemberTrackingTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationMemberTrackingTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationMemberTrackingTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationMemberTrackingTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> snapshotId = const Value.absent(),
+                Value<int> memberId = const Value.absent(),
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<int?> startAtMs = const Value.absent(),
+                Value<int?> lastLoginAtMs = const Value.absent(),
+                Value<int?> lastLogoutAtMs = const Value.absent(),
+                Value<int?> locationId = const Value.absent(),
+                Value<int?> shipTypeId = const Value.absent(),
+                Value<String?> diagnosticsJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationMemberTrackingCompanion(
+                snapshotId: snapshotId,
+                memberId: memberId,
+                ownerCharacterId: ownerCharacterId,
+                startAtMs: startAtMs,
+                lastLoginAtMs: lastLoginAtMs,
+                lastLogoutAtMs: lastLogoutAtMs,
+                locationId: locationId,
+                shipTypeId: shipTypeId,
+                diagnosticsJson: diagnosticsJson,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String snapshotId,
+                required int memberId,
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<int?> startAtMs = const Value.absent(),
+                Value<int?> lastLoginAtMs = const Value.absent(),
+                Value<int?> lastLogoutAtMs = const Value.absent(),
+                Value<int?> locationId = const Value.absent(),
+                Value<int?> shipTypeId = const Value.absent(),
+                Value<String?> diagnosticsJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationMemberTrackingCompanion.insert(
+                snapshotId: snapshotId,
+                memberId: memberId,
+                ownerCharacterId: ownerCharacterId,
+                startAtMs: startAtMs,
+                lastLoginAtMs: lastLoginAtMs,
+                lastLogoutAtMs: lastLogoutAtMs,
+                locationId: locationId,
+                shipTypeId: shipTypeId,
+                diagnosticsJson: diagnosticsJson,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationMemberTrackingTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationMemberTrackingTable,
+      CorporationMemberTrackingData,
+      $$CorporationMemberTrackingTableFilterComposer,
+      $$CorporationMemberTrackingTableOrderingComposer,
+      $$CorporationMemberTrackingTableAnnotationComposer,
+      $$CorporationMemberTrackingTableCreateCompanionBuilder,
+      $$CorporationMemberTrackingTableUpdateCompanionBuilder,
+      (
+        CorporationMemberTrackingData,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationMemberTrackingTable,
+          CorporationMemberTrackingData
+        >,
+      ),
+      CorporationMemberTrackingData,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationRoleAssignmentsTableCreateCompanionBuilder =
+    CorporationRoleAssignmentsCompanion Function({
+      required String snapshotId,
+      required int subjectId,
+      Value<int?> ownerCharacterId,
+      Value<String?> generalJson,
+      Value<String?> hqJson,
+      Value<String?> baseJson,
+      Value<String?> otherJson,
+      Value<String?> grantableJson,
+      Value<bool?> generalKnown,
+      Value<bool?> grantableKnown,
+      Value<int> rowid,
+    });
+typedef $$CorporationRoleAssignmentsTableUpdateCompanionBuilder =
+    CorporationRoleAssignmentsCompanion Function({
+      Value<String> snapshotId,
+      Value<int> subjectId,
+      Value<int?> ownerCharacterId,
+      Value<String?> generalJson,
+      Value<String?> hqJson,
+      Value<String?> baseJson,
+      Value<String?> otherJson,
+      Value<String?> grantableJson,
+      Value<bool?> generalKnown,
+      Value<bool?> grantableKnown,
+      Value<int> rowid,
+    });
+
+class $$CorporationRoleAssignmentsTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationRoleAssignmentsTable> {
+  $$CorporationRoleAssignmentsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get subjectId => $composableBuilder(
+    column: $table.subjectId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get generalJson => $composableBuilder(
+    column: $table.generalJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hqJson => $composableBuilder(
+    column: $table.hqJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get baseJson => $composableBuilder(
+    column: $table.baseJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get otherJson => $composableBuilder(
+    column: $table.otherJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get grantableJson => $composableBuilder(
+    column: $table.grantableJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get generalKnown => $composableBuilder(
+    column: $table.generalKnown,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get grantableKnown => $composableBuilder(
+    column: $table.grantableKnown,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationRoleAssignmentsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationRoleAssignmentsTable> {
+  $$CorporationRoleAssignmentsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get subjectId => $composableBuilder(
+    column: $table.subjectId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get generalJson => $composableBuilder(
+    column: $table.generalJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hqJson => $composableBuilder(
+    column: $table.hqJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get baseJson => $composableBuilder(
+    column: $table.baseJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get otherJson => $composableBuilder(
+    column: $table.otherJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get grantableJson => $composableBuilder(
+    column: $table.grantableJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get generalKnown => $composableBuilder(
+    column: $table.generalKnown,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get grantableKnown => $composableBuilder(
+    column: $table.grantableKnown,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationRoleAssignmentsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationRoleAssignmentsTable> {
+  $$CorporationRoleAssignmentsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get subjectId =>
+      $composableBuilder(column: $table.subjectId, builder: (column) => column);
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get generalJson => $composableBuilder(
+    column: $table.generalJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get hqJson =>
+      $composableBuilder(column: $table.hqJson, builder: (column) => column);
+
+  GeneratedColumn<String> get baseJson =>
+      $composableBuilder(column: $table.baseJson, builder: (column) => column);
+
+  GeneratedColumn<String> get otherJson =>
+      $composableBuilder(column: $table.otherJson, builder: (column) => column);
+
+  GeneratedColumn<String> get grantableJson => $composableBuilder(
+    column: $table.grantableJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get generalKnown => $composableBuilder(
+    column: $table.generalKnown,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get grantableKnown => $composableBuilder(
+    column: $table.grantableKnown,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationRoleAssignmentsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationRoleAssignmentsTable,
+          CorporationRoleAssignment,
+          $$CorporationRoleAssignmentsTableFilterComposer,
+          $$CorporationRoleAssignmentsTableOrderingComposer,
+          $$CorporationRoleAssignmentsTableAnnotationComposer,
+          $$CorporationRoleAssignmentsTableCreateCompanionBuilder,
+          $$CorporationRoleAssignmentsTableUpdateCompanionBuilder,
+          (
+            CorporationRoleAssignment,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationRoleAssignmentsTable,
+              CorporationRoleAssignment
+            >,
+          ),
+          CorporationRoleAssignment,
+          PrefetchHooks Function()
+        > {
+  $$CorporationRoleAssignmentsTableTableManager(
+    _$AppDatabase db,
+    $CorporationRoleAssignmentsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationRoleAssignmentsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationRoleAssignmentsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationRoleAssignmentsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> snapshotId = const Value.absent(),
+                Value<int> subjectId = const Value.absent(),
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> generalJson = const Value.absent(),
+                Value<String?> hqJson = const Value.absent(),
+                Value<String?> baseJson = const Value.absent(),
+                Value<String?> otherJson = const Value.absent(),
+                Value<String?> grantableJson = const Value.absent(),
+                Value<bool?> generalKnown = const Value.absent(),
+                Value<bool?> grantableKnown = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationRoleAssignmentsCompanion(
+                snapshotId: snapshotId,
+                subjectId: subjectId,
+                ownerCharacterId: ownerCharacterId,
+                generalJson: generalJson,
+                hqJson: hqJson,
+                baseJson: baseJson,
+                otherJson: otherJson,
+                grantableJson: grantableJson,
+                generalKnown: generalKnown,
+                grantableKnown: grantableKnown,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String snapshotId,
+                required int subjectId,
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> generalJson = const Value.absent(),
+                Value<String?> hqJson = const Value.absent(),
+                Value<String?> baseJson = const Value.absent(),
+                Value<String?> otherJson = const Value.absent(),
+                Value<String?> grantableJson = const Value.absent(),
+                Value<bool?> generalKnown = const Value.absent(),
+                Value<bool?> grantableKnown = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationRoleAssignmentsCompanion.insert(
+                snapshotId: snapshotId,
+                subjectId: subjectId,
+                ownerCharacterId: ownerCharacterId,
+                generalJson: generalJson,
+                hqJson: hqJson,
+                baseJson: baseJson,
+                otherJson: otherJson,
+                grantableJson: grantableJson,
+                generalKnown: generalKnown,
+                grantableKnown: grantableKnown,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationRoleAssignmentsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationRoleAssignmentsTable,
+      CorporationRoleAssignment,
+      $$CorporationRoleAssignmentsTableFilterComposer,
+      $$CorporationRoleAssignmentsTableOrderingComposer,
+      $$CorporationRoleAssignmentsTableAnnotationComposer,
+      $$CorporationRoleAssignmentsTableCreateCompanionBuilder,
+      $$CorporationRoleAssignmentsTableUpdateCompanionBuilder,
+      (
+        CorporationRoleAssignment,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationRoleAssignmentsTable,
+          CorporationRoleAssignment
+        >,
+      ),
+      CorporationRoleAssignment,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationTitlesTableCreateCompanionBuilder =
+    CorporationTitlesCompanion Function({
+      required String snapshotId,
+      required int titleId,
+      Value<int?> ownerCharacterId,
+      Value<String?> name,
+      Value<String?> rolesJson,
+      Value<int> rowid,
+    });
+typedef $$CorporationTitlesTableUpdateCompanionBuilder =
+    CorporationTitlesCompanion Function({
+      Value<String> snapshotId,
+      Value<int> titleId,
+      Value<int?> ownerCharacterId,
+      Value<String?> name,
+      Value<String?> rolesJson,
+      Value<int> rowid,
+    });
+
+class $$CorporationTitlesTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationTitlesTable> {
+  $$CorporationTitlesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get titleId => $composableBuilder(
+    column: $table.titleId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rolesJson => $composableBuilder(
+    column: $table.rolesJson,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationTitlesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationTitlesTable> {
+  $$CorporationTitlesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get titleId => $composableBuilder(
+    column: $table.titleId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rolesJson => $composableBuilder(
+    column: $table.rolesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationTitlesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationTitlesTable> {
+  $$CorporationTitlesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get titleId =>
+      $composableBuilder(column: $table.titleId, builder: (column) => column);
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get rolesJson =>
+      $composableBuilder(column: $table.rolesJson, builder: (column) => column);
+}
+
+class $$CorporationTitlesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationTitlesTable,
+          CorporationTitle,
+          $$CorporationTitlesTableFilterComposer,
+          $$CorporationTitlesTableOrderingComposer,
+          $$CorporationTitlesTableAnnotationComposer,
+          $$CorporationTitlesTableCreateCompanionBuilder,
+          $$CorporationTitlesTableUpdateCompanionBuilder,
+          (
+            CorporationTitle,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationTitlesTable,
+              CorporationTitle
+            >,
+          ),
+          CorporationTitle,
+          PrefetchHooks Function()
+        > {
+  $$CorporationTitlesTableTableManager(
+    _$AppDatabase db,
+    $CorporationTitlesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationTitlesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CorporationTitlesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CorporationTitlesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> snapshotId = const Value.absent(),
+                Value<int> titleId = const Value.absent(),
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<String?> rolesJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationTitlesCompanion(
+                snapshotId: snapshotId,
+                titleId: titleId,
+                ownerCharacterId: ownerCharacterId,
+                name: name,
+                rolesJson: rolesJson,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String snapshotId,
+                required int titleId,
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<String?> rolesJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationTitlesCompanion.insert(
+                snapshotId: snapshotId,
+                titleId: titleId,
+                ownerCharacterId: ownerCharacterId,
+                name: name,
+                rolesJson: rolesJson,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationTitlesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationTitlesTable,
+      CorporationTitle,
+      $$CorporationTitlesTableFilterComposer,
+      $$CorporationTitlesTableOrderingComposer,
+      $$CorporationTitlesTableAnnotationComposer,
+      $$CorporationTitlesTableCreateCompanionBuilder,
+      $$CorporationTitlesTableUpdateCompanionBuilder,
+      (
+        CorporationTitle,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationTitlesTable,
+          CorporationTitle
+        >,
+      ),
+      CorporationTitle,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationMemberTitlesTableCreateCompanionBuilder =
+    CorporationMemberTitlesCompanion Function({
+      required String snapshotId,
+      required int memberId,
+      required int titleId,
+      Value<int?> ownerCharacterId,
+      Value<int> rowid,
+    });
+typedef $$CorporationMemberTitlesTableUpdateCompanionBuilder =
+    CorporationMemberTitlesCompanion Function({
+      Value<String> snapshotId,
+      Value<int> memberId,
+      Value<int> titleId,
+      Value<int?> ownerCharacterId,
+      Value<int> rowid,
+    });
+
+class $$CorporationMemberTitlesTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationMemberTitlesTable> {
+  $$CorporationMemberTitlesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get memberId => $composableBuilder(
+    column: $table.memberId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get titleId => $composableBuilder(
+    column: $table.titleId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationMemberTitlesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationMemberTitlesTable> {
+  $$CorporationMemberTitlesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get memberId => $composableBuilder(
+    column: $table.memberId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get titleId => $composableBuilder(
+    column: $table.titleId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationMemberTitlesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationMemberTitlesTable> {
+  $$CorporationMemberTitlesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get memberId =>
+      $composableBuilder(column: $table.memberId, builder: (column) => column);
+
+  GeneratedColumn<int> get titleId =>
+      $composableBuilder(column: $table.titleId, builder: (column) => column);
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationMemberTitlesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationMemberTitlesTable,
+          CorporationMemberTitle,
+          $$CorporationMemberTitlesTableFilterComposer,
+          $$CorporationMemberTitlesTableOrderingComposer,
+          $$CorporationMemberTitlesTableAnnotationComposer,
+          $$CorporationMemberTitlesTableCreateCompanionBuilder,
+          $$CorporationMemberTitlesTableUpdateCompanionBuilder,
+          (
+            CorporationMemberTitle,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationMemberTitlesTable,
+              CorporationMemberTitle
+            >,
+          ),
+          CorporationMemberTitle,
+          PrefetchHooks Function()
+        > {
+  $$CorporationMemberTitlesTableTableManager(
+    _$AppDatabase db,
+    $CorporationMemberTitlesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationMemberTitlesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationMemberTitlesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationMemberTitlesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> snapshotId = const Value.absent(),
+                Value<int> memberId = const Value.absent(),
+                Value<int> titleId = const Value.absent(),
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationMemberTitlesCompanion(
+                snapshotId: snapshotId,
+                memberId: memberId,
+                titleId: titleId,
+                ownerCharacterId: ownerCharacterId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String snapshotId,
+                required int memberId,
+                required int titleId,
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationMemberTitlesCompanion.insert(
+                snapshotId: snapshotId,
+                memberId: memberId,
+                titleId: titleId,
+                ownerCharacterId: ownerCharacterId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationMemberTitlesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationMemberTitlesTable,
+      CorporationMemberTitle,
+      $$CorporationMemberTitlesTableFilterComposer,
+      $$CorporationMemberTitlesTableOrderingComposer,
+      $$CorporationMemberTitlesTableAnnotationComposer,
+      $$CorporationMemberTitlesTableCreateCompanionBuilder,
+      $$CorporationMemberTitlesTableUpdateCompanionBuilder,
+      (
+        CorporationMemberTitle,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationMemberTitlesTable,
+          CorporationMemberTitle
+        >,
+      ),
+      CorporationMemberTitle,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationOwnStandingsTableCreateCompanionBuilder =
+    CorporationOwnStandingsCompanion Function({
+      required String snapshotId,
+      required String sourceKind,
+      required int entityId,
+      Value<int?> ownerCharacterId,
+      Value<String?> standing,
+      Value<int> rowid,
+    });
+typedef $$CorporationOwnStandingsTableUpdateCompanionBuilder =
+    CorporationOwnStandingsCompanion Function({
+      Value<String> snapshotId,
+      Value<String> sourceKind,
+      Value<int> entityId,
+      Value<int?> ownerCharacterId,
+      Value<String?> standing,
+      Value<int> rowid,
+    });
+
+class $$CorporationOwnStandingsTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationOwnStandingsTable> {
+  $$CorporationOwnStandingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceKind => $composableBuilder(
+    column: $table.sourceKind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get entityId => $composableBuilder(
+    column: $table.entityId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get standing => $composableBuilder(
+    column: $table.standing,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationOwnStandingsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationOwnStandingsTable> {
+  $$CorporationOwnStandingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceKind => $composableBuilder(
+    column: $table.sourceKind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get entityId => $composableBuilder(
+    column: $table.entityId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get standing => $composableBuilder(
+    column: $table.standing,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationOwnStandingsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationOwnStandingsTable> {
+  $$CorporationOwnStandingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get sourceKind => $composableBuilder(
+    column: $table.sourceKind,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get entityId =>
+      $composableBuilder(column: $table.entityId, builder: (column) => column);
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get standing =>
+      $composableBuilder(column: $table.standing, builder: (column) => column);
+}
+
+class $$CorporationOwnStandingsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationOwnStandingsTable,
+          CorporationOwnStanding,
+          $$CorporationOwnStandingsTableFilterComposer,
+          $$CorporationOwnStandingsTableOrderingComposer,
+          $$CorporationOwnStandingsTableAnnotationComposer,
+          $$CorporationOwnStandingsTableCreateCompanionBuilder,
+          $$CorporationOwnStandingsTableUpdateCompanionBuilder,
+          (
+            CorporationOwnStanding,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationOwnStandingsTable,
+              CorporationOwnStanding
+            >,
+          ),
+          CorporationOwnStanding,
+          PrefetchHooks Function()
+        > {
+  $$CorporationOwnStandingsTableTableManager(
+    _$AppDatabase db,
+    $CorporationOwnStandingsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationOwnStandingsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationOwnStandingsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationOwnStandingsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> snapshotId = const Value.absent(),
+                Value<String> sourceKind = const Value.absent(),
+                Value<int> entityId = const Value.absent(),
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> standing = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationOwnStandingsCompanion(
+                snapshotId: snapshotId,
+                sourceKind: sourceKind,
+                entityId: entityId,
+                ownerCharacterId: ownerCharacterId,
+                standing: standing,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String snapshotId,
+                required String sourceKind,
+                required int entityId,
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> standing = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationOwnStandingsCompanion.insert(
+                snapshotId: snapshotId,
+                sourceKind: sourceKind,
+                entityId: entityId,
+                ownerCharacterId: ownerCharacterId,
+                standing: standing,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationOwnStandingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationOwnStandingsTable,
+      CorporationOwnStanding,
+      $$CorporationOwnStandingsTableFilterComposer,
+      $$CorporationOwnStandingsTableOrderingComposer,
+      $$CorporationOwnStandingsTableAnnotationComposer,
+      $$CorporationOwnStandingsTableCreateCompanionBuilder,
+      $$CorporationOwnStandingsTableUpdateCompanionBuilder,
+      (
+        CorporationOwnStanding,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationOwnStandingsTable,
+          CorporationOwnStanding
+        >,
+      ),
+      CorporationOwnStanding,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationDivisionNamesTableCreateCompanionBuilder =
+    CorporationDivisionNamesCompanion Function({
+      required String snapshotId,
+      required String kind,
+      required int division,
+      Value<int?> ownerCharacterId,
+      Value<String?> name,
+      Value<int> rowid,
+    });
+typedef $$CorporationDivisionNamesTableUpdateCompanionBuilder =
+    CorporationDivisionNamesCompanion Function({
+      Value<String> snapshotId,
+      Value<String> kind,
+      Value<int> division,
+      Value<int?> ownerCharacterId,
+      Value<String?> name,
+      Value<int> rowid,
+    });
+
+class $$CorporationDivisionNamesTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationDivisionNamesTable> {
+  $$CorporationDivisionNamesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get division => $composableBuilder(
+    column: $table.division,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationDivisionNamesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationDivisionNamesTable> {
+  $$CorporationDivisionNamesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get division => $composableBuilder(
+    column: $table.division,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationDivisionNamesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationDivisionNamesTable> {
+  $$CorporationDivisionNamesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<int> get division =>
+      $composableBuilder(column: $table.division, builder: (column) => column);
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+}
+
+class $$CorporationDivisionNamesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationDivisionNamesTable,
+          CorporationDivisionName,
+          $$CorporationDivisionNamesTableFilterComposer,
+          $$CorporationDivisionNamesTableOrderingComposer,
+          $$CorporationDivisionNamesTableAnnotationComposer,
+          $$CorporationDivisionNamesTableCreateCompanionBuilder,
+          $$CorporationDivisionNamesTableUpdateCompanionBuilder,
+          (
+            CorporationDivisionName,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationDivisionNamesTable,
+              CorporationDivisionName
+            >,
+          ),
+          CorporationDivisionName,
+          PrefetchHooks Function()
+        > {
+  $$CorporationDivisionNamesTableTableManager(
+    _$AppDatabase db,
+    $CorporationDivisionNamesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationDivisionNamesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationDivisionNamesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationDivisionNamesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> snapshotId = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<int> division = const Value.absent(),
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationDivisionNamesCompanion(
+                snapshotId: snapshotId,
+                kind: kind,
+                division: division,
+                ownerCharacterId: ownerCharacterId,
+                name: name,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String snapshotId,
+                required String kind,
+                required int division,
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationDivisionNamesCompanion.insert(
+                snapshotId: snapshotId,
+                kind: kind,
+                division: division,
+                ownerCharacterId: ownerCharacterId,
+                name: name,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationDivisionNamesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationDivisionNamesTable,
+      CorporationDivisionName,
+      $$CorporationDivisionNamesTableFilterComposer,
+      $$CorporationDivisionNamesTableOrderingComposer,
+      $$CorporationDivisionNamesTableAnnotationComposer,
+      $$CorporationDivisionNamesTableCreateCompanionBuilder,
+      $$CorporationDivisionNamesTableUpdateCompanionBuilder,
+      (
+        CorporationDivisionName,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationDivisionNamesTable,
+          CorporationDivisionName
+        >,
+      ),
+      CorporationDivisionName,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationAssetsTableCreateCompanionBuilder =
+    CorporationAssetsCompanion Function({
+      required String snapshotId,
+      required String itemKey,
+      Value<int?> ownerCharacterId,
+      Value<int?> typeId,
+      Value<String?> quantity,
+      Value<bool?> quantityUnknown,
+      Value<bool?> isSingleton,
+      Value<bool?> isBlueprintCopy,
+      Value<String?> locationKey,
+      Value<String?> locationType,
+      Value<String?> parentKey,
+      Value<String?> locationFlag,
+      Value<int> rowid,
+    });
+typedef $$CorporationAssetsTableUpdateCompanionBuilder =
+    CorporationAssetsCompanion Function({
+      Value<String> snapshotId,
+      Value<String> itemKey,
+      Value<int?> ownerCharacterId,
+      Value<int?> typeId,
+      Value<String?> quantity,
+      Value<bool?> quantityUnknown,
+      Value<bool?> isSingleton,
+      Value<bool?> isBlueprintCopy,
+      Value<String?> locationKey,
+      Value<String?> locationType,
+      Value<String?> parentKey,
+      Value<String?> locationFlag,
+      Value<int> rowid,
+    });
+
+class $$CorporationAssetsTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationAssetsTable> {
+  $$CorporationAssetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get itemKey => $composableBuilder(
+    column: $table.itemKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get quantityUnknown => $composableBuilder(
+    column: $table.quantityUnknown,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSingleton => $composableBuilder(
+    column: $table.isSingleton,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isBlueprintCopy => $composableBuilder(
+    column: $table.isBlueprintCopy,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get locationKey => $composableBuilder(
+    column: $table.locationKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get locationType => $composableBuilder(
+    column: $table.locationType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get parentKey => $composableBuilder(
+    column: $table.parentKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get locationFlag => $composableBuilder(
+    column: $table.locationFlag,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationAssetsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationAssetsTable> {
+  $$CorporationAssetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemKey => $composableBuilder(
+    column: $table.itemKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get quantityUnknown => $composableBuilder(
+    column: $table.quantityUnknown,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSingleton => $composableBuilder(
+    column: $table.isSingleton,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isBlueprintCopy => $composableBuilder(
+    column: $table.isBlueprintCopy,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get locationKey => $composableBuilder(
+    column: $table.locationKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get locationType => $composableBuilder(
+    column: $table.locationType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get parentKey => $composableBuilder(
+    column: $table.parentKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get locationFlag => $composableBuilder(
+    column: $table.locationFlag,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationAssetsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationAssetsTable> {
+  $$CorporationAssetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get itemKey =>
+      $composableBuilder(column: $table.itemKey, builder: (column) => column);
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<String> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  GeneratedColumn<bool> get quantityUnknown => $composableBuilder(
+    column: $table.quantityUnknown,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isSingleton => $composableBuilder(
+    column: $table.isSingleton,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isBlueprintCopy => $composableBuilder(
+    column: $table.isBlueprintCopy,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get locationKey => $composableBuilder(
+    column: $table.locationKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get locationType => $composableBuilder(
+    column: $table.locationType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get parentKey =>
+      $composableBuilder(column: $table.parentKey, builder: (column) => column);
+
+  GeneratedColumn<String> get locationFlag => $composableBuilder(
+    column: $table.locationFlag,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationAssetsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationAssetsTable,
+          CorporationAsset,
+          $$CorporationAssetsTableFilterComposer,
+          $$CorporationAssetsTableOrderingComposer,
+          $$CorporationAssetsTableAnnotationComposer,
+          $$CorporationAssetsTableCreateCompanionBuilder,
+          $$CorporationAssetsTableUpdateCompanionBuilder,
+          (
+            CorporationAsset,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationAssetsTable,
+              CorporationAsset
+            >,
+          ),
+          CorporationAsset,
+          PrefetchHooks Function()
+        > {
+  $$CorporationAssetsTableTableManager(
+    _$AppDatabase db,
+    $CorporationAssetsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationAssetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CorporationAssetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CorporationAssetsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> snapshotId = const Value.absent(),
+                Value<String> itemKey = const Value.absent(),
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<int?> typeId = const Value.absent(),
+                Value<String?> quantity = const Value.absent(),
+                Value<bool?> quantityUnknown = const Value.absent(),
+                Value<bool?> isSingleton = const Value.absent(),
+                Value<bool?> isBlueprintCopy = const Value.absent(),
+                Value<String?> locationKey = const Value.absent(),
+                Value<String?> locationType = const Value.absent(),
+                Value<String?> parentKey = const Value.absent(),
+                Value<String?> locationFlag = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationAssetsCompanion(
+                snapshotId: snapshotId,
+                itemKey: itemKey,
+                ownerCharacterId: ownerCharacterId,
+                typeId: typeId,
+                quantity: quantity,
+                quantityUnknown: quantityUnknown,
+                isSingleton: isSingleton,
+                isBlueprintCopy: isBlueprintCopy,
+                locationKey: locationKey,
+                locationType: locationType,
+                parentKey: parentKey,
+                locationFlag: locationFlag,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String snapshotId,
+                required String itemKey,
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<int?> typeId = const Value.absent(),
+                Value<String?> quantity = const Value.absent(),
+                Value<bool?> quantityUnknown = const Value.absent(),
+                Value<bool?> isSingleton = const Value.absent(),
+                Value<bool?> isBlueprintCopy = const Value.absent(),
+                Value<String?> locationKey = const Value.absent(),
+                Value<String?> locationType = const Value.absent(),
+                Value<String?> parentKey = const Value.absent(),
+                Value<String?> locationFlag = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationAssetsCompanion.insert(
+                snapshotId: snapshotId,
+                itemKey: itemKey,
+                ownerCharacterId: ownerCharacterId,
+                typeId: typeId,
+                quantity: quantity,
+                quantityUnknown: quantityUnknown,
+                isSingleton: isSingleton,
+                isBlueprintCopy: isBlueprintCopy,
+                locationKey: locationKey,
+                locationType: locationType,
+                parentKey: parentKey,
+                locationFlag: locationFlag,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationAssetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationAssetsTable,
+      CorporationAsset,
+      $$CorporationAssetsTableFilterComposer,
+      $$CorporationAssetsTableOrderingComposer,
+      $$CorporationAssetsTableAnnotationComposer,
+      $$CorporationAssetsTableCreateCompanionBuilder,
+      $$CorporationAssetsTableUpdateCompanionBuilder,
+      (
+        CorporationAsset,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationAssetsTable,
+          CorporationAsset
+        >,
+      ),
+      CorporationAsset,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationPrivateNamesTableCreateCompanionBuilder =
+    CorporationPrivateNamesCompanion Function({
+      required String ownerKey,
+      required String nameSource,
+      required String entityKey,
+      Value<int?> ownerCharacterId,
+      Value<String?> name,
+      Value<int?> observedAtMs,
+      Value<int> rowid,
+    });
+typedef $$CorporationPrivateNamesTableUpdateCompanionBuilder =
+    CorporationPrivateNamesCompanion Function({
+      Value<String> ownerKey,
+      Value<String> nameSource,
+      Value<String> entityKey,
+      Value<int?> ownerCharacterId,
+      Value<String?> name,
+      Value<int?> observedAtMs,
+      Value<int> rowid,
+    });
+
+class $$CorporationPrivateNamesTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationPrivateNamesTable> {
+  $$CorporationPrivateNamesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerKey => $composableBuilder(
+    column: $table.ownerKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nameSource => $composableBuilder(
+    column: $table.nameSource,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get entityKey => $composableBuilder(
+    column: $table.entityKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get observedAtMs => $composableBuilder(
+    column: $table.observedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationPrivateNamesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationPrivateNamesTable> {
+  $$CorporationPrivateNamesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerKey => $composableBuilder(
+    column: $table.ownerKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nameSource => $composableBuilder(
+    column: $table.nameSource,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get entityKey => $composableBuilder(
+    column: $table.entityKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get observedAtMs => $composableBuilder(
+    column: $table.observedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationPrivateNamesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationPrivateNamesTable> {
+  $$CorporationPrivateNamesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerKey =>
+      $composableBuilder(column: $table.ownerKey, builder: (column) => column);
+
+  GeneratedColumn<String> get nameSource => $composableBuilder(
+    column: $table.nameSource,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get entityKey =>
+      $composableBuilder(column: $table.entityKey, builder: (column) => column);
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get observedAtMs => $composableBuilder(
+    column: $table.observedAtMs,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationPrivateNamesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationPrivateNamesTable,
+          CorporationPrivateName,
+          $$CorporationPrivateNamesTableFilterComposer,
+          $$CorporationPrivateNamesTableOrderingComposer,
+          $$CorporationPrivateNamesTableAnnotationComposer,
+          $$CorporationPrivateNamesTableCreateCompanionBuilder,
+          $$CorporationPrivateNamesTableUpdateCompanionBuilder,
+          (
+            CorporationPrivateName,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationPrivateNamesTable,
+              CorporationPrivateName
+            >,
+          ),
+          CorporationPrivateName,
+          PrefetchHooks Function()
+        > {
+  $$CorporationPrivateNamesTableTableManager(
+    _$AppDatabase db,
+    $CorporationPrivateNamesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationPrivateNamesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationPrivateNamesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationPrivateNamesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerKey = const Value.absent(),
+                Value<String> nameSource = const Value.absent(),
+                Value<String> entityKey = const Value.absent(),
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<int?> observedAtMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationPrivateNamesCompanion(
+                ownerKey: ownerKey,
+                nameSource: nameSource,
+                entityKey: entityKey,
+                ownerCharacterId: ownerCharacterId,
+                name: name,
+                observedAtMs: observedAtMs,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerKey,
+                required String nameSource,
+                required String entityKey,
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<int?> observedAtMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationPrivateNamesCompanion.insert(
+                ownerKey: ownerKey,
+                nameSource: nameSource,
+                entityKey: entityKey,
+                ownerCharacterId: ownerCharacterId,
+                name: name,
+                observedAtMs: observedAtMs,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationPrivateNamesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationPrivateNamesTable,
+      CorporationPrivateName,
+      $$CorporationPrivateNamesTableFilterComposer,
+      $$CorporationPrivateNamesTableOrderingComposer,
+      $$CorporationPrivateNamesTableAnnotationComposer,
+      $$CorporationPrivateNamesTableCreateCompanionBuilder,
+      $$CorporationPrivateNamesTableUpdateCompanionBuilder,
+      (
+        CorporationPrivateName,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationPrivateNamesTable,
+          CorporationPrivateName
+        >,
+      ),
+      CorporationPrivateName,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationStructuresTableCreateCompanionBuilder =
+    CorporationStructuresCompanion Function({
+      required String snapshotId,
+      required String structureKey,
+      Value<int?> ownerCharacterId,
+      Value<String?> name,
+      Value<int?> typeId,
+      Value<int?> systemId,
+      Value<String?> state,
+      Value<int?> stateStartAtMs,
+      Value<int?> stateEndAtMs,
+      Value<int?> unanchorAtMs,
+      Value<int?> fuelExpiresAtMs,
+      Value<bool?> servicesPresent,
+      Value<int> rowid,
+    });
+typedef $$CorporationStructuresTableUpdateCompanionBuilder =
+    CorporationStructuresCompanion Function({
+      Value<String> snapshotId,
+      Value<String> structureKey,
+      Value<int?> ownerCharacterId,
+      Value<String?> name,
+      Value<int?> typeId,
+      Value<int?> systemId,
+      Value<String?> state,
+      Value<int?> stateStartAtMs,
+      Value<int?> stateEndAtMs,
+      Value<int?> unanchorAtMs,
+      Value<int?> fuelExpiresAtMs,
+      Value<bool?> servicesPresent,
+      Value<int> rowid,
+    });
+
+class $$CorporationStructuresTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationStructuresTable> {
+  $$CorporationStructuresTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get structureKey => $composableBuilder(
+    column: $table.structureKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get systemId => $composableBuilder(
+    column: $table.systemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get stateStartAtMs => $composableBuilder(
+    column: $table.stateStartAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get stateEndAtMs => $composableBuilder(
+    column: $table.stateEndAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get unanchorAtMs => $composableBuilder(
+    column: $table.unanchorAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get fuelExpiresAtMs => $composableBuilder(
+    column: $table.fuelExpiresAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get servicesPresent => $composableBuilder(
+    column: $table.servicesPresent,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationStructuresTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationStructuresTable> {
+  $$CorporationStructuresTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get structureKey => $composableBuilder(
+    column: $table.structureKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get systemId => $composableBuilder(
+    column: $table.systemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get stateStartAtMs => $composableBuilder(
+    column: $table.stateStartAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get stateEndAtMs => $composableBuilder(
+    column: $table.stateEndAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get unanchorAtMs => $composableBuilder(
+    column: $table.unanchorAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get fuelExpiresAtMs => $composableBuilder(
+    column: $table.fuelExpiresAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get servicesPresent => $composableBuilder(
+    column: $table.servicesPresent,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationStructuresTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationStructuresTable> {
+  $$CorporationStructuresTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get structureKey => $composableBuilder(
+    column: $table.structureKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<int> get systemId =>
+      $composableBuilder(column: $table.systemId, builder: (column) => column);
+
+  GeneratedColumn<String> get state =>
+      $composableBuilder(column: $table.state, builder: (column) => column);
+
+  GeneratedColumn<int> get stateStartAtMs => $composableBuilder(
+    column: $table.stateStartAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get stateEndAtMs => $composableBuilder(
+    column: $table.stateEndAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get unanchorAtMs => $composableBuilder(
+    column: $table.unanchorAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get fuelExpiresAtMs => $composableBuilder(
+    column: $table.fuelExpiresAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get servicesPresent => $composableBuilder(
+    column: $table.servicesPresent,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationStructuresTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationStructuresTable,
+          CorporationStructure,
+          $$CorporationStructuresTableFilterComposer,
+          $$CorporationStructuresTableOrderingComposer,
+          $$CorporationStructuresTableAnnotationComposer,
+          $$CorporationStructuresTableCreateCompanionBuilder,
+          $$CorporationStructuresTableUpdateCompanionBuilder,
+          (
+            CorporationStructure,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationStructuresTable,
+              CorporationStructure
+            >,
+          ),
+          CorporationStructure,
+          PrefetchHooks Function()
+        > {
+  $$CorporationStructuresTableTableManager(
+    _$AppDatabase db,
+    $CorporationStructuresTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationStructuresTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationStructuresTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationStructuresTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> snapshotId = const Value.absent(),
+                Value<String> structureKey = const Value.absent(),
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<int?> typeId = const Value.absent(),
+                Value<int?> systemId = const Value.absent(),
+                Value<String?> state = const Value.absent(),
+                Value<int?> stateStartAtMs = const Value.absent(),
+                Value<int?> stateEndAtMs = const Value.absent(),
+                Value<int?> unanchorAtMs = const Value.absent(),
+                Value<int?> fuelExpiresAtMs = const Value.absent(),
+                Value<bool?> servicesPresent = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationStructuresCompanion(
+                snapshotId: snapshotId,
+                structureKey: structureKey,
+                ownerCharacterId: ownerCharacterId,
+                name: name,
+                typeId: typeId,
+                systemId: systemId,
+                state: state,
+                stateStartAtMs: stateStartAtMs,
+                stateEndAtMs: stateEndAtMs,
+                unanchorAtMs: unanchorAtMs,
+                fuelExpiresAtMs: fuelExpiresAtMs,
+                servicesPresent: servicesPresent,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String snapshotId,
+                required String structureKey,
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<int?> typeId = const Value.absent(),
+                Value<int?> systemId = const Value.absent(),
+                Value<String?> state = const Value.absent(),
+                Value<int?> stateStartAtMs = const Value.absent(),
+                Value<int?> stateEndAtMs = const Value.absent(),
+                Value<int?> unanchorAtMs = const Value.absent(),
+                Value<int?> fuelExpiresAtMs = const Value.absent(),
+                Value<bool?> servicesPresent = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationStructuresCompanion.insert(
+                snapshotId: snapshotId,
+                structureKey: structureKey,
+                ownerCharacterId: ownerCharacterId,
+                name: name,
+                typeId: typeId,
+                systemId: systemId,
+                state: state,
+                stateStartAtMs: stateStartAtMs,
+                stateEndAtMs: stateEndAtMs,
+                unanchorAtMs: unanchorAtMs,
+                fuelExpiresAtMs: fuelExpiresAtMs,
+                servicesPresent: servicesPresent,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationStructuresTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationStructuresTable,
+      CorporationStructure,
+      $$CorporationStructuresTableFilterComposer,
+      $$CorporationStructuresTableOrderingComposer,
+      $$CorporationStructuresTableAnnotationComposer,
+      $$CorporationStructuresTableCreateCompanionBuilder,
+      $$CorporationStructuresTableUpdateCompanionBuilder,
+      (
+        CorporationStructure,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationStructuresTable,
+          CorporationStructure
+        >,
+      ),
+      CorporationStructure,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationStructureServicesTableCreateCompanionBuilder =
+    CorporationStructureServicesCompanion Function({
+      required String snapshotId,
+      required String structureKey,
+      required int ordinal,
+      Value<int?> ownerCharacterId,
+      Value<String?> label,
+      Value<String?> state,
+      Value<int> rowid,
+    });
+typedef $$CorporationStructureServicesTableUpdateCompanionBuilder =
+    CorporationStructureServicesCompanion Function({
+      Value<String> snapshotId,
+      Value<String> structureKey,
+      Value<int> ordinal,
+      Value<int?> ownerCharacterId,
+      Value<String?> label,
+      Value<String?> state,
+      Value<int> rowid,
+    });
+
+class $$CorporationStructureServicesTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationStructureServicesTable> {
+  $$CorporationStructureServicesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get structureKey => $composableBuilder(
+    column: $table.structureKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ordinal => $composableBuilder(
+    column: $table.ordinal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationStructureServicesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationStructureServicesTable> {
+  $$CorporationStructureServicesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get structureKey => $composableBuilder(
+    column: $table.structureKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ordinal => $composableBuilder(
+    column: $table.ordinal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationStructureServicesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationStructureServicesTable> {
+  $$CorporationStructureServicesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get structureKey => $composableBuilder(
+    column: $table.structureKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get ordinal =>
+      $composableBuilder(column: $table.ordinal, builder: (column) => column);
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<String> get state =>
+      $composableBuilder(column: $table.state, builder: (column) => column);
+}
+
+class $$CorporationStructureServicesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationStructureServicesTable,
+          CorporationStructureService,
+          $$CorporationStructureServicesTableFilterComposer,
+          $$CorporationStructureServicesTableOrderingComposer,
+          $$CorporationStructureServicesTableAnnotationComposer,
+          $$CorporationStructureServicesTableCreateCompanionBuilder,
+          $$CorporationStructureServicesTableUpdateCompanionBuilder,
+          (
+            CorporationStructureService,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationStructureServicesTable,
+              CorporationStructureService
+            >,
+          ),
+          CorporationStructureService,
+          PrefetchHooks Function()
+        > {
+  $$CorporationStructureServicesTableTableManager(
+    _$AppDatabase db,
+    $CorporationStructureServicesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationStructureServicesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationStructureServicesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationStructureServicesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> snapshotId = const Value.absent(),
+                Value<String> structureKey = const Value.absent(),
+                Value<int> ordinal = const Value.absent(),
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> label = const Value.absent(),
+                Value<String?> state = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationStructureServicesCompanion(
+                snapshotId: snapshotId,
+                structureKey: structureKey,
+                ordinal: ordinal,
+                ownerCharacterId: ownerCharacterId,
+                label: label,
+                state: state,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String snapshotId,
+                required String structureKey,
+                required int ordinal,
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<String?> label = const Value.absent(),
+                Value<String?> state = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationStructureServicesCompanion.insert(
+                snapshotId: snapshotId,
+                structureKey: structureKey,
+                ordinal: ordinal,
+                ownerCharacterId: ownerCharacterId,
+                label: label,
+                state: state,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationStructureServicesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationStructureServicesTable,
+      CorporationStructureService,
+      $$CorporationStructureServicesTableFilterComposer,
+      $$CorporationStructureServicesTableOrderingComposer,
+      $$CorporationStructureServicesTableAnnotationComposer,
+      $$CorporationStructureServicesTableCreateCompanionBuilder,
+      $$CorporationStructureServicesTableUpdateCompanionBuilder,
+      (
+        CorporationStructureService,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationStructureServicesTable,
+          CorporationStructureService
+        >,
+      ),
+      CorporationStructureService,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationFuelScenariosTableCreateCompanionBuilder =
+    CorporationFuelScenariosCompanion Function({
+      required int characterId,
+      required String incarnation,
+      required int corporationId,
+      required String structureKey,
+      Value<int?> grantEpoch,
+      Value<String?> quantity,
+      Value<String?> rate,
+      Value<int?> savedAtMs,
+      Value<int?> revision,
+      Value<String?> quarantineState,
+      Value<int> rowid,
+    });
+typedef $$CorporationFuelScenariosTableUpdateCompanionBuilder =
+    CorporationFuelScenariosCompanion Function({
+      Value<int> characterId,
+      Value<String> incarnation,
+      Value<int> corporationId,
+      Value<String> structureKey,
+      Value<int?> grantEpoch,
+      Value<String?> quantity,
+      Value<String?> rate,
+      Value<int?> savedAtMs,
+      Value<int?> revision,
+      Value<String?> quarantineState,
+      Value<int> rowid,
+    });
+
+class $$CorporationFuelScenariosTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationFuelScenariosTable> {
+  $$CorporationFuelScenariosTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get incarnation => $composableBuilder(
+    column: $table.incarnation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get corporationId => $composableBuilder(
+    column: $table.corporationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get structureKey => $composableBuilder(
+    column: $table.structureKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get grantEpoch => $composableBuilder(
+    column: $table.grantEpoch,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rate => $composableBuilder(
+    column: $table.rate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get savedAtMs => $composableBuilder(
+    column: $table.savedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get quarantineState => $composableBuilder(
+    column: $table.quarantineState,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationFuelScenariosTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationFuelScenariosTable> {
+  $$CorporationFuelScenariosTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get incarnation => $composableBuilder(
+    column: $table.incarnation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get corporationId => $composableBuilder(
+    column: $table.corporationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get structureKey => $composableBuilder(
+    column: $table.structureKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get grantEpoch => $composableBuilder(
+    column: $table.grantEpoch,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rate => $composableBuilder(
+    column: $table.rate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get savedAtMs => $composableBuilder(
+    column: $table.savedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get quarantineState => $composableBuilder(
+    column: $table.quarantineState,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationFuelScenariosTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationFuelScenariosTable> {
+  $$CorporationFuelScenariosTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get incarnation => $composableBuilder(
+    column: $table.incarnation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get corporationId => $composableBuilder(
+    column: $table.corporationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get structureKey => $composableBuilder(
+    column: $table.structureKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get grantEpoch => $composableBuilder(
+    column: $table.grantEpoch,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  GeneratedColumn<String> get rate =>
+      $composableBuilder(column: $table.rate, builder: (column) => column);
+
+  GeneratedColumn<int> get savedAtMs =>
+      $composableBuilder(column: $table.savedAtMs, builder: (column) => column);
+
+  GeneratedColumn<int> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+
+  GeneratedColumn<String> get quarantineState => $composableBuilder(
+    column: $table.quarantineState,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationFuelScenariosTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationFuelScenariosTable,
+          CorporationFuelScenario,
+          $$CorporationFuelScenariosTableFilterComposer,
+          $$CorporationFuelScenariosTableOrderingComposer,
+          $$CorporationFuelScenariosTableAnnotationComposer,
+          $$CorporationFuelScenariosTableCreateCompanionBuilder,
+          $$CorporationFuelScenariosTableUpdateCompanionBuilder,
+          (
+            CorporationFuelScenario,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationFuelScenariosTable,
+              CorporationFuelScenario
+            >,
+          ),
+          CorporationFuelScenario,
+          PrefetchHooks Function()
+        > {
+  $$CorporationFuelScenariosTableTableManager(
+    _$AppDatabase db,
+    $CorporationFuelScenariosTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationFuelScenariosTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationFuelScenariosTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationFuelScenariosTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> characterId = const Value.absent(),
+                Value<String> incarnation = const Value.absent(),
+                Value<int> corporationId = const Value.absent(),
+                Value<String> structureKey = const Value.absent(),
+                Value<int?> grantEpoch = const Value.absent(),
+                Value<String?> quantity = const Value.absent(),
+                Value<String?> rate = const Value.absent(),
+                Value<int?> savedAtMs = const Value.absent(),
+                Value<int?> revision = const Value.absent(),
+                Value<String?> quarantineState = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationFuelScenariosCompanion(
+                characterId: characterId,
+                incarnation: incarnation,
+                corporationId: corporationId,
+                structureKey: structureKey,
+                grantEpoch: grantEpoch,
+                quantity: quantity,
+                rate: rate,
+                savedAtMs: savedAtMs,
+                revision: revision,
+                quarantineState: quarantineState,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int characterId,
+                required String incarnation,
+                required int corporationId,
+                required String structureKey,
+                Value<int?> grantEpoch = const Value.absent(),
+                Value<String?> quantity = const Value.absent(),
+                Value<String?> rate = const Value.absent(),
+                Value<int?> savedAtMs = const Value.absent(),
+                Value<int?> revision = const Value.absent(),
+                Value<String?> quarantineState = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationFuelScenariosCompanion.insert(
+                characterId: characterId,
+                incarnation: incarnation,
+                corporationId: corporationId,
+                structureKey: structureKey,
+                grantEpoch: grantEpoch,
+                quantity: quantity,
+                rate: rate,
+                savedAtMs: savedAtMs,
+                revision: revision,
+                quarantineState: quarantineState,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationFuelScenariosTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationFuelScenariosTable,
+      CorporationFuelScenario,
+      $$CorporationFuelScenariosTableFilterComposer,
+      $$CorporationFuelScenariosTableOrderingComposer,
+      $$CorporationFuelScenariosTableAnnotationComposer,
+      $$CorporationFuelScenariosTableCreateCompanionBuilder,
+      $$CorporationFuelScenariosTableUpdateCompanionBuilder,
+      (
+        CorporationFuelScenario,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationFuelScenariosTable,
+          CorporationFuelScenario
+        >,
+      ),
+      CorporationFuelScenario,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationFuelAlertStatesTableCreateCompanionBuilder =
+    CorporationFuelAlertStatesCompanion Function({
+      required int characterId,
+      required String incarnation,
+      required int corporationId,
+      required String structureKey,
+      Value<int?> grantEpoch,
+      Value<String?> rearmState,
+      Value<int?> episodeOrdinal,
+      Value<int?> lastSourceRevision,
+      Value<String?> lastSeverity,
+      Value<int?> accessInvalidation,
+      Value<int> rowid,
+    });
+typedef $$CorporationFuelAlertStatesTableUpdateCompanionBuilder =
+    CorporationFuelAlertStatesCompanion Function({
+      Value<int> characterId,
+      Value<String> incarnation,
+      Value<int> corporationId,
+      Value<String> structureKey,
+      Value<int?> grantEpoch,
+      Value<String?> rearmState,
+      Value<int?> episodeOrdinal,
+      Value<int?> lastSourceRevision,
+      Value<String?> lastSeverity,
+      Value<int?> accessInvalidation,
+      Value<int> rowid,
+    });
+
+class $$CorporationFuelAlertStatesTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationFuelAlertStatesTable> {
+  $$CorporationFuelAlertStatesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get incarnation => $composableBuilder(
+    column: $table.incarnation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get corporationId => $composableBuilder(
+    column: $table.corporationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get structureKey => $composableBuilder(
+    column: $table.structureKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get grantEpoch => $composableBuilder(
+    column: $table.grantEpoch,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rearmState => $composableBuilder(
+    column: $table.rearmState,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get episodeOrdinal => $composableBuilder(
+    column: $table.episodeOrdinal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastSourceRevision => $composableBuilder(
+    column: $table.lastSourceRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastSeverity => $composableBuilder(
+    column: $table.lastSeverity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get accessInvalidation => $composableBuilder(
+    column: $table.accessInvalidation,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationFuelAlertStatesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationFuelAlertStatesTable> {
+  $$CorporationFuelAlertStatesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get incarnation => $composableBuilder(
+    column: $table.incarnation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get corporationId => $composableBuilder(
+    column: $table.corporationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get structureKey => $composableBuilder(
+    column: $table.structureKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get grantEpoch => $composableBuilder(
+    column: $table.grantEpoch,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rearmState => $composableBuilder(
+    column: $table.rearmState,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get episodeOrdinal => $composableBuilder(
+    column: $table.episodeOrdinal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastSourceRevision => $composableBuilder(
+    column: $table.lastSourceRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastSeverity => $composableBuilder(
+    column: $table.lastSeverity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get accessInvalidation => $composableBuilder(
+    column: $table.accessInvalidation,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationFuelAlertStatesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationFuelAlertStatesTable> {
+  $$CorporationFuelAlertStatesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get incarnation => $composableBuilder(
+    column: $table.incarnation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get corporationId => $composableBuilder(
+    column: $table.corporationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get structureKey => $composableBuilder(
+    column: $table.structureKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get grantEpoch => $composableBuilder(
+    column: $table.grantEpoch,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get rearmState => $composableBuilder(
+    column: $table.rearmState,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get episodeOrdinal => $composableBuilder(
+    column: $table.episodeOrdinal,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastSourceRevision => $composableBuilder(
+    column: $table.lastSourceRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastSeverity => $composableBuilder(
+    column: $table.lastSeverity,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get accessInvalidation => $composableBuilder(
+    column: $table.accessInvalidation,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationFuelAlertStatesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationFuelAlertStatesTable,
+          CorporationFuelAlertState,
+          $$CorporationFuelAlertStatesTableFilterComposer,
+          $$CorporationFuelAlertStatesTableOrderingComposer,
+          $$CorporationFuelAlertStatesTableAnnotationComposer,
+          $$CorporationFuelAlertStatesTableCreateCompanionBuilder,
+          $$CorporationFuelAlertStatesTableUpdateCompanionBuilder,
+          (
+            CorporationFuelAlertState,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationFuelAlertStatesTable,
+              CorporationFuelAlertState
+            >,
+          ),
+          CorporationFuelAlertState,
+          PrefetchHooks Function()
+        > {
+  $$CorporationFuelAlertStatesTableTableManager(
+    _$AppDatabase db,
+    $CorporationFuelAlertStatesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationFuelAlertStatesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationFuelAlertStatesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationFuelAlertStatesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> characterId = const Value.absent(),
+                Value<String> incarnation = const Value.absent(),
+                Value<int> corporationId = const Value.absent(),
+                Value<String> structureKey = const Value.absent(),
+                Value<int?> grantEpoch = const Value.absent(),
+                Value<String?> rearmState = const Value.absent(),
+                Value<int?> episodeOrdinal = const Value.absent(),
+                Value<int?> lastSourceRevision = const Value.absent(),
+                Value<String?> lastSeverity = const Value.absent(),
+                Value<int?> accessInvalidation = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationFuelAlertStatesCompanion(
+                characterId: characterId,
+                incarnation: incarnation,
+                corporationId: corporationId,
+                structureKey: structureKey,
+                grantEpoch: grantEpoch,
+                rearmState: rearmState,
+                episodeOrdinal: episodeOrdinal,
+                lastSourceRevision: lastSourceRevision,
+                lastSeverity: lastSeverity,
+                accessInvalidation: accessInvalidation,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int characterId,
+                required String incarnation,
+                required int corporationId,
+                required String structureKey,
+                Value<int?> grantEpoch = const Value.absent(),
+                Value<String?> rearmState = const Value.absent(),
+                Value<int?> episodeOrdinal = const Value.absent(),
+                Value<int?> lastSourceRevision = const Value.absent(),
+                Value<String?> lastSeverity = const Value.absent(),
+                Value<int?> accessInvalidation = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationFuelAlertStatesCompanion.insert(
+                characterId: characterId,
+                incarnation: incarnation,
+                corporationId: corporationId,
+                structureKey: structureKey,
+                grantEpoch: grantEpoch,
+                rearmState: rearmState,
+                episodeOrdinal: episodeOrdinal,
+                lastSourceRevision: lastSourceRevision,
+                lastSeverity: lastSeverity,
+                accessInvalidation: accessInvalidation,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationFuelAlertStatesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationFuelAlertStatesTable,
+      CorporationFuelAlertState,
+      $$CorporationFuelAlertStatesTableFilterComposer,
+      $$CorporationFuelAlertStatesTableOrderingComposer,
+      $$CorporationFuelAlertStatesTableAnnotationComposer,
+      $$CorporationFuelAlertStatesTableCreateCompanionBuilder,
+      $$CorporationFuelAlertStatesTableUpdateCompanionBuilder,
+      (
+        CorporationFuelAlertState,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationFuelAlertStatesTable,
+          CorporationFuelAlertState
+        >,
+      ),
+      CorporationFuelAlertState,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationFuelAlertEpisodesTableCreateCompanionBuilder =
+    CorporationFuelAlertEpisodesCompanion Function({
+      required String ownerKey,
+      required String episodeUuid,
+      Value<int?> ownerCharacterId,
+      Value<int?> sourceRevision,
+      Value<int?> createdAtMs,
+      Value<String?> severity,
+      Value<int?> acknowledgedAtMs,
+      Value<int?> closedAtMs,
+      Value<String?> deliveryClaim,
+      Value<String?> handoffState,
+      Value<int> rowid,
+    });
+typedef $$CorporationFuelAlertEpisodesTableUpdateCompanionBuilder =
+    CorporationFuelAlertEpisodesCompanion Function({
+      Value<String> ownerKey,
+      Value<String> episodeUuid,
+      Value<int?> ownerCharacterId,
+      Value<int?> sourceRevision,
+      Value<int?> createdAtMs,
+      Value<String?> severity,
+      Value<int?> acknowledgedAtMs,
+      Value<int?> closedAtMs,
+      Value<String?> deliveryClaim,
+      Value<String?> handoffState,
+      Value<int> rowid,
+    });
+
+class $$CorporationFuelAlertEpisodesTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationFuelAlertEpisodesTable> {
+  $$CorporationFuelAlertEpisodesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerKey => $composableBuilder(
+    column: $table.ownerKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get episodeUuid => $composableBuilder(
+    column: $table.episodeUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sourceRevision => $composableBuilder(
+    column: $table.sourceRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAtMs => $composableBuilder(
+    column: $table.createdAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get severity => $composableBuilder(
+    column: $table.severity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get acknowledgedAtMs => $composableBuilder(
+    column: $table.acknowledgedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get closedAtMs => $composableBuilder(
+    column: $table.closedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deliveryClaim => $composableBuilder(
+    column: $table.deliveryClaim,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get handoffState => $composableBuilder(
+    column: $table.handoffState,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationFuelAlertEpisodesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationFuelAlertEpisodesTable> {
+  $$CorporationFuelAlertEpisodesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerKey => $composableBuilder(
+    column: $table.ownerKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get episodeUuid => $composableBuilder(
+    column: $table.episodeUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sourceRevision => $composableBuilder(
+    column: $table.sourceRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAtMs => $composableBuilder(
+    column: $table.createdAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get severity => $composableBuilder(
+    column: $table.severity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get acknowledgedAtMs => $composableBuilder(
+    column: $table.acknowledgedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get closedAtMs => $composableBuilder(
+    column: $table.closedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deliveryClaim => $composableBuilder(
+    column: $table.deliveryClaim,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get handoffState => $composableBuilder(
+    column: $table.handoffState,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationFuelAlertEpisodesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationFuelAlertEpisodesTable> {
+  $$CorporationFuelAlertEpisodesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerKey =>
+      $composableBuilder(column: $table.ownerKey, builder: (column) => column);
+
+  GeneratedColumn<String> get episodeUuid => $composableBuilder(
+    column: $table.episodeUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sourceRevision => $composableBuilder(
+    column: $table.sourceRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAtMs => $composableBuilder(
+    column: $table.createdAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get severity =>
+      $composableBuilder(column: $table.severity, builder: (column) => column);
+
+  GeneratedColumn<int> get acknowledgedAtMs => $composableBuilder(
+    column: $table.acknowledgedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get closedAtMs => $composableBuilder(
+    column: $table.closedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get deliveryClaim => $composableBuilder(
+    column: $table.deliveryClaim,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get handoffState => $composableBuilder(
+    column: $table.handoffState,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationFuelAlertEpisodesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationFuelAlertEpisodesTable,
+          CorporationFuelAlertEpisode,
+          $$CorporationFuelAlertEpisodesTableFilterComposer,
+          $$CorporationFuelAlertEpisodesTableOrderingComposer,
+          $$CorporationFuelAlertEpisodesTableAnnotationComposer,
+          $$CorporationFuelAlertEpisodesTableCreateCompanionBuilder,
+          $$CorporationFuelAlertEpisodesTableUpdateCompanionBuilder,
+          (
+            CorporationFuelAlertEpisode,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationFuelAlertEpisodesTable,
+              CorporationFuelAlertEpisode
+            >,
+          ),
+          CorporationFuelAlertEpisode,
+          PrefetchHooks Function()
+        > {
+  $$CorporationFuelAlertEpisodesTableTableManager(
+    _$AppDatabase db,
+    $CorporationFuelAlertEpisodesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationFuelAlertEpisodesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationFuelAlertEpisodesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationFuelAlertEpisodesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerKey = const Value.absent(),
+                Value<String> episodeUuid = const Value.absent(),
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<int?> sourceRevision = const Value.absent(),
+                Value<int?> createdAtMs = const Value.absent(),
+                Value<String?> severity = const Value.absent(),
+                Value<int?> acknowledgedAtMs = const Value.absent(),
+                Value<int?> closedAtMs = const Value.absent(),
+                Value<String?> deliveryClaim = const Value.absent(),
+                Value<String?> handoffState = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationFuelAlertEpisodesCompanion(
+                ownerKey: ownerKey,
+                episodeUuid: episodeUuid,
+                ownerCharacterId: ownerCharacterId,
+                sourceRevision: sourceRevision,
+                createdAtMs: createdAtMs,
+                severity: severity,
+                acknowledgedAtMs: acknowledgedAtMs,
+                closedAtMs: closedAtMs,
+                deliveryClaim: deliveryClaim,
+                handoffState: handoffState,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerKey,
+                required String episodeUuid,
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<int?> sourceRevision = const Value.absent(),
+                Value<int?> createdAtMs = const Value.absent(),
+                Value<String?> severity = const Value.absent(),
+                Value<int?> acknowledgedAtMs = const Value.absent(),
+                Value<int?> closedAtMs = const Value.absent(),
+                Value<String?> deliveryClaim = const Value.absent(),
+                Value<String?> handoffState = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationFuelAlertEpisodesCompanion.insert(
+                ownerKey: ownerKey,
+                episodeUuid: episodeUuid,
+                ownerCharacterId: ownerCharacterId,
+                sourceRevision: sourceRevision,
+                createdAtMs: createdAtMs,
+                severity: severity,
+                acknowledgedAtMs: acknowledgedAtMs,
+                closedAtMs: closedAtMs,
+                deliveryClaim: deliveryClaim,
+                handoffState: handoffState,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationFuelAlertEpisodesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationFuelAlertEpisodesTable,
+      CorporationFuelAlertEpisode,
+      $$CorporationFuelAlertEpisodesTableFilterComposer,
+      $$CorporationFuelAlertEpisodesTableOrderingComposer,
+      $$CorporationFuelAlertEpisodesTableAnnotationComposer,
+      $$CorporationFuelAlertEpisodesTableCreateCompanionBuilder,
+      $$CorporationFuelAlertEpisodesTableUpdateCompanionBuilder,
+      (
+        CorporationFuelAlertEpisode,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationFuelAlertEpisodesTable,
+          CorporationFuelAlertEpisode
+        >,
+      ),
+      CorporationFuelAlertEpisode,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationWalletBalancesTableCreateCompanionBuilder =
+    CorporationWalletBalancesCompanion Function({
+      required String snapshotId,
+      required int division,
+      required int ownerCharacterId,
+      required String balance,
+      Value<int> rowid,
+    });
+typedef $$CorporationWalletBalancesTableUpdateCompanionBuilder =
+    CorporationWalletBalancesCompanion Function({
+      Value<String> snapshotId,
+      Value<int> division,
+      Value<int> ownerCharacterId,
+      Value<String> balance,
+      Value<int> rowid,
+    });
+
+class $$CorporationWalletBalancesTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationWalletBalancesTable> {
+  $$CorporationWalletBalancesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get division => $composableBuilder(
+    column: $table.division,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get balance => $composableBuilder(
+    column: $table.balance,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationWalletBalancesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationWalletBalancesTable> {
+  $$CorporationWalletBalancesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get division => $composableBuilder(
+    column: $table.division,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get balance => $composableBuilder(
+    column: $table.balance,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationWalletBalancesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationWalletBalancesTable> {
+  $$CorporationWalletBalancesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get snapshotId => $composableBuilder(
+    column: $table.snapshotId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get division =>
+      $composableBuilder(column: $table.division, builder: (column) => column);
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get balance =>
+      $composableBuilder(column: $table.balance, builder: (column) => column);
+}
+
+class $$CorporationWalletBalancesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationWalletBalancesTable,
+          CorporationWalletBalance,
+          $$CorporationWalletBalancesTableFilterComposer,
+          $$CorporationWalletBalancesTableOrderingComposer,
+          $$CorporationWalletBalancesTableAnnotationComposer,
+          $$CorporationWalletBalancesTableCreateCompanionBuilder,
+          $$CorporationWalletBalancesTableUpdateCompanionBuilder,
+          (
+            CorporationWalletBalance,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationWalletBalancesTable,
+              CorporationWalletBalance
+            >,
+          ),
+          CorporationWalletBalance,
+          PrefetchHooks Function()
+        > {
+  $$CorporationWalletBalancesTableTableManager(
+    _$AppDatabase db,
+    $CorporationWalletBalancesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationWalletBalancesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationWalletBalancesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationWalletBalancesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> snapshotId = const Value.absent(),
+                Value<int> division = const Value.absent(),
+                Value<int> ownerCharacterId = const Value.absent(),
+                Value<String> balance = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationWalletBalancesCompanion(
+                snapshotId: snapshotId,
+                division: division,
+                ownerCharacterId: ownerCharacterId,
+                balance: balance,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String snapshotId,
+                required int division,
+                required int ownerCharacterId,
+                required String balance,
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationWalletBalancesCompanion.insert(
+                snapshotId: snapshotId,
+                division: division,
+                ownerCharacterId: ownerCharacterId,
+                balance: balance,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationWalletBalancesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationWalletBalancesTable,
+      CorporationWalletBalance,
+      $$CorporationWalletBalancesTableFilterComposer,
+      $$CorporationWalletBalancesTableOrderingComposer,
+      $$CorporationWalletBalancesTableAnnotationComposer,
+      $$CorporationWalletBalancesTableCreateCompanionBuilder,
+      $$CorporationWalletBalancesTableUpdateCompanionBuilder,
+      (
+        CorporationWalletBalance,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationWalletBalancesTable,
+          CorporationWalletBalance
+        >,
+      ),
+      CorporationWalletBalance,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationWalletJournalTableCreateCompanionBuilder =
+    CorporationWalletJournalCompanion Function({
+      required String ownerKey,
+      required String journalKey,
+      required int ownerCharacterId,
+      Value<String?> amount,
+      Value<String?> balance,
+      Value<int?> occurredAtMs,
+      Value<String?> refType,
+      Value<String?> reason,
+      Value<int?> lastObservedRevision,
+      Value<int> rowid,
+    });
+typedef $$CorporationWalletJournalTableUpdateCompanionBuilder =
+    CorporationWalletJournalCompanion Function({
+      Value<String> ownerKey,
+      Value<String> journalKey,
+      Value<int> ownerCharacterId,
+      Value<String?> amount,
+      Value<String?> balance,
+      Value<int?> occurredAtMs,
+      Value<String?> refType,
+      Value<String?> reason,
+      Value<int?> lastObservedRevision,
+      Value<int> rowid,
+    });
+
+class $$CorporationWalletJournalTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationWalletJournalTable> {
+  $$CorporationWalletJournalTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerKey => $composableBuilder(
+    column: $table.ownerKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get journalKey => $composableBuilder(
+    column: $table.journalKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get balance => $composableBuilder(
+    column: $table.balance,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get occurredAtMs => $composableBuilder(
+    column: $table.occurredAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get refType => $composableBuilder(
+    column: $table.refType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastObservedRevision => $composableBuilder(
+    column: $table.lastObservedRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationWalletJournalTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationWalletJournalTable> {
+  $$CorporationWalletJournalTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerKey => $composableBuilder(
+    column: $table.ownerKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get journalKey => $composableBuilder(
+    column: $table.journalKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get balance => $composableBuilder(
+    column: $table.balance,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get occurredAtMs => $composableBuilder(
+    column: $table.occurredAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get refType => $composableBuilder(
+    column: $table.refType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastObservedRevision => $composableBuilder(
+    column: $table.lastObservedRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationWalletJournalTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationWalletJournalTable> {
+  $$CorporationWalletJournalTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerKey =>
+      $composableBuilder(column: $table.ownerKey, builder: (column) => column);
+
+  GeneratedColumn<String> get journalKey => $composableBuilder(
+    column: $table.journalKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get balance =>
+      $composableBuilder(column: $table.balance, builder: (column) => column);
+
+  GeneratedColumn<int> get occurredAtMs => $composableBuilder(
+    column: $table.occurredAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get refType =>
+      $composableBuilder(column: $table.refType, builder: (column) => column);
+
+  GeneratedColumn<String> get reason =>
+      $composableBuilder(column: $table.reason, builder: (column) => column);
+
+  GeneratedColumn<int> get lastObservedRevision => $composableBuilder(
+    column: $table.lastObservedRevision,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationWalletJournalTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationWalletJournalTable,
+          CorporationWalletJournalData,
+          $$CorporationWalletJournalTableFilterComposer,
+          $$CorporationWalletJournalTableOrderingComposer,
+          $$CorporationWalletJournalTableAnnotationComposer,
+          $$CorporationWalletJournalTableCreateCompanionBuilder,
+          $$CorporationWalletJournalTableUpdateCompanionBuilder,
+          (
+            CorporationWalletJournalData,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationWalletJournalTable,
+              CorporationWalletJournalData
+            >,
+          ),
+          CorporationWalletJournalData,
+          PrefetchHooks Function()
+        > {
+  $$CorporationWalletJournalTableTableManager(
+    _$AppDatabase db,
+    $CorporationWalletJournalTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationWalletJournalTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationWalletJournalTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationWalletJournalTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerKey = const Value.absent(),
+                Value<String> journalKey = const Value.absent(),
+                Value<int> ownerCharacterId = const Value.absent(),
+                Value<String?> amount = const Value.absent(),
+                Value<String?> balance = const Value.absent(),
+                Value<int?> occurredAtMs = const Value.absent(),
+                Value<String?> refType = const Value.absent(),
+                Value<String?> reason = const Value.absent(),
+                Value<int?> lastObservedRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationWalletJournalCompanion(
+                ownerKey: ownerKey,
+                journalKey: journalKey,
+                ownerCharacterId: ownerCharacterId,
+                amount: amount,
+                balance: balance,
+                occurredAtMs: occurredAtMs,
+                refType: refType,
+                reason: reason,
+                lastObservedRevision: lastObservedRevision,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerKey,
+                required String journalKey,
+                required int ownerCharacterId,
+                Value<String?> amount = const Value.absent(),
+                Value<String?> balance = const Value.absent(),
+                Value<int?> occurredAtMs = const Value.absent(),
+                Value<String?> refType = const Value.absent(),
+                Value<String?> reason = const Value.absent(),
+                Value<int?> lastObservedRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationWalletJournalCompanion.insert(
+                ownerKey: ownerKey,
+                journalKey: journalKey,
+                ownerCharacterId: ownerCharacterId,
+                amount: amount,
+                balance: balance,
+                occurredAtMs: occurredAtMs,
+                refType: refType,
+                reason: reason,
+                lastObservedRevision: lastObservedRevision,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationWalletJournalTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationWalletJournalTable,
+      CorporationWalletJournalData,
+      $$CorporationWalletJournalTableFilterComposer,
+      $$CorporationWalletJournalTableOrderingComposer,
+      $$CorporationWalletJournalTableAnnotationComposer,
+      $$CorporationWalletJournalTableCreateCompanionBuilder,
+      $$CorporationWalletJournalTableUpdateCompanionBuilder,
+      (
+        CorporationWalletJournalData,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationWalletJournalTable,
+          CorporationWalletJournalData
+        >,
+      ),
+      CorporationWalletJournalData,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationWalletTransactionsTableCreateCompanionBuilder =
+    CorporationWalletTransactionsCompanion Function({
+      required String ownerKey,
+      required String transactionKey,
+      Value<int?> ownerCharacterId,
+      Value<int?> occurredAtMs,
+      Value<int?> typeId,
+      Value<int?> quantity,
+      Value<String?> unitPrice,
+      Value<String?> buySell,
+      Value<String?> journalKey,
+      Value<int?> lastObservedRevision,
+      Value<int> rowid,
+    });
+typedef $$CorporationWalletTransactionsTableUpdateCompanionBuilder =
+    CorporationWalletTransactionsCompanion Function({
+      Value<String> ownerKey,
+      Value<String> transactionKey,
+      Value<int?> ownerCharacterId,
+      Value<int?> occurredAtMs,
+      Value<int?> typeId,
+      Value<int?> quantity,
+      Value<String?> unitPrice,
+      Value<String?> buySell,
+      Value<String?> journalKey,
+      Value<int?> lastObservedRevision,
+      Value<int> rowid,
+    });
+
+class $$CorporationWalletTransactionsTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationWalletTransactionsTable> {
+  $$CorporationWalletTransactionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerKey => $composableBuilder(
+    column: $table.ownerKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get transactionKey => $composableBuilder(
+    column: $table.transactionKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get occurredAtMs => $composableBuilder(
+    column: $table.occurredAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get unitPrice => $composableBuilder(
+    column: $table.unitPrice,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get buySell => $composableBuilder(
+    column: $table.buySell,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get journalKey => $composableBuilder(
+    column: $table.journalKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastObservedRevision => $composableBuilder(
+    column: $table.lastObservedRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationWalletTransactionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationWalletTransactionsTable> {
+  $$CorporationWalletTransactionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerKey => $composableBuilder(
+    column: $table.ownerKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get transactionKey => $composableBuilder(
+    column: $table.transactionKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get occurredAtMs => $composableBuilder(
+    column: $table.occurredAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get unitPrice => $composableBuilder(
+    column: $table.unitPrice,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get buySell => $composableBuilder(
+    column: $table.buySell,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get journalKey => $composableBuilder(
+    column: $table.journalKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastObservedRevision => $composableBuilder(
+    column: $table.lastObservedRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationWalletTransactionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationWalletTransactionsTable> {
+  $$CorporationWalletTransactionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerKey =>
+      $composableBuilder(column: $table.ownerKey, builder: (column) => column);
+
+  GeneratedColumn<String> get transactionKey => $composableBuilder(
+    column: $table.transactionKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get occurredAtMs => $composableBuilder(
+    column: $table.occurredAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<int> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  GeneratedColumn<String> get unitPrice =>
+      $composableBuilder(column: $table.unitPrice, builder: (column) => column);
+
+  GeneratedColumn<String> get buySell =>
+      $composableBuilder(column: $table.buySell, builder: (column) => column);
+
+  GeneratedColumn<String> get journalKey => $composableBuilder(
+    column: $table.journalKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastObservedRevision => $composableBuilder(
+    column: $table.lastObservedRevision,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationWalletTransactionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationWalletTransactionsTable,
+          CorporationWalletTransaction,
+          $$CorporationWalletTransactionsTableFilterComposer,
+          $$CorporationWalletTransactionsTableOrderingComposer,
+          $$CorporationWalletTransactionsTableAnnotationComposer,
+          $$CorporationWalletTransactionsTableCreateCompanionBuilder,
+          $$CorporationWalletTransactionsTableUpdateCompanionBuilder,
+          (
+            CorporationWalletTransaction,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationWalletTransactionsTable,
+              CorporationWalletTransaction
+            >,
+          ),
+          CorporationWalletTransaction,
+          PrefetchHooks Function()
+        > {
+  $$CorporationWalletTransactionsTableTableManager(
+    _$AppDatabase db,
+    $CorporationWalletTransactionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationWalletTransactionsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationWalletTransactionsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationWalletTransactionsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerKey = const Value.absent(),
+                Value<String> transactionKey = const Value.absent(),
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<int?> occurredAtMs = const Value.absent(),
+                Value<int?> typeId = const Value.absent(),
+                Value<int?> quantity = const Value.absent(),
+                Value<String?> unitPrice = const Value.absent(),
+                Value<String?> buySell = const Value.absent(),
+                Value<String?> journalKey = const Value.absent(),
+                Value<int?> lastObservedRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationWalletTransactionsCompanion(
+                ownerKey: ownerKey,
+                transactionKey: transactionKey,
+                ownerCharacterId: ownerCharacterId,
+                occurredAtMs: occurredAtMs,
+                typeId: typeId,
+                quantity: quantity,
+                unitPrice: unitPrice,
+                buySell: buySell,
+                journalKey: journalKey,
+                lastObservedRevision: lastObservedRevision,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerKey,
+                required String transactionKey,
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<int?> occurredAtMs = const Value.absent(),
+                Value<int?> typeId = const Value.absent(),
+                Value<int?> quantity = const Value.absent(),
+                Value<String?> unitPrice = const Value.absent(),
+                Value<String?> buySell = const Value.absent(),
+                Value<String?> journalKey = const Value.absent(),
+                Value<int?> lastObservedRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationWalletTransactionsCompanion.insert(
+                ownerKey: ownerKey,
+                transactionKey: transactionKey,
+                ownerCharacterId: ownerCharacterId,
+                occurredAtMs: occurredAtMs,
+                typeId: typeId,
+                quantity: quantity,
+                unitPrice: unitPrice,
+                buySell: buySell,
+                journalKey: journalKey,
+                lastObservedRevision: lastObservedRevision,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationWalletTransactionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationWalletTransactionsTable,
+      CorporationWalletTransaction,
+      $$CorporationWalletTransactionsTableFilterComposer,
+      $$CorporationWalletTransactionsTableOrderingComposer,
+      $$CorporationWalletTransactionsTableAnnotationComposer,
+      $$CorporationWalletTransactionsTableCreateCompanionBuilder,
+      $$CorporationWalletTransactionsTableUpdateCompanionBuilder,
+      (
+        CorporationWalletTransaction,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationWalletTransactionsTable,
+          CorporationWalletTransaction
+        >,
+      ),
+      CorporationWalletTransaction,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationHistoryCoverageTableCreateCompanionBuilder =
+    CorporationHistoryCoverageCompanion Function({
+      required String ownerKey,
+      required String coverageKey,
+      Value<int?> ownerCharacterId,
+      Value<int?> intervalStartAtMs,
+      Value<int?> intervalEndAtMs,
+      Value<String?> pageChainJson,
+      Value<String?> termination,
+      Value<int?> earliestRowAtMs,
+      Value<int?> latestRowAtMs,
+      Value<int> rowid,
+    });
+typedef $$CorporationHistoryCoverageTableUpdateCompanionBuilder =
+    CorporationHistoryCoverageCompanion Function({
+      Value<String> ownerKey,
+      Value<String> coverageKey,
+      Value<int?> ownerCharacterId,
+      Value<int?> intervalStartAtMs,
+      Value<int?> intervalEndAtMs,
+      Value<String?> pageChainJson,
+      Value<String?> termination,
+      Value<int?> earliestRowAtMs,
+      Value<int?> latestRowAtMs,
+      Value<int> rowid,
+    });
+
+class $$CorporationHistoryCoverageTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationHistoryCoverageTable> {
+  $$CorporationHistoryCoverageTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerKey => $composableBuilder(
+    column: $table.ownerKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get coverageKey => $composableBuilder(
+    column: $table.coverageKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get intervalStartAtMs => $composableBuilder(
+    column: $table.intervalStartAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get intervalEndAtMs => $composableBuilder(
+    column: $table.intervalEndAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pageChainJson => $composableBuilder(
+    column: $table.pageChainJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get termination => $composableBuilder(
+    column: $table.termination,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get earliestRowAtMs => $composableBuilder(
+    column: $table.earliestRowAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get latestRowAtMs => $composableBuilder(
+    column: $table.latestRowAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationHistoryCoverageTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationHistoryCoverageTable> {
+  $$CorporationHistoryCoverageTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerKey => $composableBuilder(
+    column: $table.ownerKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get coverageKey => $composableBuilder(
+    column: $table.coverageKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get intervalStartAtMs => $composableBuilder(
+    column: $table.intervalStartAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get intervalEndAtMs => $composableBuilder(
+    column: $table.intervalEndAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pageChainJson => $composableBuilder(
+    column: $table.pageChainJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get termination => $composableBuilder(
+    column: $table.termination,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get earliestRowAtMs => $composableBuilder(
+    column: $table.earliestRowAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get latestRowAtMs => $composableBuilder(
+    column: $table.latestRowAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationHistoryCoverageTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationHistoryCoverageTable> {
+  $$CorporationHistoryCoverageTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerKey =>
+      $composableBuilder(column: $table.ownerKey, builder: (column) => column);
+
+  GeneratedColumn<String> get coverageKey => $composableBuilder(
+    column: $table.coverageKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get ownerCharacterId => $composableBuilder(
+    column: $table.ownerCharacterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get intervalStartAtMs => $composableBuilder(
+    column: $table.intervalStartAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get intervalEndAtMs => $composableBuilder(
+    column: $table.intervalEndAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get pageChainJson => $composableBuilder(
+    column: $table.pageChainJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get termination => $composableBuilder(
+    column: $table.termination,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get earliestRowAtMs => $composableBuilder(
+    column: $table.earliestRowAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get latestRowAtMs => $composableBuilder(
+    column: $table.latestRowAtMs,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationHistoryCoverageTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationHistoryCoverageTable,
+          CorporationHistoryCoverageData,
+          $$CorporationHistoryCoverageTableFilterComposer,
+          $$CorporationHistoryCoverageTableOrderingComposer,
+          $$CorporationHistoryCoverageTableAnnotationComposer,
+          $$CorporationHistoryCoverageTableCreateCompanionBuilder,
+          $$CorporationHistoryCoverageTableUpdateCompanionBuilder,
+          (
+            CorporationHistoryCoverageData,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationHistoryCoverageTable,
+              CorporationHistoryCoverageData
+            >,
+          ),
+          CorporationHistoryCoverageData,
+          PrefetchHooks Function()
+        > {
+  $$CorporationHistoryCoverageTableTableManager(
+    _$AppDatabase db,
+    $CorporationHistoryCoverageTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationHistoryCoverageTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationHistoryCoverageTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationHistoryCoverageTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerKey = const Value.absent(),
+                Value<String> coverageKey = const Value.absent(),
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<int?> intervalStartAtMs = const Value.absent(),
+                Value<int?> intervalEndAtMs = const Value.absent(),
+                Value<String?> pageChainJson = const Value.absent(),
+                Value<String?> termination = const Value.absent(),
+                Value<int?> earliestRowAtMs = const Value.absent(),
+                Value<int?> latestRowAtMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationHistoryCoverageCompanion(
+                ownerKey: ownerKey,
+                coverageKey: coverageKey,
+                ownerCharacterId: ownerCharacterId,
+                intervalStartAtMs: intervalStartAtMs,
+                intervalEndAtMs: intervalEndAtMs,
+                pageChainJson: pageChainJson,
+                termination: termination,
+                earliestRowAtMs: earliestRowAtMs,
+                latestRowAtMs: latestRowAtMs,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerKey,
+                required String coverageKey,
+                Value<int?> ownerCharacterId = const Value.absent(),
+                Value<int?> intervalStartAtMs = const Value.absent(),
+                Value<int?> intervalEndAtMs = const Value.absent(),
+                Value<String?> pageChainJson = const Value.absent(),
+                Value<String?> termination = const Value.absent(),
+                Value<int?> earliestRowAtMs = const Value.absent(),
+                Value<int?> latestRowAtMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationHistoryCoverageCompanion.insert(
+                ownerKey: ownerKey,
+                coverageKey: coverageKey,
+                ownerCharacterId: ownerCharacterId,
+                intervalStartAtMs: intervalStartAtMs,
+                intervalEndAtMs: intervalEndAtMs,
+                pageChainJson: pageChainJson,
+                termination: termination,
+                earliestRowAtMs: earliestRowAtMs,
+                latestRowAtMs: latestRowAtMs,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationHistoryCoverageTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationHistoryCoverageTable,
+      CorporationHistoryCoverageData,
+      $$CorporationHistoryCoverageTableFilterComposer,
+      $$CorporationHistoryCoverageTableOrderingComposer,
+      $$CorporationHistoryCoverageTableAnnotationComposer,
+      $$CorporationHistoryCoverageTableCreateCompanionBuilder,
+      $$CorporationHistoryCoverageTableUpdateCompanionBuilder,
+      (
+        CorporationHistoryCoverageData,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationHistoryCoverageTable,
+          CorporationHistoryCoverageData
+        >,
+      ),
+      CorporationHistoryCoverageData,
+      PrefetchHooks Function()
+    >;
+typedef $$CorporationMonitoringPreferencesTableCreateCompanionBuilder =
+    CorporationMonitoringPreferencesCompanion Function({
+      required String tenant,
+      required int characterId,
+      Value<String?> incarnation,
+      Value<bool> optIn,
+      Value<int?> preferenceRevision,
+      Value<String?> osPermission,
+      Value<int> rowid,
+    });
+typedef $$CorporationMonitoringPreferencesTableUpdateCompanionBuilder =
+    CorporationMonitoringPreferencesCompanion Function({
+      Value<String> tenant,
+      Value<int> characterId,
+      Value<String?> incarnation,
+      Value<bool> optIn,
+      Value<int?> preferenceRevision,
+      Value<String?> osPermission,
+      Value<int> rowid,
+    });
+
+class $$CorporationMonitoringPreferencesTableFilterComposer
+    extends Composer<_$AppDatabase, $CorporationMonitoringPreferencesTable> {
+  $$CorporationMonitoringPreferencesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get tenant => $composableBuilder(
+    column: $table.tenant,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get incarnation => $composableBuilder(
+    column: $table.incarnation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get optIn => $composableBuilder(
+    column: $table.optIn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get preferenceRevision => $composableBuilder(
+    column: $table.preferenceRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get osPermission => $composableBuilder(
+    column: $table.osPermission,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CorporationMonitoringPreferencesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CorporationMonitoringPreferencesTable> {
+  $$CorporationMonitoringPreferencesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get tenant => $composableBuilder(
+    column: $table.tenant,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get incarnation => $composableBuilder(
+    column: $table.incarnation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get optIn => $composableBuilder(
+    column: $table.optIn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get preferenceRevision => $composableBuilder(
+    column: $table.preferenceRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get osPermission => $composableBuilder(
+    column: $table.osPermission,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CorporationMonitoringPreferencesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CorporationMonitoringPreferencesTable> {
+  $$CorporationMonitoringPreferencesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get tenant =>
+      $composableBuilder(column: $table.tenant, builder: (column) => column);
+
+  GeneratedColumn<int> get characterId => $composableBuilder(
+    column: $table.characterId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get incarnation => $composableBuilder(
+    column: $table.incarnation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get optIn =>
+      $composableBuilder(column: $table.optIn, builder: (column) => column);
+
+  GeneratedColumn<int> get preferenceRevision => $composableBuilder(
+    column: $table.preferenceRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get osPermission => $composableBuilder(
+    column: $table.osPermission,
+    builder: (column) => column,
+  );
+}
+
+class $$CorporationMonitoringPreferencesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CorporationMonitoringPreferencesTable,
+          CorporationMonitoringPreference,
+          $$CorporationMonitoringPreferencesTableFilterComposer,
+          $$CorporationMonitoringPreferencesTableOrderingComposer,
+          $$CorporationMonitoringPreferencesTableAnnotationComposer,
+          $$CorporationMonitoringPreferencesTableCreateCompanionBuilder,
+          $$CorporationMonitoringPreferencesTableUpdateCompanionBuilder,
+          (
+            CorporationMonitoringPreference,
+            BaseReferences<
+              _$AppDatabase,
+              $CorporationMonitoringPreferencesTable,
+              CorporationMonitoringPreference
+            >,
+          ),
+          CorporationMonitoringPreference,
+          PrefetchHooks Function()
+        > {
+  $$CorporationMonitoringPreferencesTableTableManager(
+    _$AppDatabase db,
+    $CorporationMonitoringPreferencesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CorporationMonitoringPreferencesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CorporationMonitoringPreferencesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CorporationMonitoringPreferencesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> tenant = const Value.absent(),
+                Value<int> characterId = const Value.absent(),
+                Value<String?> incarnation = const Value.absent(),
+                Value<bool> optIn = const Value.absent(),
+                Value<int?> preferenceRevision = const Value.absent(),
+                Value<String?> osPermission = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationMonitoringPreferencesCompanion(
+                tenant: tenant,
+                characterId: characterId,
+                incarnation: incarnation,
+                optIn: optIn,
+                preferenceRevision: preferenceRevision,
+                osPermission: osPermission,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String tenant,
+                required int characterId,
+                Value<String?> incarnation = const Value.absent(),
+                Value<bool> optIn = const Value.absent(),
+                Value<int?> preferenceRevision = const Value.absent(),
+                Value<String?> osPermission = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CorporationMonitoringPreferencesCompanion.insert(
+                tenant: tenant,
+                characterId: characterId,
+                incarnation: incarnation,
+                optIn: optIn,
+                preferenceRevision: preferenceRevision,
+                osPermission: osPermission,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CorporationMonitoringPreferencesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CorporationMonitoringPreferencesTable,
+      CorporationMonitoringPreference,
+      $$CorporationMonitoringPreferencesTableFilterComposer,
+      $$CorporationMonitoringPreferencesTableOrderingComposer,
+      $$CorporationMonitoringPreferencesTableAnnotationComposer,
+      $$CorporationMonitoringPreferencesTableCreateCompanionBuilder,
+      $$CorporationMonitoringPreferencesTableUpdateCompanionBuilder,
+      (
+        CorporationMonitoringPreference,
+        BaseReferences<
+          _$AppDatabase,
+          $CorporationMonitoringPreferencesTable,
+          CorporationMonitoringPreference
+        >,
+      ),
+      CorporationMonitoringPreference,
+      PrefetchHooks Function()
+    >;
+typedef $$ExactMarketPricesTableCreateCompanionBuilder =
+    ExactMarketPricesCompanion Function({
+      required String tenant,
+      required int typeId,
+      Value<String?> averagePrice,
+      Value<String?> adjustedPrice,
+      Value<int?> payloadReceivedAtMs,
+      Value<int?> validatedAtMs,
+      Value<int?> snapshotRevision,
+      Value<int> rowid,
+    });
+typedef $$ExactMarketPricesTableUpdateCompanionBuilder =
+    ExactMarketPricesCompanion Function({
+      Value<String> tenant,
+      Value<int> typeId,
+      Value<String?> averagePrice,
+      Value<String?> adjustedPrice,
+      Value<int?> payloadReceivedAtMs,
+      Value<int?> validatedAtMs,
+      Value<int?> snapshotRevision,
+      Value<int> rowid,
+    });
+
+class $$ExactMarketPricesTableFilterComposer
+    extends Composer<_$AppDatabase, $ExactMarketPricesTable> {
+  $$ExactMarketPricesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get tenant => $composableBuilder(
+    column: $table.tenant,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get averagePrice => $composableBuilder(
+    column: $table.averagePrice,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get adjustedPrice => $composableBuilder(
+    column: $table.adjustedPrice,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get payloadReceivedAtMs => $composableBuilder(
+    column: $table.payloadReceivedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get validatedAtMs => $composableBuilder(
+    column: $table.validatedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get snapshotRevision => $composableBuilder(
+    column: $table.snapshotRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ExactMarketPricesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ExactMarketPricesTable> {
+  $$ExactMarketPricesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get tenant => $composableBuilder(
+    column: $table.tenant,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get typeId => $composableBuilder(
+    column: $table.typeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get averagePrice => $composableBuilder(
+    column: $table.averagePrice,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get adjustedPrice => $composableBuilder(
+    column: $table.adjustedPrice,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get payloadReceivedAtMs => $composableBuilder(
+    column: $table.payloadReceivedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get validatedAtMs => $composableBuilder(
+    column: $table.validatedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get snapshotRevision => $composableBuilder(
+    column: $table.snapshotRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ExactMarketPricesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ExactMarketPricesTable> {
+  $$ExactMarketPricesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get tenant =>
+      $composableBuilder(column: $table.tenant, builder: (column) => column);
+
+  GeneratedColumn<int> get typeId =>
+      $composableBuilder(column: $table.typeId, builder: (column) => column);
+
+  GeneratedColumn<String> get averagePrice => $composableBuilder(
+    column: $table.averagePrice,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get adjustedPrice => $composableBuilder(
+    column: $table.adjustedPrice,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get payloadReceivedAtMs => $composableBuilder(
+    column: $table.payloadReceivedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get validatedAtMs => $composableBuilder(
+    column: $table.validatedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get snapshotRevision => $composableBuilder(
+    column: $table.snapshotRevision,
+    builder: (column) => column,
+  );
+}
+
+class $$ExactMarketPricesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ExactMarketPricesTable,
+          ExactMarketPrice,
+          $$ExactMarketPricesTableFilterComposer,
+          $$ExactMarketPricesTableOrderingComposer,
+          $$ExactMarketPricesTableAnnotationComposer,
+          $$ExactMarketPricesTableCreateCompanionBuilder,
+          $$ExactMarketPricesTableUpdateCompanionBuilder,
+          (
+            ExactMarketPrice,
+            BaseReferences<
+              _$AppDatabase,
+              $ExactMarketPricesTable,
+              ExactMarketPrice
+            >,
+          ),
+          ExactMarketPrice,
+          PrefetchHooks Function()
+        > {
+  $$ExactMarketPricesTableTableManager(
+    _$AppDatabase db,
+    $ExactMarketPricesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ExactMarketPricesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ExactMarketPricesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ExactMarketPricesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> tenant = const Value.absent(),
+                Value<int> typeId = const Value.absent(),
+                Value<String?> averagePrice = const Value.absent(),
+                Value<String?> adjustedPrice = const Value.absent(),
+                Value<int?> payloadReceivedAtMs = const Value.absent(),
+                Value<int?> validatedAtMs = const Value.absent(),
+                Value<int?> snapshotRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ExactMarketPricesCompanion(
+                tenant: tenant,
+                typeId: typeId,
+                averagePrice: averagePrice,
+                adjustedPrice: adjustedPrice,
+                payloadReceivedAtMs: payloadReceivedAtMs,
+                validatedAtMs: validatedAtMs,
+                snapshotRevision: snapshotRevision,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String tenant,
+                required int typeId,
+                Value<String?> averagePrice = const Value.absent(),
+                Value<String?> adjustedPrice = const Value.absent(),
+                Value<int?> payloadReceivedAtMs = const Value.absent(),
+                Value<int?> validatedAtMs = const Value.absent(),
+                Value<int?> snapshotRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ExactMarketPricesCompanion.insert(
+                tenant: tenant,
+                typeId: typeId,
+                averagePrice: averagePrice,
+                adjustedPrice: adjustedPrice,
+                payloadReceivedAtMs: payloadReceivedAtMs,
+                validatedAtMs: validatedAtMs,
+                snapshotRevision: snapshotRevision,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ExactMarketPricesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ExactMarketPricesTable,
+      ExactMarketPrice,
+      $$ExactMarketPricesTableFilterComposer,
+      $$ExactMarketPricesTableOrderingComposer,
+      $$ExactMarketPricesTableAnnotationComposer,
+      $$ExactMarketPricesTableCreateCompanionBuilder,
+      $$ExactMarketPricesTableUpdateCompanionBuilder,
+      (
+        ExactMarketPrice,
+        BaseReferences<
+          _$AppDatabase,
+          $ExactMarketPricesTable,
+          ExactMarketPrice
+        >,
+      ),
+      ExactMarketPrice,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -43537,4 +70341,134 @@ class $AppDatabaseManager {
         _db,
         _db.explorationLocationObservations,
       );
+  $$CharacterAuthorizationStatesTableTableManager
+  get characterAuthorizationStates =>
+      $$CharacterAuthorizationStatesTableTableManager(
+        _db,
+        _db.characterAuthorizationStates,
+      );
+  $$CorporationContextStatesTableTableManager get corporationContextStates =>
+      $$CorporationContextStatesTableTableManager(
+        _db,
+        _db.corporationContextStates,
+      );
+  $$OAuthAuthorizationAttemptsTableTableManager
+  get oAuthAuthorizationAttempts =>
+      $$OAuthAuthorizationAttemptsTableTableManager(
+        _db,
+        _db.oAuthAuthorizationAttempts,
+      );
+  $$CorporationCapabilitiesTableTableManager get corporationCapabilities =>
+      $$CorporationCapabilitiesTableTableManager(
+        _db,
+        _db.corporationCapabilities,
+      );
+  $$CorporationSnapshotHeadsTableTableManager get corporationSnapshotHeads =>
+      $$CorporationSnapshotHeadsTableTableManager(
+        _db,
+        _db.corporationSnapshotHeads,
+      );
+  $$CorporationSnapshotPagesTableTableManager get corporationSnapshotPages =>
+      $$CorporationSnapshotPagesTableTableManager(
+        _db,
+        _db.corporationSnapshotPages,
+      );
+  $$EsiRequestLeasesTableTableManager get esiRequestLeases =>
+      $$EsiRequestLeasesTableTableManager(_db, _db.esiRequestLeases);
+  $$EsiRateBucketsTableTableManager get esiRateBuckets =>
+      $$EsiRateBucketsTableTableManager(_db, _db.esiRateBuckets);
+  $$CorporationProfilesTableTableManager get corporationProfiles =>
+      $$CorporationProfilesTableTableManager(_db, _db.corporationProfiles);
+  $$CorporationMembersTableTableManager get corporationMembers =>
+      $$CorporationMembersTableTableManager(_db, _db.corporationMembers);
+  $$CorporationMemberTrackingTableTableManager get corporationMemberTracking =>
+      $$CorporationMemberTrackingTableTableManager(
+        _db,
+        _db.corporationMemberTracking,
+      );
+  $$CorporationRoleAssignmentsTableTableManager
+  get corporationRoleAssignments =>
+      $$CorporationRoleAssignmentsTableTableManager(
+        _db,
+        _db.corporationRoleAssignments,
+      );
+  $$CorporationTitlesTableTableManager get corporationTitles =>
+      $$CorporationTitlesTableTableManager(_db, _db.corporationTitles);
+  $$CorporationMemberTitlesTableTableManager get corporationMemberTitles =>
+      $$CorporationMemberTitlesTableTableManager(
+        _db,
+        _db.corporationMemberTitles,
+      );
+  $$CorporationOwnStandingsTableTableManager get corporationOwnStandings =>
+      $$CorporationOwnStandingsTableTableManager(
+        _db,
+        _db.corporationOwnStandings,
+      );
+  $$CorporationDivisionNamesTableTableManager get corporationDivisionNames =>
+      $$CorporationDivisionNamesTableTableManager(
+        _db,
+        _db.corporationDivisionNames,
+      );
+  $$CorporationAssetsTableTableManager get corporationAssets =>
+      $$CorporationAssetsTableTableManager(_db, _db.corporationAssets);
+  $$CorporationPrivateNamesTableTableManager get corporationPrivateNames =>
+      $$CorporationPrivateNamesTableTableManager(
+        _db,
+        _db.corporationPrivateNames,
+      );
+  $$CorporationStructuresTableTableManager get corporationStructures =>
+      $$CorporationStructuresTableTableManager(_db, _db.corporationStructures);
+  $$CorporationStructureServicesTableTableManager
+  get corporationStructureServices =>
+      $$CorporationStructureServicesTableTableManager(
+        _db,
+        _db.corporationStructureServices,
+      );
+  $$CorporationFuelScenariosTableTableManager get corporationFuelScenarios =>
+      $$CorporationFuelScenariosTableTableManager(
+        _db,
+        _db.corporationFuelScenarios,
+      );
+  $$CorporationFuelAlertStatesTableTableManager
+  get corporationFuelAlertStates =>
+      $$CorporationFuelAlertStatesTableTableManager(
+        _db,
+        _db.corporationFuelAlertStates,
+      );
+  $$CorporationFuelAlertEpisodesTableTableManager
+  get corporationFuelAlertEpisodes =>
+      $$CorporationFuelAlertEpisodesTableTableManager(
+        _db,
+        _db.corporationFuelAlertEpisodes,
+      );
+  $$CorporationWalletBalancesTableTableManager get corporationWalletBalances =>
+      $$CorporationWalletBalancesTableTableManager(
+        _db,
+        _db.corporationWalletBalances,
+      );
+  $$CorporationWalletJournalTableTableManager get corporationWalletJournal =>
+      $$CorporationWalletJournalTableTableManager(
+        _db,
+        _db.corporationWalletJournal,
+      );
+  $$CorporationWalletTransactionsTableTableManager
+  get corporationWalletTransactions =>
+      $$CorporationWalletTransactionsTableTableManager(
+        _db,
+        _db.corporationWalletTransactions,
+      );
+  $$CorporationHistoryCoverageTableTableManager
+  get corporationHistoryCoverage =>
+      $$CorporationHistoryCoverageTableTableManager(
+        _db,
+        _db.corporationHistoryCoverage,
+      );
+  $$CorporationMonitoringPreferencesTableTableManager
+  get corporationMonitoringPreferences =>
+      $$CorporationMonitoringPreferencesTableTableManager(
+        _db,
+        _db.corporationMonitoringPreferences,
+      );
+  $$ExactMarketPricesTableTableManager get exactMarketPrices =>
+      $$ExactMarketPricesTableTableManager(_db, _db.exactMarketPrices);
 }
