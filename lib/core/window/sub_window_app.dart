@@ -19,6 +19,7 @@ import '../../features/skills/presentation/skills_screen.dart';
 import '../../features/wallet/presentation/wallet_screen.dart';
 import '../../features/intel/presentation/kill_feed_screen.dart';
 import '../../features/combat_analyzer/presentation/encounter_list_screen.dart';
+import '../../features/corporation/presentation/corporation_screen.dart';
 import '../../features/exploration/presentation/exploration_screen.dart';
 import '../auth/auth_providers.dart';
 import '../logging/logger.dart';
@@ -268,6 +269,8 @@ class _SubWindowAppState extends ConsumerState<SubWindowApp> {
         return const EncounterListScreen();
       case WindowType.exploration:
         return const ExplorationScreen();
+      case WindowType.corporation:
+        return const CorporationScreen();
     }
   }
 }

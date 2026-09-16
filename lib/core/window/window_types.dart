@@ -53,6 +53,9 @@ enum WindowType {
 
   /// Exploration window (wormhole database, highways, notebook, routes).
   exploration,
+
+  /// Corporation workspace (roster, assets, structures, wallets).
+  corporation,
 }
 
 /// Extension methods for [WindowType].
@@ -90,6 +93,8 @@ extension WindowTypeExtension on WindowType {
         return 'Combat Analyzer - Mimir';
       case WindowType.exploration:
         return 'Exploration';
+      case WindowType.corporation:
+        return 'Corp';
     }
   }
 
@@ -128,6 +133,8 @@ extension WindowTypeExtension on WindowType {
         return 13;
       case WindowType.exploration:
         return 14;
+      case WindowType.corporation:
+        return 99;
     }
   }
 
@@ -202,6 +209,8 @@ extension WindowTypeExtension on WindowType {
         return (width: 1200, height: 800);
       case WindowType.exploration:
         return (width: 1440.0, height: 900.0);
+      case WindowType.corporation:
+        return (width: 800.0, height: 600.0);
     }
   }
 
@@ -241,6 +250,8 @@ extension WindowTypeExtension on WindowType {
         return 'assets/icons/eve/intel.png'; // shares the intel glyph
       case WindowType.exploration:
         return 'assets/icons/eve/exploration.png';
+      case WindowType.corporation:
+        return 'assets/icons/eve/dashboard.png';
     }
   }
 }
