@@ -1085,6 +1085,21 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  /// Naive C1: ignores corporation context generation.
+  Future<void> selectCharacterWithRevision(int characterId) {
+    return setActiveCharacter(characterId);
+  }
+
+  /// Naive C1: does not delete corporation-owned private rows.
+  Future<void> deleteCorporationPrivateOwner({
+    required String tenant,
+    required int characterId,
+  }) async {}
+
+  /// Test seam for injected migration failure. Schema 21 ignores it.
+  @visibleForTesting
+  static bool debugFailCorporationMigration = false;
+
   /// Delete a character and all related data.
   Future<void> deleteCharacter(int characterId) async {
     await transaction(() async {
