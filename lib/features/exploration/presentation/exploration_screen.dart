@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/logging/logger.dart';
 import '../../../core/widgets/character_nav_rail.dart';
 import 'public_highways_view.dart';
+import 'route_planner_view.dart';
+import 'signature_notebook_view.dart';
 import 'wormhole_database_view.dart';
 
 /// Exploration window shell: adaptive character selector and four destinations.
@@ -124,8 +126,8 @@ class _ExplorationScreenState extends State<ExplorationScreen> {
       children: const [
         WormholeDatabaseView(),
         PublicHighwaysView(),
-        Center(child: Text('Signatures')),
-        Center(child: Text('Routes')),
+        SignatureNotebookView(),
+        RoutePlannerView(),
       ],
     );
   }
