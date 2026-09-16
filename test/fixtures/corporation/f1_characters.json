@@ -1,0 +1,17 @@
+{
+  "tenant": "tranquility",
+  "t0": "2026-09-15T12:00:00Z",
+  "corporation": {"id": 7001, "name": "Helios Research"},
+  "alternate": {"id": 7002, "name": "Selene Works"},
+  "characters": [
+    {"id": 1, "name": "Ada", "general": []},
+    {"id": 2, "name": "Bea", "general": ["Personnel_Manager"]},
+    {"id": 3, "name": "Cyra", "general": ["Director"]},
+    {"id": 4, "name": "Dara", "general": ["Station_Manager"]},
+    {"id": 5, "name": "Eren", "general": ["Accountant"]},
+    {"id": 6, "name": "Finn", "general": ["Junior_Accountant"]},
+    {"id": 7, "name": "Gale", "general": ["Director"], "grantedScopes": ["esi-wallet.read_corporation_wallets.v1"], "requestedOnly": ["esi-wallet.read_corporation_wallets.v1"]},
+    {"id": 8, "name": "Hana", "general": [], "assigned": ["Account_Take_2", "Hangar_Query_2"]},
+    {"id": 9, "name": "Iona", "general": [], "grantableUnknown": true}
+  ]
+}

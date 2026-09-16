@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "sdeBuild": 3503375,
+  "released": "2026-09-10",
+  "fuelBlockGroup": 1136,
+  "fuelBlockTypeIds": [4051, 4246, 4247, 4312],
+  "attributes": {"group": 2108, "hourly": 2109, "startup": 2110},
+  "modules": [
+    {"typeId": 35878, "name": "Manufacturing Plant", "hourly": 12, "startup": 864, "group": 1415},
+    {"typeId": 35886, "name": "Invention Lab", "hourly": 12, "startup": 864, "group": 1415},
+    {"typeId": 35891, "name": "Research Lab", "hourly": 12, "startup": 864, "group": 1415},
+    {"typeId": 45537, "name": "Reactor", "hourly": 15, "startup": 864, "group": 1322}
+  ],
+  "hullEffects": [
+    {"effectId": 6759, "reduction": 0.25, "serviceGroup": 1415, "hulls": ["Raitaru", "Azbel", "Sotiyo"]}
+  ]
+}

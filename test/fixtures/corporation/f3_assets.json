@@ -1,0 +1,13 @@
+[
+  {"item_id": 1000, "type_id": 0, "quantity": 1, "location_id": 6001, "location_type": "station", "location_flag": "OfficeFolder"},
+  {"item_id": 1100, "type_id": 100, "quantity": 1, "location_id": 1000, "location_type": "item", "location_flag": "CorpSAG2", "name": "Supply Crate"},
+  {"item_id": 1110, "type_id": 101, "quantity": 10, "location_id": 1100, "location_type": "item", "location_flag": "Cargo"},
+  {"item_id": 1120, "type_id": 4051, "quantity": 4, "location_id": 1100, "location_type": "item", "location_flag": "Cargo"},
+  {"item_id": 1200, "type_id": 102, "quantity": 1, "location_id": 1000, "location_type": "item", "location_flag": "CorpSAG1"},
+  {"item_id": 1210, "type_id": 103, "quantity": 1, "location_id": 1200, "location_type": "item", "location_flag": "HiSlot0"},
+  {"item_id": 1220, "type_id": 104, "quantity": 1, "location_id": 1000, "location_type": "item", "location_flag": "CorpSAG1", "is_blueprint_copy": true},
+  {"item_id": 1300, "type_id": 101, "quantity": 2, "location_id": 999, "location_type": "item", "location_flag": "Cargo"},
+  {"item_id": 1400, "type_id": 101, "quantity": 1, "location_id": 1401, "location_type": "item", "location_flag": "Cargo"},
+  {"item_id": 1401, "type_id": 101, "quantity": 1, "location_id": 1400, "location_type": "item", "location_flag": "Cargo"},
+  {"item_id": 1500, "type_id": 9999, "quantity": 3, "location_id": 6001, "location_type": "station", "location_flag": "CorpSAG7"}
+]

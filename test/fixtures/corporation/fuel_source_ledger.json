@@ -1,0 +1,11 @@
+{
+  "sdeBuild": 3503375,
+  "archive": "eve-online-static-data-3503375-jsonl.zip",
+  "released": "2026-09-10",
+  "inputs": ["dogmaAttributes", "dogmaEffects", "types", "groups"],
+  "notes": [
+    "ESI service rows are labels, not fitted module type IDs.",
+    "Startup (2110) is not hourly × 72; reactors 45537–45539 remain 864.",
+    "Effect 6759 applies −25% only to service group 1415."
+  ]
+}

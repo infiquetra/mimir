@@ -1,0 +1,15 @@
+{
+  "structure": {"id": 8001, "name": "Alpha Works", "fuelExpires": "2026-09-18T00:00:00Z"},
+  "bay": [
+    {"type_id": 4051, "quantity": 1000, "location_flag": "StructureFuel"},
+    {"type_id": 4312, "quantity": 440, "location_flag": "StructureFuel"},
+    {"type_id": 16273, "quantity": 20, "location_flag": "StructureFuel", "resource": "ozone"},
+    {"type_id": 4051, "quantity": 500, "location_flag": "CorpSAG1"},
+    {"type_id": 4051, "quantity": 200, "location_flag": "SpecializedFuelBay", "inShip": true},
+    {"type_id": 4051, "quantity": 100, "location_flag": "Cargo", "nested": true}
+  ],
+  "consumers": [
+    {"label": "Manufacturing", "online": true, "group": 1415, "baseHourly": 12},
+    {"label": "Research", "online": true, "group": 1415, "baseHourly": 12}
+  ]
+}

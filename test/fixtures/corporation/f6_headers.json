@@ -1,0 +1,17 @@
+{
+  "receivedAt": "2026-09-15T12:00:00Z",
+  "headers": {
+    "Date": "Tue, 15 Sep 2026 11:58:00 GMT",
+    "Age": "120",
+    "Cache-Control": "max-age=3600"
+  },
+  "expectedDeadline": "2026-09-15T12:58:00Z",
+  "retryAfter": {
+    "at": "2026-09-15T12:00:00Z",
+    "status": 429,
+    "Retry-After": "120",
+    "suppressedAt": "2026-09-15T12:01:00Z",
+    "eligibleAt": "2026-09-15T12:02:00Z"
+  },
+  "backoffSeconds": [30, 60, 120, 300, 300]
+}

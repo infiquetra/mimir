@@ -1,0 +1,7 @@
+{
+  "widths": [320, 600, 900, 1200],
+  "textScales": [1.0, 2.0],
+  "minHeight": 640,
+  "longNameLength": 80,
+  "extremeIsk": "-1234567890123456.78"
+}

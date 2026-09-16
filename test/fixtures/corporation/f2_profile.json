@@ -1,0 +1,13 @@
+{
+  "state": "active",
+  "type": "player_owned",
+  "name": "Helios Research",
+  "ticker": "HELI",
+  "description": "Research and logistics",
+  "home_station_id": 6001,
+  "member_count": 3,
+  "tax_rates": {"isk": 10, "loyalty_point": 5.6},
+  "shares": 1000,
+  "war_eligible": true,
+  "friendly_fire": "illegal"
+}
