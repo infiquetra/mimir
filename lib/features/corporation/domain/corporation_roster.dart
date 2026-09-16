@@ -1,4 +1,5 @@
 import 'corporation_access.dart';
+import 'corporation_oracles.dart';
 
 enum JoinSource { tracking, publicHistory, unavailable }
 
@@ -53,8 +54,7 @@ class RosterSnapshot {
   bool get reportsCountMismatch => members.length != publicCount;
 }
 
-/// Naive C3 roster: pads to public count, uses the oldest matching employment,
-/// treats future logins as Online, and reads titles as authority.
+/// Roster membership is the returned ID set. Tracking/history never invent members.
 class CorporationRoster {
   const CorporationRoster();
 
@@ -67,26 +67,27 @@ class CorporationRoster {
     DateTime? now,
     int corporationId = 7001,
   }) {
-    final ids = [...returnedIds];
-    var next = 3;
-    while (ids.length < publicCount) {
-      ids.add(next++);
-    }
-    for (final extra in trackingStarts.keys) {
-      if (!ids.contains(extra)) ids.add(extra);
-    }
     final clock = now ?? DateTime.now().toUtc();
+    final ids = <int>[];
+    final seen = <int>{};
+    for (final id in returnedIds) {
+      if (seen.add(id)) ids.add(id);
+    }
     return RosterSnapshot(
-      returnedIds: returnedIds,
+      returnedIds: List<int>.unmodifiable(returnedIds),
       publicCount: publicCount,
       members: [
         for (final id in ids)
           RosterMember(
             characterId: id,
-            join: _join(id, history[id] ?? const [], corporationId),
+            join: _join(
+              history[id] ?? const [],
+              corporationId,
+              trackingStarts[id],
+            ),
             lastLogin: lastLogins[id],
             status: _status(lastLogins[id], clock),
-            online: _online(lastLogins[id], clock),
+            online: false,
             titles: const [],
           ),
       ],
@@ -94,32 +95,25 @@ class CorporationRoster {
   }
 
   JoinEvidence _join(
-    int characterId,
     List<Map<String, dynamic>> history,
     int corporationId,
+    DateTime? trackingStart,
   ) {
-    DateTime? found;
-    for (final row in history) {
-      if (row['corporation_id'] == corporationId) {
-        found = DateTime.tryParse('${row['start_date']}')?.toUtc();
-      }
+    if (trackingStart != null) {
+      return JoinEvidence(
+        at: trackingStart.toUtc(),
+        source: JoinSource.tracking,
+      );
     }
-    return JoinEvidence(
-      at: found,
-      source: found == null ? JoinSource.unavailable : JoinSource.publicHistory,
-    );
+    final at = RosterOracle().currentJoin(history, corporationId);
+    if (at == null) return const JoinEvidence();
+    return JoinEvidence(at: at, source: JoinSource.publicHistory);
   }
 
   ActivityStatus _status(DateTime? login, DateTime now) {
     if (login == null) return ActivityStatus.notReported;
-    if (login.isAfter(now)) return ActivityStatus.online;
+    if (login.isAfter(now)) return ActivityStatus.unknown;
     return ActivityStatus.reported;
-  }
-
-  bool _online(DateTime? login, DateTime now) {
-    if (login == null) return false;
-    return login.isAfter(now) ||
-        now.difference(login) < const Duration(hours: 2);
   }
 
   bool inActivityFilter({
@@ -129,21 +123,23 @@ class CorporationRoster {
   }) {
     if (bucket == ActivityBucket.all) return true;
     if (login == null) return bucket == ActivityBucket.notReported;
-    final days = switch (bucket) {
-      ActivityBucket.last7 => 7,
-      ActivityBucket.last30 => 30,
-      ActivityBucket.last90 => 90,
-      _ => 0,
+    if (bucket == ActivityBucket.notReported) return false;
+    if (login.isAfter(now)) return false;
+    final window = switch (bucket) {
+      ActivityBucket.last7 => const Duration(days: 7),
+      ActivityBucket.last30 => const Duration(days: 30),
+      ActivityBucket.last90 => const Duration(days: 90),
+      _ => Duration.zero,
     };
-    return now.difference(login).inDays <= days;
+    return now.difference(login) <= window;
   }
 
-  bool titleGrantsDirector(String titleName) =>
-      titleName.toLowerCase().contains('director');
+  bool titleGrantsDirector(String titleName) => false;
 
   String titleLabel({required int titleId, String? name, bool locked = false}) {
-    if (locked) return 'Title #$titleId';
-    return name ?? 'Title #$titleId';
+    if (locked) return 'title unavailable';
+    if (name != null && name.isNotEmpty) return name;
+    return 'title unavailable';
   }
 }
 
@@ -159,17 +155,33 @@ class OwnAccessMatrix {
   final String standingsCaption;
 }
 
-/// Naive own-access: flattens HQ evidence into Yes for every division.
+/// Seven-division reported-role matrix. Not an ACL and not corporate standings.
 class OwnAccessProjector {
   const OwnAccessProjector();
 
+  static final _division = RegExp(r'_(\d+)$');
+
   OwnAccessMatrix project(RoleEvidence roles) {
+    final yes = <int>{};
+    for (final name in [
+      ...roles.general,
+      ...roles.hq,
+      ...roles.base,
+      ...roles.other,
+      ...roles.grantable,
+    ]) {
+      final match = _division.firstMatch(name);
+      if (match != null) yes.add(int.parse(match.group(1)!));
+    }
     return OwnAccessMatrix(
       cells: [
         for (var division = 1; division <= 7; division++)
-          OwnAccessCell(division: division, value: 'Yes'),
+          OwnAccessCell(
+            division: division,
+            value: yes.contains(division) ? 'Yes' : 'Not reported',
+          ),
       ],
-      standingsCaption: 'Corporation standings',
+      standingsCaption: 'My NPC standings',
     );
   }
 }
