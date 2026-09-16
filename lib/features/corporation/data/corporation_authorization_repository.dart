@@ -15,16 +15,16 @@ class CapabilityLease {
   final bool hidden;
 }
 
-/// Naive C2 auth: equality still allows, 403 leaves cache readable, corp 0
-/// still requests, and self-role refresh waits on a corporate permit.
+/// 1h access leases. Equality locks. 403 hides cache. Corp 0 never requests.
 class CorporationAuthorizationRepository {
   CorporationAuthorizationRepository({DateTime Function()? clock})
     : _now = clock ?? DateTime.now;
 
+  static const leaseTtl = Duration(hours: 1);
+
   final DateTime Function() _now;
   final Map<String, CapabilityLease> _leases = {};
   final List<String> issuedRequests = [];
-  var selfRoleRequiresCorporatePermit = true;
 
   String _key(int characterId, Capability capability) =>
       '$characterId/${capability.name}';
@@ -36,7 +36,7 @@ class CorporationAuthorizationRepository {
   }) {
     _leases[_key(characterId, capability)] = CapabilityLease(
       capability: capability,
-      until: validatedAt.add(const Duration(hours: 1)),
+      until: validatedAt.add(leaseTtl),
     );
   }
 
@@ -45,33 +45,34 @@ class CorporationAuthorizationRepository {
     required Capability capability,
   }) {
     final existing = _leases[_key(characterId, capability)];
-    if (existing != null) {
-      _leases[_key(characterId, capability)] = CapabilityLease(
-        capability: capability,
-        until: existing.until,
-        denied: true,
-      );
-    }
+    _leases[_key(characterId, capability)] = CapabilityLease(
+      capability: capability,
+      until: existing?.until ?? _now(),
+      denied: true,
+      hidden: true,
+    );
   }
 
   bool isVisible({required int characterId, required Capability capability}) {
     final lease = _leases[_key(characterId, capability)];
-    if (lease == null) return false;
-    if (lease.denied) return true;
-    return !_now().isAfter(lease.until);
+    if (lease == null || lease.denied || lease.hidden) return false;
+    return _now().isBefore(lease.until);
   }
 
   bool mayRequest({
     required CorporationContext context,
     required Capability capability,
   }) {
+    if (context.characterId == null || context.corporationId == 0) {
+      return false;
+    }
     issuedRequests.add('${context.corporationId}/$capability');
-    return context.characterId != null;
+    return true;
   }
 
   bool mayRefreshSelfRoles({required bool hasCorporatePermit}) {
-    return !selfRoleRequiresCorporatePermit || hasCorporatePermit;
+    return true;
   }
 
-  bool cacheReadRenewsLease() => true;
+  bool cacheReadRenewsLease() => false;
 }

@@ -6,9 +6,9 @@ class AuthorizationAttempt {
     required this.intendedCharacterId,
     this.status = 'pending',
     this.grantEpoch = 0,
-    this.scopes = const {},
+    Set<String> scopes = const {},
     this.quarantined = false,
-  });
+  }) : scopes = Set<String>.from(scopes);
 
   final String operationId;
   final int intendedCharacterId;
@@ -18,8 +18,8 @@ class AuthorizationAttempt {
   bool quarantined;
 }
 
-/// Naive C2 OAuth coordination: wrong-subject callbacks commit, cancel clears
-/// the grant, and reauth overwrites without quarantine.
+/// OAuth coordination: wrong-subject reject, cancel retains grant,
+/// reauth quarantines then rebinds; scope reduction purges.
 class CorporationAuthorizationCoordinator {
   CorporationAuthorizationCoordinator();
 
@@ -32,13 +32,14 @@ class CorporationAuthorizationCoordinator {
     Set<String> scopes = const {},
     int grantEpoch = 0,
   }) {
-    _attempts[operationId] = AuthorizationAttempt(
+    final attempt = AuthorizationAttempt(
       operationId: operationId,
       intendedCharacterId: intendedCharacterId,
       scopes: scopes,
       grantEpoch: grantEpoch,
     );
-    grants[intendedCharacterId] = _attempts[operationId]!;
+    _attempts[operationId] = attempt;
+    grants[intendedCharacterId] = attempt;
   }
 
   GrantTransition completeCallback({
@@ -47,19 +48,21 @@ class CorporationAuthorizationCoordinator {
   }) {
     final attempt = _attempts[operationId];
     if (attempt == null) return GrantTransition.unchanged;
+    if (callbackCharacterId != attempt.intendedCharacterId) {
+      return GrantTransition.unchanged;
+    }
     attempt.status = 'committed';
     attempt.grantEpoch += 1;
-    grants[callbackCharacterId] = attempt;
     grants[attempt.intendedCharacterId] = attempt;
-    return GrantTransition.unchanged;
+    return GrantTransition.rebound;
   }
 
   GrantTransition cancel(String operationId) {
     final attempt = _attempts[operationId];
     if (attempt == null) return GrantTransition.unchanged;
     attempt.status = 'cancelled';
-    grants.remove(attempt.intendedCharacterId);
-    return GrantTransition.purged;
+    grants[attempt.intendedCharacterId] = attempt;
+    return GrantTransition.retained;
   }
 
   GrantTransition reauthorize({
@@ -68,9 +71,19 @@ class CorporationAuthorizationCoordinator {
   }) {
     final existing = grants[characterId];
     if (existing == null) return GrantTransition.unchanged;
-    existing.scopes = newScopes;
+    if (existing.quarantined) {
+      existing.scopes = Set<String>.from(newScopes);
+      existing.quarantined = false;
+      return GrantTransition.rebound;
+    }
+    final lost = existing.scopes.difference(newScopes);
+    if (lost.isNotEmpty) {
+      existing.scopes = Set<String>.from(newScopes);
+      existing.grantEpoch += 1;
+      return GrantTransition.purged;
+    }
+    existing.quarantined = true;
     existing.grantEpoch += 1;
-    existing.quarantined = false;
-    return GrantTransition.unchanged;
+    return GrantTransition.quarantined;
   }
 }
