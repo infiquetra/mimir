@@ -26,6 +26,32 @@
 
 ## 2026-09-15
 
+### Corporation authority is durable, fenced and separate from request eligibility
+
+**Author.** Technical Architect.
+**Decision.** Adopt the [Corporation technical design](../specs/corporation-module-design.md).
+AppDatabase 22 stores character incarnations, actual grant revisions, endpoint
+capabilities, complete snapshots and logical refresh/alert claims. Separate first
+request eligibility from read permits; ordinary refreshable token expiry does not
+shorten an unexpired offline access lease. Fence publication and deletion across
+independent engines. Preserve exact raw decimal values and keep reported expiry,
+observed fuel and manual/model estimates separate. Window 15 consumes guarded
+Riverpod 3 view models through the actual SubWindowApp.
+**Rejected alternatives.** Corporation-only caches, per-provider request locks,
+page-only refresh ownership, float-based wallet/asset totals, inferred service
+module identities, retained previous-owner UI and treating notification claims as
+guaranteed OS delivery.
+**Rationale.** Request permission, data visibility, source freshness and lifecycle
+ownership are distinct facts. A durable claim can prevent duplicate native
+handoffs but cannot transact with OS delivery; ambiguous crash claims are not
+automatically replayed. In-app episodes remain available without native opt-in.
+**Revisit when.** ESI/SSO contracts change, a reviewed fuel manifest expands model
+support, or a notification API supplies stronger delivery semantics. Architecture
+completion does not waive C0–C10 implementation and runtime gates.
+**Refs.** [Implementation queue](QUEUED.md#corporation-module),
+[source findings](LEARNINGS.md#corporation-shared-seams-need-explicit-production-contracts),
+[checkpoint](../../.codex/checkpoints/2026-09-15-corporation-module-design.md).
+
 ### Corporation data follows character capabilities and bounded offline authority
 
 **Author.** Product.

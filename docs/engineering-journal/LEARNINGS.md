@@ -31,6 +31,33 @@
 
 ## 2026-09-15
 
+### Corporation shared seams need explicit production contracts
+
+**Author.** Technical Architect.
+**Context.** Design grounding against Product `0abc4f6` and application `ccfe79b`.
+**Evidence.** OAuth parsing reads scopes but the current persistence path discards
+them; token refresh lacks a durable cross-engine claim/CAS. Character refresh can
+upsert after an earlier read. AppDatabase 21 migration callbacks lack the required
+explicit atomic DDL/version boundary. EsiClient personal wallet/market DTOs convert
+money to double, and existing global location caches cannot own private names.
+The installed framework is Riverpod 3.0.3, not the request's historical 2.0 label.
+**Mechanism.** Independent window engines do not share in-process locks or all
+Drift watch notifications; late auth/network work and numeric conversion can lose
+authority or precision before feature code receives a result. Exploration's
+release label does not establish durable wiring for every reusable provider.
+**Fix (queued).** C1/C2 add incarnation/grant/revision fences, actual-grant validation,
+logical dataset jobs, raw numeric decoding and guarded repositories. C5 requires
+proven fitted consumer instances plus a reviewed ESI-label bundle mapping; SDE
+module names alone cannot establish a fuel model. C7 wires the real selector and
+native per-window visibility instead of placeholder providers.
+**Validation.** Read-only source and current primary ESI/SSO review, two independent
+architecture reviews, exact Product mapping checks and independent fixture
+arithmetic. No runtime feature tests were run or claimed in this documentation work.
+**Generalizable rule.** Reuse verified seams, not a prior feature's completion label;
+prove authority and numeric precision at the earliest shared boundary.
+**Refs.** [Technical design](../specs/corporation-module-design.md),
+[decision](DECISIONS.md#corporation-authority-is-durable-fenced-and-separate-from-request-eligibility).
+
 ### Corporation ESI contracts require role and source-specific adapters
 
 **Author.** Product.

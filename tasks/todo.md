@@ -1,4 +1,42 @@
-# Project: Mimir — Corporation Module Product specification
+# Project: Mimir — Corporation Module technical architecture
+Date: 2026-09-15
+Checkpoint: 2026-09-15-corporation-module-design
+
+## Overview
+
+Write and commit the seven-section technical design against Product `0abc4f6`
+and application baseline `ccfe79b`, with C0–C10 and exact AC/test traceability.
+
+## Tasks
+
+- [x] Read the complete Product contract and all 60 cases.
+- [x] [P1] Ground domain, database/window, OAuth and ESI seams.
+- [x] [SEQ] Define storage, authority, refresh, domain and presentation contracts.
+- [x] [SEQ] Map all 40 ACs and 60 T/D/P/U/O test cases to work units/files.
+- [x] [P2] Independently review and validate documentation and fixture arithmetic.
+- [x] [SEQ] Update README/journal while retaining implementation-pending status.
+- [x] [CHECKPOINT] Save handoff and include documentation in this atomic commit.
+
+## Notes
+
+[Canonical plan](../.codex/plans/2026-09-15-corporation-module-design.md).
+The user's request authorizes writing and committing the design.
+
+## Review
+
+Completed the [Corporation technical design](../docs/specs/corporation-module-design.md)
+with seven sections, schema 22, actual-grant/capability leases, cross-engine fencing,
+exact numeric/domain contracts, Window 15, responsive providers/UI and C0–C10.
+All 60 Product aliases and exact AC associations are preserved and inversely mapped.
+Two independent architecture reviews resolved auth/lease, paging, asset-parent,
+numeric-bound, alert and scenario-save findings. Documentation mappings, tables,
+links and fixture arithmetic checked; no application changes or runtime tests.
+Implementation/native/performance verification remains pending. Handoff is in
+[the checkpoint](../.codex/checkpoints/2026-09-15-corporation-module-design.md).
+
+---
+
+# Completed: Mimir — Corporation Module Product specification
 Date: 2026-09-15
 Checkpoint: 2026-09-15-corporation-module-product
 

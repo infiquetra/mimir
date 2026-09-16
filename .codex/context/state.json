@@ -1,30 +1,32 @@
 {
-  "last_updated": "2026-09-16T02:19:46Z",
+  "last_updated": "2026-09-16T02:52:07Z",
   "current_work": {
-    "task": "Corporation Module: authoritative Product specification",
+    "task": "Corporation Module: authoritative technical architecture",
     "phase": "complete",
     "progress": "100%",
     "baseline": "ccfe79b",
     "branch": "feature/corporation-module",
-    "plan": ".codex/plans/2026-09-15-corporation-module-product.md",
-    "deliverable": "docs/specs/corporation-module.md",
-    "checkpoint": ".codex/checkpoints/2026-09-15-corporation-module-product.md",
+    "product_commit": "0abc4f6",
+    "plan": ".codex/plans/2026-09-15-corporation-module-design.md",
+    "deliverable": "docs/specs/corporation-module-design.md",
+    "checkpoint": ".codex/checkpoints/2026-09-15-corporation-module-design.md",
     "next_steps": [
-      "Plan writes architecture and estimates phases 4e-4h with shared-file ownership",
-      "Test-Author creates F1-F8 and T01-T60 cases preserving D/P/U/O identifiers",
-      "Implement dedicated Corporation window15 and role-aware providers/storage/API/UI contracts",
-      "Architecture, implementation and tester signoff remain pending; prior AAR and Exploration initiatives are shipped"
+      "Plan assigns C0-C10 owners and dependencies, preserving shared auth/database/window ownership",
+      "Test-Author implements F1-F8 and T01-T60 through assigned real boundaries, retaining D/P/U/O aliases",
+      "Implement schema22, verified grants/capability caches, exact accounting/fuel models and actual Window15",
+      "Prove fuel manifest/wire mappings and record native/performance/runtime evidence before C10 closeout"
     ]
   },
   "validation": {
-    "independent_review": "two independent specification reviews passed; all findings resolved",
-    "structure": "8 sections; phases4e-4h; S1-S10; R1-R32; AC1-AC40; F1-F8; T01-T60 aliases for D20/P20/U12/O8 cases",
-    "checks": "current primary ESI/SDE and code grounding; exact asset/Decimal/fuel/severity/episode/cache oracles; identifiers and AC mappings; JSON/local links/tables/whitespace/staged scope",
+    "independent_review": "two independent architecture reviews; domain and integration findings incorporated",
+    "structure": "7 sections; C0-C10; exact AC1-AC40 reverse map and all T01-T60/D20/P20/U12/O8 case mappings",
+    "checks": "current ESI/SSO and source grounding; Product case/AC equality; inverse unit maps; exact asset/fuel/wallet/cache arithmetic; JSON/local links/tables/whitespace/staged scope",
     "runtime_tests": "not run; documentation-only delivery"
   },
   "open_issues": [
-    "Technical architecture, implementation and executable tester verification pending",
-    "Plan must build grant-aware caches and current-schema adapters rather than reuse legacy role/name/wallet shortcuts",
-    "Automatic fuel models require a versioned supported-rule manifest and unambiguous consumer evidence; unsupported rates stay Not modeled"
+    "Implementation and executable tester verification remain pending; architecture complete",
+    "C1/C2/C7 must implement the documented shared migration/auth/transport/visibility gaps with regressions",
+    "Minimum fuel model support requires reviewed versioned rules and proven exact wire-label/module-instance mapping",
+    "Native notification handoff is at-most-once; SQLite cannot guarantee OS delivery across an arbitrary crash"
   ]
 }

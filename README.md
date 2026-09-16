@@ -30,6 +30,7 @@ See the [mimir-context-library](https://github.com/infiquetra/mimir-context-libr
 ### Corporation specification
 
 - [Corporation Module Product specification](docs/specs/corporation-module.md) — role-aware profile/roster, assets/hangars, structures/fuel and wallets in dedicated window 15; 32 requirements, 40 acceptance criteria and 60 mapped tests; implementation pending.
+- [Corporation Module technical design](docs/specs/corporation-module-design.md) — schema 22, character-owned authorization leases, exact accounting, fuel provenance, responsive Window 15 and real-boundary test architecture; C0–C10 with complete AC1–AC40 and T01–T60 traceability; implementation pending.
 
 ### Exploration specification
 
