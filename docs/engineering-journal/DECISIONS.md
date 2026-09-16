@@ -50,7 +50,7 @@ explicitly first.
 **Refs.** [Product](../specs/exploration-module.md),
 [queued implementation](QUEUED.md#exploration-module),
 [checkpoint](../../.codex/checkpoints/2026-09-15-exploration-module-design.md).
-Documentation delivery only; executable tests and feature shipment remain pending.
+Shipped 2026-09-15 across Units X0–X10 with 1,258 passing tests and full tester sign-off (see ARCHIVE.md).
 
 ### Exploration uses a dedicated window and explicit observation freshness
 

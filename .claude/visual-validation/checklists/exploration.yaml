@@ -1,0 +1,48 @@
+# Exploration UI Visual Validation Checklist
+
+name: Exploration Module Check
+description: Semantic layout and content validation for the Phase 4 Exploration Module screens.
+
+elements:
+  TabBar:
+    - Must be visible and display 4 tabs: Wormhole Database, Public Highways, Signature Notebook, Route Planner.
+    - Must not overflow horizontally across 320px to 1440px viewports.
+    - Must clearly indicate the active tab selection.
+
+  WormholeDatabaseView:
+    - Must provide a search bar for filtering by wormhole code, leads-to class, or name.
+    - Detail panels/cards must display mass limits (total and jump), lifetime, and target class.
+    - Must resolve all system names and classes without displaying raw IDs or placeholder text.
+    - Must display system effect badges with appropriate color coding when present.
+
+  PublicHighwaysView:
+    - Must display Thera and other public connection feeds with distinct source badges.
+    - Connection cards must show signature codes, source system, destination system, and jump counts.
+    - Must show relative freshness/last-verified indicators.
+    - Must warn visibly on EOL (end-of-life) or Critical mass wormholes.
+
+  SignatureNotebookView:
+    - Must render a scoped system header with the resolved solar system name.
+    - Must disable write and import actions when no character is selected.
+    - Scanner import dialog must provide paste input with character/row limits and preview summary.
+    - Signature rows must show code, group/type, status, and distinct observed/edited/verified timestamps.
+    - Connection controls must require explicit verification action and warn before irreversible trash deletion.
+    - Must display exact snackbar feedback with interpolated counts upon import, move to trash, or save.
+
+  RoutePlannerView:
+    - Origin selector must support current character location and custom search.
+    - Destination field must resolve EVE system names without raw IDs.
+    - Must provide preference switches (e.g. Avoid EOL, Avoid Critical, Avoid Lowsec, Avoid Nullsec, Prefer Highsec).
+    - Route step list must display step index, system name, security status, and wormhole properties.
+    - Must never show misleading safety promises ("Safe", "ETA", "Ship can pass").
+    - Must display distinct diagnostics for no-route states (unreachable, all paths excluded, origin equals destination).
+    - Must clearly mark displayed route as outdated if the underlying notebook or public feed changes.
+
+empty_states:
+  NoCharacter:
+    - Signature notebook must indicate no character is active and disable editing.
+    - Route planner origin defaulting to current location must indicate no character position available.
+  NoSignatures:
+    - Signature notebook must display empty state guidance to paste scanner results or add signatures manually.
+  NoConnections:
+    - Public highways must display helpful empty state if public feeds are unavailable or have no active routes.
