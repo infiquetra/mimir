@@ -35,10 +35,11 @@ class WalletTrade {
   final int journalRefId;
 }
 
-/// Naive C6: inclusive end bound, null amounts become 0.00, float gross,
-/// trades fold into journal cash, Bought/Sold labels.
+/// Journal cash flow and trade gross. Trades never fold into journal net.
 class CorporationWalletCalculator {
   const CorporationWalletCalculator();
+
+  static final _zero = ExactDecimal(BigInt.zero, 0);
 
   JournalTotals summarize(
     List<WalletJournalRow> rows, {
@@ -46,44 +47,40 @@ class CorporationWalletCalculator {
     required DateTime to,
     List<WalletTrade> trades = const [],
   }) {
-    final included = [
-      for (final row in rows)
-        if (!row.occurredAt.isBefore(from) && !row.occurredAt.isAfter(to)) row,
-    ]..sort((a, b) => a.id.compareTo(b.id));
+    final included =
+        [
+          for (final row in rows)
+            if (!row.occurredAt.isBefore(from) && row.occurredAt.isBefore(to))
+              row,
+        ]..sort((a, b) {
+          final byDate = b.occurredAt.compareTo(a.occurredAt);
+          if (byDate != 0) return byDate;
+          return b.id.compareTo(a.id);
+        });
 
-    var inflow = 0.0;
-    var outflow = 0.0;
+    var inflow = _zero;
+    var outflow = _zero;
+    var unknownCount = 0;
     for (final row in included) {
-      final amount = row.amount ?? ExactDecimal.parse('0.00');
-      final value = double.parse(amount.toExactString());
-      if (value > 0) inflow += value;
-      if (value < 0) outflow += -value;
+      final amount = row.amount;
+      if (amount == null) {
+        unknownCount += 1;
+        continue;
+      }
+      if (amount > _zero) {
+        inflow += amount;
+      } else if (amount < _zero) {
+        outflow += ExactDecimal(-amount.coefficient, amount.scale);
+      }
     }
-    for (final trade in trades) {
-      inflow += double.parse(
-        tradeGross(
-          quantity: trade.quantity,
-          unitPrice: trade.unitPrice,
-        ).toExactString(),
-      );
-    }
+
     return JournalTotals(
-      inflow: ExactDecimal.fromNum(inflow),
-      outflow: ExactDecimal.fromNum(outflow),
-      net: ExactDecimal.fromNum(inflow - outflow),
-      unknownCount: 0,
+      inflow: inflow,
+      outflow: outflow,
+      net: inflow - outflow,
+      unknownCount: unknownCount,
       includedIds: [for (final row in included) row.id],
-      rows: [
-        for (final row in included)
-          WalletJournalRow(
-            id: row.id,
-            occurredAt: row.occurredAt,
-            amount: row.amount ?? ExactDecimal.parse('0.00'),
-            balance: row.balance,
-            division: row.division,
-            ownerCharacterId: row.ownerCharacterId,
-          ),
-      ],
+      rows: included,
     );
   }
 
@@ -91,10 +88,8 @@ class CorporationWalletCalculator {
     required int quantity,
     required ExactDecimal unitPrice,
   }) {
-    return ExactDecimal.fromNum(
-      quantity * double.parse(unitPrice.toExactString()),
-    );
+    return ExactDecimal.fromNum(quantity) * unitPrice;
   }
 
-  String direction({required bool isBuy}) => isBuy ? 'Bought' : 'Sold';
+  String direction({required bool isBuy}) => isBuy ? 'Buy' : 'Sell';
 }

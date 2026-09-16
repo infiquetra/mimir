@@ -50,34 +50,48 @@ class WalletJournalRow {
   final int ownerCharacterId;
 }
 
-/// Naive C6: missing balances become 0.00, names ignore custom labels,
-/// Accountant requires Director, totals go through [double].
+/// Seven-division corporate wallet snapshot. Missing divisions stay unknown.
 class CorporationWallet {
   const CorporationWallet();
 
-  bool canView(RoleEvidence roles) => roles.isDirector;
+  bool canView(RoleEvidence roles) => roles.isAccountant || roles.isDirector;
 
   WalletBalanceSnapshot publish(
     List<WalletDivisionInput> rows, {
     Map<int, String> names = const {},
   }) {
-    final byDivision = {for (final row in rows) row.division: row};
+    final byDivision = <int, ExactDecimal?>{};
+    for (final row in rows) {
+      if (row.division < 1 || row.division > 7) continue;
+      byDivision[row.division] = row.balance;
+    }
+
     final divisions = <WalletDivision>[];
-    var acc = 0.0;
-    var known = 0;
+    var knownTotal = ExactDecimal(BigInt.zero, 0);
+    var knownCount = 0;
     for (var n = 1; n <= 7; n++) {
-      final amount = byDivision[n]?.balance ?? ExactDecimal.parse('0.00');
-      acc += double.parse(amount.toExactString());
-      known += 1;
+      final present = byDivision.containsKey(n);
+      final amount = present ? byDivision[n] : null;
+      if (present && amount != null) {
+        knownTotal += amount;
+        knownCount += 1;
+      } else if (present && amount == null) {
+        knownCount += 1;
+      }
+      final custom = names[n];
       divisions.add(
-        WalletDivision(division: n, balance: amount, name: 'Division $n'),
+        WalletDivision(
+          division: n,
+          balance: amount,
+          name: (custom != null && custom.isNotEmpty) ? custom : 'Division $n',
+        ),
       );
     }
     return WalletBalanceSnapshot(
       divisions: divisions,
-      knownTotal: ExactDecimal.fromNum(acc),
-      knownCount: known,
-      coverageLabel: 'All divisions',
+      knownTotal: knownTotal,
+      knownCount: knownCount,
+      coverageLabel: '$knownCount/7',
     );
   }
 }
