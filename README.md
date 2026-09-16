@@ -21,8 +21,8 @@ Mimir aims to replace the need for multiple disconnected EVE tools (EVEMon, Pyfa
 
 **Currently in active development**
 - Phase 1 & 2 (Foundational/Essential Tools): Complete
-- Phase 3 (Market Tools): Backend complete, UI pending
-- Phase 4 (Ship Fitting): Backend complete (Dogma Engine, Formats), UI pending
+- Phase 3 (Market Tools): Complete (browser, active orders, price history, trade calculator)
+- Phase 4 (Ship Fitting): Complete (Dogma Engine, EFT/Pyfa formats, visual fitting editor, stats panel)
 - Phase 4 (Exploration Module): Complete (offline reference, public highways, signature notebook, route planner, sub-window)
 
 See the [mimir-context-library](https://github.com/infiquetra/mimir-context-library) repository for detailed specifications and roadmap.
