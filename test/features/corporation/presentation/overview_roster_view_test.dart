@@ -65,7 +65,7 @@ void main() {
     await pumpView(tester);
     expect(find.textContaining('1 Sep 2026'), findsWidgets);
     expect(find.textContaining('1 Jan'), findsNothing);
-    expect(find.textContaining('unavailable'), findsWidgets);
+    expect(find.textContaining('Join date unavailable'), findsWidgets);
   });
 
   testWidgets('tracking start 2 Sep overrides public history', (tester) async {

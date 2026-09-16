@@ -38,6 +38,8 @@ void main() {
     expect(find.textContaining('6001'), findsNothing);
     expect(find.byKey(const Key('asset-1400')), findsOneWidget);
     expect(find.byKey(const Key('asset-1401')), findsOneWidget);
+    expect(find.textContaining('Cyclic hangar'), findsNothing);
+    expect(find.textContaining('Test Ammunition'), findsWidgets);
   });
 
   testWidgets('valuation is 725.00 ISK with 2 unpriced items, BPC not 999', (

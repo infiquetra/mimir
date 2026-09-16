@@ -89,6 +89,9 @@ class ExactDecimal implements Comparable<ExactDecimal> {
     return '$sign${digits.substring(0, split)}.${digits.substring(split)}';
   }
 
+  @override
+  String toString() => toExactString();
+
   ExactDecimal _withoutTrailingZeros() {
     var value = coefficient;
     var zeros = 0;

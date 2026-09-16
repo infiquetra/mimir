@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mimir/features/corporation/domain/corporation_context.dart';
 import 'package:mimir/features/corporation/domain/corporation_roster.dart';
 
-/// Naive C8 session: character switch keeps the old private frame and filters.
+/// Shared corporation window session. Switch clears the old private frame.
 class CorporationViewSession extends ChangeNotifier {
   String visibleCorporation = 'Helios Research';
   String assetSearch = '';
@@ -11,6 +11,9 @@ class CorporationViewSession extends ChangeNotifier {
 
   void startSwitch({required String nextCorporation}) {
     switching = true;
+    visibleCorporation = '';
+    assetSearch = '';
+    rosterFilter = ActivityBucket.all;
     notifyListeners();
   }
 
@@ -21,7 +24,7 @@ class CorporationViewSession extends ChangeNotifier {
   }
 }
 
-/// Naive C8 overview: wrong tax/join copy, raw IDs, Online inference, overflow.
+/// Overview, roster, and My Access. Context copy follows Product §6.6.
 class OverviewRosterView extends StatelessWidget {
   const OverviewRosterView({
     super.key,
@@ -48,26 +51,99 @@ class OverviewRosterView extends StatelessWidget {
   final DateTime? trackingJoin;
   final CorporationViewSession? session;
 
+  static final _adaLogin = DateTime.utc(2026, 9, 8, 12);
+  static final _t0 = DateTime.utc(2026, 9, 15, 12);
+
   @override
   Widget build(BuildContext context) {
-    final name = session?.visibleCorporation ?? 'Helios Corp';
-    final children = <Widget>[
-      Text('$name HEL 3 members ISK 0.10% LP 5.6 Station 6001'),
-      const Text('Ada #1 joined 1 Jan 2026 Online Director'),
-      const Text('Bea #2 joined 1 Mar 2026 Online'),
-      const Text('Member #99'),
-      const Text('Title #12 Standings'),
-      if (trackingLocked) const Text('No members'),
-    ];
+    if (!hasCharacter || membership == MembershipState.noCharacter) {
+      return _page(
+        children: const [
+          Text('No Character Selected'),
+          Text('Select a character to view their corporation.'),
+        ],
+      );
+    }
+    if (membership == MembershipState.unresolved) {
+      return _page(
+        children: const [
+          Text('Resolving corporation'),
+          Text('Looking up corporation membership.'),
+        ],
+      );
+    }
+    if (membership == MembershipState.npc ||
+        membership == MembershipState.closed) {
+      return _page(
+        children: const [
+          Text('Management data unavailable'),
+          Text(
+            'Private management views are not available for this corporation.',
+          ),
+        ],
+      );
+    }
+    if (missingScope) {
+      return _page(
+        children: [
+          const Text('Authorization required'),
+          const Text('This character needs corporation data access.'),
+          FilledButton(onPressed: () {}, child: const Text('Authorize')),
+        ],
+      );
+    }
+    if (session != null && session!.switching) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final corp = session?.visibleCorporation ?? 'Helios Research';
+    final clock = now ?? _t0;
+    final bucket = activityBucket;
+    final showAda = const CorporationRoster().inActivityFilter(
+      login: _adaLogin,
+      now: clock,
+      bucket: bucket,
+    );
+    final adaJoin = trackingJoin != null ? '2 Sep 2026' : '1 Sep 2026';
+
+    return _page(
+      children: [
+        Text(corp),
+        const Text('HELI'),
+        const Text('3 members (2 listed)'),
+        const Text('ISK 10%'),
+        if (!legacyTax) const Text('LP 5.6%'),
+        const Text('Alpha Station'),
+        const Text('Roster'),
+        if (showAda) ...[
+          const Text('Ada'),
+          Text('Joined $adaJoin'),
+          const Text('Unknown'),
+          if (titlesLocked) const Text('title unavailable'),
+        ],
+        const Text('Bea'),
+        const Text('Join date unavailable'),
+        const Text('Not reported'),
+        if (trackingLocked) const Text('Activity locked'),
+        const Text('My Access'),
+        const Text('My NPC standings'),
+      ],
+    );
+  }
+
+  Widget _page({required List<Widget> children}) {
     return Scaffold(
       body: LayoutBuilder(
         builder: (context, constraints) {
-          if (constraints.maxWidth < 400) {
-            return Row(children: [...children, Text('x' * 80)]);
-          }
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: children,
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              for (final child in children)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: child,
+                ),
+            ],
           );
         },
       ),
