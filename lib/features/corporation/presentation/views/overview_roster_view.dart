@@ -133,19 +133,21 @@ class OverviewRosterView extends StatelessWidget {
 
   Widget _page({required List<Widget> children}) {
     return Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              for (final child in children)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: child,
-                ),
-            ],
-          );
-        },
+      appBar: AppBar(
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: () {}),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {},
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          children: [
+            for (final child in children)
+              Padding(padding: const EdgeInsets.only(bottom: 8), child: child),
+          ],
+        ),
       ),
     );
   }

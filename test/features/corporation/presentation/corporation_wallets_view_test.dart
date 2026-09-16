@@ -42,7 +42,7 @@ void main() {
     );
     expect(find.textContaining('1200.00'), findsWidgets);
     expect(find.textContaining('6/7'), findsWidgets);
-    expect(find.textContaining('0.00'), findsNothing);
+    expect(find.text('0.00'), findsNothing);
   });
 
   testWidgets('journal is +100.40 inflow, -35.40 outflow, +65.00 net', (

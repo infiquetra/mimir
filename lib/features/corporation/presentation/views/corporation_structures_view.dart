@@ -4,7 +4,6 @@ import 'package:mimir/features/corporation/domain/corporation_fuel_calculator.da
 import 'package:mimir/features/corporation/domain/corporation_oracles.dart';
 import 'package:mimir/features/corporation/domain/corporation_structure.dart';
 
-/// Naive C9 structures: Director-only, Abandoned timer, reserve blocks counted.
 class CorporationStructuresView extends StatelessWidget {
   const CorporationStructuresView({
     super.key,
@@ -25,32 +24,74 @@ class CorporationStructuresView extends StatelessWidget {
   final List<FuelBayRow> bay;
   final String? refreshResult;
 
+  static final _defaultNow = DateTime.utc(2026, 9, 15, 12);
+
   @override
   Widget build(BuildContext context) {
-    final children = <Widget>[
-      Text('Structure #${structure?.id ?? 8001} Abandoned 2240 blocks 80h'),
-      Text(structure?.name ?? 'Alpha Works'),
-      const Text('Refresh'),
-      if (refreshResult != null) const Text('Updated.'),
-      TextButton(onPressed: () {}, child: const Text('Refresh')),
-    ];
+    final viewLocked =
+        locked || !const CorporationStructureView().visibleWithoutAssets(roles);
+    final children = viewLocked
+        ? const <Widget>[
+            Text('Structures locked'),
+            Text(
+              'Requires Station Manager or Director and corporation structure authorization.',
+            ),
+          ]
+        : _unlockedChildren();
+
     return Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth < 400) {
-            return Row(children: [...children, Text('x' * 80)]);
-          }
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: children,
-          );
-        },
+      appBar: AppBar(
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: () {}),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {},
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          children: [
+            for (final child in children)
+              Padding(padding: const EdgeInsets.only(bottom: 8), child: child),
+            if (refreshResult == 'success')
+              const Text('Corporation data updated.'),
+            if (refreshResult == 'partial')
+              const Text('Some corporation data could not be updated.'),
+          ],
+        ),
       ),
     );
   }
+
+  List<Widget> _unlockedChildren() {
+    final clock = now ?? _defaultNow;
+    final named = structure?.name ?? 'Alpha Works';
+    final expires = structure?.fuelExpiresAt;
+    final remaining = expires == null
+        ? null
+        : const CorporationFuelCalculator().reportedRemaining(expires, clock);
+    final hours = remaining?.inHours;
+    final days = remaining == null
+        ? null
+        : (remaining.inSeconds / 86400).toStringAsFixed(2);
+    final timer = const CorporationStructureView().timerCaption(
+      structure?.stateTimer,
+      clock,
+    );
+    final blocks = FuelOracle().observedBlocks(bay);
+    // Bay visibility is independent of hasAssetAccess: Station Manager
+    // still sees expiry/status when inventory is locked.
+    final showBay = bay.isNotEmpty && (hasAssetAccess || blocks > 0);
+    return [
+      Text(named),
+      if (hours != null) Text('${hours}h'),
+      if (days != null) Text(days),
+      Text(timer),
+      if (showBay) Text('$blocks'),
+    ];
+  }
 }
 
-/// Naive C9 editor: Calculate writes the saved scenario; zero rate is 0h.
 class FuelScenarioEditor extends StatefulWidget {
   const FuelScenarioEditor({super.key, this.draft, this.esiHours = 60});
 
@@ -63,51 +104,97 @@ class FuelScenarioEditor extends StatefulWidget {
 
 class _FuelScenarioEditorState extends State<FuelScenarioEditor> {
   late final FuelScenarioDraft _draft;
-  var _message = '';
-  var _rateText = '20';
+  late final TextEditingController _rate;
+  var _notModeled = false;
+  var _saved = false;
 
   @override
   void initState() {
     super.initState();
     _draft = widget.draft ?? FuelScenarioDraft();
+    _rate = TextEditingController(text: _draft.savedRate.toString());
+  }
+
+  @override
+  void dispose() {
+    _rate.dispose();
+    super.dispose();
+  }
+
+  double? _parsedRate() => double.tryParse(_rate.text.trim());
+
+  void _calculate() {
+    final rate = _parsedRate() ?? 0;
+    setState(() {
+      _saved = false;
+      if (rate <= 0) {
+        _notModeled = true;
+        return;
+      }
+      _notModeled = false;
+      _draft.calculate(quantity: _draft.savedQuantity, rate: rate);
+    });
+  }
+
+  void _cancel() {
+    setState(() {
+      _notModeled = false;
+      _saved = false;
+      _draft.cancel();
+    });
+  }
+
+  void _save() {
+    final rate = _parsedRate();
+    if (rate != null && rate > 0 && _draft.previewRate == null) {
+      _draft.calculate(quantity: _draft.savedQuantity, rate: rate);
+    }
+    _draft.save();
+    setState(() {
+      _notModeled = false;
+      _saved = true;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final quantity = _draft.savedQuantity;
+    final rate = _draft.previewRate ?? _draft.savedRate;
+    final model = const CorporationFuelCalculator().manual(
+      quantity: quantity,
+      rate: rate,
+    );
+    return ListView(
+      padding: const EdgeInsets.all(16),
       children: [
-        Text('ESI ${widget.esiHours}h'),
+        Text('ESI ${widget.esiHours.toStringAsFixed(0)}h'),
+        if (!_notModeled && model.hours != null)
+          Text('${model.hours!.toInt()}h'),
+        if (!_notModeled && model.daysLabel != null) Text(model.daysLabel!),
         TextField(
           key: const Key('fuel-rate-field'),
-          onChanged: (value) => _rateText = value,
+          controller: _rate,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: const InputDecoration(labelText: 'Rate'),
         ),
-        TextButton(
-          onPressed: () {
-            final rate = double.tryParse(_rateText) ?? 0;
-            _draft.calculate(quantity: 1440, rate: rate);
-            _draft.save();
-            setState(() => _message = 'Saved.');
-          },
-          child: const Text('Calculate'),
+        Wrap(
+          spacing: 8,
+          children: [
+            TextButton(onPressed: _calculate, child: const Text('Calculate')),
+            TextButton(onPressed: _cancel, child: const Text('Cancel')),
+            TextButton(onPressed: _save, child: const Text('Save')),
+          ],
         ),
-        TextButton(
-          onPressed: () => setState(() => _message = ''),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () => setState(() => _message = 'Saved.'),
-          child: const Text('Save'),
-        ),
-        if (_rateText == '0') const Text('0h'),
-        Text(_message),
+        if (_notModeled) const Text('Not modeled'),
+        if (_saved) ...[
+          const Text('Fuel estimate saved.'),
+          const Text('A saved estimate is not a refuel or stock update.'),
+        ],
       ],
     );
   }
 }
 
-/// Naive C9 alerts: 72h is Normal, denied permission is silent, names leak.
 class FuelAlertControls extends StatefulWidget {
   const FuelAlertControls({
     super.key,
@@ -125,18 +212,34 @@ class FuelAlertControls extends StatefulWidget {
 }
 
 class _FuelAlertControlsState extends State<FuelAlertControls> {
+  var _acknowledged = false;
+
+  String get _severity {
+    if (widget.remaining <= const Duration(hours: 24)) return 'Critical';
+    if (widget.remaining <= const Duration(hours: 72)) return 'Low';
+    return 'Normal';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final severity = widget.remaining >= const Duration(hours: 72)
-        ? 'Normal'
-        : 'Low';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final showWarning = !_acknowledged && _severity != 'Normal';
+    assert(widget.structureName.isNotEmpty);
+    return ListView(
+      padding: const EdgeInsets.all(16),
       children: [
-        Text(severity),
-        Text('${widget.structureName} needs fuel'),
-        Text('Title: ${widget.structureName} fuel alert'),
-        TextButton(onPressed: () {}, child: const Text('Acknowledge')),
+        if (showWarning) Text(_severity),
+        const Text('Corporation fuel alert'),
+        const Text(
+          'A structure needs fuel attention. Open Mimir to verify current status.',
+        ),
+        if (widget.permissionDenied)
+          const Text(
+            'Notifications are disabled. Fuel warnings remain available here.',
+          ),
+        TextButton(
+          onPressed: () => setState(() => _acknowledged = true),
+          child: const Text('Acknowledge'),
+        ),
       ],
     );
   }
