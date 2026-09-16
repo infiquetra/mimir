@@ -3,6 +3,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mimir/features/corporation/domain/corporation_decimal.dart';
+import 'package:mimir/features/corporation/domain/corporation_wallet.dart';
+import 'package:mimir/features/corporation/domain/corporation_wallet_calculator.dart';
 import 'package:mimir/features/corporation/presentation/views/corporation_wallets_view.dart';
 
 void main() {
@@ -30,6 +33,7 @@ void main() {
     await pumpView(tester);
     expect(find.textContaining('1500.00'), findsWidgets);
     expect(find.textContaining('Division 1'), findsWidgets);
+    expect(find.textContaining('Division 3: 0.00 ISK'), findsOneWidget);
     expect(find.textContaining('Division 7'), findsWidgets);
   });
 
@@ -42,7 +46,39 @@ void main() {
     );
     expect(find.textContaining('1200.00'), findsWidgets);
     expect(find.textContaining('6/7'), findsWidgets);
+    expect(find.textContaining('Division 7: Unknown'), findsOneWidget);
     expect(find.text('0.00'), findsNothing);
+  });
+
+  testWidgets('non-fixture inputs compute and render custom values', (
+    tester,
+  ) async {
+    await pumpView(
+      tester,
+      view: CorporationWalletsView(
+        divisionBalances: [
+          WalletDivisionInput(division: 1, balance: ExactDecimal.parse('10.00')),
+          WalletDivisionInput(division: 2, balance: ExactDecimal.parse('20.00')),
+        ],
+        journalRows: [
+          WalletJournalRow(
+            id: 1,
+            occurredAt: DateTime.utc(2026, 9, 15, 12),
+            amount: ExactDecimal.parse('50.00'),
+          ),
+        ],
+        trades: [
+          WalletTrade(
+            id: 1,
+            quantity: 5,
+            unitPrice: ExactDecimal.parse('4.00'),
+            isBuy: true,
+          ),
+        ],
+      ),
+    );
+    expect(find.textContaining('30.00 ISK'), findsWidgets);
+    expect(find.textContaining('+50.00'), findsWidgets);
   });
 
   testWidgets('journal is +100.40 inflow, -35.40 outflow, +65.00 net', (

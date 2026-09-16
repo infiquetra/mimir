@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'views/corporation_assets_view.dart';
+import 'views/corporation_structures_view.dart';
+import 'views/corporation_wallets_view.dart';
 import 'views/overview_roster_view.dart';
 
 /// Four corporation destinations. Rail at width >= 600, bar below.
@@ -43,9 +45,9 @@ class _CorporationAdaptiveNavigationState
       case 1:
         return const CorporationAssetsView();
       case 2:
-        return const Center(child: Text('Structures View'));
+        return const CorporationStructuresView();
       case 3:
-        return const Center(child: Text('Wallets View'));
+        return const CorporationWalletsView();
       default:
         return const SizedBox.shrink();
     }
