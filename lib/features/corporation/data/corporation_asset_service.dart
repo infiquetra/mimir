@@ -7,19 +7,34 @@ class AssetNamePage {
   final int generation;
 }
 
-/// Naive C4 service: mixed generations publish, 1001 IDs go in one POST, and
-/// names fall back to Item #id including other characters' custom labels.
+/// Complete-page publication, 1000-ID name batches, scoped custom names.
 class CorporationAssetService {
   const CorporationAssetService();
+
+  static const nameBatchSize = 1000;
 
   SnapshotEnvelope<List<AssetRecord>> publish(
     List<AssetNamePage> pages,
     List<AssetRecord> rows,
   ) {
-    return SnapshotEnvelope(payload: rows, complete: true);
+    final complete = acceptsMixedGeneration(pages);
+    return SnapshotEnvelope(
+      payload: complete ? rows : const [],
+      complete: complete,
+    );
   }
 
-  List<List<int>> nameBatches(List<int> itemIds) => [itemIds];
+  List<List<int>> nameBatches(List<int> itemIds) {
+    if (itemIds.isEmpty) return const [];
+    final batches = <List<int>>[];
+    for (var i = 0; i < itemIds.length; i += nameBatchSize) {
+      final end = i + nameBatchSize > itemIds.length
+          ? itemIds.length
+          : i + nameBatchSize;
+      batches.add(itemIds.sublist(i, end));
+    }
+    return batches;
+  }
 
   String displayName({
     required int itemId,
@@ -28,12 +43,18 @@ class CorporationAssetService {
     Map<int, Map<int, String>> customNamesByCharacter = const {},
     int? typeId,
   }) {
-    for (final names in customNamesByCharacter.values) {
-      final custom = names[itemId];
-      if (custom != null) return custom;
+    final custom = customNamesByCharacter[viewerCharacterId]?[itemId];
+    if (custom != null && custom.trim().isNotEmpty) return custom;
+    if (typeId != null) {
+      final typeName = typeNames[typeId];
+      if (typeName != null && typeName.trim().isNotEmpty) return typeName;
     }
-    return 'Item #$itemId';
+    return 'Unknown';
   }
 
-  bool acceptsMixedGeneration(List<AssetNamePage> pages) => true;
+  bool acceptsMixedGeneration(List<AssetNamePage> pages) {
+    if (pages.isEmpty) return true;
+    final generation = pages.first.generation;
+    return pages.every((page) => page.generation == generation);
+  }
 }

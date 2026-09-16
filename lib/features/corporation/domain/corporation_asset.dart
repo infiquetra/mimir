@@ -26,6 +26,10 @@ class AssetRecord {
 
   bool get isBpc => isBlueprintCopy || rawQuantity == -2;
 
+  bool get isGoods => !administrative;
+
+  bool get hasUnknownQuantity => quantity < 0;
+
   factory AssetRecord.fromRow(CorporateAssetRow row) {
     return AssetRecord(
       itemId: row.itemId,
@@ -51,9 +55,9 @@ class AssetValuationResult {
     ExactDecimal? division2,
     this.division7Unpriced = 0,
     ExactDecimal? unresolvedPriced,
-  }) : division1 = division1 ?? ExactDecimal.parse('0'),
-       division2 = division2 ?? ExactDecimal.parse('0'),
-       unresolvedPriced = unresolvedPriced ?? ExactDecimal.parse('0');
+  }) : division1 = division1 ?? ExactDecimal.parse('0.00'),
+       division2 = division2 ?? ExactDecimal.parse('0.00'),
+       unresolvedPriced = unresolvedPriced ?? ExactDecimal.parse('0.00');
 
   final ExactDecimal pricedSubtotal;
   final int goodsCount;
@@ -65,46 +69,83 @@ class AssetValuationResult {
   final ExactDecimal unresolvedPriced;
 }
 
-/// Naive C4 valuation: includes BPC/office, missing quotes as 0, own-flag
-/// hangars only, double arithmetic.
+/// Exact fold over distinct goods rows. Office/BPC/unknown quantity or
+/// missing quote are unpriced, never 0 ISK or adjusted-price fallbacks.
 class CorporationAssetValuation {
   const CorporationAssetValuation();
+
+  static final _zero = ExactDecimal(BigInt.zero, 2);
 
   AssetValuationResult value(
     List<AssetRecord> rows,
     Map<int, ExactDecimal> prices,
   ) {
-    var total = 0.0;
-    var d1 = 0.0;
-    var d2 = 0.0;
-    var unresolved = 0.0;
+    final byId = {for (final row in rows) row.itemId: row};
+    var pricedSum = ExactDecimal(BigInt.zero, 0);
+    var division1 = ExactDecimal(BigInt.zero, 0);
+    var division2 = ExactDecimal(BigInt.zero, 0);
+    var unresolved = ExactDecimal(BigInt.zero, 0);
     var goods = 0;
     var priced = 0;
-    var div7 = 0;
+    var unpriced = 0;
+    var division7Unpriced = 0;
+
     for (final row in rows) {
+      if (!row.isGoods) continue;
       goods += 1;
-      final unit = prices[row.typeId];
-      final line =
-          (unit == null ? 0.0 : double.parse(unit.toExactString())) *
-          row.quantity.toDouble();
-      total += line;
-      if (unit != null) priced += 1;
-      if (row.flag == 'CorpSAG1') d1 += line;
-      if (row.flag == 'CorpSAG2') d2 += line;
-      if (row.flag == 'CorpSAG7') div7 += 1;
-      if (row.locationId == 999 || row.itemId == 1400 || row.itemId == 1401) {
-        unresolved += line;
+      final division = _division(row, byId);
+      final line = _pricedLine(row, prices);
+      if (line == null) {
+        unpriced += 1;
+        if (division == 7) division7Unpriced += 1;
+        continue;
       }
+      priced += 1;
+      pricedSum += line;
+      if (division == 1) division1 += line;
+      if (division == 2) division2 += line;
+      if (division == null) unresolved += line;
     }
+
     return AssetValuationResult(
-      pricedSubtotal: ExactDecimal.fromNum(total),
+      pricedSubtotal: _money(pricedSum),
       goodsCount: goods,
       pricedCount: priced,
-      unpricedCount: 0,
-      division1: ExactDecimal.fromNum(d1),
-      division2: ExactDecimal.fromNum(d2),
-      division7Unpriced: div7,
-      unresolvedPriced: ExactDecimal.fromNum(unresolved),
+      unpricedCount: unpriced,
+      division1: _money(division1),
+      division2: _money(division2),
+      division7Unpriced: division7Unpriced,
+      unresolvedPriced: _money(unresolved),
     );
+  }
+
+  ExactDecimal? _pricedLine(AssetRecord row, Map<int, ExactDecimal> prices) {
+    if (row.isBpc || row.hasUnknownQuantity) return null;
+    final unit = prices[row.typeId];
+    if (unit == null) return null;
+    return unit * ExactDecimal.fromNum(row.quantity);
+  }
+
+  int? _division(AssetRecord row, Map<int, AssetRecord> byId) {
+    AssetRecord? current = row;
+    final seen = <int>{};
+    while (current != null && seen.add(current.itemId)) {
+      final sag = _corpSag(current.flag);
+      if (sag != null) return sag;
+      if (current.locationType != 'item') return null;
+      current = byId[current.locationId];
+    }
+    return null;
+  }
+
+  int? _corpSag(String flag) {
+    final match = RegExp(r'^CorpSAG([1-7])$').firstMatch(flag);
+    if (match == null) return null;
+    return int.parse(match.group(1)!);
+  }
+
+  ExactDecimal _money(ExactDecimal value) {
+    if (value.coefficient == BigInt.zero && value.scale == 0) return _zero;
+    return value.roundTo(2);
   }
 }

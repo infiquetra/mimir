@@ -51,7 +51,12 @@ void main() {
   });
 
   test('ammo search is 4 matches worth 35.00, crate is ancestor only', () {
-    final found = graph.search(rows, 'ammo', F3Fixtures.names);
+    final found = graph.search(
+      rows,
+      'ammo',
+      F3Fixtures.names,
+      prices: F3Fixtures.priceMap(),
+    );
     expect(found.matchedItemKeys.toSet(), {1110, 1300, 1400, 1401});
     expect(found.matchedItemKeys, hasLength(4));
     expect(found.contextAncestorKeys, contains(1100));
