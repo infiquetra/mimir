@@ -539,3 +539,21 @@ the provenance model. Do not collapse back to unstructured prompt-only evidence.
 `test/features/combat_analyzer/domain/combat_evidence_ledger_test.dart`;
 [LEARNINGS 2026-05-21](LEARNINGS.md#combat-logs-are-a-primary-source-but-not-a-complete-aar-evidence-source);
 [QUEUED AAR fit simulation](QUEUED.md#p1--aar-fit-simulation-and-defense-profile-derivation).
+
+# 2026-10-31 — Preserve first-pass CI failures and diagnostics
+
+Run the original `flutter test --coverage` invocation once. Bash pipefail
+preserves its failure through tee while retaining merged stdout/stderr in
+runner temp. An always-evaluated, pinned artifact upload retains that log and
+all `test/**/failures/**` images for 14 days; absent upload inputs are errors.
+The required Test result, coverage behavior and five-platform build graph
+remain unchanged apart from removing the unsupported whole-suite retry.
+
+Current baseline run 37091379642 failed the same 16 golden comparisons on
+both attempts (each 1447 passed, 16 failed, 14 skipped). The retry allowlist
+is empty: no renderer-noise signature is qualified. New hosted actual,
+expected and diff images are needed for diagnosis, without regenerating
+goldens or changing assertions, fixtures or tolerance. Missing diagnostics
+do not qualify a failure for retry. Broader partitioning, tag consistency,
+LCOV union and release compatibility remain later work; no numeric coverage
+floor or complete T13 qualification is claimed here.

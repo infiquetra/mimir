@@ -49,16 +49,22 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # One retry: SpaceBackground's nebula gradient bands to 8-bit colour, so
-      # a sub-pixel layout shift flips a handful of pixels between runs
-      # (~3px, 0.0003%). Real regressions in this suite measure 0.14%+, so a
-      # single retry cannot mask one. See LEARNINGS 2026-09-07.
-      - name: Run tests (retry once for golden banding noise)
+      - name: Run tests
+        shell: bash
         run: |
-          flutter test --coverage || {
-            echo "::warning::First test attempt failed; retrying once for decorative golden banding noise."
-            flutter test --coverage
-          }
+          set -o pipefail
+          flutter test --coverage 2>&1 | tee "$RUNNER_TEMP/flutter-test-firstpass.log"
+
+      - name: Retain first-pass test diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: flutter-test-firstpass-diagnostics
+          path: |
+            ${{ runner.temp }}/flutter-test-firstpass.log
+            test/**/failures/**
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
