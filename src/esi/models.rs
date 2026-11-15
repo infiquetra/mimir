@@ -394,6 +394,37 @@ pub struct AllianceInfo {
     pub executor_corporation_id: Option<i64>,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct AssetItem {
+    #[serde(default)]
+    pub item_id: i64,
+    #[serde(default)]
+    pub type_id: i64,
+    #[serde(default)]
+    pub quantity: i64,
+    #[serde(default)]
+    pub location_id: i64,
+    #[serde(default)]
+    pub location_flag: String,
+    #[serde(default)]
+    pub location_type: String,
+    #[serde(default)]
+    pub is_singleton: bool,
+    #[serde(default)]
+    pub is_blueprint_copy: Option<bool>,
+}
+
+/// One custom name for a singleton item instance, from
+/// `POST /characters/{id}/assets/names/`. Names are per-instance and
+/// must never enter the universe-name resolver cache (design D6).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct AssetName {
+    #[serde(default)]
+    pub item_id: i64,
+    #[serde(default)]
+    pub name: String,
+}
+
 /// ESI error body shape: `{"error": "..."}`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EsiErrorBody {
@@ -437,6 +468,57 @@ mod tests {
         assert_eq!(flat.len(), 2);
         assert_eq!(flat[1].name, "Jita");
         assert_eq!(flat[1].category, "solar_system");
+    }
+
+    #[test]
+    fn asset_item_full_row_parses() {
+        let item: AssetItem = serde_json::from_str(
+            r#"{"item_id":710000002,"type_id":587,"quantity":1,
+                "location_id":60003760,"location_flag":"Hangar",
+                "location_type":"station","is_singleton":true,
+                "is_blueprint_copy":false}"#,
+        )
+        .expect("parses");
+        assert_eq!(item.item_id, 710000002);
+        assert_eq!(item.type_id, 587);
+        assert_eq!(item.quantity, 1);
+        assert_eq!(item.location_id, 60003760);
+        assert_eq!(item.location_flag, "Hangar");
+        assert_eq!(item.location_type, "station");
+        assert!(item.is_singleton);
+        assert_eq!(item.is_blueprint_copy, Some(false));
+    }
+
+    #[test]
+    fn asset_item_defaults_and_blueprint_copy_variants() {
+        let empty: AssetItem = serde_json::from_str("{}").expect("parses");
+        assert_eq!(empty.item_id, 0);
+        assert_eq!(empty.type_id, 0);
+        assert_eq!(empty.quantity, 0);
+        assert_eq!(empty.location_id, 0);
+        assert!(empty.location_flag.is_empty());
+        assert!(empty.location_type.is_empty());
+        assert!(!empty.is_singleton);
+        assert_eq!(empty.is_blueprint_copy, None);
+
+        let copy: AssetItem =
+            serde_json::from_str(r#"{"is_blueprint_copy":true}"#).expect("parses");
+        assert_eq!(copy.is_blueprint_copy, Some(true));
+        let null: AssetItem =
+            serde_json::from_str(r#"{"is_blueprint_copy":null}"#).expect("parses");
+        assert_eq!(null.is_blueprint_copy, None);
+    }
+
+    #[test]
+    fn asset_name_parses_and_defaults() {
+        let name: AssetName =
+            serde_json::from_str(r#"{"item_id":710000002,"name":"Aria's Rifter"}"#)
+                .expect("parses");
+        assert_eq!(name.item_id, 710000002);
+        assert_eq!(name.name, "Aria's Rifter");
+        let empty: AssetName = serde_json::from_str("{}").expect("parses");
+        assert_eq!(empty.item_id, 0);
+        assert!(empty.name.is_empty());
     }
 
     #[test]

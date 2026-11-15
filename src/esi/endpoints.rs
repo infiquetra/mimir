@@ -160,6 +160,100 @@ pub async fn get_loyalty_points(
         .await
 }
 
+/// One character-assets page. Requires scope `esi-assets.read_assets.v1`
+/// (progressive step-up, never first-auth — design section 9); a missing
+/// scope surfaces as HTTP 403 → `EsiError::Reauthorize`.
+pub async fn get_assets_page(
+    client: &EsiClient,
+    character_id: i64,
+    page: u32,
+) -> AppResult<Vec<AssetItem>> {
+    tracing::debug!(
+        "[ASSETS] GET /characters/{}/assets/ page={}",
+        character_id,
+        page
+    );
+    let (items, _meta) = client
+        .auth_get_page(
+            &format!("/characters/{character_id}/assets/"),
+            character_id,
+            Some(page.max(1)),
+        )
+        .await?;
+    Ok(items)
+}
+
+/// Full character asset list: walks pages until `X-Pages`/an empty page
+/// ends it. Any page error (including the 403 scope failure) propagates;
+/// partial asset lists are never returned as success.
+pub async fn get_assets(client: &EsiClient, character_id: i64) -> AppResult<Vec<AssetItem>> {
+    tracing::debug!(
+        "[ASSETS] GET /characters/{}/assets/ (all pages)",
+        character_id
+    );
+    let mut page = 1u32;
+    let mut all: Vec<AssetItem> = Vec::new();
+    loop {
+        let (items, meta) = client
+            .auth_get_page::<Vec<AssetItem>>(
+                &format!("/characters/{character_id}/assets/"),
+                character_id,
+                Some(page),
+            )
+            .await?;
+        let count = items.len();
+        tracing::debug!(
+            "[ASSETS] assets page={} rows={} total={}",
+            page,
+            count,
+            all.len() + count
+        );
+        all.extend(items);
+        let last = match meta.pages {
+            Some(total) => page >= total,
+            None => count == 0,
+        };
+        if last {
+            break;
+        }
+        page += 1;
+    }
+    tracing::info!(
+        "[ASSETS] assets fetched character_id={} rows={}",
+        character_id,
+        all.len()
+    );
+    Ok(all)
+}
+
+/// Custom names for singleton item instances
+/// (`POST /characters/{id}/assets/names/`), under the same
+/// `esi-assets.read_assets.v1` scope as the asset list. ESI accepts at
+/// most 1000 item IDs per call; chunking larger sets is the caller's
+/// job (as the shell chunks `resolve_names`). Returned names are raw:
+/// the caller filters empty and `"None"` placeholders.
+pub async fn get_asset_names(
+    client: &EsiClient,
+    character_id: i64,
+    item_ids: &[i64],
+) -> AppResult<Vec<AssetName>> {
+    tracing::debug!(
+        "[ASSETS] POST /characters/{}/assets/names/ count={}",
+        character_id,
+        item_ids.len()
+    );
+    if item_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    client
+        .auth_post(
+            &format!("/characters/{character_id}/assets/names/"),
+            character_id,
+            &item_ids.to_vec(),
+        )
+        .await
+}
+
 pub async fn get_location(client: &EsiClient, character_id: i64) -> AppResult<CharacterLocation> {
     tracing::debug!("[CHAR] GET /characters/{}/location/", character_id);
     client
@@ -390,6 +484,108 @@ mod tests {
         assert!(names.is_empty());
         let ids = resolve_ids(&client, &[]).await.expect("empty ok");
         assert!(ids.is_empty());
+    }
+
+    /// Mock server that answers by `page=` query for assets pagination.
+    async fn assets_server() -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let addr = listener.local_addr().expect("addr");
+        tokio::spawn(async move {
+            loop {
+                let Ok((mut socket, _peer)) = listener.accept().await else {
+                    break;
+                };
+                tokio::spawn(async move {
+                    let mut buffer = vec![0u8; 16384];
+                    let count = socket.read(&mut buffer).await.unwrap_or(0);
+                    let request = String::from_utf8_lossy(&buffer[..count]).into_owned();
+                    let body = if request.contains("page=2") {
+                        r#"[{"item_id":102,"type_id":587,"quantity":1,"location_id":60003760,"location_flag":"Hangar","is_singleton":true}]"#
+                    } else {
+                        r#"[{"item_id":101,"type_id":34,"quantity":500,"location_id":60003760,"location_flag":"Hangar","is_singleton":false,"is_blueprint_copy":true}]"#
+                    };
+                    let payload = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nX-Pages: 2\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                        body.len()
+                    );
+                    let _ = socket.write_all(payload.as_bytes()).await;
+                    let _ = socket.flush().await;
+                });
+            }
+        });
+        format!("http://{addr}")
+    }
+
+    /// One-shot mock server: captures the request, returns fixed status/body.
+    async fn one_shot_server(
+        status: u16,
+        body: &'static str,
+    ) -> (String, tokio::sync::oneshot::Receiver<String>) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let addr = listener.local_addr().expect("addr");
+        let (tx, rx) = tokio::sync::oneshot::channel::<String>();
+        tokio::spawn(async move {
+            if let Ok((mut socket, _peer)) = listener.accept().await {
+                let mut buffer = vec![0u8; 16384];
+                let count = socket.read(&mut buffer).await.unwrap_or(0);
+                let _ = tx.send(String::from_utf8_lossy(&buffer[..count]).into_owned());
+                let payload = format!(
+                    "HTTP/1.1 {status} OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = socket.write_all(payload.as_bytes()).await;
+                let _ = socket.flush().await;
+            }
+        });
+        (format!("http://{addr}"), rx)
+    }
+
+    #[tokio::test]
+    async fn assets_walks_all_pages() {
+        let base = assets_server().await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let assets = get_assets(&client, 7).await.expect("assets");
+        assert_eq!(assets.len(), 2);
+        assert_eq!(assets[0].item_id, 101);
+        assert_eq!(assets[0].quantity, 500);
+        assert_eq!(assets[0].is_blueprint_copy, Some(true));
+        assert_eq!(assets[1].item_id, 102);
+        assert!(assets[1].is_singleton);
+    }
+
+    #[tokio::test]
+    async fn empty_asset_names_short_circuits() {
+        let client = EsiClient::with_http(reqwest::Client::new(), "http://127.0.0.1:9".to_string());
+        let names = get_asset_names(&client, 7, &[]).await.expect("empty ok");
+        assert!(names.is_empty());
+    }
+
+    #[tokio::test]
+    async fn asset_names_post_parses() {
+        let (base, captured) = one_shot_server(
+            200,
+            r#"[{"item_id":102,"name":"Aria's Rifter"},{"item_id":103,"name":"None"}]"#,
+        )
+        .await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let names = get_asset_names(&client, 7, &[102, 103])
+            .await
+            .expect("names");
+        assert_eq!(names.len(), 2);
+        assert_eq!(names[0].item_id, 102);
+        assert_eq!(names[0].name, "Aria's Rifter");
+        assert_eq!(names[1].name, "None");
+        let request = captured.await.expect("captured");
+        assert!(request.contains("assets/names"), "request: {request}");
+        assert!(request.contains("[102,103]"), "request: {request}");
+    }
+
+    #[tokio::test]
+    async fn assets_scope_failure_needs_reauthorize() {
+        let (base, _captured) = one_shot_server(403, r#"{"error":"Forbidden"}"#).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = get_assets(&client, 7).await.expect_err("403 must error");
+        assert!(needs_reauthorize(&err), "error: {err:?}");
     }
 
     #[test]
