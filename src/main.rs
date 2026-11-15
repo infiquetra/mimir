@@ -4,8 +4,10 @@
 use std::io::Write;
 use std::sync::{Arc, Mutex};
 
-use mimir::app::shell::MimirApp;
+use mimir::app::shell::{Backends, MimirApp};
+use mimir::auth::token_store::TokenStore;
 use mimir::storage::db;
+use mimir::EsiClient;
 
 /// Writer that mirrors formatted log lines into the in-app log buffer.
 struct BufferWriter(Arc<Mutex<Vec<String>>>);
@@ -54,7 +56,7 @@ fn init_tracing(log_buffer: Arc<Mutex<Vec<String>>>) {
 }
 
 fn main() -> eframe::Result<()> {
-    let demo = std::env::args().any(|a| a == "--demo");
+    let demo = mimir::demo::data::demo_requested_from_process();
     let log_buffer: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
     init_tracing(log_buffer.clone());
     tracing::info!("[STARTUP] Mimir starting demo={}", demo);
@@ -67,15 +69,37 @@ fn main() -> eframe::Result<()> {
         tracing::warn!("[STARTUP] tokio runtime failed to build; continuing UI-only");
     }
 
-    // Open the database eagerly so schema errors surface at startup. The
-    // connection itself is handed to builders via F2 repositories later.
-    match db::open_db(&db::db_path()) {
-        Ok(_) => tracing::info!(
-            "[DB] startup database open ok path={}",
-            db::db_path().display()
-        ),
-        Err(e) => tracing::warn!("[DB] startup database open failed: {}", e),
-    }
+    // Open the database eagerly so schema errors surface at startup, then
+    // hand the shared connection plus token store and ESI client to the app.
+    // Token values are never logged.
+    let backends = match db::open_db(&db::db_path()) {
+        Ok(conn) => {
+            tracing::info!(
+                "[DB] startup database open ok path={}",
+                db::db_path().display()
+            );
+            let token_store = Arc::new(TokenStore::new(db::app_data_dir()));
+            match EsiClient::new() {
+                Ok(client) => Some(Backends {
+                    esi: Arc::new(client.with_token_store(token_store.clone())),
+                    token_store,
+                    db: Arc::new(Mutex::new(conn)),
+                }),
+                Err(e) => {
+                    tracing::warn!("[ESI] client construction failed: {}", e);
+                    Some(Backends {
+                        esi: Arc::new(EsiClient::default()),
+                        token_store,
+                        db: Arc::new(Mutex::new(conn)),
+                    })
+                }
+            }
+        }
+        Err(e) => {
+            tracing::warn!("[DB] startup database open failed: {}", e);
+            None
+        }
+    };
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -89,7 +113,7 @@ fn main() -> eframe::Result<()> {
         options,
         Box::new(move |_cc| {
             tracing::info!("[STARTUP] egui frame created");
-            Ok(Box::new(MimirApp::new(demo, log_buffer, runtime)))
+            Ok(Box::new(MimirApp::new(demo, log_buffer, runtime, backends)))
         }),
     )
 }

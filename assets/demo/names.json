@@ -1,8 +1,13 @@
 [
-  { "id": 1000166, "name": "Demo Corporation", "category": "corporation" },
+  { "id": 90000001, "name": "Aria Voss", "category": "character" },
+  { "id": 90000002, "name": "Marcus Hale", "category": "character" },
+  { "id": 90000003, "name": "Silas Kade", "category": "character" },
+  { "id": 1000166, "name": "Demo Defense League", "category": "corporation" },
+  { "id": 1000125, "name": "CONCORD", "category": "corporation" },
   { "id": 34, "name": "Tritanium", "category": "inventory_type" },
+  { "id": 35, "name": "Pyerite", "category": "inventory_type" },
+  { "id": 36, "name": "Mexallon", "category": "inventory_type" },
+  { "id": 37, "name": "Isogen", "category": "inventory_type" },
   { "id": 60003760, "name": "Jita IV - Moon 4 - Caldari Navy Assembly Plant", "category": "station" },
-  { "id": 90000001, "name": "Demo Capsuleer", "category": "character" },
-  { "id": 90000003, "name": "Demo Trader", "category": "character" },
-  { "id": 1000125, "name": "CONCORD", "category": "corporation" }
+  { "id": 60011866, "name": "Amarr VIII (Oris) - Emperor Family Academy", "category": "station" }
 ]

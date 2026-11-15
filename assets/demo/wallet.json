@@ -1,47 +1,38 @@
 {
-  "balance": 1250000000.5,
-  "skills": {
-    "skills": [
-      { "skill_id": 3300, "active_skill_level": 4, "trained_skill_level": 4, "skillpoints_in_skill": 45255 },
-      { "skill_id": 3301, "active_skill_level": 3, "trained_skill_level": 3, "skillpoints_in_skill": 8000 }
+  "90000001": {
+    "balance": 250350000.0,
+    "journal": [
+      { "id": 1001, "amount": 2500000.0, "balance": 250350000.0, "date": "2026-11-15T09:30:00Z", "description": "Bounty payment for pirate kills", "ref_type": "bounty_prizes", "first_party_id": 1000125, "second_party_id": 90000001 },
+      { "id": 1002, "amount": -150000.0, "balance": 247850000.0, "date": "2026-11-14T18:05:00Z", "description": "Market purchase of Tritanium", "ref_type": "market_transaction", "first_party_id": 90000001, "second_party_id": 90000003 },
+      { "id": 1003, "amount": 1250000.0, "balance": 248000000.0, "date": "2026-11-14T07:40:00Z", "description": "Mission reward", "ref_type": "agent_mission_reward", "first_party_id": 1000166, "second_party_id": 90000001 },
+      { "id": 1004, "amount": 4800000.0, "balance": 246750000.0, "date": "2026-11-12T21:15:00Z", "description": "Market sale of Pyerite", "ref_type": "market_transaction", "first_party_id": 90000003, "second_party_id": 90000001 },
+      { "id": 1005, "amount": 3100000.0, "balance": 241950000.0, "date": "2026-11-11T08:00:00Z", "description": "Bounty payment for pirate kills", "ref_type": "bounty_prizes", "first_party_id": 1000125, "second_party_id": 90000001 },
+      { "id": 1006, "amount": -2000000.0, "balance": 238850000.0, "date": "2026-11-08T13:20:00Z", "description": "Contract payment for a fitted frigate", "ref_type": "contract_price", "first_party_id": 90000001, "second_party_id": 90000003 },
+      { "id": 1007, "amount": 5000000.0, "balance": 240850000.0, "date": "2026-10-20T10:00:00Z", "description": "Bounty payment for pirate kills", "ref_type": "bounty_prizes", "first_party_id": 1000125, "second_party_id": 90000001 },
+      { "id": 1008, "amount": 10000000.0, "balance": 235850000.0, "date": "2026-10-01T10:00:00Z", "description": "Donation from a fictional benefactor", "ref_type": "player_donation", "first_party_id": 90000003, "second_party_id": 90000001 }
     ],
-    "total_sp": 5200000,
-    "unallocated_sp": 50000
+    "transactions": [
+      { "transaction_id": 5001, "journal_ref_id": 1002, "date": "2026-11-14T18:05:00Z", "type_id": 34, "quantity": 10000, "unit_price": 15.0, "is_buy": true, "is_personal": true, "client_id": 90000003, "location_id": 60003760 },
+      { "transaction_id": 5002, "journal_ref_id": 1004, "date": "2026-11-12T21:15:00Z", "type_id": 35, "quantity": 40000, "unit_price": 120.0, "is_buy": false, "is_personal": true, "client_id": 90000003, "location_id": 60003760 }
+    ],
+    "loyalty": [
+      { "corporation_id": 1000166, "loyalty_points": 15250 },
+      { "corporation_id": 1000125, "loyalty_points": 3000 }
+    ]
   },
-  "journal": [
-    {
-      "id": 1,
-      "amount": 2500000.0,
-      "balance": 1250000000.5,
-      "date": "2026-11-14T10:00:00Z",
-      "description": "Bounty payment",
-      "ref_type": "bounty_prizes",
-      "first_party_id": 1000125,
-      "second_party_id": 90000001
-    },
-    {
-      "id": 2,
-      "amount": -150000.0,
-      "balance": 1247500000.5,
-      "date": "2026-11-13T09:00:00Z",
-      "description": "Market transaction",
-      "ref_type": "market_transaction",
-      "first_party_id": 90000001,
-      "second_party_id": 90000003
-    }
-  ],
-  "transactions": [
-    {
-      "transaction_id": 101,
-      "journal_ref_id": 2,
-      "date": "2026-11-13T09:00:00Z",
-      "type_id": 34,
-      "quantity": 10000,
-      "unit_price": 15.0,
-      "is_buy": true,
-      "is_personal": true,
-      "client_id": 90000003,
-      "location_id": 60003760
-    }
-  ]
+  "90000002": {
+    "balance": 48200000.0,
+    "journal": [
+      { "id": 2001, "amount": 900000.0, "balance": 48200000.0, "date": "2026-11-15T08:00:00Z", "description": "Bounty payment for pirate kills", "ref_type": "bounty_prizes", "first_party_id": 1000125, "second_party_id": 90000002 },
+      { "id": 2002, "amount": -2400000.0, "balance": 47300000.0, "date": "2026-11-13T16:45:00Z", "description": "Market purchase of Isogen", "ref_type": "market_transaction", "first_party_id": 90000002, "second_party_id": 90000003 },
+      { "id": 2003, "amount": 350000.0, "balance": 49700000.0, "date": "2026-11-10T09:10:00Z", "description": "Mission time bonus", "ref_type": "agent_mission_time_bonus_reward", "first_party_id": 1000166, "second_party_id": 90000002 },
+      { "id": 2004, "amount": 1800000.0, "balance": 49350000.0, "date": "2026-11-05T19:30:00Z", "description": "Bounty payment for pirate kills", "ref_type": "bounty_prizes", "first_party_id": 1000125, "second_party_id": 90000002 }
+    ],
+    "transactions": [
+      { "transaction_id": 6001, "journal_ref_id": 2002, "date": "2026-11-13T16:45:00Z", "type_id": 37, "quantity": 4000, "unit_price": 600.0, "is_buy": true, "is_personal": true, "client_id": 90000003, "location_id": 60011866 }
+    ],
+    "loyalty": [
+      { "corporation_id": 1000166, "loyalty_points": 4200 }
+    ]
+  }
 }

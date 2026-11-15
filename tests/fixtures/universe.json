@@ -1,0 +1,18 @@
+{
+  "names": [
+    { "id": 34, "name": "Tritanium", "category": "inventory_type" },
+    { "id": 90000001, "name": "Aria Voss", "category": "character" }
+  ],
+  "station": {
+    "name": "Jita IV - Moon 4 - Caldari Navy Assembly Plant",
+    "system_id": 30000142,
+    "type_id": 52678
+  },
+  "structure": {
+    "name": "Fixture Citadel",
+    "solar_system_id": 30000142,
+    "type_id": 35832
+  },
+  "corporation": { "name": "Demo Defense League", "ticker": "DDL", "member_count": 17 },
+  "alliance": { "name": "Fixture Alliance", "ticker": "FIX" }
+}

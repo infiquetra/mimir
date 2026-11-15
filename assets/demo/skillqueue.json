@@ -1,22 +1,82 @@
-[
-  {
-    "skill_id": 3300,
-    "finished_level": 5,
-    "queue_position": 0,
-    "start_date": "2026-11-10T12:00:00Z",
-    "finish_date": "2026-11-20T12:00:00Z",
-    "level_start_sp": 45255,
-    "level_end_sp": 256000,
-    "training_start_sp": 45255
+{
+  "90000001": {
+    "skills": {
+      "skills": [
+        { "skill_id": 3300, "active_skill_level": 4, "trained_skill_level": 4, "skillpoints_in_skill": 45255 },
+        { "skill_id": 3301, "active_skill_level": 3, "trained_skill_level": 3, "skillpoints_in_skill": 8000 },
+        { "skill_id": 3310, "active_skill_level": 3, "trained_skill_level": 3, "skillpoints_in_skill": 8000 },
+        { "skill_id": 3327, "active_skill_level": 5, "trained_skill_level": 5, "skillpoints_in_skill": 256000 },
+        { "skill_id": 3330, "active_skill_level": 4, "trained_skill_level": 4, "skillpoints_in_skill": 45255 },
+        { "skill_id": 3413, "active_skill_level": 5, "trained_skill_level": 5, "skillpoints_in_skill": 256000 }
+      ],
+      "total_sp": 5200000,
+      "unallocated_sp": 50000
+    },
+    "queue": [
+      {
+        "skill_id": 3300,
+        "finished_level": 5,
+        "queue_position": 0,
+        "start_date": "2026-11-10T12:00:00Z",
+        "finish_date": "2026-11-20T12:00:00Z",
+        "level_start_sp": 45255,
+        "level_end_sp": 256000,
+        "training_start_sp": 45255
+      },
+      {
+        "skill_id": 3301,
+        "finished_level": 4,
+        "queue_position": 1,
+        "start_date": "2026-11-20T12:00:00Z",
+        "finish_date": "2026-11-25T12:00:00Z",
+        "level_start_sp": 8000,
+        "level_end_sp": 45255,
+        "training_start_sp": 8000
+      },
+      {
+        "skill_id": 3310,
+        "finished_level": 4,
+        "queue_position": 2,
+        "start_date": "2026-11-25T12:00:00Z",
+        "finish_date": "2026-11-28T12:00:00Z",
+        "level_start_sp": 8000,
+        "level_end_sp": 45255,
+        "training_start_sp": 8000
+      }
+    ]
   },
-  {
-    "skill_id": 3301,
-    "finished_level": 4,
-    "queue_position": 1,
-    "start_date": "2026-11-20T12:00:00Z",
-    "finish_date": "2026-11-25T12:00:00Z",
-    "level_start_sp": 8000,
-    "level_end_sp": 45255,
-    "training_start_sp": 8000
+  "90000002": {
+    "skills": {
+      "skills": [
+        { "skill_id": 3327, "active_skill_level": 4, "trained_skill_level": 4, "skillpoints_in_skill": 45255 },
+        { "skill_id": 3392, "active_skill_level": 3, "trained_skill_level": 3, "skillpoints_in_skill": 8000 },
+        { "skill_id": 3394, "active_skill_level": 4, "trained_skill_level": 4, "skillpoints_in_skill": 45255 },
+        { "skill_id": 3426, "active_skill_level": 5, "trained_skill_level": 5, "skillpoints_in_skill": 256000 }
+      ],
+      "total_sp": 3100000,
+      "unallocated_sp": 12000
+    },
+    "queue": [
+      {
+        "skill_id": 3327,
+        "finished_level": 5,
+        "queue_position": 0,
+        "start_date": "2026-11-12T12:00:00Z",
+        "finish_date": "2026-11-22T12:00:00Z",
+        "level_start_sp": 45255,
+        "level_end_sp": 256000,
+        "training_start_sp": 45255
+      },
+      {
+        "skill_id": 3392,
+        "finished_level": 4,
+        "queue_position": 1,
+        "start_date": "2026-11-22T12:00:00Z",
+        "finish_date": "2026-11-26T12:00:00Z",
+        "level_start_sp": 8000,
+        "level_end_sp": 45255,
+        "training_start_sp": 8000
+      }
+    ]
   }
-]
+}

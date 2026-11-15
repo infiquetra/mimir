@@ -1,6 +1,18 @@
 {
   "characters": [
-    { "character_id": 90000001, "name": "Demo Capsuleer", "corporation_id": 1000166 },
-    { "character_id": 90000002, "name": "Demo Hauler", "corporation_id": 1000166 }
+    {
+      "character_id": 90000001,
+      "name": "Aria Voss",
+      "corporation_id": 1000166,
+      "alliance_id": null,
+      "security_status": 4.8
+    },
+    {
+      "character_id": 90000002,
+      "name": "Marcus Hale",
+      "corporation_id": 1000166,
+      "alliance_id": null,
+      "security_status": 2.1
+    }
   ]
 }

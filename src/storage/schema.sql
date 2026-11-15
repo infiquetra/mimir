@@ -1,4 +1,8 @@
--- Mimir Rust schema v1 (9 tables). Mirrors the Drift mimir.db Phase-1 slice.
+-- Mimir Rust schema v1. Mirrors the Drift mimir.db Phase-1 slice.
+-- The first nine tables are the scaffold contract (F4 tests count them).
+-- esi_cache and token_meta are F2 additions; token_meta never holds token
+-- values, only non-secret metadata (the tokens themselves live in the F1
+-- keyring / 0600-file store).
 CREATE TABLE IF NOT EXISTS characters (
     character_id INTEGER PRIMARY KEY,
     name TEXT NOT NULL DEFAULT '',
@@ -68,3 +72,31 @@ CREATE TABLE IF NOT EXISTS app_settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL DEFAULT ''
 );
+-- Cached ESI payloads with expiry (unix seconds). Expired rows are treated
+-- as misses and pruned by the repositories layer.
+CREATE TABLE IF NOT EXISTS esi_cache (
+    cache_key TEXT PRIMARY KEY,
+    payload_json TEXT NOT NULL DEFAULT '',
+    fetched_at INTEGER NOT NULL DEFAULT 0,
+    expires_at INTEGER NOT NULL DEFAULT 0
+);
+-- Non-secret token metadata only: granted scopes and access-token expiry.
+-- There is deliberately no column capable of holding a token value.
+CREATE TABLE IF NOT EXISTS token_meta (
+    character_id INTEGER PRIMARY KEY,
+    scopes TEXT NOT NULL DEFAULT '',
+    expires_at INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_skill_queue_character
+    ON skill_queue (character_id, queue_position);
+CREATE INDEX IF NOT EXISTS idx_wallet_journal_character_date
+    ON wallet_journal (character_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_wallet_journal_ref_type
+    ON wallet_journal (character_id, ref_type);
+CREATE INDEX IF NOT EXISTS idx_wallet_transactions_character_date
+    ON wallet_transactions (character_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_universe_names_category
+    ON universe_names (category);
+CREATE INDEX IF NOT EXISTS idx_esi_cache_expires
+    ON esi_cache (expires_at);

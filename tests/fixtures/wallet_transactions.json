@@ -1,0 +1,14 @@
+[
+  {
+    "transaction_id": 9001,
+    "journal_ref_id": 7001,
+    "date": "2026-11-14T10:00:00Z",
+    "type_id": 34,
+    "quantity": 5000,
+    "unit_price": 15.5,
+    "is_buy": true,
+    "is_personal": true,
+    "client_id": 90000003,
+    "location_id": 60003760
+  }
+]

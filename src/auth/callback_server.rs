@@ -1,4 +1,13 @@
-//! Localhost OAuth callback listener (`127.0.0.1:54321/callback`).
+//! Localhost OAuth callback listener (`127.0.0.1:54321/callback`), ported
+//! from `lib/core/auth/oauth_callback_server.dart`. Serves a success page
+//! to the browser and hands the code/state back to the caller.
+
+use std::net::SocketAddr;
+use std::time::Duration;
+
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpListener;
+use tokio::sync::Mutex;
 
 use crate::config::EveConfig;
 use crate::error::AuthError;
@@ -8,16 +17,56 @@ use crate::error::AuthError;
 pub struct CallbackParams {
     pub code: String,
     pub state: String,
+    pub error: Option<String>,
+    pub error_description: Option<String>,
+}
+
+impl CallbackParams {
+    /// Parse from a query string (the part after `?`).
+    pub fn from_query(query: &str) -> Self {
+        let mut params = CallbackParams::default();
+        for (key, value) in url::form_urlencoded::parse(query.as_bytes()) {
+            match key.as_ref() {
+                "code" => params.code = value.into_owned(),
+                "state" => params.state = value.into_owned(),
+                "error" => params.error = Some(value.into_owned()),
+                "error_description" => params.error_description = Some(value.into_owned()),
+                _ => {}
+            }
+        }
+        params
+    }
+
+    /// Convert to the validated outcome the OAuth flow consumes.
+    pub fn into_result(self, expected_state: &str) -> Result<String, AuthError> {
+        if let Some(error) = self.error {
+            let description = self
+                .error_description
+                .unwrap_or_else(|| "Unknown error".to_string());
+            tracing::warn!("[AUTH] SSO callback carried error={}", error);
+            return Err(AuthError::Denied(format!("{error} - {description}")));
+        }
+        if self.state != expected_state {
+            tracing::warn!("[AUTH] callback state mismatch");
+            return Err(AuthError::StateMismatch);
+        }
+        if self.code.is_empty() {
+            return Err(AuthError::MissingCode);
+        }
+        Ok(self.code)
+    }
 }
 
 pub struct CallbackServer {
     pub bind_addr: String,
+    listener: Mutex<Option<TcpListener>>,
 }
 
 impl Default for CallbackServer {
     fn default() -> Self {
         Self {
             bind_addr: EveConfig::CALLBACK_BIND.to_string(),
+            listener: Mutex::new(None),
         }
     }
 }
@@ -31,19 +80,183 @@ impl CallbackServer {
         Self::default()
     }
 
+    pub fn with_bind_addr(bind_addr: impl Into<String>) -> Self {
+        let bind_addr = bind_addr.into();
+        tracing::debug!("[AUTH] CallbackServer::with_bind_addr bind={}", bind_addr);
+        Self {
+            bind_addr,
+            listener: Mutex::new(None),
+        }
+    }
+
     pub fn bind_addr(&self) -> &str {
         &self.bind_addr
     }
 
     /// Success HTML served to the browser after the redirect lands.
     pub fn success_html() -> &'static str {
-        "<html><body><h1>Mimir login complete</h1><p>You can close this tab.</p></body></html>"
+        "<!DOCTYPE html><html><head><title>Authorization Successful - Mimir</title></head>\
+         <body><h1>Authenticated with Mimir Successfully</h1>\
+         <p>You can now close this page.</p></body></html>"
+    }
+
+    pub fn failure_html() -> &'static str {
+        "<!DOCTYPE html><html><head><title>Authorization Failed - Mimir</title></head>\
+         <body><h1>Authorization Failed</h1>\
+         <p>Return to Mimir and try again.</p></body></html>"
+    }
+
+    /// Bind the listener now so callers can read the actual address (tests
+    /// bind port 0). Idempotent.
+    pub async fn start(&self) -> Result<SocketAddr, AuthError> {
+        let mut guard = self.listener.lock().await;
+        if let Some(listener) = guard.as_ref() {
+            return listener
+                .local_addr()
+                .map_err(|e| AuthError::Callback(e.to_string()));
+        }
+        let listener = TcpListener::bind(&self.bind_addr)
+            .await
+            .map_err(|e| AuthError::Callback(format!("bind {}: {}", self.bind_addr, e)))?;
+        let addr = listener
+            .local_addr()
+            .map_err(|e| AuthError::Callback(e.to_string()))?;
+        tracing::info!("[AUTH] callback listener bound addr={}", addr);
+        *guard = Some(listener);
+        Ok(addr)
     }
 
     pub async fn wait_for_callback(&self) -> Result<CallbackParams, AuthError> {
-        tracing::debug!("[AUTH] wait_for_callback entry (stub)");
-        Err(AuthError::NotWired(
-            "callback listener lands with F1".to_string(),
-        ))
+        self.wait_for_callback_timeout(Duration::from_secs(EveConfig::CALLBACK_TIMEOUT_SECS))
+            .await
+    }
+
+    /// Accept requests until `/callback` arrives (other paths get 404, like
+    /// the Flutter server's favicon traffic) or the timeout elapses.
+    pub async fn wait_for_callback_timeout(
+        &self,
+        timeout: Duration,
+    ) -> Result<CallbackParams, AuthError> {
+        tracing::debug!("[AUTH] wait_for_callback bind={}", self.bind_addr);
+        self.start().await?;
+        let deadline = tokio::time::Instant::now() + timeout;
+        loop {
+            let accepted = {
+                let guard = self.listener.lock().await;
+                let listener = guard
+                    .as_ref()
+                    .ok_or_else(|| AuthError::Callback("listener not started".to_string()))?;
+                tokio::time::timeout_at(deadline, listener.accept()).await
+            };
+            let (mut socket, peer) = match accepted {
+                Ok(Ok(pair)) => pair,
+                Ok(Err(e)) => return Err(AuthError::Callback(format!("accept: {e}"))),
+                Err(_) => {
+                    tracing::warn!("[AUTH] callback wait timed out");
+                    return Err(AuthError::CallbackTimeout);
+                }
+            };
+            tracing::debug!("[AUTH] callback connection peer={}", peer);
+            let mut buffer = [0u8; 8192];
+            let read = tokio::time::timeout_at(deadline, socket.read(&mut buffer)).await;
+            let count = match read {
+                Ok(Ok(0)) => continue,
+                Ok(Ok(n)) => n,
+                Ok(Err(e)) => return Err(AuthError::Callback(format!("read: {e}"))),
+                Err(_) => return Err(AuthError::CallbackTimeout),
+            };
+            let request = String::from_utf8_lossy(&buffer[..count]);
+            let target = request
+                .lines()
+                .next()
+                .and_then(|line| line.split_whitespace().nth(1))
+                .unwrap_or("");
+            if let Some(query) = target.strip_prefix("/callback") {
+                let params = CallbackParams::from_query(query.strip_prefix('?').unwrap_or(""));
+                let (status, body) = if params.error.is_some() {
+                    (200, Self::failure_html())
+                } else {
+                    (200, Self::success_html())
+                };
+                write_response(&mut socket, status, body).await;
+                tracing::info!(
+                    "[AUTH] callback received has_code={}",
+                    !params.code.is_empty()
+                );
+                return Ok(params);
+            }
+            write_response(&mut socket, 404, "Not found").await;
+        }
+    }
+}
+
+async fn write_response(socket: &mut tokio::net::TcpStream, status: u16, body: &str) {
+    let reason = if status == 200 { "OK" } else { "Not Found" };
+    let payload = format!(
+        "HTTP/1.1 {status} {reason}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        body.len()
+    );
+    let _ = socket.write_all(payload.as_bytes()).await;
+    let _ = socket.flush().await;
+    let _ = socket.shutdown().await;
+}
+
+/// Parse a callback query string without starting a server (test helper and
+/// the seam for any future deep-link path).
+pub fn parse_callback_query(query: &str) -> CallbackParams {
+    CallbackParams::from_query(query)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn query_parsing_and_validation() {
+        let params = CallbackParams::from_query("code=abc123&state=xyz");
+        assert_eq!(params.clone().into_result("xyz").expect("code"), "abc123");
+        assert!(matches!(
+            params.into_result("nope"),
+            Err(AuthError::StateMismatch)
+        ));
+        let denied = CallbackParams::from_query("error=access_denied&state=xyz");
+        assert!(matches!(
+            denied.into_result("xyz"),
+            Err(AuthError::Denied(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn listener_roundtrip_on_ephemeral_port() {
+        let server = std::sync::Arc::new(CallbackServer::with_bind_addr("127.0.0.1:0"));
+        let addr = server.start().await.expect("bind");
+        let waiting = {
+            let server = server.clone();
+            tokio::spawn(async move {
+                server
+                    .wait_for_callback_timeout(Duration::from_secs(5))
+                    .await
+            })
+        };
+        let url = format!("http://{addr}/callback?code=testcode&state=teststate");
+        let body = reqwest::get(&url)
+            .await
+            .expect("browser request")
+            .text()
+            .await
+            .expect("page body");
+        assert!(body.contains("Authenticated with Mimir"));
+        let params = waiting.await.expect("task").expect("callback");
+        assert_eq!(params.code, "testcode");
+        assert_eq!(params.into_result("teststate").expect("code"), "testcode");
+    }
+
+    #[tokio::test]
+    async fn listener_times_out_without_callback() {
+        let server = CallbackServer::with_bind_addr("127.0.0.1:0");
+        let result = server
+            .wait_for_callback_timeout(Duration::from_millis(150))
+            .await;
+        assert!(matches!(result, Err(AuthError::CallbackTimeout)));
     }
 }
