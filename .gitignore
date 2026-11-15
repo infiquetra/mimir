@@ -57,3 +57,6 @@ app.*.map.json
 graphify-out
 .claude/
 .hermes/
+
+# Rust build output
+/target

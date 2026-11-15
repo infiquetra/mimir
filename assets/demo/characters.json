@@ -1,0 +1,6 @@
+{
+  "characters": [
+    { "character_id": 90000001, "name": "Demo Capsuleer", "corporation_id": 1000166 },
+    { "character_id": 90000002, "name": "Demo Hauler", "corporation_id": 1000166 }
+  ]
+}

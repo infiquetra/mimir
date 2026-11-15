@@ -1,0 +1,22 @@
+[
+  {
+    "skill_id": 3300,
+    "finished_level": 5,
+    "queue_position": 0,
+    "start_date": "2026-11-10T12:00:00Z",
+    "finish_date": "2026-11-20T12:00:00Z",
+    "level_start_sp": 45255,
+    "level_end_sp": 256000,
+    "training_start_sp": 45255
+  },
+  {
+    "skill_id": 3301,
+    "finished_level": 4,
+    "queue_position": 1,
+    "start_date": "2026-11-20T12:00:00Z",
+    "finish_date": "2026-11-25T12:00:00Z",
+    "level_start_sp": 8000,
+    "level_end_sp": 45255,
+    "training_start_sp": 8000
+  }
+]

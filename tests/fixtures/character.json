@@ -1,0 +1,8 @@
+{
+  "name": "Fixture Capsuleer",
+  "corporation_id": 1000166,
+  "birthday": "2020-01-01T00:00:00Z",
+  "bloodline_id": 1,
+  "race_id": 1,
+  "security_status": 2.5
+}

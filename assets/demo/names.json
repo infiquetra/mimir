@@ -1,0 +1,8 @@
+[
+  { "id": 1000166, "name": "Demo Corporation", "category": "corporation" },
+  { "id": 34, "name": "Tritanium", "category": "inventory_type" },
+  { "id": 60003760, "name": "Jita IV - Moon 4 - Caldari Navy Assembly Plant", "category": "station" },
+  { "id": 90000001, "name": "Demo Capsuleer", "category": "character" },
+  { "id": 90000003, "name": "Demo Trader", "category": "character" },
+  { "id": 1000125, "name": "CONCORD", "category": "corporation" }
+]

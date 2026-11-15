@@ -1,0 +1,47 @@
+{
+  "balance": 1250000000.5,
+  "skills": {
+    "skills": [
+      { "skill_id": 3300, "active_skill_level": 4, "trained_skill_level": 4, "skillpoints_in_skill": 45255 },
+      { "skill_id": 3301, "active_skill_level": 3, "trained_skill_level": 3, "skillpoints_in_skill": 8000 }
+    ],
+    "total_sp": 5200000,
+    "unallocated_sp": 50000
+  },
+  "journal": [
+    {
+      "id": 1,
+      "amount": 2500000.0,
+      "balance": 1250000000.5,
+      "date": "2026-11-14T10:00:00Z",
+      "description": "Bounty payment",
+      "ref_type": "bounty_prizes",
+      "first_party_id": 1000125,
+      "second_party_id": 90000001
+    },
+    {
+      "id": 2,
+      "amount": -150000.0,
+      "balance": 1247500000.5,
+      "date": "2026-11-13T09:00:00Z",
+      "description": "Market transaction",
+      "ref_type": "market_transaction",
+      "first_party_id": 90000001,
+      "second_party_id": 90000003
+    }
+  ],
+  "transactions": [
+    {
+      "transaction_id": 101,
+      "journal_ref_id": 2,
+      "date": "2026-11-13T09:00:00Z",
+      "type_id": 34,
+      "quantity": 10000,
+      "unit_price": 15.0,
+      "is_buy": true,
+      "is_personal": true,
+      "client_id": 90000003,
+      "location_id": 60003760
+    }
+  ]
+}
