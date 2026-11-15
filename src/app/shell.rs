@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use super::state::{
-    AppState, AuthState, CharacterSummary, LoadState, SkillsData, View, WalletData,
+    AppState, AssetsData, AuthState, CharacterSummary, LoadState, SkillsData, View, WalletData,
 };
 use crate::auth::callback_server::CallbackServer;
 use crate::auth::oauth;
@@ -37,6 +37,8 @@ enum BackendMsg {
         info: Box<CharacterPublicInfo>,
         skills: Box<SkillsData>,
         wallet: Box<WalletData>,
+        assets: Result<Box<AssetsData>, String>,
+        assets_needs_reauthorize: bool,
     },
     RefreshFailed {
         message: String,
@@ -355,6 +357,14 @@ impl MimirApp {
                 ids.push(lp.corporation_id);
             }
         }
+        if let LoadState::Ready(assets) = &self.state.assets {
+            for item in &assets.items {
+                ids.push(item.type_id);
+                if !crate::names::resolver::is_structure_id(item.location_id) {
+                    ids.push(item.location_id);
+                }
+            }
+        }
         let missing = self.resolver.missing(&ids);
         if missing.is_empty() {
             return;
@@ -392,6 +402,8 @@ impl MimirApp {
                     info,
                     skills,
                     wallet,
+                    assets,
+                    assets_needs_reauthorize,
                 } => {
                     tracing::info!("[ESI] refresh complete character_id={}", character_id);
                     let training = skills.queue.first();
@@ -411,6 +423,24 @@ impl MimirApp {
                     self.state.character_detail = LoadState::Ready(*info);
                     self.state.skills = LoadState::Ready(*skills);
                     self.state.wallet = LoadState::Ready(*wallet);
+                    match assets {
+                        Ok(data) => {
+                            self.state.assets = LoadState::Ready(*data);
+                            self.state.assets_needs_reauthorize = false;
+                        }
+                        Err(message) if assets_needs_reauthorize => {
+                            // The assets scope was refused: replace any stale
+                            // rows rather than present them as current.
+                            self.state.assets = LoadState::Error(message);
+                            self.state.assets_needs_reauthorize = true;
+                        }
+                        Err(message) => {
+                            self.state.assets_needs_reauthorize = false;
+                            if !self.state.assets.is_ready() {
+                                self.state.assets = LoadState::Error(message);
+                            }
+                        }
+                    }
                     self.state.offline = false;
                     self.state.status_message = "Refresh complete.".to_string();
                     self.schedule_name_resolution();
@@ -440,7 +470,10 @@ impl MimirApp {
                         self.state.skills = LoadState::Error(message.clone());
                     }
                     if !self.state.wallet.is_ready() {
-                        self.state.wallet = LoadState::Error(message);
+                        self.state.wallet = LoadState::Error(message.clone());
+                    }
+                    if !self.state.assets.is_ready() {
+                        self.state.assets = LoadState::Error(message);
                     }
                 }
                 BackendMsg::LoggedIn { row } => {
@@ -525,11 +558,67 @@ impl MimirApp {
                         .await
                         .unwrap_or_default(),
                 };
-                Ok::<_, crate::AppError>((info, SkillsData { skills, queue }, wallet))
+                // Assets are a tolerant sub-fetch (never `?`): first-sign-in
+                // tokens lack esi-assets.read_assets.v1, and that refusal
+                // must not fail the character/skills/wallet refresh above.
+                let (assets, assets_needs_reauthorize) =
+                    match endpoints::get_assets(&esi, id).await {
+                        Ok(items) => {
+                            let singleton_ids: Vec<i64> = items
+                                .iter()
+                                .filter(|a| a.is_singleton)
+                                .map(|a| a.item_id)
+                                .collect();
+                            let mut custom_names = std::collections::HashMap::new();
+                            for chunk in singleton_ids.chunks(1000) {
+                                match endpoints::get_asset_names(&esi, id, chunk).await {
+                                    Ok(names) => {
+                                        for entry in names {
+                                            let trimmed = entry.name.trim();
+                                            if !trimmed.is_empty() && trimmed != "None" {
+                                                custom_names
+                                                    .insert(entry.item_id, trimmed.to_string());
+                                            }
+                                        }
+                                    }
+                                    Err(e) => tracing::warn!(
+                                        "[ASSETS] custom-name batch failed character_id={} count={} error={}",
+                                        id,
+                                        chunk.len(),
+                                        e
+                                    ),
+                                }
+                            }
+                            tracing::info!(
+                                "[ASSETS] assets ready character_id={} items={} custom_names={}",
+                                id,
+                                items.len(),
+                                custom_names.len()
+                            );
+                            (Ok(AssetsData { items, custom_names }), false)
+                        }
+                        Err(e) => {
+                            let reauthorize = endpoints::needs_reauthorize(&e);
+                            tracing::warn!(
+                                "[ASSETS] assets fetch failed character_id={} needs_reauthorize={} error={}",
+                                id,
+                                reauthorize,
+                                e
+                            );
+                            (Err(e.to_string()), reauthorize)
+                        }
+                    };
+                Ok::<_, crate::AppError>((
+                    info,
+                    SkillsData { skills, queue },
+                    wallet,
+                    assets,
+                    assets_needs_reauthorize,
+                ))
             }
             .await;
             match result {
-                Ok((info, skills, wallet)) => {
+                Ok((info, skills, wallet, assets, assets_needs_reauthorize)) => {
                     // Persist the full refresh so the next launch renders
                     // cached skills/wallet offline (load_cached_state).
                     if let Ok(conn) = db.lock() {
@@ -632,6 +721,8 @@ impl MimirApp {
                         info: Box::new(info),
                         skills: Box::new(skills),
                         wallet: Box::new(wallet),
+                        assets: assets.map(Box::new),
+                        assets_needs_reauthorize,
                     });
                 }
                 Err(e) => {
@@ -777,6 +868,7 @@ impl MimirApp {
                 egui::Key::Num3,
                 egui::Key::Num4,
                 egui::Key::Num5,
+                egui::Key::Num6,
             ]
             .iter()
             .enumerate()
@@ -916,7 +1008,7 @@ impl eframe::App for MimirApp {
                 ui.label("PageUp/PageDown switches character.");
             }
             ui.separator();
-            ui.heading("Views (keys 1-5)");
+            ui.heading("Views (keys 1-6)");
             for (idx, view) in View::ALL.iter().enumerate() {
                 let selected = self.state.view == *view;
                 if ui
@@ -952,7 +1044,7 @@ impl eframe::App for MimirApp {
                 if self.state.refresh_requested {
                     ui.label("Refresh pending...");
                 }
-                ui.label("Keys: 1-5 views, Ctrl+R refresh, / search, PgUp/PgDn character");
+                ui.label("Keys: 1-6 views, Ctrl+R refresh, / search, PgUp/PgDn character");
             });
         });
     }
