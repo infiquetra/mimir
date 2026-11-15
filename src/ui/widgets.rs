@@ -159,7 +159,7 @@ pub fn error_panel_with_retry(ui: &mut egui::Ui, message: &str) -> bool {
 pub fn no_character_panel(ui: &mut egui::Ui) {
     ui.heading("No character selected");
     ui.label("Add a character with EVE SSO, or try the offline demo.");
-    ui.label("Keys: 1-5 switch views, PageUp/PageDown switch character.");
+    ui.label("Keys: 1-6 switch views, PageUp/PageDown switch character.");
 }
 
 /// Demo/offline notice shown at the top of data views.

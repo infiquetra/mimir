@@ -1,3 +1,4 @@
+pub mod assets;
 pub mod characters;
 pub mod dashboard;
 pub mod settings;

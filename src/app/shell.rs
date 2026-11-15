@@ -940,6 +940,7 @@ impl eframe::App for MimirApp {
                 View::Characters => ui::characters::show(ui, &mut self.state, &self.resolver),
                 View::Skills => ui::skills::show(ui, &mut self.state, &self.sde),
                 View::Wallet => ui::wallet::show(ui, &mut self.state, &self.resolver),
+                View::Assets => ui::assets::show(ui, &mut self.state, &self.resolver),
                 View::Settings => ui::settings::show(ui, &mut self.state),
             });
         });

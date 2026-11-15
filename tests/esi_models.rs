@@ -125,6 +125,31 @@ fn universe_fixtures_parse() {
 }
 
 #[test]
+fn assets_fixture_parses() {
+    let root: serde_json::Value = parse(include_str!("fixtures/assets.json"));
+    let assets: Vec<AssetItem> =
+        serde_json::from_value(root["assets"].clone()).expect("assets parse");
+    assert_eq!(assets.len(), 5);
+    assert_eq!(assets[0].quantity, 150_000);
+    assert_eq!(assets[0].type_id, 34);
+    assert_eq!(assets[0].location_id, 60003760);
+    assert!(!assets[0].is_singleton);
+    assert!(assets[1].is_singleton);
+    assert_eq!(assets[1].is_blueprint_copy, Some(false));
+    assert_eq!(assets[2].is_blueprint_copy, Some(true));
+    // Omitted fields default rather than failing.
+    assert_eq!(assets[3].is_blueprint_copy, None);
+    assert_eq!(assets[3].location_flag, "");
+    assert_eq!(assets[4].item_id, 0);
+
+    let names: Vec<AssetName> = serde_json::from_value(root["names"].clone()).expect("names parse");
+    assert_eq!(names.len(), 2);
+    assert_eq!(names[0].item_id, 710000002);
+    assert_eq!(names[0].name, "Aria's Rifter");
+    assert_eq!(names[1].name, "None");
+}
+
+#[test]
 fn empty_payloads_default_instead_of_failing() {
     // ESI occasionally omits optional fields; models must tolerate `{}`.
     let info: CharacterPublicInfo = parse("{}");
@@ -133,4 +158,7 @@ fn empty_payloads_default_instead_of_failing() {
     assert_eq!(queue_item.finish_date, None);
     let journal_item: WalletJournalItem = parse("{}");
     assert_eq!(journal_item.first_party_id, None);
+    let asset_item: AssetItem = parse("{}");
+    assert_eq!(asset_item.item_id, 0);
+    assert_eq!(asset_item.is_blueprint_copy, None);
 }
