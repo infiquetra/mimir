@@ -29,6 +29,19 @@
 
 ---
 
+## 2026-11-15
+
+### egui views must only set request flags; one drain point owns all async work
+
+**Author.** Mimir conversion workflow (integrator)
+**Context.** The five egui views were built in parallel with the ESI/auth/storage layers, so no view could call the network or database directly.
+**Evidence.** `src/app/state.rs:224` defines the request flags (`refresh_requested`, `login_requested`, `logout_requested_id`, `delete_requested_id`); `src/app/shell.rs:156` (`drain_requests`) is the only place that spawns tokio work, with results returning over an `std::sync::mpsc` channel (`BackendMsg`); `cargo test` passes 89 tests with this wiring (70 library + 19 integration).
+**Mechanism.** egui redraws every frame, so a view calling an endpoint inline would fire it per frame or block the UI thread. Flags turn each user action into a one-shot intent the shell consumes exactly once, and the channel brings results back onto the frame loop without locks on UI state.
+**Fix (or queued).** Shipped in the integration commit on `rust-rewrite`; new async actions must add a flag + `BackendMsg` variant, never a network call in a view.
+**Validation.** `cargo clippy --all-targets` clean, `cargo test` 89 passed on 2026-11-15.
+**Generalizable rule.** In immediate-mode UIs, widgets record intent; exactly one non-widget drain owns side effects.
+**Refs.** DECISIONS 2026-11-15 (Rust/egui decision); `docs/rust-rewrite-design.md` section 3.
+
 ## 2026-09-16
 
 ### Dynamic Domain Derivation in Presentation Layers

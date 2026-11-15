@@ -7,7 +7,7 @@ A cross-platform EVE Online companion app that unifies character management, ski
 
 ## Overview
 
-Mimir aims to replace the need for multiple disconnected EVE tools (EVEMon, Pyfa, jEveAssets, etc.) with a unified, cross-platform experience. Built with Flutter for native performance on iOS, Android, macOS, Windows, Linux, and Web.
+Mimir aims to replace the need for multiple disconnected EVE tools (EVEMon, Pyfa, jEveAssets, etc.) with a unified, cross-platform experience. Built in Rust with egui (eframe) as a single-window desktop app. The earlier Flutter implementation was retired on the `rust-rewrite` branch; see `docs/rust-rewrite-design.md` for the parity map and deferred features.
 
 ### Key Features (Planned)
 
@@ -50,8 +50,8 @@ See the [mimir-context-library](https://github.com/infiquetra/mimir-context-libr
 
 ### Prerequisites
 
-- Flutter SDK 3.24+
-- Dart SDK 3.5+
+- Rust toolchain (stable, with `rustfmt` and `clippy`)
+- Linux GUI build libraries for egui (xcb/wayland/xkbcommon development packages)
 
 ### Development Setup
 
@@ -60,33 +60,26 @@ See the [mimir-context-library](https://github.com/infiquetra/mimir-context-libr
 git clone https://github.com/infiquetra/mimir.git
 cd mimir
 
-# Install dependencies
-flutter pub get
+# Run with bundled demo data (no EVE credentials, no network)
+cargo run -- --demo
+# (equivalently: MIMIR_DEMO=1 cargo run)
 
-# Run the app
-flutter run
+# Run live: sign in with EVE SSO from the Characters view
+cargo run
 ```
 
 ### Running Tests
 
 ```bash
-flutter test
+cargo test
+cargo clippy --all-targets -- -D warnings
+cargo fmt --check
 ```
 
 ### Building for Release
 
 ```bash
-# macOS
-flutter build macos --release
-
-# iOS
-flutter build ios --release
-
-# Android
-flutter build apk --release
-
-# Web
-flutter build web --release
+cargo build --release   # binary at target/release/mimir
 ```
 
 ## Contributing

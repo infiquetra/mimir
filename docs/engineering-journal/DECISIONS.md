@@ -24,6 +24,17 @@
 
 ---
 
+## 2026-11-15
+
+### Flutter app replaced by a single-window Rust/egui app (rust-rewrite)
+
+**Author.** Mimir conversion workflow (design + four builders + integrator)
+**Decision.** Mimir ships as one Rust binary: eframe/egui single window with a character rail and five views (Dashboard, Characters, Skills, Wallet, Settings), tokio + reqwest (rustls) for EVE SSO (EVE's single sign-on login service) PKCE (Proof Key for Code Exchange) and ESI (EVE Swagger Interface, CCP's API), rusqlite (bundled SQLite) for the cache, OS keyring with a 0600-file fallback for tokens, and a bundled `--demo` mode. All Dart/Flutter sources, platform runners, and pubspec files are deleted on this branch; git history keeps them recoverable.
+**Rejected alternatives.** Keeping Flutter (the conversion goal itself); iced (more boilerplate per view); Slint/Dioxus/Tauri (markup, JavaScript, or WebView surface); raw winit+wgpu (weeks of work); JSON files instead of SQLite (every wallet aggregate becomes bespoke scanning code); replicating Flutter's tray host and 16 desktop windows in the first increment (highest-risk chrome; content parity first).
+**Rationale.** egui renders identically on Linux and macOS with no retained widget tree, SQLite already proved itself under Drift in the Flutter app, and the localhost PKCE path ports exactly. Tokens never enter SQLite: a `token_meta` table holds scopes and expiry only.
+**Revisit when.** A deferred feature (tray/multi-window, corporation window, market/fitting) becomes the priority, the first macOS run shows an egui/keyring problem this Linux host cannot see, or egui's immediate-mode tables stop scaling to wallet history sizes.
+**Refs.** `docs/rust-rewrite-design.md` (decisions table, parity map, deletion list); `src/main.rs`; `src/app/shell.rs`; commits on branch `rust-rewrite`.
+
 ## 2026-09-16
 
 ### Presentation Views Strictly Evaluate Pure Domain Models Rather Than Mock Lookups

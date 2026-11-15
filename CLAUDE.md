@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Purpose
 
-Mimir is a Flutter-based EVE Online companion application for macOS (and eventually mobile). It provides:
+Mimir is a Rust/egui EVE Online companion application (single-window desktop app; the Flutter app was retired on the `rust-rewrite` branch — see `docs/rust-rewrite-design.md`). Sections below that describe Flutter/Riverpod/Drift are pre-rewrite history. It provides:
 - Character overview dashboard
 - Skill queue monitoring
 - Wallet balance and transaction history
@@ -13,17 +13,11 @@ Mimir is a Flutter-based EVE Online companion application for macOS (and eventua
 ## Build Commands
 
 ```bash
-# Run on macOS
-flutter run -d macos
-
-# Run tests
-flutter test
-
-# Analyze code
-flutter analyze
-
-# Format code
-dart format .
+cargo run -- --demo      # run with bundled demo data (no EVE login)
+cargo run                # run live (EVE SSO login in the app)
+cargo test               # unit + integration tests
+cargo clippy --all-targets -- -D warnings
+cargo fmt
 ```
 
 ## Architecture
