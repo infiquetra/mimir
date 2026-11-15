@@ -12,13 +12,20 @@ use tokio::sync::Mutex;
 use crate::config::EveConfig;
 use crate::error::AuthError;
 
-/// Query parameters returned by the SSO redirect.
-#[derive(Debug, Clone, Default)]
+/// Query parameters returned by the SSO redirect. `Debug` redacts the
+/// authorization code and CSRF state so a stray `{:?}` log cannot leak them.
+#[derive(Clone, Default)]
 pub struct CallbackParams {
     pub code: String,
     pub state: String,
     pub error: Option<String>,
     pub error_description: Option<String>,
+}
+
+impl std::fmt::Debug for CallbackParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("CallbackParams(<redacted>)")
+    }
 }
 
 impl CallbackParams {

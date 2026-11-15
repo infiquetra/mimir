@@ -14,6 +14,8 @@ struct BufferWriter(Arc<Mutex<Vec<String>>>);
 
 impl Write for BufferWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        // Mirror to stderr so headless and CLI runs still produce logs.
+        let _ = std::io::stderr().write_all(buf);
         let text = String::from_utf8_lossy(buf);
         if let Ok(mut lines) = self.0.lock() {
             for line in text.lines() {

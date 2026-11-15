@@ -322,6 +322,15 @@ fn write_private_file(path: &Path, contents: &str) -> AppResult<()> {
         use std::os::unix::fs::OpenOptionsExt;
         options.mode(0o600);
     }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        // Tighten a pre-existing wider-permission file BEFORE new secrets
+        // land in it; creation mode alone does not cover existing files.
+        if path.exists() {
+            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
+        }
+    }
     let mut file = options.open(path)?;
     file.write_all(contents.as_bytes())?;
     #[cfg(unix)]

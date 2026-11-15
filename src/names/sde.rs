@@ -106,14 +106,14 @@ impl Sde {
         self.types.get(*self.by_id.get(&skill_id)?)
     }
 
-    /// Skill display name; SDE misses fall back to `Skill #<id>` (the only
-    /// raw-ID-shaped string the interface may show, matching Flutter).
+    /// Skill display name; SDE misses fall back to "Unknown Skill" so the
+    /// interface never renders a raw numeric EVE ID.
     pub fn skill_name(&self, skill_id: i64) -> String {
         match self.by_id.get(&skill_id) {
             Some(&i) => self.types[i].type_name.clone(),
             None => {
                 tracing::warn!("[SKILLS] SDE miss skill_id={}", skill_id);
-                format!("Skill #{skill_id}")
+                "Unknown Skill".to_string()
             }
         }
     }
@@ -123,7 +123,7 @@ impl Sde {
     pub fn skill_name_quiet(&self, skill_id: i64) -> String {
         match self.skill(skill_id) {
             Some(entry) => entry.type_name.clone(),
-            None => format!("Skill #{skill_id}"),
+            None => "Unknown Skill".to_string(),
         }
     }
 
@@ -188,9 +188,10 @@ mod tests {
     }
 
     #[test]
-    fn sde_miss_falls_back_to_skill_number() {
+    fn sde_miss_falls_back_to_unknown_skill() {
         let sde = Sde::load_bundled().expect("bundled SDE loads");
-        assert_eq!(sde.skill_name(999999), "Skill #999999");
+        assert_eq!(sde.skill_name(999999), "Unknown Skill");
+        assert_eq!(sde.skill_name_quiet(999999), "Unknown Skill");
         assert_eq!(sde.skill_group_name(999999), None);
     }
 

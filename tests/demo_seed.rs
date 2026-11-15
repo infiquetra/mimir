@@ -2,8 +2,7 @@
 //! skill-queue finish math at a fixed instant, wallet aggregation,
 //! journal balance-chain consistency, name-resolution fallbacks, and
 //! `AppState` seeding. Every display string must be a resolved EVE name,
-//! never a raw numeric ID (the SDE-miss `Skill #<id>` form is the single
-//! documented exception).
+//! never a raw numeric ID (SDE misses show "Unknown Skill").
 
 use mimir::app::state::{AppState, LoadState};
 use mimir::demo::data::{
@@ -180,7 +179,7 @@ fn name_resolution_covers_every_demo_id_and_falls_back_safely() {
     // Fallbacks for unknown ids are words, never the raw number.
     assert_eq!(resolver.name(424242424), UNKNOWN_ITEM);
     assert_eq!(resolver.location_name(424242424), UNKNOWN_LOCATION);
-    assert_eq!(sde.skill_name(999999999), "Skill #999999999");
+    assert_eq!(sde.skill_name(999999999), "Unknown Skill");
 
     // No bundled display name is empty or a bare numeric id.
     let names = load_demo_names().expect("demo names load");

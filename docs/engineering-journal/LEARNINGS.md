@@ -31,6 +31,17 @@
 
 ## 2026-11-15
 
+### Demo data must never share the live database, and offline-first needs both write and read halves
+
+**Author.** Muse Code (parent repair pass over the conversion workflow)
+**Context.** Adversarial review of the Rust rewrite found demo mode seeded invented characters into the real `mimir.db`, so a later live launch loaded them as stored characters; runtime "Try demo" entry also left the cached demo bundle empty, breaking demo character switching. Separately, live refresh persisted only the character row and wallet balance, and startup never reloaded cached skills/wallet, so the offline-first promise failed on both halves.
+**Evidence.** Review findings in the workflow synthesis (demo defects A/B, partial refresh persistence); `src/app/shell.rs` (`seed_into_db` on the live connection, `demo_bundle` only set at construction, refresh persisting two tables, startup loading characters only).
+**Mechanism.** Each feature was locally correct in isolation; the seams between them (which database demo writes to, who owns the bundle cache, who reads back what refresh wrote) had no owner, and no test crossed a process restart to catch it.
+**Fix (or queued).** Demo now stays in memory from bundled fixtures, previously polluted rows are removed only when id and name both match the bundle, the bundle lazy-loads on runtime demo entry, refresh persists queue/skills/journal/transactions/loyalty, and startup renders that cache before the network answers.
+**Validation.** `cargo test` / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` on branch `rust-rewrite` after the repair commit; storage round-trip tests already cover the repository read/write pairs the fix wires together.
+**Generalizable rule.** For every persisted feature, name the restart test: write in one process lifetime, read in the next. Demo and live data need separate stores by construction, not by convention.
+**Refs.** `src/app/shell.rs`, `docs/rust-rewrite-design.md`, DECISIONS.md 2026-11-15 Flutter-to-Rust entry.
+
 ### egui views must only set request flags; one drain point owns all async work
 
 **Author.** Mimir conversion workflow (integrator)

@@ -26,11 +26,17 @@ impl std::fmt::Debug for PkcePair {
 
 /// One authorization attempt: open `authorize_url` in the browser, then
 /// exchange the returned code with `pkce.verifier` after checking `state`.
-#[derive(Debug)]
+/// `Debug` redacts the URL and state (the URL embeds the CSRF state).
 pub struct AuthorizationRequest {
     pub authorize_url: url::Url,
     pub pkce: PkcePair,
     pub state: String,
+}
+
+impl std::fmt::Debug for AuthorizationRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("AuthorizationRequest(<redacted>)")
+    }
 }
 
 fn deserialize_scp<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>

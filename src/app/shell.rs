@@ -13,7 +13,10 @@ use crate::auth::oauth;
 use crate::auth::token_store::{StoredTokens, TokenStore};
 use crate::demo::data::DemoBundle;
 use crate::esi::endpoints;
-use crate::esi::models::CharacterPublicInfo;
+use crate::esi::models::{
+    CharacterPublicInfo, CharacterSkills, LoyaltyPointItem, Skill, SkillQueueItem, UniverseName,
+    WalletJournalItem, WalletTransactionItem,
+};
 use crate::names::resolver::NameResolver;
 use crate::names::sde::Sde;
 use crate::storage::repositories::{self, CharacterRow, TokenMetaRow};
@@ -44,6 +47,9 @@ enum BackendMsg {
     LoginFailed {
         message: String,
     },
+    NamesResolved {
+        names: Vec<UniverseName>,
+    },
 }
 
 pub struct MimirApp {
@@ -58,6 +64,7 @@ pub struct MimirApp {
     tx: Sender<BackendMsg>,
     rx: Receiver<BackendMsg>,
     demo_names_loaded: bool,
+    persisted_startup_view: Option<String>,
 }
 
 #[derive(Default)]
@@ -66,6 +73,126 @@ struct KeyActions {
     refresh: bool,
     focus_search: bool,
     cycle_character: isize,
+}
+
+/// Fill skills/wallet/summary state from the last persisted refresh so a
+/// live launch renders cached data before (or without) network access.
+fn load_cached_state(
+    conn: &rusqlite::Connection,
+    sde: &Sde,
+    state: &mut AppState,
+    character_id: i64,
+) {
+    let queue_rows = repositories::list_skill_queue(conn, character_id).unwrap_or_default();
+    let skill_rows = repositories::list_character_skills(conn, character_id).unwrap_or_default();
+    if !queue_rows.is_empty() || !skill_rows.is_empty() {
+        tracing::info!(
+            "[DB] cached skills loaded character_id={} skills={} queue={}",
+            character_id,
+            skill_rows.len(),
+            queue_rows.len()
+        );
+        state.skills = LoadState::Ready(SkillsData {
+            skills: CharacterSkills {
+                skills: skill_rows
+                    .iter()
+                    .map(|r| Skill {
+                        skill_id: r.skill_id,
+                        active_skill_level: r.active_skill_level,
+                        trained_skill_level: r.trained_skill_level,
+                        skillpoints_in_skill: r.skillpoints_in_skill,
+                    })
+                    .collect(),
+                total_sp: repositories::total_skillpoints(conn, character_id).unwrap_or_default(),
+                unallocated_sp: None,
+            },
+            queue: queue_rows
+                .iter()
+                .map(|r| SkillQueueItem {
+                    skill_id: r.skill_id,
+                    finished_level: r.finished_level,
+                    queue_position: r.queue_position,
+                    start_date: r.start_date.clone(),
+                    finish_date: r.finish_date.clone(),
+                    ..Default::default()
+                })
+                .collect(),
+        });
+    }
+    if let Ok(Some(balance)) = repositories::wallet_balance(conn, character_id) {
+        tracing::info!("[DB] cached wallet loaded character_id={}", character_id);
+        state.wallet = LoadState::Ready(WalletData {
+            balance,
+            journal: repositories::list_journal(conn, character_id)
+                .unwrap_or_default()
+                .iter()
+                .map(|r| WalletJournalItem {
+                    id: r.id,
+                    amount: r.amount,
+                    balance: r.balance,
+                    date: r.date.clone(),
+                    description: r.description.clone(),
+                    ref_type: r.ref_type.clone(),
+                    first_party_id: r.first_party_id,
+                    second_party_id: r.second_party_id,
+                    ..Default::default()
+                })
+                .collect(),
+            transactions: repositories::list_transactions(conn, character_id)
+                .unwrap_or_default()
+                .iter()
+                .map(|r| WalletTransactionItem {
+                    transaction_id: r.transaction_id,
+                    journal_ref_id: r.journal_ref_id,
+                    date: r.date.clone(),
+                    type_id: r.type_id,
+                    quantity: r.quantity,
+                    unit_price: r.unit_price,
+                    is_buy: r.is_buy,
+                    is_personal: r.is_personal,
+                    client_id: r.client_id,
+                    location_id: r.location_id,
+                })
+                .collect(),
+            loyalty: repositories::list_loyalty(conn, character_id)
+                .unwrap_or_default()
+                .iter()
+                .map(|r| LoyaltyPointItem {
+                    corporation_id: r.corporation_id,
+                    loyalty_points: r.loyalty_points,
+                })
+                .collect(),
+        });
+        state.summaries.insert(
+            character_id,
+            CharacterSummary {
+                balance: Some(balance),
+                training_skill_name: queue_rows.first().map(|q| sde.skill_name(q.skill_id)),
+                training_finish_date: queue_rows.first().and_then(|q| q.finish_date.clone()),
+                queue_len: Some(queue_rows.len()),
+                total_sp: Some(
+                    repositories::total_skillpoints(conn, character_id).unwrap_or_default(),
+                ),
+                location_name: None,
+                ship_name: None,
+            },
+        );
+    }
+    if let Some(row) = state
+        .characters
+        .iter()
+        .find(|c| c.character_id == character_id)
+        .cloned()
+    {
+        let info = CharacterPublicInfo {
+            name: row.name,
+            corporation_id: row.corporation_id,
+            alliance_id: row.alliance_id,
+            ..Default::default()
+        };
+        state.dashboard = LoadState::Ready(info.clone());
+        state.character_detail = LoadState::Ready(info);
+    }
 }
 
 impl MimirApp {
@@ -91,19 +218,42 @@ impl MimirApp {
             NameResolver::new()
         };
         let mut demo_bundle = None;
+        let mut persisted_startup_view: Option<String> = None;
         if let Some(b) = &backends {
             if let Ok(conn) = b.db.lock() {
+                // Demo data stays in memory from the bundled fixtures; it is
+                // never seeded into the live database, so invented characters
+                // cannot leak into a later live launch.
                 if demo {
-                    match crate::demo::data::seed_into_db(&conn) {
-                        Ok(()) => tracing::info!("[DEMO] seeded demo rows into database"),
-                        Err(e) => tracing::warn!("[DEMO] seed_into_db failed: {}", e),
-                    }
+                    tracing::info!(
+                        "[DEMO] demo uses bundled in-memory data; live database untouched"
+                    );
                 }
                 match resolver.hydrate_from_db(&conn) {
                     Ok(n) => tracing::info!("[ESI] hydrated {} cached universe names", n),
                     Err(e) => tracing::warn!("[ESI] name hydrate failed: {}", e),
                 }
                 if !demo {
+                    // One-time cleanup for databases polluted by earlier demo
+                    // seeding: drop rows whose id AND name match the bundle.
+                    if let Ok(bundle) = crate::demo::data::load_demo_bundle() {
+                        for demo_char in &bundle.characters {
+                            if let Ok(Some(row)) =
+                                repositories::get_character(&conn, demo_char.character_id)
+                            {
+                                if row.name == demo_char.name {
+                                    tracing::warn!(
+                                        "[DEMO] removing polluted demo character row {}",
+                                        row.name
+                                    );
+                                    let _ = repositories::delete_character(
+                                        &conn,
+                                        demo_char.character_id,
+                                    );
+                                }
+                            }
+                        }
+                    }
                     match repositories::list_characters(&conn) {
                         Ok(rows) => {
                             tracing::info!("[CHAR] loaded {} stored characters", rows.len());
@@ -113,8 +263,15 @@ impl MimirApp {
                         }
                         Err(e) => tracing::warn!("[CHAR] list_characters failed: {}", e),
                     }
+                    // Offline-first: render last persisted skills/wallet for
+                    // the active character immediately; the startup refresh
+                    // replaces them when the network answers.
+                    if let Some(active_id) = state.active_character_id {
+                        load_cached_state(&conn, &sde, &mut state, active_id);
+                    }
                 }
                 if let Ok(Some(saved)) = repositories::get_setting(&conn, "startup_view") {
+                    persisted_startup_view = Some(saved.clone());
                     if let Some(view) = View::ALL.iter().find(|v| v.label() == saved) {
                         tracing::info!("[STARTUP] applying saved startup view {}", saved);
                         state.startup_view = *view;
@@ -145,6 +302,7 @@ impl MimirApp {
             tx,
             rx,
             demo_names_loaded: false,
+            persisted_startup_view,
         };
         app.ensure_demo_names();
         if !demo && app.state.active_character_id.is_some() {
@@ -153,7 +311,80 @@ impl MimirApp {
         app
     }
 
+    /// Runtime "Try demo" entry points only seed `AppState`; load the full
+    /// bundle lazily so demo character switching works on that path too.
+    fn ensure_demo_bundle(&mut self) {
+        if self.state.demo && self.demo_bundle.is_none() {
+            match crate::demo::data::load_demo_bundle() {
+                Ok(bundle) => {
+                    tracing::info!("[DEMO] demo bundle lazy-loaded for runtime demo entry");
+                    self.demo_bundle = Some(bundle);
+                }
+                Err(e) => tracing::warn!("[DEMO] bundle load failed: {}", e),
+            }
+        }
+    }
+
+    /// Resolve names for IDs visible in live state (corporations, wallet
+    /// counterparties, items, stations) so views show names, not unknowns.
+    /// Player structures are excluded: `/universe/names/` cannot resolve
+    /// them and the authenticated structure lookup stays a follow-up.
+    fn schedule_name_resolution(&mut self) {
+        if self.state.demo {
+            return;
+        }
+        let mut ids: Vec<i64> = Vec::new();
+        for c in &self.state.characters {
+            ids.push(c.corporation_id);
+            ids.extend(c.alliance_id);
+        }
+        if let LoadState::Ready(wallet) = &self.state.wallet {
+            for entry in &wallet.journal {
+                ids.extend(entry.first_party_id);
+                ids.extend(entry.second_party_id);
+                ids.extend(entry.tax_receiver_id);
+            }
+            for tx in &wallet.transactions {
+                ids.push(tx.type_id);
+                ids.push(tx.client_id);
+                if !crate::names::resolver::is_structure_id(tx.location_id) {
+                    ids.push(tx.location_id);
+                }
+            }
+            for lp in &wallet.loyalty {
+                ids.push(lp.corporation_id);
+            }
+        }
+        let missing = self.resolver.missing(&ids);
+        if missing.is_empty() {
+            return;
+        }
+        let (Some(backends), Some(runtime)) = (self.backends.as_ref(), self.runtime.as_ref())
+        else {
+            return;
+        };
+        let esi = backends.esi.clone();
+        let tx = self.tx.clone();
+        tracing::info!("[ESI] resolving {} missing universe names", missing.len());
+        runtime.spawn(async move {
+            let mut all: Vec<UniverseName> = Vec::new();
+            for chunk in missing.chunks(1000) {
+                match endpoints::resolve_names(&esi, chunk).await {
+                    Ok(mut names) => all.append(&mut names),
+                    Err(e) => {
+                        tracing::warn!("[ESI] universe name resolution failed: {}", e);
+                        break;
+                    }
+                }
+            }
+            if !all.is_empty() {
+                let _ = tx.send(BackendMsg::NamesResolved { names: all });
+            }
+        });
+    }
+
     fn drain_requests(&mut self) {
+        self.ensure_demo_bundle();
         while let Ok(msg) = self.rx.try_recv() {
             match msg {
                 BackendMsg::Refreshed {
@@ -182,6 +413,24 @@ impl MimirApp {
                     self.state.wallet = LoadState::Ready(*wallet);
                     self.state.offline = false;
                     self.state.status_message = "Refresh complete.".to_string();
+                    self.schedule_name_resolution();
+                }
+                BackendMsg::NamesResolved { names } => {
+                    tracing::info!("[ESI] resolved {} universe names", names.len());
+                    self.resolver.extend_from_universe_names(&names);
+                    if let Some(b) = &self.backends {
+                        if let Ok(conn) = b.db.lock() {
+                            let rows: Vec<repositories::UniverseNameRow> = names
+                                .iter()
+                                .map(|n| repositories::UniverseNameRow {
+                                    id: n.id,
+                                    name: n.name.clone(),
+                                    category: n.category.clone(),
+                                })
+                                .collect();
+                            let _ = repositories::upsert_universe_names(&conn, &rows);
+                        }
+                    }
                 }
                 BackendMsg::RefreshFailed { message } => {
                     tracing::warn!("[ESI] refresh failed: {}", message);
@@ -281,6 +530,8 @@ impl MimirApp {
             .await;
             match result {
                 Ok((info, skills, wallet)) => {
+                    // Persist the full refresh so the next launch renders
+                    // cached skills/wallet offline (load_cached_state).
                     if let Ok(conn) = db.lock() {
                         let _ = repositories::upsert_character(
                             &conn,
@@ -292,12 +543,88 @@ impl MimirApp {
                                 is_active: true,
                             },
                         );
+                        let queue_rows: Vec<repositories::SkillQueueRow> = skills
+                            .queue
+                            .iter()
+                            .map(|q| repositories::SkillQueueRow {
+                                character_id: id,
+                                queue_position: q.queue_position,
+                                skill_id: q.skill_id,
+                                finished_level: q.finished_level,
+                                start_date: q.start_date.clone(),
+                                finish_date: q.finish_date.clone(),
+                            })
+                            .collect();
+                        let _ = repositories::replace_skill_queue(&conn, id, &queue_rows);
+                        let skill_rows: Vec<repositories::CharacterSkillRow> = skills
+                            .skills
+                            .skills
+                            .iter()
+                            .map(|s| repositories::CharacterSkillRow {
+                                character_id: id,
+                                skill_id: s.skill_id,
+                                active_skill_level: s.active_skill_level,
+                                trained_skill_level: s.trained_skill_level,
+                                skillpoints_in_skill: s.skillpoints_in_skill,
+                            })
+                            .collect();
+                        let _ = repositories::replace_character_skills(&conn, id, &skill_rows);
                         let _ = repositories::set_wallet_balance(
                             &conn,
                             &repositories::WalletBalanceRow {
                                 character_id: id,
                                 balance: wallet.balance,
                             },
+                        );
+                        let journal_rows: Vec<repositories::WalletJournalRow> = wallet
+                            .journal
+                            .iter()
+                            .map(|j| repositories::WalletJournalRow {
+                                id: j.id,
+                                character_id: id,
+                                amount: j.amount,
+                                balance: j.balance,
+                                date: j.date.clone(),
+                                description: j.description.clone(),
+                                ref_type: j.ref_type.clone(),
+                                first_party_id: j.first_party_id,
+                                second_party_id: j.second_party_id,
+                            })
+                            .collect();
+                        let _ = repositories::upsert_journal(&conn, &journal_rows);
+                        let transaction_rows: Vec<repositories::WalletTransactionRow> = wallet
+                            .transactions
+                            .iter()
+                            .map(|t| repositories::WalletTransactionRow {
+                                transaction_id: t.transaction_id,
+                                character_id: id,
+                                journal_ref_id: t.journal_ref_id,
+                                date: t.date.clone(),
+                                type_id: t.type_id,
+                                quantity: t.quantity,
+                                unit_price: t.unit_price,
+                                is_buy: t.is_buy,
+                                is_personal: t.is_personal,
+                                client_id: t.client_id,
+                                location_id: t.location_id,
+                            })
+                            .collect();
+                        let _ = repositories::upsert_transactions(&conn, &transaction_rows);
+                        let loyalty_rows: Vec<repositories::LoyaltyRow> = wallet
+                            .loyalty
+                            .iter()
+                            .map(|l| repositories::LoyaltyRow {
+                                character_id: id,
+                                corporation_id: l.corporation_id,
+                                loyalty_points: l.loyalty_points,
+                            })
+                            .collect();
+                        let _ = repositories::replace_loyalty(&conn, id, &loyalty_rows);
+                        tracing::info!(
+                            "[DB] refresh persisted character_id={} queue={} journal={}",
+                            id,
+                            queue_rows.len(),
+                            journal_rows.len()
                         );
                     }
                     let _ = tx.send(BackendMsg::Refreshed {
@@ -506,18 +833,21 @@ impl MimirApp {
 impl eframe::App for MimirApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.drain_requests();
-        // Persist startup-view choice when it changes (settings view edits it).
-        if let Some(backends) = self.backends.as_ref() {
-            if let Ok(conn) = backends.db.lock() {
-                let saved = repositories::get_setting(&conn, "startup_view")
-                    .ok()
-                    .flatten();
-                if saved.as_deref() != Some(self.state.startup_view.label()) {
-                    let _ = repositories::set_setting(
+        // Persist startup-view choice only when it actually changed since
+        // the last write (settings view edits it); no per-frame DB reads.
+        if self.persisted_startup_view.as_deref() != Some(self.state.startup_view.label()) {
+            if let Some(backends) = self.backends.as_ref() {
+                if let Ok(conn) = backends.db.lock() {
+                    if repositories::set_setting(
                         &conn,
                         "startup_view",
                         self.state.startup_view.label(),
-                    );
+                    )
+                    .is_ok()
+                    {
+                        self.persisted_startup_view =
+                            Some(self.state.startup_view.label().to_string());
+                    }
                 }
             }
         }

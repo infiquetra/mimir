@@ -40,7 +40,9 @@ impl EsiError {
         match status {
             401 => EsiError::Unauthorized,
             403 => EsiError::Reauthorize,
-            404 => EsiError::NotFound(body.to_string()),
+            404 => EsiError::NotFound(
+                extract_esi_error(body).unwrap_or_else(|| body.chars().take(200).collect()),
+            ),
             420 | 429 => EsiError::RateLimited { reset_secs },
             _ => {
                 let message = extract_esi_error(body);

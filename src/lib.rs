@@ -8,7 +8,7 @@
 //! (`[AUTH]`, `[ESI]`, `[WALLET]`, `[SKILLS]`, `[CHAR]`, `[DB]`, `[DEMO]`,
 //! `[UI]`, `[STARTUP]`). Access and refresh tokens never appear in logs or
 //! `Debug` output. User interface code shows resolved EVE names, never raw
-//! numeric IDs (unresolved skills fall back to `Skill #<id>` only).
+//! numeric IDs (unresolved skills show "Unknown Skill").
 
 pub mod app;
 pub mod auth;
