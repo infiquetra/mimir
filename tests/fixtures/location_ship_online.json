@@ -1,0 +1,10 @@
+{
+  "location": { "solar_system_id": 30000142, "station_id": 60003760 },
+  "ship": { "ship_item_id": 1234567890, "ship_name": "Fixture Frigate", "ship_type_id": 587 },
+  "online": {
+    "online": true,
+    "last_login": "2026-11-15T08:00:00Z",
+    "last_logout": "2026-11-14T22:00:00Z",
+    "logins": 412
+  }
+}

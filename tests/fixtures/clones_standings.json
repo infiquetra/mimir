@@ -1,0 +1,17 @@
+{
+  "clones": {
+    "jump_clones": [
+      {
+        "jump_clone_id": 42,
+        "location_id": 60003760,
+        "location_type": "station",
+        "implants": [22119, 22120]
+      }
+    ],
+    "last_clone_jump_date": "2026-10-01T00:00:00Z"
+  },
+  "standings": [
+    { "from_id": 1000125, "from_type": "corporation", "standing": 3.25 },
+    { "from_id": 500001, "from_type": "faction", "standing": -1.5 }
+  ]
+}

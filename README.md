@@ -7,23 +7,27 @@ A cross-platform EVE Online companion app that unifies character management, ski
 
 ## Overview
 
-Mimir aims to replace the need for multiple disconnected EVE tools (EVEMon, Pyfa, jEveAssets, etc.) with a unified, cross-platform experience. Built with Flutter for native performance on iOS, Android, macOS, Windows, Linux, and Web.
+Mimir aims to replace the need for multiple disconnected EVE tools (EVEMon, Pyfa, jEveAssets, etc.) with a unified, cross-platform experience. Built in Rust with egui (eframe) as a single-window desktop app. The earlier Flutter implementation was retired on the `rust-rewrite` branch; see `docs/rust-rewrite-design.md` for the parity map and deferred features.
 
-### Key Features (Planned)
+### What works today (Rust Phase 1)
 
-- **Character Management**: Multi-character support with skill queue monitoring
-- **Skill Planning**: Browse skills, plan training, optimize attributes
+- **Multi-character dashboard**: every authorized character with wallet balance, current training skill and finish countdown, queue length, and total skill points; click to switch
+- **Characters**: EVE SSO sign-in (OAuth2 PKCE on localhost), character detail with resolved corporation/alliance names, logout and delete
+- **Skills**: training queue with per-skill countdowns and progress, trained-skill catalogue grouped and searchable from the bundled SDE extract
+- **Wallet**: balance, journal and transactions with resolved counterparty/item/location names, period filters, income/expense/net analytics by reference type and counterparty, loyalty points
+- **Settings**: startup view, keyboard shortcuts (1-5 views, Ctrl/Cmd+R refresh, `/` search, PgUp/PgDn character cycle), filterable in-app log view
+- **Offline-first**: refreshes persist to local SQLite and render from cache at next launch; `--demo` mode runs the full UI on bundled sample data with no credentials or network
+
+### Roadmap (specified, not yet ported from the retired Flutter app)
+
 - **Market Tools**: Price checking, trade tracking, profit analysis
-- **Industry**: Blueprint browser, manufacturing calculator, PI management
+- **Industry & Planetary Industry**: Blueprint browser, manufacturing calculator, PI management
 - **Fitting**: Ship fitting simulator with EFT/Pyfa import/export
+- **Assets, Intel, Combat Analyzer, Exploration, Corporation**: see the specifications below and `docs/rust-rewrite-design.md`
 
 ## Status
 
-**Currently in active development**
-- Phase 1 & 2 (Foundational/Essential Tools): Complete
-- Phase 3 (Market Tools): Complete (browser, active orders, price history, trade calculator)
-- Phase 4 (Ship Fitting): Complete (Dogma Engine, EFT/Pyfa formats, visual fitting editor, stats panel)
-- Phase 4 (Exploration Module): Complete (offline reference, public highways, signature notebook, route planner, sub-window)
+**Rust rewrite in active development.** Phase 1 (dashboard, characters, skills, wallet, settings, EVE SSO auth, ESI client, local persistence, demo mode) is implemented and covered by the Rust test suite (`cargo test`). Market, fitting, industry, exploration, corporation, and the other modules below were implemented in the retired Flutter app; their specifications are retained as the porting roadmap and they are **not** present in the Rust build yet. Visual verification on macOS (the primary target) is still pending; the Linux build is compile- and test-verified.
 
 See the [mimir-context-library](https://github.com/infiquetra/mimir-context-library) repository for detailed specifications and roadmap.
 
@@ -50,8 +54,8 @@ See the [mimir-context-library](https://github.com/infiquetra/mimir-context-libr
 
 ### Prerequisites
 
-- Flutter SDK 3.24+
-- Dart SDK 3.5+
+- Rust toolchain (stable, with `rustfmt` and `clippy`)
+- Linux GUI build libraries for egui (xcb/wayland/xkbcommon development packages)
 
 ### Development Setup
 
@@ -60,33 +64,26 @@ See the [mimir-context-library](https://github.com/infiquetra/mimir-context-libr
 git clone https://github.com/infiquetra/mimir.git
 cd mimir
 
-# Install dependencies
-flutter pub get
+# Run with bundled demo data (no EVE credentials, no network)
+cargo run -- --demo
+# (equivalently: MIMIR_DEMO=1 cargo run)
 
-# Run the app
-flutter run
+# Run live: sign in with EVE SSO from the Characters view
+cargo run
 ```
 
 ### Running Tests
 
 ```bash
-flutter test
+cargo test
+cargo clippy --all-targets -- -D warnings
+cargo fmt --check
 ```
 
 ### Building for Release
 
 ```bash
-# macOS
-flutter build macos --release
-
-# iOS
-flutter build ios --release
-
-# Android
-flutter build apk --release
-
-# Web
-flutter build web --release
+cargo build --release   # binary at target/release/mimir
 ```
 
 ## Contributing

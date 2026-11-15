@@ -29,6 +29,41 @@
 
 ---
 
+## 2026-11-15
+
+### Branch-protection required checks keep their old names after a stack rewrite
+
+**Author.** Muse Code (parent repair pass over the conversion workflow)
+**Context.** The Rust rewrite pull request showed green continuous integration (CI) yet stayed `BLOCKED` and unmergeable.
+**Evidence.** `gh api repos/infiquetra/mimir/branches/develop/protection` requires contexts `Analyze` and `Test` (the Flutter-era job names on `origin/develop:.github/workflows/ci.yml`); the rewritten workflow reported a single `Format, clippy, test, build` check, so both required contexts never arrived. `gh pr view 561` showed `mergeable: MERGEABLE` with `mergeStateStatus: BLOCKED` and one `SUCCESS` check.
+**Mechanism.** Branch protection matches required status contexts by exact job-check name, independent of workflow files. Renaming or consolidating jobs during a rewrite silently orphans the required names; GitHub reports the pull request blocked without naming the missing contexts in the checks list.
+**Fix (or queued).** Split `.github/workflows/ci.yml` into jobs named exactly `Analyze` (format + clippy) and `Test` (test + build), plus a non-required `Build (macOS)` job proving the primary desktop target compiles and tests pass there.
+**Validation.** Pull request checks re-run after the workflow change; `Analyze` and `Test` contexts must report `SUCCESS` and `mergeStateStatus` must leave `BLOCKED` before merge.
+**Generalizable rule.** When replacing CI during any stack migration, inventory branch-protection required contexts first and keep those exact check names, or update protection in the same change.
+**Refs.** `.github/workflows/ci.yml`; DECISIONS 2026-11-15 (Rust/egui decision).
+
+### Demo data must never share the live database, and offline-first needs both write and read halves
+
+**Author.** Muse Code (parent repair pass over the conversion workflow)
+**Context.** Adversarial review of the Rust rewrite found demo mode seeded invented characters into the real `mimir.db`, so a later live launch loaded them as stored characters; runtime "Try demo" entry also left the cached demo bundle empty, breaking demo character switching. Separately, live refresh persisted only the character row and wallet balance, and startup never reloaded cached skills/wallet, so the offline-first promise failed on both halves.
+**Evidence.** Review findings in the workflow synthesis (demo defects A/B, partial refresh persistence); `src/app/shell.rs` (`seed_into_db` on the live connection, `demo_bundle` only set at construction, refresh persisting two tables, startup loading characters only).
+**Mechanism.** Each feature was locally correct in isolation; the seams between them (which database demo writes to, who owns the bundle cache, who reads back what refresh wrote) had no owner, and no test crossed a process restart to catch it.
+**Fix (or queued).** Demo now stays in memory from bundled fixtures, previously polluted rows are removed only when id and name both match the bundle, the bundle lazy-loads on runtime demo entry, refresh persists queue/skills/journal/transactions/loyalty, and startup renders that cache before the network answers.
+**Validation.** `cargo test` / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` on branch `rust-rewrite` after the repair commit; storage round-trip tests already cover the repository read/write pairs the fix wires together.
+**Generalizable rule.** For every persisted feature, name the restart test: write in one process lifetime, read in the next. Demo and live data need separate stores by construction, not by convention.
+**Refs.** `src/app/shell.rs`, `docs/rust-rewrite-design.md`, DECISIONS.md 2026-11-15 Flutter-to-Rust entry.
+
+### egui views must only set request flags; one drain point owns all async work
+
+**Author.** Mimir conversion workflow (integrator)
+**Context.** The five egui views were built in parallel with the ESI/auth/storage layers, so no view could call the network or database directly.
+**Evidence.** `src/app/state.rs:224` defines the request flags (`refresh_requested`, `login_requested`, `logout_requested_id`, `delete_requested_id`); `src/app/shell.rs:156` (`drain_requests`) is the only place that spawns tokio work, with results returning over an `std::sync::mpsc` channel (`BackendMsg`); `cargo test` passes 89 tests with this wiring (70 library + 19 integration).
+**Mechanism.** egui redraws every frame, so a view calling an endpoint inline would fire it per frame or block the UI thread. Flags turn each user action into a one-shot intent the shell consumes exactly once, and the channel brings results back onto the frame loop without locks on UI state.
+**Fix (or queued).** Shipped in the integration commit on `rust-rewrite`; new async actions must add a flag + `BackendMsg` variant, never a network call in a view.
+**Validation.** `cargo clippy --all-targets` clean, `cargo test` 89 passed on 2026-11-15.
+**Generalizable rule.** In immediate-mode UIs, widgets record intent; exactly one non-widget drain owns side effects.
+**Refs.** DECISIONS 2026-11-15 (Rust/egui decision); `docs/rust-rewrite-design.md` section 3.
+
 ## 2026-09-16
 
 ### Dynamic Domain Derivation in Presentation Layers
