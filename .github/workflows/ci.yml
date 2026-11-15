@@ -11,97 +11,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  analyze:
-    name: Analyze
+  check:
+    name: Format, clippy, test, build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          flutter-version: '3.44.x'
-          channel: 'stable'
-          cache: true
+          components: rustfmt, clippy
 
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Verify formatting
-        run: dart format --output=none --set-exit-if-changed .
-
-      - name: Analyze project source
-        run: flutter analyze --fatal-infos
-
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.44.x'
-          channel: 'stable'
-          cache: true
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      # One retry: SpaceBackground's nebula gradient bands to 8-bit colour, so
-      # a sub-pixel layout shift flips a handful of pixels between runs
-      # (~3px, 0.0003%). Real regressions in this suite measure 0.14%+, so a
-      # single retry cannot mask one. See LEARNINGS 2026-09-07.
-      - name: Run tests (retry once for golden banding noise)
-        run: |
-          flutter test --coverage || {
-            echo "::warning::First test attempt failed; retrying once for decorative golden banding noise."
-            flutter test --coverage
-          }
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          files: coverage/lcov.info
-          fail_ci_if_error: false
-
-  build:
-    name: Build
-    needs: [analyze, test]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: linux
-          - os: ubuntu-latest
-            target: web
-          - os: macos-latest
-            target: macos
-          - os: macos-latest
-            target: ios
-          - os: windows-latest
-            target: windows
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.44.x'
-          channel: 'stable'
-          cache: true
-
-      - name: Install Linux dependencies
-        if: matrix.target == 'linux'
+      - name: Install Linux GUI build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build libgtk-3-dev
+          sudo apt-get install -y libxkbcommon-dev libwayland-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libdbus-1-dev pkg-config
 
-      - name: Install dependencies
-        run: flutter pub get
+      - name: Verify formatting
+        run: cargo fmt --check
 
-      - name: Build ${{ matrix.target }}
-        run: flutter build ${{ matrix.target }} --release
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test
+
+      - name: Build
+        run: cargo build
