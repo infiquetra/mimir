@@ -11,8 +11,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
-    name: Format, clippy, test, build
+  analyze:
+    # Job name must stay "Analyze": branch protection on develop requires
+    # the Analyze and Test status contexts by name.
+    name: Analyze
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,8 +35,39 @@ jobs:
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
 
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux GUI build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-dev libwayland-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libdbus-1-dev pkg-config
+
       - name: Test
         run: cargo test
 
       - name: Build
+        run: cargo build
+
+  build-macos:
+    # macOS is the primary desktop target; prove the crate (including the
+    # keyring dependency) compiles and its tests pass there on every change.
+    name: Build (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Test (macOS)
+        run: cargo test
+
+      - name: Build (macOS)
         run: cargo build

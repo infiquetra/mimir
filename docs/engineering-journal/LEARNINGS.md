@@ -31,6 +31,17 @@
 
 ## 2026-11-15
 
+### Branch-protection required checks keep their old names after a stack rewrite
+
+**Author.** Muse Code (parent repair pass over the conversion workflow)
+**Context.** The Rust rewrite pull request showed green continuous integration (CI) yet stayed `BLOCKED` and unmergeable.
+**Evidence.** `gh api repos/infiquetra/mimir/branches/develop/protection` requires contexts `Analyze` and `Test` (the Flutter-era job names on `origin/develop:.github/workflows/ci.yml`); the rewritten workflow reported a single `Format, clippy, test, build` check, so both required contexts never arrived. `gh pr view 561` showed `mergeable: MERGEABLE` with `mergeStateStatus: BLOCKED` and one `SUCCESS` check.
+**Mechanism.** Branch protection matches required status contexts by exact job-check name, independent of workflow files. Renaming or consolidating jobs during a rewrite silently orphans the required names; GitHub reports the pull request blocked without naming the missing contexts in the checks list.
+**Fix (or queued).** Split `.github/workflows/ci.yml` into jobs named exactly `Analyze` (format + clippy) and `Test` (test + build), plus a non-required `Build (macOS)` job proving the primary desktop target compiles and tests pass there.
+**Validation.** Pull request checks re-run after the workflow change; `Analyze` and `Test` contexts must report `SUCCESS` and `mergeStateStatus` must leave `BLOCKED` before merge.
+**Generalizable rule.** When replacing CI during any stack migration, inventory branch-protection required contexts first and keep those exact check names, or update protection in the same change.
+**Refs.** `.github/workflows/ci.yml`; DECISIONS 2026-11-15 (Rust/egui decision).
+
 ### Demo data must never share the live database, and offline-first needs both write and read halves
 
 **Author.** Muse Code (parent repair pass over the conversion workflow)
