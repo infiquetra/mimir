@@ -52,6 +52,10 @@ impl EveConfig {
         "esi-characters.read_loyalty.v1",
     ];
 
+    /// Assets step-up scopes: granted after first sign-in via the
+    /// step-up OAuth flow, never at first authorization.
+    pub const ASSETS_SCOPES: &[&str] = &["esi-assets.read_assets.v1"];
+
     /// Scopes the Phase-1 Rust endpoint set actually needs, beyond the
     /// first-auth set (location/ship/online/clones/standings/loyalty).
     pub const PHASE1_ENDPOINT_SCOPES: &[&str] = &[
@@ -123,6 +127,12 @@ mod tests {
         assert!(s.contains("esi-skills.read_skills.v1"));
         assert!(s.contains("esi-wallet.read_character_wallet.v1"));
         assert!(!s.contains("esi-assets"));
+    }
+
+    #[test]
+    fn assets_scopes_is_the_single_stepup_scope() {
+        assert_eq!(EveConfig::ASSETS_SCOPES, ["esi-assets.read_assets.v1"]);
+        assert!(!EveConfig::FIRST_AUTH_SCOPES.contains(&"esi-assets.read_assets.v1"));
     }
 
     #[test]

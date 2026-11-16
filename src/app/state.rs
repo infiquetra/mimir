@@ -2,9 +2,10 @@
 //!
 //! F3 owns this state. Live data arrives from F1/F2 through the integrator:
 //! views only set the request flags (`refresh_requested`, `login_requested`,
-//! `logout_requested_id`, `delete_requested_id`, `retry_requested`) and the
-//! integrator drains them each frame. Nothing here performs network or disk
-//! work, and no token material is ever stored in this struct.
+//! `logout_requested_id`, `delete_requested_id`, `retry_requested`,
+//! `stepup_requested`) and the integrator drains them each frame. Nothing
+//! here performs network or disk work, and no token material is ever
+//! stored in this struct.
 
 use std::collections::HashMap;
 
@@ -118,6 +119,29 @@ impl AuthState {
 
     pub fn is_busy(&self) -> bool {
         matches!(self, AuthState::AwaitingCallback | AuthState::Exchanging)
+    }
+}
+
+/// Step-up sign-in request: re-run EVE SSO for an existing character to
+/// grant `scopes` in addition to what it already granted. Set by views;
+/// drained by the shell. Scopes are not secrets; no token material here.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StepUpRequest {
+    pub character_id: i64,
+    pub scopes: Vec<String>,
+}
+
+impl StepUpRequest {
+    pub fn new(character_id: i64, scopes: &[&str]) -> Self {
+        tracing::debug!(
+            "[AUTH] step-up request created character_id={} scopes={}",
+            character_id,
+            scopes.join(" ")
+        );
+        Self {
+            character_id,
+            scopes: scopes.iter().map(|s| s.to_string()).collect(),
+        }
     }
 }
 
@@ -243,6 +267,7 @@ pub struct AppState {
     pub refresh_requested: bool,
     pub retry_requested: bool,
     pub login_requested: bool,
+    pub stepup_requested: Option<StepUpRequest>,
     pub logout_requested_id: Option<i64>,
     pub delete_requested_id: Option<i64>,
 }
@@ -342,6 +367,13 @@ impl AppState {
             }
         }
         self.assets_needs_reauthorize = false;
+        if self.stepup_requested.as_ref().map(|r| r.character_id) == Some(character_id) {
+            tracing::debug!(
+                "[AUTH] clearing pending step-up request for removed character_id={}",
+                character_id
+            );
+            self.stepup_requested = None;
+        }
         if self.characters.is_empty() {
             self.skills = LoadState::Empty;
             self.wallet = LoadState::Empty;
@@ -455,6 +487,45 @@ mod tests {
         state.set_active_character(2);
         assert!(matches!(state.assets, LoadState::Loading));
         assert!(!state.assets_needs_reauthorize);
+    }
+
+    #[test]
+    fn stepup_request_default_set_and_clear_semantics() {
+        // Default (including demo entry) is None.
+        assert_eq!(AppState::new(false).stepup_requested, None);
+        assert_eq!(AppState::new(true).stepup_requested, None);
+
+        // new() copies id + scopes in order.
+        let request = StepUpRequest::new(42, &["esi-assets.read_assets.v1", "scope-b"]);
+        assert_eq!(request.character_id, 42);
+        assert_eq!(
+            request.scopes,
+            vec![
+                "esi-assets.read_assets.v1".to_string(),
+                "scope-b".to_string()
+            ]
+        );
+
+        // Set on request; set_active_character does not touch the flag
+        // (design section 3: the request names its own character).
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.stepup_requested = Some(StepUpRequest::new(1, &["esi-assets.read_assets.v1"]));
+        state.set_active_character(2);
+        assert_eq!(
+            state.stepup_requested,
+            Some(StepUpRequest::new(1, &["esi-assets.read_assets.v1"])),
+            "character switch keeps the named step-up request"
+        );
+
+        // Removing a different character keeps the pending request.
+        state.remove_character(2);
+        assert!(state.stepup_requested.is_some());
+
+        // Removing the named character clears it.
+        state.remove_character(1);
+        assert_eq!(state.stepup_requested, None);
     }
 
     #[test]
