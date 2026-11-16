@@ -52,6 +52,14 @@ pub struct FittingType {
     pub capacitor_capacity: Option<f64>,
     #[serde(rename = "maxVelocity", default)]
     pub max_velocity: Option<f64>,
+    // Recharge durations (docs/ship-recharge-times-design.md):
+    // dogma attributes 479 shieldRechargeRate and 55
+    // rechargeRate, raw milliseconds in the catalogue; the
+    // pure layer converts to seconds.
+    #[serde(rename = "shieldRechargeRate", default)]
+    pub shield_recharge_rate: Option<f64>,
+    #[serde(rename = "rechargeRate", default)]
+    pub capacitor_recharge_rate: Option<f64>,
     // Base ship resonances (docs/ship-resistances-design.md
     // section 2): dogma attributes 271/274/273/272 shield,
     // 267/270/269/268 armor, and 113/110/109/111 hull (the
@@ -427,13 +435,17 @@ mod tests {
                 || row.armor_hp.is_some()
                 || row.hull_hp.is_some()
                 || row.capacitor_capacity.is_some()
-                || row.max_velocity.is_some();
+                || row.max_velocity.is_some()
+                || row.shield_recharge_rate.is_some()
+                || row.capacitor_recharge_rate.is_some();
             for value in [
                 row.shield_capacity,
                 row.armor_hp,
                 row.hull_hp,
                 row.capacitor_capacity,
                 row.max_velocity,
+                row.shield_recharge_rate,
+                row.capacitor_recharge_rate,
             ]
             .into_iter()
             .flatten()
@@ -450,8 +462,10 @@ mod tests {
                         && row.armor_hp.is_some()
                         && row.hull_hp.is_some()
                         && row.capacitor_capacity.is_some()
-                        && row.max_velocity.is_some(),
-                    "ship without all five base stats: {:?}",
+                        && row.max_velocity.is_some()
+                        && row.shield_recharge_rate.is_some()
+                        && row.capacitor_recharge_rate.is_some(),
+                    "ship without all seven base stats: {:?}",
                     row.name
                 );
             } else {
@@ -561,6 +575,13 @@ mod tests {
         assert_eq!(punisher.hull_hp, Some(450.0));
         assert_eq!(punisher.capacitor_capacity, Some(400.0));
         assert_eq!(punisher.max_velocity, Some(355.0));
+        // Recharge pins (docs/ship-recharge-times-design.md):
+        // cache rows 587: 479 625000.0, 55 125000.0;
+        // 597: 479 625000.0, 55 160000.0 (raw milliseconds).
+        assert_eq!(rifter.shield_recharge_rate, Some(625000.0));
+        assert_eq!(rifter.capacitor_recharge_rate, Some(125000.0));
+        assert_eq!(punisher.shield_recharge_rate, Some(625000.0));
+        assert_eq!(punisher.capacitor_recharge_rate, Some(160000.0));
         // Fractional pins: Echelon 3532 capacitor 187.5, Helios
         // 11172 capacitor 218.75, Mekubal 78333 velocity 322.3.
         let echelon = types.lookup_by_id(3532).expect("Echelon row");
@@ -578,6 +599,8 @@ mod tests {
             assert_eq!(row.hull_hp, None);
             assert_eq!(row.capacitor_capacity, None);
             assert_eq!(row.max_velocity, None);
+            assert_eq!(row.shield_recharge_rate, None);
+            assert_eq!(row.capacitor_recharge_rate, None);
         }
         // Base ship resonance spot pins (docs/ship-resistances-design.md
         // section 3), read from dgmTypeAttributes.csv.bz2 during design:

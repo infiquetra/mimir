@@ -67,12 +67,21 @@ MODULE_POWER_NEED_ATTR = 30
 # dogma_attributes.dart at ed698d3 (shieldCapacity = 263,
 # armorHp = 265, hullHp = 9, capacitorCapacity = 482,
 # maxVelocity = 37).
-BASE_STAT_ATTR_IDS = {263, 265, 9, 482, 37}
+BASE_STAT_ATTR_IDS = {263, 265, 9, 482, 37, 479, 55}
 SHIELD_CAPACITY_ATTR = 263
 ARMOR_HP_ATTR = 265
 HULL_HP_ATTR = 9
 CAPACITOR_CAPACITY_ATTR = 482
 MAX_VELOCITY_ATTR = 37
+
+# Recharge durations (docs/ship-recharge-times-design.md):
+# dogmaAttributes.jsonl _key 479 "shieldRechargeRate" and
+# 55 "rechargeRate", both unit 101 Milliseconds; Flutter
+# dogma_attributes.dart at ed698d3 (shieldRechargeTime = 479,
+# capacitorRechargeTime = 55). Values stay raw milliseconds in
+# the catalogue; conversion to seconds lives in the pure layer.
+SHIELD_RECHARGE_ATTR = 479
+CAPACITOR_RECHARGE_ATTR = 55
 
 # Base ship resonance attribute ids (docs/ship-resistances-design.md
 # section 2): dogmaAttributes.jsonl in
@@ -180,6 +189,10 @@ SHIP_STAT_ORACLES = [
     (597, "hp", 450.0),
     (597, "capacitorCapacity", 400.0),
     (597, "maxVelocity", 355.0),
+    (587, "shieldRechargeRate", 625000.0),
+    (587, "rechargeRate", 125000.0),
+    (597, "shieldRechargeRate", 625000.0),
+    (597, "rechargeRate", 160000.0),
     (29986, "shieldCapacity", 1800.0),
     (29986, "armorHP", 2900.0),
     (29986, "hp", 1800.0),
@@ -460,6 +473,12 @@ def main():
             if MAX_VELOCITY_ATTR in base_stats:
                 entry["maxVelocity"] = base_stats[MAX_VELOCITY_ATTR]
                 base_stat_key_counts["maxVelocity"] += 1
+            if SHIELD_RECHARGE_ATTR in base_stats:
+                entry["shieldRechargeRate"] = base_stats[SHIELD_RECHARGE_ATTR]
+                base_stat_key_counts["shieldRechargeRate"] += 1
+            if CAPACITOR_RECHARGE_ATTR in base_stats:
+                entry["rechargeRate"] = base_stats[CAPACITOR_RECHARGE_ATTR]
+                base_stat_key_counts["rechargeRate"] += 1
             # Additive, sparse base ship resonance emission
             # (design section 3): category 6 rows gain the twelve
             # resonances, as resonances never pre-converted, after
@@ -578,6 +597,8 @@ def main():
                     "hp",
                     "capacitorCapacity",
                     "maxVelocity",
+                    "shieldRechargeRate",
+                    "rechargeRate",
                 )
                 if name in entry
             ]
@@ -629,7 +650,7 @@ def main():
             )
 
     # Catalogue-wide invariant (design sections 5 and 3): every
-    # category-6 row carries both ship outputs and all five base
+    # category-6 row carries both ship outputs and all seven base
     # ship stats, so a future cache refresh that drops a ship row
     # fails loudly instead of blanking that ship.
     for entry in types:
@@ -647,6 +668,8 @@ def main():
                 "hp",
                 "capacitorCapacity",
                 "maxVelocity",
+                "shieldRechargeRate",
+                "rechargeRate",
             )
         ):
             fail(
@@ -715,7 +738,9 @@ def main():
         f"armorHP={base_stat_key_counts['armorHP']} "
         f"hp={base_stat_key_counts['hp']} "
         f"capacitorCapacity={base_stat_key_counts['capacitorCapacity']} "
-        f"maxVelocity={base_stat_key_counts['maxVelocity']}"
+        f"maxVelocity={base_stat_key_counts['maxVelocity']} "
+        f"shieldRechargeRate={base_stat_key_counts['shieldRechargeRate']} "
+        f"rechargeRate={base_stat_key_counts['rechargeRate']}"
     )
     print(
         f"resistance_keys shieldEmDamageResonance={resonance_key_counts['shieldEmDamageResonance']} "
