@@ -13,7 +13,8 @@ use crate::app::state::{
 };
 use crate::config::EveConfig;
 use crate::esi::models::CharacterFitting;
-use crate::fitting::eft::{parse_eft, EftImportOutcome, ImportIssue, ImportedFitting};
+use crate::fitting::dna::parse_import;
+use crate::fitting::eft::{EftImportOutcome, ImportFormat, ImportIssue, ImportedFitting};
 use crate::fitting::write_map::{build_save_request, DropReason, DroppedFittingItem, SaveMapping};
 use crate::names::fitting_types::FittingTypes;
 use crate::names::resolver::NameResolver;
@@ -528,6 +529,12 @@ const DEMO_SAMPLE_EFT: &str = concat!(
     "Nanite Repair Paste x8"
 );
 
+/// Demo sample DNA link (design section 9.2): the shipped
+/// sample Rifter's fitted modules with the placeholder,
+/// loaded charge, drones, and cargo removed. Shown by the
+/// `Use sample DNA` button in demo mode only.
+const DEMO_SAMPLE_DNA: &str = "587:2048:1183;1:438;1:448;1:2889;3:31668;1::";
+
 /// Truncate an issue line for display: the first 120 characters,
 /// plus `...` when longer (design section 8.2). User text only;
 /// never a type ID.
@@ -541,45 +548,87 @@ fn truncate_issue_text(text: &str) -> String {
     }
 }
 
-/// One issue row, exact template (design section 8.2):
-/// `Line {line}: "{text}" - {reason}.`
-fn format_import_issue(issue: &ImportIssue) -> String {
-    format!(
-        "Line {}: \"{}\" - {}.",
-        issue.line,
-        truncate_issue_text(&issue.text),
-        issue.kind.reason()
-    )
+/// One issue row, exact template (design section 8.2, DNA
+/// wording section 6.4): EFT `Line {line}: "{text}" - {reason}.`,
+/// DNA `Segment {line}: "{text}" - {reason}.`
+fn format_import_issue(issue: &ImportIssue, import_format: ImportFormat) -> String {
+    match import_format {
+        ImportFormat::Eft => format!(
+            "Line {}: \"{}\" - {}.",
+            issue.line,
+            truncate_issue_text(&issue.text),
+            issue.kind.reason()
+        ),
+        ImportFormat::Dna => format!(
+            "Segment {}: \"{}\" - {}.",
+            issue.line,
+            truncate_issue_text(&issue.text),
+            issue.kind.reason()
+        ),
+    }
 }
 
-/// Issues heading, singular/plural (design section 8.2).
-fn import_issues_heading(issue_count: usize) -> String {
-    if issue_count == 1 {
-        "1 line could not be imported:".to_string()
-    } else {
-        format!("{issue_count} lines could not be imported:")
+/// Issues heading, singular/plural (design section 8.2, DNA
+/// wording section 6.4).
+fn import_issues_heading(issue_count: usize, import_format: ImportFormat) -> String {
+    match import_format {
+        ImportFormat::Eft => {
+            if issue_count == 1 {
+                "1 line could not be imported:".to_string()
+            } else {
+                format!("{issue_count} lines could not be imported:")
+            }
+        }
+        ImportFormat::Dna => {
+            if issue_count == 1 {
+                "1 segment could not be imported:".to_string()
+            } else {
+                format!("{issue_count} segments could not be imported:")
+            }
+        }
     }
 }
 
 /// Overflow disclosure when more issues exist than are shown
-/// (design section 8.2).
-fn import_issues_overflow_label(remaining: usize) -> String {
-    if remaining == 1 {
-        "...and 1 more line that could not be imported. Fix the lines above and import again to see the rest.".to_string()
-    } else {
-        format!("...and {remaining} more lines that could not be imported. Fix the lines above and import again to see the rest.")
+/// (design section 8.2, DNA wording section 6.4).
+fn import_issues_overflow_label(remaining: usize, import_format: ImportFormat) -> String {
+    match import_format {
+        ImportFormat::Eft => {
+            if remaining == 1 {
+                "...and 1 more line that could not be imported. Fix the lines above and import again to see the rest.".to_string()
+            } else {
+                format!("...and {remaining} more lines that could not be imported. Fix the lines above and import again to see the rest.")
+            }
+        }
+        ImportFormat::Dna => {
+            if remaining == 1 {
+                "...and 1 more segment that could not be imported. Fix the segments above and import again to see the rest.".to_string()
+            } else {
+                format!("...and {remaining} more segments that could not be imported. Fix the segments above and import again to see the rest.")
+            }
+        }
     }
 }
 
-/// Imported-fitting summary line (design section 8.2).
+/// Imported-fitting summary line (design section 8.2, DNA
+/// wording section 6.4): EFT says "lines", DNA says "segments".
 fn imported_summary_line(fitting: &ImportedFitting) -> String {
-    format!(
-        "Imported \"{}\" ({}): {} items from {} lines.",
-        fitting_display_name(&fitting.name),
-        fitting.ship_name,
-        fitting.items.len(),
-        fitting.report.imported_lines
-    )
+    match fitting.format {
+        ImportFormat::Eft => format!(
+            "Imported \"{}\" ({}): {} items from {} lines.",
+            fitting_display_name(&fitting.name),
+            fitting.ship_name,
+            fitting.items.len(),
+            fitting.report.imported_lines
+        ),
+        ImportFormat::Dna => format!(
+            "Imported \"{}\" ({}): {} items from {} segments.",
+            fitting_display_name(&fitting.name),
+            fitting.ship_name,
+            fitting.items.len(),
+            fitting.report.imported_lines
+        ),
+    }
 }
 
 /// Empty-slot-marker note, or `None` when there were none.
@@ -946,15 +995,15 @@ fn fittings_import_panel(
     state: &mut AppState,
     fitting_types: Option<&FittingTypes>,
 ) {
-    ui.heading("Import a fitting from EFT text");
-    ui.label("Paste an EFT block (the [Ship, Fitting name] text format). The imported fitting stays in Mimir on this device unless you save it to EVE below, and it is gone when you switch characters or close Mimir.");
+    ui.heading("Import a fitting from EFT or DNA text");
+    ui.label("Paste an EFT block (the [Ship, Fitting name] text format) or a DNA fitting link (the single line of separated numbers the EVE client copies). The imported fitting stays in Mimir on this device unless you save it to EVE below, and it is gone when you switch characters or close Mimir.");
     let Some(catalogue) = fitting_types else {
         ui.label("Could not import: Mimir's bundled item data failed to load. Restart Mimir and try again.");
         return;
     };
     let response = ui.add(
         egui::TextEdit::multiline(&mut state.fittings_import_text)
-            .hint_text("Paste EFT text: [Ship, Fitting name] then one item per line")
+            .hint_text("Paste EFT text ([Ship, Fitting name] then one item per line) or a DNA fitting link (one line, ending ::)")
             .desired_rows(8)
             .desired_width(f32::INFINITY),
     );
@@ -974,7 +1023,7 @@ fn fittings_import_panel(
                 text.len(),
                 text.lines().count()
             );
-            match parse_eft(&text, catalogue) {
+            match parse_import(&text, catalogue) {
                 EftImportOutcome::Imported(fitting) => {
                     tracing::info!(
                         "[FITTING] import complete items={} issues={} placeholders={} charges={}",
@@ -1008,6 +1057,13 @@ fn fittings_import_panel(
         if state.demo && ui.button("Use sample EFT").clicked() {
             tracing::debug!("[FITTING] demo sample EFT loaded");
             state.fittings_import_text = DEMO_SAMPLE_EFT.to_string();
+            state.fittings_imported = None;
+            state.fittings_import_error = None;
+            state.fittings_import_owner = None;
+        }
+        if state.demo && ui.button("Use sample DNA").clicked() {
+            tracing::debug!("[FITTING] demo sample DNA loaded");
+            state.fittings_import_text = DEMO_SAMPLE_DNA.to_string();
             state.fittings_imported = None;
             state.fittings_import_error = None;
             state.fittings_import_owner = None;
@@ -1073,13 +1129,17 @@ fn fittings_import_panel(
     }
     let issues = &imported.report.issues;
     if !issues.is_empty() {
-        ui.heading(import_issues_heading(issues.len()));
+        let import_format = imported.format;
+        ui.heading(import_issues_heading(issues.len(), import_format));
         let shown = issues.len().min(IMPORT_ISSUES_RENDER_MAX);
         for issue in issues.iter().take(shown) {
-            ui.label(format_import_issue(issue));
+            ui.label(format_import_issue(issue, import_format));
         }
         if issues.len() > IMPORT_ISSUES_RENDER_MAX {
-            ui.label(import_issues_overflow_label(issues.len() - shown));
+            ui.label(import_issues_overflow_label(
+                issues.len() - shown,
+                import_format,
+            ));
         }
     }
     if ui.button("Copy imported fitting as EFT").clicked() {
@@ -1459,7 +1519,7 @@ pub fn show(
 mod tests {
     use super::*;
     use crate::esi::models::FittingItem;
-    use crate::fitting::eft::{ImportIssueKind, ImportReport};
+    use crate::fitting::eft::{parse_eft, ImportFormat, ImportIssueKind, ImportReport};
 
     fn test_resolver() -> NameResolver {
         let mut r = NameResolver::new();
@@ -1899,7 +1959,7 @@ mod tests {
             kind: ImportIssueKind::UnknownName,
         };
         assert_eq!(
-            format_import_issue(&issue),
+            format_import_issue(&issue, ImportFormat::Eft),
             "Line 3: \"Nope\" - no item in Mimir's bundled data has this exact name."
         );
     }
@@ -1929,9 +1989,18 @@ mod tests {
 
     #[test]
     fn import_issues_heading_singular_and_plural() {
-        assert_eq!(import_issues_heading(1), "1 line could not be imported:");
-        assert_eq!(import_issues_heading(2), "2 lines could not be imported:");
-        assert_eq!(import_issues_heading(25), "25 lines could not be imported:");
+        assert_eq!(
+            import_issues_heading(1, ImportFormat::Eft),
+            "1 line could not be imported:"
+        );
+        assert_eq!(
+            import_issues_heading(2, ImportFormat::Eft),
+            "2 lines could not be imported:"
+        );
+        assert_eq!(
+            import_issues_heading(25, ImportFormat::Eft),
+            "25 lines could not be imported:"
+        );
     }
 
     #[test]
@@ -1941,11 +2010,11 @@ mod tests {
         let remaining = 25 - 25.min(IMPORT_ISSUES_RENDER_MAX);
         assert_eq!(remaining, 5);
         assert_eq!(
-            import_issues_overflow_label(remaining),
+            import_issues_overflow_label(remaining, ImportFormat::Eft),
             "...and 5 more lines that could not be imported. Fix the lines above and import again to see the rest."
         );
         assert_eq!(
-            import_issues_overflow_label(1),
+            import_issues_overflow_label(1, ImportFormat::Eft),
             "...and 1 more line that could not be imported. Fix the lines above and import again to see the rest."
         );
     }
@@ -1956,6 +2025,7 @@ mod tests {
             name: "Sample Brawler".to_string(),
             ship_type_id: 587,
             ship_name: "Rifter".to_string(),
+            format: ImportFormat::Eft,
             items: Vec::new(),
             report: ImportReport {
                 imported_lines: 7,
@@ -2161,6 +2231,7 @@ mod tests {
             name: "Test".to_string(),
             ship_type_id: 587,
             ship_name: "Rifter".to_string(),
+            format: ImportFormat::Eft,
             items: Vec::new(),
             report: ImportReport {
                 imported_lines: 0,
@@ -2248,6 +2319,109 @@ mod tests {
                 assert!(reimported.report.issues.is_empty());
             }
             EftImportOutcome::Failed(fatal) => panic!("re-import must succeed, got {fatal:?}"),
+        }
+    }
+
+    #[test]
+    fn dna_issue_row_heading_and_overflow_match_locked_templates() {
+        let issue = ImportIssue {
+            line: 1,
+            text: "unresolved item".to_string(),
+            kind: ImportIssueKind::UnknownTypeId,
+        };
+        assert_eq!(
+            format_import_issue(&issue, ImportFormat::Dna),
+            "Segment 1: \"unresolved item\" - Mimir's bundled data has no item for this segment."
+        );
+        assert_eq!(
+            import_issues_heading(1, ImportFormat::Dna),
+            "1 segment could not be imported:"
+        );
+        assert_eq!(
+            import_issues_heading(2, ImportFormat::Dna),
+            "2 segments could not be imported:"
+        );
+        assert_eq!(
+            import_issues_overflow_label(1, ImportFormat::Dna),
+            "...and 1 more segment that could not be imported. Fix the segments above and import again to see the rest."
+        );
+        assert_eq!(
+            import_issues_overflow_label(5, ImportFormat::Dna),
+            "...and 5 more segments that could not be imported. Fix the segments above and import again to see the rest."
+        );
+    }
+
+    #[test]
+    fn dna_summary_line_uses_segments() {
+        let fitting = ImportedFitting {
+            name: "Imported Rifter".to_string(),
+            ship_type_id: 587,
+            ship_name: "Rifter".to_string(),
+            format: ImportFormat::Dna,
+            items: Vec::new(),
+            report: ImportReport {
+                imported_lines: 6,
+                placeholder_lines: 0,
+                charges_noted: 0,
+                issues: Vec::new(),
+            },
+        };
+        assert_eq!(
+            imported_summary_line(&fitting),
+            "Imported \"Imported Rifter\" (Rifter): 0 items from 6 segments."
+        );
+    }
+
+    #[test]
+    fn demo_sample_dna_parses_clean_via_router() {
+        let types = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        match parse_import(DEMO_SAMPLE_DNA, &types) {
+            EftImportOutcome::Imported(fitting) => {
+                assert!(fitting.report.issues.is_empty());
+                assert_eq!(fitting.report.placeholder_lines, 0);
+                assert_eq!(fitting.report.charges_noted, 0);
+                assert_eq!(fitting.report.imported_lines, 6);
+                assert_eq!(fitting.items.len(), 8);
+                assert_eq!(fitting.ship_type_id, 587);
+                assert_eq!(fitting.ship_name, "Rifter");
+                assert_eq!(fitting.name, "Imported Rifter");
+                assert_eq!(fitting.format, ImportFormat::Dna);
+            }
+            EftImportOutcome::Failed(fatal) => panic!("demo DNA must import, got {fatal:?}"),
+        }
+    }
+
+    #[test]
+    fn demo_sample_dna_round_trips_through_exporter_with_zero_skips() {
+        let types = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let fitting = match parse_import(DEMO_SAMPLE_DNA, &types) {
+            EftImportOutcome::Imported(fitting) => fitting,
+            EftImportOutcome::Failed(fatal) => panic!("demo DNA must import, got {fatal:?}"),
+        };
+        let synth = fitting.to_character_fitting();
+        let resolver = fitting.name_resolver();
+        let export = fitting_to_eft(&synth, &resolver).expect("export");
+        assert_eq!(export.skipped_unknown, 0);
+        assert_eq!(export.skipped_empty, 0);
+        assert!(export.text.starts_with("[Rifter, Imported Rifter]"));
+        match parse_eft(&export.text, &types) {
+            EftImportOutcome::Imported(reimported) => {
+                assert!(reimported.report.issues.is_empty());
+                assert_eq!(reimported.items.len(), 8);
+            }
+            EftImportOutcome::Failed(fatal) => panic!("re-import must succeed, got {fatal:?}"),
+        }
+    }
+
+    #[test]
+    fn eft_demo_still_routes_as_eft_via_router() {
+        let types = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        match parse_import(DEMO_SAMPLE_EFT, &types) {
+            EftImportOutcome::Imported(fitting) => {
+                assert_eq!(fitting.format, ImportFormat::Eft);
+                assert!(fitting.report.issues.is_empty());
+            }
+            EftImportOutcome::Failed(fatal) => panic!("demo EFT must import, got {fatal:?}"),
         }
     }
 }
