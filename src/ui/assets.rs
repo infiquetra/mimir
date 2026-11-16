@@ -50,6 +50,14 @@ pub fn display_name(
     (display, type_name)
 }
 
+/// Total displayed quantity for one location group. Quantities decode
+/// straight from remote JSON with no range validation, so summation must
+/// saturate instead of overflowing (panic in debug, wrap in release).
+fn total_quantity(rows: &[AssetRow]) -> i64 {
+    rows.iter()
+        .fold(0i64, |acc, r| acc.saturating_add(r.quantity))
+}
+
 /// Group assets by location. Groups sort by total quantity descending,
 /// then location name, then location ID; rows sort by display name.
 pub fn group_assets(data: &AssetsData, resolver: &NameResolver) -> Vec<AssetLocationGroup> {
@@ -82,7 +90,7 @@ pub fn group_assets(data: &AssetsData, resolver: &NameResolver) -> Vec<AssetLoca
                     .cmp(&b.display_name)
                     .then(a.item_id.cmp(&b.item_id))
             });
-            let item_count = rows.iter().map(|r| r.quantity).sum();
+            let item_count = total_quantity(&rows);
             let type_count = rows.len();
             AssetLocationGroup {
                 location_id,
@@ -132,7 +140,7 @@ pub fn filter_groups(groups: &[AssetLocationGroup], query: &str) -> Vec<AssetLoc
         if rows.is_empty() {
             continue;
         }
-        let item_count = rows.iter().map(|r| r.quantity).sum();
+        let item_count = total_quantity(&rows);
         let type_count = rows.len();
         out.push(AssetLocationGroup {
             location_id: group.location_id,
@@ -346,5 +354,24 @@ mod tests {
         assert_eq!(by_type[0].rows[0].display_name, "Aria's Rifter");
         // Nothing matches -> no groups.
         assert!(filter_groups(&groups, "zzzzz").is_empty());
+    }
+
+    #[test]
+    fn grouping_saturates_instead_of_overflowing() {
+        // Quantities decode from remote JSON unvalidated: two i64::MAX
+        // rows must saturate the group total, never panic or wrap.
+        let overflow = AssetsData {
+            items: vec![
+                item(10, 34, i64::MAX, 60003760, false, None),
+                item(11, 34, i64::MAX, 60003760, false, None),
+            ],
+            custom_names: HashMap::new(),
+        };
+        let groups = group_assets(&overflow, &resolver());
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0].item_count, i64::MAX);
+        let filtered = filter_groups(&groups, "jita");
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].item_count, i64::MAX);
     }
 }

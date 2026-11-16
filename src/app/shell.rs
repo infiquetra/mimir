@@ -419,31 +419,41 @@ impl MimirApp {
                             ship_name: None,
                         },
                     );
-                    self.state.dashboard = LoadState::Ready((*info).clone());
-                    self.state.character_detail = LoadState::Ready(*info);
-                    self.state.skills = LoadState::Ready(*skills);
-                    self.state.wallet = LoadState::Ready(*wallet);
-                    match assets {
-                        Ok(data) => {
-                            self.state.assets = LoadState::Ready(*data);
-                            self.state.assets_needs_reauthorize = false;
-                        }
-                        Err(message) if assets_needs_reauthorize => {
-                            // The assets scope was refused: replace any stale
-                            // rows rather than present them as current.
-                            self.state.assets = LoadState::Error(message);
-                            self.state.assets_needs_reauthorize = true;
-                        }
-                        Err(message) => {
-                            self.state.assets_needs_reauthorize = false;
-                            if !self.state.assets.is_ready() {
+                    if self.state.active_character_id != Some(character_id) {
+                        // Refresh started for a character the user switched
+                        // away from: the keyed summary above is safe, but
+                        // per-view states belong to the active character.
+                        tracing::warn!(
+                            "[ESI] ignoring per-view refresh for inactive character_id={}",
+                            character_id
+                        );
+                    } else {
+                        self.state.dashboard = LoadState::Ready((*info).clone());
+                        self.state.character_detail = LoadState::Ready(*info);
+                        self.state.skills = LoadState::Ready(*skills);
+                        self.state.wallet = LoadState::Ready(*wallet);
+                        match assets {
+                            Ok(data) => {
+                                self.state.assets = LoadState::Ready(*data);
+                                self.state.assets_needs_reauthorize = false;
+                            }
+                            Err(message) if assets_needs_reauthorize => {
+                                // The assets scope was refused: replace any
+                                // stale rows rather than present them current.
                                 self.state.assets = LoadState::Error(message);
+                                self.state.assets_needs_reauthorize = true;
+                            }
+                            Err(message) => {
+                                self.state.assets_needs_reauthorize = false;
+                                if !self.state.assets.is_ready() {
+                                    self.state.assets = LoadState::Error(message);
+                                }
                             }
                         }
+                        self.state.offline = false;
+                        self.state.status_message = "Refresh complete.".to_string();
+                        self.schedule_name_resolution();
                     }
-                    self.state.offline = false;
-                    self.state.status_message = "Refresh complete.".to_string();
-                    self.schedule_name_resolution();
                 }
                 BackendMsg::NamesResolved { names } => {
                     tracing::info!("[ESI] resolved {} universe names", names.len());

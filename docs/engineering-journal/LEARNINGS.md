@@ -29,6 +29,19 @@
 
 ---
 
+## 2026-11-16
+
+### Tolerant per-character sub-fetches must be reset at the switch boundary, and decoded quantities are untrusted arithmetic
+
+**Author.** Muse Code (parent repair pass over the Assets workflow)
+**Context.** Adversarial review of the Assets slice confirmed two blockers the green test suite missed: after switching characters, the previous character's assets could render as the new character's with a success status, and summing decoded quantities with plain `sum()` panicked on overflow in debug builds.
+**Evidence.** Review probes in the Assets workflow synthesis; `src/app/state.rs` (`set_active_character` cleared nothing), `src/app/shell.rs` (tolerant assets error arm keeps `Ready` rows; `Refreshed` applied per-view data without checking `character_id` against the active character), `src/ui/assets.rs` (`group_assets`/`filter_groups` plain `Iterator::sum` over remote-decoded `i64` quantities; reviewer probe with two `i64::MAX` quantities panicked with "attempt to add with overflow").
+**Mechanism.** Making one sub-fetch tolerant (keep stale data on error) silently changes its ownership contract: whole-refresh data like wallet cannot go stale across a switch because its failure fails the refresh, but tolerant data survives both the switch and its own failure. Separately, any integer decoded from a remote payload is attacker-shaped input for arithmetic, however trustworthy the API normally is.
+**Fix (or queued).** Character switch and active-character removal reset assets to `Loading` and clear the grant flag; refresh results for a non-active character update only the keyed summary, never the per-view states; quantity totals saturate via `total_quantity`. Regression tests cover switch clearing, same-character reselect keeping rows, and saturation.
+**Validation.** New unit tests in `src/app/state.rs` and `src/ui/assets.rs` plus `cargo test` / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` on branch `feat/rust-assets-port` in the repair commit.
+**Generalizable rule.** Tolerance needs an owner check: any state allowed to survive its own fetch failure must be keyed to its owner or reset when the owner changes, and remote integers only enter saturating or checked arithmetic.
+**Refs.** `docs/assets-port-design.md`; `src/ui/assets.rs`; `src/app/state.rs`; `src/app/shell.rs`.
+
 ## 2026-11-15
 
 ### Branch-protection required checks keep their old names after a stack rewrite

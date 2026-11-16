@@ -278,10 +278,27 @@ impl AppState {
             );
             return;
         }
+        let previous = self.active_character_id;
         tracing::info!("[CHAR] set active character_id={}", character_id);
         self.active_character_id = Some(character_id);
         for c in &mut self.characters {
             c.is_active = c.character_id == character_id;
+        }
+        if let Some(previous_id) = previous {
+            if previous_id != character_id {
+                // Assets are fetched tolerantly (a failed sub-fetch keeps
+                // Ready rows), so ownership must reset at the switch
+                // boundary or the previous character's rows would render
+                // under the new character. Same-character reselect keeps
+                // the loaded rows and grant flag.
+                tracing::debug!(
+                    "[ASSETS] clearing assets on character switch from={} to={}",
+                    previous_id,
+                    character_id
+                );
+                self.assets = LoadState::Loading;
+                self.assets_needs_reauthorize = false;
+            }
         }
         self.selected_queue_row = 0;
         self.selected_journal_row = 0;
@@ -314,6 +331,12 @@ impl AppState {
         self.summaries.remove(&character_id);
         if self.active_character_id == Some(character_id) {
             self.active_character_id = None;
+            // The removed character owned the loaded assets; never show
+            // them under the replacement active character. set_active
+            // below cannot detect this (previous is already None), and
+            // the is_empty branch further down overrides this to Empty.
+            tracing::debug!("[ASSETS] clearing assets of removed active character");
+            self.assets = LoadState::Loading;
             if let Some(first) = self.characters.first().map(|c| c.character_id) {
                 self.set_active_character(first);
             }
@@ -411,6 +434,27 @@ mod tests {
         assert_eq!(state.active_character_id, None);
         assert!(matches!(state.wallet, LoadState::Empty));
         assert!(matches!(state.assets, LoadState::Empty));
+    }
+
+    #[test]
+    fn switching_character_clears_stale_assets() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.assets = LoadState::Ready(AssetsData {
+            items: Vec::new(),
+            custom_names: Default::default(),
+        });
+        state.assets_needs_reauthorize = true;
+        // Reselecting the same character keeps its rows and grant flag.
+        state.set_active_character(1);
+        assert!(state.assets.is_ready());
+        assert!(state.assets_needs_reauthorize);
+        // Switching clears them: tolerant sub-fetch errors must never
+        // present character One's rows as character Two's.
+        state.set_active_character(2);
+        assert!(matches!(state.assets, LoadState::Loading));
+        assert!(!state.assets_needs_reauthorize);
     }
 
     #[test]
