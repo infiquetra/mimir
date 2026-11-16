@@ -36,6 +36,22 @@ pub struct FittingType {
     pub cpu: Option<f64>,
     #[serde(rename = "power", default)]
     pub power: Option<f64>,
+    // Base ship stats (docs/ship-base-stats-design.md section 2):
+    // dogma attributes 263 shieldCapacity, 265 armorHP,
+    // 9 hp, 482 capacitorCapacity, 37 maxVelocity. The catalogue
+    // key for hull keeps the SDE name `hp`; the field is `hull_hp`
+    // so call sites read as what the value is (attribute 9
+    // "Structure Hitpoints", labelled `Hull` on screen).
+    #[serde(rename = "shieldCapacity", default)]
+    pub shield_capacity: Option<f64>,
+    #[serde(rename = "armorHP", default)]
+    pub armor_hp: Option<f64>,
+    #[serde(rename = "hp", default)]
+    pub hull_hp: Option<f64>,
+    #[serde(rename = "capacitorCapacity", default)]
+    pub capacitor_capacity: Option<f64>,
+    #[serde(rename = "maxVelocity", default)]
+    pub max_velocity: Option<f64>,
 }
 
 /// Outcome of a reverse name lookup. `Found` carries the unique
@@ -368,6 +384,48 @@ mod tests {
                     row.name
                 );
             }
+            // Base ship stats (design section 3): ships carry all
+            // five, every other row carries none. Present values
+            // are finite and non-negative; absence is distinct
+            // from a present 0.0.
+            let has_base_stat = row.shield_capacity.is_some()
+                || row.armor_hp.is_some()
+                || row.hull_hp.is_some()
+                || row.capacitor_capacity.is_some()
+                || row.max_velocity.is_some();
+            for value in [
+                row.shield_capacity,
+                row.armor_hp,
+                row.hull_hp,
+                row.capacitor_capacity,
+                row.max_velocity,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                assert!(
+                    value.is_finite() && value >= 0.0,
+                    "negative or non-finite base ship stat on {:?}",
+                    row.name
+                );
+            }
+            if row.category_id == 6 {
+                assert!(
+                    row.shield_capacity.is_some()
+                        && row.armor_hp.is_some()
+                        && row.hull_hp.is_some()
+                        && row.capacitor_capacity.is_some()
+                        && row.max_velocity.is_some(),
+                    "ship without all five base stats: {:?}",
+                    row.name
+                );
+            } else {
+                assert!(
+                    !has_base_stat,
+                    "non-ship carrying base ship stats: {:?}",
+                    row.name
+                );
+            }
         }
         // Spot pins mirroring the generator oracles (design section
         // 5), read from dgmTypeAttributes.csv.bz2 during design.
@@ -387,5 +445,39 @@ mod tests {
         let rig = types.lookup_by_id(31668).expect("rig row");
         assert_eq!(rig.cpu, None);
         assert_eq!(rig.power, None);
+        // Base ship stat spot pins (design section 3), read from
+        // dgmTypeAttributes.csv.bz2 during design: Rifter 587
+        // (263/265/9/482/37) = 450.0/450.0/350.0/250.0/365.0;
+        // Punisher 597 = 350.0/500.0/450.0/400.0/355.0.
+        let rifter = types.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(rifter.shield_capacity, Some(450.0));
+        assert_eq!(rifter.armor_hp, Some(450.0));
+        assert_eq!(rifter.hull_hp, Some(350.0));
+        assert_eq!(rifter.capacitor_capacity, Some(250.0));
+        assert_eq!(rifter.max_velocity, Some(365.0));
+        let punisher = types.lookup_by_id(597).expect("Punisher row");
+        assert_eq!(punisher.shield_capacity, Some(350.0));
+        assert_eq!(punisher.armor_hp, Some(500.0));
+        assert_eq!(punisher.hull_hp, Some(450.0));
+        assert_eq!(punisher.capacitor_capacity, Some(400.0));
+        assert_eq!(punisher.max_velocity, Some(355.0));
+        // Fractional pins: Echelon 3532 capacitor 187.5, Helios
+        // 11172 capacitor 218.75, Mekubal 78333 velocity 322.3.
+        let echelon = types.lookup_by_id(3532).expect("Echelon row");
+        assert_eq!(echelon.capacitor_capacity, Some(187.5));
+        let helios = types.lookup_by_id(11172).expect("Helios row");
+        assert_eq!(helios.capacitor_capacity, Some(218.75));
+        let mekubal = types.lookup_by_id(78333).expect("Mekubal row");
+        assert_eq!(mekubal.max_velocity, Some(322.3));
+        // Category gate pins: module, rig, and subsystem rows
+        // carry none of the five.
+        let subsystem = types.lookup_by_id(45623).expect("subsystem row");
+        for row in [damage_control, rig, subsystem] {
+            assert_eq!(row.shield_capacity, None);
+            assert_eq!(row.armor_hp, None);
+            assert_eq!(row.hull_hp, None);
+            assert_eq!(row.capacitor_capacity, None);
+            assert_eq!(row.max_velocity, None);
+        }
     }
 }
