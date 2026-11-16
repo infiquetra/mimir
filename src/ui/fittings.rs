@@ -7,10 +7,14 @@
 //! and never a raw ESI flag string.
 
 use super::widgets;
-use crate::app::state::{AppState, FittingsData, LoadState, SectionError, StepUpRequest};
+use crate::app::state::{
+    AppState, FittingWriteConfirm, FittingWriteKind, FittingWriteRequest, FittingsData, LoadState,
+    SectionError, StepUpRequest,
+};
 use crate::config::EveConfig;
 use crate::esi::models::CharacterFitting;
 use crate::fitting::eft::{parse_eft, EftImportOutcome, ImportIssue, ImportedFitting};
+use crate::fitting::write_map::{build_save_request, DropReason, DroppedFittingItem, SaveMapping};
 use crate::names::fitting_types::FittingTypes;
 use crate::names::resolver::NameResolver;
 use std::collections::HashMap;
@@ -452,6 +456,54 @@ fn fittings_reauthorize_panel(ui: &mut egui::Ui, state: &mut AppState) {
     }
 }
 
+/// Write step-up panel (write design section 3.2), modeled
+/// line-for-line on the read panel but rendering the write
+/// scope group. Driven by `fittings_write_needs_reauthorize`;
+/// renders only when that flag is set for the active
+/// character outside demo, ahead of the read section so it
+/// stays reachable while reads await their own grant or fail.
+fn fittings_write_reauthorize_panel(ui: &mut egui::Ui, state: &mut AppState) {
+    if state.demo || state.active_character_id.is_none() || !state.fittings_write_needs_reauthorize
+    {
+        return;
+    }
+    ui.heading("Saving fittings needs one more EVE permission.");
+    ui.label(format!(
+        "Mimir cannot save or delete fittings for this character until this EVE SSO scope is granted: {}. Reading fittings and other views are unaffected.",
+        EveConfig::FITTINGS_WRITE_SCOPES.join(" ")
+    ));
+    let active_id = state.active_character_id;
+    if let Some(name) = state.active_character().map(|c| c.name.clone()) {
+        ui.label(format!(
+            "Choose Re-authorize and Mimir opens EVE SSO in your browser for {name}, asking for the permissions already granted plus these. Sign in as {name}: approving as a different character is rejected and nothing is saved."
+        ));
+    }
+    let enabled = !state.demo && !state.auth.is_busy() && state.active_character_id.is_some();
+    if state.auth.is_busy() {
+        ui.spinner();
+        ui.label(state.auth.label());
+    }
+    if ui
+        .add_enabled(enabled, egui::Button::new("Re-authorize with EVE SSO"))
+        .clicked()
+    {
+        if let Some(active_id) = active_id {
+            tracing::info!(
+                "[AUTH] step-up re-authorize requested from Fittings view character_id={} scopes={}",
+                active_id,
+                EveConfig::FITTINGS_WRITE_SCOPES.join(" ")
+            );
+            state.stepup_requested = Some(StepUpRequest::new(
+                active_id,
+                EveConfig::FITTINGS_WRITE_SCOPES,
+            ));
+            state.status_message =
+                "EVE SSO requested: your browser should open to login.eveonline.com.".to_string();
+        }
+    }
+    ui.separator();
+}
+
 /// Demo sample EFT block (design section 8.3): real catalogue names,
 /// zero issues, one empty-slot marker, one noted loaded charge. Shown
 /// by the `Use sample EFT` button in demo mode only.
@@ -563,6 +615,294 @@ fn copy_imported_status_message(display_name: &str, charges_noted: usize) -> Str
     }
 }
 
+/// Maximum dropped-item lines spelled out in a save
+/// confirmation; the rest collapse into one overflow line
+/// (write design section 6.4).
+pub const WRITE_DROPPED_RENDER_MAX: usize = 8;
+
+/// The one demo label for write affordances (write design
+/// section 10): demo performs no writes and offers none.
+pub const DEMO_FIT_WRITE_LABEL: &str =
+    "Demo mode uses sample data. Saving or deleting fittings in EVE is disabled.";
+
+/// The fixed label shown in place of a write arm button when
+/// the mapping cannot be saved (write design section 4.2
+/// guards), or `None` when the mapping is saveable.
+fn unsaveable_label(mapping: &SaveMapping) -> Option<&'static str> {
+    if mapping.request.ship_type_id <= 0 || mapping.request.items.is_empty() {
+        Some("This fitting cannot be saved to EVE: nothing in it fits an EVE fitting slot.")
+    } else if mapping.request.items.len() > 512 {
+        Some("This fitting cannot be saved to EVE: it has more items than EVE allows in one fitting (512).")
+    } else {
+        None
+    }
+}
+
+/// Save-confirmation title (write design section 6.1 line 1).
+fn save_confirmation_title(name: &str) -> String {
+    format!("Save \"{name}\" to EVE?")
+}
+
+/// Save-confirmation summary for an imported fitting (section
+/// 6.1 line 2). `{ship}` is the catalogue ship name, `{n}`
+/// the kept-item count.
+fn save_confirmation_imported(name: &str, ship: &str, kept: usize) -> String {
+    format!(
+        "\"{name}\" ({ship}, {kept} items) will be added to this character's in-game fitting list."
+    )
+}
+
+/// Save-confirmation summary for a copy of a saved fitting
+/// (section 6.2).
+fn save_confirmation_copy(name: &str, ship: &str, kept: usize) -> String {
+    format!("A copy of \"{name}\" ({ship}, {kept} items) will be added to this character's in-game fitting list. The original stays as it is.")
+}
+
+/// Fallback-name disclosure (section 6.1 line 3).
+fn fallback_name_line() -> &'static str {
+    "The fitting name was empty, so it will be saved as \"Unnamed fit\"."
+}
+
+/// Truncated-name disclosure (section 6.1 line 4).
+fn truncated_name_line(char_count: usize) -> String {
+    format!("EVE fitting names are limited to 50 characters. This name ({char_count} characters) will be saved in the shortened form shown above.")
+}
+
+/// Truncated-description disclosure (section 6.1 line 5).
+fn description_truncated_line() -> &'static str {
+    "The fitting notes are too long for EVE and will be shortened."
+}
+
+/// Loaded-charge disclosure for an imported source (section
+/// 6.1 line 6).
+fn charges_not_sent_line(charges_noted: usize) -> String {
+    format!("{charges_noted} loaded charge(s) are shown above but are not part of a saved fitting and will not be sent to EVE.")
+}
+
+/// Delete-confirmation title (section 6.3 line 1).
+fn delete_confirmation_title(name: &str) -> String {
+    format!("Delete \"{name}\" from EVE?")
+}
+
+/// Delete-confirmation summary (section 6.3 line 2). The
+/// irreversibility sentence is verbatim-locked.
+fn delete_confirmation_summary(name: &str, ship: &str, item_count: usize) -> String {
+    format!("\"{name}\" ({ship}, {item_count} items) will be deleted from this character's in-game fitting list. This cannot be undone.")
+}
+
+/// One dropped-item disclosure line (section 6.4).
+fn dropped_item_line(item_name: &str, reason: DropReason) -> String {
+    match reason {
+        DropReason::NoEsiFlag => {
+            format!("{item_name} has no EVE fitting slot and will be left out.")
+        }
+        DropReason::DuplicateSlot => {
+            format!("{item_name} shares a fitting slot with another item and will be left out.")
+        }
+        DropReason::NotSaveable => format!("{item_name} cannot be saved and will be left out."),
+    }
+}
+
+/// Dropped-item disclosure lines (section 6.4): named lines
+/// first, at most `WRITE_DROPPED_RENDER_MAX` of them, then
+/// one overflow line covering items with no resolved name
+/// and any beyond the named ones. A dropped item is never
+/// rendered as a numeric id.
+fn dropped_disclosure_lines(
+    dropped: &[DroppedFittingItem],
+    resolver: &NameResolver,
+) -> Vec<String> {
+    let mut lines: Vec<String> = Vec::new();
+    let mut overflow: usize = 0;
+    for item in dropped {
+        let resolved = resolver
+            .cached(item.type_id)
+            .filter(|name| !name.is_empty() && !is_digit_only(name));
+        match resolved {
+            Some(name) if lines.len() < WRITE_DROPPED_RENDER_MAX => {
+                lines.push(dropped_item_line(name, item.reason));
+            }
+            _ => overflow = overflow.saturating_add(1),
+        }
+    }
+    if overflow > 0 {
+        lines.push(format!("{overflow} more item(s) will be left out."));
+    }
+    lines
+}
+
+/// Whether a write control may be armed or confirmed (write
+/// design section 6). `Cancel` is always enabled and is not
+/// gated by this.
+fn write_enabled(state: &AppState) -> bool {
+    !state.demo
+        && !state.auth.is_busy()
+        && state.fittings_write_in_flight.is_none()
+        && state.active_character_id.is_some()
+}
+
+/// What a save confirmation block decided (write design
+/// section 6): the single snapshot point is the Confirm
+/// click, in whose frame the caller builds the request.
+enum SaveConfirmAction {
+    Confirmed,
+    Cancelled,
+}
+
+/// Render one save confirmation block (sections 6.1/6.2),
+/// recomputed every frame from the current mapping. Returns
+/// the action only when the block was clicked; the caller
+/// stamps the request and clears the armed confirmation.
+fn render_save_confirm(
+    ui: &mut egui::Ui,
+    enabled: bool,
+    mapping: &SaveMapping,
+    ship_name: &str,
+    copy: bool,
+    charges_noted: Option<usize>,
+    resolver: &NameResolver,
+) -> Option<SaveConfirmAction> {
+    let name = &mapping.request.name;
+    ui.heading(save_confirmation_title(name));
+    if copy {
+        ui.label(save_confirmation_copy(
+            name,
+            ship_name,
+            mapping.request.items.len(),
+        ));
+    } else {
+        ui.label(save_confirmation_imported(
+            name,
+            ship_name,
+            mapping.request.items.len(),
+        ));
+    }
+    if mapping.name_was_fallback {
+        ui.label(fallback_name_line());
+    }
+    if let Some(count) = mapping.name_truncated_from {
+        ui.label(truncated_name_line(count));
+    }
+    if mapping.description_truncated {
+        ui.label(description_truncated_line());
+    }
+    if let Some(count) = charges_noted {
+        if count > 0 {
+            ui.label(charges_not_sent_line(count));
+        }
+    }
+    for line in dropped_disclosure_lines(&mapping.dropped, resolver) {
+        ui.label(line);
+    }
+    if ui
+        .add_enabled(enabled, egui::Button::new("Confirm save to EVE"))
+        .clicked()
+    {
+        return Some(SaveConfirmAction::Confirmed);
+    }
+    if ui.button("Cancel").clicked() {
+        return Some(SaveConfirmAction::Cancelled);
+    }
+    None
+}
+
+/// What a delete confirmation block decided (section 6.3).
+enum DeleteConfirmAction {
+    Confirmed,
+    Cancelled,
+}
+
+fn render_delete_confirm(
+    ui: &mut egui::Ui,
+    enabled: bool,
+    name: &str,
+    ship_name: &str,
+    item_count: usize,
+) -> Option<DeleteConfirmAction> {
+    ui.heading(delete_confirmation_title(name));
+    ui.label(delete_confirmation_summary(name, ship_name, item_count));
+    if ui
+        .add_enabled(enabled, egui::Button::new("Confirm delete"))
+        .clicked()
+    {
+        return Some(DeleteConfirmAction::Confirmed);
+    }
+    if ui.button("Cancel").clicked() {
+        return Some(DeleteConfirmAction::Cancelled);
+    }
+    None
+}
+
+/// Render the in-flight spinner row for a write belonging to
+/// the active character (section 6.5). Returns true when a
+/// row was rendered.
+fn render_write_in_flight(ui: &mut egui::Ui, state: &AppState) -> bool {
+    match &state.fittings_write_in_flight {
+        Some(flight) if Some(flight.character_id) == state.active_character_id => {
+            ui.horizontal(|ui| {
+                ui.spinner();
+                ui.label(match flight.kind {
+                    FittingWriteKind::Save => "Saving to EVE...",
+                    FittingWriteKind::Delete => "Deleting from EVE...",
+                });
+            });
+            true
+        }
+        _ => false,
+    }
+}
+
+/// Whether an armed write confirmation is no longer
+/// renderable (section 6): the stamped character is not
+/// active, the stamped fitting is gone from the loaded list,
+/// or the imported fitting (or its owner) is gone. A
+/// confirmation never outlives the thing it confirms.
+fn write_confirm_is_stale(state: &AppState) -> bool {
+    let Some(confirm) = &state.fittings_write_confirm else {
+        return false;
+    };
+    match confirm {
+        FittingWriteConfirm::SaveImported { character_id } => {
+            Some(*character_id) != state.active_character_id
+                || state.fittings_import_owner != state.active_character_id
+                || state.fittings_imported.is_none()
+        }
+        FittingWriteConfirm::SaveCopy {
+            character_id,
+            fitting_id,
+        }
+        | FittingWriteConfirm::Delete {
+            character_id,
+            fitting_id,
+        } => {
+            Some(*character_id) != state.active_character_id
+                || *fitting_id <= 0
+                || !matches!(&state.fittings, LoadState::Ready(bundle)
+                if bundle.fittings.as_ref().is_ok_and(|list| {
+                    list.iter().any(|f| f.fitting_id == *fitting_id)
+                }))
+        }
+    }
+}
+
+/// Log and queue one confirmed save. Runs in the Confirm
+/// click frame, so the displayed block is bit-for-bit what
+/// is sent. Counts only, never the fitting name (design
+/// section 11).
+fn queue_save_request(state: &mut AppState, character_id: i64, mapping: SaveMapping) {
+    tracing::info!(
+        "[FITTING] save confirmed character_id={} kept={} dropped={}",
+        character_id,
+        mapping.request.items.len(),
+        mapping.dropped.len()
+    );
+    state.fittings_write_requested = Some(FittingWriteRequest::Save {
+        character_id,
+        request: mapping.request,
+    });
+    state.fittings_write_confirm = None;
+}
+
 /// Item-section rendering shared by the saved fitting detail and the
 /// imported fitting detail (design section 6.2). The empty-fitting
 /// sentence stays at the callers.
@@ -607,7 +947,7 @@ fn fittings_import_panel(
     fitting_types: Option<&FittingTypes>,
 ) {
     ui.heading("Import a fitting from EFT text");
-    ui.label("Paste an EFT block (the [Ship, Fitting name] text format). The imported fitting stays in Mimir on this device: it is not saved to EVE and is gone when you switch characters or close Mimir.");
+    ui.label("Paste an EFT block (the [Ship, Fitting name] text format). The imported fitting stays in Mimir on this device unless you save it to EVE below, and it is gone when you switch characters or close Mimir.");
     let Some(catalogue) = fitting_types else {
         ui.label("Could not import: Mimir's bundled item data failed to load. Restart Mimir and try again.");
         return;
@@ -693,7 +1033,7 @@ fn fittings_import_panel(
         return;
     };
     ui.label(imported_summary_line(&imported));
-    ui.label("Imported fitting (not saved in EVE)");
+    ui.label("Imported fitting");
     if let Some(note) = placeholder_note(imported.report.placeholder_lines) {
         ui.label(note);
     }
@@ -764,6 +1104,72 @@ fn fittings_import_panel(
             }
         }
     }
+    // Save affordance (write design section 6.1): the arm
+    // button, its armed confirmation block, the demo label,
+    // or the in-flight row — never more than one.
+    if render_write_in_flight(ui, state) {
+        return;
+    }
+    if state.demo {
+        ui.label(DEMO_FIT_WRITE_LABEL);
+        return;
+    }
+    let active_id = state.active_character_id;
+    let mapping = build_save_request(&synth);
+    if matches!(
+        state.fittings_write_confirm,
+        Some(FittingWriteConfirm::SaveImported { character_id }) if Some(character_id) == active_id
+    ) {
+        // Recomputed every frame from the current imported
+        // fitting: what the block displays is bit-for-bit what
+        // Confirm sends. An un-saveable source drops the
+        // confirmation (write design section 6.1).
+        if let Some(label) = unsaveable_label(&mapping) {
+            state.fittings_write_confirm = None;
+            ui.label(label);
+            return;
+        }
+        let enabled = write_enabled(state);
+        let ship_name = imported.ship_name.clone();
+        let charges_noted = imported.report.charges_noted;
+        match render_save_confirm(
+            ui,
+            enabled,
+            &mapping,
+            &ship_name,
+            false,
+            Some(charges_noted),
+            &local_resolver,
+        ) {
+            Some(SaveConfirmAction::Confirmed) => {
+                if let Some(character_id) = active_id {
+                    queue_save_request(state, character_id, mapping);
+                }
+            }
+            Some(SaveConfirmAction::Cancelled) => {
+                state.fittings_write_confirm = None;
+            }
+            None => {}
+        }
+    } else if let Some(label) = unsaveable_label(&mapping) {
+        ui.label(label);
+    } else if ui
+        .add_enabled(
+            write_enabled(state),
+            egui::Button::new("Save imported fitting to EVE..."),
+        )
+        .clicked()
+    {
+        if let Some(character_id) = active_id {
+            tracing::info!(
+                "[FITTING] save confirmation armed character_id={} kind=save_imported kept={} dropped={}",
+                character_id,
+                mapping.request.items.len(),
+                mapping.dropped.len()
+            );
+            state.fittings_write_confirm = Some(FittingWriteConfirm::SaveImported { character_id });
+        }
+    }
 }
 
 pub fn show(
@@ -783,6 +1189,16 @@ pub fn show(
     // step-up grant (design section 8.2).
     fittings_import_panel(ui, state, fitting_types);
     ui.separator();
+    // A confirmation never outlives the thing it confirms (write
+    // design section 6): sweep stale armed values before any
+    // confirmation block renders.
+    if write_confirm_is_stale(state) {
+        state.fittings_write_confirm = None;
+    }
+    // The write step-up panel stays reachable while the read
+    // section awaits its own grant or shows an error (write
+    // design section 3.2), ahead of the LoadState match.
+    fittings_write_reauthorize_panel(ui, state);
     let snapshot: LoadState<FittingsData> = state.fittings.clone();
     match snapshot {
         LoadState::Loading => widgets::loading_panel(ui, "Loading fittings data..."),
@@ -847,6 +1263,10 @@ pub fn show(
                                     row.display_name
                                 );
                                 state.fittings_selected_fitting_id = Some(row.fitting_id);
+                                // Write design section 8.1: an
+                                // explicit user choice always beats
+                                // a pending machine one.
+                                state.fittings_pending_selection = None;
                             }
                             ui.label(format!("{} • {} items", row.ship_name, row.item_count));
                         }
@@ -908,6 +1328,124 @@ pub fn show(
                                     export.skipped_unknown,
                                     export.skipped_empty
                                 );
+                            }
+                        }
+                    }
+                    // Write affordances (write design sections
+                    // 6.2/6.3): save-a-copy and delete. The arm
+                    // buttons and a single armed block never
+                    // coexist for the same target.
+                    if render_write_in_flight(ui, state) {
+                        // In-flight row replaces the write buttons.
+                    } else if state.demo {
+                        ui.label(DEMO_FIT_WRITE_LABEL);
+                    } else if let Some(active_id) = state.active_character_id {
+                        let selected_fitting_id = selected.fitting_id;
+                        let mapping = build_save_request(selected);
+                        let armed_copy = matches!(
+                            state.fittings_write_confirm,
+                            Some(FittingWriteConfirm::SaveCopy {
+                                character_id,
+                                fitting_id,
+                            }) if character_id == active_id
+                                && fitting_id == selected_fitting_id
+                        );
+                        let armed_delete = matches!(
+                            state.fittings_write_confirm,
+                            Some(FittingWriteConfirm::Delete {
+                                character_id,
+                                fitting_id,
+                            }) if character_id == active_id
+                                && fitting_id == selected_fitting_id
+                        );
+                        if armed_copy {
+                            // A copy source cannot drift
+                            // un-saveable, but the guard keeps the
+                            // confirmation honest if it ever did.
+                            if let Some(label) = unsaveable_label(&mapping) {
+                                state.fittings_write_confirm = None;
+                                ui.label(label);
+                            } else {
+                                let enabled = write_enabled(state);
+                                let ship_name = resolver.name(selected.ship_type_id);
+                                match render_save_confirm(
+                                    ui, enabled, &mapping, &ship_name, true, None, resolver,
+                                ) {
+                                    Some(SaveConfirmAction::Confirmed) => {
+                                        queue_save_request(state, active_id, mapping);
+                                    }
+                                    Some(SaveConfirmAction::Cancelled) => {
+                                        state.fittings_write_confirm = None;
+                                    }
+                                    None => {}
+                                }
+                            }
+                        } else if armed_delete {
+                            let enabled = write_enabled(state);
+                            let name = mapping.request.name.clone();
+                            let ship_name = resolver.name(selected.ship_type_id);
+                            let item_count = selected.items.len();
+                            match render_delete_confirm(ui, enabled, &name, &ship_name, item_count)
+                            {
+                                Some(DeleteConfirmAction::Confirmed) => {
+                                    tracing::info!(
+                                        "[FITTING] delete confirmed character_id={} fitting_id={}",
+                                        active_id,
+                                        selected_fitting_id
+                                    );
+                                    state.fittings_write_requested =
+                                        Some(FittingWriteRequest::Delete {
+                                            character_id: active_id,
+                                            fitting_id: selected_fitting_id,
+                                        });
+                                    state.fittings_write_confirm = None;
+                                }
+                                Some(DeleteConfirmAction::Cancelled) => {
+                                    state.fittings_write_confirm = None;
+                                }
+                                None => {}
+                            }
+                        } else {
+                            if let Some(label) = unsaveable_label(&mapping) {
+                                ui.label(label);
+                            } else if ui
+                                .add_enabled(
+                                    write_enabled(state),
+                                    egui::Button::new("Save a copy to EVE..."),
+                                )
+                                .clicked()
+                            {
+                                tracing::info!(
+                                    "[FITTING] save confirmation armed character_id={} kind=save_copy kept={} dropped={}",
+                                    active_id,
+                                    mapping.request.items.len(),
+                                    mapping.dropped.len()
+                                );
+                                state.fittings_write_confirm =
+                                    Some(FittingWriteConfirm::SaveCopy {
+                                        character_id: active_id,
+                                        fitting_id: selected_fitting_id,
+                                    });
+                            }
+                            // Only server-issued ids are delete
+                            // targets (write design section 5.2).
+                            if selected_fitting_id > 0
+                                && ui
+                                    .add_enabled(
+                                        write_enabled(state),
+                                        egui::Button::new("Delete fitting from EVE..."),
+                                    )
+                                    .clicked()
+                            {
+                                tracing::info!(
+                                    "[FITTING] delete confirmation armed character_id={} fitting_id={}",
+                                    active_id,
+                                    selected_fitting_id
+                                );
+                                state.fittings_write_confirm = Some(FittingWriteConfirm::Delete {
+                                    character_id: active_id,
+                                    fitting_id: selected_fitting_id,
+                                });
                             }
                         }
                     }
@@ -1474,6 +2012,222 @@ mod tests {
             }
             EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
         }
+    }
+
+    #[test]
+    fn write_confirmation_lines_match_the_locked_templates() {
+        assert_eq!(
+            save_confirmation_title("My Rifter"),
+            "Save \"My Rifter\" to EVE?"
+        );
+        assert_eq!(
+            save_confirmation_imported("My Rifter", "Rifter", 3),
+            "\"My Rifter\" (Rifter, 3 items) will be added to this character's in-game fitting list."
+        );
+        assert_eq!(
+            save_confirmation_copy("My Rifter", "Rifter", 3),
+            "A copy of \"My Rifter\" (Rifter, 3 items) will be added to this character's in-game fitting list. The original stays as it is."
+        );
+        assert_eq!(
+            fallback_name_line(),
+            "The fitting name was empty, so it will be saved as \"Unnamed fit\"."
+        );
+        assert_eq!(
+            truncated_name_line(51),
+            "EVE fitting names are limited to 50 characters. This name (51 characters) will be saved in the shortened form shown above."
+        );
+        assert_eq!(
+            description_truncated_line(),
+            "The fitting notes are too long for EVE and will be shortened."
+        );
+        assert_eq!(
+            charges_not_sent_line(2),
+            "2 loaded charge(s) are shown above but are not part of a saved fitting and will not be sent to EVE."
+        );
+        assert_eq!(
+            delete_confirmation_title("My Rifter"),
+            "Delete \"My Rifter\" from EVE?"
+        );
+        assert_eq!(
+            delete_confirmation_summary("My Rifter", "Rifter", 3),
+            "\"My Rifter\" (Rifter, 3 items) will be deleted from this character's in-game fitting list. This cannot be undone."
+        );
+        assert_eq!(
+            dropped_item_line("Demo Small Railgun", DropReason::NoEsiFlag),
+            "Demo Small Railgun has no EVE fitting slot and will be left out."
+        );
+        assert_eq!(
+            dropped_item_line("Demo Small Railgun", DropReason::DuplicateSlot),
+            "Demo Small Railgun shares a fitting slot with another item and will be left out."
+        );
+        assert_eq!(
+            dropped_item_line("Demo Small Railgun", DropReason::NotSaveable),
+            "Demo Small Railgun cannot be saved and will be left out."
+        );
+        assert_eq!(
+            DEMO_FIT_WRITE_LABEL,
+            "Demo mode uses sample data. Saving or deleting fittings in EVE is disabled."
+        );
+    }
+
+    #[test]
+    fn unsaveable_labels_match_the_locked_wording() {
+        let fitting = |ship_type_id: i64, items: Vec<FittingItem>| CharacterFitting {
+            fitting_id: 1,
+            name: "Rifter".to_string(),
+            description: None,
+            ship_type_id,
+            items,
+        };
+        let saveable = build_save_request(&fitting(587, vec![item("LoSlot0", 1, 2048)]));
+        assert_eq!(unsaveable_label(&saveable), None);
+        let ship_zero = build_save_request(&fitting(0, vec![item("LoSlot0", 1, 2048)]));
+        assert_eq!(
+            unsaveable_label(&ship_zero),
+            Some("This fitting cannot be saved to EVE: nothing in it fits an EVE fitting slot.")
+        );
+        let no_items = build_save_request(&fitting(587, vec![item("RigSlot3", 1, 2048)]));
+        assert_eq!(
+            unsaveable_label(&no_items),
+            Some("This fitting cannot be saved to EVE: nothing in it fits an EVE fitting slot.")
+        );
+        let over_cap: Vec<FittingItem> = (0..513).map(|_| item("Cargo", 1, 34)).collect();
+        let over = build_save_request(&fitting(587, over_cap));
+        assert_eq!(
+            unsaveable_label(&over),
+            Some("This fitting cannot be saved to EVE: it has more items than EVE allows in one fitting (512).")
+        );
+        let at_cap: Vec<FittingItem> = (0..512).map(|_| item("Cargo", 1, 34)).collect();
+        let at = build_save_request(&fitting(587, at_cap));
+        assert_eq!(unsaveable_label(&at), None);
+    }
+
+    #[test]
+    fn dropped_disclosure_caps_named_lines_then_overflows() {
+        let resolver = test_resolver();
+        assert_eq!(WRITE_DROPPED_RENDER_MAX, 8);
+        // Ten dropped items, all resolved: eight named lines
+        // plus the overflow line (write design section 13).
+        let dropped: Vec<DroppedFittingItem> = (0..10)
+            .map(|_| DroppedFittingItem {
+                type_id: 2048,
+                flag: "RigSlot3".to_string(),
+                reason: DropReason::NoEsiFlag,
+            })
+            .collect();
+        let lines = dropped_disclosure_lines(&dropped, &resolver);
+        assert_eq!(lines.len(), 9);
+        assert_eq!(
+            lines[0],
+            "Demo Small Railgun has no EVE fitting slot and will be left out."
+        );
+        assert_eq!(lines[8], "2 more item(s) will be left out.");
+        // Unresolved items collapse into the overflow line and
+        // are never rendered as numbers.
+        let dropped = vec![
+            DroppedFittingItem {
+                type_id: 424242,
+                flag: "RigSlot3".to_string(),
+                reason: DropReason::NoEsiFlag,
+            },
+            DroppedFittingItem {
+                type_id: 2048,
+                flag: "HiSlot0".to_string(),
+                reason: DropReason::DuplicateSlot,
+            },
+        ];
+        let lines = dropped_disclosure_lines(&dropped, &resolver);
+        assert_eq!(lines.len(), 2);
+        assert_eq!(
+            lines[0],
+            "Demo Small Railgun shares a fitting slot with another item and will be left out."
+        );
+        assert_eq!(lines[1], "1 more item(s) will be left out.");
+        assert!(lines.iter().all(|line| !line.contains("424242")));
+        assert!(dropped_disclosure_lines(&[], &resolver).is_empty());
+    }
+
+    #[test]
+    fn write_confirm_staleness_matrix() {
+        let mut state = AppState::new(false);
+        state.active_character_id = Some(42);
+        // Nothing armed is never stale.
+        assert!(!write_confirm_is_stale(&state));
+        // SaveImported: own character + owner + imported present.
+        state.fittings_write_confirm = Some(FittingWriteConfirm::SaveImported { character_id: 42 });
+        assert!(write_confirm_is_stale(&state), "no imported fitting yet");
+        state.fittings_import_owner = Some(42);
+        state.fittings_imported = Some(ImportedFitting {
+            name: "Test".to_string(),
+            ship_type_id: 587,
+            ship_name: "Rifter".to_string(),
+            items: Vec::new(),
+            report: ImportReport {
+                imported_lines: 0,
+                placeholder_lines: 0,
+                charges_noted: 0,
+                issues: Vec::new(),
+            },
+        });
+        assert!(!write_confirm_is_stale(&state), "fresh import arm");
+        state.active_character_id = Some(7);
+        assert!(write_confirm_is_stale(&state), "switched character");
+        state.fittings_write_confirm = Some(FittingWriteConfirm::SaveImported { character_id: 7 });
+        // SaveCopy/Delete: stamped fitting must be in the list.
+        state.fittings_write_confirm = Some(FittingWriteConfirm::SaveCopy {
+            character_id: 7,
+            fitting_id: 4242,
+        });
+        assert!(write_confirm_is_stale(&state), "list is Loading");
+        state.fittings = LoadState::Ready(FittingsData {
+            fittings: Ok(vec![CharacterFitting {
+                fitting_id: 4242,
+                ..CharacterFitting::default()
+            }]),
+        });
+        assert!(!write_confirm_is_stale(&state), "fitting still loaded");
+        state.fittings_write_confirm = Some(FittingWriteConfirm::Delete {
+            character_id: 7,
+            fitting_id: 4242,
+        });
+        assert!(!write_confirm_is_stale(&state));
+        state.fittings_write_confirm = Some(FittingWriteConfirm::Delete {
+            character_id: 7,
+            fitting_id: 0,
+        });
+        assert!(write_confirm_is_stale(&state), "zero id is never a target");
+        state.fittings_write_confirm = Some(FittingWriteConfirm::SaveCopy {
+            character_id: 42,
+            fitting_id: 4242,
+        });
+        assert!(
+            write_confirm_is_stale(&state),
+            "stamped for another character"
+        );
+    }
+
+    #[test]
+    fn write_enabled_gate_covers_demo_busy_flight_and_character() {
+        // Demo cannot write.
+        let demo = AppState::new(true);
+        assert!(!write_enabled(&demo));
+        let mut state = AppState::new(false);
+        assert!(!write_enabled(&state), "no active character");
+        state.active_character_id = Some(42);
+        assert!(write_enabled(&state));
+        state.auth = crate::app::state::AuthState::AwaitingCallback;
+        assert!(!write_enabled(&state), "sign-in in progress");
+        state.auth = crate::app::state::AuthState::Idle;
+        state.fittings_write_in_flight = Some(crate::app::state::FittingWriteInFlight {
+            character_id: 42,
+            kind: crate::app::state::FittingWriteKind::Save,
+            fitting_id: None,
+        });
+        assert!(!write_enabled(&state), "one flight app-wide");
+        // A fresh demo state cannot write even with a character.
+        let mut demo2 = AppState::new(true);
+        demo2.active_character_id = Some(42);
+        assert!(!write_enabled(&demo2));
     }
 
     #[test]
