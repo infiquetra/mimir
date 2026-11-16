@@ -505,7 +505,11 @@ impl MimirApp {
                     tracing::info!("[AUTH] step-up complete character_id={}", character_id);
                     self.state.auth = AuthState::Success;
                     if self.state.active_character_id == Some(character_id) {
-                        self.state.assets_needs_reauthorize = false;
+                        // Do NOT clear assets_needs_reauthorize here: login
+                        // success alone does not prove the grant loads data.
+                        // The Refreshed Ok(assets) arm clears it once a
+                        // refresh actually succeeds; a failed refresh leaves
+                        // the Re-authorize panel in place.
                         // request_refresh sets its own generic status, so the
                         // specific step-up status must be set after it.
                         self.state.request_refresh("post-stepup");
@@ -551,10 +555,32 @@ impl MimirApp {
             self.start_stepup_login(request);
         }
         if let Some(id) = self.state.logout_requested_id.take() {
-            self.logout(id);
+            // UI disables these buttons while busy; this drain guard is
+            // the backstop so no path can delete tokens mid-callback.
+            if self.state.auth.is_busy() {
+                tracing::warn!(
+                    "[AUTH] ignoring logout while sign-in in progress character_id={}",
+                    id
+                );
+                self.state.status_message =
+                    "Finish sign-in in your browser before logging out or deleting characters."
+                        .to_string();
+            } else {
+                self.logout(id);
+            }
         }
         if let Some(id) = self.state.delete_requested_id.take() {
-            self.delete_character(id);
+            if self.state.auth.is_busy() {
+                tracing::warn!(
+                    "[AUTH] ignoring delete while sign-in in progress character_id={}",
+                    id
+                );
+                self.state.status_message =
+                    "Finish sign-in in your browser before logging out or deleting characters."
+                        .to_string();
+            } else {
+                self.delete_character(id);
+            }
         }
     }
 
@@ -952,7 +978,10 @@ impl MimirApp {
         let db = backends.db.clone();
         let tx = self.tx.clone();
         let expected_character_id = request.character_id;
-        let requested_scopes = request.scopes;
+        // The callback must prove the returned token retains every
+        // previously granted scope plus the requested ones, not just
+        // the newly requested delta.
+        let expected_scopes = union;
         runtime.spawn(async move {
             let outcome = async {
                 let params = CallbackServer::new().wait_for_callback().await?;
@@ -961,10 +990,10 @@ impl MimirApp {
                 let claims = oauth::parse_jwt_claims(&tokens.access_token)?;
                 let character_id =
                     oauth::validate_expected_character(&claims, expected_character_id)?;
-                let still_missing = oauth::missing_scopes(&claims.scp, &requested_scopes);
+                let still_missing = oauth::missing_scopes(&claims.scp, &expected_scopes);
                 if !still_missing.is_empty() {
                     tracing::warn!(
-                        "[AUTH] step-up returned without requested scopes character_id={} missing={}",
+                        "[AUTH] step-up returned without granted or requested scopes character_id={} missing={}",
                         character_id,
                         still_missing.join(" ")
                     );
@@ -972,6 +1001,28 @@ impl MimirApp {
                         "EVE did not grant the requested scope(s); nothing was saved"
                             .to_string(),
                     )));
+                }
+                // The character may have been removed during the browser
+                // wait (UI and drain guards block the known paths; this
+                // save-time re-check is the backstop so deleted characters
+                // never regain stored tokens).
+                {
+                    let conn = db.lock().map_err(|_| {
+                        crate::AppError::from(crate::AuthError::Message(
+                            "could not verify the character still exists; nothing was saved"
+                                .to_string(),
+                        ))
+                    })?;
+                    if repositories::get_character(&conn, character_id)?.is_none() {
+                        tracing::warn!(
+                            "[AUTH] discarding step-up tokens for removed character_id={} (nothing saved)",
+                            character_id
+                        );
+                        return Err(crate::AppError::from(crate::AuthError::Message(
+                            "that character was removed during sign-in; nothing was saved"
+                                .to_string(),
+                        )));
+                    }
                 }
                 let stored = StoredTokens::from_token_response(character_id, &tokens);
                 token_store.save(&stored)?;

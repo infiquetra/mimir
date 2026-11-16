@@ -665,6 +665,26 @@ mod tests {
     }
 
     #[test]
+    fn missing_scopes_against_union_detects_dropped_granted_scope() {
+        // Step-up completion validates the returned token against
+        // granted ∪ requested: gaining the new scope while losing a
+        // previously granted one must be detected, not saved.
+        let granted = scopes(&[
+            "esi-wallet.read_character_wallet.v1",
+            "esi-skills.read_skills.v1",
+        ]);
+        let requested = scopes(&["esi-assets.read_assets.v1"]);
+        let expected = union_scopes(&granted, &requested);
+        let returned = scopes(&["esi-skills.read_skills.v1", "esi-assets.read_assets.v1"]);
+        assert_eq!(
+            missing_scopes(&returned, &expected),
+            scopes(&["esi-wallet.read_character_wallet.v1"])
+        );
+        // Checking only the requested scope would have passed.
+        assert!(missing_scopes(&returned, &requested).is_empty());
+    }
+
+    #[test]
     fn split_and_join_scopes_roundtrip() {
         assert_eq!(split_scopes("a  b\t c"), scopes(&["a", "b", "c"]));
         assert!(split_scopes("").is_empty());

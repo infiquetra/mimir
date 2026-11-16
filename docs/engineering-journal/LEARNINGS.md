@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### A step-up grant is proven by the next successful data fetch, never by login alone; in-flight sign-in outlives UI intentions
+
+**Author.** Muse Code (parent repair pass over the step-up OAuth workflow)
+**Context.** Adversarial review of the scoped step-up sign-in confirmed three blockers the green suite missed: the Assets re-authorize panel cleared at login success before any refresh proved the grant, the returned token was checked only for the newly requested scope (so a previously granted scope could be silently dropped on save), and deleting a character during the up-to-300-second browser wait let the callback save fresh tokens for the removed character.
+**Evidence.** Review traces in the step-up workflow synthesis; `src/app/shell.rs` (`StepUpLoggedIn` arm clearing `assets_needs_reauthorize`, scope-gain check against `requested_scopes` only, spawned callback task saving with no still-present re-check), `src/ui/characters.rs` (logout/delete buttons enabled while authentication (auth) is busy).
+**Mechanism.** Each step was locally correct — login succeeded, the requested scope arrived, deletion deleted — but correctness lives in the ordering across an asynchronous gap: user intent (delete) and external results (token, refresh) can arrive in either order, and every consumer must re-validate its preconditions at apply time against the full expected end state, not just the delta it asked for.
+**Fix (or queued).** The grant flag now clears only in the refresh-proven arm; returned scopes are validated against granted union requested before anything is saved; logout/delete are disabled and drain-guarded while auth is busy, and the callback task re-checks the character still exists in the database before saving tokens.
+**Validation.** New unit test in `src/auth/oauth.rs` pins dropped-grant detection against the union; full `cargo test` / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` on branch `feat/stepup-oauth` in the repair commit. Shell and egui paths have no test harness in this repo, so the flag-timing and race guards are code-inspected with log evidence, not unit-proven.
+**Generalizable rule.** For any multi-step external grant: validate the returned end state in full before persisting, clear "needs action" only when the protected operation succeeds, and re-check that the subject still exists at save time — or block destructive actions for the whole in-flight window.
+**Refs.** `docs/stepup-oauth-design.md`; `src/app/shell.rs`; `src/auth/oauth.rs`; `src/ui/characters.rs`.
+
 ### Tolerant per-character sub-fetches must be reset at the switch boundary, and decoded quantities are untrusted arithmetic
 
 **Author.** Muse Code (parent repair pass over the Assets workflow)
