@@ -13,6 +13,9 @@ use mimir::demo::data::{
 use mimir::names::resolver::{UNKNOWN_ITEM, UNKNOWN_LOCATION};
 use mimir::names::sde::Sde;
 use mimir::ui::assets::group_assets;
+use mimir::ui::characters::{
+    attribute_rows, clone_display_name, implant_names, standing_counts, standing_groups,
+};
 
 const ARIA: i64 = 90000001;
 const MARCUS: i64 = 90000002;
@@ -190,6 +193,36 @@ fn name_resolution_covers_every_demo_id_and_falls_back_safely() {
                 asset.location_id
             );
         }
+        // Every character-detail ID of design section 8 resolves too.
+        let detail = per.detail.as_ref().expect("demo detail present");
+        for implant_id in detail.implants.as_ref().expect("implants ok") {
+            assert_ne!(resolver.name(*implant_id), UNKNOWN_ITEM);
+        }
+        let clones = detail.clones.as_ref().expect("clones ok");
+        for clone in &clones.jump_clones {
+            assert_ne!(resolver.location_name(clone.location_id), UNKNOWN_LOCATION);
+            for implant_id in &clone.implants {
+                assert_ne!(resolver.name(*implant_id), UNKNOWN_ITEM);
+            }
+        }
+        if let Some(home) = &clones.home_location {
+            assert_ne!(resolver.location_name(home.location_id), UNKNOWN_LOCATION);
+        }
+        for standing in detail.standings.as_ref().expect("standings ok") {
+            assert_ne!(resolver.name(standing.from_id), UNKNOWN_ITEM);
+        }
+        let location = detail.location.as_ref().expect("location ok");
+        assert_ne!(
+            resolver.location_name(location.solar_system_id),
+            UNKNOWN_LOCATION
+        );
+        if let Some(docked_id) = location.docked_location_id() {
+            assert_ne!(resolver.location_name(docked_id), UNKNOWN_LOCATION);
+        }
+        assert_ne!(
+            resolver.name(detail.ship.as_ref().expect("ship ok").ship_type_id),
+            UNKNOWN_ITEM
+        );
     }
 
     // Fallbacks for unknown ids are words, never the raw number.
@@ -230,6 +263,28 @@ fn demo_seed_populates_state_and_switching_characters_works() {
         assert!(summary.queue_len.unwrap_or(0) > 0);
     }
 
+    // Character details seed Ready and both summaries carry resolved
+    // location/ship names (never raw IDs).
+    assert!(matches!(state.character_details, LoadState::Ready(_)));
+    let aria_summary = state.summaries.get(&ARIA).expect("aria summary");
+    assert_eq!(
+        aria_summary.location_name.as_deref(),
+        Some("Jita IV - Moon 4 - Caldari Navy Assembly Plant")
+    );
+    assert_eq!(
+        aria_summary.ship_name.as_deref(),
+        Some("Aria's Rifter (Rifter)")
+    );
+    let marcus_summary = state.summaries.get(&MARCUS).expect("marcus summary");
+    assert_eq!(
+        marcus_summary.location_name.as_deref(),
+        Some("Amarr VIII (Oris) - Emperor Family Academy")
+    );
+    assert_eq!(
+        marcus_summary.ship_name.as_deref(),
+        Some("Marcus's Rifter (Rifter)")
+    );
+
     // Switching to the second character swaps the per-view data.
     let bundle = load_demo_bundle().expect("bundle");
     state.set_active_character(MARCUS);
@@ -240,6 +295,19 @@ fn demo_seed_populates_state_and_switching_characters_works() {
     assert_eq!(skills.queue[0].skill_id, 3327);
     let detail = state.character_detail.as_ready().expect("detail ready");
     assert_eq!(detail.name, "Marcus Hale");
+    let marcus_details = state
+        .character_details
+        .as_ready()
+        .expect("marcus character details ready");
+    assert_eq!(
+        marcus_details
+            .attributes
+            .as_ref()
+            .expect("attributes ok")
+            .intelligence,
+        20
+    );
+    assert!(!marcus_details.online.as_ref().expect("online ok").online);
 }
 
 #[test]
@@ -289,4 +357,80 @@ fn demo_assets_render_with_resolved_names_for_both_characters() {
         }
     }
     assert!(!state.assets_needs_reauthorize);
+}
+
+#[test]
+fn demo_character_details_render_resolved_for_both() {
+    let bundle = load_demo_bundle().expect("bundle");
+    let resolver = demo_resolver().expect("demo resolver");
+    let mut state = AppState::new(true);
+    seed_demo_state(&mut state);
+
+    // Aria after seeding: every section renders through the pure helpers
+    // with resolved names, none of them a raw numeric ID.
+    let aria = state
+        .character_details
+        .as_ready()
+        .expect("aria character details ready")
+        .clone();
+    let aria_rows = attribute_rows(aria.attributes.as_ref().expect("attributes ok"));
+    assert_eq!(aria_rows.len(), 5);
+    assert!(aria_rows.contains(&("Intelligence", 27)));
+    let aria_implants = implant_names(aria.implants.as_ref().expect("implants ok"), &resolver);
+    assert_eq!(
+        aria_implants,
+        vec!["Demo Memory Implant", "Demo Perception Implant"]
+    );
+    let aria_clones = aria.clones.as_ref().expect("clones ok");
+    assert_eq!(aria_clones.jump_clones.len(), 2);
+    assert_eq!(
+        clone_display_name(&aria_clones.jump_clones[0]),
+        "Amarr spare"
+    );
+    assert_eq!(
+        clone_display_name(&aria_clones.jump_clones[1]),
+        "Jump clone"
+    );
+    let aria_standings = aria.standings.as_ref().expect("standings ok");
+    assert_eq!(standing_counts(aria_standings), (1, 0, 1));
+    let aria_groups = standing_groups(aria_standings, &resolver);
+    assert_eq!(aria_groups.len(), 2);
+    assert!(aria_groups
+        .iter()
+        .flat_map(|g| &g.rows)
+        .any(|r| r.name == "Caldari State" && r.standing_text == "+3.25"));
+    assert!(aria_groups
+        .iter()
+        .flat_map(|g| &g.rows)
+        .any(|r| r.name == "CONCORD" && r.standing_text == "-1.50"));
+
+    // Switching swaps in Marcus's entirely different bundle.
+    state.set_active_character(MARCUS);
+    apply_character(&mut state, &bundle, MARCUS);
+    let marcus = state
+        .character_details
+        .as_ready()
+        .expect("marcus character details ready")
+        .clone();
+    let marcus_rows = attribute_rows(marcus.attributes.as_ref().expect("attributes ok"));
+    assert!(marcus_rows.contains(&("Intelligence", 20)));
+    assert!(implant_names(marcus.implants.as_ref().expect("implants ok"), &resolver).is_empty());
+    let marcus_clones = marcus.clones.as_ref().expect("clones ok");
+    assert_eq!(marcus_clones.jump_clones.len(), 1);
+    assert_eq!(
+        clone_display_name(&marcus_clones.jump_clones[0]),
+        "Jump clone"
+    );
+    let marcus_standings = marcus.standings.as_ref().expect("standings ok");
+    assert_eq!(standing_counts(marcus_standings), (1, 1, 1));
+    let marcus_groups = standing_groups(marcus_standings, &resolver);
+    assert!(marcus_groups
+        .iter()
+        .any(|g| g.heading == "Other" && g.rows.iter().any(|r| r.name == "Demo Alliance")));
+    for groups in [&aria_groups, &marcus_groups] {
+        for row in groups.iter().flat_map(|g| &g.rows) {
+            assert_ne!(row.name, UNKNOWN_ITEM);
+            assert!(row.name.parse::<i64>().is_err(), "raw id: {}", row.name);
+        }
+    }
 }
