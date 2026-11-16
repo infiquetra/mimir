@@ -15,6 +15,7 @@ use crate::config::EveConfig;
 use crate::esi::models::CharacterFitting;
 use crate::fitting::dna::parse_import;
 use crate::fitting::eft::{EftImportOutcome, ImportFormat, ImportIssue, ImportedFitting};
+use crate::fitting::resources::{fitting_resources, FittingResources, ResourceBudget};
 use crate::fitting::write_map::{build_save_request, DropReason, DroppedFittingItem, SaveMapping};
 use crate::names::fitting_types::FittingTypes;
 use crate::names::resolver::NameResolver;
@@ -1127,6 +1128,103 @@ fn render_fitting_items(ui: &mut egui::Ui, item_rows: &[FittingItemRow]) {
     }
 }
 
+/// Locked heading for the base resource block (design section 7).
+const FITTINGS_RESOURCES_HEADING: &str = "Fitting resources (base values)";
+
+/// Locked disclosure: the numbers are base values only, never
+/// in-game totals (design section 4).
+const FITTING_RESOURCES_DISCLOSURE: &str = "Base values from Mimir's bundled item data. Skills, implants, and bonuses from modules, rigs, subsystems, and the ship itself are not applied, so these numbers can differ from EVE.";
+
+const FITTING_RESOURCES_NO_CATALOGUE: &str =
+    "Fitting resources unavailable: Mimir's bundled item data failed to load.";
+const FITTING_RESOURCES_NO_SHIP_OUTPUT: &str = "Fitting resources unavailable: Mimir's bundled item data has no ship output data for this fitting's ship.";
+
+/// One CPU or power grid line (design section 7): `left` with the
+/// room remaining, or `over` with the positive overage. Exactly at
+/// budget is `0.0 left`, in the normal colour.
+fn resource_line(label: &str, budget: &ResourceBudget, unit: &str) -> String {
+    let used = widgets::format_fitting_amount(budget.used, unit);
+    let output = widgets::format_fitting_amount(budget.output, unit);
+    if budget.is_over() {
+        let over = widgets::format_fitting_amount(budget.used - budget.output, unit);
+        format!("{label}: {used} of {output} used ({over} over)")
+    } else {
+        let remaining = widgets::format_fitting_amount(budget.remaining(), unit);
+        format!("{label}: {used} of {output} used ({remaining} left)")
+    }
+}
+
+/// Per-dimension excluded-module disclosure, or `None` when every
+/// fitted module counted (design section 7).
+fn cpu_excluded_line(excluded: usize) -> Option<String> {
+    if excluded == 0 {
+        None
+    } else if excluded == 1 {
+        Some(
+            "CPU does not count 1 fitted module with no CPU data in Mimir's bundled item data."
+                .to_string(),
+        )
+    } else {
+        Some(format!("CPU does not count {excluded} fitted modules with no CPU data in Mimir's bundled item data."))
+    }
+}
+
+/// Per-dimension excluded-module disclosure for power grid, or
+/// `None` when every fitted module counted (design section 7).
+fn power_grid_excluded_line(excluded: usize) -> Option<String> {
+    if excluded == 0 {
+        None
+    } else if excluded == 1 {
+        Some("Power grid does not count 1 fitted module with no power grid data in Mimir's bundled item data.".to_string())
+    } else {
+        Some(format!(
+            "Power grid does not count {excluded} fitted modules with no power grid data in Mimir's bundled item data."
+        ))
+    }
+}
+
+/// Base CPU and power grid block shared by the saved and imported
+/// fitting details (design section 7). Renders even when the
+/// fitting has no items. Logs nothing itself: the pure function
+/// already logged counts.
+fn render_fitting_resources(
+    ui: &mut egui::Ui,
+    fitting: &CharacterFitting,
+    fitting_types: Option<&FittingTypes>,
+) {
+    ui.heading(FITTINGS_RESOURCES_HEADING);
+    let Some(catalogue) = fitting_types else {
+        ui.label(FITTING_RESOURCES_NO_CATALOGUE);
+        return;
+    };
+    match fitting_resources(fitting, catalogue) {
+        FittingResources::ShipNoOutput => {
+            ui.label(FITTING_RESOURCES_NO_SHIP_OUTPUT);
+        }
+        FittingResources::Available { cpu, power } => {
+            let cpu_line = resource_line("CPU", &cpu, "tf");
+            if cpu.is_over() {
+                ui.colored_label(egui::Color32::LIGHT_RED, cpu_line);
+            } else {
+                ui.label(cpu_line);
+            }
+            let power_line = resource_line("Power grid", &power, "MW");
+            if power.is_over() {
+                ui.colored_label(egui::Color32::LIGHT_RED, power_line);
+            } else {
+                ui.label(power_line);
+            }
+            if let Some(line) = cpu_excluded_line(cpu.excluded_modules) {
+                ui.label(line);
+            }
+            if let Some(line) = power_grid_excluded_line(power.excluded_modules) {
+                ui.label(line);
+            }
+            ui.label(FITTING_RESOURCES_DISCLOSURE);
+        }
+    }
+}
+
 /// The EFT import panel: paste box, Import/Clear/sample actions, the
 /// fatal error, and the imported fitting with its honest parse report.
 /// Reachable without the fittings read scope (design section 8.2):
@@ -1246,6 +1344,7 @@ fn fittings_import_panel(
     } else {
         render_fitting_items(ui, &item_rows);
     }
+    render_fitting_resources(ui, &synth, fitting_types);
     // Loaded charges, in item order (design section 8.2).
     let charged_total = imported
         .items
@@ -1526,6 +1625,7 @@ pub fn show(
                     } else {
                         render_fitting_items(ui, &item_rows);
                     }
+                    render_fitting_resources(ui, selected, fitting_types);
                     if ui.button("Copy as EFT").clicked() {
                         tracing::info!(
                             "[FITTING] copy as EFT requested for fitting name={}",
@@ -2735,5 +2835,179 @@ mod tests {
             }
             EftImportOutcome::Failed(fatal) => panic!("demo EFT must import, got {fatal:?}"),
         }
+    }
+
+    fn budget(used: f64, output: f64) -> ResourceBudget {
+        ResourceBudget {
+            used,
+            output,
+            excluded_modules: 0,
+        }
+    }
+
+    #[test]
+    fn fitting_resource_lines_match_the_locked_templates() {
+        assert_eq!(
+            resource_line("CPU", &budget(114.0, 130.0), "tf"),
+            "CPU: 114.0 tf of 130.0 tf used (16.0 tf left)"
+        );
+        assert_eq!(
+            resource_line("Power grid", &budget(31.0, 41.0), "MW"),
+            "Power grid: 31.0 MW of 41.0 MW used (10.0 MW left)"
+        );
+        assert_eq!(
+            resource_line("CPU", &budget(150.0, 130.0), "tf"),
+            "CPU: 150.0 tf of 130.0 tf used (20.0 tf over)"
+        );
+        assert_eq!(
+            resource_line("Power grid", &budget(50.0, 41.0), "MW"),
+            "Power grid: 50.0 MW of 41.0 MW used (9.0 MW over)"
+        );
+        // Exactly at budget is not over: 0.0 left, normal colour.
+        assert_eq!(
+            resource_line("CPU", &budget(130.0, 130.0), "tf"),
+            "CPU: 130.0 tf of 130.0 tf used (0.0 tf left)"
+        );
+    }
+
+    #[test]
+    fn fitting_resource_excluded_lines_match_the_locked_templates() {
+        assert_eq!(cpu_excluded_line(0), None);
+        assert_eq!(
+            cpu_excluded_line(1).as_deref(),
+            Some(
+                "CPU does not count 1 fitted module with no CPU data in Mimir's bundled item data."
+            )
+        );
+        assert_eq!(
+            cpu_excluded_line(2).as_deref(),
+            Some("CPU does not count 2 fitted modules with no CPU data in Mimir's bundled item data.")
+        );
+        assert_eq!(power_grid_excluded_line(0), None);
+        assert_eq!(
+            power_grid_excluded_line(1).as_deref(),
+            Some("Power grid does not count 1 fitted module with no power grid data in Mimir's bundled item data.")
+        );
+        assert_eq!(
+            power_grid_excluded_line(2).as_deref(),
+            Some("Power grid does not count 2 fitted modules with no power grid data in Mimir's bundled item data.")
+        );
+    }
+
+    #[test]
+    fn fitting_resource_unavailable_and_disclosure_wording() {
+        assert_eq!(
+            FITTINGS_RESOURCES_HEADING,
+            "Fitting resources (base values)"
+        );
+        assert_eq!(
+            FITTING_RESOURCES_NO_CATALOGUE,
+            "Fitting resources unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            FITTING_RESOURCES_NO_SHIP_OUTPUT,
+            "Fitting resources unavailable: Mimir's bundled item data has no ship output data for this fitting's ship."
+        );
+        assert_eq!(
+            FITTING_RESOURCES_DISCLOSURE,
+            "Base values from Mimir's bundled item data. Skills, implants, and bonuses from modules, rigs, subsystems, and the ship itself are not applied, so these numbers can differ from EVE."
+        );
+    }
+
+    // Demo story (design section 7): the locked numbers a
+    // reviewer sees, computed from the real demo fixture over
+    // the real bundled catalogue, so fixture or catalogue
+    // drift fails this test instead of surprising a reviewer.
+    #[test]
+    fn demo_fixture_resources_match_the_locked_demo_story() {
+        use crate::demo::data::DEMO_FITTINGS_JSON;
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let assert_close = |actual: f64, expected: f64| {
+            assert!(
+                (actual - expected).abs() < 1e-9,
+                "expected {expected}, got {actual}"
+            );
+        };
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+
+        // Demo Brawler (Rifter, 130.0 tf / 41.0 MW): Damage Control
+        // II + 2x Gistum hardener counted; blueprint and ore
+        // excluded on both dimensions.
+        let brawler = match fitting_resources(&find("Demo Brawler"), &catalogue) {
+            FittingResources::Available { cpu, power } => (cpu, power),
+            FittingResources::ShipNoOutput => panic!("Demo Brawler must have ship output"),
+        };
+        assert_close(brawler.0.used, 84.0);
+        assert_close(brawler.0.output, 130.0);
+        assert_close(brawler.1.used, 3.0);
+        assert_close(brawler.1.output, 41.0);
+        assert_eq!(brawler.0.excluded_modules, 2);
+        assert_eq!(brawler.1.excluded_modules, 2);
+        assert_eq!(
+            resource_line("CPU", &brawler.0, "tf"),
+            "CPU: 84.0 tf of 130.0 tf used (46.0 tf left)"
+        );
+        assert_eq!(
+            resource_line("Power grid", &brawler.1, "MW"),
+            "Power grid: 3.0 MW of 41.0 MW used (38.0 MW left)"
+        );
+
+        // Mission Runner: one counted module, one excluded.
+        let mission = match fitting_resources(&find("Mission Runner"), &catalogue) {
+            FittingResources::Available { cpu, power } => (cpu, power),
+            FittingResources::ShipNoOutput => panic!("Mission Runner must have ship output"),
+        };
+        assert_close(mission.0.used, 30.0);
+        assert_close(mission.1.used, 1.0);
+        assert_eq!(mission.0.excluded_modules, 1);
+        assert_eq!(mission.1.excluded_modules, 1);
+
+        // Demo Runner (Punisher, 140.0 tf / 67.0 MW).
+        let runner = match fitting_resources(&find("Demo Runner"), &catalogue) {
+            FittingResources::Available { cpu, power } => (cpu, power),
+            FittingResources::ShipNoOutput => panic!("Demo Runner must have ship output"),
+        };
+        assert_close(runner.0.used, 57.0);
+        assert_close(runner.0.output, 140.0);
+        assert_close(runner.1.used, 2.0);
+        assert_close(runner.1.output, 67.0);
+        assert_eq!(runner.0.excluded_modules, 1);
+        assert_eq!(runner.1.excluded_modules, 1);
+
+        // The clean showcase: the demo sample import, through
+        // the shared synthesis path, with no excluded lines.
+        let synth = match parse_eft(DEMO_SAMPLE_EFT, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
+        };
+        let sample = match fitting_resources(&synth, &catalogue) {
+            FittingResources::Available { cpu, power } => (cpu, power),
+            FittingResources::ShipNoOutput => panic!("sample must have ship output"),
+        };
+        assert_close(sample.0.used, 114.0);
+        assert_close(sample.1.used, 31.0);
+        assert_close(sample.0.remaining(), 16.0);
+        assert_close(sample.1.remaining(), 10.0);
+        assert_eq!(sample.0.excluded_modules, 0);
+        assert_eq!(sample.1.excluded_modules, 0);
+        assert_eq!(cpu_excluded_line(sample.0.excluded_modules), None);
+        assert_eq!(power_grid_excluded_line(sample.1.excluded_modules), None);
     }
 }

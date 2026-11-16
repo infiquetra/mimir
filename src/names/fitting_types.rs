@@ -28,6 +28,14 @@ pub struct FittingType {
     pub category_id: i64,
     #[serde(rename = "slotEffects", default)]
     pub slot_effects: Vec<i64>,
+    #[serde(rename = "cpuOutput", default)]
+    pub cpu_output: Option<f64>,
+    #[serde(rename = "powerOutput", default)]
+    pub power_output: Option<f64>,
+    #[serde(rename = "cpu", default)]
+    pub cpu: Option<f64>,
+    #[serde(rename = "power", default)]
+    pub power: Option<f64>,
 }
 
 /// Outcome of a reverse name lookup. `Found` carries the unique
@@ -321,6 +329,63 @@ mod tests {
                     row.name
                 );
             }
+            // Base resource attributes (design section 5): ships
+            // carry outputs, slot modules carry needs, every other
+            // row carries neither. Present values are finite and
+            // non-negative; absence is distinct from a present 0.0.
+            let has_output = row.cpu_output.is_some() || row.power_output.is_some();
+            let has_need = row.cpu.is_some() || row.power.is_some();
+            for value in [row.cpu_output, row.power_output, row.cpu, row.power]
+                .into_iter()
+                .flatten()
+            {
+                assert!(
+                    value.is_finite() && value >= 0.0,
+                    "negative or non-finite resource value on {:?}",
+                    row.name
+                );
+            }
+            if row.category_id == 6 {
+                assert!(
+                    row.cpu_output.is_some() && row.power_output.is_some(),
+                    "ship without both outputs: {:?}",
+                    row.name
+                );
+                assert!(!has_need, "ship carrying module needs: {:?}", row.name);
+            } else if row.category_id == 7 && !row.slot_effects.is_empty() {
+                assert!(!has_output, "module carrying ship outputs: {:?}", row.name);
+            } else {
+                assert!(
+                    !has_output && !has_need,
+                    "non-ship/non-slot row carrying resource values: {:?}",
+                    row.name
+                );
+            }
+            if row.category_id == 7 && row.slot_effects == [2663] {
+                assert!(
+                    row.cpu.is_none() && row.power.is_none(),
+                    "rig carrying CPU/power needs: {:?}",
+                    row.name
+                );
+            }
         }
+        // Spot pins mirroring the generator oracles (design section
+        // 5), read from dgmTypeAttributes.csv.bz2 during design.
+        let rifter = types.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(rifter.cpu_output, Some(130.0));
+        assert_eq!(rifter.power_output, Some(41.0));
+        let damage_control = types.lookup_by_id(2048).expect("DC II row");
+        assert_eq!(damage_control.cpu, Some(30.0));
+        assert_eq!(damage_control.power, Some(1.0));
+        let railgun = types.lookup_by_id(37303).expect("railgun row");
+        assert_eq!(railgun.cpu, Some(126.5));
+        let reactor = types.lookup_by_id(1355).expect("reactor row");
+        assert_eq!(reactor.power, Some(0.0));
+        let overdrive = types.lookup_by_id(1236).expect("overdrive row");
+        assert_eq!(overdrive.cpu, None);
+        assert_eq!(overdrive.power, None);
+        let rig = types.lookup_by_id(31668).expect("rig row");
+        assert_eq!(rig.cpu, None);
+        assert_eq!(rig.power, None);
     }
 }
