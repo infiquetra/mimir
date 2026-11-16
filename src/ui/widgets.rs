@@ -38,6 +38,34 @@ pub fn format_isk_signed(amount: f64) -> String {
     }
 }
 
+/// Fitting resource amount: thousands-grouped with exactly one
+/// decimal, always (`114.0 tf`, `1,234.5 MW`). Fitting needs can
+/// carry a fractional `.5` CPU, so integer display would be lossy;
+/// the one-decimal shape follows Flutter's readout.
+pub fn format_fitting_amount(value: f64, unit: &str) -> String {
+    if !value.is_finite() {
+        tracing::warn!("[UI] format_fitting_amount non-finite amount");
+        return format!("0.0 {unit}");
+    }
+    let sign = if value < 0.0 { "-" } else { "" };
+    let abs = value.abs();
+    let mut whole = abs.floor() as i64;
+    let mut frac = ((abs - whole as f64) * 10.0).round() as i64;
+    if frac >= 10 {
+        whole += 1;
+        frac -= 10;
+    }
+    let digits = whole.to_string();
+    let mut grouped = String::new();
+    for (i, ch) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
+            grouped.push(',');
+        }
+        grouped.push(ch);
+    }
+    format!("{sign}{grouped}.{frac} {unit}")
+}
+
 /// Compact skill-point formatting (`5,200,000 SP`).
 pub fn format_sp(points: i64) -> String {
     let digits = points.unsigned_abs().to_string();
@@ -213,6 +241,21 @@ mod tests {
         assert_eq!(format_isk(0.0), "0.00 ISK");
         assert_eq!(format_countdown(90_061), "1d 1h 1m");
         assert_eq!(format_countdown(0), "0m");
+    }
+
+    #[test]
+    fn fitting_amount_formats_one_grouped_decimal() {
+        assert_eq!(format_fitting_amount(0.0, "tf"), "0.0 tf");
+        assert_eq!(format_fitting_amount(114.0, "tf"), "114.0 tf");
+        // Fractional .5 CPU rows exist in the catalogue, so the
+        // tenth is always rendered, never dropped.
+        assert_eq!(format_fitting_amount(126.5, "tf"), "126.5 tf");
+        assert_eq!(format_fitting_amount(1_234.5, "MW"), "1,234.5 MW");
+        // Rounding can carry into a new thousands group.
+        assert_eq!(format_fitting_amount(999.95, "tf"), "1,000.0 tf");
+        assert_eq!(format_fitting_amount(-3.0, "tf"), "-3.0 tf");
+        assert_eq!(format_fitting_amount(f64::NAN, "tf"), "0.0 tf");
+        assert_eq!(format_fitting_amount(f64::INFINITY, "MW"), "0.0 MW");
     }
 
     #[test]
