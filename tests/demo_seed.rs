@@ -21,6 +21,9 @@ use mimir::ui::industry::{
     blueprint_counts, blueprint_rows, filter_blueprint_rows, industry_job_rows, job_counts,
 };
 use mimir::ui::market::{character_order_rows, region_label, summarize_history, summarize_orders};
+use mimir::ui::planets::{
+    colony_rows, extractor_product_rows, pin_type_counts, planet_type_label, storage_content_rows,
+};
 
 const ARIA: i64 = 90000001;
 const MARCUS: i64 = 90000002;
@@ -665,4 +668,122 @@ fn demo_industry_renders_resolved_for_both_characters() {
     assert!(marcus_jobs
         .iter()
         .all(|r| !aria_instances.contains(&r.job_id)));
+}
+
+#[test]
+fn demo_planets_render_resolved_for_both_characters() {
+    let bundle = load_demo_bundle().expect("bundle");
+    let resolver = demo_resolver().expect("demo resolver");
+
+    // Both bundled characters carry a planets fixture whose every
+    // rendered system, pin type, product, and content type resolves
+    // to words.
+    for character in &bundle.characters {
+        let per = bundle
+            .character_data(character.character_id)
+            .expect("per-character data");
+        let planets = per.planets.as_ref().expect("demo planets present");
+        for colony in &planets.colonies {
+            assert_ne!(
+                resolver.location_name(colony.solar_system_id),
+                UNKNOWN_LOCATION,
+                "system {}",
+                colony.solar_system_id
+            );
+            let label = planet_type_label(&colony.planet_type);
+            assert_ne!(label, "Unknown planet type", "type {}", colony.planet_type);
+            assert!(label.parse::<i64>().is_err());
+        }
+        for detail in planets.details.values() {
+            for pin in &detail.pins {
+                assert_ne!(
+                    resolver.name(pin.type_id),
+                    UNKNOWN_ITEM,
+                    "pin type {}",
+                    pin.type_id
+                );
+                if let Some(details) = &pin.extractor_details {
+                    if let Some(product) = details.product_type_id {
+                        assert_ne!(resolver.name(product), UNKNOWN_ITEM, "product {product}");
+                    }
+                }
+                for entry in &pin.contents {
+                    assert_ne!(
+                        resolver.name(entry.type_id),
+                        UNKNOWN_ITEM,
+                        "content {}",
+                        entry.type_id
+                    );
+                }
+            }
+        }
+    }
+
+    let mut state = AppState::new(true);
+    seed_demo_state(&mut state);
+
+    // Aria after seeding: Ready bundle, selection, and matching
+    // detail; every aggregated number clamps and resolves.
+    let aria = state.planetary.as_ready().expect("aria planetary ready");
+    let aria_colonies = aria.colonies.as_ref().expect("colonies ok").clone();
+    assert_eq!(aria_colonies.len(), 2);
+    assert_eq!(state.planetary_selected_planet_id, Some(700000001));
+    let aria_rows = colony_rows(&aria_colonies, &resolver);
+    assert_eq!(aria_rows.len(), 2);
+    for row in &aria_rows {
+        assert_ne!(row.system_name, UNKNOWN_LOCATION);
+        assert!(row.system_name.parse::<i64>().is_err());
+        assert_ne!(row.planet_type_label, "Unknown planet type");
+    }
+    assert!(aria_rows.iter().any(|r| r.system_name == "Jita"));
+    assert!(aria_rows.iter().any(|r| r.system_name == "Amarr"));
+    let aria_detail = aria.detail.as_ref().expect("aria detail").clone();
+    assert_eq!(aria_detail.selection.character_id, ARIA);
+    assert_eq!(aria_detail.selection.planet_id, 700000001);
+    let pins = aria_detail.result.as_ref().expect("detail ok").pins.clone();
+    let counts = pin_type_counts(&pins, &resolver);
+    assert_eq!(counts.len(), 2);
+    assert!(counts
+        .iter()
+        .any(|r| r.type_name == "Demo Extractor" && r.count >= 2));
+    assert!(counts.iter().any(|r| r.type_name == "Demo Factory"));
+    let extractors = extractor_product_rows(&pins, &resolver);
+    assert!(extractors
+        .iter()
+        .any(|r| r.product_name == "Tritanium" && r.qty_per_cycle == Some(120)));
+    assert!(extractors
+        .iter()
+        .any(|r| r.product_name == "Mexallon" && r.qty_per_cycle.is_none()));
+    // Pyerite is stored on two pins and aggregates; the clamping
+    // entry contributes zero, never a negative total.
+    let storage = storage_content_rows(&pins, &resolver);
+    let pyerite = storage
+        .iter()
+        .find(|r| r.type_name == "Pyerite")
+        .expect("pyerite");
+    assert_eq!(pyerite.amount, 800);
+    for row in &storage {
+        assert_ne!(row.type_name, UNKNOWN_ITEM);
+    }
+
+    // Switching swaps in Marcus's colony; his detail has pins but
+    // empty contents, so Stored items reports empty in demo.
+    state.set_active_character(MARCUS);
+    apply_character(&mut state, &bundle, MARCUS);
+    let marcus = state.planetary.as_ready().expect("marcus planetary ready");
+    let marcus_colonies = marcus.colonies.as_ref().expect("colonies ok").clone();
+    assert_eq!(marcus_colonies.len(), 1);
+    assert_eq!(state.planetary_selected_planet_id, Some(700000101));
+    let marcus_detail = marcus.detail.as_ref().expect("marcus detail").clone();
+    assert_eq!(marcus_detail.selection.character_id, MARCUS);
+    assert_eq!(marcus_detail.selection.planet_id, 700000101);
+    let marcus_pins = marcus_detail
+        .result
+        .as_ref()
+        .expect("detail ok")
+        .pins
+        .clone();
+    assert!(!marcus_pins.is_empty());
+    assert!(storage_content_rows(&marcus_pins, &resolver).is_empty());
+    assert!(marcus_pins.iter().all(|p| p.contents.is_empty()));
 }

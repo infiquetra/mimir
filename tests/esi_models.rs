@@ -207,6 +207,55 @@ fn industry_fixture_parses() {
 }
 
 #[test]
+fn planets_fixture_parses() {
+    let root: serde_json::Value = parse(include_str!("fixtures/planets.json"));
+    let colonies: Vec<PlanetColony> =
+        serde_json::from_value(root["colonies"].clone()).expect("colonies parse");
+    assert_eq!(colonies.len(), 2);
+    assert_eq!(colonies[0].planet_id, 700000001);
+    assert_eq!(colonies[0].planet_type, "temperate");
+    assert_eq!(colonies[0].solar_system_id, 30000142);
+    assert_eq!(colonies[0].upgrade_level, 2);
+    assert_eq!(colonies[0].num_pins, 9);
+    assert_eq!(colonies[1].planet_id, 700000002);
+    assert_eq!(colonies[1].solar_system_id, 30002187);
+
+    let detail: PlanetColonyDetail =
+        serde_json::from_value(root["detail"].clone()).expect("detail parses");
+    assert_eq!(detail.pins.len(), 3);
+    let pin = &detail.pins[0];
+    assert_eq!(pin.pin_id, 700000011);
+    assert_eq!(pin.type_id, 20001);
+    let extractor = pin.extractor_details.as_ref().expect("extractor");
+    assert_eq!(extractor.product_type_id, Some(34));
+    assert_eq!(extractor.qty_per_cycle, Some(120));
+    assert_eq!(extractor.cycle_time, Some(7200));
+    assert_eq!(pin.schematic_id, Some(15462));
+    assert_eq!(pin.contents.len(), 2);
+    assert_eq!(pin.contents[0].type_id, 35);
+    assert_eq!(pin.contents[0].amount, 500);
+    // Repeat pin type: two extractors in this colony.
+    assert_eq!(detail.pins[1].type_id, 20001);
+    let extractor2 = detail.pins[1]
+        .extractor_details
+        .as_ref()
+        .expect("extractor");
+    assert_eq!(extractor2.product_type_id, Some(36));
+    assert_eq!(extractor2.qty_per_cycle, None, "null qty stays None");
+    // Bare pin: no extractor, no contents, optional dates absent.
+    let bare = &detail.pins[2];
+    assert!(bare.extractor_details.is_none());
+    assert!(bare.contents.is_empty());
+    assert_eq!(bare.expiry_time, None);
+    assert_eq!(bare.last_cycle_start, None);
+    assert_eq!(bare.schematic_id, None);
+    // Raw link/route rows carry through untyped.
+    assert_eq!(detail.links.len(), 1);
+    assert_eq!(detail.routes.len(), 1);
+    assert!(detail.links[0].is_object());
+}
+
+#[test]
 fn empty_payloads_default_instead_of_failing() {
     // ESI occasionally omits optional fields; models must tolerate `{}`.
     let info: CharacterPublicInfo = parse("{}");

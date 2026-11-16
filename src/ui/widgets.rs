@@ -100,12 +100,13 @@ pub fn countdown_label(finish: Option<&str>, now: DateTime<Utc>) -> String {
     }
 }
 
-/// Short date for tables (`2026-11-14 10:00`); unparseable input is shown
-/// trimmed rather than dropped.
+/// Short date for tables (`2026-11-14 10:00`). Unparseable input gets
+/// fixed words: values here are remote text and must never render
+/// verbatim (a pseudo-date like `700000001` is a raw ID on screen).
 pub fn format_date_short(value: &str) -> String {
     match parse_esi_date(value) {
         Some(date) => date.format("%Y-%m-%d %H:%M").to_string(),
-        None => value.chars().take(16).collect(),
+        None => "date unavailable".to_string(),
     }
 }
 
@@ -159,7 +160,7 @@ pub fn error_panel_with_retry(ui: &mut egui::Ui, message: &str) -> bool {
 pub fn no_character_panel(ui: &mut egui::Ui) {
     ui.heading("No character selected");
     ui.label("Add a character with EVE SSO, or try the offline demo.");
-    ui.label("Keys: 1-8 switch views, PageUp/PageDown switch character.");
+    ui.label("Keys: 1-9 switch views, PageUp/PageDown switch character.");
 }
 
 /// Demo/offline notice shown at the top of data views.
@@ -250,7 +251,15 @@ mod tests {
             format_date_short("2026-11-14T10:00:00Z"),
             "2026-11-14 10:00"
         );
-        assert_eq!(format_date_short("garbage"), "garbage");
+        // Unparseable remote date text never renders verbatim (probe
+        // regression: a numeric or attacker-shaped pseudo-date must not
+        // reach the screen as if it were a real date).
+        assert_eq!(format_date_short("garbage"), "date unavailable");
+        assert_eq!(format_date_short("700000001"), "date unavailable");
+        assert_eq!(
+            format_date_short("PWNED-REMOTE-STRING-123"),
+            "date unavailable"
+        );
     }
 
     #[test]

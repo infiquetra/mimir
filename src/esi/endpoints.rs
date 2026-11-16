@@ -574,6 +574,48 @@ async fn get_character_blueprints_capped(
     Ok((all, truncated))
 }
 
+/// The character's colonies, one row per colony. Requires scope
+/// `esi-planets.manage_planets.v1` (progressive step-up, never
+/// first-auth); a missing scope surfaces as HTTP 401/403 →
+/// `EsiError::Reauthorize`/`Unauthorized`, detected only through
+/// `endpoints::needs_reauthorize`. Rows return in fetch order,
+/// unsorted and unfiltered.
+pub async fn get_character_planets(
+    client: &EsiClient,
+    character_id: i64,
+) -> AppResult<Vec<PlanetColony>> {
+    tracing::debug!("[PI] GET /characters/{}/planets/", character_id);
+    client
+        .auth_get(
+            &format!("/characters/{character_id}/planets/"),
+            character_id,
+        )
+        .await
+}
+
+/// One colony's detail (pins, links, routes). Requires scope
+/// `esi-planets.manage_planets.v1` (progressive step-up, never
+/// first-auth); a missing scope surfaces as HTTP 401/403 →
+/// `EsiError::Reauthorize`/`Unauthorized`, detected only through
+/// `endpoints::needs_reauthorize`.
+pub async fn get_character_planet(
+    client: &EsiClient,
+    character_id: i64,
+    planet_id: i64,
+) -> AppResult<PlanetColonyDetail> {
+    tracing::debug!(
+        "[PI] GET /characters/{}/planets/{}/",
+        character_id,
+        planet_id
+    );
+    client
+        .auth_get(
+            &format!("/characters/{character_id}/planets/{planet_id}/"),
+            character_id,
+        )
+        .await
+}
+
 pub async fn get_location(client: &EsiClient, character_id: i64) -> AppResult<CharacterLocation> {
     tracing::debug!("[CHAR] GET /characters/{}/location/", character_id);
     client
@@ -1405,6 +1447,119 @@ mod tests {
             .expect_err("no tokens must error");
         assert!(!err.to_string().contains("90000001"), "error: {err}");
         let err = get_character_blueprints(&client, 90000001)
+            .await
+            .expect_err("no tokens must error");
+        assert!(!err.to_string().contains("90000001"), "error: {err}");
+    }
+
+    #[tokio::test]
+    async fn colonies_list_parses_in_fetch_order() {
+        let (base, captured) = one_shot_server(
+            200,
+            r#"[{"planet_id":700000001,"planet_type":"temperate","solar_system_id":30000142,"last_update":"2026-11-14T10:00:00Z","upgrade_level":2,"num_pins":9},{"planet_id":700000002,"planet_type":"oceanic","solar_system_id":30002187,"last_update":"2026-11-13T09:00:00Z","upgrade_level":1,"num_pins":4}]"#,
+        )
+        .await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let colonies = get_character_planets(&client, 7).await.expect("colonies");
+        assert_eq!(colonies.len(), 2);
+        assert_eq!(colonies[0].planet_id, 700000001);
+        assert_eq!(colonies[0].planet_type, "temperate");
+        assert_eq!(colonies[0].solar_system_id, 30000142);
+        assert_eq!(colonies[0].num_pins, 9);
+        assert_eq!(colonies[1].planet_id, 700000002);
+        let request = captured.await.expect("captured");
+        assert!(
+            request.contains("/characters/7/planets/"),
+            "request: {request}"
+        );
+    }
+
+    #[tokio::test]
+    async fn colonies_empty_list_returns_empty() {
+        let (base, _captured) = one_shot_server(200, "[]").await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let colonies = get_character_planets(&client, 7).await.expect("colonies");
+        assert!(colonies.is_empty());
+    }
+
+    #[tokio::test]
+    async fn colony_detail_parses_pins_extractor_and_contents() {
+        let (base, captured) = one_shot_server(
+            200,
+            r#"{"pins":[{"pin_id":700000011,"type_id":20001,"latitude":0.5,"longitude":-0.25,"install_time":"2026-11-01T08:00:00Z","expiry_time":"2026-11-21T08:00:00Z","last_cycle_start":"2026-11-14T10:00:00Z","schematic_id":15462,"extractor_details":{"product_type_id":34,"qty_per_cycle":120,"cycle_time":7200},"contents":[{"type_id":35,"amount":500}]}],"links":[{"source_pin_id":700000011,"destination_pin_id":700000012}],"routes":[{"source_pin_id":700000011,"destination_pin_id":700000012,"route_type":"basic"}]}"#,
+        )
+        .await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let detail = get_character_planet(&client, 7, 700000001)
+            .await
+            .expect("detail");
+        assert_eq!(detail.pins.len(), 1);
+        let pin = &detail.pins[0];
+        assert_eq!(pin.pin_id, 700000011);
+        assert_eq!(pin.type_id, 20001);
+        let extractor = pin.extractor_details.as_ref().expect("extractor");
+        assert_eq!(extractor.product_type_id, Some(34));
+        assert_eq!(extractor.qty_per_cycle, Some(120));
+        assert_eq!(extractor.cycle_time, Some(7200));
+        assert_eq!(pin.contents.len(), 1);
+        assert_eq!(pin.contents[0].type_id, 35);
+        assert_eq!(pin.contents[0].amount, 500);
+        assert_eq!(detail.links.len(), 1);
+        assert_eq!(detail.routes.len(), 1);
+        let request = captured.await.expect("captured");
+        assert!(
+            request.contains("/characters/7/planets/700000001/"),
+            "request: {request}"
+        );
+    }
+
+    #[tokio::test]
+    async fn colony_detail_optional_pin_fields_default() {
+        let (base, _captured) = one_shot_server(
+            200,
+            r#"{"pins":[{"pin_id":700000021,"type_id":20003,"latitude":0.1,"longitude":0.2,"install_time":"2026-11-02T08:00:00Z"}]}"#,
+        )
+        .await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let detail = get_character_planet(&client, 7, 700000001)
+            .await
+            .expect("detail");
+        assert_eq!(detail.pins.len(), 1);
+        let pin = &detail.pins[0];
+        assert_eq!(pin.expiry_time, None);
+        assert_eq!(pin.last_cycle_start, None);
+        assert_eq!(pin.schematic_id, None);
+        assert!(pin.extractor_details.is_none());
+        assert!(pin.contents.is_empty());
+        assert!(detail.links.is_empty());
+        assert!(detail.routes.is_empty());
+    }
+
+    #[tokio::test]
+    async fn colonies_scope_failure_needs_reauthorize() {
+        let (base, _captured) = one_shot_server(403, r#"{"error":"Forbidden"}"#).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = get_character_planets(&client, 7)
+            .await
+            .expect_err("403 must error");
+        assert!(needs_reauthorize(&err), "error: {err:?}");
+
+        let (base, _captured) = one_shot_server(403, r#"{"error":"Forbidden"}"#).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = get_character_planet(&client, 7, 700000001)
+            .await
+            .expect_err("403 must error");
+        assert!(needs_reauthorize(&err), "error: {err:?}");
+    }
+
+    #[tokio::test]
+    async fn colony_no_tokens_error_carries_no_character_id_text() {
+        let client = EsiClient::with_http(reqwest::Client::new(), "http://127.0.0.1:9".to_string());
+        let err = get_character_planets(&client, 90000001)
+            .await
+            .expect_err("no tokens must error");
+        assert!(!err.to_string().contains("90000001"), "error: {err}");
+        let err = get_character_planet(&client, 90000001, 700000001)
             .await
             .expect_err("no tokens must error");
         assert!(!err.to_string().contains("90000001"), "error: {err}");

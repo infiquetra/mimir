@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### Observed 403s outrank stored grant metadata, and every verbatim remote string needs its own rendering rule
+
+**Author.** Muse Code (parent repair pass over the Planetary Industry workflow)
+**Context.** Adversarial review found the Market-era stale-metadata trap one layer deeper: when persisted token metadata already claimed the planets scope, the PI Re-authorize button only ever took the already-granted shortcut and could never reopen the browser. The same review probe-confirmed two rendering leaks: an unparseable colony `last_update` rendered verbatim through a shared date helper, and an all-digit universe name longer than the `i64` range bypassed the numeric-name guard added for Market.
+**Evidence.** Probe results in the PI workflow synthesis (already-granted trace through `src/app/shell.rs` `start_stepup_login`; `format_date_short("700000001")` and a 20-digit resolver name both rendered verbatim); `src/ui/widgets.rs` (`format_date_short` fell back to a truncated copy of its input), `src/names/resolver.rs` (`insert_with_category` rejected only names that *parsed* as `i64`), `src/demo/data.rs` (the demo seed failure branch never set the planetary load state).
+**Mechanism.** Three different trust lessons share one shape: a stored claim, an input validation rule, and a rendering fallback were each treated as equivalent to observed behavior. Stored scope claims are a cache, not an observation; parseability is not the same as display-safety for either numbers or dates; and a field is only guarded at the exact sites where the guard is applied.
+**Fix (or queued).** The already-granted shortcut is bypassed whenever a section for one of the requested scope groups has already returned 403 this session, so the browser flow the user asked for always remains reachable. Unparseable dates render the fixed words `date unavailable`. The resolver now rejects digit names of any length (including a sign prefix) instead of only `i64`-parseable ones. The demo seed failure branch sets the planetary error like every sibling section.
+**Validation.** Extended regression tests `insert_rejects_numeric_names_so_lookup_never_returns_a_raw_id` (beyond-i64 and signed numerics) and the `format_date_short` cases in `src/ui/widgets.rs`, plus full `cargo test` / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` on branch `feat/rust-pi-port` in the repair commit. Shell sign-in flows have no test harness in this repo, so the bypass condition is code-inspected with log evidence.
+**Generalizable rule.** When stored claims contradict observed responses, observed responses win; when input must never render raw, validate the rendered *form* (all digits, any length; a parsed date), not one parse path that happens to reject today's examples.
+**Refs.** `docs/pi-port-design.md`; `src/app/shell.rs`; `src/ui/widgets.rs`; `src/names/resolver.rs`; `src/demo/data.rs`.
+
 ### A boundary fix does not sanitize the fan-out paths that reuse the original error value
 
 **Author.** Muse Code (parent repair pass over the Industry workflow)

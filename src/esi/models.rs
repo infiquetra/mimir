@@ -594,6 +594,98 @@ pub struct IndustryJob {
     pub successful_runs: Option<i64>,
 }
 
+/// One colony from `GET /characters/{character_id}/planets/`.
+/// `planet_id` is a per-instance identity: selection identity and
+/// invisible sort tie-break only, never rendered and never sent to
+/// universe name resolution. `planet_type` is the ESI word (e.g.
+/// `temperate`); it is rendered only through the view whitelist,
+/// never echoed verbatim. `solar_system_id` is resolved via the
+/// location path.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PlanetColony {
+    #[serde(default)]
+    pub planet_id: i64,
+    #[serde(default)]
+    pub planet_type: String,
+    #[serde(default)]
+    pub solar_system_id: i64,
+    #[serde(default)]
+    pub last_update: String,
+    #[serde(default)]
+    pub upgrade_level: i64,
+    #[serde(default)]
+    pub num_pins: i64,
+}
+
+/// One colony's detail object from
+/// `GET /characters/{character_id}/planets/{planet_id}/`. `links`
+/// and `routes` are carried raw and never rendered, counted, or
+/// name-resolved; their lengths may appear in one `[PI]` info log
+/// line only.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PlanetColonyDetail {
+    #[serde(default)]
+    pub pins: Vec<PlanetPin>,
+    #[serde(default)]
+    pub links: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub routes: Vec<serde_json::Value>,
+}
+
+/// One pin inside a colony detail. `pin_id` is a per-instance
+/// identity: an invisible sort tie-break only, never rendered and
+/// never name-resolved. `type_id` resolves via the item-name path.
+/// `latitude`/`longitude` and `install_time` are carried but never
+/// rendered; `schematic_id` is carried but never rendered,
+/// resolved, or computed with (no calculator in this slice).
+/// Nullability is preserved exactly: `None` is never coerced to
+/// zero.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PlanetPin {
+    #[serde(default)]
+    pub pin_id: i64,
+    #[serde(default)]
+    pub type_id: i64,
+    #[serde(default)]
+    pub latitude: f64,
+    #[serde(default)]
+    pub longitude: f64,
+    #[serde(default)]
+    pub install_time: String,
+    #[serde(default)]
+    pub expiry_time: Option<String>,
+    #[serde(default)]
+    pub last_cycle_start: Option<String>,
+    #[serde(default)]
+    pub schematic_id: Option<i64>,
+    #[serde(default)]
+    pub extractor_details: Option<ExtractorDetails>,
+    #[serde(default)]
+    pub contents: Vec<PinContent>,
+}
+
+/// Extractor fields carried on a pin, present only when the wire
+/// payload carries an `extractor_details` object. Nullability is
+/// preserved exactly: `None` is never coerced to zero.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ExtractorDetails {
+    #[serde(default)]
+    pub product_type_id: Option<i64>,
+    #[serde(default)]
+    pub qty_per_cycle: Option<i64>,
+    #[serde(default)]
+    pub cycle_time: Option<i64>,
+}
+
+/// One stored-items entry inside a pin's `contents`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PinContent {
+    #[serde(default)]
+    pub type_id: i64,
+    #[serde(default)]
+    pub amount: i64,
+}
+
 /// ESI error body shape: `{"error": "..."}`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EsiErrorBody {
@@ -896,6 +988,143 @@ mod tests {
         assert_eq!(nulls.completed_date, None);
         assert_eq!(nulls.completed_character_id, None);
         assert_eq!(nulls.successful_runs, None);
+    }
+
+    #[test]
+    fn planet_colony_full_row_parses() {
+        let colonies: Vec<PlanetColony> = serde_json::from_str(
+            r#"[{"planet_id":700000001,"planet_type":"temperate",
+                "solar_system_id":30000142,"last_update":"2026-11-14T10:00:00Z",
+                "upgrade_level":2,"num_pins":9,"unknown_future_field":true},
+               {"planet_id":700000002,"planet_type":"oceanic",
+                "solar_system_id":30002187,"last_update":"2026-11-13T09:00:00Z",
+                "upgrade_level":1,"num_pins":4}]"#,
+        )
+        .expect("parses");
+        assert_eq!(colonies.len(), 2);
+        assert_eq!(colonies[0].planet_id, 700000001);
+        assert_eq!(colonies[0].planet_type, "temperate");
+        assert_eq!(colonies[0].solar_system_id, 30000142);
+        assert_eq!(colonies[0].last_update, "2026-11-14T10:00:00Z");
+        assert_eq!(colonies[0].upgrade_level, 2);
+        assert_eq!(colonies[0].num_pins, 9);
+        assert_eq!(colonies[1].planet_id, 700000002);
+        assert_eq!(colonies[1].planet_type, "oceanic");
+        assert_eq!(colonies[1].solar_system_id, 30002187);
+    }
+
+    #[test]
+    fn planet_colony_detail_parses_pins_extractor_contents_and_raw_links_routes() {
+        let detail: PlanetColonyDetail = serde_json::from_str(
+            r#"{"pins":[{"pin_id":700000011,"type_id":20001,"latitude":0.5,
+                "longitude":-0.25,"install_time":"2026-11-01T08:00:00Z",
+                "expiry_time":"2026-11-21T08:00:00Z",
+                "last_cycle_start":"2026-11-14T10:00:00Z","schematic_id":15462,
+                "extractor_details":{"product_type_id":34,"qty_per_cycle":120,
+                "cycle_time":7200},
+                "contents":[{"type_id":35,"amount":500},{"type_id":36,"amount":250}],
+                "unknown_future_field":"x"}],
+               "links":[{"source_pin_id":700000011,"destination_pin_id":700000012}],
+               "routes":[{"source_pin_id":700000011,"destination_pin_id":700000012,
+               "route_type":"basic"}]}"#,
+        )
+        .expect("parses");
+        assert_eq!(detail.pins.len(), 1);
+        let pin = &detail.pins[0];
+        assert_eq!(pin.pin_id, 700000011);
+        assert_eq!(pin.type_id, 20001);
+        assert_eq!(pin.latitude, 0.5);
+        assert_eq!(pin.longitude, -0.25);
+        assert_eq!(pin.install_time, "2026-11-01T08:00:00Z");
+        assert_eq!(pin.expiry_time.as_deref(), Some("2026-11-21T08:00:00Z"));
+        assert_eq!(
+            pin.last_cycle_start.as_deref(),
+            Some("2026-11-14T10:00:00Z")
+        );
+        assert_eq!(pin.schematic_id, Some(15462));
+        let extractor = pin.extractor_details.as_ref().expect("extractor");
+        assert_eq!(extractor.product_type_id, Some(34));
+        assert_eq!(extractor.qty_per_cycle, Some(120));
+        assert_eq!(extractor.cycle_time, Some(7200));
+        assert_eq!(pin.contents.len(), 2);
+        assert_eq!(pin.contents[0].type_id, 35);
+        assert_eq!(pin.contents[0].amount, 500);
+        assert_eq!(pin.contents[1].type_id, 36);
+        assert_eq!(pin.contents[1].amount, 250);
+        assert_eq!(detail.links.len(), 1);
+        assert_eq!(detail.routes.len(), 1);
+        assert!(detail.links[0].is_object());
+        assert!(detail.routes[0].is_object());
+    }
+
+    #[test]
+    fn planet_pin_without_extractor_or_contents_parses_to_none_and_empty() {
+        let pin: PlanetPin = serde_json::from_str(
+            r#"{"pin_id":700000021,"type_id":20003,"latitude":0.1,
+                "longitude":0.2,"install_time":"2026-11-02T08:00:00Z"}"#,
+        )
+        .expect("parses");
+        assert_eq!(pin.pin_id, 700000021);
+        assert_eq!(pin.type_id, 20003);
+        assert_eq!(pin.expiry_time, None);
+        assert_eq!(pin.last_cycle_start, None);
+        assert_eq!(pin.schematic_id, None);
+        assert!(pin.extractor_details.is_none());
+        assert!(pin.contents.is_empty());
+
+        let nulls: PlanetPin = serde_json::from_str(
+            r#"{"pin_id":700000022,"type_id":20001,"latitude":0.0,"longitude":0.0,
+                "install_time":"2026-11-02T08:00:00Z","expiry_time":null,
+                "last_cycle_start":null,"schematic_id":null,
+                "extractor_details":{"product_type_id":null,"qty_per_cycle":null,
+                "cycle_time":null},"contents":[]}"#,
+        )
+        .expect("parses");
+        assert_eq!(nulls.expiry_time, None);
+        assert_eq!(nulls.last_cycle_start, None);
+        assert_eq!(nulls.schematic_id, None);
+        let extractor = nulls.extractor_details.as_ref().expect("extractor");
+        assert_eq!(extractor.product_type_id, None);
+        assert_eq!(extractor.qty_per_cycle, None);
+        assert_eq!(extractor.cycle_time, None);
+        assert!(nulls.contents.is_empty());
+    }
+
+    #[test]
+    fn planet_models_default_everywhere() {
+        let colony: PlanetColony = serde_json::from_str("{}").expect("parses");
+        assert_eq!(colony.planet_id, 0);
+        assert!(colony.planet_type.is_empty());
+        assert_eq!(colony.solar_system_id, 0);
+        assert!(colony.last_update.is_empty());
+        assert_eq!(colony.upgrade_level, 0);
+        assert_eq!(colony.num_pins, 0);
+
+        let detail: PlanetColonyDetail = serde_json::from_str("{}").expect("parses");
+        assert!(detail.pins.is_empty());
+        assert!(detail.links.is_empty());
+        assert!(detail.routes.is_empty());
+
+        let pin: PlanetPin = serde_json::from_str("{}").expect("parses");
+        assert_eq!(pin.pin_id, 0);
+        assert_eq!(pin.type_id, 0);
+        assert_eq!(pin.latitude, 0.0);
+        assert_eq!(pin.longitude, 0.0);
+        assert!(pin.install_time.is_empty());
+        assert_eq!(pin.expiry_time, None);
+        assert_eq!(pin.last_cycle_start, None);
+        assert_eq!(pin.schematic_id, None);
+        assert!(pin.extractor_details.is_none());
+        assert!(pin.contents.is_empty());
+
+        let extractor: ExtractorDetails = serde_json::from_str("{}").expect("parses");
+        assert_eq!(extractor.product_type_id, None);
+        assert_eq!(extractor.qty_per_cycle, None);
+        assert_eq!(extractor.cycle_time, None);
+
+        let content: PinContent = serde_json::from_str("{}").expect("parses");
+        assert_eq!(content.type_id, 0);
+        assert_eq!(content.amount, 0);
     }
 
     #[test]

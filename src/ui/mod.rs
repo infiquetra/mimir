@@ -3,6 +3,7 @@ pub mod characters;
 pub mod dashboard;
 pub mod industry;
 pub mod market;
+pub mod planets;
 pub mod settings;
 pub mod skills;
 pub mod wallet;
