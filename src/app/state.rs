@@ -879,6 +879,17 @@ impl AppState {
                     character_id
                 );
                 self.character_details = LoadState::Loading;
+                // Same ownership argument: the skills bundle carries
+                // the previous character's trained levels, which gate
+                // fitting resource outputs. Reset at the switch
+                // boundary so a replacement active character never
+                // inherits them (fitting skill resources design section 3).
+                tracing::debug!(
+                    "[SKILLS] clearing skills on character switch from={} to={}",
+                    previous_id,
+                    character_id
+                );
+                self.skills = LoadState::Loading;
                 // Same ownership argument: the loaded bundle carries
                 // the previous character's own orders. Selection,
                 // region, and search text survive the switch.
@@ -976,6 +987,8 @@ impl AppState {
             self.assets = LoadState::Loading;
             tracing::debug!("[CHAR] clearing character details of removed active character");
             self.character_details = LoadState::Loading;
+            tracing::debug!("[SKILLS] clearing skills of removed active character");
+            self.skills = LoadState::Loading;
             tracing::debug!("[MARKET] clearing market of removed active character");
             if self.market_selected_type_id.is_some() {
                 self.market = LoadState::Loading;
@@ -1811,6 +1824,92 @@ mod tests {
         assert!(state.characters.is_empty());
         assert!(matches!(state.fittings, LoadState::Empty));
         assert_eq!(state.fittings_selected_fitting_id, None);
+    }
+
+    fn skills_bundle_with(rows: Vec<Skill>) -> SkillsData {
+        SkillsData {
+            skills: CharacterSkills {
+                skills: rows,
+                total_sp: 0,
+                unallocated_sp: None,
+            },
+            queue: Vec::new(),
+        }
+    }
+
+    fn skill_row(skill_id: i64, trained: i32) -> Skill {
+        Skill {
+            skill_id,
+            active_skill_level: trained,
+            trained_skill_level: trained,
+            skillpoints_in_skill: 0,
+        }
+    }
+
+    #[test]
+    fn switching_character_clears_stale_skills() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.skills = LoadState::Ready(skills_bundle_with(vec![skill_row(3413, 5)]));
+        // Same-character reselect keeps the loaded rows.
+        state.set_active_character(1);
+        assert!(state.skills.is_ready());
+        // Switching clears them: tolerant fetch errors and the
+        // failed-refresh preserve must never present one
+        // character's trained levels as another's.
+        state.set_active_character(2);
+        assert!(matches!(state.skills, LoadState::Loading));
+    }
+
+    #[test]
+    fn removing_active_character_clears_skills_and_last_empties() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two"), row(3, "Three")];
+        state.set_active_character(1);
+        state.skills = LoadState::Ready(skills_bundle_with(vec![skill_row(3413, 5)]));
+        // Removing a non-active character leaves the bundle ready.
+        state.remove_character(3);
+        assert!(state.skills.is_ready());
+        // Removing the active character never shows its levels under the
+        // replacement character.
+        state.remove_character(1);
+        assert_eq!(state.active_character_id, Some(2));
+        assert!(matches!(state.skills, LoadState::Loading));
+        // Removing the last character empties it.
+        state.skills = LoadState::Ready(skills_bundle_with(vec![skill_row(3426, 5)]));
+        state.remove_character(2);
+        assert!(state.characters.is_empty());
+        assert!(matches!(state.skills, LoadState::Empty));
+    }
+
+    #[test]
+    fn demo_switch_still_lands_ready_skills_for_the_switched_to_character() {
+        use crate::fitting::resources::resource_skill_levels;
+        let bundle = crate::demo::data::load_demo_bundle().expect("bundled demo loads");
+        let mut state = AppState::new(true);
+        state.characters = bundle
+            .characters
+            .iter()
+            .map(|c| row(c.character_id, &c.name))
+            .collect();
+        // Seed order: switch, then apply installs the first
+        // character's rows synchronously.
+        state.set_active_character(90000001);
+        crate::demo::data::apply_character(&mut state, &bundle, 90000001);
+        let aria = state.skills.as_ready().expect("aria skills ready");
+        let aria_levels = resource_skill_levels(&aria.skills);
+        assert_eq!(aria_levels.cpu_management, 0);
+        assert_eq!(aria_levels.power_grid_management, 5);
+        // Switch order: the switch reset lands first, then the
+        // shell's apply installs the switched-to character's rows.
+        state.set_active_character(90000002);
+        assert!(matches!(state.skills, LoadState::Loading));
+        crate::demo::data::apply_character(&mut state, &bundle, 90000002);
+        let marcus = state.skills.as_ready().expect("marcus skills ready");
+        let marcus_levels = resource_skill_levels(&marcus.skills);
+        assert_eq!(marcus_levels.cpu_management, 5);
+        assert_eq!(marcus_levels.power_grid_management, 0);
     }
 
     fn seed_import_state(state: &mut AppState) {
