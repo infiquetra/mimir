@@ -3584,5 +3584,15 @@ mod tests {
             EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
         };
         assert_eq!(lines_for(&synth), rifter_block);
+
+        // The DNA sample lands on the same hull, so its block is
+        // byte-identical too (stats key off the ship, not format).
+        let synth_dna = match parse_import(DEMO_SAMPLE_DNA, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => {
+                panic!("demo DNA sample must import, got {fatal:?}")
+            }
+        };
+        assert_eq!(lines_for(&synth_dna), rifter_block);
     }
 }
