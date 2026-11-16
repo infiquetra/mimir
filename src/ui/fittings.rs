@@ -412,6 +412,116 @@ pub fn fitting_to_eft(fitting: &CharacterFitting, resolver: &NameResolver) -> Op
     })
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct DnaExport {
+    pub text: String,
+    /// Units in sections DNA cannot hold (drones, fighters, cargo).
+    pub skipped_unsupported: usize,
+    /// Rows with no usable type id or quantity.
+    pub skipped_empty: usize,
+    /// Units truncated by the DNA expanded-items cap.
+    pub skipped_capped: usize,
+}
+
+/// Largest expanded fitting our DNA importer accepts; DNA export
+/// never emits a larger total, so its own output always re-imports.
+const MAX_DNA_EXPORT_ITEMS: i64 = 4_096;
+
+/// DNA generation order: Flutter `Fitting.allModules` is high,
+/// medium, low, rig, subsystem slots; counts merge by type id in
+/// first-appearance order across that traversal.
+const DNA_SECTION_ORDER: [FittingSection; 5] = [
+    FittingSection::High,
+    FittingSection::Medium,
+    FittingSection::Low,
+    FittingSection::Rig,
+    FittingSection::Subsystem,
+];
+
+/// Build the DNA link text for a fitting (DNA export design
+/// section 3). DNA carries type numbers, so no name resolution is
+/// involved and an unloaded ship name never blocks a copy; `None`
+/// only for a non-positive ship type id. Items DNA cannot hold
+/// are counted, never silently absent.
+pub fn fitting_to_dna(fitting: &CharacterFitting) -> Option<DnaExport> {
+    if fitting.ship_type_id <= 0 {
+        return None;
+    }
+    let mut skipped_unsupported: usize = 0;
+    let mut skipped_empty: usize = 0;
+    // (type_id, count) in first-appearance order.
+    let mut counts: Vec<(i64, i64)> = Vec::new();
+    let mut index_by_type: HashMap<i64, usize> = HashMap::new();
+    for section in DNA_SECTION_ORDER {
+        for item in fitting
+            .items
+            .iter()
+            .filter(|item| section_for_flag(&item.flag) == section)
+        {
+            if item.type_id <= 0 || item.quantity <= 0 {
+                skipped_empty = skipped_empty.saturating_add(1);
+                continue;
+            }
+            if let Some(&idx) = index_by_type.get(&item.type_id) {
+                if let Some(entry) = counts.get_mut(idx) {
+                    entry.1 = entry.1.saturating_add(item.quantity);
+                }
+            } else {
+                index_by_type.insert(item.type_id, counts.len());
+                counts.push((item.type_id, item.quantity));
+            }
+        }
+    }
+    for item in &fitting.items {
+        let section = section_for_flag(&item.flag);
+        if DNA_SECTION_ORDER.contains(&section) {
+            continue;
+        }
+        if item.type_id <= 0 || item.quantity <= 0 {
+            skipped_empty = skipped_empty.saturating_add(1);
+        } else {
+            skipped_unsupported =
+                skipped_unsupported.saturating_add(usize::try_from(item.quantity).unwrap_or(0));
+        }
+    }
+    // Cap the emitted total at the importer's expanded-items cap,
+    // truncating counts in first-appearance order.
+    let mut remaining = MAX_DNA_EXPORT_ITEMS;
+    let mut skipped_capped: usize = 0;
+    let mut segments: Vec<String> = Vec::new();
+    for (type_id, count) in counts {
+        if remaining <= 0 {
+            skipped_capped = skipped_capped.saturating_add(usize::try_from(count).unwrap_or(0));
+            continue;
+        }
+        let emitted = count.min(remaining);
+        skipped_capped =
+            skipped_capped.saturating_add(usize::try_from(count - emitted).unwrap_or(0));
+        remaining -= emitted;
+        segments.push(format!("{type_id};{emitted}"));
+    }
+    let mut text = format!("{}:", fitting.ship_type_id);
+    for segment in &segments {
+        text.push_str(segment);
+        text.push(':');
+    }
+    text.push(':');
+    tracing::debug!(
+        "[FITTING] dna built fitting_id={} segments={} skipped_unsupported={} skipped_empty={} skipped_capped={}",
+        fitting.fitting_id,
+        segments.len(),
+        skipped_unsupported,
+        skipped_empty,
+        skipped_capped
+    );
+    Some(DnaExport {
+        text,
+        skipped_unsupported,
+        skipped_empty,
+        skipped_capped,
+    })
+}
+
 fn section_error_label(ui: &mut egui::Ui, error: &SectionError, panel_shown: bool) {
     if error.needs_reauthorize && panel_shown {
         ui.label("Not authorized yet. Re-authorize above to load this section.");
@@ -654,6 +764,38 @@ fn charges_note(charges_noted: usize) -> Option<String> {
 }
 
 /// Copy status message for the imported fitting (design section 8.2).
+/// Status line for copying an imported fitting as DNA: the
+/// charges disclosure mirrors the EFT copy, and left-out items
+/// (sections DNA cannot hold, empty rows, cap truncation) are
+/// counted, never silent.
+fn copy_imported_dna_status_message(
+    display_name: &str,
+    charges_noted: usize,
+    left_out: usize,
+) -> String {
+    let mut notes: Vec<String> = Vec::new();
+    if charges_noted == 1 {
+        notes.push("1 loaded charge left out: DNA links do not store loaded charges".to_string());
+    } else if charges_noted > 1 {
+        notes.push(format!(
+            "{charges_noted} loaded charges left out: DNA links do not store loaded charges"
+        ));
+    }
+    if left_out > 0 {
+        notes.push(format!(
+            "{left_out} items left out: DNA links hold fitted modules only"
+        ));
+    }
+    if notes.is_empty() {
+        format!("Copied \"{display_name}\" as a DNA link")
+    } else {
+        format!(
+            "Copied \"{display_name}\" as a DNA link ({})",
+            notes.join("; ")
+        )
+    }
+}
+
 fn copy_imported_status_message(display_name: &str, charges_noted: usize) -> String {
     if charges_noted == 0 {
         format!("Copied \"{display_name}\" as EFT")
@@ -1164,6 +1306,36 @@ fn fittings_import_panel(
             }
         }
     }
+    if ui.button("Copy imported fitting as DNA").clicked() {
+        match fitting_to_dna(&synth) {
+            None => {
+                tracing::warn!("[FITTING] copy imported fitting as DNA blocked");
+                state.status_message =
+                    "That fitting cannot be copied: it has no ship. Refresh and try again."
+                        .to_string();
+            }
+            Some(export) => {
+                let left_out = export
+                    .skipped_unsupported
+                    .saturating_add(export.skipped_empty)
+                    .saturating_add(export.skipped_capped);
+                tracing::info!(
+                    "[FITTING] copied imported fitting as DNA skipped_unsupported={} skipped_empty={} skipped_capped={} charges_left_out={}",
+                    export.skipped_unsupported,
+                    export.skipped_empty,
+                    export.skipped_capped,
+                    imported.report.charges_noted
+                );
+                ui.ctx().copy_text(export.text.clone());
+                let display_name = fitting_display_name(&imported.name);
+                state.status_message = copy_imported_dna_status_message(
+                    &display_name,
+                    imported.report.charges_noted,
+                    left_out,
+                );
+            }
+        }
+    }
     // Save affordance (write design section 6.1): the arm
     // button, its armed confirmation block, the demo label,
     // or the in-flight row — never more than one.
@@ -1387,6 +1559,40 @@ pub fn show(
                                     line_count,
                                     export.skipped_unknown,
                                     export.skipped_empty
+                                );
+                            }
+                        }
+                    }
+                    if ui.button("Copy as DNA").clicked() {
+                        match fitting_to_dna(selected) {
+                            None => {
+                                tracing::warn!(
+                                    "[FITTING] copy as DNA blocked fitting name={}",
+                                    display_name
+                                );
+                                state.status_message = "That fitting cannot be copied: it has no ship. Refresh and try again.".to_string();
+                            }
+                            Some(export) => {
+                                ui.ctx().copy_text(export.text.clone());
+                                let skipped = export
+                                    .skipped_unsupported
+                                    .saturating_add(export.skipped_empty)
+                                    .saturating_add(export.skipped_capped);
+                                if skipped == 0 {
+                                    state.status_message =
+                                        format!("Copied \"{}\" as a DNA link", display_name);
+                                } else {
+                                    state.status_message = format!(
+                                        "Copied \"{}\" as a DNA link ({} items left out: DNA links hold fitted modules only)",
+                                        display_name, skipped
+                                    );
+                                }
+                                tracing::info!(
+                                    "[FITTING] copied fitting as DNA name={} skipped_unsupported={} skipped_empty={} skipped_capped={}",
+                                    display_name,
+                                    export.skipped_unsupported,
+                                    export.skipped_empty,
+                                    export.skipped_capped
                                 );
                             }
                         }
@@ -1936,6 +2142,112 @@ mod tests {
         assert_eq!(header, "[Rifter, Demo Brawler Name]");
         assert!(!header.contains('\r'));
         assert!(!export.text.contains('\r'));
+    }
+
+    #[test]
+    fn dna_matches_flutter_round_trip_oracle() {
+        // Flutter generateDna oracle: Rifter with two LoSlot
+        // Damage Control rows generates exactly 587:2048;2::.
+        let fitting = fitting_with_items(vec![item("LoSlot0", 1, 2048), item("LoSlot1", 1, 2048)]);
+        let export = fitting_to_dna(&fitting).expect("dna export");
+        assert_eq!(export.text, "587:2048;2::");
+        assert_eq!(export.skipped_unsupported, 0);
+        assert_eq!(export.skipped_empty, 0);
+        assert_eq!(export.skipped_capped, 0);
+    }
+
+    #[test]
+    fn dna_counts_follow_flutter_all_modules_order() {
+        // Stored order is low, high, medium; Flutter allModules
+        // is high, medium, low, rig, subsystem, so the high-slot
+        // type is counted first regardless of stored order.
+        let fitting = fitting_with_items(vec![
+            item("LoSlot0", 1, 2048),
+            item("HiSlot0", 1, 484),
+            item("MedSlot0", 1, 5973),
+            item("LoSlot1", 1, 2048),
+        ]);
+        let export = fitting_to_dna(&fitting).expect("dna export");
+        assert_eq!(export.text, "587:484;1:5973;1:2048;2::");
+    }
+
+    #[test]
+    fn dna_hull_only_and_ship_guard() {
+        let fitting = fitting_with_items(Vec::new());
+        let export = fitting_to_dna(&fitting).expect("hull only");
+        assert_eq!(export.text, "587::");
+        let mut broken = fitting_with_items(Vec::new());
+        broken.ship_type_id = 0;
+        assert!(fitting_to_dna(&broken).is_none());
+    }
+
+    #[test]
+    fn dna_unsupported_and_empty_rows_are_counted() {
+        let fitting = fitting_with_items(vec![
+            item("LoSlot0", 1, 2048),
+            item("DroneBay", 5, 2456),
+            item("Cargo", 100, 34),
+            item("LoSlot1", 0, 2048),
+            item("HiSlot0", 1, -7),
+        ]);
+        let export = fitting_to_dna(&fitting).expect("dna export");
+        assert_eq!(export.text, "587:2048;1::");
+        assert_eq!(export.skipped_unsupported, 105);
+        assert_eq!(export.skipped_empty, 2);
+        assert_eq!(export.skipped_capped, 0);
+    }
+
+    #[test]
+    fn dna_total_is_capped_at_importer_expansion_limit() {
+        let fitting =
+            fitting_with_items(vec![item("LoSlot0", 4000, 2048), item("HiSlot0", 500, 484)]);
+        let export = fitting_to_dna(&fitting).expect("dna export");
+        // High section counts first: 500 emitted, then low is
+        // truncated to the remaining 3596 of the 4096 total.
+        assert_eq!(export.text, "587:484;500:2048;3596::");
+        assert_eq!(export.skipped_capped, 404);
+    }
+
+    #[test]
+    fn dna_export_reimports_to_same_slot_items() {
+        let types = crate::names::fitting_types::FittingTypes::load_bundled()
+            .expect("bundled catalogue loads");
+        let fitting = fitting_with_items(vec![
+            item("LoSlot0", 1, 2048),
+            item("LoSlot1", 1, 2048),
+            item("MedSlot0", 1, 5973),
+            item("HiSlot0", 1, 484),
+            item("DroneBay", 5, 2456),
+        ]);
+        let export = fitting_to_dna(&fitting).expect("dna export");
+        assert_eq!(export.skipped_unsupported, 5);
+        match crate::fitting::dna::parse_dna(&export.text, &types) {
+            crate::fitting::eft::EftImportOutcome::Imported(imported) => {
+                assert!(imported.report.issues.is_empty());
+                let mut ids: Vec<i64> = imported.items.iter().map(|i| i.type_id).collect();
+                ids.sort_unstable();
+                assert_eq!(ids, vec![484, 2048, 2048, 5973]);
+            }
+            crate::fitting::eft::EftImportOutcome::Failed(f) => {
+                panic!("exported DNA must re-import, got {f:?}")
+            }
+        }
+    }
+
+    #[test]
+    fn dna_imported_status_message_discloses_left_out() {
+        assert_eq!(
+            copy_imported_dna_status_message("Imported Rifter", 0, 0),
+            "Copied \"Imported Rifter\" as a DNA link"
+        );
+        assert_eq!(
+            copy_imported_dna_status_message("Imported Rifter", 1, 0),
+            "Copied \"Imported Rifter\" as a DNA link (1 loaded charge left out: DNA links do not store loaded charges)"
+        );
+        assert_eq!(
+            copy_imported_dna_status_message("Imported Rifter", 2, 5),
+            "Copied \"Imported Rifter\" as a DNA link (2 loaded charges left out: DNA links do not store loaded charges; 5 items left out: DNA links hold fitted modules only)"
+        );
     }
 
     #[test]
