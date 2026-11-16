@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### First ESI writes: an unanswered write is an unknown outcome
+
+**Author.** Muse Code (fittings-write workflow, integrator)
+**Context.** Saving and deleting character fittings are Mimir's first writes to EVE's ESI API (the game's public API). Every earlier call was a read, where a lost response costs nothing but a repeat.
+**Evidence.** `docs/fittings-write-design.md` sections 7.4 and 9.1; implementing commits `4de5a75` (`src/esi/endpoints.rs` `classify_write_error`, `save_character_fitting`, `delete_character_fitting`), `5c49e4c` and `30e69b9` (`src/app/shell.rs` `start_fitting_write` and the `FittingWriteDone` landing, `src/ui/fittings.rs` confirmations) on branch `feat/rust-fittings-write`; mock request-capture tests prove the POST body bytes and the DELETE 204 handling, and that a 500, transport failure, or malformed 201 classifies as unknown rather than failed.
+**Mechanism.** Reads can be repeated harmlessly, so "no answer" and "refused" collapse into one retryable failure. A POST whose response was lost may already have committed on the server: there is no idempotency key in this API, so an automatic retry is a duplicate-fitting generator, and reporting flat failure would be a lie the user then acts on by saving again by hand. Transport, 5xx, and success-body decode failures on a write therefore form a third class beside success and refusal — outcome unknown — which is never retried automatically and is reconciled only by refreshing server state through the existing read path and letting the user look.
+**Fix (or queued).** `classify_write_error` maps every typed error arm to NotSent, Definitive, Unknown, AlreadyGone (delete 404), or RateLimited; the shell runs one write at a time globally, drops a result whole if the active character changed while it was in flight, and refreshes the fittings list after success, already-gone, and unknown outcomes instead of editing the list locally. Success is claimed only from the 201 receipt's returned fitting id.
+**Validation.** Full `cargo test` / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` / `cargo build` and a bounded headless demo smoke on the branch; the write path itself has not been live-verified against a real EVE account (the README says so).
+**Generalizable rule.** For any non-idempotent write, "we did not hear back" is its own outcome class, distinct from refusal: never auto-retry it, never report it as failure, and reconcile by re-reading server state.
+**Refs.** `docs/fittings-write-design.md` sections 7.4, 9.1, 9.2; `src/esi/endpoints.rs` (`classify_write_error`); `src/app/shell.rs` (`decide_fitting_write_landing`); DECISIONS 2026-11-16 write-scope entry.
+
 ### The pinning table must enumerate every typed refusal, or the missing one becomes head-of-line blocking
 
 **Author.** Muse Code (parent repair pass over the structure-names workflow)
