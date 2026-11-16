@@ -21,6 +21,9 @@ use crate::fitting::resources::{
     fitting_resources_with_skills, resource_skill_levels, FittingResources, ResourceBudget,
     ResourceSkillLevels, CPU_MANAGEMENT_SKILL_ID, POWER_GRID_MANAGEMENT_SKILL_ID,
 };
+use crate::fitting::ship_resistances::{
+    ship_resistances, ResistLayer, ShipResistances, ShipResistancesOutcome,
+};
 use crate::fitting::ship_stats::{ship_base_stats, ShipBaseStats, ShipBaseStatsOutcome};
 use crate::fitting::write_map::{build_save_request, DropReason, DroppedFittingItem, SaveMapping};
 use crate::names::fitting_types::FittingTypes;
@@ -1172,6 +1175,21 @@ const FITTING_SHIP_BASE_STATS_NO_CATALOGUE: &str =
     "Ship values unavailable: Mimir's bundled item data failed to load.";
 const FITTING_SHIP_BASE_STATS_NO_SHIP_DATA: &str = "Ship values unavailable: Mimir's bundled item data has no base ship data for this fitting's ship.";
 
+/// Locked heading for the ship base resistances block (ship
+/// resistances design section 6). The "(base values)" qualifier
+/// keeps every base hull number from reading as a fitted total.
+const FITTINGS_SHIP_RESISTANCES_HEADING: &str = "Ship resistances (base values)";
+
+/// Locked disclosure: the numbers are the bare hull's base
+/// resistances, never modified by anything fitted or trained
+/// (design section 6). This block's own sentence; the ship base
+/// values disclosure above names a different set.
+const FITTING_SHIP_RESISTANCES_DISCLOSURE: &str = "These are the bare hull's base resistances from Mimir's bundled item data. Fitted modules, rigs, subsystems, skills, implants, and ship bonuses are not applied, so these numbers can differ from EVE.";
+
+const FITTING_SHIP_RESISTANCES_NO_CATALOGUE: &str =
+    "Ship resistances unavailable: Mimir's bundled item data failed to load.";
+const FITTING_SHIP_RESISTANCES_NO_SHIP_DATA: &str = "Ship resistances unavailable: Mimir's bundled item data has no resistance data for this fitting's ship.";
+
 /// One CPU or power grid line (design section 7): `left` with the
 /// room remaining, or `over` with the positive overage. Exactly at
 /// budget is `0.0 left`, in the normal colour.
@@ -1379,6 +1397,83 @@ fn render_ship_base_stats(
     }
 }
 
+/// One resistance segment (design section 6), pure like
+/// `ship_stat_line`: `None` (no data) contributes no segment —
+/// never a zero, a dash, or placeholder words. A present `0.0`
+/// renders like any other value, as does a negative percentage
+/// from a resonance above 1.
+fn ship_resistance_segment(label: &str, value: Option<f64>) -> Option<String> {
+    value.map(|v| format!("{label} {}", widgets::format_fitting_percent(v)))
+}
+
+/// One layer line (design section 6): segments in EM, thermal,
+/// kinetic, explosive order joined by `, `. A layer with no usable
+/// resistance contributes no line at all.
+fn ship_resistance_layer_line(layer_name: &str, layer: &ResistLayer) -> Option<String> {
+    let segments: Vec<String> = [
+        ship_resistance_segment("EM", layer.em),
+        ship_resistance_segment("Thermal", layer.thermal),
+        ship_resistance_segment("Kinetic", layer.kinetic),
+        ship_resistance_segment("Explosive", layer.explosive),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    if segments.is_empty() {
+        None
+    } else {
+        Some(format!("{layer_name} resistances: {}", segments.join(", ")))
+    }
+}
+
+/// The block's lines in locked order (shield, armor, hull —
+/// section 2). Absent resistances are omitted, so a partial block
+/// still renders its available values plus the disclosure.
+fn ship_resistance_lines(resistances: &ShipResistances) -> Vec<String> {
+    [
+        ship_resistance_layer_line("Shield", &resistances.shield),
+        ship_resistance_layer_line("Armor", &resistances.armor),
+        ship_resistance_layer_line("Hull", &resistances.hull),
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
+}
+
+/// Ship base resistances block shared by the saved and imported
+/// fitting details (ship resistances design section 6). Depends
+/// only on the fitting's ship and the catalogue: no skill levels,
+/// no SDE handle, so it renders identically for every viewing
+/// character. The heading always renders, so the view never
+/// silently omits the feature; `Unavailable` swaps all lines and
+/// the disclosure for the fixed unavailable sentence. Renders
+/// even when the fitting has no items. Logs nothing itself: the
+/// pure function logs nothing (render cadence).
+fn render_ship_resistances(
+    ui: &mut egui::Ui,
+    fitting: &CharacterFitting,
+    fitting_types: Option<&FittingTypes>,
+) {
+    let Some(catalogue) = fitting_types else {
+        ui.heading(FITTINGS_SHIP_RESISTANCES_HEADING);
+        ui.label(FITTING_SHIP_RESISTANCES_NO_CATALOGUE);
+        return;
+    };
+    match ship_resistances(fitting, catalogue) {
+        ShipResistancesOutcome::Available(resistances) => {
+            ui.heading(FITTINGS_SHIP_RESISTANCES_HEADING);
+            for line in ship_resistance_lines(&resistances) {
+                ui.label(line);
+            }
+            ui.label(FITTING_SHIP_RESISTANCES_DISCLOSURE);
+        }
+        ShipResistancesOutcome::Unavailable => {
+            ui.heading(FITTINGS_SHIP_RESISTANCES_HEADING);
+            ui.label(FITTING_SHIP_RESISTANCES_NO_SHIP_DATA);
+        }
+    }
+}
+
 /// The EFT import panel: paste box, Import/Clear/sample actions, the
 /// fatal error, and the imported fitting with its honest parse report.
 /// Reachable without the fittings read scope (design section 8.2):
@@ -1505,6 +1600,7 @@ fn fittings_import_panel(
         .map(|data| resource_skill_levels(&data.skills));
     render_fitting_resources(ui, &synth, fitting_types, levels, sde);
     render_ship_base_stats(ui, &synth, fitting_types);
+    render_ship_resistances(ui, &synth, fitting_types);
     // Loaded charges, in item order (design section 8.2).
     let charged_total = imported
         .items
@@ -1792,6 +1888,7 @@ pub fn show(
                         .map(|data| resource_skill_levels(&data.skills));
                     render_fitting_resources(ui, selected, fitting_types, levels, sde);
                     render_ship_base_stats(ui, selected, fitting_types);
+                    render_ship_resistances(ui, selected, fitting_types);
                     if ui.button("Copy as EFT").clicked() {
                         tracing::info!(
                             "[FITTING] copy as EFT requested for fitting name={}",
@@ -3587,6 +3684,259 @@ mod tests {
 
         // The DNA sample lands on the same hull, so its block is
         // byte-identical too (stats key off the ship, not format).
+        let synth_dna = match parse_import(DEMO_SAMPLE_DNA, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => {
+                panic!("demo DNA sample must import, got {fatal:?}")
+            }
+        };
+        assert_eq!(lines_for(&synth_dna), rifter_block);
+    }
+
+    // Ship base resistances (ship resistances design section 8):
+    // the locked three-line blocks, built from real
+    // `ship_resistances` results over the bundled catalogue.
+    // Oracle resonance rows read from
+    // `scripts/sde/dgmTypeAttributes.csv.bz2` (valueInt None,
+    // valueFloat shown): Rifter 587: shield 1.0/0.8/0.6/0.5,
+    // armor 0.4/0.65/0.75/0.9, hull 0.67 x4 (974-977 decoy rows
+    // at 1.0 never emitted; hull 33.0% is the tripwire against a
+    // wrong-set 0%). Punisher 597: shield 1.0/0.8/0.6/0.5,
+    // armor 0.5/0.65/0.75/0.8, hull 0.67 x4. Mimir 32209:
+    // armor 0.1/0.325/0.75/0.9. Percentages are (1 - resonance)
+    // * 100 hand-derived, rendered at one decimal.
+    fn ship_resistances_lines_for(catalogue: &FittingTypes, ship_type_id: i64) -> Vec<String> {
+        let fitting = CharacterFitting {
+            fitting_id: 1,
+            name: "pin".to_string(),
+            description: None,
+            ship_type_id,
+            items: vec![],
+        };
+        match ship_resistances(&fitting, catalogue) {
+            ShipResistancesOutcome::Available(resistances) => ship_resistance_lines(&resistances),
+            ShipResistancesOutcome::Unavailable => {
+                panic!("ship {ship_type_id} must have base resistances")
+            }
+        }
+    }
+
+    #[test]
+    fn ship_resistance_lines_match_the_locked_templates() {
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        assert_eq!(
+            ship_resistances_lines_for(&catalogue, 587),
+            [
+                "Shield resistances: EM 0.0%, Thermal 20.0%, Kinetic 40.0%, Explosive 50.0%",
+                "Armor resistances: EM 60.0%, Thermal 35.0%, Kinetic 25.0%, Explosive 10.0%",
+                "Hull resistances: EM 33.0%, Thermal 33.0%, Kinetic 33.0%, Explosive 33.0%",
+            ]
+        );
+        assert_eq!(
+            ship_resistances_lines_for(&catalogue, 597),
+            [
+                "Shield resistances: EM 0.0%, Thermal 20.0%, Kinetic 40.0%, Explosive 50.0%",
+                "Armor resistances: EM 50.0%, Thermal 35.0%, Kinetic 25.0%, Explosive 20.0%",
+                "Hull resistances: EM 33.0%, Thermal 33.0%, Kinetic 33.0%, Explosive 33.0%",
+            ]
+        );
+    }
+
+    // Formatting pins (design section 8): the one-decimal picks
+    // rounding, the exact one-decimal values, the signed render
+    // for resonances above 1, and the inherited formatter guards.
+    // Mimir 32209 armor thermal 67.5% renders exactly; Falcon
+    // 11957 armor thermal 79.375% renders 79.4%; Legion 29986
+    // armor kinetic 43.75% renders 43.8%; Nemesis 11377 armor
+    // thermal 43.125% renders 43.1%; resonance 0.0 renders
+    // 100.0%; resonances 1.1/7.0 render -10.0%/-600.0% through
+    // the line helper, never clamped.
+    #[test]
+    fn ship_resistance_formatting_pins() {
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        assert_eq!(
+            ship_resistances_lines_for(&catalogue, 32209)[1],
+            "Armor resistances: EM 90.0%, Thermal 67.5%, Kinetic 25.0%, Explosive 10.0%"
+        );
+        assert!(
+            ship_resistances_lines_for(&catalogue, 11957)[1].contains("Thermal 79.4%"),
+            "Falcon armor thermal 79.375% rounds to 79.4%"
+        );
+        assert!(
+            ship_resistances_lines_for(&catalogue, 29986)[1].contains("Kinetic 43.8%"),
+            "Legion armor kinetic 43.75% rounds to 43.8%"
+        );
+        assert!(
+            ship_resistances_lines_for(&catalogue, 11377)[1].contains("Thermal 43.1%"),
+            "Nemesis armor thermal 43.125% rounds to 43.1%"
+        );
+        // Present 1.0 renders 0.0% (Rifter shield EM) and 0.67
+        // renders 33.0% with float dust absorbed; both are in the
+        // locked-template test above and repeated here as lines.
+        assert_eq!(
+            ship_resistances_lines_for(&catalogue, 587)[0],
+            "Shield resistances: EM 0.0%, Thermal 20.0%, Kinetic 40.0%, Explosive 50.0%"
+        );
+        assert_eq!(
+            ship_resistances_lines_for(&catalogue, 587)[2],
+            "Hull resistances: EM 33.0%, Thermal 33.0%, Kinetic 33.0%, Explosive 33.0%"
+        );
+        // Signed render through the line helper (direct
+        // percentages, the fixture path for 100.0% is in the
+        // omission test): resonances above 1 render true
+        // negatives, never clamped.
+        let signed = ShipResistances {
+            shield: ResistLayer {
+                em: Some(100.0),
+                thermal: Some(-10.0),
+                kinetic: Some(-600.0),
+                explosive: Some(0.0),
+            },
+            armor: ResistLayer {
+                em: None,
+                thermal: None,
+                kinetic: None,
+                explosive: None,
+            },
+            hull: ResistLayer {
+                em: None,
+                thermal: None,
+                kinetic: None,
+                explosive: None,
+            },
+        };
+        assert_eq!(
+            ship_resistance_lines(&signed),
+            ["Shield resistances: EM 100.0%, Thermal -10.0%, Kinetic -600.0%, Explosive 0.0%"]
+        );
+        // Inherited guards through the one percent formatter.
+        assert_eq!(widgets::format_fitting_percent(1_234.5), "1,234.5%");
+        let huge = widgets::format_fitting_percent(30.0 * i64::MAX as f64);
+        assert!(huge.ends_with(".0%"), "huge renders one decimal: {huge}");
+        assert!(!huge.starts_with('-'), "positive stays positive: {huge}");
+        assert_eq!(widgets::format_fitting_percent(f64::NAN), "0.0%");
+        assert_eq!(widgets::format_fitting_percent(f64::INFINITY), "0.0%");
+    }
+
+    // Absent versus zero (fixture catalogue; shipped data has no
+    // ship with a missing resistance): a present 1.0 renders
+    // EM 0.0% and a present 0.0 renders 100.0%, absent segments
+    // produce no segment at all, and an all-absent layer produces
+    // no line.
+    #[test]
+    fn ship_resistance_present_zero_renders_and_absent_omits() {
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],
+                 "shieldEmDamageResonance":1.0,"shieldKineticDamageResonance":0.6,"shieldExplosiveDamageResonance":0.5,
+                 "emDamageResonance":0.0,"thermalDamageResonance":0.67,"kineticDamageResonance":0.67,"explosiveDamageResonance":0.67}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let lines = ship_resistances_lines_for(&catalogue, 42);
+        assert_eq!(
+            lines,
+            [
+                "Shield resistances: EM 0.0%, Kinetic 40.0%, Explosive 50.0%",
+                "Hull resistances: EM 100.0%, Thermal 33.0%, Kinetic 33.0%, Explosive 33.0%",
+            ]
+        );
+        assert!(
+            lines[0].starts_with("Shield resistances: EM 0.0%"),
+            "present 1.0 renders first: {lines:?}"
+        );
+        assert!(
+            !lines[0].contains("Thermal"),
+            "absent thermal must produce no segment: {lines:?}"
+        );
+        assert!(
+            lines.iter().all(|line| !line.starts_with("Armor")),
+            "all-absent armor must produce no line: {lines:?}"
+        );
+    }
+
+    #[test]
+    fn ship_resistances_unavailable_and_disclosure_wording() {
+        assert_eq!(
+            FITTINGS_SHIP_RESISTANCES_HEADING,
+            "Ship resistances (base values)"
+        );
+        assert_eq!(
+            FITTING_SHIP_RESISTANCES_NO_CATALOGUE,
+            "Ship resistances unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            FITTING_SHIP_RESISTANCES_NO_SHIP_DATA,
+            "Ship resistances unavailable: Mimir's bundled item data has no resistance data for this fitting's ship."
+        );
+        assert_eq!(
+            FITTING_SHIP_RESISTANCES_DISCLOSURE,
+            "These are the bare hull's base resistances from Mimir's bundled item data. Fitted modules, rigs, subsystems, skills, implants, and ship bonuses are not applied, so these numbers can differ from EVE."
+        );
+    }
+
+    // Demo story (ship resistances design section 7): Demo
+    // Brawler and Mission Runner are both Rifter 587 and render
+    // identical blocks despite their invented sample rows (the
+    // 974-977 tripwire: a wrong-set implementation shows hull 0%
+    // here instead of the locked 33%); Demo Runner is Punisher
+    // 597. Built from the real demo fixture over the real
+    // catalogue, so fixture or catalogue drift fails here.
+    #[test]
+    fn demo_fixture_ship_resistances_match_the_locked_demo_story() {
+        use crate::demo::data::DEMO_FITTINGS_JSON;
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let lines_for = |fitting: &CharacterFitting| match ship_resistances(fitting, &catalogue) {
+            ShipResistancesOutcome::Available(resistances) => ship_resistance_lines(&resistances),
+            ShipResistancesOutcome::Unavailable => {
+                panic!("demo fitting must have base resistances")
+            }
+        };
+
+        let rifter_block = [
+            "Shield resistances: EM 0.0%, Thermal 20.0%, Kinetic 40.0%, Explosive 50.0%",
+            "Armor resistances: EM 60.0%, Thermal 35.0%, Kinetic 25.0%, Explosive 10.0%",
+            "Hull resistances: EM 33.0%, Thermal 33.0%, Kinetic 33.0%, Explosive 33.0%",
+        ];
+        assert_eq!(lines_for(&find("Demo Brawler")), rifter_block);
+        assert_eq!(lines_for(&find("Mission Runner")), rifter_block);
+        assert_eq!(
+            lines_for(&find("Demo Runner")),
+            [
+                "Shield resistances: EM 0.0%, Thermal 20.0%, Kinetic 40.0%, Explosive 50.0%",
+                "Armor resistances: EM 50.0%, Thermal 35.0%, Kinetic 25.0%, Explosive 20.0%",
+                "Hull resistances: EM 33.0%, Thermal 33.0%, Kinetic 33.0%, Explosive 33.0%",
+            ]
+        );
+
+        // Imported path: the demo sample fit through the shared
+        // synthesis seam yields the same Rifter block.
+        let synth = match parse_eft(DEMO_SAMPLE_EFT, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
+        };
+        assert_eq!(lines_for(&synth), rifter_block);
+
+        // The DNA sample lands on the same hull, so its block is
+        // byte-identical too (resistances key off the ship, not
+        // format).
         let synth_dna = match parse_import(DEMO_SAMPLE_DNA, &catalogue) {
             EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
             EftImportOutcome::Failed(fatal) => {
