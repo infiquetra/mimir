@@ -1,11 +1,19 @@
 //! Pure fitting-resources calculation over the bundled catalogue.
 //!
-//! Computes base CPU and power grid used versus the hull's base
-//! output for one [`CharacterFitting`]. This is the first honest
-//! slice of a fitting simulator (docs/fitting-resources-design.md):
-//! only base (unmodified) dogma attributes are summed. Skills,
-//! implants, and bonuses from modules, rigs, subsystems, and the
-//! ship itself are not applied, so totals can differ from EVE.
+//! [`fitting_resources`] computes CPU and power grid used versus
+//! the hull's base output for one [`CharacterFitting`] from base
+//! (unmodified) dogma attributes only.
+//! [`fitting_resources_with_skills`] is the skill-aware entry point:
+//! with `Some(levels)` it raises ship outputs by CPU Management
+//! (skill 3426, +5% ship CPU output per trained level) and Power
+//! Grid Management (skill 3413, +5% ship power output per trained
+//! level), each as one unpenalized percent entry
+//! (`output * (1 + 0.05 * level)`, level 5 = ×1.25). With `None` it
+//! returns exactly [`fitting_resources`]. Module needs are never
+//! scaled. Module need reductions, implants, and bonuses from
+//! modules, rigs, subsystems, and the ship itself are not applied,
+//! so totals can differ from EVE. See
+//! `docs/fitting-skill-resources-design.md`.
 //!
 //! The module is pure computation over the bundled catalogue — no
 //! egui, no state, no network, no database. It depends on
@@ -15,8 +23,55 @@
 //! following the [`crate::fitting::eft::ImportSection`]
 //! independence precedent.
 
-use crate::esi::models::{CharacterFitting, FittingItem};
+use crate::esi::models::{CharacterFitting, CharacterSkills, FittingItem};
 use crate::names::fitting_types::FittingTypes;
+
+/// CPU Management: +5% ship CPU output (attribute 48) per trained
+/// level. Provenance: Flutter `dogma_engine.dart` `_skillModifiers`
+/// at `ed698d3` (3426 → `cpuOutput` = 48 at 0.05/level); name in the
+/// bundled skills catalogue.
+pub const CPU_MANAGEMENT_SKILL_ID: i64 = 3426;
+
+/// Power Grid Management: +5% ship power output (attribute 11) per
+/// trained level. Same provenance (3413 → `powerOutput` = 11 at
+/// 0.05/level). Skill 3418 is Capacitor Management and must never
+/// appear here.
+pub const POWER_GRID_MANAGEMENT_SKILL_ID: i64 = 3413;
+
+/// Trained levels of the two resource skills, already clamped to
+/// `0..=5` by [`resource_skill_levels`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ResourceSkillLevels {
+    pub cpu_management: i32,
+    pub power_grid_management: i32,
+}
+
+fn clamp_level(level: i32) -> i32 {
+    level.clamp(0, 5)
+}
+
+/// Both trained levels from one loaded skills payload. Absent rows
+/// and present level-0 rows both yield 0; duplicate rows yield the
+/// last row; every value is clamped to `0..=5`. Reads
+/// `trained_skill_level` (the grounded parity field), never
+/// `active_skill_level`.
+pub fn resource_skill_levels(skills: &CharacterSkills) -> ResourceSkillLevels {
+    // Last-wins over duplicates, mirroring the BTreeMap::collect
+    // precedent in `crate::ui::skills::trained_levels`.
+    let mut cpu: Option<i32> = None;
+    let mut power: Option<i32> = None;
+    for skill in &skills.skills {
+        match skill.skill_id {
+            CPU_MANAGEMENT_SKILL_ID => cpu = Some(skill.trained_skill_level),
+            POWER_GRID_MANAGEMENT_SKILL_ID => power = Some(skill.trained_skill_level),
+            _ => {}
+        }
+    }
+    ResourceSkillLevels {
+        cpu_management: clamp_level(cpu.unwrap_or(0)),
+        power_grid_management: clamp_level(power.unwrap_or(0)),
+    }
+}
 
 /// One resource dimension: base need summed over counted fitted
 /// modules against the hull's base output.
@@ -66,7 +121,20 @@ fn usable(value: Option<f64>) -> Option<f64> {
     value.filter(|v| v.is_finite() && *v >= 0.0)
 }
 
+/// Base CPU / power grid resources for one fitting. Equivalent to
+/// [`fitting_resources_with_skills`] with `None`.
 pub fn fitting_resources(fitting: &CharacterFitting, catalogue: &FittingTypes) -> FittingResources {
+    fitting_resources_with_skills(fitting, catalogue, None)
+}
+
+/// Base resources, with ship outputs raised by the two skills when
+/// `levels` is `Some`. `None` is exactly [`fitting_resources`].
+/// Only `output` scales, by `1 + 0.05 * clamped_level` per dimension.
+pub fn fitting_resources_with_skills(
+    fitting: &CharacterFitting,
+    catalogue: &FittingTypes,
+    levels: Option<ResourceSkillLevels>,
+) -> FittingResources {
     let mut cpu_excluded: usize = 0;
     let mut power_excluded: usize = 0;
 
@@ -86,6 +154,17 @@ pub fn fitting_resources(fitting: &CharacterFitting, catalogue: &FittingTypes) -
     };
     let Some(power_output) = usable(ship.power_output) else {
         return FittingResources::ShipNoOutput;
+    };
+
+    // Skill scaling: defensive re-clamp so a hand-built
+    // ResourceSkillLevels cannot exceed ×1.25.
+    let (cpu_output, power_output) = match levels {
+        None => (cpu_output, power_output),
+        Some(levels) => {
+            let cpu_factor = 1.0 + 0.05 * clamp_level(levels.cpu_management) as f64;
+            let power_factor = 1.0 + 0.05 * clamp_level(levels.power_grid_management) as f64;
+            (cpu_output * cpu_factor, power_output * power_factor)
+        }
     };
 
     let mut cpu_used: f64 = 0.0;
@@ -497,5 +576,335 @@ mod tests {
         assert_eq!(usable(Some(f64::INFINITY)), None);
         assert_eq!(usable(Some(f64::NEG_INFINITY)), None);
         assert_eq!(usable(Some(f64::NAN)), None);
+    }
+
+    fn skill(skill_id: i64, active: i32, trained: i32) -> crate::esi::models::Skill {
+        crate::esi::models::Skill {
+            skill_id,
+            active_skill_level: active,
+            trained_skill_level: trained,
+            skillpoints_in_skill: 0,
+        }
+    }
+
+    fn skills(rows: Vec<crate::esi::models::Skill>) -> CharacterSkills {
+        CharacterSkills {
+            skills: rows,
+            total_sp: 0,
+            unallocated_sp: None,
+        }
+    }
+
+    fn levels(cpu: i32, pg: i32) -> ResourceSkillLevels {
+        ResourceSkillLevels {
+            cpu_management: cpu,
+            power_grid_management: pg,
+        }
+    }
+
+    // Real Rifter table (×(1 + 0.05·level) on base 130.0/41.0).
+    // Level 2 (143.0, not 143.325) and level 5 (162.5, not
+    // 130 × 1.05⁵ = 165.916…) kill the per-level compounding mutant.
+    #[test]
+    fn skill_outputs_follow_real_rifter_table_and_stay_independent() {
+        let catalogue = bundled();
+        let hull = fitting(587, vec![]);
+        let table: [(i32, f64, f64); 6] = [
+            (0, 130.0, 41.0),
+            (1, 136.5, 43.05),
+            (2, 143.0, 45.1),
+            (3, 149.5, 47.15),
+            (4, 156.0, 49.2),
+            (5, 162.5, 51.25),
+        ];
+        for (level, cpu_expected, pg_expected) in table {
+            let (cpu, power) = budgets(fitting_resources_with_skills(
+                &hull,
+                &catalogue,
+                Some(levels(level, level)),
+            ));
+            assert_close(cpu.output, cpu_expected);
+            assert_close(power.output, pg_expected);
+        }
+        // Independence: CPU L5 + PG L0 scales CPU only, and vice versa.
+        let (cpu, power) = budgets(fitting_resources_with_skills(
+            &hull,
+            &catalogue,
+            Some(levels(5, 0)),
+        ));
+        assert_close(cpu.output, 162.5);
+        assert_close(power.output, 41.0);
+        let (cpu, power) = budgets(fitting_resources_with_skills(
+            &hull,
+            &catalogue,
+            Some(levels(0, 5)),
+        ));
+        assert_close(cpu.output, 130.0);
+        assert_close(power.output, 51.25);
+    }
+
+    // Synthetic Flutter oracle (labelled synthetic): Flutter's
+    // synthetic Rifter carries 125.0/37.0; 3426 L5 → 125 × 1.25 =
+    // 156.25. Reproducing Flutter's synthetic numbers verbatim.
+    #[test]
+    fn synthetic_flutter_oracle_cpu_management_l5() {
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[],"cpuOutput":125.0,"powerOutput":37.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let hull = fitting(587, vec![]);
+        let (cpu, power) = budgets(fitting_resources_with_skills(
+            &hull,
+            &catalogue,
+            Some(levels(5, 0)),
+        ));
+        assert_close(cpu.output, 156.25);
+        assert_close(power.output, 37.0);
+        // Power grid side of the same synthetic row: 37 × 1.25 = 46.25.
+        let (_, power) = budgets(fitting_resources_with_skills(
+            &hull,
+            &catalogue,
+            Some(levels(0, 5)),
+        ));
+        assert_close(power.output, 46.25);
+    }
+
+    #[test]
+    fn none_equals_base_on_real_and_no_output_fits() {
+        let catalogue = bundled();
+        let fit = fitting(587, vec![item("LoSlot0", 1, 2048)]);
+        assert_eq!(
+            fitting_resources(&fit, &catalogue),
+            fitting_resources_with_skills(&fit, &catalogue, None)
+        );
+        let no_output = fitting(999999, vec![]);
+        assert_eq!(
+            fitting_resources(&no_output, &catalogue),
+            fitting_resources_with_skills(&no_output, &catalogue, None)
+        );
+        assert_eq!(
+            fitting_resources(&no_output, &catalogue),
+            FittingResources::ShipNoOutput
+        );
+    }
+
+    #[test]
+    fn lookup_absent_rows_yield_zero_zero() {
+        let levels = resource_skill_levels(&skills(vec![]));
+        assert_eq!(
+            levels,
+            ResourceSkillLevels {
+                cpu_management: 0,
+                power_grid_management: 0
+            }
+        );
+        // Unrelated rows do not fill the two slots.
+        let levels = resource_skill_levels(&skills(vec![skill(3300, 5, 5)]));
+        assert_eq!(
+            levels,
+            ResourceSkillLevels {
+                cpu_management: 0,
+                power_grid_management: 0
+            }
+        );
+    }
+
+    #[test]
+    fn lookup_reads_trained_not_active() {
+        let levels = resource_skill_levels(&skills(vec![
+            skill(CPU_MANAGEMENT_SKILL_ID, 5, 2),
+            skill(POWER_GRID_MANAGEMENT_SKILL_ID, 1, 4),
+        ]));
+        assert_eq!(
+            levels,
+            ResourceSkillLevels {
+                cpu_management: 2,
+                power_grid_management: 4
+            }
+        );
+        let present_zero = resource_skill_levels(&skills(vec![
+            skill(CPU_MANAGEMENT_SKILL_ID, 5, 0),
+            skill(POWER_GRID_MANAGEMENT_SKILL_ID, 5, 0),
+        ]));
+        assert_eq!(
+            present_zero,
+            ResourceSkillLevels {
+                cpu_management: 0,
+                power_grid_management: 0
+            }
+        );
+    }
+
+    #[test]
+    fn lookup_wrong_id_3418_is_noop_and_output_equals_base() {
+        // E0c.2 trap: 3418 is Capacitor Management, not a resource
+        // skill. It must yield 0/0 and leave outputs at base.
+        let levels = resource_skill_levels(&skills(vec![skill(3418, 5, 5)]));
+        assert_eq!(
+            levels,
+            ResourceSkillLevels {
+                cpu_management: 0,
+                power_grid_management: 0
+            }
+        );
+        let catalogue = bundled();
+        let hull = fitting(587, vec![]);
+        let (cpu, power) = budgets(fitting_resources_with_skills(
+            &hull,
+            &catalogue,
+            Some(levels),
+        ));
+        assert_close(cpu.output, 130.0);
+        assert_close(power.output, 41.0);
+    }
+
+    #[test]
+    fn lookup_duplicate_rows_last_wins() {
+        let levels = resource_skill_levels(&skills(vec![
+            skill(CPU_MANAGEMENT_SKILL_ID, 5, 1),
+            skill(CPU_MANAGEMENT_SKILL_ID, 5, 4),
+            skill(POWER_GRID_MANAGEMENT_SKILL_ID, 5, 2),
+            skill(POWER_GRID_MANAGEMENT_SKILL_ID, 5, 3),
+        ]));
+        assert_eq!(
+            levels,
+            ResourceSkillLevels {
+                cpu_management: 4,
+                power_grid_management: 3
+            }
+        );
+    }
+
+    #[test]
+    fn lookup_clamps_negative_seven_and_i32_extremes_without_panic() {
+        let levels = resource_skill_levels(&skills(vec![
+            skill(CPU_MANAGEMENT_SKILL_ID, -3, -3),
+            skill(POWER_GRID_MANAGEMENT_SKILL_ID, 7, 7),
+        ]));
+        assert_eq!(
+            levels,
+            ResourceSkillLevels {
+                cpu_management: 0,
+                power_grid_management: 5
+            }
+        );
+        let extremes = resource_skill_levels(&skills(vec![
+            skill(CPU_MANAGEMENT_SKILL_ID, i32::MIN, i32::MIN),
+            skill(POWER_GRID_MANAGEMENT_SKILL_ID, i32::MAX, i32::MAX),
+        ]));
+        assert_eq!(
+            extremes,
+            ResourceSkillLevels {
+                cpu_management: 0,
+                power_grid_management: 5
+            }
+        );
+    }
+
+    #[test]
+    fn hand_built_levels_above_five_are_reclamped_inside() {
+        let catalogue = bundled();
+        let hull = fitting(587, vec![]);
+        let (cpu, power) = budgets(fitting_resources_with_skills(
+            &hull,
+            &catalogue,
+            Some(levels(99, 99)),
+        ));
+        assert_close(cpu.output, 162.5);
+        assert_close(power.output, 51.25);
+        let (cpu, power) = budgets(fitting_resources_with_skills(
+            &hull,
+            &catalogue,
+            Some(levels(-99, -99)),
+        ));
+        assert_close(cpu.output, 130.0);
+        assert_close(power.output, 41.0);
+    }
+
+    #[test]
+    fn only_output_scales_used_and_excluded_stay_equal() {
+        let catalogue = bundled();
+        let fit = fitting(
+            587,
+            vec![
+                item("LoSlot0", 1, 2048),
+                item("LoSlot1", 1, 999999),
+                item("LoSlot2", 1, 1236),
+            ],
+        );
+        let base = fitting_resources(&fit, &catalogue);
+        let applied = fitting_resources_with_skills(&fit, &catalogue, Some(levels(5, 5)));
+        let (base_cpu, base_power) = budgets(base);
+        let (applied_cpu, applied_power) = budgets(applied);
+        assert_close(applied_cpu.used, base_cpu.used);
+        assert_close(applied_power.used, base_power.used);
+        assert_eq!(applied_cpu.excluded_modules, base_cpu.excluded_modules);
+        assert_eq!(applied_power.excluded_modules, base_power.excluded_modules);
+        assert_close(applied_cpu.output, 162.5);
+        assert_close(applied_power.output, 51.25);
+    }
+
+    #[test]
+    fn ship_no_output_and_zero_output_guards_hold_at_l5() {
+        let catalogue = bundled();
+        assert_eq!(
+            fitting_resources_with_skills(&fitting(999999, vec![]), &catalogue, Some(levels(5, 5))),
+            FittingResources::ShipNoOutput
+        );
+        let zero = zero_output_catalogue();
+        let fit = fitting(2078, vec![item("LoSlot0", 1, 2048)]);
+        let (cpu, power) = budgets(fitting_resources_with_skills(
+            &fit,
+            &zero,
+            Some(levels(5, 5)),
+        ));
+        assert_close(cpu.output, 0.0);
+        assert_close(power.output, 0.0);
+        assert_close(cpu.remaining(), -30.0);
+        assert_close(power.remaining(), -1.0);
+        assert!(cpu.is_over());
+        assert!(power.is_over());
+        let hull = fitting(2078, vec![]);
+        let (cpu, power) = budgets(fitting_resources_with_skills(
+            &hull,
+            &zero,
+            Some(levels(5, 5)),
+        ));
+        assert_close(cpu.output, 0.0);
+        assert_close(power.output, 0.0);
+        assert!(!cpu.is_over());
+        assert!(!power.is_over());
+    }
+
+    #[test]
+    fn over_budget_flips_and_stays_over_against_applied_output() {
+        let catalogue = bundled();
+        let items5: Vec<FittingItem> = (0..5)
+            .map(|n| item(&format!("LoSlot{n}"), 1, 2048))
+            .collect();
+        let fit5 = fitting(587, items5);
+        // 150.0 used is over base 130.0 and under applied 162.5.
+        let base = fitting_resources(&fit5, &catalogue);
+        let (base_cpu, _) = budgets(base);
+        assert!(base_cpu.is_over());
+        assert_close(base_cpu.remaining(), -20.0);
+        let applied = fitting_resources_with_skills(&fit5, &catalogue, Some(levels(5, 0)));
+        let (applied_cpu, _) = budgets(applied);
+        assert!(!applied_cpu.is_over());
+        assert_close(applied_cpu.output, 162.5);
+        assert_close(applied_cpu.used, 150.0);
+        assert_close(applied_cpu.remaining(), 12.5);
+
+        let items6: Vec<FittingItem> = (0..6)
+            .map(|n| item(&format!("LoSlot{n}"), 1, 2048))
+            .collect();
+        let fit6 = fitting(587, items6);
+        let applied6 = fitting_resources_with_skills(&fit6, &catalogue, Some(levels(5, 0)));
+        let (applied6_cpu, _) = budgets(applied6);
+        assert!(applied6_cpu.is_over());
+        assert_close(applied6_cpu.output, 162.5);
+        assert_close(applied6_cpu.used, 180.0);
+        assert_close(applied6_cpu.remaining(), -17.5);
     }
 }
