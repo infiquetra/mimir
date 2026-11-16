@@ -509,6 +509,91 @@ pub struct MarketHistoryEntry {
     pub volume: i64,
 }
 
+/// One of a character's blueprints from
+/// `GET /characters/{character_id}/blueprints/`. `item_id` is an
+/// item-instance id: an invisible sort tie-break only, never
+/// rendered and never name-resolved. `quantity` carries the ESI
+/// sentinels -1 and -2 and `runs` carries -1 for an original;
+/// both render as words in the view (design section 7.3), never
+/// as raw counts. `location_flag` parses and is carried but is
+/// not rendered in this slice.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct CharacterBlueprint {
+    #[serde(default)]
+    pub item_id: i64,
+    #[serde(default)]
+    pub type_id: i64,
+    #[serde(default)]
+    pub location_id: i64,
+    #[serde(default)]
+    pub location_flag: String,
+    #[serde(default)]
+    pub quantity: i64,
+    #[serde(default)]
+    pub time_efficiency: i64,
+    #[serde(default)]
+    pub material_efficiency: i64,
+    #[serde(default)]
+    pub runs: i64,
+}
+
+/// One character industry job from
+/// `GET /characters/{character_id}/industry/jobs/`. `job_id`,
+/// `blueprint_id` (the used blueprint's item-instance id),
+/// `installer_id`, and `completed_character_id` are never
+/// rendered and never name-resolved; `job_id` is an invisible
+/// sort tie-break only. `cost`, `probability`,
+/// `licensed_production_runs`, `duration`, `location_id`, and
+/// `output_location_id` parse and are carried but are never
+/// rendered and never enter any computation (no calculator).
+/// Nullability is preserved exactly: a null `cost` stays `None`
+/// and is never coerced to zero.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct IndustryJob {
+    #[serde(default)]
+    pub job_id: i64,
+    #[serde(default)]
+    pub installer_id: i64,
+    #[serde(default)]
+    pub facility_id: i64,
+    #[serde(default)]
+    pub location_id: i64,
+    #[serde(default)]
+    pub activity_id: i64,
+    #[serde(default)]
+    pub blueprint_id: i64,
+    #[serde(default)]
+    pub blueprint_type_id: i64,
+    #[serde(default)]
+    pub output_location_id: i64,
+    #[serde(default)]
+    pub runs: i64,
+    #[serde(default)]
+    pub cost: Option<f64>,
+    #[serde(default)]
+    pub licensed_production_runs: Option<i64>,
+    #[serde(default)]
+    pub probability: Option<f64>,
+    #[serde(default)]
+    pub product_type_id: Option<i64>,
+    #[serde(default)]
+    pub status: String,
+    #[serde(default)]
+    pub duration: i64,
+    #[serde(default)]
+    pub start_date: String,
+    #[serde(default)]
+    pub end_date: String,
+    #[serde(default)]
+    pub pause_date: Option<String>,
+    #[serde(default)]
+    pub completed_date: Option<String>,
+    #[serde(default)]
+    pub completed_character_id: Option<i64>,
+    #[serde(default)]
+    pub successful_runs: Option<i64>,
+}
+
 /// ESI error body shape: `{"error": "..."}`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EsiErrorBody {
@@ -711,6 +796,106 @@ mod tests {
         assert_eq!(empty.lowest, 0.0);
         assert_eq!(empty.order_count, 0);
         assert_eq!(empty.volume, 0);
+    }
+
+    #[test]
+    fn character_blueprint_full_row_parses_and_defaults() {
+        let bp: CharacterBlueprint = serde_json::from_str(
+            r#"{"item_id":710001001,"type_id":681,"location_id":60003760,
+                "location_flag":"Hangar","quantity":-2,"time_efficiency":10,
+                "material_efficiency":8,"runs":5,"runs_remaining":3,
+                "unknown_future_field":true}"#,
+        )
+        .expect("parses");
+        assert_eq!(bp.item_id, 710001001);
+        assert_eq!(bp.type_id, 681);
+        assert_eq!(bp.location_id, 60003760);
+        assert_eq!(bp.location_flag, "Hangar");
+        assert_eq!(bp.quantity, -2);
+        assert_eq!(bp.time_efficiency, 10);
+        assert_eq!(bp.material_efficiency, 8);
+        assert_eq!(bp.runs, 5);
+
+        let original: CharacterBlueprint =
+            serde_json::from_str(r#"{"quantity":-1,"runs":-1}"#).expect("parses");
+        assert_eq!(original.quantity, -1);
+        assert_eq!(original.runs, -1);
+
+        let empty: CharacterBlueprint = serde_json::from_str("{}").expect("parses");
+        assert_eq!(empty.item_id, 0);
+        assert_eq!(empty.type_id, 0);
+        assert_eq!(empty.location_id, 0);
+        assert!(empty.location_flag.is_empty());
+        assert_eq!(empty.quantity, 0);
+        assert_eq!(empty.time_efficiency, 0);
+        assert_eq!(empty.material_efficiency, 0);
+        assert_eq!(empty.runs, 0);
+    }
+
+    #[test]
+    fn industry_job_full_row_parses_defaults_and_option_variants() {
+        let job: IndustryJob = serde_json::from_str(
+            r#"{"job_id":710000101,"installer_id":90000001,"facility_id":60003760,
+                "location_id":60003760,"activity_id":1,"blueprint_id":710001001,
+                "blueprint_type_id":681,"output_location_id":60003760,"runs":3,
+                "cost":12345.5,"licensed_production_runs":10,"probability":0.4,
+                "product_type_id":587,"status":"active","duration":3600,
+                "start_date":"2026-11-14T10:00:00Z","end_date":"2026-11-15T11:00:00Z",
+                "pause_date":"2026-11-14T12:00:00Z",
+                "completed_date":"2026-11-15T11:05:00Z",
+                "completed_character_id":90000001,"successful_runs":2,
+                "unknown_future_field":"x"}"#,
+        )
+        .expect("parses");
+        assert_eq!(job.job_id, 710000101);
+        assert_eq!(job.installer_id, 90000001);
+        assert_eq!(job.facility_id, 60003760);
+        assert_eq!(job.location_id, 60003760);
+        assert_eq!(job.activity_id, 1);
+        assert_eq!(job.blueprint_id, 710001001);
+        assert_eq!(job.blueprint_type_id, 681);
+        assert_eq!(job.output_location_id, 60003760);
+        assert_eq!(job.runs, 3);
+        assert_eq!(job.cost, Some(12345.5));
+        assert_eq!(job.licensed_production_runs, Some(10));
+        assert_eq!(job.probability, Some(0.4));
+        assert_eq!(job.product_type_id, Some(587));
+        assert_eq!(job.status, "active");
+        assert_eq!(job.duration, 3600);
+        assert_eq!(job.start_date, "2026-11-14T10:00:00Z");
+        assert_eq!(job.end_date, "2026-11-15T11:00:00Z");
+        assert_eq!(job.pause_date.as_deref(), Some("2026-11-14T12:00:00Z"));
+        assert_eq!(job.completed_date.as_deref(), Some("2026-11-15T11:05:00Z"));
+        assert_eq!(job.completed_character_id, Some(90000001));
+        assert_eq!(job.successful_runs, Some(2));
+
+        let empty: IndustryJob = serde_json::from_str("{}").expect("parses");
+        assert_eq!(empty.job_id, 0);
+        assert_eq!(empty.activity_id, 0);
+        assert!(empty.status.is_empty());
+        assert_eq!(empty.cost, None);
+        assert_eq!(empty.licensed_production_runs, None);
+        assert_eq!(empty.probability, None);
+        assert_eq!(empty.product_type_id, None);
+        assert_eq!(empty.pause_date, None);
+        assert_eq!(empty.completed_date, None);
+        assert_eq!(empty.completed_character_id, None);
+        assert_eq!(empty.successful_runs, None);
+
+        let nulls: IndustryJob = serde_json::from_str(
+            r#"{"cost":null,"licensed_production_runs":null,"probability":null,
+                "product_type_id":null,"pause_date":null,"completed_date":null,
+                "completed_character_id":null,"successful_runs":null}"#,
+        )
+        .expect("parses");
+        assert_eq!(nulls.cost, None);
+        assert_eq!(nulls.licensed_production_runs, None);
+        assert_eq!(nulls.probability, None);
+        assert_eq!(nulls.product_type_id, None);
+        assert_eq!(nulls.pause_date, None);
+        assert_eq!(nulls.completed_date, None);
+        assert_eq!(nulls.completed_character_id, None);
+        assert_eq!(nulls.successful_runs, None);
     }
 
     #[test]

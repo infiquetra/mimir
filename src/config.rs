@@ -79,6 +79,16 @@ impl EveConfig {
         "esi-location.read_online.v1",
     ];
 
+    /// Industry step-up scopes: read the character's industry jobs
+    /// and blueprint library. Granted after first sign-in via
+    /// step-up, never at first auth. Both scopes are required: the
+    /// industry decision records that name only the jobs scope are
+    /// incomplete and must not be copied (design section 2.3).
+    pub const INDUSTRY_SCOPES: &[&str] = &[
+        "esi-characters.read_blueprints.v1",
+        "esi-industry.read_character_jobs.v1",
+    ];
+
     /// Scopes the Phase-1 Rust endpoint set actually needs, beyond the
     /// first-auth set (location/ship/online/clones/standings/loyalty).
     pub const PHASE1_ENDPOINT_SCOPES: &[&str] = &[
@@ -184,6 +194,23 @@ mod tests {
             "implants is first-auth and stays out of the step-up set"
         );
         for scope in EveConfig::CHARACTER_DETAIL_SCOPES {
+            assert!(
+                !EveConfig::FIRST_AUTH_SCOPES.contains(scope),
+                "step-up scope {scope} must be disjoint from first-auth"
+            );
+        }
+    }
+
+    #[test]
+    fn industry_scopes_are_the_two_stepup_scopes() {
+        assert_eq!(
+            EveConfig::INDUSTRY_SCOPES,
+            [
+                "esi-characters.read_blueprints.v1",
+                "esi-industry.read_character_jobs.v1",
+            ]
+        );
+        for scope in EveConfig::INDUSTRY_SCOPES {
             assert!(
                 !EveConfig::FIRST_AUTH_SCOPES.contains(scope),
                 "step-up scope {scope} must be disjoint from first-auth"
