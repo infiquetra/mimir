@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### Unverified token headers are log input, not log text
+
+**Author.** Muse Code (parent hardening pass over the JWT verification review)
+**Context.** Adversarial review of the JWT slice found zero bypasses but flagged that the token header's key id (`kid`) — attacker-influenced before any signature check — was interpolated raw into twelve tracing lines, so a `kid` containing newlines could forge additional log lines and an unbounded value could bloat them.
+**Evidence.** Review observations in the JWT workflow synthesis; `src/auth/jwt_verify.rs` pre-fix `kid={}` interpolations in `usable_key` and `verify_with_keys` (duplicate/unknown/mismatch/verify-failure/issuer/audience/expiry paths).
+**Mechanism.** Structured surrounding log text does not sanitize its interpolated values: any pre-authentication field reaches log files with whatever control characters it carries, and log consumers downstream cannot distinguish forged lines from real ones.
+**Fix (or queued).** Every `kid` log site now renders through `kid_for_log` (debug-escaped, capped at 64 characters); key lookup still uses the original value, so verification behavior is unchanged.
+**Validation.** New unit test `kid_for_log_escapes_and_caps_untrusted_kid` in `src/auth/jwt_verify.rs` plus full `cargo test` / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` on branch `feat/jwt-signature-verification` in the hardening commit.
+**Generalizable rule.** Anything read before trust is established — headers, key ids, remote names — only reaches logs through an escaping, length-capped rendering; the raw value stays in logic paths where equality matters.
+**Refs.** `docs/jwt-verification-design.md`; `src/auth/jwt_verify.rs` (`kid_for_log`).
+
 ### jsonwebtoken 12 validates expiry against the system clock only, so time rules must move into the caller when "now" is injected
 
 **Author.** Mimir JWT verification workflow (Builder A, recorded by the integrator)

@@ -94,7 +94,7 @@ fn parse_usable_keys(body: &str) -> Result<Vec<Jwk>, AuthError> {
 }
 
 fn usable_key(raw: RawJwk) -> Option<Jwk> {
-    let kid_label = raw.kid.clone().unwrap_or_default();
+    let kid_label = kid_for_log(raw.kid.as_deref().unwrap_or_default());
     let drop_key = |reason: &'static str| {
         tracing::debug!(
             "[AUTH] dropping unusable JWKS key kid={} reason={}",
@@ -250,6 +250,14 @@ fn categorize_claims_shape(payload: &serde_json::Value) -> AuthError {
     AuthError::MalformedToken
 }
 
+/// Render an untrusted `kid` header value safe for log lines:
+/// debug-escaped (control characters such as newlines cannot forge
+/// log lines) and capped at 64 characters. Lookup always uses the
+/// original value; this rendering is for logs only.
+fn kid_for_log(kid: &str) -> String {
+    format!("{:?}", kid.chars().take(64).collect::<String>())
+}
+
 /// Pure verification core: no I/O, no clock, no cache. Steps
 /// follow design Section 5 in order; no claims field is
 /// returned until the signature and every claim check pass.
@@ -270,15 +278,18 @@ pub(crate) fn verify_with_keys(
             return Err(AuthError::MalformedToken);
         }
     };
+    // Logs below only ever use this escaped, capped rendering; the
+    // header value itself is attacker-influenced pre-verification.
+    let kid_log = kid_for_log(kid);
     let mut matches = keys.iter().filter(|k| k.kid == kid);
     let selected = match (matches.next(), matches.next()) {
         (Some(only), None) => only,
         (Some(_), Some(_)) => {
-            tracing::warn!("[AUTH] duplicate signing key kid={}", kid);
+            tracing::warn!("[AUTH] duplicate signing key kid={}", kid_log);
             return Err(AuthError::UnknownSigningKey);
         }
         _ => {
-            tracing::warn!("[AUTH] unknown signing key kid={}", kid);
+            tracing::warn!("[AUTH] unknown signing key kid={}", kid_log);
             return Err(AuthError::UnknownSigningKey);
         }
     };
@@ -287,7 +298,7 @@ pub(crate) fn verify_with_keys(
     if header.alg != selected.alg {
         tracing::warn!(
             "[AUTH] token algorithm mismatch kid={} expected={:?} header={:?}",
-            kid,
+            kid_log,
             selected.alg,
             header.alg
         );
@@ -312,7 +323,7 @@ pub(crate) fn verify_with_keys(
             let mapped = map_jwt_error(e.kind());
             tracing::warn!(
                 "[AUTH] token verification failed kid={} error={}",
-                kid,
+                kid_log,
                 mapped
             );
             mapped
@@ -322,36 +333,40 @@ pub(crate) fn verify_with_keys(
             let mapped = categorize_claims_shape(&decoded.claims);
             tracing::warn!(
                 "[AUTH] token claims shape rejected kid={} error={}",
-                kid,
+                kid_log,
                 mapped
             );
             mapped
         })?;
     if !issuers.iter().any(|accepted| accepted == &verified.iss) {
-        tracing::warn!("[AUTH] token issuer rejected kid={}", kid);
+        tracing::warn!("[AUTH] token issuer rejected kid={}", kid_log);
         return Err(AuthError::InvalidClaims("issuer"));
     }
     let has_client = verified.aud.iter().any(|aud| aud == client_id);
     let has_eve_online = verified.aud.iter().any(|aud| aud == EVE_ONLINE_AUDIENCE);
     if !has_client || !has_eve_online {
-        tracing::warn!("[AUTH] token audience rejected kid={}", kid);
+        tracing::warn!("[AUTH] token audience rejected kid={}", kid_log);
         return Err(AuthError::InvalidClaims("audience"));
     }
     if verified.exp <= 0 {
-        tracing::warn!("[AUTH] token missing exp kid={}", kid);
+        tracing::warn!("[AUTH] token missing exp kid={}", kid_log);
         return Err(AuthError::InvalidClaims("missing_exp"));
     }
     if now_unix_secs >= verified.exp.saturating_add(JWT_LEEWAY_SECS) {
-        tracing::warn!("[AUTH] token expired kid={}", kid);
+        tracing::warn!("[AUTH] token expired kid={}", kid_log);
         return Err(AuthError::InvalidClaims("expired"));
     }
     if let Some(nbf) = verified.nbf {
         if now_unix_secs.saturating_add(JWT_LEEWAY_SECS) < nbf {
-            tracing::warn!("[AUTH] token not yet valid kid={}", kid);
+            tracing::warn!("[AUTH] token not yet valid kid={}", kid_log);
             return Err(AuthError::InvalidClaims("not_yet_valid"));
         }
     }
-    tracing::debug!("[AUTH] token verified kid={} alg={:?}", kid, selected.alg);
+    tracing::debug!(
+        "[AUTH] token verified kid={} alg={:?}",
+        kid_log,
+        selected.alg
+    );
     Ok(JwtClaims::from(verified))
 }
 
@@ -686,6 +701,19 @@ mod tests {
 
     fn verify(token: &str, keys: &[Jwk]) -> Result<JwtClaims, AuthError> {
         verify_with_keys(token, keys, CLIENT, NOW)
+    }
+
+    #[test]
+    fn kid_for_log_escapes_and_caps_untrusted_kid() {
+        // The header kid is attacker-influenced before verification:
+        // its log rendering must never contain a raw newline (log-line
+        // forgery) and must stay bounded however long the value is.
+        let rendered = kid_for_log("evil\n[AUTH] forged line");
+        assert!(!rendered.contains('\n'));
+        assert!(rendered.contains("\\n"));
+        let capped = kid_for_log(&"k".repeat(200));
+        assert_eq!(capped.len(), 66); // 64 content chars + Debug quotes
+        assert_eq!(kid_for_log("EVE-KID_1.x"), "\"EVE-KID_1.x\"");
     }
 
     // Case 1: valid RS256 (host issuer spelling; past `nbf` ok).
