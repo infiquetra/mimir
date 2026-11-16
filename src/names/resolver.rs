@@ -82,7 +82,13 @@ impl NameResolver {
     }
 
     pub fn insert_with_category(&mut self, id: i64, name: String, category: String) {
-        if name.trim().is_empty() || name.trim().parse::<i64>().is_ok() {
+        let trimmed = name.trim();
+        let digits = trimmed
+            .strip_prefix('+')
+            .or_else(|| trimmed.strip_prefix('-'))
+            .unwrap_or(trimmed);
+        if trimmed.is_empty() || (!digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit()))
+        {
             // A purely numeric remote "name" would render as a raw ID;
             // word fallbacks (Unknown Item/Location) are the contract.
             tracing::debug!("[DB] ignoring empty or numeric name insert id={}", id);
@@ -369,6 +375,12 @@ mod tests {
         r.insert(34, " 34 ".to_string());
         assert_eq!(r.name(10000002), UNKNOWN_ITEM);
         assert_eq!(r.location_name(34), UNKNOWN_LOCATION);
+        // All-digit names beyond i64 range and signed numerics are raw
+        // IDs too; parsing alone would let them through.
+        r.insert(36, "99999999999999999999".to_string());
+        assert_eq!(r.name(36), UNKNOWN_ITEM);
+        r.insert(37, "-37".to_string());
+        assert_eq!(r.name(37), UNKNOWN_ITEM);
         // Normal and whitespace-padded real names still insert.
         r.insert(34, "Tritanium".to_string());
         assert_eq!(r.name(34), "Tritanium");

@@ -1237,6 +1237,7 @@ pub fn seed_demo_state(state: &mut AppState) {
             state.character_details = LoadState::Error(format!("Demo data failed to load: {e}"));
             state.market = LoadState::Error(format!("Demo data failed to load: {e}"));
             state.industry = LoadState::Error(format!("Demo data failed to load: {e}"));
+            state.planetary = LoadState::Error(format!("Demo data failed to load: {e}"));
         }
     }
 }

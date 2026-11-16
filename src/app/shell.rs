@@ -15,6 +15,7 @@ use crate::auth::callback_server::CallbackServer;
 use crate::auth::jwt_verify::JwtVerifier;
 use crate::auth::oauth;
 use crate::auth::token_store::{StoredTokens, TokenStore};
+use crate::config::EveConfig;
 use crate::demo::data::DemoBundle;
 use crate::esi::endpoints;
 use crate::esi::models::{
@@ -1842,7 +1843,29 @@ impl MimirApp {
             request.scopes.join(" "),
             missing.len()
         );
-        if missing.is_empty() {
+        // Observed reality outranks stored metadata: if a section for
+        // one of the requested scope groups already returned 403 this
+        // session, token_meta claiming the grant is stale, and taking
+        // the shortcut would loop the panel forever without ever
+        // opening the browser the user just asked for.
+        let observed_reauthorize = {
+            let overlaps = |set: &[&str]| {
+                request
+                    .scopes
+                    .iter()
+                    .any(|scope| set.contains(&scope.as_str()))
+            };
+            (overlaps(EveConfig::ASSETS_SCOPES) && self.state.assets_needs_reauthorize)
+                || (overlaps(EveConfig::CHARACTER_DETAIL_SCOPES)
+                    && matches!(&self.state.character_details, LoadState::Ready(d) if d.needs_detail_stepup()))
+                || (overlaps(EveConfig::INDUSTRY_SCOPES)
+                    && matches!(&self.state.industry, LoadState::Ready(d) if d.needs_industry_stepup()))
+                || (overlaps(EveConfig::PLANETS_SCOPES)
+                    && matches!(&self.state.planetary, LoadState::Ready(d) if d.needs_planetary_stepup()))
+                || (overlaps(EveConfig::MARKET_SCOPES)
+                    && matches!(&self.state.market, LoadState::Ready(d) if matches!(&d.character_orders, Err(e) if e.needs_reauthorize)))
+        };
+        if missing.is_empty() && !observed_reauthorize {
             tracing::info!(
                 "[AUTH] step-up skipped; scopes already granted character_id={}",
                 request.character_id
