@@ -873,12 +873,16 @@ impl MimirApp {
                                     &e,
                                     crate::error::AppError::Esi(
                                         crate::error::EsiError::Reauthorize
+                                            | crate::error::EsiError::NotFound(_)
                                     )
                                 ) =>
                             {
                                 // 403 in a scope-present pass is an ACL
-                                // denial for this character: pin the id
-                                // and continue (design section 6.3).
+                                // denial for this character, and 404 is a
+                                // destroyed structure or a parent item id
+                                // above the structure threshold: pin the
+                                // id and continue so one dead id never
+                                // head-of-line blocks larger ids.
                                 denied.push(structure_id);
                             }
                             Err(e) => {

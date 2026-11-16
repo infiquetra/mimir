@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### The pinning table must enumerate every typed refusal, or the missing one becomes head-of-line blocking
+
+**Author.** Muse Code (parent repair pass over the structure-names workflow)
+**Context.** The entry below locked which structure-lookup failures may pin an id: scope-present 403 and non-displayable names pin; 401 and transport failures abort unpinned. Adversarial review then probed the one typed refusal the design table never listed — 404.
+**Evidence.** `src/error.rs` (`EsiError::from_status` maps 404 to `EsiError::NotFound`); `src/names/resolver.rs` and `src/app/shell.rs` (both structure loops matched only `Reauthorize` as pin-and-continue, so a 404 fell into the abort arm: the pass stopped, the id stayed unpinned, and because batches are ascending the same lowest 404 id was retried first on every pass while larger ids were never attempted — the reviewer's probe made exactly 1 request for 2 ids); `src/ui/assets.rs` (asset items inside ships/containers carry parent item ids as `location_id`, and any such id at or above `STRUCTURE_ID_MIN` is looked up as a structure, so 404-class ids are routine input, not exotic).
+**Mechanism.** The design reasoned about failures by story ("denied", "token-class", "transport") instead of by enumerating the typed error variants the client can actually return. An unlisted variant silently inherits the abort arm, and abort-without-pin plus deterministic ascending order converts one permanently failing id into a permanent gate in front of every other id — the precise dual of the stale-pin trap in the entry below.
+**Fix (or queued).** 404 is now a definitive per-id refusal (pin and continue) in both loops, like 403; destroyed structures and parent item ids stay "Unknown Location" without blocking siblings. The same repair closed two persist-side gaps the review noted: batch `/universe/names/` answers are filtered by `is_displayable_name` before the `universe_names` upsert, and a lone `+`/`-` is no longer displayable.
+**Validation.** New regression tests `structure_not_found_pins_and_continues_to_siblings` (observed failing first: 1 request instead of 2) and `numeric_batch_name_is_not_persisted`, extended `displayable_name_matrix`, full `cargo test` / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` on branch `feat/rust-structure-names`, and a parent-inspected demo Assets screenshot. Whether live ESI returns 404 or 403 for invalid/destroyed ids is unobservable here; the code is now safe under either.
+**Generalizable rule.** When a pass classifies failures into pin/abort/retry, enumerate the client's typed error variants exhaustively in the design table; any variant left to a default arm must be proven safe under both pinning choices, because deterministic ordering turns one wrong default into permanent blocking.
+**Refs.** `docs/structure-names-design.md` section 6.3; `src/names/resolver.rs`; `src/app/shell.rs`; `src/error.rs` (`EsiError::from_status`).
+
 ### A failed lookup caused by the caller's missing permission must not be pinned as a fact about the id
 
 **Author.** Muse Code (structure-names workflow, integrator)

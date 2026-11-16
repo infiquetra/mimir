@@ -54,7 +54,8 @@ pub fn is_displayable_name(name: &str) -> bool {
         .strip_prefix('+')
         .or_else(|| trimmed.strip_prefix('-'))
         .unwrap_or(trimmed);
-    digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit())
+    // A lone sign ("+"/"-") leaves no digits and is not a name either.
+    !digits.is_empty() && !digits.bytes().all(|b| b.is_ascii_digit())
 }
 
 /// The structure ids one pass may attempt: sorted ascending
@@ -301,11 +302,16 @@ impl NameResolver {
             match crate::esi::endpoints::resolve_names(client, chunk).await {
                 Ok(names) => {
                     for n in &names {
-                        fresh.push(UniverseNameRow {
-                            id: n.id,
-                            name: n.name.clone(),
-                            category: n.category.clone(),
-                        });
+                        // Persist only displayable names, so a numeric
+                        // batch answer never reaches the DB even though
+                        // the memory insert guard would reject it anyway.
+                        if is_displayable_name(&n.name) {
+                            fresh.push(UniverseNameRow {
+                                id: n.id,
+                                name: n.name.clone(),
+                                category: n.category.clone(),
+                            });
+                        }
                     }
                     self.extend_from_universe_names(&names);
                 }
@@ -321,8 +327,8 @@ impl NameResolver {
         // Structure ids resolve one at a time through the authenticated
         // endpoint, capped per pass. The batch above only ever sees
         // non-structure ids: /universe/names/ cannot resolve structures.
-        // A structure id is pinned only on a definitive refusal (403 or a
-        // non-displayable answer). 401 (token-class) and transport-class
+        // A structure id is pinned only on a definitive refusal (403,
+        // 404, or a non-displayable answer). 401 (token-class) and transport-class
         // failures abort the rest of the pass, leaving the remainder
         // unpinned for the next pass, and never fail the whole fill —
         // batch names resolved above must still persist.
@@ -362,12 +368,18 @@ impl NameResolver {
                     Err(e)
                         if matches!(
                             &e,
-                            crate::error::AppError::Esi(crate::error::EsiError::Reauthorize)
+                            crate::error::AppError::Esi(
+                                crate::error::EsiError::Reauthorize
+                                    | crate::error::EsiError::NotFound(_)
+                            )
                         ) =>
                     {
-                        // 403 is expected for structures the character cannot
-                        // see; pin that id and keep going so one denied
-                        // structure never wedges the rest.
+                        // 403 (character cannot see it) and 404 (destroyed
+                        // structure, or a parent item id above the
+                        // structure threshold) are definitive per-id
+                        // answers: pin that id and keep going so one dead
+                        // id never head-of-line blocks larger ids on
+                        // every future pass.
                         tracing::debug!("[ESI] structure denied id={} reason={}", structure_id, e);
                         denied.push(structure_id);
                     }
@@ -634,7 +646,16 @@ mod tests {
 
     #[test]
     fn displayable_name_matrix() {
-        for bad in ["", "  ", "123", "-5", "+7", "99999999999999999999"] {
+        for bad in [
+            "",
+            "  ",
+            "123",
+            "-5",
+            "+7",
+            "99999999999999999999",
+            "+",
+            "-",
+        ] {
             assert!(!is_displayable_name(bad), "must reject {bad:?}");
         }
         for good in ["Keepstar 9", "  Perimeter - Tranquility Trading Tower "] {
@@ -769,6 +790,59 @@ mod tests {
             r.missing(&[1030000000001]),
             vec![1030000000001],
             "forget re-arms the id"
+        );
+    }
+
+    #[tokio::test]
+    async fn structure_not_found_pins_and_continues_to_siblings() {
+        // A 404 (destroyed structure, or a parent item id above the
+        // structure threshold) is a definitive per-id answer: it pins
+        // that id and the pass moves on. Without this, the lowest
+        // 404 id is retried first on every pass and larger ids are
+        // never attempted (head-of-line blocking).
+        let (base, counter, _captured) =
+            name_resolution_mock(404, r#"{"error":"Not found"}"#, 200, "[]").await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let mut r = NameResolver::new();
+        let ids = [1030000000001, 1030000000002];
+        let still = r
+            .resolve_missing_esi(&client, None, &ids, Some(7))
+            .await
+            .expect("not-found structures never fail the fill");
+        assert_eq!(still, ids.to_vec());
+        assert_eq!(
+            counter.load(Ordering::SeqCst),
+            2,
+            "both structures attempted, in-pass sibling isolation"
+        );
+        assert!(r.missing(&ids).is_empty(), "both 404 ids stay pinned");
+        r.forget_unresolved_structures();
+        assert_eq!(r.missing(&ids), ids.to_vec(), "forget re-arms both ids");
+    }
+
+    #[tokio::test]
+    async fn numeric_batch_name_is_not_persisted() {
+        let (base, _counter, _captured) = name_resolution_mock(
+            200,
+            "{}",
+            200,
+            r#"[{"id":34,"name":"34","category":"inventory_type"}]"#,
+        )
+        .await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let conn = db::open_in_memory().expect("db opens");
+        let mut r = NameResolver::new();
+        let still = r
+            .resolve_missing_esi(&client, Some(&conn), &[34], None)
+            .await
+            .expect("numeric batch fill succeeds");
+        assert_eq!(still, vec![34]);
+        assert_eq!(r.name(34), UNKNOWN_ITEM);
+        assert!(
+            repositories::get_universe_name(&conn, 34)
+                .expect("read")
+                .is_none(),
+            "numeric batch name must never reach the DB"
         );
     }
 
