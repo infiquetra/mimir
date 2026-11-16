@@ -22,6 +22,7 @@ use crate::fitting::resources::{
     ResourceSkillLevels, CPU_MANAGEMENT_SKILL_ID, POWER_GRID_MANAGEMENT_SKILL_ID,
 };
 use crate::fitting::ship_ehp::{ship_base_ehp, ShipBaseEhp, ShipBaseEhpOutcome};
+use crate::fitting::ship_peak_recharge::ship_base_peak_recharge;
 use crate::fitting::ship_resistances::{
     ship_resistances, ResistLayer, ShipResistances, ShipResistancesOutcome,
 };
@@ -1372,6 +1373,7 @@ fn ship_stat_line(label: &str, value: Option<f64>, unit: &str) -> Option<String>
 /// partial block still renders its available values plus the
 /// disclosure.
 fn ship_base_stat_lines(stats: &ShipBaseStats) -> Vec<String> {
+    let peaks = ship_base_peak_recharge(stats);
     [
         ship_stat_line("Shield", stats.shield_capacity, "HP"),
         ship_stat_line("Armor", stats.armor_hp, "HP"),
@@ -1380,6 +1382,12 @@ fn ship_base_stat_lines(stats: &ShipBaseStats) -> Vec<String> {
         ship_stat_line("Max speed", stats.max_velocity, "m/s"),
         ship_stat_line("Shield recharge", stats.shield_recharge_secs, "s"),
         ship_stat_line("Capacitor recharge", stats.capacitor_recharge_secs, "s"),
+        ship_stat_line("Shield peak recharge", peaks.shield_hp_per_sec, "HP/s"),
+        ship_stat_line(
+            "Capacitor peak recharge",
+            peaks.capacitor_gj_per_sec,
+            "GJ/s",
+        ),
     ]
     .into_iter()
     .flatten()
@@ -3619,6 +3627,9 @@ mod tests {
                 "Max speed: 365.0 m/s",
                 "Shield recharge: 625.0 s",
                 "Capacitor recharge: 125.0 s",
+                // 2.5 * 450.0 / 625.0 = 1.8 HP/s; 2.5 * 250.0 / 125.0 = 5.0 GJ/s.
+                "Shield peak recharge: 1.8 HP/s",
+                "Capacitor peak recharge: 5.0 GJ/s",
             ]
         );
         assert_eq!(
@@ -3631,6 +3642,10 @@ mod tests {
                 "Max speed: 355.0 m/s",
                 "Shield recharge: 625.0 s",
                 "Capacitor recharge: 160.0 s",
+                // 2.5 * 350.0 / 625.0 = 1.4 HP/s; 2.5 * 400.0 / 160.0
+                // = 6.25 GJ/s, rendered 6.3 (half away from zero).
+                "Shield peak recharge: 1.4 HP/s",
+                "Capacitor peak recharge: 6.3 GJ/s",
             ]
         );
     }
@@ -3692,6 +3707,93 @@ mod tests {
         );
     }
 
+    // Peak absence matrix at the line level (peak design
+    // section 7; fixture catalogues in the style above). Each
+    // peak needs both its capacity and its recharge duration:
+    // capacity without recharge shows the capacity line and no
+    // peak; recharge without capacity shows the duration line
+    // and no peak; a present-zero capacity with a positive
+    // recharge renders the honest 0.0 peak line; a 0.0 recharge
+    // renders the 0.0 s duration line (unchanged #581
+    // behaviour) and no peak line. Catalogue recharge keys are
+    // milliseconds (shieldRechargeRate, rechargeRate).
+    #[test]
+    fn ship_base_peak_lines_absence_matrix() {
+        let no_peaks = |lines: &Vec<String>| {
+            assert!(
+                lines.iter().all(|line| !line.contains("peak recharge")),
+                "no peak line without complete inputs: {lines:?}"
+            );
+        };
+
+        // Capacities present, recharge attributes absent.
+        let capacities_only = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Capacities Only","categoryId":6,"slotEffects":[],
+                 "shieldCapacity":450.0,"capacitorCapacity":250.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let lines = ship_stats_lines_for(&capacities_only, 42);
+        assert_eq!(lines, ["Shield: 450.0 HP", "Capacitor capacity: 250.0 GJ"]);
+        no_peaks(&lines);
+
+        // Recharge durations present, capacities absent.
+        let recharges_only = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Recharges Only","categoryId":6,"slotEffects":[],
+                 "shieldRechargeRate":625000.0,"rechargeRate":125000.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let lines = ship_stats_lines_for(&recharges_only, 42);
+        assert_eq!(
+            lines,
+            ["Shield recharge: 625.0 s", "Capacitor recharge: 125.0 s"]
+        );
+        no_peaks(&lines);
+
+        // Present-zero capacities with positive recharges: honest
+        // 0.0 peak lines (2.5 * 0 / t is exactly 0).
+        let zero_capacities = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Zero Capacities","categoryId":6,"slotEffects":[],
+                 "shieldCapacity":0.0,"shieldRechargeRate":625000.0,
+                 "capacitorCapacity":0.0,"rechargeRate":125000.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let lines = ship_stats_lines_for(&zero_capacities, 42);
+        assert_eq!(
+            lines,
+            [
+                "Shield: 0.0 HP",
+                "Capacitor capacity: 0.0 GJ",
+                "Shield recharge: 625.0 s",
+                "Capacitor recharge: 125.0 s",
+                "Shield peak recharge: 0.0 HP/s",
+                "Capacitor peak recharge: 0.0 GJ/s",
+            ]
+        );
+
+        // Zero recharges: duration lines render 0.0 s, no peak.
+        let zero_recharges = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Zero Recharges","categoryId":6,"slotEffects":[],
+                 "shieldCapacity":450.0,"shieldRechargeRate":0.0,
+                 "capacitorCapacity":250.0,"rechargeRate":0.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let lines = ship_stats_lines_for(&zero_recharges, 42);
+        assert_eq!(
+            lines,
+            [
+                "Shield: 450.0 HP",
+                "Capacitor capacity: 250.0 GJ",
+                "Shield recharge: 0.0 s",
+                "Capacitor recharge: 0.0 s",
+            ]
+        );
+        no_peaks(&lines);
+    }
+
     #[test]
     fn ship_base_stats_unavailable_and_disclosure_wording() {
         assert_eq!(FITTINGS_SHIP_BASE_STATS_HEADING, "Ship (base values)");
@@ -3749,6 +3851,8 @@ mod tests {
             "Max speed: 365.0 m/s",
             "Shield recharge: 625.0 s",
             "Capacitor recharge: 125.0 s",
+            "Shield peak recharge: 1.8 HP/s",
+            "Capacitor peak recharge: 5.0 GJ/s",
         ];
         assert_eq!(lines_for(&find("Demo Brawler")), rifter_block);
         assert_eq!(lines_for(&find("Mission Runner")), rifter_block);
@@ -3762,6 +3866,8 @@ mod tests {
                 "Max speed: 355.0 m/s",
                 "Shield recharge: 625.0 s",
                 "Capacitor recharge: 160.0 s",
+                "Shield peak recharge: 1.4 HP/s",
+                "Capacitor peak recharge: 6.3 GJ/s",
             ]
         );
 
