@@ -68,6 +68,7 @@ Explicitly out of scope (each is a future slice if ever):
   does not trigger. DNA is excluded by the brief's
   EFT-only slice goal; a DNA string fails the header rule
   and is reported as malformed, never guessed at.
+  Superseded for DNA by `docs/fittings-dna-import-design.md`: DNA links now route to a DNA parser instead of failing the header rule; every other exclusion in this section stands.
 - No file picker and no clipboard read. Flutter shipped
   paste-string import only (`saved_fittings_dialog.dart`
   at `ed698d3`); egui's text box already accepts paste.

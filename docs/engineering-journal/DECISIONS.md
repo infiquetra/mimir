@@ -26,6 +26,15 @@
 
 ## 2026-11-16
 
+### DNA link import takes its strictness from the AAR adapter, expressed through the per-segment report model (feat/rust-fittings-dna-import)
+
+**Author.** Muse Code (fittings DNA-import workflow, integrator)
+**Decision.** DNA strictness comes from the AAR adapter, expressed through the per-segment report model: every segment of a pasted DNA fitting link is accounted for as an imported item or a named issue with its segment position, numbers resolve only against the bundled catalogue (offline, no network, no EVE scope), and unresolvable segments are reported never displayed as numbers. Flutter's `generateDna` is not ported (dead and lossy in Flutter); copy-back stays EFT only.
+**Rejected alternatives.** Base-parser tolerance (Flutter `parseDna` silently skips unknown items, defaults bad quantities, and fabricates ship names) — it loses user input without saying so, against the honesty model the EFT import already ships. Drone/cargo mapping for DNA segments — no grounded EVE DNA grammar represents drones or cargo in a fitting link, so mapping them would be guessing a slot; such segments are `UnsupportedDnaItem` issues instead.
+**Rationale.** The strict AAR (after-action report) adapter was Flutter's own evidence that tolerant DNA parsing drops data; routing that strictness through the existing per-line report model (with `line` meaning segment position for DNA) gives one honesty contract for both import formats and lets display, EFT copy-back, and save-to-EVE work unchanged. Porting `generateDna` would add a lossy exporter no Flutter caller used.
+**Revisit when.** A grounded EVE DNA grammar that represents drones or cargo is inspected, or a real caller needs DNA export and can ground its round-trip rules.
+**Refs.** `docs/fittings-dna-import-design.md` (sections 9.3, 10 divergences D1–D12); `src/fitting/dna.rs`; `src/fitting/eft.rs` (`ImportFormat`); `src/names/fitting_types.rs` (`lookup_by_id`); `src/ui/fittings.rs` (`parse_import` call site).
+
 ### The fittings write scope is its own step-up group, never folded into the read group (feat/rust-fittings-write)
 
 **Author.** Muse Code (fittings-write workflow, integrator)
