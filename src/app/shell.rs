@@ -8,8 +8,8 @@ use std::time::Duration;
 use super::state::{
     ship_display_name, summary_location_name, AppState, AssetsData, AuthState, BlueprintsData,
     CharacterDetailData, CharacterOrdersData, CharacterSummary, IndustryData, IndustryJobsData,
-    LoadState, MarketData, MarketSelection, PublicOrdersData, SectionError, SkillsData,
-    StepUpRequest, View, WalletData,
+    LoadState, MarketData, MarketSelection, PlanetSelection, PlanetaryData, PublicOrdersData,
+    SectionError, SectionResult, SelectedColonyDetail, SkillsData, StepUpRequest, View, WalletData,
 };
 use crate::auth::callback_server::CallbackServer;
 use crate::auth::jwt_verify::JwtVerifier;
@@ -18,8 +18,8 @@ use crate::auth::token_store::{StoredTokens, TokenStore};
 use crate::demo::data::DemoBundle;
 use crate::esi::endpoints;
 use crate::esi::models::{
-    CharacterPublicInfo, CharacterSkills, LoyaltyPointItem, Skill, SkillQueueItem, UniverseName,
-    WalletJournalItem, WalletTransactionItem,
+    CharacterPublicInfo, CharacterSkills, LoyaltyPointItem, PlanetColony, PlanetColonyDetail,
+    Skill, SkillQueueItem, UniverseName, WalletJournalItem, WalletTransactionItem,
 };
 use crate::names::resolver::NameResolver;
 use crate::names::sde::Sde;
@@ -46,6 +46,7 @@ enum BackendMsg {
         assets_needs_reauthorize: bool,
         detail: Box<CharacterDetailData>,
         industry: Box<IndustryData>,
+        planetary_colonies: SectionResult<Vec<PlanetColony>>,
     },
     RefreshFailed {
         character_id: i64,
@@ -66,6 +67,11 @@ enum BackendMsg {
     MarketFetched {
         generation: u64,
         data: Box<MarketData>,
+    },
+    PlanetaryDetailFetched {
+        generation: u64,
+        selection: PlanetSelection,
+        result: SectionResult<PlanetColonyDetail>,
     },
     MarketLookupDone {
         generation: u64,
@@ -136,6 +142,20 @@ fn market_result_matches(state: &AppState, generation: u64, selection: &MarketSe
         && Some(selection.type_id) == state.market_selected_type_id
         && selection.region_id == state.market_region_id
         && selection.character_id == state.active_character_id
+}
+
+/// PI design section 7.3 identity check: a colony detail result
+/// applies only when generation, selected planet, and active
+/// character all still match the stamped selection, so a detail
+/// fetched for a previous planet or character can never display.
+fn planetary_result_matches(
+    state: &AppState,
+    generation: u64,
+    selection: &PlanetSelection,
+) -> bool {
+    generation == state.planetary_generation
+        && Some(selection.planet_id) == state.planetary_selected_planet_id
+        && Some(selection.character_id) == state.active_character_id
 }
 
 /// Design section 8.3 freshness check: a lookup answer applies only
@@ -518,6 +538,34 @@ impl MimirApp {
                 }
             }
         }
+        // Planetary IDs (PI design section 10): colony solar-system
+        // IDs behind the structure guard (location path), plus pin,
+        // extractor-product, and stored-item type IDs (item path).
+        // Planet/pin instance IDs, schematic IDs, anything inside
+        // raw links/routes, and the planet-type word are never
+        // scheduled.
+        if let LoadState::Ready(bundle) = &self.state.planetary {
+            if let Ok(colonies) = &bundle.colonies {
+                for colony in colonies {
+                    if !crate::names::resolver::is_structure_id(colony.solar_system_id) {
+                        ids.push(colony.solar_system_id);
+                    }
+                }
+            }
+            if let Some(detail) = &bundle.detail {
+                if let Ok(detail) = &detail.result {
+                    for pin in &detail.pins {
+                        ids.push(pin.type_id);
+                        if let Some(extractor) = &pin.extractor_details {
+                            ids.extend(extractor.product_type_id);
+                        }
+                        for content in &pin.contents {
+                            ids.push(content.type_id);
+                        }
+                    }
+                }
+            }
+        }
         let missing = self.resolver.missing(&ids);
         if missing.is_empty() {
             return;
@@ -559,6 +607,7 @@ impl MimirApp {
                     assets_needs_reauthorize,
                     detail,
                     industry,
+                    planetary_colonies,
                 } => {
                     tracing::info!("[ESI] refresh complete character_id={}", character_id);
                     // A refresh landing after its character was removed
@@ -609,6 +658,45 @@ impl MimirApp {
                         self.state.wallet = LoadState::Ready(*wallet);
                         self.state.character_details = LoadState::Ready(*detail);
                         self.state.industry = LoadState::Ready(*industry);
+                        // Planetary merge (PI design section 7.2): the
+                        // selection survives unless a successful list
+                        // proves its planet is gone (a failed list
+                        // proves nothing); a stamped detail is kept
+                        // only for this character and a surviving
+                        // selection; a surviving selection re-queues
+                        // its one identity-guarded detail fetch.
+                        let mut selection_survives =
+                            self.state.planetary_selected_planet_id.is_some();
+                        if let (Ok(colonies), Some(selected)) =
+                            (&planetary_colonies, self.state.planetary_selected_planet_id)
+                        {
+                            if !colonies.iter().any(|c| c.planet_id == selected) {
+                                tracing::debug!(
+                                    "[PI] clearing selection no longer in refreshed colonies character_id={}",
+                                    character_id
+                                );
+                                self.state.planetary_selected_planet_id = None;
+                                self.state.planetary_generation =
+                                    self.state.planetary_generation.wrapping_add(1);
+                                selection_survives = false;
+                            }
+                        }
+                        let preserved_detail = if selection_survives {
+                            self.state
+                                .planetary
+                                .as_ready()
+                                .and_then(|bundle| bundle.detail.clone())
+                                .filter(|d| d.selection.character_id == character_id)
+                        } else {
+                            None
+                        };
+                        self.state.planetary = LoadState::Ready(PlanetaryData {
+                            colonies: planetary_colonies,
+                            detail: preserved_detail,
+                        });
+                        if selection_survives {
+                            self.state.planetary_detail_fetch_requested = true;
+                        }
                         match assets {
                             Ok(data) => {
                                 self.state.assets = LoadState::Ready(*data);
@@ -701,6 +789,14 @@ impl MimirApp {
                             self.state.industry =
                                 LoadState::Error("character refresh request failed".to_string());
                         }
+                        if !self.state.planetary.is_ready() {
+                            // Same fixed wording for the Planets
+                            // whole-view panel (PI design section 7.4);
+                            // the raw refresh message is never installed
+                            // into planetary state.
+                            self.state.planetary =
+                                LoadState::Error("character refresh request failed".to_string());
+                        }
                         if !self.state.assets.is_ready() {
                             self.state.assets = LoadState::Error(message);
                         }
@@ -737,6 +833,14 @@ impl MimirApp {
                             tracing::debug!("[MARKET] market refetch queued after step-up");
                             self.state.market_fetch_requested = true;
                         }
+                        // PI design section 7.5: post-stepup refresh
+                        // refills the colonies list; queue the gated
+                        // detail refetch too. Clear nothing — the panel
+                        // clears only when a later fetch returns Ok.
+                        if self.state.planetary_selected_planet_id.is_some() {
+                            tracing::debug!("[PI] colony detail refetch queued after step-up");
+                            self.state.planetary_detail_fetch_requested = true;
+                        }
                         self.state.status_message = "Permission granted. Refreshing...".to_string();
                     } else {
                         self.state.status_message = "Permission granted. Refreshing...".to_string();
@@ -761,6 +865,16 @@ impl MimirApp {
                             "[MARKET] dropping market result for a superseded selection"
                         );
                     }
+                }
+                BackendMsg::PlanetaryDetailFetched {
+                    generation,
+                    selection,
+                    result,
+                } => {
+                    // PI design section 7.3: the Err travels inside
+                    // the message, so a stale failure drops by the
+                    // same identity check as a stale success.
+                    self.apply_planetary_detail_result(generation, selection, result);
                 }
                 BackendMsg::MarketLookupDone {
                     generation,
@@ -824,6 +938,9 @@ impl MimirApp {
         }
         if self.state.market_fetch_requested {
             self.start_market_fetch();
+        }
+        if self.state.planetary_detail_fetch_requested {
+            self.start_planetary_detail_fetch();
         }
         if self.state.login_requested {
             self.state.login_requested = false;
@@ -1004,6 +1121,129 @@ impl MimirApp {
             let _ = tx.send(BackendMsg::MarketFetched {
                 generation,
                 data: Box::new(data),
+            });
+        });
+    }
+
+    /// Install one colony detail result only on a full identity
+    /// match (PI design section 7.3). A matching result that lands
+    /// while the bundle is not Ready (a refresh error raced it)
+    /// drops the same way; the next refresh re-queues per 7.2.
+    fn apply_planetary_detail_result(
+        &mut self,
+        generation: u64,
+        selection: PlanetSelection,
+        result: SectionResult<PlanetColonyDetail>,
+    ) {
+        if !planetary_result_matches(&self.state, generation, &selection) {
+            tracing::warn!("[PI] dropping colony detail result for a superseded selection");
+            return;
+        }
+        match &result {
+            Ok(detail) => tracing::info!(
+                "[PI] colony detail applied character_id={} pins={} links={} routes={}",
+                selection.character_id,
+                detail.pins.len(),
+                detail.links.len(),
+                detail.routes.len()
+            ),
+            Err(e) => tracing::info!(
+                "[PI] colony detail error applied character_id={} needs_reauthorize={}",
+                selection.character_id,
+                e.needs_reauthorize
+            ),
+        }
+        match &mut self.state.planetary {
+            LoadState::Ready(bundle) => {
+                bundle.detail = Some(SelectedColonyDetail { selection, result });
+            }
+            _ => {
+                tracing::warn!("[PI] dropping colony detail result for a superseded selection");
+                return;
+            }
+        }
+        self.schedule_name_resolution();
+    }
+
+    /// On-demand colony detail fetch (PI design section 7.3): its
+    /// own spawn on selection change, keyed by character + planet +
+    /// generation. In-memory only — no repository call. Demo answers
+    /// from the bundle's per-colony details with zero network and
+    /// never changes the demo selection itself.
+    fn start_planetary_detail_fetch(&mut self) {
+        self.state.planetary_detail_fetch_requested = false;
+        let (Some(character_id), Some(planet_id)) = (
+            self.state.active_character_id,
+            self.state.planetary_selected_planet_id,
+        ) else {
+            tracing::debug!("[PI] colony detail fetch skipped: no character or colony selected");
+            return;
+        };
+        let selection = PlanetSelection {
+            character_id,
+            planet_id,
+        };
+        let generation = self.state.planetary_generation;
+        if self.state.demo {
+            let detail = self
+                .demo_bundle
+                .as_ref()
+                .and_then(|bundle| bundle.character_data(character_id))
+                .and_then(|per| per.planets.as_ref())
+                .and_then(|planets| planets.details.get(&planet_id))
+                .cloned();
+            tracing::debug!(
+                "[PI] demo colony detail answered from bundle hit={}",
+                detail.is_some()
+            );
+            let result = detail.ok_or_else(|| SectionError {
+                message: "colony detail request failed".to_string(),
+                needs_reauthorize: false,
+            });
+            self.apply_planetary_detail_result(generation, selection, result);
+            return;
+        }
+        let (Some(backends), Some(runtime)) = (self.backends.as_ref(), self.runtime.as_ref())
+        else {
+            // A detail failure must never blank the colonies list:
+            // install the stamped fixed Err through the same match
+            // check instead of a whole-view LoadState::Error.
+            tracing::warn!("[PI] colony detail fetch skipped: live backends not wired");
+            self.apply_planetary_detail_result(
+                generation,
+                selection,
+                Err(SectionError {
+                    message: "colony detail request failed".to_string(),
+                    needs_reauthorize: false,
+                }),
+            );
+            return;
+        };
+        let esi = backends.esi.clone();
+        let tx = self.tx.clone();
+        tracing::info!(
+            "[PI] colony detail fetch started character_id={} planet_id={}",
+            character_id,
+            planet_id
+        );
+        runtime.spawn(async move {
+            // The fixed wording is the only detail failure string
+            // that can reach the screen; the full error stays in
+            // this [PI] warn line.
+            let result = endpoints::get_character_planet(&esi, character_id, planet_id)
+                .await
+                .map_err(|e| {
+                    let needs_reauthorize = endpoints::needs_reauthorize(&e);
+                    tracing::warn!("[PI] planetary section failed character_id={} section=colony detail needs_reauthorize={} error={}", character_id, needs_reauthorize, e);
+                    SectionError {
+                        message: "colony detail request failed".to_string(),
+                        needs_reauthorize,
+                    }
+                });
+            let _ = tx.send(BackendMsg::PlanetaryDetailFetched {
+                generation,
+                selection,
+                result,
             });
         });
     }
@@ -1274,6 +1514,27 @@ impl MimirApp {
                         .map_or(0, |d| d.blueprints.len()),
                     industry.blueprints.as_ref().is_ok_and(|d| d.truncated)
                 );
+                // Colonies list is one tolerant sub-fetch (never `?`,
+                // PI design section 7.2): fixed wording on screen,
+                // full error detail in the [PI] warn only. Colony
+                // detail is never fetched here (no N+1 walk).
+                let planetary_colonies = endpoints::get_character_planets(&esi, id)
+                    .await
+                    .map_err(|e| {
+                        let needs_reauthorize = endpoints::needs_reauthorize(&e);
+                        tracing::warn!("[PI] planetary section failed character_id={} section=colonies needs_reauthorize={} error={}", id, needs_reauthorize, e);
+                        SectionError {
+                            message: "colonies request failed".to_string(),
+                            needs_reauthorize,
+                        }
+                    });
+                if let Ok(colonies) = &planetary_colonies {
+                    tracing::info!(
+                        "[PI] colonies ready character_id={} colonies={}",
+                        id,
+                        colonies.len()
+                    );
+                }
                 Ok::<_, crate::AppError>((
                     info,
                     SkillsData { skills, queue },
@@ -1282,6 +1543,7 @@ impl MimirApp {
                     assets_needs_reauthorize,
                     detail,
                     industry,
+                    planetary_colonies,
                 ))
             }
             .await;
@@ -1294,6 +1556,7 @@ impl MimirApp {
                     assets_needs_reauthorize,
                     detail,
                     industry,
+                    planetary_colonies,
                 )) => {
                     // Persist the full refresh so the next launch renders
                     // cached skills/wallet offline (load_cached_state).
@@ -1401,6 +1664,7 @@ impl MimirApp {
                         assets_needs_reauthorize,
                         detail: Box::new(detail),
                         industry: Box::new(industry),
+                        planetary_colonies,
                     });
                 }
                 Err(e) => {
@@ -1594,6 +1858,14 @@ impl MimirApp {
                 tracing::debug!("[MARKET] market refetch queued after already-granted step-up");
                 self.state.market_fetch_requested = true;
             }
+            // PI design section 7.5: the shortcut must queue the
+            // same refetch the Planets panel gates — the refresh
+            // above covers the list, this queues the gated
+            // planetary_detail_fetch_requested detail refetch.
+            if self.state.planetary_selected_planet_id.is_some() {
+                tracing::debug!("[PI] colony detail refetch queued after already-granted step-up");
+                self.state.planetary_detail_fetch_requested = true;
+            }
             self.state.status_message =
                 "That permission is already granted. Refreshing...".to_string();
             return;
@@ -1780,6 +2052,7 @@ impl MimirApp {
                 egui::Key::Num6,
                 egui::Key::Num7,
                 egui::Key::Num8,
+                egui::Key::Num9,
             ]
             .iter()
             .enumerate()
@@ -1929,7 +2202,7 @@ impl eframe::App for MimirApp {
                 ui.label("PageUp/PageDown switches character.");
             }
             ui.separator();
-            ui.heading("Views (keys 1-8)");
+            ui.heading("Views (keys 1-9)");
             for (idx, view) in View::ALL.iter().enumerate() {
                 let selected = self.state.view == *view;
                 if ui
@@ -1968,7 +2241,7 @@ impl eframe::App for MimirApp {
                 if self.state.refresh_requested {
                     ui.label("Refresh pending...");
                 }
-                ui.label("Keys: 1-8 views, Ctrl+R refresh, / search, PgUp/PgDn character");
+                ui.label("Keys: 1-9 views, Ctrl+R refresh, / search, PgUp/PgDn character");
             });
         });
     }
@@ -2037,6 +2310,46 @@ mod tests {
             gen,
             &MarketSelection {
                 character_id: Some(7),
+                ..selection
+            }
+        ));
+    }
+
+    #[test]
+    fn planetary_result_identity_requires_all_three_matches() {
+        let mut state = AppState::new(false);
+        state.active_character_id = Some(42);
+        state.set_planetary_selection(700000001);
+        let gen = state.planetary_generation;
+        let selection = PlanetSelection {
+            character_id: 42,
+            planet_id: 700000001,
+        };
+        assert!(planetary_result_matches(&state, gen, &selection));
+        // Nothing selected can never match, even at the same generation.
+        let mut unselected = AppState::new(false);
+        unselected.active_character_id = Some(42);
+        unselected.planetary_generation = gen;
+        assert!(!planetary_result_matches(&unselected, gen, &selection));
+        // Each single mismatch alone drops the result.
+        assert!(!planetary_result_matches(
+            &state,
+            gen.wrapping_add(1),
+            &selection
+        ));
+        assert!(!planetary_result_matches(
+            &state,
+            gen,
+            &PlanetSelection {
+                planet_id: 700000002,
+                ..selection
+            }
+        ));
+        assert!(!planetary_result_matches(
+            &state,
+            gen,
+            &PlanetSelection {
+                character_id: 7,
                 ..selection
             }
         ));
