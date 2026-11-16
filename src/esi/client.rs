@@ -244,7 +244,13 @@ impl EsiClient {
         path: &str,
     ) -> AppResult<(T, EsiMeta)> {
         self.check_error_limit(path)?;
-        let response = request.send().await.map_err(EsiError::from)?;
+        // Error Display text reaches load-state UI panels: strip the
+        // request URL (which embeds numeric character IDs) at this
+        // single conversion boundary. Logs below keep the path.
+        let response = request
+            .send()
+            .await
+            .map_err(|e| EsiError::from(e.without_url()))?;
         let status = response.status();
         self.update_error_limit_from_headers(response.headers());
         let pages = response
@@ -257,7 +263,10 @@ impl EsiClient {
             error_limit_remain: self.error_limit_remain(),
             error_limit_reset_secs: self.error_limit_reset_secs(),
         };
-        let body = response.text().await.map_err(EsiError::from)?;
+        let body = response
+            .text()
+            .await
+            .map_err(|e| EsiError::from(e.without_url()))?;
         if !status.is_success() {
             tracing::warn!(
                 "[ESI] request failed path={} status={}",
@@ -270,7 +279,9 @@ impl EsiClient {
         }
         let parsed: T = serde_json::from_str(&body).map_err(|e| {
             tracing::warn!("[ESI] decode failed path={}: {}", path, e);
-            AppError::from(EsiError::Decode(format!("{path}: {e}")))
+            // Path stays in the log line above; error text reaches UI
+            // error panels and must never carry the numeric IDs in it.
+            AppError::from(EsiError::Decode(e.to_string()))
         })?;
         tracing::debug!("[ESI] request ok path={} status={}", path, status.as_u16());
         Ok((parsed, meta))

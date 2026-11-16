@@ -6,8 +6,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use super::state::{
-    AppState, AssetsData, AuthState, CharacterSummary, LoadState, SkillsData, StepUpRequest, View,
-    WalletData,
+    ship_display_name, summary_location_name, AppState, AssetsData, AuthState, CharacterDetailData,
+    CharacterSummary, LoadState, SectionError, SkillsData, StepUpRequest, View, WalletData,
 };
 use crate::auth::callback_server::CallbackServer;
 use crate::auth::jwt_verify::JwtVerifier;
@@ -42,8 +42,10 @@ enum BackendMsg {
         wallet: Box<WalletData>,
         assets: Result<Box<AssetsData>, String>,
         assets_needs_reauthorize: bool,
+        detail: Box<CharacterDetailData>,
     },
     RefreshFailed {
+        character_id: i64,
         message: String,
     },
     LoggedIn {
@@ -81,6 +83,30 @@ struct KeyActions {
     refresh: bool,
     focus_search: bool,
     cycle_character: isize,
+}
+
+/// Dashboard/Characters summary strings from a detail bundle (design
+/// section 7): resolved names only via `resolver.cached()`, `None` when a
+/// section failed or its name is unresolved yet — never the Unknown words
+/// and never a raw numeric ID.
+fn detail_summary_names(
+    detail: &CharacterDetailData,
+    resolver: &NameResolver,
+) -> (Option<String>, Option<String>) {
+    let location_name = match &detail.location {
+        Ok(location) => summary_location_name(
+            location
+                .docked_location_id()
+                .and_then(|id| resolver.cached(id)),
+            resolver.cached(location.solar_system_id),
+        ),
+        Err(_) => None,
+    };
+    let ship_name = match &detail.ship {
+        Ok(ship) => ship_display_name(&ship.ship_name, resolver.cached(ship.ship_type_id)),
+        Err(_) => None,
+    };
+    (location_name, ship_name)
 }
 
 /// Fill skills/wallet/summary state from the last persisted refresh so a
@@ -371,6 +397,43 @@ impl MimirApp {
                 }
             }
         }
+        if let LoadState::Ready(bundle) = &self.state.character_details {
+            // Detail IDs (design section 8): implant integers are type IDs;
+            // location-class IDs pass the structure guard. Instance IDs
+            // (ship_item_id, jump_clone_id) are never resolved or shown.
+            if let Ok(implants) = &bundle.implants {
+                ids.extend(implants.iter().copied());
+            }
+            if let Ok(clones) = &bundle.clones {
+                for clone in &clones.jump_clones {
+                    if !crate::names::resolver::is_structure_id(clone.location_id) {
+                        ids.push(clone.location_id);
+                    }
+                    ids.extend(clone.implants.iter().copied());
+                }
+                if let Some(home) = &clones.home_location {
+                    if !crate::names::resolver::is_structure_id(home.location_id) {
+                        ids.push(home.location_id);
+                    }
+                }
+            }
+            if let Ok(standings) = &bundle.standings {
+                for standing in standings {
+                    ids.push(standing.from_id);
+                }
+            }
+            if let Ok(location) = &bundle.location {
+                ids.push(location.solar_system_id);
+                if let Some(docked_id) = location.docked_location_id() {
+                    if !crate::names::resolver::is_structure_id(docked_id) {
+                        ids.push(docked_id);
+                    }
+                }
+            }
+            if let Ok(ship) = &bundle.ship {
+                ids.push(ship.ship_type_id);
+            }
+        }
         let missing = self.resolver.missing(&ids);
         if missing.is_empty() {
             return;
@@ -410,21 +473,42 @@ impl MimirApp {
                     wallet,
                     assets,
                     assets_needs_reauthorize,
+                    detail,
                 } => {
                     tracing::info!("[ESI] refresh complete character_id={}", character_id);
-                    let training = skills.queue.first();
-                    self.state.summaries.insert(
-                        character_id,
-                        CharacterSummary {
-                            balance: Some(wallet.balance),
-                            training_skill_name: training.map(|t| self.sde.skill_name(t.skill_id)),
-                            training_finish_date: training.and_then(|t| t.finish_date.clone()),
-                            queue_len: Some(skills.queue.len()),
-                            total_sp: Some(skills.skills.total_sp),
-                            location_name: None,
-                            ship_name: None,
-                        },
-                    );
+                    // A refresh landing after its character was removed
+                    // must not resurrect that character's summary (the
+                    // dashboard combined total sums every summary value).
+                    // Summaries for still-present inactive characters are
+                    // keyed and safe to keep.
+                    if self
+                        .state
+                        .characters
+                        .iter()
+                        .any(|c| c.character_id == character_id)
+                    {
+                        let training = skills.queue.first();
+                        let (location_name, ship_name) =
+                            detail_summary_names(&detail, &self.resolver);
+                        self.state.summaries.insert(
+                            character_id,
+                            CharacterSummary {
+                                balance: Some(wallet.balance),
+                                training_skill_name: training
+                                    .map(|t| self.sde.skill_name(t.skill_id)),
+                                training_finish_date: training.and_then(|t| t.finish_date.clone()),
+                                queue_len: Some(skills.queue.len()),
+                                total_sp: Some(skills.skills.total_sp),
+                                location_name,
+                                ship_name,
+                            },
+                        );
+                    } else {
+                        tracing::warn!(
+                            "[CHAR] ignoring summary for removed character_id={}",
+                            character_id
+                        );
+                    }
                     if self.state.active_character_id != Some(character_id) {
                         // Refresh started for a character the user switched
                         // away from: the keyed summary above is safe, but
@@ -438,6 +522,7 @@ impl MimirApp {
                         self.state.character_detail = LoadState::Ready(*info);
                         self.state.skills = LoadState::Ready(*skills);
                         self.state.wallet = LoadState::Ready(*wallet);
+                        self.state.character_details = LoadState::Ready(*detail);
                         match assets {
                             Ok(data) => {
                                 self.state.assets = LoadState::Ready(*data);
@@ -464,6 +549,24 @@ impl MimirApp {
                 BackendMsg::NamesResolved { names } => {
                     tracing::info!("[ESI] resolved {} universe names", names.len());
                     self.resolver.extend_from_universe_names(&names);
+                    // Summary strings were frozen at Refreshed time; upgrade
+                    // the active character's location/ship now that names
+                    // landed (design section 6.5). Only the active bundle
+                    // is in memory; never create a summary entry here.
+                    if let Some(active_id) = self.state.active_character_id {
+                        if let LoadState::Ready(bundle) = &self.state.character_details {
+                            let (location_name, ship_name) =
+                                detail_summary_names(bundle, &self.resolver);
+                            if let Some(summary) = self.state.summaries.get_mut(&active_id) {
+                                summary.location_name = location_name;
+                                summary.ship_name = ship_name;
+                                tracing::debug!(
+                                    "[ESI] recomputed location/ship summary after name resolution character_id={}",
+                                    active_id
+                                );
+                            }
+                        }
+                    }
                     if let Some(b) = &self.backends {
                         if let Ok(conn) = b.db.lock() {
                             let rows: Vec<repositories::UniverseNameRow> = names
@@ -478,18 +581,34 @@ impl MimirApp {
                         }
                     }
                 }
-                BackendMsg::RefreshFailed { message } => {
-                    tracing::warn!("[ESI] refresh failed: {}", message);
-                    self.state.offline = true;
-                    self.state.status_message = format!("Refresh failed: {message}");
-                    if !self.state.skills.is_ready() {
-                        self.state.skills = LoadState::Error(message.clone());
-                    }
-                    if !self.state.wallet.is_ready() {
-                        self.state.wallet = LoadState::Error(message.clone());
-                    }
-                    if !self.state.assets.is_ready() {
-                        self.state.assets = LoadState::Error(message);
+                BackendMsg::RefreshFailed {
+                    character_id,
+                    message,
+                } => {
+                    if self.state.active_character_id != Some(character_id) {
+                        // A failure landing after a character switch must
+                        // not overwrite the new active character's states,
+                        // offline flag, or status with the old one's error.
+                        tracing::warn!(
+                            "[ESI] ignoring refresh failure for inactive character_id={}",
+                            character_id
+                        );
+                    } else {
+                        tracing::warn!("[ESI] refresh failed: {}", message);
+                        self.state.offline = true;
+                        self.state.status_message = format!("Refresh failed: {message}");
+                        if !self.state.skills.is_ready() {
+                            self.state.skills = LoadState::Error(message.clone());
+                        }
+                        if !self.state.wallet.is_ready() {
+                            self.state.wallet = LoadState::Error(message.clone());
+                        }
+                        if !self.state.character_details.is_ready() {
+                            self.state.character_details = LoadState::Error(message.clone());
+                        }
+                        if !self.state.assets.is_ready() {
+                            self.state.assets = LoadState::Error(message);
+                        }
                     }
                 }
                 BackendMsg::LoggedIn { row } => {
@@ -670,17 +789,96 @@ impl MimirApp {
                             (Err(e.to_string()), reauthorize)
                         }
                     };
+                // Character details are seven tolerant sub-fetches (never
+                // `?`): a section failure degrades only that section and
+                // never fails the character/skills/wallet/assets refresh.
+                let attributes = endpoints::get_attributes(&esi, id).await.map_err(|e| {
+                    let needs_reauthorize = endpoints::needs_reauthorize(&e);
+                    tracing::warn!("[CHAR] character detail section failed character_id={} section=attributes needs_reauthorize={} error={}", id, needs_reauthorize, e);
+                    SectionError {
+                        message: e.to_string(),
+                        needs_reauthorize,
+                    }
+                });
+                let implants = endpoints::get_implants(&esi, id).await.map_err(|e| {
+                    let needs_reauthorize = endpoints::needs_reauthorize(&e);
+                    tracing::warn!("[CHAR] character detail section failed character_id={} section=implants needs_reauthorize={} error={}", id, needs_reauthorize, e);
+                    SectionError {
+                        message: e.to_string(),
+                        needs_reauthorize,
+                    }
+                });
+                let clones = endpoints::get_clones(&esi, id).await.map_err(|e| {
+                    let needs_reauthorize = endpoints::needs_reauthorize(&e);
+                    tracing::warn!("[CHAR] character detail section failed character_id={} section=clones needs_reauthorize={} error={}", id, needs_reauthorize, e);
+                    SectionError {
+                        message: e.to_string(),
+                        needs_reauthorize,
+                    }
+                });
+                let standings = endpoints::get_standings(&esi, id).await.map_err(|e| {
+                    let needs_reauthorize = endpoints::needs_reauthorize(&e);
+                    tracing::warn!("[CHAR] character detail section failed character_id={} section=standings needs_reauthorize={} error={}", id, needs_reauthorize, e);
+                    SectionError {
+                        message: e.to_string(),
+                        needs_reauthorize,
+                    }
+                });
+                let location = endpoints::get_location(&esi, id).await.map_err(|e| {
+                    let needs_reauthorize = endpoints::needs_reauthorize(&e);
+                    tracing::warn!("[CHAR] character detail section failed character_id={} section=location needs_reauthorize={} error={}", id, needs_reauthorize, e);
+                    SectionError {
+                        message: e.to_string(),
+                        needs_reauthorize,
+                    }
+                });
+                let ship = endpoints::get_ship(&esi, id).await.map_err(|e| {
+                    let needs_reauthorize = endpoints::needs_reauthorize(&e);
+                    tracing::warn!("[CHAR] character detail section failed character_id={} section=ship needs_reauthorize={} error={}", id, needs_reauthorize, e);
+                    SectionError {
+                        message: e.to_string(),
+                        needs_reauthorize,
+                    }
+                });
+                let online = endpoints::get_online(&esi, id).await.map_err(|e| {
+                    let needs_reauthorize = endpoints::needs_reauthorize(&e);
+                    tracing::warn!("[CHAR] character detail section failed character_id={} section=online needs_reauthorize={} error={}", id, needs_reauthorize, e);
+                    SectionError {
+                        message: e.to_string(),
+                        needs_reauthorize,
+                    }
+                });
+                let detail = CharacterDetailData {
+                    attributes,
+                    implants,
+                    clones,
+                    standings,
+                    location,
+                    ship,
+                    online,
+                };
+                tracing::info!(
+                    "[CHAR] character details ready character_id={} implants={} clones={} standings={}",
+                    id,
+                    detail.implants.as_ref().map_or(0, Vec::len),
+                    detail
+                        .clones
+                        .as_ref()
+                        .map_or(0, |c| c.jump_clones.len()),
+                    detail.standings.as_ref().map_or(0, Vec::len)
+                );
                 Ok::<_, crate::AppError>((
                     info,
                     SkillsData { skills, queue },
                     wallet,
                     assets,
                     assets_needs_reauthorize,
+                    detail,
                 ))
             }
             .await;
             match result {
-                Ok((info, skills, wallet, assets, assets_needs_reauthorize)) => {
+                Ok((info, skills, wallet, assets, assets_needs_reauthorize, detail)) => {
                     // Persist the full refresh so the next launch renders
                     // cached skills/wallet offline (load_cached_state).
                     if let Ok(conn) = db.lock() {
@@ -785,10 +983,12 @@ impl MimirApp {
                         wallet: Box::new(wallet),
                         assets: assets.map(Box::new),
                         assets_needs_reauthorize,
+                        detail: Box::new(detail),
                     });
                 }
                 Err(e) => {
                     let _ = tx.send(BackendMsg::RefreshFailed {
+                        character_id: id,
                         message: e.to_string(),
                     });
                 }
