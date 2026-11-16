@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### Error strings are UI strings, and late async results need identity checks at apply time
+
+**Author.** Muse Code (parent repair pass over the character-detail workflow)
+**Context.** Adversarial review falsified the character-detail slice in three places the green suite missed: detail-section errors rendered verbatim in the Characters view could embed the raw numeric character ID, a late whole-refresh failure carried no character identity and overwrote the newly active character's detail error state, and a late successful refresh reinserted a removed character's dashboard summary (which the combined-wallet total then summed).
+**Evidence.** Reviewer probe in the character-detail workflow synthesis drove the real `get_location`/`get_ship` endpoints and found the fictional ID 90000001 in every error string; `src/error.rs` (`NoTokens` display interpolated the ID), `src/esi/client.rs` (`send()` converted reqwest errors with URLs intact and prefixed decode errors with the request path), `src/app/shell.rs` (`BackendMsg::RefreshFailed` had no `character_id`; the `Refreshed` summary insert preceded the inactive-character guard and never checked the character still exists).
+**Mechanism.** Error `Display` text crosses into load-state UI panels unchanged, so anything interpolated at construction (paths, request URLs, entity IDs) becomes user-visible. Separately, any asynchronous result applied without re-checking its subject at drain time applies to whatever state exists then — success and failure messages are symmetric hazards.
+**Fix (or queued).** IDs and URLs are stripped at the single error-construction boundary in the ESI client (`without_url`, path-free decode message, generic no-tokens display); `RefreshFailed` now carries `character_id` and is ignored unless that character is active; summary insertion is skipped when the character no longer exists.
+**Validation.** New `ui_facing_error_text_never_embeds_raw_character_id` unit test in `src/error.rs` plus full `cargo test` / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` on branch `feat/character-detail` in the repair commit. Shell drain paths have no test harness in this repo, so the identity guards are code-inspected with log evidence, not unit-proven.
+**Generalizable rule.** Sanitise at construction, not at render: every error type whose text can reach a screen gets category-only display strings, and every late-arriving result re-validates its subject still exists and is current before mutating keyed or active state.
+**Refs.** `docs/character-detail-design.md`; `src/error.rs`; `src/esi/client.rs`; `src/app/shell.rs`.
+
 ### Unverified token headers are log input, not log text
 
 **Author.** Muse Code (parent hardening pass over the JWT verification review)

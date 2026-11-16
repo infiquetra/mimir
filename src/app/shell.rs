@@ -45,6 +45,7 @@ enum BackendMsg {
         detail: Box<CharacterDetailData>,
     },
     RefreshFailed {
+        character_id: i64,
         message: String,
     },
     LoggedIn {
@@ -475,20 +476,39 @@ impl MimirApp {
                     detail,
                 } => {
                     tracing::info!("[ESI] refresh complete character_id={}", character_id);
-                    let training = skills.queue.first();
-                    let (location_name, ship_name) = detail_summary_names(&detail, &self.resolver);
-                    self.state.summaries.insert(
-                        character_id,
-                        CharacterSummary {
-                            balance: Some(wallet.balance),
-                            training_skill_name: training.map(|t| self.sde.skill_name(t.skill_id)),
-                            training_finish_date: training.and_then(|t| t.finish_date.clone()),
-                            queue_len: Some(skills.queue.len()),
-                            total_sp: Some(skills.skills.total_sp),
-                            location_name,
-                            ship_name,
-                        },
-                    );
+                    // A refresh landing after its character was removed
+                    // must not resurrect that character's summary (the
+                    // dashboard combined total sums every summary value).
+                    // Summaries for still-present inactive characters are
+                    // keyed and safe to keep.
+                    if self
+                        .state
+                        .characters
+                        .iter()
+                        .any(|c| c.character_id == character_id)
+                    {
+                        let training = skills.queue.first();
+                        let (location_name, ship_name) =
+                            detail_summary_names(&detail, &self.resolver);
+                        self.state.summaries.insert(
+                            character_id,
+                            CharacterSummary {
+                                balance: Some(wallet.balance),
+                                training_skill_name: training
+                                    .map(|t| self.sde.skill_name(t.skill_id)),
+                                training_finish_date: training.and_then(|t| t.finish_date.clone()),
+                                queue_len: Some(skills.queue.len()),
+                                total_sp: Some(skills.skills.total_sp),
+                                location_name,
+                                ship_name,
+                            },
+                        );
+                    } else {
+                        tracing::warn!(
+                            "[CHAR] ignoring summary for removed character_id={}",
+                            character_id
+                        );
+                    }
                     if self.state.active_character_id != Some(character_id) {
                         // Refresh started for a character the user switched
                         // away from: the keyed summary above is safe, but
@@ -561,21 +581,34 @@ impl MimirApp {
                         }
                     }
                 }
-                BackendMsg::RefreshFailed { message } => {
-                    tracing::warn!("[ESI] refresh failed: {}", message);
-                    self.state.offline = true;
-                    self.state.status_message = format!("Refresh failed: {message}");
-                    if !self.state.skills.is_ready() {
-                        self.state.skills = LoadState::Error(message.clone());
-                    }
-                    if !self.state.wallet.is_ready() {
-                        self.state.wallet = LoadState::Error(message.clone());
-                    }
-                    if !self.state.character_details.is_ready() {
-                        self.state.character_details = LoadState::Error(message.clone());
-                    }
-                    if !self.state.assets.is_ready() {
-                        self.state.assets = LoadState::Error(message);
+                BackendMsg::RefreshFailed {
+                    character_id,
+                    message,
+                } => {
+                    if self.state.active_character_id != Some(character_id) {
+                        // A failure landing after a character switch must
+                        // not overwrite the new active character's states,
+                        // offline flag, or status with the old one's error.
+                        tracing::warn!(
+                            "[ESI] ignoring refresh failure for inactive character_id={}",
+                            character_id
+                        );
+                    } else {
+                        tracing::warn!("[ESI] refresh failed: {}", message);
+                        self.state.offline = true;
+                        self.state.status_message = format!("Refresh failed: {message}");
+                        if !self.state.skills.is_ready() {
+                            self.state.skills = LoadState::Error(message.clone());
+                        }
+                        if !self.state.wallet.is_ready() {
+                            self.state.wallet = LoadState::Error(message.clone());
+                        }
+                        if !self.state.character_details.is_ready() {
+                            self.state.character_details = LoadState::Error(message.clone());
+                        }
+                        if !self.state.assets.is_ready() {
+                            self.state.assets = LoadState::Error(message);
+                        }
                     }
                 }
                 BackendMsg::LoggedIn { row } => {
@@ -955,6 +988,7 @@ impl MimirApp {
                 }
                 Err(e) => {
                     let _ = tx.send(BackendMsg::RefreshFailed {
+                        character_id: id,
                         message: e.to_string(),
                     });
                 }

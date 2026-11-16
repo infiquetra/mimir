@@ -22,7 +22,9 @@ pub enum EsiError {
     RateLimited { reset_secs: u32 },
     #[error("[ESI] error limit exhausted (retry after {reset_secs}s)")]
     ErrorLimitExhausted { reset_secs: u32 },
-    #[error("[ESI] no stored tokens for character {0}")]
+    // Display text reaches the UI via load-state error panels, so it
+    // must never embed the numeric character ID (resolved names only).
+    #[error("[ESI] no stored tokens for this character")]
     NoTokens(i64),
     #[error("[ESI] response decode failed: {0}")]
     Decode(String),
@@ -176,5 +178,14 @@ mod tests {
             Some("Token expired")
         );
         assert_eq!(extract_esi_error("not json"), None);
+    }
+
+    #[test]
+    fn ui_facing_error_text_never_embeds_raw_character_id() {
+        // LoadState error panels render Display verbatim; the numeric
+        // character ID must never reach them (resolved names only in UI).
+        let rendered = EsiError::NoTokens(90000001).to_string();
+        assert!(!rendered.contains("90000001"), "got: {rendered}");
+        assert!(rendered.contains("no stored tokens"));
     }
 }
