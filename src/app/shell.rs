@@ -7,7 +7,8 @@ use std::time::Duration;
 
 use super::state::{
     ship_display_name, summary_location_name, AppState, AssetsData, AuthState, CharacterDetailData,
-    CharacterSummary, LoadState, SectionError, SkillsData, StepUpRequest, View, WalletData,
+    CharacterOrdersData, CharacterSummary, LoadState, MarketData, MarketSelection,
+    PublicOrdersData, SectionError, SkillsData, StepUpRequest, View, WalletData,
 };
 use crate::auth::callback_server::CallbackServer;
 use crate::auth::jwt_verify::JwtVerifier;
@@ -60,7 +61,23 @@ enum BackendMsg {
     NamesResolved {
         names: Vec<UniverseName>,
     },
+    MarketFetched {
+        generation: u64,
+        data: Box<MarketData>,
+    },
+    MarketLookupDone {
+        generation: u64,
+        query: String,
+        result: Result<Vec<UniverseName>, String>,
+    },
 }
+
+/// Fixed lookup outcome lines (design section 6.1): the submitted text
+/// is never echoed inside either sentence, and lookup error detail
+/// stays in a `[MARKET]` log line, never on screen.
+const MARKET_LOOKUP_NOT_FOUND: &str =
+    "No item with that exact name was found. Check the spelling, or pick an item you hold below.";
+const MARKET_LOOKUP_FAILED: &str = "Item name lookup failed. Check the connection and try again.";
 
 pub struct MimirApp {
     pub state: AppState,
@@ -107,6 +124,23 @@ fn detail_summary_names(
         Err(_) => None,
     };
     (location_name, ship_name)
+}
+
+/// Design section 8.2 identity check: a market bundle applies only
+/// when generation, selected type, region, and active character all
+/// still match the stamped selection.
+fn market_result_matches(state: &AppState, generation: u64, selection: &MarketSelection) -> bool {
+    generation == state.market_generation
+        && Some(selection.type_id) == state.market_selected_type_id
+        && selection.region_id == state.market_region_id
+        && selection.character_id == state.active_character_id
+}
+
+/// Design section 8.3 freshness check: a lookup answer applies only
+/// when its generation is current and its text is still what the
+/// (trimmed) search box holds.
+fn market_lookup_is_current(state: &AppState, generation: u64, query: &str) -> bool {
+    generation == state.market_generation && query == state.market_search.trim()
 }
 
 /// Fill skills/wallet/summary state from the last persisted refresh so a
@@ -434,6 +468,32 @@ impl MimirApp {
                 ids.push(ship.ship_type_id);
             }
         }
+        // Market IDs (design section 8.4): the selected type, displayed
+        // top-N public-order locations, and character-order types and
+        // locations — every location behind the structure guard. Hub
+        // region IDs, order IDs, region/system IDs on rows are never
+        // scheduled (constants/fallback words cover regions).
+        if let Some(type_id) = self.state.market_selected_type_id {
+            ids.push(type_id);
+        }
+        if let LoadState::Ready(bundle) = &self.state.market {
+            if let Ok(public) = &bundle.public_orders {
+                let summary = ui::market::summarize_orders(&public.orders);
+                for order in summary.top_sells.iter().chain(summary.top_buys.iter()) {
+                    if !crate::names::resolver::is_structure_id(order.location_id) {
+                        ids.push(order.location_id);
+                    }
+                }
+            }
+            if let Ok(own) = &bundle.character_orders {
+                for order in &own.orders {
+                    ids.push(order.type_id);
+                    if !crate::names::resolver::is_structure_id(order.location_id) {
+                        ids.push(order.location_id);
+                    }
+                }
+            }
+        }
         let missing = self.resolver.missing(&ids);
         if missing.is_empty() {
             return;
@@ -634,6 +694,14 @@ impl MimirApp {
                         // request_refresh sets its own generic status, so the
                         // specific step-up status must be set after it.
                         self.state.request_refresh("post-stepup");
+                        // Design section 8.5: refill the market bundle
+                        // under the newly granted scopes; clear nothing
+                        // here — the re-authorize panel clears only when
+                        // a later fetch returns character-orders Ok.
+                        if self.state.market_selected_type_id.is_some() {
+                            tracing::debug!("[MARKET] market refetch queued after step-up");
+                            self.state.market_fetch_requested = true;
+                        }
                         self.state.status_message = "Permission granted. Refreshing...".to_string();
                     } else {
                         self.state.status_message = "Permission granted. Refreshing...".to_string();
@@ -641,6 +709,45 @@ impl MimirApp {
                             "[AUTH] step-up finished for non-active character_id={}",
                             character_id
                         );
+                    }
+                }
+                BackendMsg::MarketFetched { generation, data } => {
+                    // Design section 8.2: apply only on a full identity
+                    // match — generation, selected type, region, and
+                    // active character. Any mismatch is a stale result
+                    // for a superseded selection: drop it, never apply
+                    // or partially merge it.
+                    if market_result_matches(&self.state, generation, &data.selection) {
+                        tracing::info!("[MARKET] market bundle applied");
+                        self.state.market = LoadState::Ready(*data);
+                        self.schedule_name_resolution();
+                    } else {
+                        tracing::warn!(
+                            "[MARKET] dropping market result for a superseded selection"
+                        );
+                    }
+                }
+                BackendMsg::MarketLookupDone {
+                    generation,
+                    query,
+                    result,
+                } => {
+                    // Design section 8.3: a lookup whose generation was
+                    // superseded, or whose text the user already edited
+                    // away from, is stale even if it arrived intact.
+                    if !market_lookup_is_current(&self.state, generation, &query) {
+                        tracing::warn!("[MARKET] dropping stale item-name lookup result");
+                    } else {
+                        match result {
+                            Ok(candidates) => self.apply_market_lookup_candidates(candidates),
+                            Err(e) => {
+                                // Error detail is log-only; the view gets
+                                // the fixed worded failure line.
+                                tracing::warn!("[MARKET] item-name lookup failed: {}", e);
+                                self.state.market_lookup_message =
+                                    Some(MARKET_LOOKUP_FAILED.to_string());
+                            }
+                        }
                     }
                 }
                 BackendMsg::LoginFailed { message } => {
@@ -661,12 +768,27 @@ impl MimirApp {
                 }
             } else {
                 self.state.request_refresh("character-switch");
+                // Design section 8.5: the switch reset the market
+                // bundle to Loading; refill it under the new character
+                // when a type is selected.
+                if self.state.market_selected_type_id.is_some() {
+                    tracing::debug!("[MARKET] market refetch queued after character switch");
+                    self.state.market_fetch_requested = true;
+                }
             }
         }
         if self.state.refresh_requested || self.state.retry_requested {
             self.state.refresh_requested = false;
             self.state.retry_requested = false;
             self.start_refresh();
+        }
+        // Market drains (design sections 8.2/8.3): lookup before fetch
+        // so a lookup that picks a type starts its fetch this frame.
+        if let Some(query) = self.state.market_lookup_requested.take() {
+            self.start_market_lookup(query);
+        }
+        if self.state.market_fetch_requested {
+            self.start_market_fetch();
         }
         if self.state.login_requested {
             self.state.login_requested = false;
@@ -703,6 +825,208 @@ impl MimirApp {
                 self.delete_character(id);
             }
         }
+    }
+
+    /// Shared lookup outcome (design sections 6.1/8.3): one candidate
+    /// selects immediately, several become clickable candidates, none
+    /// shows the fixed not-found line. Never writes `state.market`.
+    fn apply_market_lookup_candidates(&mut self, candidates: Vec<UniverseName>) {
+        match candidates.as_slice() {
+            [] => {
+                tracing::debug!("[MARKET] item-name lookup found no match");
+                self.state.market_candidates.clear();
+                self.state.market_lookup_message = Some(MARKET_LOOKUP_NOT_FOUND.to_string());
+            }
+            [only] => {
+                let (id, name) = (only.id, only.name.clone());
+                tracing::debug!("[MARKET] item-name lookup selected one match");
+                self.state.set_market_selection(id, name);
+            }
+            _ => {
+                tracing::debug!(
+                    "[MARKET] item-name lookup offered {} candidates",
+                    candidates.len()
+                );
+                self.state.market_candidates = candidates;
+                self.state.market_lookup_message = None;
+            }
+        }
+    }
+
+    /// On-demand market fetch (design section 8.2): its own path,
+    /// separate from `start_refresh`, keyed by the stamped selection
+    /// identity plus generation. In-memory only — no repository call.
+    fn start_market_fetch(&mut self) {
+        self.state.market_fetch_requested = false;
+        if self.state.demo {
+            if let (Some(bundle), Some(id)) =
+                (self.demo_bundle.clone(), self.state.active_character_id)
+            {
+                tracing::debug!("[MARKET] demo market fetch re-applies fixture character");
+                crate::demo::data::apply_character(&mut self.state, &bundle, id);
+            }
+            return;
+        }
+        let Some(type_id) = self.state.market_selected_type_id else {
+            tracing::debug!("[MARKET] market fetch skipped: no item selected");
+            return;
+        };
+        let selection = MarketSelection {
+            type_id,
+            type_name: self
+                .state
+                .market_selected_type_name
+                .clone()
+                .unwrap_or_else(|| "Unknown Item".to_string()),
+            region_id: self.state.market_region_id,
+            character_id: self.state.active_character_id,
+        };
+        let generation = self.state.market_generation;
+        let (Some(backends), Some(runtime)) = (self.backends.as_ref(), self.runtime.as_ref())
+        else {
+            tracing::warn!("[MARKET] market fetch skipped: live backends not wired");
+            self.state.market =
+                LoadState::Error("Market data unavailable: live backends not wired.".to_string());
+            return;
+        };
+        let esi = backends.esi.clone();
+        let tx = self.tx.clone();
+        tracing::info!("[MARKET] market fetch started item={}", selection.type_name);
+        runtime.spawn(async move {
+            // Three tolerant fetches (never `?`): each section degrades
+            // alone. Public sections force needs_reauthorize=false —
+            // they need no character and no scope; only the character
+            // walk carries the real typed scope outcome.
+            let (public_result, history_result, character_result) = tokio::join!(
+                endpoints::get_regional_orders(&esi, selection.region_id, selection.type_id),
+                endpoints::get_market_history(&esi, selection.region_id, selection.type_id),
+                async {
+                    match selection.character_id {
+                        Some(id) => Some(endpoints::get_character_orders(&esi, id).await),
+                        None => None,
+                    }
+                }
+            );
+            let public_orders = match public_result {
+                Ok((orders, truncated)) => Ok(PublicOrdersData { orders, truncated }),
+                Err(e) => {
+                    tracing::warn!("[MARKET] market section failed section=public_orders error={}", e);
+                    Err(SectionError {
+                        message: e.to_string(),
+                        needs_reauthorize: false,
+                    })
+                }
+            };
+            let history = match history_result {
+                Ok(entries) => Ok(entries),
+                Err(e) => {
+                    tracing::warn!("[MARKET] market section failed section=history error={}", e);
+                    Err(SectionError {
+                        message: e.to_string(),
+                        needs_reauthorize: false,
+                    })
+                }
+            };
+            let character_orders = match character_result {
+                None => Ok(CharacterOrdersData::default()),
+                Some(Ok((orders, truncated))) => {
+                    Ok(CharacterOrdersData { orders, truncated })
+                }
+                Some(Err(e)) => {
+                    let needs_reauthorize = endpoints::needs_reauthorize(&e);
+                    tracing::warn!(
+                        "[MARKET] market section failed section=character_orders needs_reauthorize={} error={}",
+                        needs_reauthorize,
+                        e
+                    );
+                    Err(SectionError {
+                        message: e.to_string(),
+                        needs_reauthorize,
+                    })
+                }
+            };
+            let data = MarketData {
+                selection,
+                public_orders,
+                history,
+                character_orders,
+            };
+            tracing::info!(
+                "[MARKET] market fetch ready public_orders={} public_truncated={} history_days={} character_orders={} character_truncated={}",
+                data.public_orders.as_ref().map_or(0, |d| d.orders.len()),
+                data.public_orders
+                    .as_ref()
+                    .is_ok_and(|d| d.truncated),
+                data.history.as_ref().map_or(0, Vec::len),
+                data.character_orders.as_ref().map_or(0, |d| d.orders.len()),
+                data.character_orders
+                    .as_ref()
+                    .is_ok_and(|d| d.truncated)
+            );
+            let _ = tx.send(BackendMsg::MarketFetched {
+                generation,
+                data: Box::new(data),
+            });
+        });
+    }
+
+    /// Exact-name item lookup (design section 8.3). Demo answers
+    /// synchronously from quick-pick labels with zero network; live
+    /// reuses the existing public `resolve_ids` (no new POST site),
+    /// filtered to inventory types.
+    fn start_market_lookup(&mut self, query: String) {
+        if self.state.demo {
+            let candidates: Vec<UniverseName> =
+                ui::market::quick_pick_types(&self.state, &self.resolver)
+                    .into_iter()
+                    .filter(|(_, label)| label.to_lowercase() == query.trim().to_lowercase())
+                    .map(|(id, name)| UniverseName {
+                        id,
+                        name,
+                        category: "inventory_type".to_string(),
+                    })
+                    .collect();
+            tracing::debug!(
+                "[DEMO] demo item-name lookup matched {} bundled types",
+                candidates.len()
+            );
+            self.apply_market_lookup_candidates(candidates);
+            return;
+        }
+        let generation = self.state.market_generation;
+        let (Some(backends), Some(runtime)) = (self.backends.as_ref(), self.runtime.as_ref())
+        else {
+            tracing::warn!("[MARKET] item-name lookup skipped: live backends not wired");
+            self.state.market_lookup_message = Some(MARKET_LOOKUP_FAILED.to_string());
+            return;
+        };
+        let esi = backends.esi.clone();
+        let tx = self.tx.clone();
+        tracing::debug!("[MARKET] item-name lookup started");
+        runtime.spawn(async move {
+            let result = endpoints::resolve_ids(&esi, std::slice::from_ref(&query))
+                .await
+                .map(|names| {
+                    let mut types: Vec<UniverseName> = names
+                        .into_iter()
+                        .filter(|n| n.category == "inventory_type" && n.id > 0)
+                        .collect();
+                    types.sort_by(|a, b| {
+                        a.name
+                            .to_lowercase()
+                            .cmp(&b.name.to_lowercase())
+                            .then_with(|| a.name.cmp(&b.name))
+                            .then(a.id.cmp(&b.id))
+                    });
+                    types
+                })
+                .map_err(|e| e.to_string());
+            let _ = tx.send(BackendMsg::MarketLookupDone {
+                generation,
+                query,
+                result,
+            });
+        });
     }
 
     fn start_refresh(&mut self) {
@@ -1353,6 +1677,7 @@ impl MimirApp {
                 egui::Key::Num4,
                 egui::Key::Num5,
                 egui::Key::Num6,
+                egui::Key::Num7,
             ]
             .iter()
             .enumerate()
@@ -1492,7 +1817,7 @@ impl eframe::App for MimirApp {
                 ui.label("PageUp/PageDown switches character.");
             }
             ui.separator();
-            ui.heading("Views (keys 1-6)");
+            ui.heading("Views (keys 1-7)");
             for (idx, view) in View::ALL.iter().enumerate() {
                 let selected = self.state.view == *view;
                 if ui
@@ -1529,8 +1854,92 @@ impl eframe::App for MimirApp {
                 if self.state.refresh_requested {
                     ui.label("Refresh pending...");
                 }
-                ui.label("Keys: 1-6 views, Ctrl+R refresh, / search, PgUp/PgDn character");
+                ui.label("Keys: 1-7 views, Ctrl+R refresh, / search, PgUp/PgDn character");
             });
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn selected_state() -> (AppState, MarketSelection) {
+        let mut state = AppState::new(false);
+        state.active_character_id = Some(42);
+        state.set_market_selection(34, "Tritanium".to_string());
+        let selection = MarketSelection {
+            type_id: 34,
+            type_name: "Tritanium".to_string(),
+            region_id: state.market_region_id,
+            character_id: Some(42),
+        };
+        (state, selection)
+    }
+
+    #[test]
+    fn market_result_identity_requires_all_four_matches() {
+        let (state, selection) = selected_state();
+        let gen = state.market_generation;
+        assert!(market_result_matches(&state, gen, &selection));
+        // Nothing selected can never match.
+        assert!(!market_result_matches(
+            &AppState::new(false),
+            gen,
+            &selection
+        ));
+        // Each single mismatch alone drops the result.
+        assert!(!market_result_matches(
+            &state,
+            gen.wrapping_add(1),
+            &selection
+        ));
+        assert!(!market_result_matches(
+            &state,
+            gen,
+            &MarketSelection {
+                type_id: 35,
+                ..selection.clone()
+            }
+        ));
+        assert!(!market_result_matches(
+            &state,
+            gen,
+            &MarketSelection {
+                region_id: 10000043,
+                ..selection.clone()
+            }
+        ));
+        assert!(!market_result_matches(
+            &state,
+            gen,
+            &MarketSelection {
+                character_id: None,
+                ..selection.clone()
+            }
+        ));
+        assert!(!market_result_matches(
+            &state,
+            gen,
+            &MarketSelection {
+                character_id: Some(7),
+                ..selection
+            }
+        ));
+    }
+
+    #[test]
+    fn market_lookup_freshness_requires_generation_and_current_text() {
+        let (mut state, _) = selected_state();
+        state.market_search = "  Tritanium ".to_string();
+        let gen = state.market_generation;
+        assert!(market_lookup_is_current(&state, gen, "Tritanium"));
+        assert!(!market_lookup_is_current(
+            &state,
+            gen.wrapping_add(1),
+            "Tritanium"
+        ));
+        assert!(!market_lookup_is_current(&state, gen, "Pyerite"));
+        assert!(!market_lookup_is_current(&state, gen, "  Tritanium "));
     }
 }

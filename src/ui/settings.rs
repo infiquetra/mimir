@@ -109,7 +109,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
 
     // --- Keyboard help ---
     ui.heading("Keyboard");
-    ui.monospace("1-6 views | Ctrl/Cmd+R refresh | / focus search | PgUp/PgDn character | Up/Down table rows");
+    ui.monospace("1-7 views | Ctrl/Cmd+R refresh | / focus search | PgUp/PgDn character | Up/Down table rows");
     ui.separator();
 
     // --- Structured log / status view ---
