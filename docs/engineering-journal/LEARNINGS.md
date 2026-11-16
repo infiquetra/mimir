@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### Category-only errors belong at every construction site, and a short-circuit must still drive the state it gates
+
+**Author.** Muse Code (parent repair pass over the Market workflow)
+**Context.** Adversarial review found one blocker and two raw ID minors in the Market slice: when stored scope metadata already claimed the market scope, the Re-authorize panel could loop forever, server error text could still reach Market section panels through SectionError messages, and numeric resolver names could render verbatim.
+**Evidence.** Review findings in the Market workflow synthesis; `src/app/shell.rs` (the already-granted shortcut in `start_stepup_login` queued only the main refresh, which never touches market state; market and detail section errors were built as `message: e.to_string()`), `src/names/resolver.rs` (`insert_with_category` rejected only empty names), `src/ui/market.rs` (character-order remaining volumes were displayed unclamped).
+**Mechanism.** A short circuit that skips the browser also skips the completion path that normally queues follow-up work, so gated state must be driven explicitly on every exit path. Sanitising one error type at the client boundary does not help when callers re-wrap the full error text per section, and any remote string accepted into a name cache becomes display text wherever that cache is read.
+**Fix (or queued).** The already-granted shortcut now also queues the market refetch when a type is selected; all market, assets, and character-detail section errors use fixed per-section wording with full detail kept in `[MARKET]`/`[CHAR]`/`[ASSETS]` warn logs; purely numeric remote names are rejected at resolver insert so word fallbacks render; negative remaining volumes clamp at both the shared helper and the row display.
+**Validation.** New unit tests `insert_rejects_numeric_names_so_lookup_never_returns_a_raw_id` and `character_order_rows_clamp_negative_remaining` plus full `cargo test` / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` on branch `feat/rust-market-port` in the repair commit. Shell flows have no test harness in this repo, so the refetch wiring is code-inspected with log evidence.
+**Generalizable rule.** Audit every construction and ingestion site, not just the boundary that was fixed last time, and make every early-return path drive the same downstream state as the path it replaces.
+**Refs.** `docs/market-port-design.md`; `src/app/shell.rs`; `src/names/resolver.rs`; `src/ui/market.rs`.
+
 ### Error strings are UI strings, and late async results need identity checks at apply time
 
 **Author.** Muse Code (parent repair pass over the character-detail workflow)

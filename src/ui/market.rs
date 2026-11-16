@@ -118,7 +118,9 @@ pub struct CharacterOrderRow {
 }
 
 pub fn filled_volume(volume_total: i64, volume_remain: i64) -> i64 {
-    volume_total.saturating_sub(volume_remain).max(0)
+    // Volumes decode from remote JSON unvalidated: clamp the remaining
+    // volume first so a negative can never inflate the filled amount.
+    volume_total.saturating_sub(volume_remain.max(0)).max(0)
 }
 
 pub fn filled_fraction(volume_total: i64, volume_remain: i64) -> Option<f64> {
@@ -144,8 +146,8 @@ pub fn character_order_rows(
             location_id: order.location_id,
             is_buy_order: order.is_buy_order,
             price: order.price,
-            filled: filled_volume(order.volume_total, order.volume_remain),
-            volume_remain: order.volume_remain,
+            filled: filled_volume(order.volume_total, order.volume_remain.max(0)),
+            volume_remain: order.volume_remain.max(0),
             volume_total: order.volume_total,
             issued: order.issued.clone(),
             duration_days: order.duration,
@@ -737,6 +739,28 @@ mod tests {
         assert!(rows[1].matches_selected_type);
         assert!(!rows[0].matches_selected_type);
         assert_eq!(rows[1].filled, 25_000);
+    }
+
+    #[test]
+    fn character_order_rows_clamp_negative_remaining() {
+        // Volumes decode from remote JSON unvalidated: a negative
+        // remaining volume must render as zero remaining, never as a
+        // raw negative count or an inflated filled amount.
+        assert_eq!(filled_volume(50, -100), 50);
+        assert_eq!(filled_fraction(50, -100), Some(1.0));
+        let rows = character_order_rows(
+            &[CharacterOrder {
+                order_id: 20,
+                type_id: 34,
+                volume_remain: -100,
+                volume_total: 50,
+                issued: "2026-11-13T11:00:00Z".to_string(),
+                ..Default::default()
+            }],
+            34,
+        );
+        assert_eq!(rows[0].volume_remain, 0);
+        assert_eq!(rows[0].filled, 50);
     }
 
     #[test]

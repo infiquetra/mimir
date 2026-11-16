@@ -907,12 +907,15 @@ impl MimirApp {
                     }
                 }
             );
+            // SectionError messages render verbatim in the Market view,
+            // so they are fixed wording here; full error detail stays in
+            // the [MARKET] warn logs above (remote text can embed IDs).
             let public_orders = match public_result {
                 Ok((orders, truncated)) => Ok(PublicOrdersData { orders, truncated }),
                 Err(e) => {
                     tracing::warn!("[MARKET] market section failed section=public_orders error={}", e);
                     Err(SectionError {
-                        message: e.to_string(),
+                        message: "public orders request failed".to_string(),
                         needs_reauthorize: false,
                     })
                 }
@@ -922,7 +925,7 @@ impl MimirApp {
                 Err(e) => {
                     tracing::warn!("[MARKET] market section failed section=history error={}", e);
                     Err(SectionError {
-                        message: e.to_string(),
+                        message: "price history request failed".to_string(),
                         needs_reauthorize: false,
                     })
                 }
@@ -940,7 +943,7 @@ impl MimirApp {
                         e
                     );
                     Err(SectionError {
-                        message: e.to_string(),
+                        message: "character orders request failed".to_string(),
                         needs_reauthorize,
                     })
                 }
@@ -1110,17 +1113,20 @@ impl MimirApp {
                                 reauthorize,
                                 e
                             );
-                            (Err(e.to_string()), reauthorize)
+                            (Err("assets request failed".to_string()), reauthorize)
                         }
                     };
                 // Character details are seven tolerant sub-fetches (never
                 // `?`): a section failure degrades only that section and
                 // never fails the character/skills/wallet/assets refresh.
+                // SectionError messages render verbatim in section
+                // panels, so they are fixed wording here; full error
+                // detail stays in the [CHAR] warn logs above each.
                 let attributes = endpoints::get_attributes(&esi, id).await.map_err(|e| {
                     let needs_reauthorize = endpoints::needs_reauthorize(&e);
                     tracing::warn!("[CHAR] character detail section failed character_id={} section=attributes needs_reauthorize={} error={}", id, needs_reauthorize, e);
                     SectionError {
-                        message: e.to_string(),
+                        message: "attributes request failed".to_string(),
                         needs_reauthorize,
                     }
                 });
@@ -1128,7 +1134,7 @@ impl MimirApp {
                     let needs_reauthorize = endpoints::needs_reauthorize(&e);
                     tracing::warn!("[CHAR] character detail section failed character_id={} section=implants needs_reauthorize={} error={}", id, needs_reauthorize, e);
                     SectionError {
-                        message: e.to_string(),
+                        message: "implants request failed".to_string(),
                         needs_reauthorize,
                     }
                 });
@@ -1136,7 +1142,7 @@ impl MimirApp {
                     let needs_reauthorize = endpoints::needs_reauthorize(&e);
                     tracing::warn!("[CHAR] character detail section failed character_id={} section=clones needs_reauthorize={} error={}", id, needs_reauthorize, e);
                     SectionError {
-                        message: e.to_string(),
+                        message: "clones request failed".to_string(),
                         needs_reauthorize,
                     }
                 });
@@ -1144,7 +1150,7 @@ impl MimirApp {
                     let needs_reauthorize = endpoints::needs_reauthorize(&e);
                     tracing::warn!("[CHAR] character detail section failed character_id={} section=standings needs_reauthorize={} error={}", id, needs_reauthorize, e);
                     SectionError {
-                        message: e.to_string(),
+                        message: "standings request failed".to_string(),
                         needs_reauthorize,
                     }
                 });
@@ -1152,7 +1158,7 @@ impl MimirApp {
                     let needs_reauthorize = endpoints::needs_reauthorize(&e);
                     tracing::warn!("[CHAR] character detail section failed character_id={} section=location needs_reauthorize={} error={}", id, needs_reauthorize, e);
                     SectionError {
-                        message: e.to_string(),
+                        message: "location request failed".to_string(),
                         needs_reauthorize,
                     }
                 });
@@ -1160,7 +1166,7 @@ impl MimirApp {
                     let needs_reauthorize = endpoints::needs_reauthorize(&e);
                     tracing::warn!("[CHAR] character detail section failed character_id={} section=ship needs_reauthorize={} error={}", id, needs_reauthorize, e);
                     SectionError {
-                        message: e.to_string(),
+                        message: "ship request failed".to_string(),
                         needs_reauthorize,
                     }
                 });
@@ -1168,7 +1174,7 @@ impl MimirApp {
                     let needs_reauthorize = endpoints::needs_reauthorize(&e);
                     tracing::warn!("[CHAR] character detail section failed character_id={} section=online needs_reauthorize={} error={}", id, needs_reauthorize, e);
                     SectionError {
-                        message: e.to_string(),
+                        message: "online status request failed".to_string(),
                         needs_reauthorize,
                     }
                 });
@@ -1493,6 +1499,14 @@ impl MimirApp {
             // request_refresh sets its own generic status, so the specific
             // already-granted status must be set after it.
             self.state.request_refresh("stepup-already-granted");
+            // The main refresh never touches market state, so queue the
+            // market refetch too (mirror StepUpLoggedIn) or the Market
+            // re-authorize panel can never clear via its own button when
+            // token metadata already claims the scope.
+            if self.state.market_selected_type_id.is_some() {
+                tracing::debug!("[MARKET] market refetch queued after already-granted step-up");
+                self.state.market_fetch_requested = true;
+            }
             self.state.status_message =
                 "That permission is already granted. Refreshing...".to_string();
             return;
