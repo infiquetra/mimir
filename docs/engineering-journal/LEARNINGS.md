@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### Clipboard formats are a trust boundary: sanitize every interpolated name, cap every expansion
+
+**Author.** Muse Code (parent repair pass over the saved-fittings workflow)
+**Context.** Adversarial review falsified the new EFT exporter twice, both probe-confirmed: a resolved ship name containing brackets, a comma, and a newline corrupted the `[ship, fit name]` header structure, and a hostile slot quantity of 100,000 expanded into that many module lines on the Copy-as-EFT click (`i64::MAX` would hang the UI thread). No raw IDs leaked — the failures were structural, not naming.
+**Evidence.** Review probes in the saved-fittings workflow synthesis; `src/ui/fittings.rs` (`fitting_to_eft` interpolated the ship name with only single-line collapsing, while the fitting name already went through header-grade sanitization, and the slot loop repeated each module line `0..clamped` times with no upper bound).
+**Mechanism.** Export text is parsed by other tools exactly like rendered UI is read by people: every interpolated remote string is a framing risk, and every remote count is a resource bound. Sanitizing one field of a header, or clamping a count for display, does not bound the sibling field or the expansion site that repeats it.
+**Fix (or queued).** Ship and item names in EFT output now get the same header-grade sanitization as fitting names (brackets and commas stripped, controls collapsed, digit-only ship names rejected), and slot-line expansion is capped at `MAX_EFT_SLOT_REPEATS` (16) per row with truncated rows disclosed once through the existing skipped counter.
+**Validation.** New regression tests `eft_ship_and_item_names_cannot_corrupt_structure` and `eft_slot_quantity_expansion_is_capped` in `src/ui/fittings.rs`, plus full `cargo test` (292 passed) / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` on branch `feat/rust-fittings-library` in the repair commit, and a parent-inspected demo Fittings screenshot.
+**Generalizable rule.** Any text built for another parser gets the same audit as rendered UI: sanitize at every interpolation site, and cap every repetition driven by a remote count, disclosing truncation through the channel the format already has.
+**Refs.** `docs/fittings-library-design.md`; `src/ui/fittings.rs` (`fitting_to_eft`, `sanitize_header_name`, `MAX_EFT_SLOT_REPEATS`).
+
 ### Observed 403s outrank stored grant metadata, and every verbatim remote string needs its own rendering rule
 
 **Author.** Muse Code (parent repair pass over the Planetary Industry workflow)

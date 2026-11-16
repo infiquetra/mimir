@@ -15,6 +15,12 @@ use std::collections::HashMap;
 
 pub const FITTINGS_RENDER_MAX: usize = 100;
 
+/// Maximum EFT lines one fitted slot row may expand to. No EVE ship
+/// has more than eight slots in a section; quantities decode from
+/// remote JSON unvalidated, so a hostile quantity must never be able
+/// to expand into unbounded clipboard text.
+const MAX_EFT_SLOT_REPEATS: usize = 16;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FittingSection {
     Low,
@@ -215,8 +221,11 @@ pub fn fitting_to_eft(fitting: &CharacterFitting, resolver: &NameResolver) -> Op
         return None;
     }
     let ship_raw = resolver.cached(fitting.ship_type_id)?;
-    let ship_sanitized = sanitize_single_line(ship_raw);
-    if ship_sanitized.is_empty() {
+    // The ship name sits inside the EFT header's bracket/comma
+    // structure exactly like the fitting name, so it gets the same
+    // header sanitization (brackets and commas stripped).
+    let ship_sanitized = sanitize_header_name(ship_raw);
+    if ship_sanitized.is_empty() || is_digit_only(&ship_sanitized) {
         return None;
     }
     let ship_name = ship_sanitized;
@@ -251,7 +260,10 @@ pub fn fitting_to_eft(fitting: &CharacterFitting, resolver: &NameResolver) -> Op
             skipped_unknown = skipped_unknown.saturating_add(1);
             continue;
         };
-        let sanitized = sanitize_single_line(cached);
+        // Item names land on lines where a comma starts a charge field
+        // and brackets delimit structure, so they get header-grade
+        // sanitization (controls collapsed, `[`, `]`, `,` stripped).
+        let sanitized = sanitize_header_name(cached);
         if sanitized.is_empty() {
             skipped_unknown = skipped_unknown.saturating_add(1);
             continue;
@@ -302,7 +314,16 @@ pub fn fitting_to_eft(fitting: &CharacterFitting, resolver: &NameResolver) -> Op
                     skipped_empty = skipped_empty.saturating_add(1);
                     continue;
                 }
-                for _ in 0..c.clamped {
+                // Quantities decode from remote JSON unvalidated: cap
+                // expansion so a hostile quantity cannot expand into
+                // unbounded clipboard text. A truncated row is disclosed
+                // once via skipped_empty, like other unexportable rows.
+                let requested = usize::try_from(c.clamped).unwrap_or(usize::MAX);
+                let repeats = requested.min(MAX_EFT_SLOT_REPEATS);
+                if repeats < requested {
+                    skipped_empty = skipped_empty.saturating_add(1);
+                }
+                for _ in 0..repeats {
                     lines.push(c.name.clone());
                 }
             }
@@ -897,6 +918,47 @@ mod tests {
             export.text,
             "[Rifter, Demo Brawler]\nDemo Small Railgun\nDemo Small Railgun"
         );
+    }
+
+    #[test]
+    fn eft_slot_quantity_expansion_is_capped() {
+        // Slot quantities decode from remote JSON unvalidated: expansion
+        // must stay bounded however hostile the quantity is, with the
+        // truncation disclosed through skipped_empty (reviewer probe:
+        // quantity 100_000 must not produce 100k lines, i64::MAX must
+        // return at all).
+        let resolver = test_resolver();
+        for qty in [100_000i64, i64::MAX] {
+            let fitting = fitting_with_items(vec![item("LoSlot0", qty, 2048)]);
+            let export = fitting_to_eft(&fitting, &resolver).expect("export");
+            assert_eq!(export.text.lines().count(), 1 + MAX_EFT_SLOT_REPEATS);
+            assert_eq!(export.skipped_empty, 1);
+        }
+        // At the cap boundary nothing is disclosed as skipped.
+        let at_cap = fitting_with_items(vec![item("LoSlot0", MAX_EFT_SLOT_REPEATS as i64, 2048)]);
+        let export = fitting_to_eft(&at_cap, &resolver).expect("export");
+        assert_eq!(export.text.lines().count(), 1 + MAX_EFT_SLOT_REPEATS);
+        assert_eq!(export.skipped_empty, 0);
+    }
+
+    #[test]
+    fn eft_ship_and_item_names_cannot_corrupt_structure() {
+        let mut resolver = test_resolver();
+        // Resolved names land inside the EFT header brackets and on
+        // their own lines, where a comma starts a charge suffix.
+        resolver.insert(587, "Rifter], Evil\n[Fake, Ship".to_string());
+        resolver.insert(2048, "Railgun, [Charge]\nInjected".to_string());
+        let fitting = fitting_with_items(vec![item("LoSlot0", 1, 2048)]);
+        let export = fitting_to_eft(&fitting, &resolver).expect("export");
+        let lines: Vec<&str> = export.text.lines().collect();
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0], "[Rifter Evil Fake Ship, Demo Brawler]");
+        assert_eq!(lines[0].matches(',').count(), 1);
+        assert_eq!(lines[0].matches('[').count(), 1);
+        assert_eq!(lines[0].matches(']').count(), 1);
+        assert_eq!(lines[1], "Railgun Charge Injected");
+        assert!(!lines[1].contains(','));
+        assert!(!export.text.contains('\r'));
     }
 
     #[test]
