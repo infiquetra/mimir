@@ -101,6 +101,19 @@ pub fn format_fitting_amount(value: f64, unit: &str) -> String {
     format!("{sign}{grouped}.{frac} {unit}")
 }
 
+/// Fitting resistance percentage: exactly one decimal with no
+/// space before `%` (`33.0%`, `-10.0%`). Thin adapter over
+/// [`format_fitting_amount`]: it inherits grouping, rounding,
+/// sign handling, and the huge/non-finite guards, and only
+/// removes the separator space before the unit.
+pub fn format_fitting_percent(value: f64) -> String {
+    let formatted = format_fitting_amount(value, "%");
+    match formatted.strip_suffix(" %") {
+        Some(number) => format!("{number}%"),
+        None => formatted,
+    }
+}
+
 /// Compact skill-point formatting (`5,200,000 SP`).
 pub fn format_sp(points: i64) -> String {
     let digits = points.unsigned_abs().to_string();
@@ -308,6 +321,35 @@ mod tests {
             huge_negative.starts_with("-") && !huge_negative.starts_with("--"),
             "single sign: {huge_negative}"
         );
+    }
+
+    #[test]
+    fn fitting_percent_formats_one_grouped_decimal_without_space() {
+        assert_eq!(format_fitting_percent(0.0), "0.0%");
+        assert_eq!(format_fitting_percent(33.0), "33.0%");
+        assert_eq!(format_fitting_percent(67.5), "67.5%");
+        // Rounding pins (ship resistances design section 5): the
+        // catalogue keeps the exact value, the string rounds.
+        assert_eq!(format_fitting_percent(43.125), "43.1%");
+        assert_eq!(format_fitting_percent(43.75), "43.8%");
+        assert_eq!(format_fitting_percent(79.375), "79.4%");
+        assert_eq!(format_fitting_percent(100.0), "100.0%");
+        assert_eq!(format_fitting_percent(-10.0), "-10.0%");
+        assert_eq!(format_fitting_percent(-600.0), "-600.0%");
+        // Inherited guards: grouping, huge magnitude, non-finite
+        // fallback (reachable only synthetically, section 5).
+        assert_eq!(format_fitting_percent(1_234.5), "1,234.5%");
+        let huge = format_fitting_percent(30.0 * i64::MAX as f64);
+        assert!(huge.ends_with(".0%"), "huge renders one decimal: {huge}");
+        assert!(!huge.starts_with('-'), "positive stays positive: {huge}");
+        let parsed: f64 = huge
+            .trim_end_matches('%')
+            .replace(',', "")
+            .parse()
+            .expect("grouped digits parse back");
+        assert!(parsed > 9.0e18, "magnitude preserved: {parsed}");
+        assert_eq!(format_fitting_percent(f64::NAN), "0.0%");
+        assert_eq!(format_fitting_percent(f64::INFINITY), "0.0%");
     }
 
     #[test]

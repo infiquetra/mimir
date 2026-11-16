@@ -26,6 +26,15 @@
 
 ## 2026-11-16
 
+### A resonance above 1 renders its true signed percent; a negative resonance is invalid data (feat/rust-ship-resistances)
+
+**Author.** Muse Code (ship-resistances workflow, integrator)
+**Decision.** Base resistances apply no clamping and no upper bound anywhere: a present resonance above 1 converts by the same `(1 - resonance) * 100` and renders its true signed percent (1.1 renders -10.0%, 7.0 renders -600.0%), in the generator, the catalogue loader invariants, and `resonance_to_percent` (`src/fitting/ship_resistances.rs:66`). A negative resonance is instead invalid data: the generator fails on it and writes nothing, and a negative value reaching the pure function is no data for that one resistance only. A finite resonance whose computed percentage is non-finite is likewise no data, so it never reaches the formatter.
+**Rejected alternatives.** Clamping rendered percentages into 0% to 100%: it silently rewrites a grounded value into a different one, the exact dishonesty this slice forbids. Failing generation on any resonance above 1: the cache scan sees unpublished NPC rows at 1.1, 1.2, and 7.0 today, so generation would fail on current data for rows the category-6 gate never emits.
+**Rationale.** On shipped data the question is unreachable (all 4,848 ship resonances lie in 0.10 to 1.00), but a resonance above 1 is a real cache value shape and the retired Flutter engine rendered the signed result with no clamp, while a negative resonance exists nowhere in the cache and both precedents (generator failures on negative wanted values, the ship-base-stats usable rule) already treat negatives as invalid data. Each treatment follows its evidence instead of one blanket range rule.
+**Revisit when.** A published ship ever carries a resonance outside [0, 1] in the cache — then re-decide from that row's provenance before rendering it, rather than extending this fixture-only rule by default.
+**Refs.** `docs/ship-resistances-design.md` section 2 (out-of-range locks) and section 9; `scripts/sde/generate_fitting_types_sde.py:97` (`RESIST_ATTR_IDS`); signed/negative/overflow pins in `src/fitting/ship_resistances.rs`; LEARNINGS 2026-11-16 ship-resistances hull-set entry.
+
 ### Each base-attribute block ships as its own heading plus disclosure, available independently of its neighbours (feat/rust-ship-base-stats)
 
 **Author.** Muse Code (ship-base-stats workflow, integrator)

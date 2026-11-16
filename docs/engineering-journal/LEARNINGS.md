@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### Two hull-resistance attribute sets share display names; coverage plus the retired app's constants pick 109-113 over the Damage Control bonus set 974-977
+
+**Author.** Muse Code (ship-resistances workflow, integrator)
+**Context.** The ship resistances slice shows the bare hull's base shield, armor, and hull resistances (EM, thermal, kinetic, explosive) in saved and imported fitting details, converted from catalogue resonances by `(1 - resonance) * 100`, with no fitted modifiers, effective hit points, or recharge.
+**Evidence.** `docs/ship-resistances-design.md` section 2 (coverage audit over `dgmTypeAttributes.csv.bz2`: hull attributes 113/110/109/111, the `emDamageResonance` family, are present on all 404 published category-6 ships at 0.67, while 974-977, the `hullEmDamageResonance` family, are present on only 9 of 404 ships at 1.0 and are a fitted Damage Control's bonus inputs per the retired Flutter constants; both families share identical English display names); `scripts/sde/generate_fitting_types_sde.py:97` (`RESIST_ATTR_IDS`, category-6-only emission keeping 53,981 non-ship wanted rows out); `src/names/fitting_types.rs:338` (`bundled_catalogue_invariants` proves all twelve resonances `Some` on every ship and none outside category 6); `src/fitting/ship_resistances.rs:66` (`resonance_to_percent`) and `:81` (`ship_resistances`); `src/ui/fittings.rs:1452` (`render_ship_resistances`).
+**Mechanism.** The SDE display name cannot arbitrate which attribute set is ship data, because both sets are named the same; only the attribute names, the retired app's constants, and cache coverage distinguish them. Emitting 974-977 would have shown an invented 0% hull resistance on nine ships (the Rifter carries both sets, 0.67 and 1.0) and no hull line on 395. And because all 404 ships carry all twelve resonances with none absent, the absent-versus-present-1.0 honesty path (absent omits its segment; a present 1.0 renders a real 0.0%) again ships proven only by fixtures.
+**Fix (or queued).** Emit only the 109-113 hull family, pin the Rifter 33% hull tripwire and absent/1.0/0.0 fixtures in `src/fitting/ship_resistances.rs` and `src/ui/fittings.rs`, and keep category-6-only sparse emission in the generator.
+**Validation.** `bundled_catalogue_invariants` plus literal oracles (Rifter, Punisher, Mimir 32209, Legion, Falcon) in `src/fitting/ship_resistances.rs`; regeneration byte-identity proofs in the catalogue commit; full gates on branch `feat/rust-ship-resistances`.
+**Generalizable rule.** When two dogma attribute sets share a display name, never arbitrate by the display name — coverage over the target category plus a proven consumer's constants decide which set is ship data.
+**Refs.** `docs/ship-resistances-design.md` sections 2-4 and 9; DECISIONS 2026-11-16 ship-resistances out-of-range entry below.
+
 ### All 404 published ships carry all five base attributes; the category gate is what keeps 40,923 non-ship rows out
 
 **Author.** Muse Code (ship-base-stats workflow, integrator)

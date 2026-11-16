@@ -33,7 +33,9 @@ no timestamps. Shape: {"types":[{"typeId":..,"typeName":..,
 "categoryId":..,"slotEffects":[..]}, ...]} with camelCase keys
 matching assets/sde/skills.json, plus the four optional resource keys
 where present and, on category 6 rows only, the five optional base
-ship stat keys (docs/ship-base-stats-design.md section 3).
+ship stat keys (docs/ship-base-stats-design.md section 3) plus the
+twelve optional base ship resonance keys (docs/ship-resistances-design.md
+section 3).
 """
 
 import bz2
@@ -71,6 +73,41 @@ ARMOR_HP_ATTR = 265
 HULL_HP_ATTR = 9
 CAPACITOR_CAPACITY_ATTR = 482
 MAX_VELOCITY_ATTR = 37
+
+# Base ship resonance attribute ids (docs/ship-resistances-design.md
+# section 2): dogmaAttributes.jsonl in
+# scripts/sde/eve-online-static-data-3503375-jsonl.zip names
+# 271 shieldEmDamageResonance, 274 shieldThermalDamageResonance,
+# 273 shieldKineticDamageResonance, 272 shieldExplosiveDamageResonance,
+# 267 armorEmDamageResonance, 270 armorThermalDamageResonance,
+# 269 armorKineticDamageResonance, 268 armorExplosiveDamageResonance,
+# 113 emDamageResonance, 110 thermalDamageResonance,
+# 109 kineticDamageResonance, 111 explosiveDamageResonance, each
+# unit 108 "Inverse Absolute Percent" (dogmaUnits.jsonl: "Used for
+# resistance.\n0.0 = 100% 1.0 = 0%") with default value 1.0; Flutter
+# dogma_attributes.dart at ed698d3 gives the same twelve numbers.
+# The hull set is the emDamageResonance family (113/110/109/111),
+# NOT 974-977 (hullEmDamageResonance et al.): those four share the
+# identical SDE English display names ("Structure EM Damage
+# Resistance" etc.) but are Damage Control bonus-attribute
+# inputs (Flutter effect 2302 maps them onto 113/110/109/111),
+# present on only 9 of 404 ships at 1.0, while 113/110/109/111
+# are present on all 404 ships at 0.67. Emitting 974-977 as hull
+# base would show invented resistances.
+RESIST_ATTR_IDS = {271, 274, 273, 272, 267, 270, 269, 268,
+                   113, 110, 109, 111}
+SHIELD_EM_RESONANCE_ATTR = 271
+SHIELD_THERMAL_RESONANCE_ATTR = 274
+SHIELD_KINETIC_RESONANCE_ATTR = 273
+SHIELD_EXPLOSIVE_RESONANCE_ATTR = 272
+ARMOR_EM_RESONANCE_ATTR = 267
+ARMOR_THERMAL_RESONANCE_ATTR = 270
+ARMOR_KINETIC_RESONANCE_ATTR = 269
+ARMOR_EXPLOSIVE_RESONANCE_ATTR = 268
+HULL_EM_RESONANCE_ATTR = 113
+HULL_THERMAL_RESONANCE_ATTR = 110
+HULL_KINETIC_RESONANCE_ATTR = 109
+HULL_EXPLOSIVE_RESONANCE_ATTR = 111
 
 CACHES = {
     "invTypes": "invTypes.csv.bz2",
@@ -156,6 +193,52 @@ SHIP_STAT_ORACLES = [
     (3532, "capacitorCapacity", 187.5),
     (11172, "capacitorCapacity", 218.75),
     (78333, "maxVelocity", 322.3),
+    (2048, None, None),
+    (31668, None, None),
+    (45623, None, None),
+]
+
+# Base ship resonance oracle pins (docs/ship-resistances-design.md
+# section 3): each value read directly from
+# dgmTypeAttributes.csv.bz2 during design. Tuple shape:
+# (typeId, key-or-None, expected value-or-None). A None key means
+# none of the twelve new keys may be present on that row at all.
+# Rifter 587 also carries the 974-977 decoy rows at 1.0, which
+# must not appear under any key (tripwire).
+RESIST_ORACLES = [
+    (587, "shieldEmDamageResonance", 1.0),
+    (587, "shieldThermalDamageResonance", 0.8),
+    (587, "shieldKineticDamageResonance", 0.6),
+    (587, "shieldExplosiveDamageResonance", 0.5),
+    (587, "armorEmDamageResonance", 0.4),
+    (587, "armorThermalDamageResonance", 0.65),
+    (587, "armorKineticDamageResonance", 0.75),
+    (587, "armorExplosiveDamageResonance", 0.9),
+    (587, "emDamageResonance", 0.67),
+    (587, "thermalDamageResonance", 0.67),
+    (587, "kineticDamageResonance", 0.67),
+    (587, "explosiveDamageResonance", 0.67),
+    (597, "shieldEmDamageResonance", 1.0),
+    (597, "shieldThermalDamageResonance", 0.8),
+    (597, "shieldKineticDamageResonance", 0.6),
+    (597, "shieldExplosiveDamageResonance", 0.5),
+    (597, "armorEmDamageResonance", 0.5),
+    (597, "armorThermalDamageResonance", 0.65),
+    (597, "armorKineticDamageResonance", 0.75),
+    (597, "armorExplosiveDamageResonance", 0.8),
+    (597, "emDamageResonance", 0.67),
+    (597, "thermalDamageResonance", 0.67),
+    (597, "kineticDamageResonance", 0.67),
+    (597, "explosiveDamageResonance", 0.67),
+    (32209, "armorEmDamageResonance", 0.1),
+    (32209, "armorThermalDamageResonance", 0.325),
+    (32209, "shieldEmDamageResonance", 1.0),
+    (29986, "armorExplosiveDamageResonance", 0.4),
+    (29986, "armorKineticDamageResonance", 0.5625),
+    (29986, "shieldExplosiveDamageResonance", 0.25),
+    (29986, "shieldKineticDamageResonance", 0.45),
+    (11957, "armorKineticDamageResonance", 0.46875),
+    (11957, "armorThermalDamageResonance", 0.20625),
     (2048, None, None),
     (31668, None, None),
     (45623, None, None),
@@ -280,10 +363,51 @@ def main():
         seen_base_stat_keys.add(key)
         base_stats_by_type.setdefault(type_id, {})[attribute_id] = value
 
+    # Base ship resonances per type (design section 3): only the
+    # twelve locked attributes, each parsed from valueFloat. An
+    # unparseable, duplicated, non-finite, or negative wanted row
+    # fails loudly and writes nothing. A value above 1 is NOT a
+    # failure: the scan also sees unpublished NPC rows carrying
+    # 1.1/1.2/7.0, and such a resonance renders its true signed
+    # percent (design section 2).
+    resonances_by_type = {}
+    seen_resonance_keys = set()
+    for row in type_attributes:
+        attribute_id = int(row["attributeID"])
+        if attribute_id not in RESIST_ATTR_IDS:
+            continue
+        type_id = int(row["typeID"])
+        key = (type_id, attribute_id)
+        if key in seen_resonance_keys:
+            fail(
+                f"duplicate ship resistance row (type {type_id}, "
+                f"attribute {attribute_id}) in dgmTypeAttributes"
+            )
+        try:
+            value = float(row["valueFloat"])
+        except (TypeError, ValueError):
+            fail(
+                f"unparseable ship resistance value {row['valueFloat']!r} "
+                f"for (type {type_id}, attribute {attribute_id})"
+            )
+        if not math.isfinite(value):
+            fail(
+                f"non-finite ship resistance value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        if value < 0:
+            fail(
+                f"negative ship resistance value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        seen_resonance_keys.add(key)
+        resonances_by_type.setdefault(type_id, {})[attribute_id] = value
+
     types = []
     missing_group = 0
     resource_key_counts = Counter()
     base_stat_key_counts = Counter()
+    resonance_key_counts = Counter()
     for row in inv_types:
         if row["published"] != "1":
             continue
@@ -336,6 +460,48 @@ def main():
             if MAX_VELOCITY_ATTR in base_stats:
                 entry["maxVelocity"] = base_stats[MAX_VELOCITY_ATTR]
                 base_stat_key_counts["maxVelocity"] += 1
+            # Additive, sparse base ship resonance emission
+            # (design section 3): category 6 rows gain the twelve
+            # resonances, as resonances never pre-converted, after
+            # the base stat keys in this locked key order.
+            # Every other row is byte-identical.
+            resonances = resonances_by_type.get(type_id, {})
+            if SHIELD_EM_RESONANCE_ATTR in resonances:
+                entry["shieldEmDamageResonance"] = resonances[SHIELD_EM_RESONANCE_ATTR]
+                resonance_key_counts["shieldEmDamageResonance"] += 1
+            if SHIELD_THERMAL_RESONANCE_ATTR in resonances:
+                entry["shieldThermalDamageResonance"] = resonances[SHIELD_THERMAL_RESONANCE_ATTR]
+                resonance_key_counts["shieldThermalDamageResonance"] += 1
+            if SHIELD_KINETIC_RESONANCE_ATTR in resonances:
+                entry["shieldKineticDamageResonance"] = resonances[SHIELD_KINETIC_RESONANCE_ATTR]
+                resonance_key_counts["shieldKineticDamageResonance"] += 1
+            if SHIELD_EXPLOSIVE_RESONANCE_ATTR in resonances:
+                entry["shieldExplosiveDamageResonance"] = resonances[SHIELD_EXPLOSIVE_RESONANCE_ATTR]
+                resonance_key_counts["shieldExplosiveDamageResonance"] += 1
+            if ARMOR_EM_RESONANCE_ATTR in resonances:
+                entry["armorEmDamageResonance"] = resonances[ARMOR_EM_RESONANCE_ATTR]
+                resonance_key_counts["armorEmDamageResonance"] += 1
+            if ARMOR_THERMAL_RESONANCE_ATTR in resonances:
+                entry["armorThermalDamageResonance"] = resonances[ARMOR_THERMAL_RESONANCE_ATTR]
+                resonance_key_counts["armorThermalDamageResonance"] += 1
+            if ARMOR_KINETIC_RESONANCE_ATTR in resonances:
+                entry["armorKineticDamageResonance"] = resonances[ARMOR_KINETIC_RESONANCE_ATTR]
+                resonance_key_counts["armorKineticDamageResonance"] += 1
+            if ARMOR_EXPLOSIVE_RESONANCE_ATTR in resonances:
+                entry["armorExplosiveDamageResonance"] = resonances[ARMOR_EXPLOSIVE_RESONANCE_ATTR]
+                resonance_key_counts["armorExplosiveDamageResonance"] += 1
+            if HULL_EM_RESONANCE_ATTR in resonances:
+                entry["emDamageResonance"] = resonances[HULL_EM_RESONANCE_ATTR]
+                resonance_key_counts["emDamageResonance"] += 1
+            if HULL_THERMAL_RESONANCE_ATTR in resonances:
+                entry["thermalDamageResonance"] = resonances[HULL_THERMAL_RESONANCE_ATTR]
+                resonance_key_counts["thermalDamageResonance"] += 1
+            if HULL_KINETIC_RESONANCE_ATTR in resonances:
+                entry["kineticDamageResonance"] = resonances[HULL_KINETIC_RESONANCE_ATTR]
+                resonance_key_counts["kineticDamageResonance"] += 1
+            if HULL_EXPLOSIVE_RESONANCE_ATTR in resonances:
+                entry["explosiveDamageResonance"] = resonances[HULL_EXPLOSIVE_RESONANCE_ATTR]
+                resonance_key_counts["explosiveDamageResonance"] += 1
         elif category_id == 7 and slot_effects:
             if MODULE_CPU_NEED_ATTR in resources:
                 entry["cpu"] = resources[MODULE_CPU_NEED_ATTR]
@@ -426,6 +592,42 @@ def main():
                 f"{entry.get(key)!r}, expected {expected!r}"
             )
 
+    # Base ship resonance oracles (design section 3). A None key
+    # means none of the twelve new keys may be present at all.
+    for type_id, key, expected in RESIST_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(f"ship resistance oracle type {type_id} missing from extract")
+        if key is None:
+            present = [
+                name
+                for name in (
+                    "shieldEmDamageResonance",
+                    "shieldThermalDamageResonance",
+                    "shieldKineticDamageResonance",
+                    "shieldExplosiveDamageResonance",
+                    "armorEmDamageResonance",
+                    "armorThermalDamageResonance",
+                    "armorKineticDamageResonance",
+                    "armorExplosiveDamageResonance",
+                    "emDamageResonance",
+                    "thermalDamageResonance",
+                    "kineticDamageResonance",
+                    "explosiveDamageResonance",
+                )
+                if name in entry
+            ]
+            if present:
+                fail(
+                    f"ship resistance oracle type {type_id} carries "
+                    f"{present}, expected no resistance keys"
+                )
+        elif entry.get(key) != expected:
+            fail(
+                f"ship resistance oracle type {type_id} {key}="
+                f"{entry.get(key)!r}, expected {expected!r}"
+            )
+
     # Catalogue-wide invariant (design sections 5 and 3): every
     # category-6 row carries both ship outputs and all five base
     # ship stats, so a future cache refresh that drops a ship row
@@ -449,6 +651,26 @@ def main():
         ):
             fail(
                 f"ship type {entry['typeId']} missing base ship stats"
+            )
+        if entry["categoryId"] == 6 and any(
+            key not in entry
+            for key in (
+                "shieldEmDamageResonance",
+                "shieldThermalDamageResonance",
+                "shieldKineticDamageResonance",
+                "shieldExplosiveDamageResonance",
+                "armorEmDamageResonance",
+                "armorThermalDamageResonance",
+                "armorKineticDamageResonance",
+                "armorExplosiveDamageResonance",
+                "emDamageResonance",
+                "thermalDamageResonance",
+                "kineticDamageResonance",
+                "explosiveDamageResonance",
+            )
+        ):
+            fail(
+                f"ship type {entry['typeId']} missing ship resistances"
             )
 
     # Invariants the parser relies on (design sections 5.2, 6.3): no
@@ -494,6 +716,20 @@ def main():
         f"hp={base_stat_key_counts['hp']} "
         f"capacitorCapacity={base_stat_key_counts['capacitorCapacity']} "
         f"maxVelocity={base_stat_key_counts['maxVelocity']}"
+    )
+    print(
+        f"resistance_keys shieldEmDamageResonance={resonance_key_counts['shieldEmDamageResonance']} "
+        f"shieldThermalDamageResonance={resonance_key_counts['shieldThermalDamageResonance']} "
+        f"shieldKineticDamageResonance={resonance_key_counts['shieldKineticDamageResonance']} "
+        f"shieldExplosiveDamageResonance={resonance_key_counts['shieldExplosiveDamageResonance']} "
+        f"armorEmDamageResonance={resonance_key_counts['armorEmDamageResonance']} "
+        f"armorThermalDamageResonance={resonance_key_counts['armorThermalDamageResonance']} "
+        f"armorKineticDamageResonance={resonance_key_counts['armorKineticDamageResonance']} "
+        f"armorExplosiveDamageResonance={resonance_key_counts['armorExplosiveDamageResonance']} "
+        f"emDamageResonance={resonance_key_counts['emDamageResonance']} "
+        f"thermalDamageResonance={resonance_key_counts['thermalDamageResonance']} "
+        f"kineticDamageResonance={resonance_key_counts['kineticDamageResonance']} "
+        f"explosiveDamageResonance={resonance_key_counts['explosiveDamageResonance']}"
     )
 
 
