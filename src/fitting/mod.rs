@@ -4,6 +4,7 @@
 pub mod dna;
 pub mod eft;
 pub mod resources;
+pub mod ship_ehp;
 pub mod ship_resistances;
 pub mod ship_stats;
 pub mod write_map;
@@ -18,6 +19,7 @@ pub use resources::{
     fitting_resources, fitting_resources_with_skills, resource_skill_levels, FittingResources,
     ResourceBudget, ResourceSkillLevels, CPU_MANAGEMENT_SKILL_ID, POWER_GRID_MANAGEMENT_SKILL_ID,
 };
+pub use ship_ehp::{ship_base_ehp, ShipBaseEhp, ShipBaseEhpOutcome};
 pub use ship_resistances::{
     ship_resistances, ResistLayer, ShipResistances, ShipResistancesOutcome,
 };
