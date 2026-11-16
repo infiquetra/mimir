@@ -28,11 +28,11 @@ pub const MAX_STACK_QUANTITY: i64 = 2_147_483_647;
 
 // Category IDs (AAR constants at aar_fit_import_parser.dart:57-61,
 // plus charge 8 from generate_dogma_sde.py TARGET_CATEGORIES).
-const CATEGORY_SHIP: i64 = 6;
-const CATEGORY_MODULE: i64 = 7;
+pub(crate) const CATEGORY_SHIP: i64 = 6;
+pub(crate) const CATEGORY_MODULE: i64 = 7;
 const CATEGORY_CHARGE: i64 = 8;
 const CATEGORY_DRONE: i64 = 18;
-const CATEGORY_SUBSYSTEM: i64 = 32;
+pub(crate) const CATEGORY_SUBSYSTEM: i64 = 32;
 const CATEGORY_FIGHTER: i64 = 87;
 
 // Dogma slot-effect IDs in Flutter `_slotTypeFor` check order:
@@ -90,6 +90,12 @@ pub enum ImportIssueKind {
     UnknownCharge,
     AmbiguousCharge,
     NotACharge,
+    EmptySegment,
+    ExtraSegmentFields,
+    InvalidTypeId,
+    UnknownTypeId,
+    InvalidSegmentQuantity,
+    UnsupportedDnaItem,
 }
 
 impl ImportIssueKind {
@@ -130,6 +136,24 @@ impl ImportIssueKind {
                 "the loaded charge after the comma matches more than one item in Mimir's bundled data"
             }
             ImportIssueKind::NotACharge => "the name after the comma is not a charge",
+            ImportIssueKind::EmptySegment => {
+                "this segment is empty; DNA segments are separated by single colons"
+            }
+            ImportIssueKind::ExtraSegmentFields => {
+                "a DNA segment is one item, optionally followed by a semicolon and a quantity"
+            }
+            ImportIssueKind::InvalidTypeId => {
+                "the item at the start of this segment is not written as a whole number from 1 to 2,147,483,647"
+            }
+            ImportIssueKind::UnknownTypeId => {
+                "Mimir's bundled data has no item for this segment"
+            }
+            ImportIssueKind::InvalidSegmentQuantity => {
+                "the quantity after the semicolon must be a whole number from 1 to 2,147,483,647"
+            }
+            ImportIssueKind::UnsupportedDnaItem => {
+                "DNA links list fitted modules and subsystems only, and this item is not one"
+            }
         }
     }
 }
@@ -153,13 +177,20 @@ pub enum ImportFatal {
     ShipUnknown,
     ShipAmbiguous,
     ShipNotShip,
+    DnaMalformed,
+    DnaShipUnknown,
+    DnaShipNotShip,
+    DnaTooManySegments,
+    DnaTooManyItems,
 }
 
 impl ImportFatal {
     /// Fixed fatal wording for the UI.
     pub fn message(&self) -> &'static str {
         match self {
-            ImportFatal::Empty => "Paste an EFT fitting first - the import box is empty.",
+            ImportFatal::Empty => {
+                "Paste an EFT block or a DNA fitting link first - the import box is empty."
+            }
             ImportFatal::TooLarge => {
                 "That paste is too large to import (limit 64 KiB). Nothing was imported."
             }
@@ -178,8 +209,31 @@ impl ImportFatal {
             ImportFatal::ShipNotShip => {
                 "Could not import: the first name in the header is not a ship. Nothing was imported."
             }
+            ImportFatal::DnaMalformed => {
+                "Could not import: paste an EFT block starting with [Ship name, Fitting name], or a single-line DNA fitting link. Nothing was imported."
+            }
+            ImportFatal::DnaShipUnknown => {
+                "Could not import: Mimir's bundled data has no ship for this DNA link. Nothing was imported."
+            }
+            ImportFatal::DnaShipNotShip => {
+                "Could not import: this DNA link does not start with a ship in Mimir's bundled data. Nothing was imported."
+            }
+            ImportFatal::DnaTooManySegments => {
+                "That DNA link has too many segments to import (limit 1,000 segments). Nothing was imported."
+            }
+            ImportFatal::DnaTooManyItems => {
+                "That DNA link has too many fitted items to import (limit 4,096 items). Nothing was imported."
+            }
         }
     }
+}
+
+/// Which input format produced an imported fitting. The panel uses
+/// this to say "segment" for DNA and "line" for EFT.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ImportFormat {
+    Eft,
+    Dna,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -206,6 +260,7 @@ pub struct ImportedFitting {
     pub ship_type_id: i64,
     /// Canonical catalogue ship name.
     pub ship_name: String,
+    pub format: ImportFormat,
     pub items: Vec<ImportedItem>,
     pub report: ImportReport,
 }
@@ -303,7 +358,7 @@ fn issue(line: usize, text: &str, kind: ImportIssueKind) -> ImportIssue {
 
 /// Slot from dogma effects, checked in Flutter `_slotTypeFor` order.
 /// A module with no slot effect is an issue, never a guess.
-fn slot_section(effects: &[i64]) -> Option<ImportSection> {
+pub(crate) fn slot_section(effects: &[i64]) -> Option<ImportSection> {
     if effects.contains(&EFFECT_HIGH) {
         Some(ImportSection::High)
     } else if effects.contains(&EFFECT_MEDIUM) {
@@ -656,6 +711,7 @@ pub fn parse_eft(text: &str, types: &FittingTypes) -> EftImportOutcome {
         name: fit_name,
         ship_type_id,
         ship_name,
+        format: ImportFormat::Eft,
         items,
         report: ImportReport {
             imported_lines,
@@ -1228,7 +1284,7 @@ mod tests {
         );
         assert_eq!(
             ImportFatal::Empty.message(),
-            "Paste an EFT fitting first - the import box is empty."
+            "Paste an EFT block or a DNA fitting link first - the import box is empty."
         );
         assert_eq!(
             ImportFatal::TooLarge.message(),

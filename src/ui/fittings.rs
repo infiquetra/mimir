@@ -1459,7 +1459,7 @@ pub fn show(
 mod tests {
     use super::*;
     use crate::esi::models::FittingItem;
-    use crate::fitting::eft::{ImportIssueKind, ImportReport};
+    use crate::fitting::eft::{ImportFormat, ImportIssueKind, ImportReport};
 
     fn test_resolver() -> NameResolver {
         let mut r = NameResolver::new();
@@ -1956,6 +1956,7 @@ mod tests {
             name: "Sample Brawler".to_string(),
             ship_type_id: 587,
             ship_name: "Rifter".to_string(),
+            format: ImportFormat::Eft,
             items: Vec::new(),
             report: ImportReport {
                 imported_lines: 7,
@@ -2161,6 +2162,7 @@ mod tests {
             name: "Test".to_string(),
             ship_type_id: 587,
             ship_name: "Rifter".to_string(),
+            format: ImportFormat::Eft,
             items: Vec::new(),
             report: ImportReport {
                 imported_lines: 0,

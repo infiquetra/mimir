@@ -1066,7 +1066,7 @@ impl AppState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fitting::eft::ImportReport;
+    use crate::fitting::eft::{ImportFormat, ImportReport};
 
     fn row(id: i64, name: &str) -> CharacterRow {
         CharacterRow {
@@ -1819,6 +1819,7 @@ mod tests {
             name: "Test".to_string(),
             ship_type_id: 587,
             ship_name: "Rifter".to_string(),
+            format: ImportFormat::Eft,
             items: Vec::new(),
             report: ImportReport {
                 imported_lines: 0,
