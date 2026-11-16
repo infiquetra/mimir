@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### An EHP number without its damage profile named beside it is a lie by omission; compose it in resonance space and never adjust a rendered total to match its rendered layers
+
+**Author.** Muse Code (ship-base-ehp workflow, integrator)
+**Context.** The ship base effective hit points (EHP) slice adds per-layer (shield, armor, hull) and total base EHP to saved and imported fitting details, composed only from the bare hull's base hit points and base resistances already in the bundled catalogue, with no fitted modifiers, recharge, or sustained tank.
+**Evidence.** `docs/ship-base-ehp-design.md` sections 2 and 9 (the retired Flutter fitting panel rendered a bare `EHP` total whose omni profile existed only in code comments, while its combat analyzer labelled `EHP (omni)` / `omni 25/25/25/25` in the view itself); `src/fitting/ship_ehp.rs:31` (named `OMNI_*_SHARE` constants, each 0.25), `:96` (share-weighted resonance denominator), and `:121` (`ship_base_ehp`); `src/ui/fittings.rs:1200` (heading "Ship effective hit points (base values, omni 25/25/25/25)"), `:1208` (disclosure naming the equal-quarters mix and every not-applied class), and `:4048` (the Rifter rendering pin: unrounded total 1809.7443815 renders 1,809.7 even though the rendered layers 620.7 + 666.7 + 522.4 sum to 1809.8).
+**Mechanism.** EHP is meaningless without the damage mix it assumes, so copying the retired panel's bare label would have shipped a number whose premise lived only in comments; the labelled analyzer wording is the grounded precedent. Two precision traps sit under that label: composing from the resistances block's displayed percents would round-trip through `(1 - resonance) * 100` and back, compounding display rounding into the division, so the computation reads stored resonances directly in resonance space; and a total summed from unrounded layers can differ by a tenth from the sum of its one-decimal rendered layers, which is correct arithmetic, not a display bug to "fix" by nudging either string.
+**Fix (or queued).** Heading and disclosure name the omni 25/25/25/25 profile in the view itself; `ship_ehp.rs` does its own resonance-space catalogue lookup with no percent round-trip; rendered strings are pinned exactly as computed (Rifter total 1,809.7) in `src/ui/fittings.rs`, with no adjustment to make them agree.
+**Validation.** Hand-derived bundled-catalogue oracles and Flutter bare-hull parity (Rifter hull 522.388, total 1809.744 within 0.01) in `src/fitting/ship_ehp.rs`; locked wording, omission, and demo-story pins in `src/ui/fittings.rs`; full gates on branch `feat/rust-ship-base-ehp`.
+**Generalizable rule.** Every derived number carries its premises (profile, base-vs-fitted, not-applied classes) in the visible label, is composed from stored source values never from displayed ones, and its rendered total is pinned as computed even when displayed parts appear to disagree by a rounding tenth.
+**Refs.** `docs/ship-base-ehp-design.md` sections 2, 4-6 and 9; DECISIONS 2026-11-16 ship-base-EHP composition entry below.
+
 ### Two hull-resistance attribute sets share display names; coverage plus the retired app's constants pick 109-113 over the Damage Control bonus set 974-977
 
 **Author.** Muse Code (ship-resistances workflow, integrator)
