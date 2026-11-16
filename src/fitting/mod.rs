@@ -4,6 +4,7 @@
 pub mod dna;
 pub mod eft;
 pub mod resources;
+pub mod ship_stats;
 pub mod write_map;
 
 pub use dna::{parse_dna, parse_import, MAX_DNA_EXPANDED_ITEMS, MAX_DNA_SEGMENTS};
@@ -16,4 +17,5 @@ pub use resources::{
     fitting_resources, fitting_resources_with_skills, resource_skill_levels, FittingResources,
     ResourceBudget, ResourceSkillLevels, CPU_MANAGEMENT_SKILL_ID, POWER_GRID_MANAGEMENT_SKILL_ID,
 };
+pub use ship_stats::{ship_base_stats, ShipBaseStats, ShipBaseStatsOutcome};
 pub use write_map::{build_save_request, DropReason, DroppedFittingItem, SaveMapping};
