@@ -711,11 +711,17 @@ mod tests {
     }
 
     #[test]
+    fn skill_id_constants_are_the_grounded_ids() {
+        // Literal rows in the lookup tests below pin behavior to
+        // these exact ids; the constants are pinned here too so a
+        // swap fails at the unit boundary, not only via demo pins.
+        assert_eq!(CPU_MANAGEMENT_SKILL_ID, 3426);
+        assert_eq!(POWER_GRID_MANAGEMENT_SKILL_ID, 3413);
+    }
+
+    #[test]
     fn lookup_reads_trained_not_active() {
-        let levels = resource_skill_levels(&skills(vec![
-            skill(CPU_MANAGEMENT_SKILL_ID, 5, 2),
-            skill(POWER_GRID_MANAGEMENT_SKILL_ID, 1, 4),
-        ]));
+        let levels = resource_skill_levels(&skills(vec![skill(3426, 5, 2), skill(3413, 1, 4)]));
         assert_eq!(
             levels,
             ResourceSkillLevels {
@@ -723,10 +729,8 @@ mod tests {
                 power_grid_management: 4
             }
         );
-        let present_zero = resource_skill_levels(&skills(vec![
-            skill(CPU_MANAGEMENT_SKILL_ID, 5, 0),
-            skill(POWER_GRID_MANAGEMENT_SKILL_ID, 5, 0),
-        ]));
+        let present_zero =
+            resource_skill_levels(&skills(vec![skill(3426, 5, 0), skill(3413, 5, 0)]));
         assert_eq!(
             present_zero,
             ResourceSkillLevels {
@@ -762,10 +766,10 @@ mod tests {
     #[test]
     fn lookup_duplicate_rows_last_wins() {
         let levels = resource_skill_levels(&skills(vec![
-            skill(CPU_MANAGEMENT_SKILL_ID, 5, 1),
-            skill(CPU_MANAGEMENT_SKILL_ID, 5, 4),
-            skill(POWER_GRID_MANAGEMENT_SKILL_ID, 5, 2),
-            skill(POWER_GRID_MANAGEMENT_SKILL_ID, 5, 3),
+            skill(3426, 5, 1),
+            skill(3426, 5, 4),
+            skill(3413, 5, 2),
+            skill(3413, 5, 3),
         ]));
         assert_eq!(
             levels,
@@ -778,10 +782,7 @@ mod tests {
 
     #[test]
     fn lookup_clamps_negative_seven_and_i32_extremes_without_panic() {
-        let levels = resource_skill_levels(&skills(vec![
-            skill(CPU_MANAGEMENT_SKILL_ID, -3, -3),
-            skill(POWER_GRID_MANAGEMENT_SKILL_ID, 7, 7),
-        ]));
+        let levels = resource_skill_levels(&skills(vec![skill(3426, -3, -3), skill(3413, 7, 7)]));
         assert_eq!(
             levels,
             ResourceSkillLevels {
@@ -790,8 +791,8 @@ mod tests {
             }
         );
         let extremes = resource_skill_levels(&skills(vec![
-            skill(CPU_MANAGEMENT_SKILL_ID, i32::MIN, i32::MIN),
-            skill(POWER_GRID_MANAGEMENT_SKILL_ID, i32::MAX, i32::MAX),
+            skill(3426, i32::MIN, i32::MIN),
+            skill(3413, i32::MAX, i32::MAX),
         ]));
         assert_eq!(
             extremes,

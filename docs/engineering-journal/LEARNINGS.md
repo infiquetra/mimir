@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### Tests built from the constants under test cannot catch a constant swap
+
+**Author.** Muse Code (parent repair pass over the fitting-skill-resources workflow)
+**Context.** Adversarial review mutation-tested the skill slice and found the arithmetic, ownership, and honesty claims all held — except that swapping the two skill-id constants (CPU Management 3426, Power Grid Management 3413) failed only three demo-fixture tests, none of the pure lookup tests.
+**Evidence.** Review finding F1 in the fitting-skill-resources synthesis (swap in a temp clone: 469 passed, 3 failed); `src/fitting/resources.rs` (the lookup tests built their skill rows with `skill(CPU_MANAGEMENT_SKILL_ID, …)` — the very constants being mutated — so test and code moved together; only the demo-story and wording tests, which flow through the real `skillqueue.json` rows and SDE name lookup, caught it).
+**Mechanism.** A test that constructs its inputs from the implementation's own named constants proves the logic downstream of the constant, never the constant's value. Identifier constants are exactly where a transposition is cheapest to make and hardest to see in review, so they need at least one test written against the literal external value.
+**Fix (or queued).** Lookup-test rows now use the literal ids 3426/3413, plus `skill_id_constants_are_the_grounded_ids` pins the constants themselves; the demo/name tests remain the second net.
+**Validation.** Full `cargo test` / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` on branch `feat/rust-fitting-skill-resources` after the repair, and a parent-inspected demo Fittings screenshot. The reviewer's unobserved compounding mutant (1.05^level) is covered analytically by the L2/L5 literal pins (143.0/162.5 at 1e-9 tolerance vs the compounded 143.325/165.917).
+**Generalizable rule.** For every externally-grounded identifier constant (skill ids, attribute ids, scope strings), at least one test must spell the literal value; tests built from the constant prove everything except the constant.
+**Refs.** `docs/fitting-skill-resources-design.md`; `src/fitting/resources.rs` (`resource_skill_levels`, lookup tests).
+
 ### "No skill row" means untrained only inside a loaded, owner-proven skill bundle; before the first skill-consuming feature you find the switch-boundary gap
 
 **Author.** Muse Code (fitting-skill-resources workflow, integrator)
