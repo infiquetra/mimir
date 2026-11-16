@@ -686,6 +686,44 @@ pub struct PinContent {
     pub amount: i64,
 }
 
+/// One saved fitting from `GET /characters/{character_id}/fittings/`.
+/// `fitting_id` is a per-instance identity: selection identity
+/// and invisible sort tie-break only, never rendered and never
+/// sent to universe name resolution. `ship_type_id` and every
+/// item `type_id` resolve via the item-name path. `name` is
+/// user text: it renders only after the single-line sanitize
+/// in the view/export rules and is never trusted as a number.
+/// Nullability is preserved exactly: `None` is never coerced to
+/// an empty string at parse.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct CharacterFitting {
+    #[serde(default)]
+    pub fitting_id: i64,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub ship_type_id: i64,
+    #[serde(default)]
+    pub items: Vec<FittingItem>,
+}
+
+/// One fitted or carried item inside a saved fitting. `flag`
+/// is the ESI slot vocabulary word (for example `LoSlot0` or
+/// `DroneBay`); it is grouped only through the view whitelist
+/// and is never rendered verbatim. `quantity` is carried raw
+/// and clamped at render/export, never at parse.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct FittingItem {
+    #[serde(default)]
+    pub flag: String,
+    #[serde(default)]
+    pub quantity: i64,
+    #[serde(default)]
+    pub type_id: i64,
+}
+
 /// ESI error body shape: `{"error": "..."}`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EsiErrorBody {
@@ -1134,5 +1172,70 @@ mod tests {
         )
         .expect("parses");
         assert_eq!(clones.home_location.expect("home").location_id, 60003760);
+    }
+
+    #[test]
+    fn character_fitting_full_payload_parses_with_items_and_unknown_field() {
+        let fitting: CharacterFitting = serde_json::from_str(
+            r#"{"fitting_id":1,"name":"Demo Brawler",
+                "description":"Sample close-range fit","ship_type_id":587,
+                "items":[{"flag":"LoSlot0","quantity":1,"type_id":2048},
+                {"flag":"DroneBay","quantity":5,"type_id":2456},
+                {"flag":"Cargo","quantity":500,"type_id":34}],
+                "unknown_future_field":true}"#,
+        )
+        .expect("parses");
+        assert_eq!(fitting.fitting_id, 1);
+        assert_eq!(fitting.name, "Demo Brawler");
+        assert_eq!(
+            fitting.description.as_deref(),
+            Some("Sample close-range fit")
+        );
+        assert_eq!(fitting.ship_type_id, 587);
+        assert_eq!(fitting.items.len(), 3);
+        assert_eq!(fitting.items[0].flag, "LoSlot0");
+        assert_eq!(fitting.items[0].quantity, 1);
+        assert_eq!(fitting.items[0].type_id, 2048);
+        assert_eq!(fitting.items[1].flag, "DroneBay");
+        assert_eq!(fitting.items[1].quantity, 5);
+        assert_eq!(fitting.items[2].flag, "Cargo");
+        assert_eq!(fitting.items[2].type_id, 34);
+    }
+
+    #[test]
+    fn character_fitting_empty_object_parses_to_defaults() {
+        let fitting: CharacterFitting = serde_json::from_str("{}").expect("parses");
+        assert_eq!(fitting.fitting_id, 0);
+        assert!(fitting.name.is_empty());
+        assert_eq!(fitting.description, None);
+        assert_eq!(fitting.ship_type_id, 0);
+        assert!(fitting.items.is_empty());
+
+        let item: FittingItem = serde_json::from_str("{}").expect("parses");
+        assert!(item.flag.is_empty());
+        assert_eq!(item.quantity, 0);
+        assert_eq!(item.type_id, 0);
+    }
+
+    #[test]
+    fn character_fitting_description_variants_preserve_none() {
+        let null: CharacterFitting =
+            serde_json::from_str(r#"{"fitting_id":2,"description":null}"#).expect("parses");
+        assert_eq!(null.fitting_id, 2);
+        assert_eq!(null.description, None);
+
+        let absent: CharacterFitting = serde_json::from_str(r#"{"fitting_id":3}"#).expect("parses");
+        assert_eq!(absent.fitting_id, 3);
+        assert_eq!(absent.description, None);
+    }
+
+    #[test]
+    fn fitting_item_negative_quantity_parses_unchanged() {
+        // Clamping is a render/export rule, never a parse rule.
+        let item: FittingItem =
+            serde_json::from_str(r#"{"flag":"Cargo","quantity":-3,"type_id":36}"#).expect("parses");
+        assert_eq!(item.flag, "Cargo");
+        assert_eq!(item.quantity, -3);
+        assert_eq!(item.type_id, 36);
     }
 }
