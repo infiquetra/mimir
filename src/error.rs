@@ -93,6 +93,8 @@ pub enum AuthError {
     Http(#[from] reqwest::Error),
     #[error("[AUTH] state mismatch")]
     StateMismatch,
+    #[error("[AUTH] step-up sign-in returned a different character than expected")]
+    CharacterMismatch,
     #[error("[AUTH] authorization was denied or failed: {0}")]
     Denied(String),
     #[error("[AUTH] callback did not contain an authorization code")]

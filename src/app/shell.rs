@@ -6,7 +6,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use super::state::{
-    AppState, AssetsData, AuthState, CharacterSummary, LoadState, SkillsData, View, WalletData,
+    AppState, AssetsData, AuthState, CharacterSummary, LoadState, SkillsData, StepUpRequest, View,
+    WalletData,
 };
 use crate::auth::callback_server::CallbackServer;
 use crate::auth::oauth;
@@ -45,6 +46,9 @@ enum BackendMsg {
     },
     LoggedIn {
         row: CharacterRow,
+    },
+    StepUpLoggedIn {
+        character_id: i64,
     },
     LoginFailed {
         message: String,
@@ -497,6 +501,27 @@ impl MimirApp {
                     self.state.status_message = "Signed in. Refreshing...".to_string();
                     self.state.request_refresh("post-login");
                 }
+                BackendMsg::StepUpLoggedIn { character_id } => {
+                    tracing::info!("[AUTH] step-up complete character_id={}", character_id);
+                    self.state.auth = AuthState::Success;
+                    if self.state.active_character_id == Some(character_id) {
+                        // Do NOT clear assets_needs_reauthorize here: login
+                        // success alone does not prove the grant loads data.
+                        // The Refreshed Ok(assets) arm clears it once a
+                        // refresh actually succeeds; a failed refresh leaves
+                        // the Re-authorize panel in place.
+                        // request_refresh sets its own generic status, so the
+                        // specific step-up status must be set after it.
+                        self.state.request_refresh("post-stepup");
+                        self.state.status_message = "Permission granted. Refreshing...".to_string();
+                    } else {
+                        self.state.status_message = "Permission granted. Refreshing...".to_string();
+                        tracing::warn!(
+                            "[AUTH] step-up finished for non-active character_id={}",
+                            character_id
+                        );
+                    }
+                }
                 BackendMsg::LoginFailed { message } => {
                     tracing::warn!("[AUTH] login failed: {}", message);
                     self.state.auth = AuthState::Error;
@@ -526,11 +551,36 @@ impl MimirApp {
             self.state.login_requested = false;
             self.start_login();
         }
+        if let Some(request) = self.state.stepup_requested.take() {
+            self.start_stepup_login(request);
+        }
         if let Some(id) = self.state.logout_requested_id.take() {
-            self.logout(id);
+            // UI disables these buttons while busy; this drain guard is
+            // the backstop so no path can delete tokens mid-callback.
+            if self.state.auth.is_busy() {
+                tracing::warn!(
+                    "[AUTH] ignoring logout while sign-in in progress character_id={}",
+                    id
+                );
+                self.state.status_message =
+                    "Finish sign-in in your browser before logging out or deleting characters."
+                        .to_string();
+            } else {
+                self.logout(id);
+            }
         }
         if let Some(id) = self.state.delete_requested_id.take() {
-            self.delete_character(id);
+            if self.state.auth.is_busy() {
+                tracing::warn!(
+                    "[AUTH] ignoring delete while sign-in in progress character_id={}",
+                    id
+                );
+                self.state.status_message =
+                    "Finish sign-in in your browser before logging out or deleting characters."
+                        .to_string();
+            } else {
+                self.delete_character(id);
+            }
         }
     }
 
@@ -805,6 +855,193 @@ impl MimirApp {
             match outcome {
                 Ok(row) => {
                     let _ = tx.send(BackendMsg::LoggedIn { row });
+                }
+                Err(e) => {
+                    let _ = tx.send(BackendMsg::LoginFailed {
+                        message: e.to_string(),
+                    });
+                }
+            }
+        });
+    }
+
+    fn start_stepup_login(&mut self, request: StepUpRequest) {
+        if self.state.demo {
+            tracing::warn!(
+                "[AUTH] step-up ignored in demo mode character_id={}",
+                request.character_id
+            );
+            self.state.status_message =
+                "Demo mode uses sample data; EVE sign-in is disabled.".to_string();
+            return;
+        }
+        if self.state.auth.is_busy() {
+            tracing::warn!(
+                "[AUTH] step-up ignored; sign-in already in progress character_id={}",
+                request.character_id
+            );
+            self.state.status_message =
+                "Sign-in already in progress; finish it in your browser first.".to_string();
+            return;
+        }
+        let (Some(backends), Some(runtime)) = (self.backends.as_ref(), self.runtime.as_ref())
+        else {
+            self.state.status_message =
+                "Step-up sign-in unavailable: live backends not wired.".to_string();
+            return;
+        };
+        if !self
+            .state
+            .characters
+            .iter()
+            .any(|c| c.character_id == request.character_id)
+        {
+            tracing::warn!(
+                "[AUTH] step-up skipped for unknown character_id={}",
+                request.character_id
+            );
+            self.state.status_message =
+                "Step-up sign-in skipped: that character is no longer in Mimir.".to_string();
+            return;
+        }
+        let granted: Vec<String> = match backends.db.lock() {
+            Ok(conn) => match repositories::get_token_meta(&conn, request.character_id) {
+                Ok(Some(meta)) => oauth::split_scopes(&meta.scopes),
+                Ok(None) => {
+                    tracing::debug!(
+                        "[AUTH] step-up no token_meta row; treating granted scopes as empty character_id={}",
+                        request.character_id
+                    );
+                    Vec::new()
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "[AUTH] step-up token_meta read failed character_id={} error={}",
+                        request.character_id,
+                        e
+                    );
+                    Vec::new()
+                }
+            },
+            Err(e) => {
+                tracing::warn!(
+                    "[AUTH] step-up token_meta lock failed character_id={} error={}",
+                    request.character_id,
+                    e
+                );
+                Vec::new()
+            }
+        };
+        let missing = oauth::missing_scopes(&granted, &request.scopes);
+        tracing::info!(
+            "[AUTH] step-up pre-check character_id={} granted={} requested={} missing={}",
+            request.character_id,
+            granted.len(),
+            request.scopes.join(" "),
+            missing.len()
+        );
+        if missing.is_empty() {
+            tracing::info!(
+                "[AUTH] step-up skipped; scopes already granted character_id={}",
+                request.character_id
+            );
+            // request_refresh sets its own generic status, so the specific
+            // already-granted status must be set after it.
+            self.state.request_refresh("stepup-already-granted");
+            self.state.status_message =
+                "That permission is already granted. Refreshing...".to_string();
+            return;
+        }
+        let union = oauth::union_scopes(&granted, &request.scopes);
+        let scopes_string = oauth::join_scopes(&union);
+        tracing::debug!(
+            "[AUTH] step-up scope union scopes={} count={}",
+            union.join(" "),
+            union.len()
+        );
+        let auth_request = match oauth::create_authorization_request_with_scopes(&scopes_string) {
+            Ok(r) => r,
+            Err(e) => {
+                self.state.auth = AuthState::Error;
+                self.state.status_message = format!("Step-up sign-in failed: {e}");
+                return;
+            }
+        };
+        tracing::info!("[AUTH] opening browser for EVE SSO step-up (url not logged with state)");
+        if let Err(e) = open::that(auth_request.authorize_url.as_str()) {
+            self.state.auth = AuthState::Error;
+            self.state.status_message = format!("Could not open browser: {e}");
+            return;
+        }
+        self.state.auth = AuthState::AwaitingCallback;
+        let token_store = backends.token_store.clone();
+        let db = backends.db.clone();
+        let tx = self.tx.clone();
+        let expected_character_id = request.character_id;
+        // The callback must prove the returned token retains every
+        // previously granted scope plus the requested ones, not just
+        // the newly requested delta.
+        let expected_scopes = union;
+        runtime.spawn(async move {
+            let outcome = async {
+                let params = CallbackServer::new().wait_for_callback().await?;
+                let code = params.into_result(&auth_request.state)?;
+                let tokens = oauth::exchange_code(&code, &auth_request.pkce.verifier).await?;
+                let claims = oauth::parse_jwt_claims(&tokens.access_token)?;
+                let character_id =
+                    oauth::validate_expected_character(&claims, expected_character_id)?;
+                let still_missing = oauth::missing_scopes(&claims.scp, &expected_scopes);
+                if !still_missing.is_empty() {
+                    tracing::warn!(
+                        "[AUTH] step-up returned without granted or requested scopes character_id={} missing={}",
+                        character_id,
+                        still_missing.join(" ")
+                    );
+                    return Err(crate::AppError::from(crate::AuthError::Message(
+                        "EVE did not grant the requested scope(s); nothing was saved"
+                            .to_string(),
+                    )));
+                }
+                // The character may have been removed during the browser
+                // wait (UI and drain guards block the known paths; this
+                // save-time re-check is the backstop so deleted characters
+                // never regain stored tokens).
+                {
+                    let conn = db.lock().map_err(|_| {
+                        crate::AppError::from(crate::AuthError::Message(
+                            "could not verify the character still exists; nothing was saved"
+                                .to_string(),
+                        ))
+                    })?;
+                    if repositories::get_character(&conn, character_id)?.is_none() {
+                        tracing::warn!(
+                            "[AUTH] discarding step-up tokens for removed character_id={} (nothing saved)",
+                            character_id
+                        );
+                        return Err(crate::AppError::from(crate::AuthError::Message(
+                            "that character was removed during sign-in; nothing was saved"
+                                .to_string(),
+                        )));
+                    }
+                }
+                let stored = StoredTokens::from_token_response(character_id, &tokens);
+                token_store.save(&stored)?;
+                if let Ok(conn) = db.lock() {
+                    let _ = repositories::set_token_meta(
+                        &conn,
+                        &TokenMetaRow {
+                            character_id,
+                            scopes: claims.scp.join(" "),
+                            expires_at: claims.exp,
+                        },
+                    );
+                }
+                Ok::<_, crate::AppError>(character_id)
+            }
+            .await;
+            match outcome {
+                Ok(character_id) => {
+                    let _ = tx.send(BackendMsg::StepUpLoggedIn { character_id });
                 }
                 Err(e) => {
                     let _ = tx.send(BackendMsg::LoginFailed {

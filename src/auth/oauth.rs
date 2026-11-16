@@ -59,6 +59,89 @@ fn ssplit_scopes(s: &str) -> Vec<String> {
     s.split_whitespace().map(|p| p.to_string()).collect()
 }
 
+/// Split a space-separated EVE scope string (the `token_meta.scopes`
+/// shape) into individual scopes. Empty input yields an empty vec.
+pub fn split_scopes(scopes: &str) -> Vec<String> {
+    scopes.split_whitespace().map(|p| p.to_string()).collect()
+}
+
+/// Join scopes into the space-separated form EVE SSO expects.
+pub fn join_scopes(scopes: &[String]) -> String {
+    scopes.join(" ")
+}
+
+/// Granted ∪ requested, first occurrence wins: granted order first,
+/// then requested scopes not already present, in requested order.
+/// Exact string equality; empty strings are skipped. Duplicates inside
+/// either input collapse to their first occurrence.
+pub fn union_scopes(granted: &[String], requested: &[String]) -> Vec<String> {
+    let mut union: Vec<String> = Vec::new();
+    for scope in granted.iter().chain(requested.iter()) {
+        if !scope.is_empty() && !union.contains(scope) {
+            union.push(scope.clone());
+        }
+    }
+    tracing::debug!(
+        "[AUTH] scope union granted={} requested={} union={}",
+        granted.len(),
+        requested.len(),
+        union.len()
+    );
+    union
+}
+
+/// Requested scopes not present in granted, in requested order,
+/// duplicates collapsed, empty strings skipped. Empty result means
+/// "already granted" (including when `requested` is empty).
+pub fn missing_scopes(granted: &[String], requested: &[String]) -> Vec<String> {
+    let mut missing: Vec<String> = Vec::new();
+    for scope in requested {
+        if !scope.is_empty() && !granted.contains(scope) && !missing.contains(scope) {
+            missing.push(scope.clone());
+        }
+    }
+    tracing::debug!(
+        "[AUTH] missing scopes granted={} requested={} missing={}",
+        granted.len(),
+        requested.len(),
+        missing.len()
+    );
+    missing
+}
+
+/// Validate that exchanged token claims belong to the character the
+/// step-up was started for. Ok carries the validated character id.
+/// Unparsable `sub` -> AuthError::MalformedToken (same as the
+/// first-login tail); a different character -> the new
+/// AuthError::CharacterMismatch. Logs expected/actual ids at warn on
+/// mismatch under [AUTH]; never receives or logs token values.
+pub fn validate_expected_character(
+    claims: &JwtClaims,
+    expected_character_id: i64,
+) -> Result<i64, AuthError> {
+    match claims.character_id() {
+        Some(actual) if actual == expected_character_id => {
+            tracing::debug!("[AUTH] step-up character validated character_id={}", actual);
+            Ok(actual)
+        }
+        Some(actual) => {
+            tracing::warn!(
+                "[AUTH] step-up character mismatch expected={} actual={}",
+                expected_character_id,
+                actual
+            );
+            Err(AuthError::CharacterMismatch)
+        }
+        None => {
+            tracing::warn!(
+                "[AUTH] step-up claims have unparsable subject expected={}",
+                expected_character_id
+            );
+            Err(AuthError::MalformedToken)
+        }
+    }
+}
+
 /// JWT claims parsed without signature verification (same as Flutter; JWKS
 /// verification is a named hardening follow-up in the design).
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -533,6 +616,123 @@ mod tests {
             parse_callback_url(&no_code, "st"),
             Err(AuthError::MissingCode)
         ));
+    }
+
+    fn scopes(items: &[&str]) -> Vec<String> {
+        items.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn union_scopes_is_order_preserving_and_dedups() {
+        assert_eq!(
+            union_scopes(&scopes(&["b", "a", "b"]), &scopes(&["a", "c", "c"])),
+            scopes(&["b", "a", "c"])
+        );
+        assert!(union_scopes(&[], &[]).is_empty());
+        assert_eq!(
+            union_scopes(&[], &scopes(&["a", "a", "b"])),
+            scopes(&["a", "b"])
+        );
+        assert_eq!(union_scopes(&scopes(&["a"]), &[]), scopes(&["a"]));
+        assert_eq!(
+            union_scopes(&scopes(&["", "a"]), &scopes(&["", "b"])),
+            scopes(&["a", "b"])
+        );
+    }
+
+    #[test]
+    fn missing_scopes_covers_granted_partial_and_empty() {
+        // Already granted -> empty (the no-browser decision input).
+        assert!(missing_scopes(&scopes(&["a", "b"]), &scopes(&["b"])).is_empty());
+        // Empty granted -> everything requested is missing.
+        assert_eq!(
+            missing_scopes(&[], &scopes(&["a", "b"])),
+            scopes(&["a", "b"])
+        );
+        // Partial -> only the missing ones, in requested order.
+        assert_eq!(
+            missing_scopes(&scopes(&["b"]), &scopes(&["a", "b", "c"])),
+            scopes(&["a", "c"])
+        );
+        // Duplicate requested entries appear once; empties skipped.
+        assert_eq!(
+            missing_scopes(&[], &scopes(&["a", "a", "", "b"])),
+            scopes(&["a", "b"])
+        );
+        // Empty requested -> empty (already granted).
+        assert!(missing_scopes(&scopes(&["a"]), &[]).is_empty());
+        assert!(missing_scopes(&[], &[]).is_empty());
+    }
+
+    #[test]
+    fn missing_scopes_against_union_detects_dropped_granted_scope() {
+        // Step-up completion validates the returned token against
+        // granted ∪ requested: gaining the new scope while losing a
+        // previously granted one must be detected, not saved.
+        let granted = scopes(&[
+            "esi-wallet.read_character_wallet.v1",
+            "esi-skills.read_skills.v1",
+        ]);
+        let requested = scopes(&["esi-assets.read_assets.v1"]);
+        let expected = union_scopes(&granted, &requested);
+        let returned = scopes(&["esi-skills.read_skills.v1", "esi-assets.read_assets.v1"]);
+        assert_eq!(
+            missing_scopes(&returned, &expected),
+            scopes(&["esi-wallet.read_character_wallet.v1"])
+        );
+        // Checking only the requested scope would have passed.
+        assert!(missing_scopes(&returned, &requested).is_empty());
+    }
+
+    #[test]
+    fn split_and_join_scopes_roundtrip() {
+        assert_eq!(split_scopes("a  b\t c"), scopes(&["a", "b", "c"]));
+        assert!(split_scopes("").is_empty());
+        assert!(split_scopes("   ").is_empty());
+        assert_eq!(join_scopes(&split_scopes("a  b   c")), "a b c");
+        assert_eq!(join_scopes(&[]), "");
+        assert_eq!(join_scopes(&scopes(&["a"])), "a");
+    }
+
+    #[test]
+    fn validate_expected_character_match_mismatch_and_malformed() {
+        let token = fake_jwt(r#"{"sub":"CHARACTER:EVE:12345","name":"Fixture","exp":9999999999}"#);
+        let claims = parse_jwt_claims(&token).expect("claims parse");
+        assert!(matches!(
+            validate_expected_character(&claims, 12345),
+            Ok(12345)
+        ));
+        assert!(matches!(
+            validate_expected_character(&claims, 999),
+            Err(AuthError::CharacterMismatch)
+        ));
+        for bad_sub in ["", "CHARACTER:EVE:abc", "WRONG:EVE:12345", "CHARACTER:EVE:"] {
+            let bad = JwtClaims {
+                sub: bad_sub.to_string(),
+                ..JwtClaims::default()
+            };
+            assert!(matches!(
+                validate_expected_character(&bad, 12345),
+                Err(AuthError::MalformedToken)
+            ));
+        }
+    }
+
+    #[test]
+    fn scoped_authorize_url_carries_exact_scopes() {
+        let url = build_authorize_url_with_scopes("chal", "st", "scope-one scope-two")
+            .expect("url builds");
+        // Assert by parsed query pairs so URL-encoding of the space
+        // cannot make the test brittle. Never print the URL.
+        let scope = url
+            .query_pairs()
+            .find(|(k, _)| k == "scope")
+            .map(|(_, v)| v.into_owned());
+        assert_eq!(scope.as_deref(), Some("scope-one scope-two"));
+        assert_eq!(
+            split_scopes(scope.as_deref().unwrap_or_default()),
+            scopes(&["scope-one", "scope-two"])
+        );
     }
 
     #[test]

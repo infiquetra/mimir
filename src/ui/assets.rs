@@ -5,7 +5,8 @@
 use std::collections::{BTreeMap, HashMap};
 
 use super::widgets;
-use crate::app::state::{AppState, AssetsData, LoadState};
+use crate::app::state::{AppState, AssetsData, LoadState, StepUpRequest};
+use crate::config::EveConfig;
 use crate::esi::models::AssetItem;
 use crate::names::resolver::NameResolver;
 
@@ -153,21 +154,44 @@ pub fn filter_groups(groups: &[AssetLocationGroup], query: &str) -> Vec<AssetLoc
     out
 }
 
-/// Honest step-up guidance: names the missing scope, offers no button
-/// that pretends to grant it (that flow is a follow-up, design D4).
-fn reauthorize_panel(ui: &mut egui::Ui) {
+/// Step-up guidance with a real Re-authorize button: the button only
+/// sets the shell's step-up request flag for the active character.
+fn reauthorize_panel(ui: &mut egui::Ui, state: &mut AppState) {
     ui.heading("Assets need one more EVE permission.");
     ui.label(
         "This character has not granted esi-assets.read_assets.v1, the EVE SSO \
          scope that lets Mimir read the character asset list. No asset data was \
          loaded, and your other views are unaffected.",
     );
-    ui.label(
-        "Granting extra scopes after first sign-in (step-up sign-in) is not in \
-         this build yet, so this view stays empty for this character until that \
-         follow-up lands. Demo mode (Settings) shows the full Assets view with \
-         sample data.",
-    );
+    let active_id = state.active_character_id;
+    if let Some(name) = state.active_character().map(|c| c.name.clone()) {
+        ui.label(format!(
+            "Choose Re-authorize and Mimir opens EVE SSO in your browser for {name}, \
+             asking for the permissions already granted plus this one. Sign in as \
+             {name}: approving as a different character is rejected and nothing \
+             is saved."
+        ));
+    }
+    let enabled = !state.demo && !state.auth.is_busy() && state.active_character_id.is_some();
+    if state.auth.is_busy() {
+        ui.spinner();
+        ui.label(state.auth.label());
+    }
+    if ui
+        .add_enabled(enabled, egui::Button::new("Re-authorize with EVE SSO"))
+        .clicked()
+    {
+        if let Some(active_id) = active_id {
+            tracing::info!(
+                "[AUTH] step-up re-authorize requested from Assets view character_id={} scopes={}",
+                active_id,
+                EveConfig::ASSETS_SCOPES.join(" ")
+            );
+            state.stepup_requested = Some(StepUpRequest::new(active_id, EveConfig::ASSETS_SCOPES));
+            state.status_message =
+                "EVE SSO requested: your browser should open to login.eveonline.com.".to_string();
+        }
+    }
 }
 
 pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
@@ -179,7 +203,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
     }
     if state.assets_needs_reauthorize {
         tracing::debug!("[ASSETS] showing re-authorize guidance (missing scope)");
-        reauthorize_panel(ui);
+        reauthorize_panel(ui, state);
         return;
     }
     // Clone the snapshot so the search box can borrow `state` mutably.

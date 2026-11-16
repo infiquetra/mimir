@@ -148,13 +148,26 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
     {
         ui.separator();
         ui.horizontal(|ui| {
-            if ui.button(format!("Log out {}", active.1)).clicked() {
+            // Logout/delete must not race an in-flight browser sign-in:
+            // removing tokens mid-callback would let the completion save
+            // fresh tokens for a character the user just removed.
+            let auth_idle = !state.auth.is_busy();
+            if ui
+                .add_enabled(
+                    auth_idle,
+                    egui::Button::new(format!("Log out {}", active.1)),
+                )
+                .clicked()
+            {
                 tracing::info!("[AUTH] logout requested character selected");
                 state.logout_requested_id = Some(active.0);
                 state.status_message = "Logout requested (token cleanup runs via F1).".to_string();
             }
             if state.confirm_delete_id == Some(active.0) {
-                if ui.button("Confirm delete").clicked() {
+                if ui
+                    .add_enabled(auth_idle, egui::Button::new("Confirm delete"))
+                    .clicked()
+                {
                     tracing::warn!("[CHAR] delete confirmed character selected");
                     state.delete_requested_id = Some(active.0);
                     state.confirm_delete_id = None;
@@ -164,7 +177,10 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
                 if ui.button("Cancel").clicked() {
                     state.confirm_delete_id = None;
                 }
-            } else if ui.button("Delete character...").clicked() {
+            } else if ui
+                .add_enabled(auth_idle, egui::Button::new("Delete character..."))
+                .clicked()
+            {
                 tracing::info!("[CHAR] delete requested, awaiting confirmation");
                 state.confirm_delete_id = Some(active.0);
             }
