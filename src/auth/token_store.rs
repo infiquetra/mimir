@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::auth::oauth::{expiry_for, needs_refresh, TokenResponse};
+use crate::auth::oauth::{expiry_for_verified, needs_refresh, JwtClaims, TokenResponse};
 use crate::config::{now_unix, EveConfig};
 use crate::error::{AppError, AppResult};
 
@@ -68,19 +68,28 @@ impl std::fmt::Debug for StoredTokens {
 }
 
 impl StoredTokens {
-    pub fn from_token_response(character_id: i64, response: &TokenResponse) -> Self {
+    /// Build stored tokens from a token response whose access token has
+    /// already been signature-verified; expiry comes from the verified
+    /// claims, never from an unverified re-parse.
+    pub fn from_token_response(
+        character_id: i64,
+        response: &TokenResponse,
+        claims: &JwtClaims,
+    ) -> Self {
         tracing::debug!("[AUTH] building StoredTokens character_id={}", character_id);
         Self {
             character_id,
             access: AccessToken(response.access_token.clone()),
             refresh: RefreshToken(response.refresh_token.clone()),
-            expires_at_unix: expiry_for(response),
+            expires_at_unix: expiry_for_verified(response, claims),
         }
     }
 
-    /// Merge a refresh response: EVE rotates refresh tokens, but keep the
-    /// old one if a response ever omits the field.
-    pub fn apply_refresh(&mut self, response: &TokenResponse) {
+    /// Merge a refresh response whose access token has already been
+    /// signature-verified: EVE rotates refresh tokens, but keep the
+    /// old one if a response ever omits the field. Expiry comes from
+    /// the verified claims.
+    pub fn apply_refresh(&mut self, response: &TokenResponse, claims: &JwtClaims) {
         tracing::debug!(
             "[AUTH] applying refreshed tokens character_id={}",
             self.character_id
@@ -89,7 +98,7 @@ impl StoredTokens {
         if !response.refresh_token.is_empty() {
             self.refresh = RefreshToken(response.refresh_token.clone());
         }
-        self.expires_at_unix = expiry_for(response);
+        self.expires_at_unix = expiry_for_verified(response, claims);
     }
 
     pub fn needs_refresh_at(&self, now_unix_secs: i64) -> bool {
@@ -400,9 +409,14 @@ mod tests {
             expires_in: 1199,
             token_type: "Bearer".to_string(),
         };
-        tokens.apply_refresh(&response);
+        let claims = JwtClaims {
+            exp: now_unix() + 1199,
+            ..JwtClaims::default()
+        };
+        tokens.apply_refresh(&response, &claims);
         assert_eq!(tokens.access.as_str(), "new-access");
         assert_eq!(tokens.refresh.as_str(), "secret-refresh-value");
+        assert_eq!(tokens.expires_at_unix, claims.exp);
         assert!(!tokens.needs_refresh_now());
     }
 }

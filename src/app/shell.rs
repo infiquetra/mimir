@@ -10,6 +10,7 @@ use super::state::{
     WalletData,
 };
 use crate::auth::callback_server::CallbackServer;
+use crate::auth::jwt_verify::JwtVerifier;
 use crate::auth::oauth;
 use crate::auth::token_store::{StoredTokens, TokenStore};
 use crate::demo::data::DemoBundle;
@@ -30,6 +31,7 @@ pub struct Backends {
     pub esi: Arc<EsiClient>,
     pub token_store: Arc<TokenStore>,
     pub db: Arc<Mutex<rusqlite::Connection>>,
+    pub jwt_verifier: Option<Arc<JwtVerifier>>,
 }
 
 enum BackendMsg {
@@ -795,9 +797,26 @@ impl MimirApp {
     }
 
     fn start_login(&mut self) {
+        if self.state.demo {
+            // Demo mode is fully local: no browser flow and zero
+            // verification (JWKS) network calls.
+            tracing::warn!("[AUTH] sign-in ignored in demo mode");
+            self.state.status_message =
+                "Demo mode uses sample data; EVE sign-in is disabled.".to_string();
+            return;
+        }
         let (Some(backends), Some(runtime)) = (self.backends.as_ref(), self.runtime.as_ref())
         else {
             self.state.status_message = "Sign-in unavailable: live backends not wired.".to_string();
+            return;
+        };
+        // Fail before the browser, not after the callback: never let the
+        // user complete an EVE consent flow whose token could not be
+        // verified for a local wiring reason known beforehand.
+        let Some(jwt_verifier) = backends.jwt_verifier.clone() else {
+            tracing::warn!("[AUTH] sign-in blocked: token verification not wired");
+            self.state.status_message =
+                "Sign-in unavailable: token verification not wired.".to_string();
             return;
         };
         let request = match oauth::create_authorization_request() {
@@ -823,11 +842,13 @@ impl MimirApp {
                 let params = CallbackServer::new().wait_for_callback().await?;
                 let code = params.into_result(&request.state)?;
                 let tokens = oauth::exchange_code(&code, &request.pkce.verifier).await?;
-                let claims = oauth::parse_jwt_claims(&tokens.access_token)?;
+                // Verify the signature before any claims field is read:
+                // a rejection aborts via LoginFailed with nothing saved.
+                let claims = jwt_verifier.verify(&tokens.access_token).await?;
                 let character_id = claims
                     .character_id()
                     .ok_or(crate::AuthError::MalformedToken)?;
-                let stored = StoredTokens::from_token_response(character_id, &tokens);
+                let stored = StoredTokens::from_token_response(character_id, &tokens, &claims);
                 token_store.save(&stored)?;
                 if let Ok(conn) = db.lock() {
                     let _ = repositories::set_token_meta(
@@ -952,6 +973,19 @@ impl MimirApp {
                 "That permission is already granted. Refreshing...".to_string();
             return;
         }
+        // Fail before the browser (after the already-granted shortcut
+        // above, which needs no step-up tail): never let the user
+        // complete an EVE consent flow whose token could not be
+        // verified for a local wiring reason known beforehand.
+        let Some(jwt_verifier) = backends.jwt_verifier.clone() else {
+            tracing::warn!(
+                "[AUTH] step-up blocked: token verification not wired character_id={}",
+                request.character_id
+            );
+            self.state.status_message =
+                "Step-up sign-in unavailable: token verification not wired.".to_string();
+            return;
+        };
         let union = oauth::union_scopes(&granted, &request.scopes);
         let scopes_string = oauth::join_scopes(&union);
         tracing::debug!(
@@ -987,7 +1021,10 @@ impl MimirApp {
                 let params = CallbackServer::new().wait_for_callback().await?;
                 let code = params.into_result(&auth_request.state)?;
                 let tokens = oauth::exchange_code(&code, &auth_request.pkce.verifier).await?;
-                let claims = oauth::parse_jwt_claims(&tokens.access_token)?;
+                // Verify the signature before the character/scope checks:
+                // a rejection aborts via LoginFailed with nothing saved.
+                // Those checks keep their logic, now on verified claims.
+                let claims = jwt_verifier.verify(&tokens.access_token).await?;
                 let character_id =
                     oauth::validate_expected_character(&claims, expected_character_id)?;
                 let still_missing = oauth::missing_scopes(&claims.scp, &expected_scopes);
@@ -1024,7 +1061,7 @@ impl MimirApp {
                         )));
                     }
                 }
-                let stored = StoredTokens::from_token_response(character_id, &tokens);
+                let stored = StoredTokens::from_token_response(character_id, &tokens, &claims);
                 token_store.save(&stored)?;
                 if let Ok(conn) = db.lock() {
                     let _ = repositories::set_token_meta(

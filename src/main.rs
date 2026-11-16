@@ -5,6 +5,7 @@ use std::io::Write;
 use std::sync::{Arc, Mutex};
 
 use mimir::app::shell::{Backends, MimirApp};
+use mimir::auth::jwt_verify::JwtVerifier;
 use mimir::auth::token_store::TokenStore;
 use mimir::storage::db;
 use mimir::EsiClient;
@@ -81,18 +82,41 @@ fn main() -> eframe::Result<()> {
                 db::db_path().display()
             );
             let token_store = Arc::new(TokenStore::new(db::app_data_dir()));
+            // One shared verifier so login, step-up, and refresh see a
+            // single JWKS cache. Construction makes no network call;
+            // demo mode skips it entirely (zero verification calls).
+            let jwt_verifier = if demo {
+                tracing::debug!("[AUTH] JWT verifier skipped in demo mode");
+                None
+            } else {
+                match JwtVerifier::new() {
+                    Ok(verifier) => Some(Arc::new(verifier)),
+                    Err(e) => {
+                        tracing::warn!("[AUTH] JWT verifier construction failed: {}", e);
+                        None
+                    }
+                }
+            };
+            let attach_verifier = |client: EsiClient| match &jwt_verifier {
+                Some(verifier) => client.with_jwt_verifier(verifier.clone()),
+                None => client,
+            };
             match EsiClient::new() {
                 Ok(client) => Some(Backends {
-                    esi: Arc::new(client.with_token_store(token_store.clone())),
+                    esi: Arc::new(attach_verifier(
+                        client.with_token_store(token_store.clone()),
+                    )),
                     token_store,
                     db: Arc::new(Mutex::new(conn)),
+                    jwt_verifier,
                 }),
                 Err(e) => {
                     tracing::warn!("[ESI] client construction failed: {}", e);
                     Some(Backends {
-                        esi: Arc::new(EsiClient::default()),
+                        esi: Arc::new(attach_verifier(EsiClient::default())),
                         token_store,
                         db: Arc::new(Mutex::new(conn)),
+                        jwt_verifier,
                     })
                 }
             }
