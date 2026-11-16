@@ -3,8 +3,10 @@
 //! resolved names only, never raw numeric IDs.
 
 pub mod exploration_ref;
+pub mod fitting_types;
 pub mod resolver;
 pub mod sde;
 
+pub use fitting_types::{normalize_type_name, FittingType, FittingTypes, NameLookup};
 pub use resolver::NameResolver;
 pub use sde::Sde;
