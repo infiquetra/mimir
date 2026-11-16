@@ -1,6 +1,7 @@
 pub mod assets;
 pub mod characters;
 pub mod dashboard;
+pub mod industry;
 pub mod market;
 pub mod settings;
 pub mod skills;

@@ -11,8 +11,9 @@ use chrono::{DateTime, Utc};
 
 use crate::app::state::{
     market_region_name, ship_display_name, summary_location_name, AppState, AssetsData,
-    CharacterDetailData, CharacterOrdersData, CharacterSummary, LoadState, MarketData,
-    MarketSelection, PublicOrdersData, SkillsData, WalletData,
+    BlueprintsData, CharacterDetailData, CharacterOrdersData, CharacterSummary, IndustryData,
+    IndustryJobsData, LoadState, MarketData, MarketSelection, PublicOrdersData, SkillsData,
+    WalletData,
 };
 use crate::error::{AppError, AppResult};
 use crate::esi::models::*;
@@ -31,6 +32,7 @@ pub const DEMO_ASSETS_JSON: &str = include_str!("../../assets/demo/assets.json")
 pub const DEMO_CHARACTER_DETAIL_JSON: &str =
     include_str!("../../assets/demo/character_detail.json");
 pub const DEMO_MARKET_JSON: &str = include_str!("../../assets/demo/market.json");
+pub const DEMO_INDUSTRY_JSON: &str = include_str!("../../assets/demo/industry.json");
 
 /// Command-line flag that selects demo mode (design section 1).
 pub const DEMO_FLAG: &str = "--demo";
@@ -93,6 +95,17 @@ pub struct DemoMarketData {
     pub character_orders_truncated: bool,
 }
 
+/// One demo character's industry fixture: raw row sets. Demo
+/// seeding composes an `IndustryData` from this with both
+/// sections Ok, so this is deliberately not `IndustryData`.
+#[derive(Debug, Clone, Default)]
+pub struct DemoIndustryData {
+    pub jobs: Vec<IndustryJob>,
+    pub jobs_truncated: bool,
+    pub blueprints: Vec<CharacterBlueprint>,
+    pub blueprints_truncated: bool,
+}
+
 /// Everything one demo character shows in the Phase-1 views.
 #[derive(Debug, Clone, Default)]
 pub struct DemoCharacterData {
@@ -106,6 +119,7 @@ pub struct DemoCharacterData {
     pub custom_names: Vec<AssetName>,
     pub detail: Option<CharacterDetailData>,
     pub market: Option<DemoMarketData>,
+    pub industry: Option<DemoIndustryData>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -175,6 +189,18 @@ struct CharacterDetailFileEntry {
     ship: CharacterShip,
     #[serde(default)]
     online: CharacterOnline,
+}
+
+#[derive(serde::Deserialize, Default)]
+struct IndustryFileEntry {
+    #[serde(default)]
+    jobs: Vec<IndustryJob>,
+    #[serde(default)]
+    jobs_truncated: bool,
+    #[serde(default)]
+    blueprints: Vec<CharacterBlueprint>,
+    #[serde(default)]
+    blueprints_truncated: bool,
 }
 
 #[derive(serde::Deserialize, Default)]
@@ -254,7 +280,10 @@ pub fn load_demo_bundle_with_detail(
 }
 
 /// Parse a bundle including assets, character detail, and the market
-/// file. A `"{}"` market text yields `market: None` everywhere.
+/// file. Kept with its original meaning — no industry — so
+/// six-argument callers keep working unchanged (`industry: None`
+/// for everyone). A `"{}"` market text yields `market: None`
+/// everywhere.
 pub fn load_demo_bundle_with_market(
     characters_json: &str,
     skillqueue_json: &str,
@@ -262,6 +291,29 @@ pub fn load_demo_bundle_with_market(
     assets_json: &str,
     character_detail_json: &str,
     market_json: &str,
+) -> AppResult<DemoBundle> {
+    load_demo_bundle_with_industry(
+        characters_json,
+        skillqueue_json,
+        wallet_json,
+        assets_json,
+        character_detail_json,
+        market_json,
+        "{}",
+    )
+}
+
+/// Parse a bundle including assets, character detail, market, and the
+/// industry file. A `"{}"` industry text yields `industry: None`
+/// everywhere.
+pub fn load_demo_bundle_with_industry(
+    characters_json: &str,
+    skillqueue_json: &str,
+    wallet_json: &str,
+    assets_json: &str,
+    character_detail_json: &str,
+    market_json: &str,
+    industry_json: &str,
 ) -> AppResult<DemoBundle> {
     tracing::debug!("[DEMO] parsing demo bundle");
     let characters: CharactersFile = serde_json::from_str(characters_json)?;
@@ -271,6 +323,7 @@ pub fn load_demo_bundle_with_market(
     let detail_by_id: HashMap<String, CharacterDetailFileEntry> =
         serde_json::from_str(character_detail_json)?;
     let market_by_id: HashMap<String, MarketFileEntry> = serde_json::from_str(market_json)?;
+    let industry_by_id: HashMap<String, IndustryFileEntry> = serde_json::from_str(industry_json)?;
 
     let mut data: HashMap<i64, DemoCharacterData> = HashMap::new();
     for (key, entry) in skills_by_id {
@@ -342,6 +395,23 @@ pub fn load_demo_bundle_with_market(
         });
     }
 
+    for (key, entry) in industry_by_id {
+        let id = parse_character_key(&key)?;
+        tracing::debug!(
+            "[DEMO] character_id={} industry jobs={} blueprints={}",
+            id,
+            entry.jobs.len(),
+            entry.blueprints.len()
+        );
+        let slot = data.entry(id).or_default();
+        slot.industry = Some(DemoIndustryData {
+            jobs: entry.jobs,
+            jobs_truncated: entry.jobs_truncated,
+            blueprints: entry.blueprints,
+            blueprints_truncated: entry.blueprints_truncated,
+        });
+    }
+
     let bundle = DemoBundle {
         characters: characters.characters,
         data,
@@ -358,13 +428,14 @@ pub fn load_demo_bundle_with_market(
 /// Load the bundled demo JSON files into typed structures.
 pub fn load_demo_bundle() -> AppResult<DemoBundle> {
     tracing::debug!("[DEMO] loading bundled demo fixtures");
-    load_demo_bundle_with_market(
+    load_demo_bundle_with_industry(
         DEMO_CHARACTERS_JSON,
         DEMO_SKILLQUEUE_JSON,
         DEMO_WALLET_JSON,
         DEMO_ASSETS_JSON,
         DEMO_CHARACTER_DETAIL_JSON,
         DEMO_MARKET_JSON,
+        DEMO_INDUSTRY_JSON,
     )
 }
 
@@ -537,6 +608,45 @@ pub fn validate_bundle(bundle: &DemoBundle) -> AppResult<()> {
                     return Err(fail(format!(
                         "character {} duplicate history date {}",
                         character.character_id, entry.date
+                    )));
+                }
+            }
+        }
+        // Industry is optional the same way; validate only when
+        // present: job and blueprint item IDs unique, every job
+        // start/end and present pause/completed date parses.
+        if let Some(industry) = &per.industry {
+            let mut job_ids = HashSet::new();
+            for job in &industry.jobs {
+                if !job_ids.insert(job.job_id) {
+                    return Err(fail(format!(
+                        "character {} duplicate industry job id {}",
+                        character.character_id, job.job_id
+                    )));
+                }
+                for raw in [&job.start_date, &job.end_date] {
+                    if parse_esi_datetime(raw).is_none() {
+                        return Err(fail(format!(
+                            "character {} industry job date does not parse: {raw}",
+                            character.character_id
+                        )));
+                    }
+                }
+                for raw in [&job.pause_date, &job.completed_date].into_iter().flatten() {
+                    if parse_esi_datetime(raw).is_none() {
+                        return Err(fail(format!(
+                            "character {} industry job date does not parse: {raw}",
+                            character.character_id
+                        )));
+                    }
+                }
+            }
+            let mut item_ids = HashSet::new();
+            for blueprint in &industry.blueprints {
+                if !item_ids.insert(blueprint.item_id) {
+                    return Err(fail(format!(
+                        "character {} duplicate blueprint item_id {}",
+                        character.character_id, blueprint.item_id
                     )));
                 }
             }
@@ -833,6 +943,27 @@ pub fn apply_character(state: &mut AppState, bundle: &DemoBundle, character_id: 
             state.market_selected_type_name = None;
         }
     }
+    // Empty-if-absent industry, same rule: a demo switch can never
+    // leave the previous character's jobs or blueprints installed.
+    // Search text and kind filter are view-local and untouched.
+    tracing::debug!(
+        "[DEMO] apply_character character_id={} industry_present={}",
+        character_id,
+        per.industry.is_some()
+    );
+    state.industry = match &per.industry {
+        Some(fixture) => LoadState::Ready(IndustryData {
+            jobs: Ok(IndustryJobsData {
+                jobs: fixture.jobs.clone(),
+                truncated: fixture.jobs_truncated,
+            }),
+            blueprints: Ok(BlueprintsData {
+                blueprints: fixture.blueprints.clone(),
+                truncated: fixture.blueprints_truncated,
+            }),
+        }),
+        None => LoadState::Empty,
+    };
 }
 
 /// Seed demo content into the UI state: both fictional characters, the
@@ -931,6 +1062,7 @@ pub fn seed_demo_state(state: &mut AppState) {
             state.assets = LoadState::Error(format!("Demo data failed to load: {e}"));
             state.character_details = LoadState::Error(format!("Demo data failed to load: {e}"));
             state.market = LoadState::Error(format!("Demo data failed to load: {e}"));
+            state.industry = LoadState::Error(format!("Demo data failed to load: {e}"));
         }
     }
 }
@@ -944,8 +1076,8 @@ pub fn seed_bundle_into_db(conn: &rusqlite::Connection, bundle: &DemoBundle) -> 
         bundle.characters.len()
     );
     let first_id = bundle.first_character_id();
-    // Assets, character detail, and market are in-memory only (no
-    // tables); nothing to persist for any of them.
+    // Assets, character detail, market, and industry are in-memory
+    // only (no tables); nothing to persist for any of them.
     for character in &bundle.characters {
         repositories::upsert_character(
             conn,
@@ -1247,6 +1379,7 @@ mod tests {
             assert!(per.custom_names.is_empty());
             assert!(per.detail.is_none(), "old loader yields no detail");
             assert!(per.market.is_none(), "old loader yields no market");
+            assert!(per.industry.is_none(), "old loader yields no industry");
         }
     }
 
@@ -1268,6 +1401,10 @@ mod tests {
             assert!(
                 per.market.is_none(),
                 "four-argument loader yields no market"
+            );
+            assert!(
+                per.industry.is_none(),
+                "four-argument loader yields no industry"
             );
         }
     }
@@ -1477,5 +1614,187 @@ mod tests {
         assert_eq!(state.market_selected_type_id, None);
         assert_eq!(state.market_selected_type_name, None);
         assert_eq!(state.market_region_id, 10000043);
+    }
+
+    #[test]
+    fn bundled_industry_loads_for_both_characters_and_empty_text_is_none() {
+        let bundle = load_demo_bundle().expect("bundled bundle loads");
+        for character in &bundle.characters {
+            let industry = bundle
+                .character_data(character.character_id)
+                .and_then(|per| per.industry.as_ref())
+                .unwrap_or_else(|| panic!("demo industry for {}", character.name));
+            assert!(!industry.jobs.is_empty(), "jobs for {}", character.name);
+            assert!(
+                !industry.blueprints.is_empty(),
+                "blueprints for {}",
+                character.name
+            );
+            assert!(!industry.jobs_truncated);
+            assert!(!industry.blueprints_truncated);
+        }
+        // Sentinel spread is present in the shipped fixture.
+        let aria = bundle
+            .character_data(90000001)
+            .and_then(|per| per.industry.as_ref())
+            .expect("aria industry");
+        assert!(aria
+            .blueprints
+            .iter()
+            .any(|b| b.quantity == -1 && b.runs == -1));
+        assert!(aria
+            .blueprints
+            .iter()
+            .any(|b| b.quantity == -2 && b.runs > 0));
+        assert!(aria.jobs.iter().any(|j| j.successful_runs.is_some()));
+        let marcus = bundle
+            .character_data(90000002)
+            .and_then(|per| per.industry.as_ref())
+            .expect("marcus industry");
+        assert!(
+            marcus.jobs.iter().any(|j| j.activity_id == 11),
+            "reaction job"
+        );
+        // "{}" industry text and every older arity yield no industry.
+        let empty = load_demo_bundle_with_industry(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+            DEMO_CHARACTER_DETAIL_JSON,
+            DEMO_MARKET_JSON,
+            "{}",
+        )
+        .expect("empty industry text loads");
+        assert!(empty.data.values().all(|per| per.industry.is_none()));
+        let market_only = load_demo_bundle_with_market(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+            DEMO_CHARACTER_DETAIL_JSON,
+            DEMO_MARKET_JSON,
+        )
+        .expect("six-argument bundle loads");
+        assert!(market_only.data.values().all(|per| per.industry.is_none()));
+        // Non-numeric character key in the industry file.
+        assert!(load_demo_bundle_with_industry(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+            DEMO_CHARACTER_DETAIL_JSON,
+            DEMO_MARKET_JSON,
+            r#"{"nope":{}}"#
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn industry_validation_rejects_bad_fixtures() {
+        fn mutate(bundle: &mut DemoBundle, f: impl FnOnce(&mut DemoIndustryData)) {
+            let first = bundle.first_character_id().expect("first character");
+            let per = bundle.data.get_mut(&first).expect("per-character data");
+            f(per.industry.as_mut().expect("industry present"));
+        }
+        let mut dupe_job = load_demo_bundle().expect("bundle");
+        mutate(&mut dupe_job, |i| {
+            let dupe = i.jobs[0].clone();
+            i.jobs.push(dupe);
+        });
+        assert!(validate_bundle(&dupe_job).is_err(), "duplicate job id");
+
+        let mut dupe_item = load_demo_bundle().expect("bundle");
+        mutate(&mut dupe_item, |i| {
+            let dupe = i.blueprints[0].clone();
+            i.blueprints.push(dupe);
+        });
+        assert!(validate_bundle(&dupe_item).is_err(), "duplicate item id");
+
+        let mut bad_end = load_demo_bundle().expect("bundle");
+        mutate(&mut bad_end, |i| {
+            i.jobs[0].end_date = "not a date".to_string()
+        });
+        assert!(validate_bundle(&bad_end).is_err(), "unparseable end");
+
+        let mut bad_start = load_demo_bundle().expect("bundle");
+        mutate(&mut bad_start, |i| {
+            i.jobs[0].start_date = String::new();
+        });
+        assert!(validate_bundle(&bad_start).is_err(), "empty start");
+
+        let mut bad_completed = load_demo_bundle().expect("bundle");
+        mutate(&mut bad_completed, |i| {
+            let job = i
+                .jobs
+                .iter_mut()
+                .find(|j| j.completed_date.is_some())
+                .expect("a delivered job");
+            job.completed_date = Some("not a date".to_string());
+        });
+        assert!(
+            validate_bundle(&bad_completed).is_err(),
+            "unparseable completed date"
+        );
+
+        let mut bad_pause = load_demo_bundle().expect("bundle");
+        mutate(&mut bad_pause, |i| {
+            let job = i
+                .jobs
+                .iter_mut()
+                .find(|j| j.pause_date.is_some())
+                .expect("a paused job");
+            job.pause_date = Some("not a date".to_string());
+        });
+        assert!(
+            validate_bundle(&bad_pause).is_err(),
+            "unparseable pause date"
+        );
+    }
+
+    #[test]
+    fn apply_character_installs_industry_and_industryless_empties() {
+        let bundle = load_demo_bundle().expect("bundled bundle loads");
+        let mut state = AppState::new(true);
+        state.industry_search = "Bantam".to_string();
+        apply_character(&mut state, &bundle, 90000001);
+        let aria = state.industry.as_ready().expect("aria industry ready");
+        assert_eq!(aria.jobs.as_ref().expect("jobs ok").jobs.len(), 4);
+        assert_eq!(
+            aria.blueprints
+                .as_ref()
+                .expect("blueprints ok")
+                .blueprints
+                .len(),
+            4
+        );
+        apply_character(&mut state, &bundle, 90000002);
+        let marcus = state.industry.as_ready().expect("marcus industry ready");
+        assert_eq!(marcus.jobs.as_ref().expect("jobs ok").jobs.len(), 3);
+        assert!(marcus
+            .jobs
+            .as_ref()
+            .expect("jobs ok")
+            .jobs
+            .iter()
+            .all(|j| j.installer_id == 90000002));
+        assert_eq!(
+            state.industry_search, "Bantam",
+            "filter text survives apply"
+        );
+        // An industry-less bundle empties the view (stale-bundle
+        // regression guard) and still preserves the search text.
+        let industryless = load_demo_bundle_with_market(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+            DEMO_CHARACTER_DETAIL_JSON,
+            DEMO_MARKET_JSON,
+        )
+        .expect("industryless bundle loads");
+        apply_character(&mut state, &industryless, 90000002);
+        assert!(matches!(state.industry, LoadState::Empty));
+        assert_eq!(state.industry_search, "Bantam");
     }
 }

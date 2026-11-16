@@ -4,6 +4,7 @@
 //! `AppState` seeding. Every display string must be a resolved EVE name,
 //! never a raw numeric ID (SDE misses show "Unknown Skill").
 
+use mimir::app::state::BlueprintKindFilter;
 use mimir::app::state::{AppState, LoadState};
 use mimir::demo::data::{
     apply_character, currently_training, demo_resolver, is_demo_requested, journal_since,
@@ -15,6 +16,9 @@ use mimir::names::sde::Sde;
 use mimir::ui::assets::group_assets;
 use mimir::ui::characters::{
     attribute_rows, clone_display_name, implant_names, standing_counts, standing_groups,
+};
+use mimir::ui::industry::{
+    blueprint_counts, blueprint_rows, filter_blueprint_rows, industry_job_rows, job_counts,
 };
 use mimir::ui::market::{character_order_rows, region_label, summarize_history, summarize_orders};
 
@@ -521,4 +525,144 @@ fn demo_market_renders_resolved_for_both_characters() {
         .best_sell,
         Some(8.2)
     );
+}
+
+#[test]
+fn demo_industry_renders_resolved_for_both_characters() {
+    let bundle = load_demo_bundle().expect("bundle");
+    let resolver = demo_resolver().expect("demo resolver");
+
+    // Both bundled characters carry an industry fixture whose every
+    // rendered type, facility, and location resolves to words.
+    for character in &bundle.characters {
+        let per = bundle
+            .character_data(character.character_id)
+            .expect("per-character data");
+        let industry = per.industry.as_ref().expect("demo industry present");
+        for job in &industry.jobs {
+            let display = job
+                .product_type_id
+                .filter(|id| *id > 0)
+                .unwrap_or(job.blueprint_type_id);
+            assert_ne!(resolver.name(display), UNKNOWN_ITEM, "job type {display}");
+            assert_ne!(resolver.name(job.blueprint_type_id), UNKNOWN_ITEM);
+            assert_ne!(
+                resolver.location_name(job.facility_id),
+                UNKNOWN_LOCATION,
+                "facility {}",
+                job.facility_id
+            );
+        }
+        for bp in &industry.blueprints {
+            assert_ne!(
+                resolver.name(bp.type_id),
+                UNKNOWN_ITEM,
+                "bp type {}",
+                bp.type_id
+            );
+            assert_ne!(
+                resolver.location_name(bp.location_id),
+                UNKNOWN_LOCATION,
+                "bp location {}",
+                bp.location_id
+            );
+        }
+    }
+
+    let mut state = AppState::new(true);
+    seed_demo_state(&mut state);
+
+    // Aria after seeding: section-7 builders yield resolved rows,
+    // sentinel words, and no instance ID as text.
+    let check = |state: &AppState,
+                 expected_jobs: usize,
+                 expected_blueprints: usize,
+                 instance_ids: &[i64]| {
+        let industry = state.industry.as_ready().expect("industry ready");
+        let jobs = industry.jobs.as_ref().expect("jobs ok");
+        let blueprints = industry.blueprints.as_ref().expect("blueprints ok");
+        assert_eq!(jobs.jobs.len(), expected_jobs);
+        assert_eq!(blueprints.blueprints.len(), expected_blueprints);
+        assert!(!jobs.truncated && !blueprints.truncated);
+        let job_rows = industry_job_rows(&jobs.jobs, &resolver);
+        assert_eq!(job_rows.len(), expected_jobs);
+        assert!(job_counts(&job_rows).in_progress > 0);
+        for row in &job_rows {
+            assert_ne!(row.type_name, UNKNOWN_ITEM);
+            assert_ne!(row.facility_name, UNKNOWN_LOCATION);
+            for text in [
+                row.type_name.as_str(),
+                row.facility_name.as_str(),
+                row.activity_label,
+                row.status_label,
+            ] {
+                assert!(text.parse::<i64>().is_err(), "raw id: {text}");
+                for id in instance_ids {
+                    assert_ne!(text, id.to_string(), "instance id leaked");
+                }
+            }
+        }
+        let bp_rows = blueprint_rows(&blueprints.blueprints, &resolver);
+        let counts = blueprint_counts(&bp_rows);
+        assert_eq!(counts.total, expected_blueprints);
+        assert_eq!(counts.originals + counts.copies, counts.total);
+        assert!(counts.originals > 0 && counts.copies > 0);
+        for row in &bp_rows {
+            assert_ne!(row.type_name, UNKNOWN_ITEM);
+            assert_ne!(row.location_name, UNKNOWN_LOCATION);
+            for text in [
+                row.type_name.as_str(),
+                row.location_name.as_str(),
+                row.kind_label,
+                row.quantity_label.as_str(),
+                row.runs_label.as_str(),
+            ] {
+                assert!(
+                    text.parse::<i64>().is_err() || text == "3" || text == "5",
+                    "raw id: {text}"
+                );
+                assert_ne!(text, "-1");
+                assert_ne!(text, "-2");
+                for id in instance_ids {
+                    assert_ne!(text, id.to_string(), "instance id leaked");
+                }
+            }
+        }
+        // Search finds by name, never by numeric ID text.
+        assert!(
+            !filter_blueprint_rows(&bp_rows, "bantam", BlueprintKindFilter::All).is_empty()
+                || !filter_blueprint_rows(&bp_rows, "blueprint", BlueprintKindFilter::All)
+                    .is_empty()
+        );
+        assert!(filter_blueprint_rows(&bp_rows, "681", BlueprintKindFilter::All).is_empty());
+        (job_rows, bp_rows)
+    };
+
+    let aria_instances = [
+        710000101, 710000102, 710000103, 710000104, 710001001, 710001002, 710001003, 710001004,
+    ];
+    let (aria_jobs, aria_bps) = check(&state, 4, 4, &aria_instances);
+    assert!(aria_jobs
+        .iter()
+        .any(|r| r.type_name == "Rifter" && r.activity_label == "Manufacturing"));
+    assert!(aria_bps
+        .iter()
+        .any(|r| r.quantity_label == "Original" && r.runs_label == "Infinite runs (original)"));
+    assert!(aria_bps
+        .iter()
+        .any(|r| r.quantity_label == "Copy" && r.runs_label == "5 runs"));
+
+    // Switching swaps in Marcus's different bundle, reaction included.
+    state.set_active_character(MARCUS);
+    apply_character(&mut state, &bundle, MARCUS);
+    let marcus_instances = [
+        710000201, 710000202, 710000203, 710002001, 710002002, 710002003,
+    ];
+    let (marcus_jobs, _) = check(&state, 3, 3, &marcus_instances);
+    assert!(marcus_jobs
+        .iter()
+        .any(|r| r.type_name == "Ferrogel" && r.activity_label == "Reaction"));
+    assert!(marcus_jobs
+        .iter()
+        .all(|r| !aria_instances.contains(&r.job_id)));
 }
