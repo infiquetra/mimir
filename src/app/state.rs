@@ -10,6 +10,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::esi::endpoints::WriteFailureClass;
 use crate::esi::models::*;
 use crate::fitting::eft::ImportedFitting;
 use crate::names::exploration_ref::{EffectFamily, ExplorationRef};
@@ -161,6 +162,81 @@ impl StepUpRequest {
             scopes: scopes.iter().map(|s| s.to_string()).collect(),
         }
     }
+}
+
+/// Armed (not yet confirmed) fitting write, stamped with the
+/// character and target it was armed for (design section 6).
+/// Arming swaps the arm button for the confirmation block; at
+/// most one is armed app-wide and arming one replaces any
+/// other. Memory only: never persisted, and cleared whenever
+/// the stamped target is no longer visible.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FittingWriteConfirm {
+    SaveImported { character_id: i64 },
+    SaveCopy { character_id: i64, fitting_id: i64 },
+    Delete { character_id: i64, fitting_id: i64 },
+}
+
+/// A confirmed fitting write waiting to be drained by the
+/// shell (design section 7). The save request body is the
+/// finished `SaveFittingRequest` built in the confirmation
+/// frame, so the shell never touches mapping logic.
+#[derive(Debug, Clone)]
+pub enum FittingWriteRequest {
+    Save {
+        character_id: i64,
+        request: SaveFittingRequest,
+    },
+    Delete {
+        character_id: i64,
+        fitting_id: i64,
+    },
+}
+
+/// What kind of fitting write is in flight (or just landed).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FittingWriteKind {
+    Save,
+    Delete,
+}
+
+impl FittingWriteKind {
+    pub fn label(&self) -> &'static str {
+        match self {
+            FittingWriteKind::Save => "save",
+            FittingWriteKind::Delete => "delete",
+        }
+    }
+}
+
+/// Record of the one write currently in flight (design
+/// section 7.1). Single-flight is global: at most one value
+/// in the whole app. `fitting_id` is `Some` for a delete (the
+/// target) and `None` for a save (there is no server fitting
+/// yet).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FittingWriteInFlight {
+    pub character_id: i64,
+    pub kind: FittingWriteKind,
+    pub fitting_id: Option<i64>,
+}
+
+/// How one fitting write ended (design section 8). `Saved`
+/// and `Deleted` carry the receipt the server returned (for a
+/// delete, the target that was deleted); `Failed` carries the
+/// classifier verdict.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FittingWriteOutcome {
+    Saved {
+        fitting_id: i64,
+    },
+    Deleted {
+        fitting_id: i64,
+    },
+    Failed {
+        class: WriteFailureClass,
+        needs_reauthorize: bool,
+    },
 }
 
 /// Wallet period filter shared by the wallet view and the dashboard.
@@ -638,6 +714,18 @@ pub struct AppState {
     pub fittings_imported: Option<ImportedFitting>,
     pub fittings_import_error: Option<String>,
     pub fittings_import_owner: Option<i64>,
+    // Fitting-write state (write design sections 3.2, 6, 7, 8).
+    // Memory only: never persisted. `fittings_write_needs_reauthorize`
+    // is a sibling `AppState` boolean rather than part of
+    // `FittingsData` (its field set is a cross-builder contract),
+    // because a write refusal is not a list state. The pending
+    // selection records a just-saved fitting id until the first
+    // judged refresh lands (design section 8.1).
+    pub fittings_write_needs_reauthorize: bool,
+    pub fittings_write_confirm: Option<FittingWriteConfirm>,
+    pub fittings_write_requested: Option<FittingWriteRequest>,
+    pub fittings_write_in_flight: Option<FittingWriteInFlight>,
+    pub fittings_pending_selection: Option<(i64, i64)>,
     // View-local exploration UI state (design section 7.1). The
     // bundled reference is character-independent static data, so
     // character switches and removals never reset these fields or
@@ -837,6 +925,16 @@ impl AppState {
                 self.fittings_imported = None;
                 self.fittings_import_error = None;
                 self.fittings_import_owner = None;
+                // Write design section 3.2: the write state is per
+                // character too. An armed confirmation or a queued
+                // request must never outlive its character; the
+                // in-flight record is deliberately kept (its landing
+                // drops whole on the identity mismatch, design
+                // section 8 step 2) so it still unblocks the UI.
+                self.fittings_write_needs_reauthorize = false;
+                self.fittings_write_confirm = None;
+                self.fittings_write_requested = None;
+                self.fittings_pending_selection = None;
             }
         }
         self.selected_queue_row = 0;
@@ -901,6 +999,12 @@ impl AppState {
             self.fittings_imported = None;
             self.fittings_import_error = None;
             self.fittings_import_owner = None;
+            // Write state reset (design section 3.2), same
+            // ownership argument as the import state.
+            self.fittings_write_needs_reauthorize = false;
+            self.fittings_write_confirm = None;
+            self.fittings_write_requested = None;
+            self.fittings_pending_selection = None;
             if let Some(first) = self.characters.first().map(|c| c.character_id) {
                 self.set_active_character(first);
             }
@@ -933,6 +1037,10 @@ impl AppState {
             self.fittings_imported = None;
             self.fittings_import_error = None;
             self.fittings_import_owner = None;
+            self.fittings_write_needs_reauthorize = false;
+            self.fittings_write_confirm = None;
+            self.fittings_write_requested = None;
+            self.fittings_pending_selection = None;
             self.dashboard = LoadState::Empty;
         }
     }
@@ -1857,5 +1965,84 @@ mod tests {
         assert!(AuthState::AwaitingCallback.is_busy());
         assert!(!AuthState::Idle.is_busy());
         assert!(!AuthState::Error.label().is_empty());
+    }
+
+    fn seed_write_state(state: &mut AppState) {
+        state.fittings_write_needs_reauthorize = true;
+        state.fittings_write_confirm = Some(FittingWriteConfirm::SaveImported {
+            character_id: state.active_character_id.unwrap_or(1),
+        });
+        state.fittings_write_requested = Some(FittingWriteRequest::Delete {
+            character_id: state.active_character_id.unwrap_or(1),
+            fitting_id: 42,
+        });
+        state.fittings_pending_selection = Some((state.active_character_id.unwrap_or(1), 4242));
+    }
+
+    fn assert_write_state_cleared(state: &AppState) {
+        assert!(!state.fittings_write_needs_reauthorize);
+        assert_eq!(state.fittings_write_confirm, None);
+        assert!(state.fittings_write_requested.is_none());
+        assert_eq!(state.fittings_pending_selection, None);
+    }
+
+    #[test]
+    fn fitting_write_state_defaults_are_empty_for_demo_and_live() {
+        for demo in [false, true] {
+            let state = AppState::new(demo);
+            assert!(!state.fittings_write_needs_reauthorize);
+            assert_eq!(state.fittings_write_confirm, None);
+            assert!(state.fittings_write_requested.is_none());
+            assert!(state.fittings_write_in_flight.is_none());
+            assert_eq!(state.fittings_pending_selection, None);
+        }
+        assert_eq!(FittingWriteKind::Save.label(), "save");
+        assert_eq!(FittingWriteKind::Delete.label(), "delete");
+    }
+
+    #[test]
+    fn switching_character_clears_fitting_write_state() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        seed_write_state(&mut state);
+        // Same-character reselect keeps everything.
+        state.set_active_character(1);
+        assert!(state.fittings_write_needs_reauthorize);
+        assert!(state.fittings_write_confirm.is_some());
+        // Switching to a different character clears the whole
+        // write state (design section 3.2).
+        state.set_active_character(2);
+        assert_write_state_cleared(&state);
+    }
+
+    #[test]
+    fn removing_character_clears_fitting_write_only_when_active() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two"), row(3, "Three")];
+        state.set_active_character(1);
+        seed_write_state(&mut state);
+        // Removing a non-active character clears none of the
+        // active character's write state.
+        state.remove_character(3);
+        assert!(state.fittings_write_needs_reauthorize);
+        assert!(state.fittings_write_confirm.is_some());
+        assert!(state.fittings_write_requested.is_some());
+        assert_eq!(state.fittings_pending_selection, Some((1, 4242)));
+        // Removing the active character clears it.
+        state.remove_character(1);
+        assert_eq!(state.active_character_id, Some(2));
+        assert_write_state_cleared(&state);
+    }
+
+    #[test]
+    fn empty_roster_clears_fitting_write_state() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One")];
+        state.set_active_character(1);
+        seed_write_state(&mut state);
+        state.remove_character(1);
+        assert!(state.characters.is_empty());
+        assert_write_state_cleared(&state);
     }
 }

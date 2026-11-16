@@ -7,7 +7,8 @@ use std::time::Duration;
 
 use super::state::{
     ship_display_name, summary_location_name, AppState, AssetsData, AuthState, BlueprintsData,
-    CharacterDetailData, CharacterOrdersData, CharacterSummary, ExplorationData, FittingsData,
+    CharacterDetailData, CharacterOrdersData, CharacterSummary, ExplorationData,
+    FittingWriteInFlight, FittingWriteKind, FittingWriteOutcome, FittingWriteRequest, FittingsData,
     IndustryData, IndustryJobsData, LoadState, MarketData, MarketSelection, PlanetSelection,
     PlanetaryData, PublicOrdersData, SectionError, SectionResult, SelectedColonyDetail, SkillsData,
     StepUpRequest, View, WalletData,
@@ -18,7 +19,7 @@ use crate::auth::oauth;
 use crate::auth::token_store::{StoredTokens, TokenStore};
 use crate::config::EveConfig;
 use crate::demo::data::DemoBundle;
-use crate::esi::endpoints;
+use crate::esi::endpoints::{self, WriteFailureClass};
 use crate::esi::models::{
     CharacterFitting, CharacterPublicInfo, CharacterSkills, LoyaltyPointItem, PlanetColony,
     PlanetColonyDetail, Skill, SkillQueueItem, UniverseName, WalletJournalItem,
@@ -90,6 +91,11 @@ enum BackendMsg {
         generation: u64,
         query: String,
         result: Result<Vec<UniverseName>, String>,
+    },
+    FittingWriteDone {
+        character_id: i64,
+        kind: FittingWriteKind,
+        outcome: FittingWriteOutcome,
     },
 }
 
@@ -209,6 +215,158 @@ fn structures_stepup_observed(request_scopes: &[String], state: &AppState) -> bo
         .iter()
         .any(|scope| EveConfig::STRUCTURE_SCOPES.contains(&scope.as_str()))
         && state.structures_needs_reauthorize
+}
+
+/// Fittings-write design section 3.4 observed-reality arm: a
+/// write already observed a live 401/403 this session (which
+/// set the write flag at landing) while the step-up request
+/// asks for the write scope, so stored token metadata
+/// claiming the grant is stale and the already-granted
+/// shortcut must not be taken.
+fn fittings_write_stepup_observed(request_scopes: &[String], state: &AppState) -> bool {
+    request_scopes
+        .iter()
+        .any(|scope| EveConfig::FITTINGS_WRITE_SCOPES.contains(&scope.as_str()))
+        && state.fittings_write_needs_reauthorize
+}
+
+/// Decide what applying one `FittingWriteDone` mutates, before
+/// the landing handler mutates anything (write design section
+/// 8). Always clears the flight; a character mismatch drops
+/// the result whole (no status, no refresh); a matching
+/// landing outside `Saved`/`Deleted`/`Unknown`/`AlreadyGone`
+/// queues no refresh because the server state provably did
+/// not change.
+struct FittingWriteLanding {
+    stale: bool,
+    status: Option<String>,
+    queue_refresh: bool,
+    record_pending: Option<(i64, i64)>,
+    set_reauthorize: bool,
+}
+
+fn decide_fitting_write_landing(
+    state: &AppState,
+    character_id: i64,
+    kind: FittingWriteKind,
+    outcome: &FittingWriteOutcome,
+) -> FittingWriteLanding {
+    if Some(character_id) != state.active_character_id {
+        return FittingWriteLanding {
+            stale: true,
+            status: None,
+            queue_refresh: false,
+            record_pending: None,
+            set_reauthorize: false,
+        };
+    }
+    match outcome {
+        FittingWriteOutcome::Saved { fitting_id } => FittingWriteLanding {
+            stale: false,
+            status: Some("Saved the fitting to EVE. Refreshing your fitting list...".to_string()),
+            queue_refresh: true,
+            record_pending: Some((character_id, *fitting_id)),
+            set_reauthorize: false,
+        },
+        FittingWriteOutcome::Deleted { .. } => FittingWriteLanding {
+            stale: false,
+            status: Some(
+                "Deleted the fitting from EVE. Refreshing your fitting list...".to_string(),
+            ),
+            queue_refresh: true,
+            record_pending: None,
+            set_reauthorize: false,
+        },
+        FittingWriteOutcome::Failed {
+            class,
+            needs_reauthorize,
+        } => FittingWriteLanding {
+            stale: false,
+            status: Some(fitting_write_status_message(
+                kind,
+                *class,
+                *needs_reauthorize,
+            )),
+            queue_refresh: matches!(
+                class,
+                WriteFailureClass::Unknown | WriteFailureClass::AlreadyGone
+            ),
+            record_pending: None,
+            set_reauthorize: *needs_reauthorize,
+        },
+    }
+}
+
+/// Fixed status wording for a failed write (write design
+/// section 9.2). No fitting name, no numeric id, no server
+/// error text ever appears here; the only number is the
+/// rate-limit reset duration.
+fn fitting_write_status_message(
+    kind: FittingWriteKind,
+    class: WriteFailureClass,
+    needs_reauthorize: bool,
+) -> String {
+    if needs_reauthorize {
+        return match kind {
+            FittingWriteKind::Save => "EVE refused the save: this character has not granted fitting changes. Re-authorize in the Fittings view.".to_string(),
+            FittingWriteKind::Delete => "EVE refused the delete: this character has not granted fitting changes. Re-authorize in the Fittings view.".to_string(),
+        };
+    }
+    match class {
+        WriteFailureClass::AlreadyGone => {
+            "That fitting is already gone from EVE. Refreshing your fitting list...".to_string()
+        }
+        WriteFailureClass::RateLimited { reset_secs } => format!(
+            "EVE is rate-limiting requests. Nothing was {}; wait {reset_secs} seconds and try again.",
+            match kind {
+                FittingWriteKind::Save => "saved",
+                FittingWriteKind::Delete => "deleted",
+            }
+        ),
+        WriteFailureClass::Unknown => match kind {
+            FittingWriteKind::Save => "The save may or may not have reached EVE. Check the refreshed fitting list before saving again, so you do not create a duplicate.".to_string(),
+            FittingWriteKind::Delete => "The delete may or may not have reached EVE. Check the refreshed fitting list; if the fitting is still there, you can delete it again.".to_string(),
+        },
+        WriteFailureClass::NotSent => {
+            "Nothing was sent to EVE. Check the connection and try again.".to_string()
+        }
+        WriteFailureClass::Definitive => match kind {
+            FittingWriteKind::Save => {
+                "EVE refused the save and nothing was saved. See the log for details.".to_string()
+            }
+            FittingWriteKind::Delete => {
+                "EVE refused the delete and nothing was deleted. See the log for details.".to_string()
+            }
+        },
+    }
+}
+
+/// Write design section 8.1: apply a just-saved fitting id to
+/// the selection when the first judged refresh names it. Only
+/// an `Ok` list for the stamped character judges the pending
+/// value; an `Err` list proves nothing (the pending value
+/// survives), and a refresh for another character is ignored.
+/// Returns the pending value to keep and the fitting id to
+/// select.
+fn apply_pending_fitting_selection(
+    pending: Option<(i64, i64)>,
+    applied_character_id: i64,
+    fittings_list: &SectionResult<Vec<CharacterFitting>>,
+) -> (Option<(i64, i64)>, Option<i64>) {
+    let Some((character_id, fitting_id)) = pending else {
+        return (None, None);
+    };
+    if character_id != applied_character_id {
+        return (Some((character_id, fitting_id)), None);
+    }
+    let Ok(list) = fittings_list else {
+        return (Some((character_id, fitting_id)), None);
+    };
+    if list.iter().any(|f| f.fitting_id == fitting_id) {
+        (None, Some(fitting_id))
+    } else {
+        (None, None)
+    }
 }
 
 /// Design section 8.3 freshness check: a lookup answer applies only
@@ -1066,6 +1224,23 @@ impl MimirApp {
                             );
                             self.state.fittings_selected_fitting_id = None;
                         }
+                        // A just-saved fitting is selected only if
+                        // this first judged refresh names it (write
+                        // design section 8.1). A failed list leaves
+                        // the pending value unjudged.
+                        let (pending, select) = apply_pending_fitting_selection(
+                            self.state.fittings_pending_selection,
+                            character_id,
+                            &fittings_list,
+                        );
+                        self.state.fittings_pending_selection = pending;
+                        if let Some(fitting_id) = select {
+                            tracing::debug!(
+                                "[FITTING] selecting just-saved fitting character_id={}",
+                                character_id
+                            );
+                            self.state.fittings_selected_fitting_id = Some(fitting_id);
+                        }
                         self.state.fittings = LoadState::Ready(FittingsData {
                             fittings: fittings_list,
                         });
@@ -1225,6 +1400,11 @@ impl MimirApp {
                         // above already refills the fittings list,
                         // and the panel clears only when a later
                         // refresh returns it Ok.
+                        // Write design section 3.2: a step-up that
+                        // just completed for the active character
+                        // clears the write flag (it never resumes a
+                        // write — consent is re-given by hand).
+                        self.state.fittings_write_needs_reauthorize = false;
                         self.state.status_message = "Permission granted. Refreshing...".to_string();
                     } else {
                         self.state.status_message = "Permission granted. Refreshing...".to_string();
@@ -1283,6 +1463,56 @@ impl MimirApp {
                         }
                     }
                 }
+                BackendMsg::FittingWriteDone {
+                    character_id,
+                    kind,
+                    outcome,
+                } => {
+                    // Write design section 8, in order: the
+                    // flight is over whatever the ids say.
+                    self.state.fittings_write_in_flight = None;
+                    let landing =
+                        decide_fitting_write_landing(&self.state, character_id, kind, &outcome);
+                    if landing.stale {
+                        // The user switched character or removed
+                        // the writer mid-flight: drop the result
+                        // whole and claim nothing (the
+                        // StructuresResolved precedent). The write
+                        // may well have succeeded in EVE for the
+                        // original character; switching back and
+                        // refreshing shows the server truth.
+                        tracing::info!(
+                            "[FITTING] stale write result dropped character_id={} kind={}",
+                            character_id,
+                            kind.label()
+                        );
+                    } else {
+                        if matches!(
+                            outcome,
+                            FittingWriteOutcome::Saved { .. } | FittingWriteOutcome::Deleted { .. }
+                        ) {
+                            self.state.fittings_write_needs_reauthorize = false;
+                        }
+                        if landing.set_reauthorize {
+                            self.state.fittings_write_needs_reauthorize = true;
+                        }
+                        if let Some(pending) = landing.record_pending {
+                            self.state.fittings_pending_selection = Some(pending);
+                        }
+                        if let Some(status) = landing.status {
+                            self.state.status_message = status;
+                        }
+                        if landing.queue_refresh {
+                            self.state.refresh_requested = true;
+                        }
+                        tracing::info!(
+                            "[FITTING] fitting write landed character_id={} kind={} outcome={:?}",
+                            character_id,
+                            kind.label(),
+                            outcome
+                        );
+                    }
+                }
                 BackendMsg::LoginFailed { message } => {
                     tracing::warn!("[AUTH] login failed: {}", message);
                     self.state.auth = AuthState::Error;
@@ -1336,6 +1566,9 @@ impl MimirApp {
         }
         if let Some(request) = self.state.stepup_requested.take() {
             self.start_stepup_login(request);
+        }
+        if let Some(request) = self.state.fittings_write_requested.take() {
+            self.start_fitting_write(request);
         }
         if let Some(id) = self.state.logout_requested_id.take() {
             // UI disables these buttons while busy; this drain guard is
@@ -2278,6 +2511,7 @@ impl MimirApp {
                 || (overlaps(EveConfig::PLANETS_SCOPES)
                     && matches!(&self.state.planetary, LoadState::Ready(d) if d.needs_planetary_stepup()))
                 || fittings_stepup_observed(&request.scopes, &self.state)
+                || fittings_write_stepup_observed(&request.scopes, &self.state)
                 || structures_stepup_observed(&request.scopes, &self.state)
                 || (overlaps(EveConfig::MARKET_SCOPES)
                     && matches!(&self.state.market, LoadState::Ready(d) if matches!(&d.character_orders, Err(e) if e.needs_reauthorize)))
@@ -2427,6 +2661,220 @@ impl MimirApp {
                 }
             }
         });
+    }
+
+    /// Start one confirmed fitting write (write design
+    /// section 7.2). Refusals are synchronous and never set
+    /// the flight or spawn; the scope-absent case (section
+    /// 3.3) is detected from token metadata before any HTTP
+    /// request is made. On spawn, exactly one endpoint call
+    /// runs and exactly one `FittingWriteDone` is sent on
+    /// every path. No write is ever retried automatically.
+    fn start_fitting_write(&mut self, request: FittingWriteRequest) {
+        let (character_id, kind) = match &request {
+            FittingWriteRequest::Save { character_id, .. } => {
+                (*character_id, FittingWriteKind::Save)
+            }
+            FittingWriteRequest::Delete { character_id, .. } => {
+                (*character_id, FittingWriteKind::Delete)
+            }
+        };
+        let kind_label = kind.label();
+        // Demo performs no writes and offers none (section 10):
+        // this is the shell backstop, not the only defense.
+        if self.state.demo {
+            tracing::warn!(
+                "[FITTING] fitting write refused in demo character_id={} kind={}",
+                character_id,
+                kind_label
+            );
+            self.state.status_message =
+                "Demo mode uses sample data. Saving or deleting fittings in EVE is disabled."
+                    .to_string();
+            return;
+        }
+        if self.state.auth.is_busy() {
+            tracing::warn!(
+                "[FITTING] fitting write refused; sign-in in progress character_id={} kind={}",
+                character_id,
+                kind_label
+            );
+            self.state.status_message =
+                "Finish sign-in in your browser before changing fittings in EVE.".to_string();
+            return;
+        }
+        if self.state.fittings_write_in_flight.is_some() {
+            tracing::warn!(
+                "[FITTING] fitting write refused; one already in flight character_id={} kind={}",
+                character_id,
+                kind_label
+            );
+            self.state.status_message =
+                "A fitting change is already in progress. Wait for it to finish.".to_string();
+            return;
+        }
+        if !self
+            .state
+            .characters
+            .iter()
+            .any(|c| c.character_id == character_id)
+        {
+            tracing::warn!(
+                "[FITTING] fitting write refused for unknown character_id={} kind={}",
+                character_id,
+                kind_label
+            );
+            self.state.status_message =
+                "That character is no longer in Mimir. Nothing was sent to EVE.".to_string();
+            return;
+        }
+        if self.state.active_character_id != Some(character_id) {
+            tracing::warn!(
+                "[FITTING] fitting write refused; active character changed character_id={} kind={}",
+                character_id,
+                kind_label
+            );
+            self.state.status_message =
+                "The active character changed. Nothing was sent to EVE.".to_string();
+            return;
+        }
+        let (Some(backends), Some(runtime)) = (self.backends.as_ref(), self.runtime.as_ref())
+        else {
+            tracing::warn!(
+                "[FITTING] fitting write refused; backends not wired character_id={} kind={}",
+                character_id,
+                kind_label
+            );
+            self.state.status_message =
+                "Fitting changes are unavailable: live backends not wired.".to_string();
+            return;
+        };
+        // Scope pre-check (section 3.3): stored token metadata
+        // is read the same way the step-up flow reads it; a
+        // missing row or read error is treated as absent, and
+        // absence sends nothing.
+        let granted: Vec<String> = match backends.db.lock() {
+            Ok(conn) => match repositories::get_token_meta(&conn, character_id) {
+                Ok(Some(meta)) => oauth::split_scopes(&meta.scopes),
+                Ok(None) => Vec::new(),
+                Err(e) => {
+                    tracing::warn!(
+                        "[FITTING] fitting write token_meta read failed character_id={} error={}",
+                        character_id,
+                        e
+                    );
+                    Vec::new()
+                }
+            },
+            Err(e) => {
+                tracing::warn!(
+                    "[FITTING] fitting write token_meta lock failed character_id={} error={}",
+                    character_id,
+                    e
+                );
+                Vec::new()
+            }
+        };
+        let wanted: Vec<String> = EveConfig::FITTINGS_WRITE_SCOPES
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        if !oauth::missing_scopes(&granted, &wanted).is_empty() {
+            tracing::info!(
+                "[FITTING] fitting write refused; write scope absent character_id={} kind={}",
+                character_id,
+                kind_label
+            );
+            self.state.fittings_write_needs_reauthorize = true;
+            self.state.status_message = "Saving and deleting fittings needs one more EVE permission. Re-authorize in the Fittings view.".to_string();
+            return;
+        }
+        let esi = backends.esi.clone();
+        let tx = self.tx.clone();
+        match request {
+            FittingWriteRequest::Save {
+                character_id,
+                request,
+            } => {
+                tracing::info!(
+                    "[FITTING] write started character_id={} kind=save items={}",
+                    character_id,
+                    request.items.len()
+                );
+                self.state.fittings_write_in_flight = Some(FittingWriteInFlight {
+                    character_id,
+                    kind: FittingWriteKind::Save,
+                    fitting_id: None,
+                });
+                runtime.spawn(async move {
+                    let outcome =
+                        match endpoints::save_character_fitting(&esi, character_id, &request).await
+                        {
+                            Ok(response) => FittingWriteOutcome::Saved {
+                                fitting_id: response.fitting_id,
+                            },
+                            Err(e) => {
+                                let (class, needs_reauthorize) =
+                                    endpoints::classify_write_error(&e, false);
+                                tracing::warn!(
+                                    "[FITTING] save failed character_id={} error={}",
+                                    character_id,
+                                    e
+                                );
+                                FittingWriteOutcome::Failed {
+                                    class,
+                                    needs_reauthorize,
+                                }
+                            }
+                        };
+                    let _ = tx.send(BackendMsg::FittingWriteDone {
+                        character_id,
+                        kind: FittingWriteKind::Save,
+                        outcome,
+                    });
+                });
+            }
+            FittingWriteRequest::Delete {
+                character_id,
+                fitting_id,
+            } => {
+                tracing::info!(
+                    "[FITTING] write started character_id={} kind=delete",
+                    character_id
+                );
+                self.state.fittings_write_in_flight = Some(FittingWriteInFlight {
+                    character_id,
+                    kind: FittingWriteKind::Delete,
+                    fitting_id: Some(fitting_id),
+                });
+                runtime.spawn(async move {
+                    let outcome =
+                        match endpoints::delete_character_fitting(&esi, character_id, fitting_id)
+                            .await
+                        {
+                            Ok(()) => FittingWriteOutcome::Deleted { fitting_id },
+                            Err(e) => {
+                                let (class, needs_reauthorize) =
+                                    endpoints::classify_write_error(&e, true);
+                                tracing::warn!(
+                                    "[FITTING] delete failed character_id={} error={}",
+                                    character_id,
+                                    e
+                                );
+                                FittingWriteOutcome::Failed {
+                                    class,
+                                    needs_reauthorize,
+                                }
+                            }
+                        };
+                    let _ = tx.send(BackendMsg::FittingWriteDone {
+                        character_id,
+                        kind: FittingWriteKind::Delete,
+                        outcome,
+                    });
+                });
+            }
+        }
     }
 
     fn logout(&mut self, character_id: i64) {
@@ -2904,6 +3352,245 @@ mod tests {
         assert!(structures_stepup_observed(&structures_scope, &state));
         // An unrelated request is not blocked by the structures arm.
         assert!(!structures_stepup_observed(&other_scope, &state));
+    }
+
+    #[test]
+    fn fittings_write_stepup_observed_needs_scope_and_flag() {
+        let write_scope = vec!["esi-fittings.write_fittings.v1".to_string()];
+        let read_scope = vec!["esi-fittings.read_fittings.v1".to_string()];
+        let mut state = AppState::new(false);
+        // Flag unset: shortcut allowed even for the write scope.
+        assert!(!fittings_write_stepup_observed(&write_scope, &state));
+        // Flag set + write scope request blocks the shortcut.
+        state.fittings_write_needs_reauthorize = true;
+        assert!(fittings_write_stepup_observed(&write_scope, &state));
+        // The read scope alone never triggers the write arm.
+        assert!(!fittings_write_stepup_observed(&read_scope, &state));
+        // Flag clear again: shortcut allowed.
+        state.fittings_write_needs_reauthorize = false;
+        assert!(!fittings_write_stepup_observed(&write_scope, &state));
+    }
+
+    #[test]
+    fn fitting_write_landing_drops_whole_on_character_mismatch() {
+        let mut state = AppState::new(false);
+        state.active_character_id = Some(42);
+        let outcomes = [
+            FittingWriteOutcome::Saved { fitting_id: 7 },
+            FittingWriteOutcome::Deleted { fitting_id: 7 },
+            FittingWriteOutcome::Failed {
+                class: WriteFailureClass::Unknown,
+                needs_reauthorize: false,
+            },
+        ];
+        for outcome in outcomes {
+            for kind in [FittingWriteKind::Save, FittingWriteKind::Delete] {
+                let landing = decide_fitting_write_landing(&state, 7, kind, &outcome);
+                assert!(landing.stale, "mismatch drops whole");
+                assert_eq!(landing.status, None, "no status on a stale landing");
+                assert!(!landing.queue_refresh, "no refresh on a stale landing");
+                assert_eq!(landing.record_pending, None);
+                assert!(!landing.set_reauthorize);
+            }
+        }
+    }
+
+    #[test]
+    fn fitting_write_landing_matrix_on_match() {
+        let mut state = AppState::new(false);
+        state.active_character_id = Some(42);
+        // Saved: refresh queued, pending selection recorded.
+        let landing = decide_fitting_write_landing(
+            &state,
+            42,
+            FittingWriteKind::Save,
+            &FittingWriteOutcome::Saved { fitting_id: 4242 },
+        );
+        assert!(!landing.stale);
+        assert_eq!(
+            landing.status.as_deref(),
+            Some("Saved the fitting to EVE. Refreshing your fitting list...")
+        );
+        assert!(landing.queue_refresh);
+        assert_eq!(landing.record_pending, Some((42, 4242)));
+        // Deleted: refresh queued, no pending selection.
+        let landing = decide_fitting_write_landing(
+            &state,
+            42,
+            FittingWriteKind::Delete,
+            &FittingWriteOutcome::Deleted { fitting_id: 4242 },
+        );
+        assert_eq!(
+            landing.status.as_deref(),
+            Some("Deleted the fitting from EVE. Refreshing your fitting list...")
+        );
+        assert!(landing.queue_refresh);
+        assert_eq!(landing.record_pending, None);
+        // Unknown: refresh queued (the reconciliation), no pending.
+        let landing = decide_fitting_write_landing(
+            &state,
+            42,
+            FittingWriteKind::Save,
+            &FittingWriteOutcome::Failed {
+                class: WriteFailureClass::Unknown,
+                needs_reauthorize: false,
+            },
+        );
+        assert!(landing.queue_refresh);
+        assert_eq!(landing.record_pending, None);
+        assert!(!landing.set_reauthorize);
+        // Definitive: no refresh, no pending.
+        let landing = decide_fitting_write_landing(
+            &state,
+            42,
+            FittingWriteKind::Save,
+            &FittingWriteOutcome::Failed {
+                class: WriteFailureClass::Definitive,
+                needs_reauthorize: false,
+            },
+        );
+        assert!(!landing.queue_refresh);
+        assert_eq!(landing.record_pending, None);
+        // Reauthorize failure: flag set, no refresh.
+        let landing = decide_fitting_write_landing(
+            &state,
+            42,
+            FittingWriteKind::Save,
+            &FittingWriteOutcome::Failed {
+                class: WriteFailureClass::Definitive,
+                needs_reauthorize: true,
+            },
+        );
+        assert!(landing.set_reauthorize);
+        assert!(!landing.queue_refresh);
+        // NotSent: no refresh.
+        let landing = decide_fitting_write_landing(
+            &state,
+            42,
+            FittingWriteKind::Save,
+            &FittingWriteOutcome::Failed {
+                class: WriteFailureClass::NotSent,
+                needs_reauthorize: false,
+            },
+        );
+        assert!(!landing.queue_refresh);
+        // AlreadyGone: refresh queued.
+        let landing = decide_fitting_write_landing(
+            &state,
+            42,
+            FittingWriteKind::Delete,
+            &FittingWriteOutcome::Failed {
+                class: WriteFailureClass::AlreadyGone,
+                needs_reauthorize: false,
+            },
+        );
+        assert!(landing.queue_refresh);
+        // RateLimited: no refresh.
+        let landing = decide_fitting_write_landing(
+            &state,
+            42,
+            FittingWriteKind::Save,
+            &FittingWriteOutcome::Failed {
+                class: WriteFailureClass::RateLimited { reset_secs: 42 },
+                needs_reauthorize: false,
+            },
+        );
+        assert!(!landing.queue_refresh);
+    }
+
+    #[test]
+    fn fitting_write_status_wording_matches_the_locked_table() {
+        use FittingWriteKind::{Delete, Save};
+        // Reauthorize row (either kind).
+        assert_eq!(
+            fitting_write_status_message(Save, WriteFailureClass::Definitive, true),
+            "EVE refused the save: this character has not granted fitting changes. Re-authorize in the Fittings view."
+        );
+        assert_eq!(
+            fitting_write_status_message(Delete, WriteFailureClass::Definitive, true),
+            "EVE refused the delete: this character has not granted fitting changes. Re-authorize in the Fittings view."
+        );
+        // NotSent row (same for both kinds).
+        for kind in [Save, Delete] {
+            assert_eq!(
+                fitting_write_status_message(kind, WriteFailureClass::NotSent, false),
+                "Nothing was sent to EVE. Check the connection and try again."
+            );
+        }
+        // Definitive 4xx row.
+        assert_eq!(
+            fitting_write_status_message(Save, WriteFailureClass::Definitive, false),
+            "EVE refused the save and nothing was saved. See the log for details."
+        );
+        assert_eq!(
+            fitting_write_status_message(Delete, WriteFailureClass::Definitive, false),
+            "EVE refused the delete and nothing was deleted. See the log for details."
+        );
+        // AlreadyGone row (delete 404).
+        assert_eq!(
+            fitting_write_status_message(Delete, WriteFailureClass::AlreadyGone, false),
+            "That fitting is already gone from EVE. Refreshing your fitting list..."
+        );
+        // RateLimited row, {s} = 42 per design section 9.2.
+        assert_eq!(
+            fitting_write_status_message(
+                Save,
+                WriteFailureClass::RateLimited { reset_secs: 42 },
+                false
+            ),
+            "EVE is rate-limiting requests. Nothing was saved; wait 42 seconds and try again."
+        );
+        assert_eq!(
+            fitting_write_status_message(
+                Delete,
+                WriteFailureClass::RateLimited { reset_secs: 42 },
+                false
+            ),
+            "EVE is rate-limiting requests. Nothing was deleted; wait 42 seconds and try again."
+        );
+        // Unknown row.
+        assert_eq!(
+            fitting_write_status_message(Save, WriteFailureClass::Unknown, false),
+            "The save may or may not have reached EVE. Check the refreshed fitting list before saving again, so you do not create a duplicate."
+        );
+        assert_eq!(
+            fitting_write_status_message(Delete, WriteFailureClass::Unknown, false),
+            "The delete may or may not have reached EVE. Check the refreshed fitting list; if the fitting is still there, you can delete it again."
+        );
+    }
+
+    #[test]
+    fn pending_fitting_selection_is_judged_by_first_ok_refresh_only() {
+        let pending = Some((42, 4242));
+        let contains = Ok(vec![fitting(4242)]);
+        let (keep, select) = apply_pending_fitting_selection(pending, 42, &contains);
+        assert_eq!(keep, None, "judged pending is consumed");
+        assert_eq!(select, Some(4242), "a contained id is selected");
+        let missing = Ok(vec![fitting(1)]);
+        let (keep, select) = apply_pending_fitting_selection(pending, 42, &missing);
+        assert_eq!(keep, None, "a missing id consumes without selecting");
+        assert_eq!(select, None);
+        let failed: SectionResult<Vec<CharacterFitting>> = Err(SectionError {
+            message: "fittings request failed".to_string(),
+            needs_reauthorize: false,
+        });
+        let (keep, select) = apply_pending_fitting_selection(pending, 42, &failed);
+        assert_eq!(
+            keep,
+            Some((42, 4242)),
+            "an Err list keeps the pending value"
+        );
+        assert_eq!(select, None);
+        let (keep, select) = apply_pending_fitting_selection(pending, 7, &contains);
+        assert_eq!(
+            keep,
+            Some((42, 4242)),
+            "a refresh for another character ignores the pending value"
+        );
+        assert_eq!(select, None);
+        let (keep, select) = apply_pending_fitting_selection(None, 42, &contains);
+        assert_eq!(keep, None);
+        assert_eq!(select, None);
     }
 
     #[test]
