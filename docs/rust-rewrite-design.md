@@ -274,8 +274,11 @@ findings), per the repo's auto-maintain rule.
   Linux secret-service) are unverifiable from this Linux host; first Mac
   run is a scheduled follow-up, and the `0600` fallback must be exercised
   there too.
-- JWT signature is not verified (faithful port of Flutter); add JWKS
-  verification against `login.eveonline.com` as a hardening follow-up.
+- ~~JWT signature is not verified (faithful port of Flutter); add JWKS
+  verification against `login.eveonline.com` as a hardening follow-up.~~
+  Done on branch `feat/jwt-signature-verification` (see
+  `docs/jwt-verification-design.md`); live-account verification is
+  still pending.
 - Deferred parity is large (11 of 15 Flutter features); Phase 1 parity
   claim covers only Dashboard/Characters/Skills/Wallet/Settings + auth,
   exactly the P0 set in the context library's priority matrix.

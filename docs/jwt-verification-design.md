@@ -1,9 +1,13 @@
 # JWT Signature Verification — Design
 
-Status: design only (this commit). No code, dependency, or behaviour
-changes in this commit. Builders implement exactly this document;
-a builder who disagrees stops and raises it instead of silently
-re-deciding.
+Status: implemented on `feat/jwt-signature-verification`
+(verification module, trust-point wiring, and integrator finish
+all committed locally; not pushed or merged). The live-account
+matrix in Section 11 gate 6 has not been run against a real EVE
+account yet. The text below is the design as approved; two
+version adaptations (jsonwebtoken 12 clock and `alg=none`
+handling) are recorded in the implementing commit body and in
+`docs/engineering-journal/LEARNINGS.md`.
 Repo: `/home/jefcox/workspace/infiquetra/mimir`, branch
 `feat/jwt-signature-verification` off `develop` at 9d21bb7
 (conversion #561, Assets #562, step-up #563 all merged). Every

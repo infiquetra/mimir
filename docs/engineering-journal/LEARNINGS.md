@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### jsonwebtoken 12 validates expiry against the system clock only, so time rules must move into the caller when "now" is injected
+
+**Author.** Mimir JWT verification workflow (Builder A, recorded by the integrator)
+**Context.** The JWT design requires the pure verification core to evaluate `exp` (expiry) and `nbf` (not-before) at an injected `now` so tests can pin the 60-second leeway boundaries exactly, with no sleeps and no dependence on the host clock.
+**Evidence.** `src/auth/jwt_verify.rs:297-303` sets `validation.validate_exp = false` and `validation.validate_nbf = false` with a comment recording why; boundary tests in the same file assert both sides of the leeway (`expired_and_leeway_boundary`, nbf exactly at now plus leeway accepted).
+**Mechanism.** `jsonwebtoken` version 12 reads the system clock inside its own validation and offers no parameter to supply the current time. Leaving its time checks enabled would make the core's result depend on wall time, so boundary cases could not be tested deterministically and could disagree with the design formulas. The library still verifies the signature and enforces required-claim presence, issuer, and the client-id audience; the caller then applies the expiry and not-before formulas at the injected time.
+**Fix (or queued).** Library time validation disabled, design time formulas applied in `verify_with_keys` immediately after decode (`src/auth/jwt_verify.rs:340-353`). A related version fact: an `alg=none` header surfaces as malformed rather than invalid-signature in this version, which the design test matrix permits.
+**Validation.** The jwt_verify test module covers both sides of each boundary with fixed timestamps; full `cargo test` green on `feat/jwt-signature-verification`.
+**Generalizable rule.** When a validation library owns a hidden input such as the system clock, either wrap that input or move the affected check into your own code; never let a library default silently own a boundary your design specifies.
+**Refs.** `docs/jwt-verification-design.md` Sections 5 and 9; `src/auth/jwt_verify.rs`; DECISIONS 2026-11-15 JWT verification entry.
+
 ### A step-up grant is proven by the next successful data fetch, never by login alone; in-flight sign-in outlives UI intentions
 
 **Author.** Muse Code (parent repair pass over the step-up OAuth workflow)

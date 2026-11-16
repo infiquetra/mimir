@@ -547,17 +547,6 @@ pub async fn revoke_token(token: &str) -> Result<(), AuthError> {
     .await
 }
 
-/// Convenience: expiry instant for a fresh token response, using JWT `exp`
-/// when parseable and `expires_in` otherwise.
-pub fn expiry_for(tokens: &TokenResponse) -> i64 {
-    if let Ok(claims) = parse_jwt_claims(&tokens.access_token) {
-        if claims.exp > 0 {
-            return claims.exp;
-        }
-    }
-    tokens.expires_at_unix(now_unix())
-}
-
 /// Expiry instant from already-verified claims: the verified `exp`
 /// wins; the `expires_in` fallback is defensive only (verified
 /// claims always carry `exp > 0`).
