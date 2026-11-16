@@ -10,8 +10,9 @@ use std::collections::{HashMap, HashSet};
 use chrono::{DateTime, Utc};
 
 use crate::app::state::{
-    ship_display_name, summary_location_name, AppState, AssetsData, CharacterDetailData,
-    CharacterSummary, LoadState, SkillsData, WalletData,
+    market_region_name, ship_display_name, summary_location_name, AppState, AssetsData,
+    CharacterDetailData, CharacterOrdersData, CharacterSummary, LoadState, MarketData,
+    MarketSelection, PublicOrdersData, SkillsData, WalletData,
 };
 use crate::error::{AppError, AppResult};
 use crate::esi::models::*;
@@ -29,6 +30,7 @@ pub const DEMO_NAMES_JSON: &str = include_str!("../../assets/demo/names.json");
 pub const DEMO_ASSETS_JSON: &str = include_str!("../../assets/demo/assets.json");
 pub const DEMO_CHARACTER_DETAIL_JSON: &str =
     include_str!("../../assets/demo/character_detail.json");
+pub const DEMO_MARKET_JSON: &str = include_str!("../../assets/demo/market.json");
 
 /// Command-line flag that selects demo mode (design section 1).
 pub const DEMO_FLAG: &str = "--demo";
@@ -77,6 +79,20 @@ pub struct DemoCharacter {
     pub security_status: f64,
 }
 
+/// One demo character's market fixture: the selection plus raw row
+/// sets. Demo seeding composes a `MarketData` from this with the
+/// character being applied, so this is deliberately not `MarketData`.
+#[derive(Debug, Clone, Default)]
+pub struct DemoMarketData {
+    pub selected_type_id: i64,
+    pub region_id: i64,
+    pub public_orders: Vec<RegionalOrder>,
+    pub public_orders_truncated: bool,
+    pub history: Vec<MarketHistoryEntry>,
+    pub character_orders: Vec<CharacterOrder>,
+    pub character_orders_truncated: bool,
+}
+
 /// Everything one demo character shows in the Phase-1 views.
 #[derive(Debug, Clone, Default)]
 pub struct DemoCharacterData {
@@ -89,6 +105,7 @@ pub struct DemoCharacterData {
     pub assets: Vec<AssetItem>,
     pub custom_names: Vec<AssetName>,
     pub detail: Option<CharacterDetailData>,
+    pub market: Option<DemoMarketData>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -160,6 +177,24 @@ struct CharacterDetailFileEntry {
     online: CharacterOnline,
 }
 
+#[derive(serde::Deserialize, Default)]
+struct MarketFileEntry {
+    #[serde(default)]
+    selected_type_id: i64,
+    #[serde(default)]
+    region_id: i64,
+    #[serde(default)]
+    public_orders: Vec<RegionalOrder>,
+    #[serde(default)]
+    public_orders_truncated: bool,
+    #[serde(default)]
+    history: Vec<MarketHistoryEntry>,
+    #[serde(default)]
+    character_orders: Vec<CharacterOrder>,
+    #[serde(default)]
+    character_orders_truncated: bool,
+}
+
 fn parse_character_key(key: &str) -> AppResult<i64> {
     key.parse::<i64>().map_err(|_| {
         AppError::Message(format!(
@@ -199,12 +234,34 @@ pub fn load_demo_bundle_with_assets(
 }
 
 /// Parse a bundle including assets and the character-detail file.
+/// Kept with its original meaning — no market — so five-argument
+/// callers keep working unchanged (`market: None` for everyone).
 pub fn load_demo_bundle_with_detail(
     characters_json: &str,
     skillqueue_json: &str,
     wallet_json: &str,
     assets_json: &str,
     character_detail_json: &str,
+) -> AppResult<DemoBundle> {
+    load_demo_bundle_with_market(
+        characters_json,
+        skillqueue_json,
+        wallet_json,
+        assets_json,
+        character_detail_json,
+        "{}",
+    )
+}
+
+/// Parse a bundle including assets, character detail, and the market
+/// file. A `"{}"` market text yields `market: None` everywhere.
+pub fn load_demo_bundle_with_market(
+    characters_json: &str,
+    skillqueue_json: &str,
+    wallet_json: &str,
+    assets_json: &str,
+    character_detail_json: &str,
+    market_json: &str,
 ) -> AppResult<DemoBundle> {
     tracing::debug!("[DEMO] parsing demo bundle");
     let characters: CharactersFile = serde_json::from_str(characters_json)?;
@@ -213,6 +270,7 @@ pub fn load_demo_bundle_with_detail(
     let assets_by_id: HashMap<String, AssetsFileEntry> = serde_json::from_str(assets_json)?;
     let detail_by_id: HashMap<String, CharacterDetailFileEntry> =
         serde_json::from_str(character_detail_json)?;
+    let market_by_id: HashMap<String, MarketFileEntry> = serde_json::from_str(market_json)?;
 
     let mut data: HashMap<i64, DemoCharacterData> = HashMap::new();
     for (key, entry) in skills_by_id {
@@ -263,6 +321,27 @@ pub fn load_demo_bundle_with_detail(
         });
     }
 
+    for (key, entry) in market_by_id {
+        let id = parse_character_key(&key)?;
+        tracing::debug!(
+            "[DEMO] character_id={} market public_orders={} history={} character_orders={}",
+            id,
+            entry.public_orders.len(),
+            entry.history.len(),
+            entry.character_orders.len()
+        );
+        let slot = data.entry(id).or_default();
+        slot.market = Some(DemoMarketData {
+            selected_type_id: entry.selected_type_id,
+            region_id: entry.region_id,
+            public_orders: entry.public_orders,
+            public_orders_truncated: entry.public_orders_truncated,
+            history: entry.history,
+            character_orders: entry.character_orders,
+            character_orders_truncated: entry.character_orders_truncated,
+        });
+    }
+
     let bundle = DemoBundle {
         characters: characters.characters,
         data,
@@ -279,12 +358,13 @@ pub fn load_demo_bundle_with_detail(
 /// Load the bundled demo JSON files into typed structures.
 pub fn load_demo_bundle() -> AppResult<DemoBundle> {
     tracing::debug!("[DEMO] loading bundled demo fixtures");
-    load_demo_bundle_with_detail(
+    load_demo_bundle_with_market(
         DEMO_CHARACTERS_JSON,
         DEMO_SKILLQUEUE_JSON,
         DEMO_WALLET_JSON,
         DEMO_ASSETS_JSON,
         DEMO_CHARACTER_DETAIL_JSON,
+        DEMO_MARKET_JSON,
     )
 }
 
@@ -399,6 +479,68 @@ pub fn validate_bundle(bundle: &DemoBundle) -> AppResult<()> {
                 check_dates([&online.last_login, &online.last_logout])?;
             }
         }
+        // Market is optional the same way; validate only when present:
+        // hub region, public rows scoped to the selected type, unique
+        // order IDs and history dates, every date parses.
+        if let Some(market) = &per.market {
+            if market_region_name(market.region_id).is_none() {
+                return Err(fail(format!(
+                    "character {} market region is outside the hub set",
+                    character.character_id
+                )));
+            }
+            let mut public_ids = HashSet::new();
+            for order in &market.public_orders {
+                if order.type_id != market.selected_type_id {
+                    return Err(fail(format!(
+                        "character {} public order type differs from selected type",
+                        character.character_id
+                    )));
+                }
+                if !public_ids.insert(order.order_id) {
+                    return Err(fail(format!(
+                        "character {} duplicate public order id {}",
+                        character.character_id, order.order_id
+                    )));
+                }
+                if parse_esi_datetime(&order.issued).is_none() {
+                    return Err(fail(format!(
+                        "character {} public order issued does not parse: {}",
+                        character.character_id, order.issued
+                    )));
+                }
+            }
+            let mut character_ids = HashSet::new();
+            for order in &market.character_orders {
+                if !character_ids.insert(order.order_id) {
+                    return Err(fail(format!(
+                        "character {} duplicate character order id {}",
+                        character.character_id, order.order_id
+                    )));
+                }
+                if parse_esi_datetime(&order.issued).is_none() {
+                    return Err(fail(format!(
+                        "character {} character order issued does not parse: {}",
+                        character.character_id, order.issued
+                    )));
+                }
+            }
+            let mut history_dates = HashSet::new();
+            for entry in &market.history {
+                if chrono::NaiveDate::parse_from_str(&entry.date, "%Y-%m-%d").is_err() {
+                    return Err(fail(format!(
+                        "character {} history date does not parse: {}",
+                        character.character_id, entry.date
+                    )));
+                }
+                if !history_dates.insert(&entry.date) {
+                    return Err(fail(format!(
+                        "character {} duplicate history date {}",
+                        character.character_id, entry.date
+                    )));
+                }
+            }
+        }
     }
     tracing::debug!("[DEMO] bundle validation ok");
     Ok(())
@@ -410,6 +552,18 @@ pub fn load_demo_names() -> AppResult<Vec<UniverseName>> {
     let names: Vec<UniverseName> = serde_json::from_str(DEMO_NAMES_JSON)?;
     tracing::info!("[DEMO] demo names loaded count={}", names.len());
     Ok(names)
+}
+
+/// The demo word for a type id from the bundled name table, used to
+/// seed the market selection where no resolver is at hand. Falls back
+/// to the resolver's word, never the raw number.
+pub fn demo_type_name(type_id: i64) -> String {
+    let word = load_demo_names()
+        .ok()
+        .and_then(|names| names.into_iter().find(|n| n.id == type_id).map(|n| n.name))
+        .unwrap_or_else(|| "Unknown Item".to_string());
+    tracing::debug!("[DEMO] demo_type_name resolved={}", word);
+    word
 }
 
 /// Insert every bundled demo name into a resolver; returns how many.
@@ -639,6 +793,46 @@ pub fn apply_character(state: &mut AppState, bundle: &DemoBundle, character_id: 
         Some(detail) => LoadState::Ready(detail.clone()),
         None => LoadState::Empty,
     };
+    // Empty-if-absent market, same rule: a demo switch can never leave
+    // the previous character's bundle or selection installed.
+    tracing::debug!(
+        "[DEMO] apply_character character_id={} market_present={}",
+        character_id,
+        per.market.is_some()
+    );
+    state.market_candidates.clear();
+    state.market_lookup_message = None;
+    state.market_generation = state.market_generation.wrapping_add(1);
+    match &per.market {
+        Some(fixture) => {
+            let word = demo_type_name(fixture.selected_type_id);
+            state.market_selected_type_id = Some(fixture.selected_type_id);
+            state.market_selected_type_name = Some(word.clone());
+            state.market_region_id = fixture.region_id;
+            state.market = LoadState::Ready(MarketData {
+                selection: MarketSelection {
+                    type_id: fixture.selected_type_id,
+                    type_name: word,
+                    region_id: fixture.region_id,
+                    character_id: Some(character_id),
+                },
+                public_orders: Ok(PublicOrdersData {
+                    orders: fixture.public_orders.clone(),
+                    truncated: fixture.public_orders_truncated,
+                }),
+                history: Ok(fixture.history.clone()),
+                character_orders: Ok(CharacterOrdersData {
+                    orders: fixture.character_orders.clone(),
+                    truncated: fixture.character_orders_truncated,
+                }),
+            });
+        }
+        None => {
+            state.market = LoadState::Empty;
+            state.market_selected_type_id = None;
+            state.market_selected_type_name = None;
+        }
+    }
 }
 
 /// Seed demo content into the UI state: both fictional characters, the
@@ -736,6 +930,7 @@ pub fn seed_demo_state(state: &mut AppState) {
             state.wallet = LoadState::Error(format!("Demo data failed to load: {e}"));
             state.assets = LoadState::Error(format!("Demo data failed to load: {e}"));
             state.character_details = LoadState::Error(format!("Demo data failed to load: {e}"));
+            state.market = LoadState::Error(format!("Demo data failed to load: {e}"));
         }
     }
 }
@@ -749,8 +944,8 @@ pub fn seed_bundle_into_db(conn: &rusqlite::Connection, bundle: &DemoBundle) -> 
         bundle.characters.len()
     );
     let first_id = bundle.first_character_id();
-    // Assets and character detail are in-memory only (no tables);
-    // nothing to persist for either.
+    // Assets, character detail, and market are in-memory only (no
+    // tables); nothing to persist for any of them.
     for character in &bundle.characters {
         repositories::upsert_character(
             conn,
@@ -1051,6 +1246,7 @@ mod tests {
             assert!(per.assets.is_empty());
             assert!(per.custom_names.is_empty());
             assert!(per.detail.is_none(), "old loader yields no detail");
+            assert!(per.market.is_none(), "old loader yields no market");
         }
     }
 
@@ -1068,6 +1264,10 @@ mod tests {
             assert!(
                 per.detail.is_none(),
                 "four-argument loader yields no detail"
+            );
+            assert!(
+                per.market.is_none(),
+                "four-argument loader yields no market"
             );
         }
     }
@@ -1162,5 +1362,120 @@ mod tests {
             "\"None\" filtered"
         );
         assert!(!state.assets_needs_reauthorize);
+    }
+
+    #[test]
+    fn bundled_market_loads_for_both_characters_and_empty_text_is_none() {
+        let bundle = load_demo_bundle().expect("bundled bundle loads");
+        let aria = bundle
+            .character_data(90000001)
+            .and_then(|per| per.market.as_ref())
+            .expect("aria market fixture");
+        assert_eq!(aria.selected_type_id, 34);
+        assert_eq!(aria.region_id, 10000002);
+        assert!(!aria.public_orders.is_empty());
+        assert!(aria.history.len() >= 5);
+        assert!(aria.public_orders.iter().any(|o| o.is_buy_order));
+        assert!(aria.public_orders.iter().any(|o| !o.is_buy_order));
+        let marcus = bundle
+            .character_data(90000002)
+            .and_then(|per| per.market.as_ref())
+            .expect("marcus market fixture");
+        assert_eq!(marcus.selected_type_id, 35);
+        assert_eq!(marcus.region_id, 10000043);
+        assert!(marcus.history.len() >= 5);
+        // "{}" market text and every older arity yield no market.
+        let empty = load_demo_bundle_with_market(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+            DEMO_CHARACTER_DETAIL_JSON,
+            "{}",
+        )
+        .expect("empty market text loads");
+        assert!(empty.data.values().all(|per| per.market.is_none()));
+        let detail_only = load_demo_bundle_with_detail(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+            DEMO_CHARACTER_DETAIL_JSON,
+        )
+        .expect("five-argument bundle loads");
+        assert!(detail_only.data.values().all(|per| per.market.is_none()));
+        assert_eq!(demo_type_name(34), "Tritanium");
+        assert_eq!(demo_type_name(424242), "Unknown Item");
+    }
+
+    #[test]
+    fn market_validation_rejects_bad_fixtures() {
+        fn mutate(bundle: &mut DemoBundle, f: impl FnOnce(&mut DemoMarketData)) {
+            let first = bundle.first_character_id().expect("first character");
+            let per = bundle.data.get_mut(&first).expect("per-character data");
+            f(per.market.as_mut().expect("market present"));
+        }
+        let mut wrong_type = load_demo_bundle().expect("bundle");
+        mutate(&mut wrong_type, |m| m.public_orders[0].type_id = 587);
+        assert!(validate_bundle(&wrong_type).is_err(), "type mismatch");
+
+        let mut bad_region = load_demo_bundle().expect("bundle");
+        mutate(&mut bad_region, |m| m.region_id = 42);
+        assert!(validate_bundle(&bad_region).is_err(), "non-hub region");
+
+        let mut dupe_order = load_demo_bundle().expect("bundle");
+        mutate(&mut dupe_order, |m| {
+            let dupe = m.public_orders[0].clone();
+            m.public_orders.push(dupe);
+        });
+        assert!(validate_bundle(&dupe_order).is_err(), "duplicate order id");
+
+        let mut bad_issued = load_demo_bundle().expect("bundle");
+        mutate(&mut bad_issued, |m| {
+            m.character_orders[0].issued = "not a date".to_string()
+        });
+        assert!(validate_bundle(&bad_issued).is_err(), "unparseable issued");
+
+        let mut dupe_date = load_demo_bundle().expect("bundle");
+        mutate(&mut dupe_date, |m| {
+            let dupe = m.history[0].clone();
+            m.history.push(dupe);
+        });
+        assert!(
+            validate_bundle(&dupe_date).is_err(),
+            "duplicate history date"
+        );
+    }
+
+    #[test]
+    fn apply_character_swaps_market_and_marketless_clears_selection() {
+        let bundle = load_demo_bundle().expect("bundled bundle loads");
+        let mut state = AppState::new(true);
+        apply_character(&mut state, &bundle, 90000001);
+        let aria = state.market.as_ready().expect("aria market ready");
+        assert_eq!(aria.selection.character_id, Some(90000001));
+        assert_eq!(aria.selection.type_name, "Tritanium");
+        assert_eq!(state.market_selected_type_id, Some(34));
+        assert_eq!(state.market_region_id, 10000002);
+        apply_character(&mut state, &bundle, 90000002);
+        let marcus = state.market.as_ready().expect("marcus market ready");
+        assert_eq!(marcus.selection.character_id, Some(90000002));
+        assert_eq!(marcus.selection.type_name, "Pyerite");
+        assert_eq!(state.market_region_id, 10000043);
+        // A marketless bundle empties the view and clears the selection
+        // (stale-bundle regression guard); the region choice survives.
+        let marketless = load_demo_bundle_with_detail(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+            DEMO_CHARACTER_DETAIL_JSON,
+        )
+        .expect("marketless bundle loads");
+        apply_character(&mut state, &marketless, 90000002);
+        assert!(matches!(state.market, LoadState::Empty));
+        assert_eq!(state.market_selected_type_id, None);
+        assert_eq!(state.market_selected_type_name, None);
+        assert_eq!(state.market_region_id, 10000043);
     }
 }

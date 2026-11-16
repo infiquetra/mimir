@@ -1517,6 +1517,7 @@ impl eframe::App for MimirApp {
                 View::Skills => ui::skills::show(ui, &mut self.state, &self.sde),
                 View::Wallet => ui::wallet::show(ui, &mut self.state, &self.resolver),
                 View::Assets => ui::assets::show(ui, &mut self.state, &self.resolver),
+                View::Market => ui::market::show(ui, &mut self.state, &self.resolver),
                 View::Settings => ui::settings::show(ui, &mut self.state),
             });
         });
