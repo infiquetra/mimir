@@ -13,6 +13,7 @@ use std::time::Duration;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
+use crate::auth::jwt_verify::JwtVerifier;
 use crate::auth::oauth;
 use crate::auth::token_store::{AccessToken, TokenStore};
 use crate::config::{now_unix, EveConfig};
@@ -39,6 +40,7 @@ pub struct EsiClient {
     token_endpoint: String,
     client_id: String,
     token_store: Option<Arc<TokenStore>>,
+    jwt_verifier: Option<Arc<JwtVerifier>>,
     error_limit: Mutex<ErrorLimit>,
 }
 
@@ -65,6 +67,7 @@ impl EsiClient {
             token_endpoint: EveConfig::OAUTH_TOKEN_URL.to_string(),
             client_id: EveConfig::CLIENT_ID.to_string(),
             token_store: None,
+            jwt_verifier: None,
             error_limit: Mutex::new(ErrorLimit {
                 remain: EveConfig::MAX_ERRORS_PER_MINUTE,
                 reset_secs: 0,
@@ -76,6 +79,15 @@ impl EsiClient {
     pub fn with_token_store(mut self, store: Arc<TokenStore>) -> Self {
         tracing::debug!("[ESI] token store attached");
         self.token_store = Some(store);
+        self
+    }
+
+    /// Attach the shared JWT verifier. A needed refresh without one
+    /// fails closed (see `valid_access_token`); it never skips
+    /// verification silently.
+    pub fn with_jwt_verifier(mut self, verifier: Arc<JwtVerifier>) -> Self {
+        tracing::debug!("[ESI] JWT verifier attached");
+        self.jwt_verifier = Some(verifier);
         self
     }
 
@@ -179,6 +191,15 @@ impl EsiClient {
             .load(character_id)?
             .ok_or_else(|| AppError::from(EsiError::NoTokens(character_id)))?;
         if tokens.needs_refresh_at(now_unix()) {
+            // Fail closed before the refresh (and therefore before any
+            // save) when verification is not wired: never skip it.
+            let verifier = self.jwt_verifier.as_ref().ok_or_else(|| {
+                tracing::warn!(
+                    "[AUTH] token verification not wired; refusing refresh character_id={}",
+                    character_id
+                );
+                AppError::from(AuthError::JwksUnavailable)
+            })?;
             tracing::info!(
                 "[AUTH] refreshing access token character_id={}",
                 character_id
@@ -194,7 +215,24 @@ impl EsiClient {
                 AuthError::RefreshRejected => AppError::from(EsiError::Reauthorize),
                 other => AppError::from(other),
             })?;
-            tokens.apply_refresh(&refreshed);
+            // Verify before trusting any claim or persisting anything:
+            // a rejection drops the whole refresh response, rotated
+            // refresh token included, and stored tokens are untouched.
+            let claims = verifier
+                .verify(&refreshed.access_token)
+                .await
+                .map_err(|e| match e {
+                    AuthError::RefreshRejected => AppError::from(EsiError::Reauthorize),
+                    other => AppError::from(other),
+                })?;
+            if claims.character_id() != Some(character_id) {
+                tracing::warn!(
+                    "[AUTH] refreshed token names a different character; refusing save character_id={}",
+                    character_id
+                );
+                return Err(AppError::from(AuthError::CharacterMismatch));
+            }
+            tokens.apply_refresh(&refreshed, &claims);
             store.save(&tokens)?;
         }
         Ok(tokens.access)
@@ -367,6 +405,168 @@ mod tests {
         (format!("http://{addr}"), rx)
     }
 
+    /// Owned-body variant of `mock_server` for dynamically built bodies
+    /// (signed-token responses and JWKS documents).
+    async fn mock_server_owned(body: String) -> (String, tokio::sync::oneshot::Receiver<String>) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind mock");
+        let addr = listener.local_addr().expect("addr");
+        let (tx, rx) = tokio::sync::oneshot::channel::<String>();
+        tokio::spawn(async move {
+            if let Ok((mut socket, _peer)) = listener.accept().await {
+                let mut buffer = vec![0u8; 16384];
+                let count = socket.read(&mut buffer).await.unwrap_or(0);
+                let _ = tx.send(String::from_utf8_lossy(&buffer[..count]).into_owned());
+                let payload = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = socket.write_all(payload.as_bytes()).await;
+                let _ = socket.flush().await;
+            }
+        });
+        (format!("http://{addr}"), rx)
+    }
+
+    // TEST-ONLY signed-token fixtures: a minimal copy of the RS256
+    // signing helper in `src/auth/jwt_verify.rs` tests (keys generated
+    // in code here, never committed material; the signing is manual and
+    // independent of the verifying library).
+    struct TestRng;
+
+    impl rsa::rand_core::TryRng for TestRng {
+        type Error = std::convert::Infallible;
+
+        fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
+            let mut bytes = [0u8; 4];
+            self.try_fill_bytes(&mut bytes)?;
+            Ok(u32::from_le_bytes(bytes))
+        }
+
+        fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+            let mut bytes = [0u8; 8];
+            self.try_fill_bytes(&mut bytes)?;
+            Ok(u64::from_le_bytes(bytes))
+        }
+
+        fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Self::Error> {
+            rand::RngCore::fill_bytes(&mut rand::thread_rng(), dst);
+            Ok(())
+        }
+    }
+
+    impl rsa::rand_core::TryCryptoRng for TestRng {}
+
+    fn b64(bytes: &[u8]) -> String {
+        use base64::Engine as _;
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
+    }
+
+    fn uint_b64(bytes: &[u8]) -> String {
+        let mut start = 0;
+        while start + 1 < bytes.len() && bytes[start] == 0 {
+            start += 1;
+        }
+        b64(&bytes[start..])
+    }
+
+    fn payload_for(character_id: i64) -> serde_json::Value {
+        let now = crate::config::now_unix();
+        serde_json::json!({
+            "sub": format!("CHARACTER:EVE:{character_id}"),
+            "name": "Fixture Capsuleer",
+            "exp": now + 1199,
+            "iat": now,
+            "scp": ["esi-skills.read_skills.v1"],
+            "iss": "login.eveonline.com",
+            "aud": ["test-client", "EVE Online"],
+            "owner": "fixture-owner",
+        })
+    }
+
+    /// Generate a TEST-ONLY 2048-bit RSA key in code, manually sign an
+    /// RS256 token for `character_id`, and return it with the JWKS
+    /// document carrying the public key.
+    fn signed_rs256_token(character_id: i64) -> (String, String) {
+        use rsa::sha2::{Digest as _, Sha256 as RsaSha256};
+        use rsa::traits::PublicKeyParts as _;
+        use rsa::{Pkcs1v15Sign, PrivateKey};
+        let private = PrivateKey::new(&mut TestRng, 2048).expect("rsa keygen");
+        let jwks = serde_json::json!({
+            "keys": [{
+                "kty": "RSA", "kid": "rsa-1", "use": "sig", "alg": "RS256",
+                "n": uint_b64(&private.n().to_be_bytes()),
+                "e": uint_b64(&private.e().to_be_bytes()),
+            }]
+        })
+        .to_string();
+        let header = serde_json::json!({"alg": "RS256", "kid": "rsa-1", "typ": "JWT"});
+        let signing_input = format!(
+            "{}.{}",
+            b64(header.to_string().as_bytes()),
+            b64(payload_for(character_id).to_string().as_bytes())
+        );
+        let digest = RsaSha256::digest(signing_input.as_bytes());
+        let signature = private
+            .sign(Pkcs1v15Sign::new::<RsaSha256>(), &digest)
+            .expect("rs256 sign");
+        (format!("{signing_input}.{}", b64(&signature)), jwks)
+    }
+
+    /// Replace a token's payload segment under its original signature.
+    fn tamper_payload(token: &str, character_id: i64) -> String {
+        let mut parts = token.split('.');
+        let header = parts.next().expect("header segment");
+        let _original = parts.next().expect("payload segment");
+        let signature = parts.next().expect("signature segment");
+        format!(
+            "{}.{}.{}",
+            header,
+            b64(payload_for(character_id).to_string().as_bytes()),
+            signature
+        )
+    }
+
+    fn token_response_body(access_token: &str) -> String {
+        serde_json::json!({
+            "access_token": access_token,
+            "refresh_token": "fresh-refresh",
+            "expires_in": 1199,
+            "token_type": "Bearer",
+        })
+        .to_string()
+    }
+
+    fn seeded_expired_store(dir: &tempfile::TempDir) -> Arc<TokenStore> {
+        let store = Arc::new(TokenStore::file_only(dir.path().join("tokens.json")));
+        store
+            .save(&StoredTokens {
+                character_id: 99,
+                access: AccessToken("stale-access".to_string()),
+                refresh: RefreshToken("stale-refresh".to_string()),
+                expires_at_unix: 1, // long expired -> must refresh
+            })
+            .expect("seed tokens");
+        store
+    }
+
+    fn test_verifier(jwks_base: &str) -> Arc<JwtVerifier> {
+        Arc::new(JwtVerifier::with_endpoint(
+            reqwest::Client::new(),
+            format!("{jwks_base}/oauth/jwks"),
+            "test-client".to_string(),
+        ))
+    }
+
+    fn assert_stored_tokens_unchanged(store: &TokenStore) {
+        let persisted = store
+            .load(99)
+            .expect("load")
+            .expect("seeded tokens present");
+        assert!(persisted.access.as_str() == "stale-access");
+        assert!(persisted.refresh.as_str() == "stale-refresh");
+        assert_eq!(persisted.expires_at_unix, 1);
+    }
+
     #[test]
     fn build_url_adds_datasource() {
         let client = EsiClient::with_http(reqwest::Client::new(), "http://x/latest/".to_string());
@@ -417,31 +617,24 @@ mod tests {
 
     #[tokio::test]
     async fn auth_get_refreshes_expired_token_via_mock() {
-        // Token endpoint mock.
-        let (token_base, token_request) = mock_server(
-            200,
-            "",
-            r#"{"access_token":"fresh-access","refresh_token":"fresh-refresh","expires_in":1199,"token_type":"Bearer"}"#,
-        )
-        .await;
+        // Properly test-signed RS256 token (case 18): an unverifiable
+        // placeholder would now be rejected before any save.
+        let (signed_access, jwks_body) = signed_rs256_token(99);
+        let (jwks_base, jwks_request) = mock_server_owned(jwks_body).await;
+        // Token endpoint mock returns the signed token.
+        let (token_base, token_request) =
+            mock_server_owned(token_response_body(&signed_access)).await;
         // ESI mock.
         let (base, esi_request) = mock_server(200, "", r#"{"total_sp":10,"skills":[]}"#).await;
         let dir = tempfile::tempdir().expect("tempdir");
-        let store = Arc::new(TokenStore::file_only(dir.path().join("tokens.json")));
-        store
-            .save(&StoredTokens {
-                character_id: 99,
-                access: AccessToken("stale-access".to_string()),
-                refresh: RefreshToken("stale-refresh".to_string()),
-                expires_at_unix: 1, // long expired -> must refresh
-            })
-            .expect("seed tokens");
+        let store = seeded_expired_store(&dir);
         let client = EsiClient::with_http(reqwest::Client::new(), base)
             .with_token_store(store.clone())
             .with_token_endpoint(
                 format!("{token_base}/oauth/token"),
                 "test-client".to_string(),
-            );
+            )
+            .with_jwt_verifier(test_verifier(&jwks_base));
         let value: serde_json::Value = client
             .auth_get("/characters/99/skills/", 99)
             .await
@@ -450,10 +643,91 @@ mod tests {
         let refresh_body = token_request.await.expect("refresh captured");
         assert!(refresh_body.contains("grant_type=refresh_token"));
         let esi_req = esi_request.await.expect("esi captured");
-        assert!(esi_req.contains("Bearer fresh-access"));
+        assert!(esi_req.contains(&format!("Bearer {signed_access}")));
+        // The JWKS fetch carries no token material.
+        let jwks_req = jwks_request.await.expect("jwks captured");
+        assert!(!jwks_req.to_lowercase().contains("authorization"));
         let persisted = store.load(99).expect("load").expect("persisted");
-        assert_eq!(persisted.access.as_str(), "fresh-access");
-        assert_eq!(persisted.refresh.as_str(), "fresh-refresh");
+        assert!(persisted.access.as_str() == signed_access);
+        assert!(persisted.refresh.as_str() == "fresh-refresh");
+        assert!(persisted.expires_at_unix > crate::config::now_unix());
+    }
+
+    // Case 19: a tampered refreshed token is rejected and the
+    // previously stored tokens are left exactly as seeded.
+    #[tokio::test]
+    async fn auth_get_rejects_tampered_refreshed_token_and_saves_nothing() {
+        let (signed_access, jwks_body) = signed_rs256_token(99);
+        // Different payload under the original signature (a regenerated
+        // identical payload would not be a tamper).
+        let tampered = tamper_payload(&signed_access, 100);
+        let (jwks_base, _jwks_request) = mock_server_owned(jwks_body).await;
+        let (token_base, _token_request) = mock_server_owned(token_response_body(&tampered)).await;
+        let dir = tempfile::tempdir().expect("tempdir");
+        let store = seeded_expired_store(&dir);
+        let client = EsiClient::with_http(reqwest::Client::new(), "http://127.0.0.1:9".to_string())
+            .with_token_store(store.clone())
+            .with_token_endpoint(
+                format!("{token_base}/oauth/token"),
+                "test-client".to_string(),
+            )
+            .with_jwt_verifier(test_verifier(&jwks_base));
+        let result: AppResult<serde_json::Value> =
+            client.auth_get("/characters/99/skills/", 99).await;
+        assert!(matches!(
+            result,
+            Err(AppError::Auth(AuthError::InvalidSignature))
+        ));
+        assert_stored_tokens_unchanged(&store);
+    }
+
+    // Case 20: a validly signed refreshed token naming a different
+    // character is rejected and stored tokens are unchanged.
+    #[tokio::test]
+    async fn auth_get_rejects_refreshed_token_for_wrong_character() {
+        let (signed_access, jwks_body) = signed_rs256_token(100);
+        let (jwks_base, _jwks_request) = mock_server_owned(jwks_body).await;
+        let (token_base, _token_request) =
+            mock_server_owned(token_response_body(&signed_access)).await;
+        let dir = tempfile::tempdir().expect("tempdir");
+        let store = seeded_expired_store(&dir);
+        let client = EsiClient::with_http(reqwest::Client::new(), "http://127.0.0.1:9".to_string())
+            .with_token_store(store.clone())
+            .with_token_endpoint(
+                format!("{token_base}/oauth/token"),
+                "test-client".to_string(),
+            )
+            .with_jwt_verifier(test_verifier(&jwks_base));
+        let result: AppResult<serde_json::Value> =
+            client.auth_get("/characters/99/skills/", 99).await;
+        assert!(matches!(
+            result,
+            Err(AppError::Auth(AuthError::CharacterMismatch))
+        ));
+        assert_stored_tokens_unchanged(&store);
+    }
+
+    // Absence rule: a needed refresh with no verifier attached fails
+    // closed before the token endpoint is even called (the endpoint
+    // below is unreachable; a refresh attempt would surface a
+    // different error), and stored tokens are unchanged.
+    #[tokio::test]
+    async fn auth_get_refresh_without_verifier_fails_closed() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let store = seeded_expired_store(&dir);
+        let client = EsiClient::with_http(reqwest::Client::new(), "http://127.0.0.1:9".to_string())
+            .with_token_store(store.clone())
+            .with_token_endpoint(
+                "http://127.0.0.1:9/oauth/token".to_string(),
+                "test-client".to_string(),
+            );
+        let result: AppResult<serde_json::Value> =
+            client.auth_get("/characters/99/skills/", 99).await;
+        assert!(matches!(
+            result,
+            Err(AppError::Auth(AuthError::JwksUnavailable))
+        ));
+        assert_stored_tokens_unchanged(&store);
     }
 
     #[tokio::test]

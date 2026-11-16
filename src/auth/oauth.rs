@@ -39,7 +39,7 @@ impl std::fmt::Debug for AuthorizationRequest {
     }
 }
 
-fn deserialize_scp<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+pub(crate) fn deserialize_scp<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -47,6 +47,24 @@ where
     let value = Option::<serde_json::Value>::deserialize(deserializer)?;
     Ok(match value {
         Some(serde_json::Value::String(s)) => ssplit_scopes(&s),
+        Some(serde_json::Value::Array(items)) => items
+            .iter()
+            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+            .collect(),
+        _ => Vec::new(),
+    })
+}
+
+/// EVE sends `aud` as a string or a JSON array. A single string is
+/// ONE audience (never whitespace-split, unlike `scp`); anything
+/// else yields an empty vec, which then fails audience validation.
+pub(crate) fn deserialize_aud<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = Option::<serde_json::Value>::deserialize(deserializer)?;
+    Ok(match value {
+        Some(serde_json::Value::String(s)) => vec![s],
         Some(serde_json::Value::Array(items)) => items
             .iter()
             .filter_map(|v| v.as_str().map(|s| s.to_string()))
@@ -142,8 +160,9 @@ pub fn validate_expected_character(
     }
 }
 
-/// JWT claims parsed without signature verification (same as Flutter; JWKS
-/// verification is a named hardening follow-up in the design).
+/// JWT claims. Instances returned by `parse_jwt_claims` are
+/// UNVERIFIED; trusted instances come from
+/// `JwtVerifier::verify` (see `jwt_verify`).
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct JwtClaims {
     #[serde(default)]
@@ -160,6 +179,10 @@ pub struct JwtClaims {
     pub iss: Option<String>,
     #[serde(default)]
     pub owner: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_aud")]
+    pub aud: Vec<String>,
+    #[serde(default)]
+    pub nbf: Option<i64>,
 }
 
 impl JwtClaims {
@@ -341,7 +364,9 @@ pub fn parse_callback_url(callback: &url::Url, expected_state: &str) -> Result<S
     }
 }
 
-/// Decode the claims segment of a JWT (no signature check, as in Flutter).
+/// UNVERIFIED decode of the claims segment of a JWT (no signature
+/// check). Production trust decisions must use
+/// `JwtVerifier::verify`; this stays for parser unit tests.
 pub fn parse_jwt_claims(token: &str) -> Result<JwtClaims, AuthError> {
     tracing::debug!("[AUTH] parsing JWT claims");
     let mut segments = token.split('.');
@@ -361,7 +386,7 @@ pub fn needs_refresh(expires_at_unix: i64, now_unix_secs: i64) -> bool {
     now_unix_secs + EveConfig::TOKEN_REFRESH_BUFFER_SECS >= expires_at_unix
 }
 
-fn default_http() -> Result<reqwest::Client, AuthError> {
+pub(crate) fn default_http() -> Result<reqwest::Client, AuthError> {
     Ok(reqwest::Client::builder()
         .timeout(std::time::Duration::from_millis(
             EveConfig::DEFAULT_TIMEOUT_MS,
@@ -522,13 +547,12 @@ pub async fn revoke_token(token: &str) -> Result<(), AuthError> {
     .await
 }
 
-/// Convenience: expiry instant for a fresh token response, using JWT `exp`
-/// when parseable and `expires_in` otherwise.
-pub fn expiry_for(tokens: &TokenResponse) -> i64 {
-    if let Ok(claims) = parse_jwt_claims(&tokens.access_token) {
-        if claims.exp > 0 {
-            return claims.exp;
-        }
+/// Expiry instant from already-verified claims: the verified `exp`
+/// wins; the `expires_in` fallback is defensive only (verified
+/// claims always carry `exp > 0`).
+pub fn expiry_for_verified(tokens: &TokenResponse, claims: &JwtClaims) -> i64 {
+    if claims.exp > 0 {
+        return claims.exp;
     }
     tokens.expires_at_unix(now_unix())
 }
@@ -747,5 +771,46 @@ mod tests {
         assert!(!rendered.contains("sekrit-a"));
         assert!(!rendered.contains("sekrit-r"));
         assert_eq!(t.expires_at_unix(1000), 2199);
+    }
+
+    #[test]
+    fn expiry_for_verified_prefers_verified_exp() {
+        let tokens = TokenResponse {
+            expires_in: 1199,
+            ..TokenResponse::default()
+        };
+        let claims = JwtClaims {
+            exp: 1_800_000_000,
+            ..JwtClaims::default()
+        };
+        assert_eq!(expiry_for_verified(&tokens, &claims), 1_800_000_000);
+        // Defensive fallback keeps the expires_in arithmetic.
+        let no_exp = JwtClaims::default();
+        let before = now_unix();
+        let fallback = expiry_for_verified(&tokens, &no_exp);
+        assert!(fallback >= before + 1199 && fallback <= now_unix() + 1199);
+    }
+
+    #[test]
+    fn aud_deserialize_string_array_and_other() {
+        let string_form = fake_jwt(r#"{"sub":"CHARACTER:EVE:7","exp":9,"aud":"only-aud"}"#);
+        assert_eq!(
+            parse_jwt_claims(&string_form).expect("claims").aud,
+            vec!["only-aud".to_string()]
+        );
+        let array_form = fake_jwt(r#"{"sub":"CHARACTER:EVE:7","exp":9,"aud":["a","b"]}"#);
+        assert_eq!(
+            parse_jwt_claims(&array_form).expect("claims").aud,
+            vec!["a".to_string(), "b".to_string()]
+        );
+        let number_form = fake_jwt(r#"{"sub":"CHARACTER:EVE:7","exp":9,"aud":42}"#);
+        assert!(parse_jwt_claims(&number_form)
+            .expect("claims")
+            .aud
+            .is_empty());
+        let no_aud = fake_jwt(r#"{"sub":"CHARACTER:EVE:7","exp":9}"#);
+        let claims = parse_jwt_claims(&no_aud).expect("claims");
+        assert!(claims.aud.is_empty());
+        assert_eq!(claims.nbf, None);
     }
 }

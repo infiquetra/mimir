@@ -111,6 +111,14 @@ pub enum AuthError {
     BadTokenResponse(String),
     #[error("[AUTH] malformed token")]
     MalformedToken,
+    #[error("[AUTH] EVE signing keys unavailable; token not verified")]
+    JwksUnavailable,
+    #[error("[AUTH] token signed with an unknown key")]
+    UnknownSigningKey,
+    #[error("[AUTH] token signature invalid")]
+    InvalidSignature,
+    #[error("[AUTH] token claims invalid: {0}")]
+    InvalidClaims(&'static str),
     #[error("[AUTH] callback timed out")]
     CallbackTimeout,
     #[error("[AUTH] callback listener failed: {0}")]

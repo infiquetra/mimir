@@ -31,6 +31,28 @@
 
 ## 2026-11-16
 
+### Unverified token headers are log input, not log text
+
+**Author.** Muse Code (parent hardening pass over the JWT verification review)
+**Context.** Adversarial review of the JWT slice found zero bypasses but flagged that the token header's key id (`kid`) — attacker-influenced before any signature check — was interpolated raw into twelve tracing lines, so a `kid` containing newlines could forge additional log lines and an unbounded value could bloat them.
+**Evidence.** Review observations in the JWT workflow synthesis; `src/auth/jwt_verify.rs` pre-fix `kid={}` interpolations in `usable_key` and `verify_with_keys` (duplicate/unknown/mismatch/verify-failure/issuer/audience/expiry paths).
+**Mechanism.** Structured surrounding log text does not sanitize its interpolated values: any pre-authentication field reaches log files with whatever control characters it carries, and log consumers downstream cannot distinguish forged lines from real ones.
+**Fix (or queued).** Every `kid` log site now renders through `kid_for_log` (debug-escaped, capped at 64 characters); key lookup still uses the original value, so verification behavior is unchanged.
+**Validation.** New unit test `kid_for_log_escapes_and_caps_untrusted_kid` in `src/auth/jwt_verify.rs` plus full `cargo test` / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` on branch `feat/jwt-signature-verification` in the hardening commit.
+**Generalizable rule.** Anything read before trust is established — headers, key ids, remote names — only reaches logs through an escaping, length-capped rendering; the raw value stays in logic paths where equality matters.
+**Refs.** `docs/jwt-verification-design.md`; `src/auth/jwt_verify.rs` (`kid_for_log`).
+
+### jsonwebtoken 12 validates expiry against the system clock only, so time rules must move into the caller when "now" is injected
+
+**Author.** Mimir JWT verification workflow (Builder A, recorded by the integrator)
+**Context.** The JWT design requires the pure verification core to evaluate `exp` (expiry) and `nbf` (not-before) at an injected `now` so tests can pin the 60-second leeway boundaries exactly, with no sleeps and no dependence on the host clock.
+**Evidence.** `src/auth/jwt_verify.rs:297-303` sets `validation.validate_exp = false` and `validation.validate_nbf = false` with a comment recording why; boundary tests in the same file assert both sides of the leeway (`expired_and_leeway_boundary`, nbf exactly at now plus leeway accepted).
+**Mechanism.** `jsonwebtoken` version 12 reads the system clock inside its own validation and offers no parameter to supply the current time. Leaving its time checks enabled would make the core's result depend on wall time, so boundary cases could not be tested deterministically and could disagree with the design formulas. The library still verifies the signature and enforces required-claim presence, issuer, and the client-id audience; the caller then applies the expiry and not-before formulas at the injected time.
+**Fix (or queued).** Library time validation disabled, design time formulas applied in `verify_with_keys` immediately after decode (`src/auth/jwt_verify.rs:340-353`). A related version fact: an `alg=none` header surfaces as malformed rather than invalid-signature in this version, which the design test matrix permits.
+**Validation.** The jwt_verify test module covers both sides of each boundary with fixed timestamps; full `cargo test` green on `feat/jwt-signature-verification`.
+**Generalizable rule.** When a validation library owns a hidden input such as the system clock, either wrap that input or move the affected check into your own code; never let a library default silently own a boundary your design specifies.
+**Refs.** `docs/jwt-verification-design.md` Sections 5 and 9; `src/auth/jwt_verify.rs`; DECISIONS 2026-11-15 JWT verification entry.
+
 ### A step-up grant is proven by the next successful data fetch, never by login alone; in-flight sign-in outlives UI intentions
 
 **Author.** Muse Code (parent repair pass over the step-up OAuth workflow)
