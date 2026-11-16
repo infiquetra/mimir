@@ -2368,6 +2368,7 @@ impl eframe::App for MimirApp {
                 View::Planets => ui::planets::show(ui, &mut self.state, &self.resolver),
                 View::Fittings => ui::fittings::show(ui, &mut self.state, &self.resolver),
                 View::Settings => ui::settings::show(ui, &mut self.state),
+                View::Exploration => ui::exploration::show(ui, &mut self.state),
             });
         });
 
