@@ -714,6 +714,9 @@ pub struct CharacterFitting {
 /// `DroneBay`); it is grouped only through the view whitelist
 /// and is never rendered verbatim. `quantity` is carried raw
 /// and clamped at render/export, never at parse.
+///
+/// The same triple is the ESI write item shape, so this type
+/// serializes unchanged into a `SaveFittingRequest` body.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct FittingItem {
     #[serde(default)]
@@ -722,6 +725,33 @@ pub struct FittingItem {
     pub quantity: i64,
     #[serde(default)]
     pub type_id: i64,
+}
+
+/// `POST /characters/{character_id}/fittings/` request body.
+/// Field order is part of the contract: serde serializes in
+/// declaration order, and the endpoint's request-capture test
+/// asserts the exact bytes. The field names are exactly the
+/// ESI OpenAPI property names, which are also exactly the
+/// retired Flutter client's keys: no extra keys, none omitted.
+/// `ship_type_id` and every item `type_id` are numeric IDs
+/// carried on the wire only, never rendered.
+#[derive(Debug, Clone, Serialize)]
+pub struct SaveFittingRequest {
+    pub name: String,
+    pub description: String,
+    pub ship_type_id: i64,
+    pub items: Vec<FittingItem>,
+}
+
+/// `POST /characters/{character_id}/fittings/` success receipt:
+/// the single `fitting_id` ESI returns for the new fitting.
+/// The field deliberately has no `#[serde(default)]`: a 201
+/// whose body lacks `fitting_id` is a decode failure, never a
+/// fabricated id. The id is selection identity only, never
+/// rendered and never sent to universe name resolution.
+#[derive(Debug, Clone, Deserialize)]
+pub struct SaveFittingResponse {
+    pub fitting_id: i64,
 }
 
 /// ESI error body shape: `{"error": "..."}`.
