@@ -26,6 +26,15 @@
 
 ## 2026-11-15
 
+### Step-up sign-in asks for granted ∪ requested scopes and validates the character before saving anything (feat/stepup-oauth)
+
+**Author.** Mimir step-up workflow (designer, two builders, integrator)
+**Decision.** Granting a post-first-sign-in scope (today only `esi-assets.read_assets.v1` from the Assets view) re-runs EVE SSO (EVE's single sign-on login service) asking for the union of already-granted and requested scopes. After the code exchange, the returned claims must name the character the flow was started for and must actually contain the requested scope; either check failing aborts before `TokenStore::save` or `set_token_meta`, leaving the old tokens untouched. First sign-in (`FIRST_AUTH_SCOPES`, `start_login`) is not widened or refactored, and a `token_meta` pre-check skips the browser entirely when the scope is already granted.
+**Rejected alternatives.** Asking only for the new scope (would mint a replacement token stripped of skills/wallet scopes); widening first authorization (breaks the least-privilege decision in `docs/rust-rewrite-design.md`); reusing `BackendMsg::LoggedIn` for step-up completion (would steal the active character if the user switched mid-flow); saving first and validating after (a browser approved as a different character would overwrite the clicked character's working tokens).
+**Rationale.** An EVE token carries exactly the scopes requested at authorize time, and the person approving in the browser can be any EVE account. Union preserves the existing grant; validate-before-save makes every failure mode leave the previous working state intact.
+**Revisit when.** A third scoped flow appears (then extract the duplicated callback/exchange tail shared by `start_login` and `start_stepup_login`), JWT signature verification lands, or CCP changes scope-grant semantics.
+**Refs.** `docs/stepup-oauth-design.md` (decisions S1–S10); `src/auth/oauth.rs` (`union_scopes`, `validate_expected_character`); `src/app/shell.rs` (`start_stepup_login`); LEARNINGS 2026-11-15 request_refresh entry.
+
 ### Flutter app replaced by a single-window Rust/egui app (rust-rewrite)
 
 **Author.** Mimir conversion workflow (design + four builders + integrator)

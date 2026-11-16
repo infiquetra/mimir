@@ -504,11 +504,14 @@ impl MimirApp {
                 BackendMsg::StepUpLoggedIn { character_id } => {
                     tracing::info!("[AUTH] step-up complete character_id={}", character_id);
                     self.state.auth = AuthState::Success;
-                    self.state.status_message = "Permission granted. Refreshing...".to_string();
                     if self.state.active_character_id == Some(character_id) {
                         self.state.assets_needs_reauthorize = false;
+                        // request_refresh sets its own generic status, so the
+                        // specific step-up status must be set after it.
                         self.state.request_refresh("post-stepup");
+                        self.state.status_message = "Permission granted. Refreshing...".to_string();
                     } else {
+                        self.state.status_message = "Permission granted. Refreshing...".to_string();
                         tracing::warn!(
                             "[AUTH] step-up finished for non-active character_id={}",
                             character_id
@@ -916,9 +919,11 @@ impl MimirApp {
                 "[AUTH] step-up skipped; scopes already granted character_id={}",
                 request.character_id
             );
+            // request_refresh sets its own generic status, so the specific
+            // already-granted status must be set after it.
+            self.state.request_refresh("stepup-already-granted");
             self.state.status_message =
                 "That permission is already granted. Refreshing...".to_string();
-            self.state.request_refresh("stepup-already-granted");
             return;
         }
         let union = oauth::union_scopes(&granted, &request.scopes);

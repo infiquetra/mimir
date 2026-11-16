@@ -44,6 +44,17 @@
 
 ## 2026-11-15
 
+### `request_refresh` overwrites `status_message`, so a specific status must be set after it
+
+**Author.** Mimir step-up workflow (integrator)
+**Context.** The step-up design specified exact status strings ("Permission granted. Refreshing...", "That permission is already granted. Refreshing...") set immediately before calling `request_refresh`.
+**Evidence.** `AppState::request_refresh` in `src/app/state.rs` unconditionally assigns `status_message = "Refresh requested..."` (or the demo text). Both step-up sites in `src/app/shell.rs` (`StepUpLoggedIn` arm, already-granted path in `start_stepup_login`) set their specific status first, so the generic text always won and the specified strings could never render. The pre-existing `LoggedIn` arm has the same ordering and was left untouched per the step-up design (section 5.3).
+**Mechanism.** A helper that bundles "queue work + announce it" silently owns the announcement; any caller treating it as queue-only loses its own message, and no test asserts on status text so the loss is invisible.
+**Fix (or queued).** Integrator commit on `feat/stepup-oauth`: both step-up sites now call `request_refresh` first and set the specific status after it.
+**Validation.** Full gates green (`cargo fmt`, `cargo clippy --all-targets -- -D warnings`, `cargo test`, `cargo build`); ordering verified by reading both call sites after the edit. Live browser flow not exercised (no real EVE account on this host).
+**Generalizable rule.** When a helper sets shared UI state as a side effect, callers must write their own value after the helper — check the helper body, not its name, before assuming it is side-effect-free for the fields you care about.
+**Refs.** `docs/stepup-oauth-design.md` sections 5.2 and 11; DECISIONS 2026-11-15 step-up entry.
+
 ### Branch-protection required checks keep their old names after a stack rewrite
 
 **Author.** Muse Code (parent repair pass over the conversion workflow)

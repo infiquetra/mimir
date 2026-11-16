@@ -1,6 +1,9 @@
 # Step-Up OAuth — Design
 
-Status: design only. No code is created by this document.
+Status: implemented on `feat/stepup-oauth` (scope logic and request
+state, shell and Assets wiring, then integrator finish). This document
+remains the design record; the live manual matrix in Section 11 still
+needs a real EVE account and has not been run.
 Repo: `/home/jefcox/workspace/infiquetra/mimir`, branch `feat/stepup-oauth`
 off `develop` at ff7886e (Assets slice merged). Every `file:line`
 reference below was read in full at that commit.
