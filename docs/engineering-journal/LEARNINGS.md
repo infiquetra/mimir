@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### "No skill row" means untrained only inside a loaded, owner-proven skill bundle; before the first skill-consuming feature you find the switch-boundary gap
+
+**Author.** Muse Code (fitting-skill-resources workflow, integrator)
+**Context.** The second resources slice applies CPU Management (skill 3426) and Power Grid Management (skill 3413) to ship CPU and power grid output. Two questions had to be decided from bodies: whether a missing skill row means level 0, and whether the `Ready` skills bundle ever survives a character switch.
+**Evidence.** `docs/fitting-skill-resources-design.md` section 3 (the retired Flutter lookup conflates "no bundle loaded" with "row absent", defaulting both to 0); `src/fitting/resources.rs:58` (`resource_skill_levels` reads `trained_skill_level` inside a loaded bundle only, absent row reads as 0 there) and `:133` (`fitting_resources_with_skills` takes `Option`, `None` renders the base block); `src/ui/fittings.rs:1428` and `:1714` (both details derive levels from `state.skills.as_ready()`); `src/app/state.rs:892` and `:991` (the new `skills = LoadState::Loading` resets on real switch and removed-active).
+**Mechanism.** An absent row in a loaded trained-skills bundle genuinely means untrained (level 0), but when no bundle is loaded for the owning character the level is unknown — rendering level 0 there would mislabel a possibly trained output as base, and rendering a prior bundle would be another character's skills. The `Ready` bundle carried no owner stamp, and before this slice nothing forced the distinction because no feature rendered one character's skills inside another character's owning context; the stale bundle survived switch and removal exactly like the known wallet/dashboard gap, but a *calculated number* would have silently consumed it instead of a visibly-wrong skill list.
+**Fix (or queued).** `Option<ResourceSkillLevels>` carries loaded-vs-untrained (`None` = byte-identical base block); `set_active_character`/`remove_character` reset `skills` to Loading so a `Ready` bundle is owner-proven for the active character; wallet/dashboard gaps stay out of scope by design.
+**Validation.** Pure pins in `src/fitting/resources.rs` (absent-row, present-0, trained-vs-active, the 3418 Capacitor Management no-op trap, clamp bounds) and ownership tests in `src/app/state.rs` (switch/same-id/removal/demo order); existing base-block tests unmodified as the byte-identical gate; full gates on branch `feat/rust-fitting-skill-resources`.
+**Generalizable rule.** Absence means zero only inside a loaded, owner-proven bundle: model "not loaded" as a distinct `None` all the way to the render, and audit every `Ready` state for owner staleness the first time a new feature derives numbers from it.
+**Refs.** `docs/fitting-skill-resources-design.md` sections 2-3; DECISIONS 2026-11-16 skill-resources entry below; LEARNINGS 2026-11-16 missing-row entry below for the sibling catalogue rule.
+
 ### In dgmTypeAttributes, a missing row does not mean zero, and subsystem output rows are not ship output
 
 **Author.** Muse Code (fitting-resources workflow, integrator)

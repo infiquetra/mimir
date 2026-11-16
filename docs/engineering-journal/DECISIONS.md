@@ -26,6 +26,15 @@
 
 ## 2026-11-16
 
+### Two grounded skills join the resources readout; per-view character data resets at the switch boundary (feat/rust-fitting-skill-resources)
+
+**Author.** Muse Code (fitting-skill-resources workflow, integrator)
+**Decision.** Ship outputs in the fitting-resources readout now include CPU Management (skill 3426, +5% per trained level to CPU output) and Power Grid Management (skill 3413, +5% per trained level to power grid output) from the owning character's `trained_skill_level`, only when that character's skills bundle is loaded (`Ready`); otherwise the base-values block renders unchanged. Module need reductions, implants, and module/rig/subsystem/ship output bonuses stay excluded and named in the view. To make `Ready` mean "belongs to the active character", `skills` resets to Loading on a real character switch and on removing the active character (`src/app/state.rs:892` and `:991`) — this reset-at-switch convention binds every later slice that derives numbers from a per-character bundle: either reset the state at the boundary or stamp it with its owner and check the stamp at use.
+**Rejected alternatives.** Owner-stamping `SkillsData` for this slice: a cross-builder field contract the Skills view does not need and this slice cannot regress-test cheaply. Assuming level 0 or 5 when skills are unloaded, or reusing a stale bundle until refresh lands: each silently shows the wrong character's or an invented number. Applying the Weapon Upgrades need-reduction family in the same slice: the retired Flutter engine never applied need reductions to usage, so there is no grounded parity to claim.
+**Rationale.** The two skills are the only output modifiers the retired Flutter engine both applied and oracle-pinned (unpenalized percent chain, level 5 = ×1.25); everything else stays in the disclosure, extending the base-values-first decision below rather than replacing it. Reset-at-switch matches the neighbouring resets (market, assets, fittings) and keeps the ordering invariant in one function.
+**Revisit when.** A grounded modifier pipeline with oracle tests lands for module/rig/subsystem/ship output bonuses or need reductions; each newly applied class then leaves the disclosure wording in the same change. Revisit reset-vs-stamp when per-character stamping exists for another reason (offline caching per character), or when the same switch-boundary gap is closed for `wallet`, `dashboard`, or `character_detail` — then fix them by this same convention in one change.
+**Refs.** `docs/fitting-skill-resources-design.md` sections 2-3 and 6; `src/fitting/resources.rs:133` (`fitting_resources_with_skills`); `src/ui/fittings.rs:1209` (`skill_line`); LEARNINGS 2026-11-16 skill-bundle entry; DECISIONS 2026-11-16 base-values-first entry below.
+
 ### Fitting numbers ship base-values-first, labelled in the view for exactly what they exclude (feat/rust-fitting-resources)
 
 **Author.** Muse Code (fitting-resources workflow, integrator)
