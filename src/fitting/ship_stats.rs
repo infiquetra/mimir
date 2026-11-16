@@ -1,7 +1,9 @@
 //! Pure ship base stats calculation over the bundled catalogue.
 //!
 //! [`ship_base_stats`] reads the hull's base shield, armor, and
-//! hull hit points, capacitor capacity, and maximum velocity for
+//! hull hit points, capacitor capacity, maximum velocity, and
+//! shield/capacitor recharge times (converted from the
+//! catalogue's milliseconds to seconds) for
 //! one [`CharacterFitting`] from base (unmodified) dogma
 //! attributes only. No modifier of any kind is applied: fitted
 //! modules, rigs, subsystems, skills, implants, and ship bonuses
@@ -30,6 +32,11 @@ pub struct ShipBaseStats {
     pub hull_hp: Option<f64>,
     pub capacitor_capacity: Option<f64>,
     pub max_velocity: Option<f64>,
+    /// Full shield recharge duration in seconds (catalogue
+    /// milliseconds / 1000; docs/ship-recharge-times-design.md).
+    pub shield_recharge_secs: Option<f64>,
+    /// Full capacitor recharge duration in seconds.
+    pub capacitor_recharge_secs: Option<f64>,
 }
 
 /// Base ship values outcome for one fitting.
@@ -52,7 +59,7 @@ fn usable(value: Option<f64>) -> Option<f64> {
 /// Base ship values for one fitting. The fitting's items are
 /// never read, and availability is independent of
 /// [`crate::fitting::resources::FittingResources`]: this function
-/// keys off the five base stat fields only.
+/// keys off the seven base stat fields only.
 pub fn ship_base_stats(
     fitting: &CharacterFitting,
     catalogue: &FittingTypes,
@@ -74,12 +81,16 @@ pub fn ship_base_stats(
         hull_hp: usable(ship.hull_hp),
         capacitor_capacity: usable(ship.capacitor_capacity),
         max_velocity: usable(ship.max_velocity),
+        shield_recharge_secs: usable(ship.shield_recharge_rate).map(|ms| ms / 1000.0),
+        capacitor_recharge_secs: usable(ship.capacitor_recharge_rate).map(|ms| ms / 1000.0),
     };
     if stats.shield_capacity.is_none()
         && stats.armor_hp.is_none()
         && stats.hull_hp.is_none()
         && stats.capacitor_capacity.is_none()
         && stats.max_velocity.is_none()
+        && stats.shield_recharge_secs.is_none()
+        && stats.capacitor_recharge_secs.is_none()
     {
         return ShipBaseStatsOutcome::Unavailable;
     }
@@ -153,6 +164,20 @@ mod tests {
     // Fractional pins from the same cache: Echelon 3532
     // capacitor 187.5, Helios 11172 capacitor 218.75, Mekubal
     // 78333 velocity 322.3. Exact in the API; only display rounds.
+    // Recharge rows from the same cache (valueFloat, unit 101
+    // milliseconds): Rifter 587: 479 625000.0, 55 125000.0;
+    // Punisher 597: 479 625000.0, 55 160000.0. Seconds are ms/1000.
+    #[test]
+    fn recharge_times_convert_milliseconds_to_seconds() {
+        let catalogue = bundled();
+        let rifter = available(ship_base_stats(&fitting(587, vec![]), &catalogue));
+        assert_eq!(rifter.shield_recharge_secs, Some(625.0));
+        assert_eq!(rifter.capacitor_recharge_secs, Some(125.0));
+        let punisher = available(ship_base_stats(&fitting(597, vec![]), &catalogue));
+        assert_eq!(punisher.shield_recharge_secs, Some(625.0));
+        assert_eq!(punisher.capacitor_recharge_secs, Some(160.0));
+    }
+
     #[test]
     fn fractional_values_are_exact_in_the_api() {
         let catalogue = bundled();

@@ -1378,6 +1378,8 @@ fn ship_base_stat_lines(stats: &ShipBaseStats) -> Vec<String> {
         ship_stat_line("Hull", stats.hull_hp, "HP"),
         ship_stat_line("Capacitor capacity", stats.capacitor_capacity, "GJ"),
         ship_stat_line("Max speed", stats.max_velocity, "m/s"),
+        ship_stat_line("Shield recharge", stats.shield_recharge_secs, "s"),
+        ship_stat_line("Capacitor recharge", stats.capacitor_recharge_secs, "s"),
     ]
     .into_iter()
     .flatten()
@@ -3615,6 +3617,8 @@ mod tests {
                 "Hull: 350.0 HP",
                 "Capacitor capacity: 250.0 GJ",
                 "Max speed: 365.0 m/s",
+                "Shield recharge: 625.0 s",
+                "Capacitor recharge: 125.0 s",
             ]
         );
         assert_eq!(
@@ -3625,6 +3629,8 @@ mod tests {
                 "Hull: 450.0 HP",
                 "Capacitor capacity: 400.0 GJ",
                 "Max speed: 355.0 m/s",
+                "Shield recharge: 625.0 s",
+                "Capacitor recharge: 160.0 s",
             ]
         );
     }
@@ -3741,6 +3747,8 @@ mod tests {
             "Hull: 350.0 HP",
             "Capacitor capacity: 250.0 GJ",
             "Max speed: 365.0 m/s",
+            "Shield recharge: 625.0 s",
+            "Capacitor recharge: 125.0 s",
         ];
         assert_eq!(lines_for(&find("Demo Brawler")), rifter_block);
         assert_eq!(lines_for(&find("Mission Runner")), rifter_block);
@@ -3752,6 +3760,8 @@ mod tests {
                 "Hull: 450.0 HP",
                 "Capacitor capacity: 400.0 GJ",
                 "Max speed: 355.0 m/s",
+                "Shield recharge: 625.0 s",
+                "Capacitor recharge: 160.0 s",
             ]
         );
 
