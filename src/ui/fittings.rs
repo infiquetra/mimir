@@ -21,6 +21,7 @@ use crate::fitting::resources::{
     fitting_resources_with_skills, resource_skill_levels, FittingResources, ResourceBudget,
     ResourceSkillLevels, CPU_MANAGEMENT_SKILL_ID, POWER_GRID_MANAGEMENT_SKILL_ID,
 };
+use crate::fitting::ship_ehp::{ship_base_ehp, ShipBaseEhp, ShipBaseEhpOutcome};
 use crate::fitting::ship_resistances::{
     ship_resistances, ResistLayer, ShipResistances, ShipResistancesOutcome,
 };
@@ -1190,6 +1191,26 @@ const FITTING_SHIP_RESISTANCES_NO_CATALOGUE: &str =
     "Ship resistances unavailable: Mimir's bundled item data failed to load.";
 const FITTING_SHIP_RESISTANCES_NO_SHIP_DATA: &str = "Ship resistances unavailable: Mimir's bundled item data has no resistance data for this fitting's ship.";
 
+/// Locked heading for the ship base effective hit points block
+/// (ship base EHP design section 6). Both qualifiers are
+/// load-bearing: "(base values)" keeps every base hull number
+/// from reading as a fitted total, and the named omni profile
+/// with its shares keeps every number from reading as
+/// profile-free.
+const FITTINGS_SHIP_BASE_EHP_HEADING: &str =
+    "Ship effective hit points (base values, omni 25/25/25/25)";
+
+/// Locked disclosure: the numbers are the bare hull's base
+/// effective hit points against omni damage, never modified by
+/// anything fitted or trained (design section 6). This block's
+/// own sentence; the ship base values and resistances
+/// disclosures above name different sets.
+const FITTING_SHIP_BASE_EHP_DISCLOSURE: &str = "These are the bare hull's base effective hit points (EHP) from Mimir's bundled item data, against omni damage: equal quarters (25% each) of EM, thermal, kinetic, and explosive damage. Fitted modules, rigs, subsystems, skills, implants, and ship bonuses are not applied, and a different damage mix would give different numbers, so these numbers can differ from EVE.";
+
+const FITTING_SHIP_BASE_EHP_NO_CATALOGUE: &str =
+    "Ship effective hit points unavailable: Mimir's bundled item data failed to load.";
+const FITTING_SHIP_BASE_EHP_NO_SHIP_DATA: &str = "Ship effective hit points unavailable: Mimir's bundled item data has no complete base hit point and resistance data for this fitting's ship.";
+
 /// One CPU or power grid line (design section 7): `left` with the
 /// room remaining, or `over` with the positive overage. Exactly at
 /// budget is `0.0 left`, in the normal colour.
@@ -1474,6 +1495,64 @@ fn render_ship_resistances(
     }
 }
 
+/// One effective hit points line (design section 6), pure like
+/// `ship_stat_line`: `None` (no computable layer) renders no
+/// line at all — never a zero, a dash, or placeholder words. A
+/// present `0.0` renders like any other value.
+fn ship_ehp_line(label: &str, value: Option<f64>) -> Option<String> {
+    value.map(|v| format!("{label} EHP: {}", widgets::format_fitting_amount(v, "HP")))
+}
+
+/// The block's lines in locked order (shield, armor, hull, then
+/// total — design section 6). Non-computable layers and a
+/// non-computable total are omitted, so a partial block still
+/// renders its available values plus the disclosure.
+fn ship_base_ehp_lines(ehp: &ShipBaseEhp) -> Vec<String> {
+    [
+        ship_ehp_line("Shield", ehp.shield),
+        ship_ehp_line("Armor", ehp.armor),
+        ship_ehp_line("Hull", ehp.hull),
+        ship_ehp_line("Total", ehp.total),
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
+}
+
+/// Ship base effective hit points block shared by the saved and
+/// imported fitting details (ship base EHP design section 6).
+/// Depends only on the fitting's ship and the catalogue: no skill
+/// levels, no SDE handle, so it renders identically for every
+/// viewing character. The heading always renders, so the view
+/// never silently omits the feature; `Unavailable` swaps all
+/// lines and the disclosure for the fixed unavailable sentence.
+/// Renders even when the fitting has no items. Logs nothing
+/// itself: the pure function logs nothing (render cadence).
+fn render_ship_base_ehp(
+    ui: &mut egui::Ui,
+    fitting: &CharacterFitting,
+    fitting_types: Option<&FittingTypes>,
+) {
+    let Some(catalogue) = fitting_types else {
+        ui.heading(FITTINGS_SHIP_BASE_EHP_HEADING);
+        ui.label(FITTING_SHIP_BASE_EHP_NO_CATALOGUE);
+        return;
+    };
+    match ship_base_ehp(fitting, catalogue) {
+        ShipBaseEhpOutcome::Available(ehp) => {
+            ui.heading(FITTINGS_SHIP_BASE_EHP_HEADING);
+            for line in ship_base_ehp_lines(&ehp) {
+                ui.label(line);
+            }
+            ui.label(FITTING_SHIP_BASE_EHP_DISCLOSURE);
+        }
+        ShipBaseEhpOutcome::Unavailable => {
+            ui.heading(FITTINGS_SHIP_BASE_EHP_HEADING);
+            ui.label(FITTING_SHIP_BASE_EHP_NO_SHIP_DATA);
+        }
+    }
+}
+
 /// The EFT import panel: paste box, Import/Clear/sample actions, the
 /// fatal error, and the imported fitting with its honest parse report.
 /// Reachable without the fittings read scope (design section 8.2):
@@ -1601,6 +1680,7 @@ fn fittings_import_panel(
     render_fitting_resources(ui, &synth, fitting_types, levels, sde);
     render_ship_base_stats(ui, &synth, fitting_types);
     render_ship_resistances(ui, &synth, fitting_types);
+    render_ship_base_ehp(ui, &synth, fitting_types);
     // Loaded charges, in item order (design section 8.2).
     let charged_total = imported
         .items
@@ -1889,6 +1969,7 @@ pub fn show(
                     render_fitting_resources(ui, selected, fitting_types, levels, sde);
                     render_ship_base_stats(ui, selected, fitting_types);
                     render_ship_resistances(ui, selected, fitting_types);
+                    render_ship_base_ehp(ui, selected, fitting_types);
                     if ui.button("Copy as EFT").clicked() {
                         tracing::info!(
                             "[FITTING] copy as EFT requested for fitting name={}",
@@ -3937,6 +4018,276 @@ mod tests {
         // The DNA sample lands on the same hull, so its block is
         // byte-identical too (resistances key off the ship, not
         // format).
+        let synth_dna = match parse_import(DEMO_SAMPLE_DNA, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => {
+                panic!("demo DNA sample must import, got {fatal:?}")
+            }
+        };
+        assert_eq!(lines_for(&synth_dna), rifter_block);
+    }
+
+    // Ship base effective hit points (ship base EHP design
+    // section 8): the locked four-line blocks, built from real
+    // `ship_base_ehp` results over the bundled catalogue. Oracle
+    // rows read from the bundled catalogue: Rifter 587 hit points
+    // 450/450/350; shield resonances 1.0/0.8/0.6/0.5, armor
+    // 0.4/0.65/0.75/0.9, hull 0.67 x4. Punisher 597 hit points
+    // 350/500/450; shield 1.0/0.8/0.6/0.5, armor 0.5/0.65/0.75/0.8,
+    // hull 0.67 x4. Each denominator is 0.25*em + 0.25*thermal +
+    // 0.25*kinetic + 0.25*explosive; each layer is HP / denominator;
+    // the total is shield + armor + hull summed before rounding,
+    // rendered at one decimal (design section 5).
+    //   Rifter shield: denominator 0.725, 450 / 0.725 = 620.6896552
+    //     renders 620.7 HP.
+    //   Rifter armor: denominator 0.675, 450 / 0.675 = 666.6666667
+    //     renders 666.7 HP.
+    //   Rifter hull: denominator 0.67, 350 / 0.67 = 522.3880597
+    //     renders 522.4 HP.
+    //   Rifter total: 620.6896552 + 666.6666667 + 522.3880597
+    //     = 1809.7443815 renders 1,809.7 HP (not 1809.8 — the
+    //     rendered layers sum to 1809.8; the total is summed from
+    //     unrounded values, design section 5, pinned as written).
+    //   Punisher shield: denominator 0.725, 350 / 0.725 = 482.7586207
+    //     renders 482.8 HP.
+    //   Punisher armor: denominator 0.675, 500 / 0.675 = 740.7407407
+    //     renders 740.7 HP.
+    //   Punisher hull: denominator 0.67, 450 / 0.67 = 671.6417910
+    //     renders 671.6 HP.
+    //   Punisher total: 482.7586207 + 740.7407407 + 671.6417910
+    //     = 1895.1411525 renders 1,895.1 HP.
+    fn ship_base_ehp_lines_for(catalogue: &FittingTypes, ship_type_id: i64) -> Vec<String> {
+        let fitting = CharacterFitting {
+            fitting_id: 1,
+            name: "pin".to_string(),
+            description: None,
+            ship_type_id,
+            items: vec![],
+        };
+        match ship_base_ehp(&fitting, catalogue) {
+            ShipBaseEhpOutcome::Available(ehp) => ship_base_ehp_lines(&ehp),
+            ShipBaseEhpOutcome::Unavailable => {
+                panic!("ship {ship_type_id} must have base effective hit points")
+            }
+        }
+    }
+
+    #[test]
+    fn ship_base_ehp_lines_match_the_locked_templates() {
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        assert_eq!(
+            ship_base_ehp_lines_for(&catalogue, 587),
+            [
+                "Shield EHP: 620.7 HP",
+                "Armor EHP: 666.7 HP",
+                "Hull EHP: 522.4 HP",
+                "Total EHP: 1,809.7 HP",
+            ]
+        );
+        assert_eq!(
+            ship_base_ehp_lines_for(&catalogue, 597),
+            [
+                "Shield EHP: 482.8 HP",
+                "Armor EHP: 740.7 HP",
+                "Hull EHP: 671.6 HP",
+                "Total EHP: 1,895.1 HP",
+            ]
+        );
+    }
+
+    // Formatting pins (design section 8): thousands grouping at
+    // Raven scale and at capital scale, and the exact Legion
+    // shield rendering. Raven 638: hit points 7700/6380/7040;
+    // shield 1.0/0.8/0.6/0.5, armor 0.5/0.55/0.75/0.9, hull
+    // 0.67 x4; total 10620.6896552 + 9451.8518519 + 10507.4626866
+    // = 30580.0041936 renders 30,580.0 HP. Komodo 45649: hit
+    // points 950000/450000/525000; shield 1.0/0.8/0.6/0.5,
+    // armor 0.5/0.55/0.75/0.9, hull 0.67 x4; shield 950000 /
+    // 0.725 = 1310344.8276 renders 1,310,344.8 HP; total
+    // 1310344.8276 + 666666.6667 + 783582.0896 = 2760593.5839
+    // renders 2,760,593.6 HP. Legion 29986: hit points
+    // 1800/2900/1800; shield 1.0/0.8/0.45/0.25, denominator
+    // 0.625 (binary-exact), shield 1800 / 0.625 = 2880.0 renders
+    // 2,880.0 HP.
+    #[test]
+    fn ship_base_ehp_formatting_pins() {
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let raven = ship_base_ehp_lines_for(&catalogue, 638);
+        assert_eq!(raven[3], "Total EHP: 30,580.0 HP");
+        let komodo = ship_base_ehp_lines_for(&catalogue, 45649);
+        assert_eq!(komodo[0], "Shield EHP: 1,310,344.8 HP");
+        assert_eq!(komodo[3], "Total EHP: 2,760,593.6 HP");
+        let legion = ship_base_ehp_lines_for(&catalogue, 29986);
+        assert_eq!(legion[0], "Shield EHP: 2,880.0 HP");
+    }
+
+    // Present zero versus absent (fixture catalogue; shipped
+    // data has no ship with a missing hit point or resonance):
+    // a present 0.0 hit point value with complete resonances
+    // renders 0.0 HP (0.0 / 1.0 = 0.0), an absent layer produces
+    // no line at all. The fixture has shield 0.0 HP with shield
+    // resonances 1.0 x4, armor 800 HP and hull 600 HP with 1.0
+    // x4 resonances per layer, so armor is 800 / 1.0 = 800.0,
+    // hull is 600 / 1.0 = 600.0, and the total is
+    // 0.0 + 800.0 + 600.0 = 1400.0.
+    #[test]
+    fn ship_base_ehp_present_zero_renders_and_absent_omits() {
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],
+                 "shieldCapacity":0.0,"armorHP":800.0,"hp":600.0,
+                 "shieldEmDamageResonance":1.0,"shieldThermalDamageResonance":1.0,"shieldKineticDamageResonance":1.0,"shieldExplosiveDamageResonance":1.0,
+                 "armorEmDamageResonance":1.0,"armorThermalDamageResonance":1.0,"armorKineticDamageResonance":1.0,"armorExplosiveDamageResonance":1.0,
+                 "emDamageResonance":1.0,"thermalDamageResonance":1.0,"kineticDamageResonance":1.0,"explosiveDamageResonance":1.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let lines = ship_base_ehp_lines_for(&catalogue, 42);
+        assert_eq!(
+            lines,
+            [
+                "Shield EHP: 0.0 HP",
+                "Armor EHP: 800.0 HP",
+                "Hull EHP: 600.0 HP",
+                "Total EHP: 1,400.0 HP",
+            ]
+        );
+        assert_eq!(lines[0], "Shield EHP: 0.0 HP");
+    }
+
+    // Omission pins (fixture catalogues): a layer whose hit
+    // points or any needed resonance is absent contributes no
+    // line, and a partial block shows no total line. One
+    // complete layer (shield 450 HP with shield resonances
+    // 1.0 x4, so 450 / 1.0 = 450.0) produces exactly one line.
+    // Two complete layers (shield 450 and armor 450, each with
+    // 1.0 x4 resonances) produce exactly two lines and no total.
+    #[test]
+    fn ship_base_ehp_omission_pins() {
+        let one_layer = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Shield Only","categoryId":6,"slotEffects":[],
+                 "shieldCapacity":450.0,
+                 "shieldEmDamageResonance":1.0,"shieldThermalDamageResonance":1.0,"shieldKineticDamageResonance":1.0,"shieldExplosiveDamageResonance":1.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let lines = ship_base_ehp_lines_for(&one_layer, 42);
+        assert_eq!(lines, ["Shield EHP: 450.0 HP"]);
+        assert!(
+            lines.iter().all(|line| !line.starts_with("Armor")),
+            "absent armor must produce no line: {lines:?}"
+        );
+        assert!(
+            lines.iter().all(|line| !line.starts_with("Hull")),
+            "absent hull must produce no line: {lines:?}"
+        );
+        assert!(
+            lines.iter().all(|line| !line.starts_with("Total")),
+            "partial block must show no total line: {lines:?}"
+        );
+
+        let two_layers = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Shield Armor","categoryId":6,"slotEffects":[],
+                 "shieldCapacity":450.0,"armorHP":450.0,
+                 "shieldEmDamageResonance":1.0,"shieldThermalDamageResonance":1.0,"shieldKineticDamageResonance":1.0,"shieldExplosiveDamageResonance":1.0,
+                 "armorEmDamageResonance":1.0,"armorThermalDamageResonance":1.0,"armorKineticDamageResonance":1.0,"armorExplosiveDamageResonance":1.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let lines = ship_base_ehp_lines_for(&two_layers, 42);
+        assert_eq!(lines, ["Shield EHP: 450.0 HP", "Armor EHP: 450.0 HP"]);
+        assert!(
+            lines.iter().all(|line| !line.starts_with("Total")),
+            "two-layer block must show no total line: {lines:?}"
+        );
+    }
+
+    #[test]
+    fn ship_base_ehp_unavailable_and_disclosure_wording() {
+        assert_eq!(
+            FITTINGS_SHIP_BASE_EHP_HEADING,
+            "Ship effective hit points (base values, omni 25/25/25/25)"
+        );
+        assert_eq!(
+            FITTING_SHIP_BASE_EHP_NO_CATALOGUE,
+            "Ship effective hit points unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            FITTING_SHIP_BASE_EHP_NO_SHIP_DATA,
+            "Ship effective hit points unavailable: Mimir's bundled item data has no complete base hit point and resistance data for this fitting's ship."
+        );
+        assert_eq!(
+            FITTING_SHIP_BASE_EHP_DISCLOSURE,
+            "These are the bare hull's base effective hit points (EHP) from Mimir's bundled item data, against omni damage: equal quarters (25% each) of EM, thermal, kinetic, and explosive damage. Fitted modules, rigs, subsystems, skills, implants, and ship bonuses are not applied, and a different damage mix would give different numbers, so these numbers can differ from EVE."
+        );
+    }
+
+    // Demo story (ship base EHP design section 7): Demo Brawler
+    // and Mission Runner are both Rifter 587 and render
+    // identical blocks despite their invented sample rows (the
+    // 974-977 tripwire: a wrong-set implementation shows hull
+    // EHP 350.0 here instead of 522.4); Demo Runner is Punisher
+    // 597. Built from the real demo fixture over the real
+    // catalogue, so fixture or catalogue drift fails here.
+    // Divisions as pinned above: Rifter 450/0.725, 450/0.675,
+    // 350/0.67, total 1809.7443815; Punisher 350/0.725,
+    // 500/0.675, 450/0.67, total 1895.1411525.
+    #[test]
+    fn demo_fixture_ship_base_ehp_match_the_locked_demo_story() {
+        use crate::demo::data::DEMO_FITTINGS_JSON;
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let lines_for = |fitting: &CharacterFitting| match ship_base_ehp(fitting, &catalogue) {
+            ShipBaseEhpOutcome::Available(ehp) => ship_base_ehp_lines(&ehp),
+            ShipBaseEhpOutcome::Unavailable => {
+                panic!("demo fitting must have base effective hit points")
+            }
+        };
+
+        let rifter_block = [
+            "Shield EHP: 620.7 HP",
+            "Armor EHP: 666.7 HP",
+            "Hull EHP: 522.4 HP",
+            "Total EHP: 1,809.7 HP",
+        ];
+        assert_eq!(lines_for(&find("Demo Brawler")), rifter_block);
+        assert_eq!(lines_for(&find("Mission Runner")), rifter_block);
+        assert_eq!(
+            lines_for(&find("Demo Runner")),
+            [
+                "Shield EHP: 482.8 HP",
+                "Armor EHP: 740.7 HP",
+                "Hull EHP: 671.6 HP",
+                "Total EHP: 1,895.1 HP",
+            ]
+        );
+
+        // Imported path: the demo sample fit through the shared
+        // synthesis seam yields the same Rifter block.
+        let synth = match parse_eft(DEMO_SAMPLE_EFT, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
+        };
+        assert_eq!(lines_for(&synth), rifter_block);
+
+        // The DNA sample lands on the same hull, so its block is
+        // byte-identical too (EHP keys off the ship, not format).
         let synth_dna = match parse_import(DEMO_SAMPLE_DNA, &catalogue) {
             EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
             EftImportOutcome::Failed(fatal) => {
