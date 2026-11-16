@@ -17,6 +17,7 @@ use mimir::ui::assets::group_assets;
 use mimir::ui::characters::{
     attribute_rows, clone_display_name, implant_names, standing_counts, standing_groups,
 };
+use mimir::ui::fittings::{fitting_item_rows, fitting_rows, section_for_flag, FittingSection};
 use mimir::ui::industry::{
     blueprint_counts, blueprint_rows, filter_blueprint_rows, industry_job_rows, job_counts,
 };
@@ -786,4 +787,101 @@ fn demo_planets_render_resolved_for_both_characters() {
     assert!(!marcus_pins.is_empty());
     assert!(storage_content_rows(&marcus_pins, &resolver).is_empty());
     assert!(marcus_pins.iter().all(|p| p.contents.is_empty()));
+}
+
+#[test]
+fn demo_fittings_render_resolved_for_both_characters() {
+    let bundle = load_demo_bundle().expect("bundle");
+    let resolver = demo_resolver().expect("demo resolver");
+
+    for character in &bundle.characters {
+        let per = bundle
+            .character_data(character.character_id)
+            .expect("per-character data");
+        let fittings = per.fittings.as_ref().expect("demo fittings present");
+        assert!(
+            !fittings.fittings.is_empty(),
+            "fittings for {}",
+            character.name
+        );
+        let selected = fittings.selected_fitting_id.expect("selected fitting");
+        assert!(fittings.fittings.iter().any(|f| f.fitting_id == selected));
+        for fitting in &fittings.fittings {
+            assert_ne!(
+                resolver.name(fitting.ship_type_id),
+                UNKNOWN_ITEM,
+                "ship {}",
+                fitting.ship_type_id
+            );
+            for item in &fitting.items {
+                assert_ne!(
+                    resolver.name(item.type_id),
+                    UNKNOWN_ITEM,
+                    "item {}",
+                    item.type_id
+                );
+            }
+            // Unknown-flag item lands in Cargo section (includes Invalid flag fixture).
+            for item in &fitting.items {
+                if item.flag == "Invalid" {
+                    assert_eq!(section_for_flag(&item.flag), FittingSection::Cargo);
+                }
+            }
+        }
+    }
+
+    let mut state = AppState::new(true);
+    seed_demo_state(&mut state);
+
+    let aria = state.fittings.as_ready().expect("aria fittings ready");
+    let aria_list = aria.fittings.as_ref().expect("fittings ok").clone();
+    assert_eq!(aria_list.len(), 2);
+    assert_eq!(state.fittings_selected_fitting_id, Some(1));
+    let aria_rows = fitting_rows(&aria_list, &resolver);
+    assert_eq!(aria_rows.len(), 2);
+    for row in &aria_rows {
+        assert_ne!(row.ship_name, UNKNOWN_ITEM);
+        assert!(row.ship_name.parse::<i64>().is_err());
+        assert!(
+            row.display_name.parse::<i64>().is_err(),
+            "display {} ",
+            row.display_name
+        );
+    }
+    // One fitting exercises every section across the fixture set, including
+    // one Cargo stack and one unknown-flag item in Cargo.
+    let demo_brawler = aria_list
+        .iter()
+        .find(|f| f.fitting_id == 1)
+        .expect("demo brawler");
+    let demo_brawler_rows = fitting_item_rows(demo_brawler, &resolver);
+    let sections: Vec<_> = demo_brawler_rows.iter().map(|r| r.section).collect();
+    for section in [
+        FittingSection::Low,
+        FittingSection::Medium,
+        FittingSection::High,
+        FittingSection::Rig,
+        FittingSection::Subsystem,
+        FittingSection::Drones,
+        FittingSection::Fighters,
+        FittingSection::Cargo,
+    ] {
+        assert!(sections.contains(&section), "section {section:?}");
+    }
+    for row in &demo_brawler_rows {
+        assert_ne!(row.type_name, UNKNOWN_ITEM);
+        assert!(row.type_name.parse::<i64>().is_err());
+        assert!(row.quantity >= 0, "clamped");
+    }
+
+    state.set_active_character(MARCUS);
+    apply_character(&mut state, &bundle, MARCUS);
+    let marcus = state.fittings.as_ready().expect("marcus fittings ready");
+    let marcus_list = marcus.fittings.as_ref().expect("fittings ok").clone();
+    assert_eq!(marcus_list.len(), 1);
+    assert_eq!(state.fittings_selected_fitting_id, Some(10));
+    assert!(marcus_list.iter().all(|f| f.fitting_id != 1));
+    let marcus_rows = fitting_rows(&marcus_list, &resolver);
+    assert_eq!(marcus_rows.len(), 1);
+    assert_eq!(marcus_rows[0].ship_name, "Punisher");
 }

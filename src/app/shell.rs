@@ -7,9 +7,10 @@ use std::time::Duration;
 
 use super::state::{
     ship_display_name, summary_location_name, AppState, AssetsData, AuthState, BlueprintsData,
-    CharacterDetailData, CharacterOrdersData, CharacterSummary, IndustryData, IndustryJobsData,
-    LoadState, MarketData, MarketSelection, PlanetSelection, PlanetaryData, PublicOrdersData,
-    SectionError, SectionResult, SelectedColonyDetail, SkillsData, StepUpRequest, View, WalletData,
+    CharacterDetailData, CharacterOrdersData, CharacterSummary, FittingsData, IndustryData,
+    IndustryJobsData, LoadState, MarketData, MarketSelection, PlanetSelection, PlanetaryData,
+    PublicOrdersData, SectionError, SectionResult, SelectedColonyDetail, SkillsData, StepUpRequest,
+    View, WalletData,
 };
 use crate::auth::callback_server::CallbackServer;
 use crate::auth::jwt_verify::JwtVerifier;
@@ -19,8 +20,9 @@ use crate::config::EveConfig;
 use crate::demo::data::DemoBundle;
 use crate::esi::endpoints;
 use crate::esi::models::{
-    CharacterPublicInfo, CharacterSkills, LoyaltyPointItem, PlanetColony, PlanetColonyDetail,
-    Skill, SkillQueueItem, UniverseName, WalletJournalItem, WalletTransactionItem,
+    CharacterFitting, CharacterPublicInfo, CharacterSkills, LoyaltyPointItem, PlanetColony,
+    PlanetColonyDetail, Skill, SkillQueueItem, UniverseName, WalletJournalItem,
+    WalletTransactionItem,
 };
 use crate::names::resolver::NameResolver;
 use crate::names::sde::Sde;
@@ -48,6 +50,7 @@ enum BackendMsg {
         detail: Box<CharacterDetailData>,
         industry: Box<IndustryData>,
         planetary_colonies: SectionResult<Vec<PlanetColony>>,
+        fittings_list: SectionResult<Vec<CharacterFitting>>,
     },
     RefreshFailed {
         character_id: i64,
@@ -157,6 +160,31 @@ fn planetary_result_matches(
     generation == state.planetary_generation
         && Some(selection.planet_id) == state.planetary_selected_planet_id
         && Some(selection.character_id) == state.active_character_id
+}
+
+/// Fittings design section 7.2 selection merge: a successful list
+/// is the only evidence that may clear the selection — it is stale
+/// only when it names a fitting and the fresh `Ok` list no longer
+/// carries that `fitting_id`. A failed list proves nothing, so the
+/// selection survives a section error untouched (planetary rule).
+fn fittings_selection_is_stale(
+    selected: Option<i64>,
+    fittings_list: &SectionResult<Vec<CharacterFitting>>,
+) -> bool {
+    matches!((fittings_list, selected), (Ok(list), Some(id)) if !list.iter().any(|f| f.fitting_id == id))
+}
+
+/// Fittings design section 7.3 observed-reality arm: the fittings
+/// section already returned a scope refusal this session while the
+/// step-up request asks for the fittings scope, so stored token
+/// metadata claiming the grant is stale and the already-granted
+/// shortcut must not be taken (it would loop the panel's own
+/// Re-authorize button without ever opening the browser).
+fn fittings_stepup_observed(request_scopes: &[String], state: &AppState) -> bool {
+    request_scopes
+        .iter()
+        .any(|scope| EveConfig::FITTINGS_SCOPES.contains(&scope.as_str()))
+        && matches!(&state.fittings, LoadState::Ready(d) if d.needs_fittings_stepup())
 }
 
 /// Design section 8.3 freshness check: a lookup answer applies only
@@ -567,6 +595,20 @@ impl MimirApp {
                 }
             }
         }
+        // Fittings IDs (fittings design section 10): ship and item
+        // type IDs take the item-name path (no structure guard;
+        // ship/item types are not locations). Fitting IDs (instance
+        // identity), flag words, and quantities are never scheduled.
+        if let LoadState::Ready(bundle) = &self.state.fittings {
+            if let Ok(fittings) = &bundle.fittings {
+                for fitting in fittings {
+                    ids.push(fitting.ship_type_id);
+                    for item in &fitting.items {
+                        ids.push(item.type_id);
+                    }
+                }
+            }
+        }
         let missing = self.resolver.missing(&ids);
         if missing.is_empty() {
             return;
@@ -609,6 +651,7 @@ impl MimirApp {
                     detail,
                     industry,
                     planetary_colonies,
+                    fittings_list,
                 } => {
                     tracing::info!("[ESI] refresh complete character_id={}", character_id);
                     // A refresh landing after its character was removed
@@ -698,6 +741,26 @@ impl MimirApp {
                         if selection_survives {
                             self.state.planetary_detail_fetch_requested = true;
                         }
+                        // Fittings merge (fittings design section 7.2):
+                        // the selection survives unless a successful
+                        // list proves its fitting is gone (a failed
+                        // list proves nothing). No detail is preserved
+                        // and no follow-up fetch is queued — selecting
+                        // a fitting never fetches (the list carries
+                        // its items).
+                        if fittings_selection_is_stale(
+                            self.state.fittings_selected_fitting_id,
+                            &fittings_list,
+                        ) {
+                            tracing::debug!(
+                                "[FITTING] clearing selection no longer in refreshed fittings character_id={}",
+                                character_id
+                            );
+                            self.state.fittings_selected_fitting_id = None;
+                        }
+                        self.state.fittings = LoadState::Ready(FittingsData {
+                            fittings: fittings_list,
+                        });
                         match assets {
                             Ok(data) => {
                                 self.state.assets = LoadState::Ready(*data);
@@ -798,6 +861,14 @@ impl MimirApp {
                             self.state.planetary =
                                 LoadState::Error("character refresh request failed".to_string());
                         }
+                        if !self.state.fittings.is_ready() {
+                            // Same fixed wording for the Fittings
+                            // whole-view panel (fittings design
+                            // section 7.4); the raw refresh message is
+                            // never installed into fittings state.
+                            self.state.fittings =
+                                LoadState::Error("character refresh request failed".to_string());
+                        }
                         if !self.state.assets.is_ready() {
                             self.state.assets = LoadState::Error(message);
                         }
@@ -842,6 +913,11 @@ impl MimirApp {
                             tracing::debug!("[PI] colony detail refetch queued after step-up");
                             self.state.planetary_detail_fetch_requested = true;
                         }
+                        // Fittings design section 7.3: no fittings
+                        // flag here — the post-stepup main refresh
+                        // above already refills the fittings list,
+                        // and the panel clears only when a later
+                        // refresh returns it Ok.
                         self.state.status_message = "Permission granted. Refreshing...".to_string();
                     } else {
                         self.state.status_message = "Permission granted. Refreshing...".to_string();
@@ -1536,6 +1612,31 @@ impl MimirApp {
                         colonies.len()
                     );
                 }
+                // Saved fittings are one tolerant sub-fetch (never
+                // `?`, fittings design section 7.2): fixed wording
+                // on screen, full error detail in the [FITTING]
+                // warn only. In-memory only — nothing about
+                // fittings is persisted in the persist block below.
+                let fittings_list = endpoints::get_character_fittings(&esi, id)
+                    .await
+                    .map_err(|e| {
+                        let needs_reauthorize = endpoints::needs_reauthorize(&e);
+                        tracing::warn!("[FITTING] fittings section failed character_id={} section=fittings needs_reauthorize={} error={}", id, needs_reauthorize, e);
+                        SectionError {
+                            message: "fittings request failed".to_string(),
+                            needs_reauthorize,
+                        }
+                    });
+                if let Ok(fittings) = &fittings_list {
+                    tracing::info!(
+                        "[FITTING] fittings ready character_id={} fittings={} items={}",
+                        id,
+                        fittings.len(),
+                        fittings
+                            .iter()
+                            .fold(0usize, |total, f| total.saturating_add(f.items.len()))
+                    );
+                }
                 Ok::<_, crate::AppError>((
                     info,
                     SkillsData { skills, queue },
@@ -1545,6 +1646,7 @@ impl MimirApp {
                     detail,
                     industry,
                     planetary_colonies,
+                    fittings_list,
                 ))
             }
             .await;
@@ -1558,6 +1660,7 @@ impl MimirApp {
                     detail,
                     industry,
                     planetary_colonies,
+                    fittings_list,
                 )) => {
                     // Persist the full refresh so the next launch renders
                     // cached skills/wallet offline (load_cached_state).
@@ -1666,6 +1769,7 @@ impl MimirApp {
                         detail: Box::new(detail),
                         industry: Box::new(industry),
                         planetary_colonies,
+                        fittings_list,
                     });
                 }
                 Err(e) => {
@@ -1862,6 +1966,7 @@ impl MimirApp {
                     && matches!(&self.state.industry, LoadState::Ready(d) if d.needs_industry_stepup()))
                 || (overlaps(EveConfig::PLANETS_SCOPES)
                     && matches!(&self.state.planetary, LoadState::Ready(d) if d.needs_planetary_stepup()))
+                || fittings_stepup_observed(&request.scopes, &self.state)
                 || (overlaps(EveConfig::MARKET_SCOPES)
                     && matches!(&self.state.market, LoadState::Ready(d) if matches!(&d.character_orders, Err(e) if e.needs_reauthorize)))
         };
@@ -1889,6 +1994,9 @@ impl MimirApp {
                 tracing::debug!("[PI] colony detail refetch queued after already-granted step-up");
                 self.state.planetary_detail_fetch_requested = true;
             }
+            // Fittings design section 7.3: no fittings flag here
+            // either — the already-granted main refresh above
+            // already refills the fittings list the panel gates.
             self.state.status_message =
                 "That permission is already granted. Refreshing...".to_string();
             return;
@@ -2084,6 +2192,11 @@ impl MimirApp {
                     actions.switch_view = View::from_index(idx);
                 }
             }
+            // Tenth view (Settings, index 9) takes Num0 so keys
+            // 1-9 keep their muscle memory (fittings design 9.4).
+            if i.key_pressed(egui::Key::Num0) && !i.modifiers.command && !i.modifiers.ctrl {
+                actions.switch_view = View::from_index(9);
+            }
             if i.key_pressed(egui::Key::PageDown) {
                 actions.cycle_character = 1;
             }
@@ -2225,11 +2338,11 @@ impl eframe::App for MimirApp {
                 ui.label("PageUp/PageDown switches character.");
             }
             ui.separator();
-            ui.heading("Views (keys 1-9)");
+            ui.heading("Views (keys 1-9, 0)");
             for (idx, view) in View::ALL.iter().enumerate() {
                 let selected = self.state.view == *view;
                 if ui
-                    .selectable_label(selected, format!("{} {}", idx + 1, view.label()))
+                    .selectable_label(selected, format!("{} {}", (idx + 1) % 10, view.label()))
                     .clicked()
                 {
                     self.state.switch_view(*view);
@@ -2253,6 +2366,7 @@ impl eframe::App for MimirApp {
                 View::Market => ui::market::show(ui, &mut self.state, &self.resolver),
                 View::Industry => ui::industry::show(ui, &mut self.state, &self.resolver),
                 View::Planets => ui::planets::show(ui, &mut self.state, &self.resolver),
+                View::Fittings => ui::fittings::show(ui, &mut self.state, &self.resolver),
                 View::Settings => ui::settings::show(ui, &mut self.state),
             });
         });
@@ -2264,7 +2378,7 @@ impl eframe::App for MimirApp {
                 if self.state.refresh_requested {
                     ui.label("Refresh pending...");
                 }
-                ui.label("Keys: 1-9 views, Ctrl+R refresh, / search, PgUp/PgDn character");
+                ui.label("Keys: 1-9, 0 views, Ctrl+R refresh, / search, PgUp/PgDn character");
             });
         });
     }
@@ -2391,5 +2505,63 @@ mod tests {
         ));
         assert!(!market_lookup_is_current(&state, gen, "Pyerite"));
         assert!(!market_lookup_is_current(&state, gen, "  Tritanium "));
+    }
+
+    fn fitting(id: i64) -> CharacterFitting {
+        CharacterFitting {
+            fitting_id: id,
+            ..CharacterFitting::default()
+        }
+    }
+
+    #[test]
+    fn fittings_selection_survives_unless_ok_list_proves_it_gone() {
+        let present = Ok(vec![fitting(1), fitting(2)]);
+        // A surviving selection is kept.
+        assert!(!fittings_selection_is_stale(Some(2), &present));
+        // A successful list without the selection clears it.
+        assert!(fittings_selection_is_stale(Some(3), &present));
+        // No selection is never stale.
+        assert!(!fittings_selection_is_stale(None, &present));
+        // A failed list proves nothing: the selection survives.
+        let failed: SectionResult<Vec<CharacterFitting>> = Err(SectionError {
+            message: "fittings request failed".to_string(),
+            needs_reauthorize: false,
+        });
+        assert!(!fittings_selection_is_stale(Some(3), &failed));
+        // An empty successful list proves every selection gone.
+        assert!(fittings_selection_is_stale(Some(1), &Ok(Vec::new())));
+    }
+
+    #[test]
+    fn fittings_observed_reauthorize_blocks_shortcut_only_on_scope_refusal() {
+        let fittings_scope = vec!["esi-fittings.read_fittings.v1".to_string()];
+        let other_scope = vec!["esi-assets.read_assets.v1".to_string()];
+        let mut state = AppState::new(false);
+        // Nothing loaded yet: shortcut allowed.
+        assert!(!fittings_stepup_observed(&fittings_scope, &state));
+        state.fittings = LoadState::Ready(FittingsData {
+            fittings: Err(SectionError {
+                message: "fittings request failed".to_string(),
+                needs_reauthorize: true,
+            }),
+        });
+        // Scope refusal + fittings request blocks the shortcut.
+        assert!(fittings_stepup_observed(&fittings_scope, &state));
+        // An unrelated request is not blocked by the fittings arm.
+        assert!(!fittings_stepup_observed(&other_scope, &state));
+        // A plain (non-scope) failure does not block it.
+        state.fittings = LoadState::Ready(FittingsData {
+            fittings: Err(SectionError {
+                message: "fittings request failed".to_string(),
+                needs_reauthorize: false,
+            }),
+        });
+        assert!(!fittings_stepup_observed(&fittings_scope, &state));
+        // A loaded list does not block it.
+        state.fittings = LoadState::Ready(FittingsData {
+            fittings: Ok(vec![fitting(1)]),
+        });
+        assert!(!fittings_stepup_observed(&fittings_scope, &state));
     }
 }

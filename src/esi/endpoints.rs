@@ -616,6 +616,28 @@ pub async fn get_character_planet(
         .await
 }
 
+/// The character's saved fittings, in fetch order. Requires scope
+/// `esi-fittings.read_fittings.v1` (progressive step-up, never
+/// first-auth); a missing scope surfaces as HTTP 401/403 →
+/// `EsiError::Reauthorize`/`Unauthorized`, detected only through
+/// `endpoints::needs_reauthorize`. The list carries each fitting's
+/// full item list, so selecting a fitting never fetches. The
+/// write scope is never requested; there is no fitting write in
+/// this slice. Rows return in fetch order, unsorted and
+/// unfiltered. The endpoint function adds no scope logic.
+pub async fn get_character_fittings(
+    client: &EsiClient,
+    character_id: i64,
+) -> AppResult<Vec<CharacterFitting>> {
+    tracing::debug!("[ESI] GET /characters/{}/fittings/", character_id);
+    client
+        .auth_get(
+            &format!("/characters/{character_id}/fittings/"),
+            character_id,
+        )
+        .await
+}
+
 pub async fn get_location(client: &EsiClient, character_id: i64) -> AppResult<CharacterLocation> {
     tracing::debug!("[CHAR] GET /characters/{}/location/", character_id);
     client
@@ -1560,6 +1582,88 @@ mod tests {
             .expect_err("no tokens must error");
         assert!(!err.to_string().contains("90000001"), "error: {err}");
         let err = get_character_planet(&client, 90000001, 700000001)
+            .await
+            .expect_err("no tokens must error");
+        assert!(!err.to_string().contains("90000001"), "error: {err}");
+    }
+
+    #[tokio::test]
+    async fn fittings_list_parses_in_fetch_order() {
+        let (base, captured) = one_shot_server(
+            200,
+            r#"[{"fitting_id":1,"name":"Demo Brawler","description":"Sample close-range fit","ship_type_id":587,"items":[{"flag":"LoSlot0","quantity":1,"type_id":2048},{"flag":"DroneBay","quantity":5,"type_id":2456}]},{"fitting_id":2,"name":"Mission Runner","description":null,"ship_type_id":597,"items":[{"flag":"HiSlot0","quantity":1,"type_id":2048},{"flag":"Cargo","quantity":-3,"type_id":36}]}]"#,
+        )
+        .await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let fittings = get_character_fittings(&client, 7).await.expect("fittings");
+        assert_eq!(fittings.len(), 2);
+        assert_eq!(fittings[0].fitting_id, 1);
+        assert_eq!(fittings[0].name, "Demo Brawler");
+        assert_eq!(
+            fittings[0].description.as_deref(),
+            Some("Sample close-range fit")
+        );
+        assert_eq!(fittings[0].ship_type_id, 587);
+        assert_eq!(fittings[0].items.len(), 2);
+        assert_eq!(fittings[0].items[0].flag, "LoSlot0");
+        assert_eq!(fittings[0].items[0].type_id, 2048);
+        assert_eq!(fittings[0].items[1].flag, "DroneBay");
+        assert_eq!(fittings[0].items[1].quantity, 5);
+        assert_eq!(fittings[1].fitting_id, 2);
+        assert_eq!(fittings[1].name, "Mission Runner");
+        assert_eq!(fittings[1].description, None);
+        assert_eq!(fittings[1].ship_type_id, 597);
+        // Negative wire quantity parses unchanged; clamping is downstream.
+        assert_eq!(fittings[1].items[1].quantity, -3);
+        let request = captured.await.expect("captured");
+        assert!(
+            request.contains("/characters/7/fittings/"),
+            "request: {request}"
+        );
+    }
+
+    #[tokio::test]
+    async fn fittings_empty_list_returns_empty() {
+        let (base, _captured) = one_shot_server(200, "[]").await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let fittings = get_character_fittings(&client, 7).await.expect("fittings");
+        assert!(fittings.is_empty());
+    }
+
+    #[tokio::test]
+    async fn fittings_scope_failure_needs_reauthorize() {
+        let (base, _captured) = one_shot_server(403, r#"{"error":"Forbidden"}"#).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = get_character_fittings(&client, 7)
+            .await
+            .expect_err("403 must error");
+        assert!(needs_reauthorize(&err), "error: {err:?}");
+    }
+
+    #[tokio::test]
+    async fn fittings_server_error_does_not_need_reauthorize() {
+        let (base, _captured) = one_shot_server(500, r#"{"error":"boom"}"#).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = get_character_fittings(&client, 7)
+            .await
+            .expect_err("500 must error");
+        assert!(!needs_reauthorize(&err), "error: {err:?}");
+    }
+
+    #[tokio::test]
+    async fn fittings_malformed_body_errors_without_panic() {
+        let (base, _captured) = one_shot_server(200, "not-json{").await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = get_character_fittings(&client, 7)
+            .await
+            .expect_err("malformed body must error");
+        assert!(!needs_reauthorize(&err), "error: {err:?}");
+    }
+
+    #[tokio::test]
+    async fn fittings_no_tokens_error_carries_no_character_id_text() {
+        let client = EsiClient::with_http(reqwest::Client::new(), "http://127.0.0.1:9".to_string());
+        let err = get_character_fittings(&client, 90000001)
             .await
             .expect_err("no tokens must error");
         assert!(!err.to_string().contains("90000001"), "error: {err}");

@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use crate::esi::models::*;
 use crate::storage::repositories::CharacterRow;
 
-/// The nine views (keys 1-9 in the shell).
+/// The ten views (keys 1-9 and 0 in the shell).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum View {
     #[default]
@@ -24,11 +24,12 @@ pub enum View {
     Market,
     Industry,
     Planets,
+    Fittings,
     Settings,
 }
 
 impl View {
-    pub const ALL: [View; 9] = [
+    pub const ALL: [View; 10] = [
         View::Dashboard,
         View::Characters,
         View::Skills,
@@ -37,6 +38,7 @@ impl View {
         View::Market,
         View::Industry,
         View::Planets,
+        View::Fittings,
         View::Settings,
     ];
 
@@ -50,6 +52,7 @@ impl View {
             View::Market => "Market",
             View::Industry => "Industry",
             View::Planets => "Planets",
+            View::Fittings => "Fittings",
             View::Settings => "Settings",
         }
     }
@@ -366,6 +369,22 @@ impl PlanetaryData {
     }
 }
 
+/// Saved-fittings bundle: the one list section for the active
+/// character. Field set is a cross-builder contract (the
+/// shell and demo seeding construct this literally); do not
+/// add fields here.
+#[derive(Debug, Clone)]
+pub struct FittingsData {
+    pub fittings: SectionResult<Vec<CharacterFitting>>,
+}
+
+impl FittingsData {
+    /// True when the list section failed for scope reasons.
+    pub fn needs_fittings_stepup(&self) -> bool {
+        matches!(&self.fittings, Err(e) if e.needs_reauthorize)
+    }
+}
+
 /// Blueprint library filter: every blueprint, originals only,
 /// or copies only. Classification is `runs == -1` (section 7.3).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -490,6 +509,7 @@ pub struct AppState {
     pub market: LoadState<MarketData>,
     pub industry: LoadState<IndustryData>,
     pub planetary: LoadState<PlanetaryData>,
+    pub fittings: LoadState<FittingsData>,
     pub log_lines: Vec<String>,
     pub status_message: String,
 
@@ -527,6 +547,9 @@ pub struct AppState {
     // cannot lose the selection.
     pub planetary_selected_planet_id: Option<i64>,
     pub planetary_generation: u64,
+    // View-local fittings UI state.
+    pub fittings_search: String,
+    pub fittings_selected_fitting_id: Option<i64>,
 
     // Request flags for the integrator to drain (set by views, never faked
     // as completed work). See the module comment.
@@ -692,6 +715,13 @@ impl AppState {
                 self.planetary_selected_planet_id = None;
                 self.planetary_detail_fetch_requested = false;
                 self.planetary_generation = self.planetary_generation.wrapping_add(1);
+                tracing::debug!(
+                    "[FITTING] clearing fittings on character switch from={} to={}",
+                    previous_id,
+                    character_id
+                );
+                self.fittings = LoadState::Loading;
+                self.fittings_selected_fitting_id = None;
             }
         }
         self.selected_queue_row = 0;
@@ -747,6 +777,9 @@ impl AppState {
             self.planetary_selected_planet_id = None;
             self.planetary_detail_fetch_requested = false;
             self.planetary_generation = self.planetary_generation.wrapping_add(1);
+            tracing::debug!("[FITTING] clearing fittings of removed active character");
+            self.fittings = LoadState::Loading;
+            self.fittings_selected_fitting_id = None;
             if let Some(first) = self.characters.first().map(|c| c.character_id) {
                 self.set_active_character(first);
             }
@@ -772,6 +805,8 @@ impl AppState {
             self.planetary_selected_planet_id = None;
             self.planetary_detail_fetch_requested = false;
             self.planetary_generation = self.planetary_generation.wrapping_add(1);
+            self.fittings = LoadState::Empty;
+            self.fittings_selected_fitting_id = None;
             self.dashboard = LoadState::Empty;
         }
     }
@@ -818,20 +853,24 @@ mod tests {
         assert_eq!(View::from_index(5), Some(View::Market));
         assert_eq!(View::from_index(6), Some(View::Industry));
         assert_eq!(View::from_index(7), Some(View::Planets));
-        assert_eq!(View::from_index(8), Some(View::Settings));
-        assert_eq!(View::from_index(9), None);
+        assert_eq!(View::from_index(8), Some(View::Fittings));
+        assert_eq!(View::from_index(9), Some(View::Settings));
+        assert_eq!(View::from_index(10), None);
         assert_eq!(View::Wallet.index(), 3);
         assert_eq!(View::Assets.index(), 4);
         assert_eq!(View::Market.index(), 5);
         assert_eq!(View::Industry.index(), 6);
         assert_eq!(View::Planets.index(), 7);
-        assert_eq!(View::Settings.index(), 8);
+        assert_eq!(View::Fittings.index(), 8);
+        assert_eq!(View::Settings.index(), 9);
         assert_eq!(View::Wallet.next(), View::Assets);
         assert_eq!(View::Assets.next(), View::Market);
         assert_eq!(View::Market.next(), View::Industry);
         assert_eq!(View::Industry.next(), View::Planets);
-        assert_eq!(View::Planets.next(), View::Settings);
-        assert_eq!(View::Settings.previous(), View::Planets);
+        assert_eq!(View::Planets.next(), View::Fittings);
+        assert_eq!(View::Fittings.next(), View::Settings);
+        assert_eq!(View::Settings.previous(), View::Fittings);
+        assert_eq!(View::Fittings.previous(), View::Planets);
         assert_eq!(View::Planets.previous(), View::Industry);
         assert_eq!(View::Assets.previous(), View::Wallet);
     }
@@ -1429,6 +1468,83 @@ mod tests {
         assert!(matches!(state.planetary, LoadState::Empty));
         assert_eq!(state.planetary_selected_planet_id, None);
         assert!(!state.planetary_detail_fetch_requested);
+    }
+
+    fn fittings_bundle() -> FittingsData {
+        FittingsData {
+            fittings: Ok(Vec::new()),
+        }
+    }
+
+    #[test]
+    fn needs_fittings_stepup_matrix() {
+        assert!(!fittings_bundle().needs_fittings_stepup(), "all-Ok");
+        let plain = SectionError {
+            message: "timeout".to_string(),
+            needs_reauthorize: false,
+        };
+        let mut plain_bundle = fittings_bundle();
+        plain_bundle.fittings = Err(plain);
+        assert!(!plain_bundle.needs_fittings_stepup());
+        let mut reauth_bundle = fittings_bundle();
+        reauth_bundle.fittings = Err(reauth_error());
+        assert!(reauth_bundle.needs_fittings_stepup(), "reauth");
+    }
+
+    #[test]
+    fn fittings_defaults_are_loading_empty_search_no_selection() {
+        let state = AppState::new(false);
+        assert!(matches!(state.fittings, LoadState::Loading));
+        assert_eq!(state.fittings_search, "");
+        assert_eq!(state.fittings_selected_fitting_id, None);
+    }
+
+    #[test]
+    fn switching_character_clears_stale_fittings() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        let mut bundle = fittings_bundle();
+        bundle.fittings = Err(reauth_error());
+        state.fittings = LoadState::Ready(bundle);
+        state.fittings_selected_fitting_id = Some(42);
+        state.fittings_search = "Brawler".to_string();
+        // Same-character reselect keeps the bundle and its step-up need.
+        state.set_active_character(1);
+        let kept = state.fittings.as_ready().expect("reselect keeps fittings");
+        assert!(kept.needs_fittings_stepup());
+        assert_eq!(state.fittings_selected_fitting_id, Some(42));
+        // Switching clears rows and selection, mirroring planetary.
+        // Search text survives the switch (view-local).
+        state.set_active_character(2);
+        assert!(matches!(state.fittings, LoadState::Loading));
+        assert_eq!(state.fittings_selected_fitting_id, None);
+        assert_eq!(state.fittings_search, "Brawler");
+    }
+
+    #[test]
+    fn removing_active_character_clears_fittings_and_last_empties() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two"), row(3, "Three")];
+        state.set_active_character(1);
+        state.fittings = LoadState::Ready(fittings_bundle());
+        state.fittings_selected_fitting_id = Some(1);
+        // Removing a non-active character leaves bundle ready.
+        state.remove_character(3);
+        assert!(state.fittings.is_ready());
+        assert_eq!(state.fittings_selected_fitting_id, Some(1));
+        // Removing the active character clears.
+        state.remove_character(1);
+        assert_eq!(state.active_character_id, Some(2));
+        assert!(matches!(state.fittings, LoadState::Loading));
+        assert_eq!(state.fittings_selected_fitting_id, None);
+        // Removing the last character empties.
+        state.fittings = LoadState::Ready(fittings_bundle());
+        state.fittings_selected_fitting_id = Some(2);
+        state.remove_character(2);
+        assert!(state.characters.is_empty());
+        assert!(matches!(state.fittings, LoadState::Empty));
+        assert_eq!(state.fittings_selected_fitting_id, None);
     }
 
     #[test]

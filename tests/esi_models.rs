@@ -256,6 +256,45 @@ fn planets_fixture_parses() {
 }
 
 #[test]
+fn fittings_fixture_parses() {
+    let fittings: Vec<CharacterFitting> = parse(include_str!("fixtures/fittings.json"));
+    assert_eq!(fittings.len(), 2);
+    // Fetch order preserved; first fitting carries every wired section.
+    let brawler = &fittings[0];
+    assert_eq!(brawler.fitting_id, 1);
+    assert_eq!(brawler.name, "Demo Brawler");
+    assert_eq!(
+        brawler.description.as_deref(),
+        Some("Sample close-range fit")
+    );
+    assert_eq!(brawler.ship_type_id, 587);
+    assert_eq!(brawler.items.len(), 12);
+    assert_eq!(brawler.items[0].flag, "LoSlot0");
+    assert_eq!(brawler.items[1].flag, "MedSlot0");
+    assert_eq!(brawler.items[3].flag, "HiSlot0");
+    assert_eq!(brawler.items[5].flag, "RigSlot0");
+    assert_eq!(brawler.items[6].flag, "SubSystemSlot0");
+    assert_eq!(brawler.items[7].flag, "DroneBay");
+    assert_eq!(brawler.items[7].quantity, 5);
+    assert_eq!(brawler.items[8].flag, "Cargo");
+    assert_eq!(brawler.items[9].flag, "Cargo");
+    // Unknown ESI flag word carries through parsed, untouched.
+    assert_eq!(brawler.items[10].flag, "Invalid");
+    // Negative wire quantity parses unchanged; clamping is downstream.
+    assert_eq!(brawler.items[11].quantity, -3);
+    assert_eq!(brawler.items[11].type_id, 36);
+
+    let runner = &fittings[1];
+    assert_eq!(runner.fitting_id, 2);
+    assert_eq!(runner.name, "Mission Runner");
+    assert_eq!(runner.description, None, "null description stays None");
+    assert_eq!(runner.ship_type_id, 597);
+    assert_eq!(runner.items.len(), 4);
+    assert_eq!(runner.items[2].quantity, 3);
+    assert_eq!(runner.items[3].type_id, 37);
+}
+
+#[test]
 fn empty_payloads_default_instead_of_failing() {
     // ESI occasionally omits optional fields; models must tolerate `{}`.
     let info: CharacterPublicInfo = parse("{}");

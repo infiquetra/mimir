@@ -94,6 +94,12 @@ impl EveConfig {
     /// never at first auth.
     pub const PLANETS_SCOPES: &[&str] = &["esi-planets.manage_planets.v1"];
 
+    /// Saved-fittings step-up scope: read the character's saved
+    /// fittings. Granted after first sign-in via step-up, never
+    /// at first auth. The write scope is never requested (no
+    /// fitting writes exist in the read-only slice).
+    pub const FITTINGS_SCOPES: &[&str] = &["esi-fittings.read_fittings.v1"];
+
     /// Scopes the Phase-1 Rust endpoint set actually needs, beyond the
     /// first-auth set (location/ship/online/clones/standings/loyalty).
     pub const PHASE1_ENDPOINT_SCOPES: &[&str] = &[
@@ -227,6 +233,20 @@ mod tests {
     fn planets_scopes_is_the_single_stepup_scope() {
         assert_eq!(EveConfig::PLANETS_SCOPES, ["esi-planets.manage_planets.v1"]);
         for scope in EveConfig::PLANETS_SCOPES {
+            assert!(
+                !EveConfig::FIRST_AUTH_SCOPES.contains(scope),
+                "step-up scope {scope} must be disjoint from first-auth"
+            );
+        }
+    }
+
+    #[test]
+    fn fittings_scopes_is_the_single_stepup_scope() {
+        assert_eq!(
+            EveConfig::FITTINGS_SCOPES,
+            ["esi-fittings.read_fittings.v1"]
+        );
+        for scope in EveConfig::FITTINGS_SCOPES {
             assert!(
                 !EveConfig::FIRST_AUTH_SCOPES.contains(scope),
                 "step-up scope {scope} must be disjoint from first-auth"
