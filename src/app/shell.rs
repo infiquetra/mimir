@@ -693,7 +693,13 @@ impl MimirApp {
                             self.state.character_details = LoadState::Error(message.clone());
                         }
                         if !self.state.industry.is_ready() {
-                            self.state.industry = LoadState::Error(message.clone());
+                            // Industry's whole-view error panel renders this
+                            // string verbatim, and refresh error text can
+                            // carry server-controlled body text (including
+                            // numeric IDs): fixed wording here, full
+                            // detail stays in the [ESI] warn above.
+                            self.state.industry =
+                                LoadState::Error("character refresh request failed".to_string());
                         }
                         if !self.state.assets.is_ready() {
                             self.state.assets = LoadState::Error(message);

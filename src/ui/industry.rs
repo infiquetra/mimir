@@ -83,7 +83,7 @@ pub fn industry_job_rows(jobs: &[IndustryJob], resolver: &NameResolver) -> Vec<I
                 status_label: status_label(&job.status),
                 in_progress: is_in_progress_status(&job.status),
                 runs: job.runs.max(0),
-                successful_runs: job.successful_runs,
+                successful_runs: job.successful_runs.map(|v| v.max(0)),
                 facility_name: resolver.location_name(job.facility_id),
                 start_date: job.start_date.clone(),
                 end_date: job.end_date.clone(),
@@ -630,6 +630,27 @@ mod tests {
         );
         assert!(industry_job_rows(&[], &resolver()).is_empty());
         assert_eq!(job_counts(&[]), JobCounts::default());
+    }
+
+    #[test]
+    fn job_rows_clamp_negative_successful_runs() {
+        // Successful runs decode from remote JSON unvalidated: a negative
+        // value must render as zero, never a raw negative count.
+        let mut neg = job(9, "delivered", "2026-11-11T10:00:00Z", 1, None);
+        neg.successful_runs = Some(-7);
+        let mut ok = job(10, "delivered", "2026-11-10T10:00:00Z", 1, None);
+        ok.successful_runs = Some(3);
+        let none = job(11, "active", "2026-11-12T10:00:00Z", 1, None);
+        let rows = industry_job_rows(&[neg, ok, none], &resolver());
+        let by_id = |id: i64| {
+            rows.iter()
+                .find(|r| r.job_id == id)
+                .expect("row")
+                .successful_runs
+        };
+        assert_eq!(by_id(9), Some(0));
+        assert_eq!(by_id(10), Some(3));
+        assert_eq!(by_id(11), None);
     }
 
     #[test]
