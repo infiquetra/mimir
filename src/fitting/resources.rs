@@ -67,7 +67,6 @@ fn usable(value: Option<f64>) -> Option<f64> {
 }
 
 pub fn fitting_resources(fitting: &CharacterFitting, catalogue: &FittingTypes) -> FittingResources {
-    let mut counted_rows: usize = 0;
     let mut cpu_excluded: usize = 0;
     let mut power_excluded: usize = 0;
 
@@ -77,39 +76,15 @@ pub fn fitting_resources(fitting: &CharacterFitting, catalogue: &FittingTypes) -
         None
     };
     let Some(ship) = ship_row else {
-        tracing::debug!(
-            "[FITTING] fitting resources counted={} cpu_excluded={} power_excluded={} outcome=ship_no_output",
-            counted_rows,
-            cpu_excluded,
-            power_excluded
-        );
         return FittingResources::ShipNoOutput;
     };
     if ship.category_id != 6 {
-        tracing::debug!(
-            "[FITTING] fitting resources counted={} cpu_excluded={} power_excluded={} outcome=ship_no_output",
-            counted_rows,
-            cpu_excluded,
-            power_excluded
-        );
         return FittingResources::ShipNoOutput;
     }
     let Some(cpu_output) = usable(ship.cpu_output) else {
-        tracing::debug!(
-            "[FITTING] fitting resources counted={} cpu_excluded={} power_excluded={} outcome=ship_no_output",
-            counted_rows,
-            cpu_excluded,
-            power_excluded
-        );
         return FittingResources::ShipNoOutput;
     };
     let Some(power_output) = usable(ship.power_output) else {
-        tracing::debug!(
-            "[FITTING] fitting resources counted={} cpu_excluded={} power_excluded={} outcome=ship_no_output",
-            counted_rows,
-            cpu_excluded,
-            power_excluded
-        );
         return FittingResources::ShipNoOutput;
     };
 
@@ -123,29 +98,25 @@ pub fn fitting_resources(fitting: &CharacterFitting, catalogue: &FittingTypes) -
         if quantity == 0 {
             continue;
         }
-        counted_rows = counted_rows.saturating_add(1);
         let quantity_f = quantity as f64;
+        // Excluded counts modules, matching the multiplied sums:
+        // a stacked row of five uncounted modules reports five.
+        let quantity_units = usize::try_from(quantity).unwrap_or(0);
         let Some(row) = catalogue.lookup_by_id(item.type_id) else {
-            cpu_excluded = cpu_excluded.saturating_add(1);
-            power_excluded = power_excluded.saturating_add(1);
+            cpu_excluded = cpu_excluded.saturating_add(quantity_units);
+            power_excluded = power_excluded.saturating_add(quantity_units);
             continue;
         };
         match usable(row.cpu) {
             Some(value) => cpu_used += quantity_f * value,
-            None => cpu_excluded = cpu_excluded.saturating_add(1),
+            None => cpu_excluded = cpu_excluded.saturating_add(quantity_units),
         }
         match usable(row.power) {
             Some(value) => power_used += quantity_f * value,
-            None => power_excluded = power_excluded.saturating_add(1),
+            None => power_excluded = power_excluded.saturating_add(quantity_units),
         }
     }
 
-    tracing::debug!(
-        "[FITTING] fitting resources counted={} cpu_excluded={} power_excluded={} outcome=available",
-        counted_rows,
-        cpu_excluded,
-        power_excluded
-    );
     FittingResources::Available {
         cpu: ResourceBudget {
             used: cpu_used,
@@ -299,6 +270,18 @@ mod tests {
         assert_close(power.used, 0.0);
         assert_eq!(cpu.excluded_modules, 3);
         assert_eq!(power.excluded_modules, 3);
+    }
+
+    #[test]
+    fn excluded_counts_modules_not_rows_for_stacked_rows() {
+        // The UI says "N fitted modules"; a stacked slot row of
+        // five unknown modules must report five, matching the
+        // multiplied sums (reviewer F3).
+        let catalogue = bundled();
+        let fit = fitting(587, vec![item("LoSlot0", 5, 999999)]);
+        let (cpu, power) = budgets(fitting_resources(&fit, &catalogue));
+        assert_eq!(cpu.excluded_modules, 5);
+        assert_eq!(power.excluded_modules, 5);
     }
 
     // (33981) Limited Hyperspatial Accelerator carries only a power

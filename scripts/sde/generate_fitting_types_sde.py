@@ -163,13 +163,14 @@ def main():
     # unparseable, duplicated, non-finite, or negative wanted row
     # fails loudly and writes nothing.
     resources_by_type = {}
+    seen_resource_keys = set()
     for row in type_attributes:
         attribute_id = int(row["attributeID"])
         if attribute_id not in RESOURCE_ATTR_IDS:
             continue
         type_id = int(row["typeID"])
         key = (type_id, attribute_id)
-        if key in resources_by_type:
+        if key in seen_resource_keys:
             fail(
                 f"duplicate resource row (type {type_id}, "
                 f"attribute {attribute_id}) in dgmTypeAttributes"
@@ -191,6 +192,7 @@ def main():
                 f"negative resource value {value!r} for "
                 f"(type {type_id}, attribute {attribute_id})"
             )
+        seen_resource_keys.add(key)
         resources_by_type.setdefault(type_id, {})[attribute_id] = value
 
     types = []

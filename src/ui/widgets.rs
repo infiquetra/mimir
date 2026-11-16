@@ -4,6 +4,18 @@
 
 use chrono::{DateTime, Utc};
 
+/// Thousands-group a digit string (no sign, no fraction).
+fn group_digits(digits: &str) -> String {
+    let mut grouped = String::new();
+    for (i, ch) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
+            grouped.push(',');
+        }
+        grouped.push(ch);
+    }
+    grouped
+}
+
 /// Format an ISK amount with thousands separators and two decimals.
 pub fn format_isk(amount: f64) -> String {
     if !amount.is_finite() {
@@ -12,10 +24,22 @@ pub fn format_isk(amount: f64) -> String {
     }
     let sign = if amount < 0.0 { "-" } else { "" };
     let abs = amount.abs();
+    // Above this magnitude the i64 split loses the fraction (and
+    // the carry could overflow); render the f64 directly and
+    // group its integer digits instead. Finite hostile totals
+    // must format, never panic.
+    if abs >= 9.0e18 {
+        let rendered = format!("{abs:.2}");
+        let (digits, frac_part) = match rendered.split_once('.') {
+            Some((whole_part, frac_part)) => (whole_part, frac_part),
+            None => (rendered.as_str(), "00"),
+        };
+        return format!("{sign}{}.{frac_part} ISK", group_digits(digits));
+    }
     let mut whole = abs.floor() as i64;
     let mut frac = ((abs - whole as f64) * 100.0).round() as i64;
     if frac >= 100 {
-        whole += 1;
+        whole = whole.saturating_add(1);
         frac -= 100;
     }
     let digits = whole.to_string();
@@ -49,10 +73,21 @@ pub fn format_fitting_amount(value: f64, unit: &str) -> String {
     }
     let sign = if value < 0.0 { "-" } else { "" };
     let abs = value.abs();
+    // Same huge-magnitude guard as format_isk: hostile remote
+    // quantities can push a finite total past i64 range, where
+    // the split below would overflow on the carry.
+    if abs >= 9.0e18 {
+        let rendered = format!("{abs:.1}");
+        let (digits, frac_part) = match rendered.split_once('.') {
+            Some((whole_part, frac_part)) => (whole_part, frac_part),
+            None => (rendered.as_str(), "0"),
+        };
+        return format!("{sign}{}.{frac_part} {unit}", group_digits(digits));
+    }
     let mut whole = abs.floor() as i64;
     let mut frac = ((abs - whole as f64) * 10.0).round() as i64;
     if frac >= 10 {
-        whole += 1;
+        whole = whole.saturating_add(1);
         frac -= 10;
     }
     let digits = whole.to_string();
@@ -256,11 +291,35 @@ mod tests {
         assert_eq!(format_fitting_amount(-3.0, "tf"), "-3.0 tf");
         assert_eq!(format_fitting_amount(f64::NAN, "tf"), "0.0 tf");
         assert_eq!(format_fitting_amount(f64::INFINITY, "MW"), "0.0 MW");
+        // Hostile remote quantities can push a finite total past
+        // i64 range; formatting must never panic or print a sign
+        // the value does not have (reviewer F1 reproduction).
+        let huge = format_fitting_amount(30.0 * i64::MAX as f64, "tf");
+        assert!(huge.ends_with(".0 tf"), "huge renders one decimal: {huge}");
+        assert!(!huge.starts_with('-'), "positive stays positive: {huge}");
+        let parsed: f64 = huge
+            .trim_end_matches(" tf")
+            .replace(',', "")
+            .parse()
+            .expect("grouped digits parse back");
+        assert!(parsed > 9.0e18, "magnitude preserved: {parsed}");
+        let huge_negative = format_fitting_amount(-30.0 * i64::MAX as f64, "MW");
+        assert!(
+            huge_negative.starts_with("-") && !huge_negative.starts_with("--"),
+            "single sign: {huge_negative}"
+        );
     }
 
     #[test]
     fn isk_rollover_signed_and_non_finite() {
         assert_eq!(format_isk(999.999), "1,000.00 ISK");
+        // Same huge-magnitude guard as the fitting formatter.
+        let huge_isk = format_isk(30.0 * i64::MAX as f64);
+        assert!(
+            huge_isk.ends_with(".00 ISK"),
+            "huge ISK renders: {huge_isk}"
+        );
+        assert!(!huge_isk.starts_with('-'));
         assert_eq!(format_isk(f64::NAN), "0.00 ISK");
         assert_eq!(format_isk(f64::INFINITY), "0.00 ISK");
         assert_eq!(format_isk_signed(10.0), "+10.00 ISK");
