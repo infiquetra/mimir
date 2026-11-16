@@ -5,7 +5,8 @@
       {"item_id": 710000002, "type_id": 587, "quantity": 1, "location_id": 60003760, "location_flag": "Hangar", "is_singleton": true},
       {"item_id": 710000003, "type_id": 681, "quantity": 1, "location_id": 60011866, "location_flag": "Hangar", "is_singleton": true, "is_blueprint_copy": true},
       {"item_id": 710000004, "type_id": 35, "quantity": 42000, "location_id": 60011866, "location_flag": "Hangar", "is_singleton": false},
-      {"item_id": 710000005, "type_id": 36, "quantity": 8000, "location_id": 60003760, "location_flag": "Hangar", "is_singleton": false}
+      {"item_id": 710000005, "type_id": 36, "quantity": 8000, "location_id": 60003760, "location_flag": "Hangar", "is_singleton": false},
+      {"item_id": 710000006, "type_id": 34, "quantity": 50000, "location_id": 1030000000001, "location_flag": "Hangar", "is_singleton": false}
     ],
     "custom_names": [
       {"item_id": 710000002, "name": "Aria's Rifter"},

@@ -579,6 +579,11 @@ pub struct AppState {
     /// The assets fetch failed with the typed scope error, so the Assets
     /// view shows step-up guidance instead of a retry panel.
     pub assets_needs_reauthorize: bool,
+    /// A name-resolution pass found player-structure
+    /// locations for the active character but stored token
+    /// metadata does not carry the structures scope, so the
+    /// Assets view shows the structure step-up banner.
+    pub structures_needs_reauthorize: bool,
     pub character_details: LoadState<CharacterDetailData>,
     pub market: LoadState<MarketData>,
     pub industry: LoadState<IndustryData>,
@@ -774,6 +779,10 @@ impl AppState {
                 );
                 self.assets = LoadState::Loading;
                 self.assets_needs_reauthorize = false;
+                // The structure banner's scope fact is per character;
+                // never carry it across a switch. Same-character
+                // reselect keeps it, like the assets grant flag.
+                self.structures_needs_reauthorize = false;
                 // Same ownership argument as assets: detail sections are
                 // fetched tolerantly, so reset at the switch boundary.
                 tracing::debug!(
@@ -897,6 +906,7 @@ impl AppState {
             }
         }
         self.assets_needs_reauthorize = false;
+        self.structures_needs_reauthorize = false;
         if self.stepup_requested.as_ref().map(|r| r.character_id) == Some(character_id) {
             tracing::debug!(
                 "[AUTH] clearing pending step-up request for removed character_id={}",
@@ -1057,6 +1067,29 @@ mod tests {
         state.set_active_character(2);
         assert!(matches!(state.assets, LoadState::Loading));
         assert!(!state.assets_needs_reauthorize);
+    }
+
+    #[test]
+    fn structures_flag_clears_on_switch_and_removal() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two"), row(3, "Three")];
+        state.set_active_character(1);
+        state.structures_needs_reauthorize = true;
+        // Reselecting the same character keeps the banner state.
+        state.set_active_character(1);
+        assert!(state.structures_needs_reauthorize);
+        // Switching to a different character clears it: the scope
+        // fact is per character.
+        state.set_active_character(2);
+        assert!(!state.structures_needs_reauthorize);
+        // Removing a character clears it too, mirroring the assets
+        // flag.
+        state.structures_needs_reauthorize = true;
+        state.remove_character(3);
+        assert!(
+            !state.structures_needs_reauthorize,
+            "flag clears on removal"
+        );
     }
 
     fn detail_bundle(intelligence: i32) -> CharacterDetailData {

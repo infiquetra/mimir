@@ -25,6 +25,7 @@
   { "id": 16679, "name": "Ferrogel", "category": "inventory_type" },
   { "id": 60003760, "name": "Jita IV - Moon 4 - Caldari Navy Assembly Plant", "category": "station" },
   { "id": 60011866, "name": "Amarr VIII (Oris) - Emperor Family Academy", "category": "station" },
+  { "id": 1030000000001, "name": "Demo Astrahus - Voss Logistics Hub", "category": "structure" },
   { "id": 22119, "name": "Demo Memory Implant", "category": "inventory_type" },
   { "id": 22120, "name": "Demo Perception Implant", "category": "inventory_type" },
   { "id": 20001, "name": "Demo Extractor", "category": "inventory_type" },

@@ -100,6 +100,12 @@ impl EveConfig {
     /// fitting writes exist in the read-only slice).
     pub const FITTINGS_SCOPES: &[&str] = &["esi-fittings.read_fittings.v1"];
 
+    /// Player-structure name step-up scope: look up a
+    /// player-built structure's name with the active
+    /// character's token. Granted after first sign-in via
+    /// step-up, never at first auth.
+    pub const STRUCTURE_SCOPES: &[&str] = &["esi-universe.read_structures.v1"];
+
     /// Scopes the Phase-1 Rust endpoint set actually needs, beyond the
     /// first-auth set (location/ship/online/clones/standings/loyalty).
     pub const PHASE1_ENDPOINT_SCOPES: &[&str] = &[
@@ -247,6 +253,20 @@ mod tests {
             ["esi-fittings.read_fittings.v1"]
         );
         for scope in EveConfig::FITTINGS_SCOPES {
+            assert!(
+                !EveConfig::FIRST_AUTH_SCOPES.contains(scope),
+                "step-up scope {scope} must be disjoint from first-auth"
+            );
+        }
+    }
+
+    #[test]
+    fn structure_scopes_is_the_single_stepup_scope() {
+        assert_eq!(
+            EveConfig::STRUCTURE_SCOPES,
+            ["esi-universe.read_structures.v1"]
+        );
+        for scope in EveConfig::STRUCTURE_SCOPES {
             assert!(
                 !EveConfig::FIRST_AUTH_SCOPES.contains(scope),
                 "step-up scope {scope} must be disjoint from first-auth"

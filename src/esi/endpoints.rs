@@ -718,15 +718,6 @@ pub async fn get_station(client: &EsiClient, station_id: i64) -> AppResult<Stati
         .await
 }
 
-/// Structure lookup without a character context (public attempt; live ESI
-/// usually 401s). Prefer `get_structure_for_character`.
-pub async fn get_structure(client: &EsiClient, structure_id: i64) -> AppResult<StructureInfo> {
-    tracing::debug!("[ESI] GET /universe/structures/{}/", structure_id);
-    client
-        .public_get(&format!("/universe/structures/{structure_id}/"))
-        .await
-}
-
 /// Authenticated structure lookup (Flutter `getStructureName` parity: ESI
 /// 403s for structures the character cannot see, surfaced as
 /// `EsiError::Reauthorize`; resolvers map that to "Unknown Location").
@@ -969,6 +960,39 @@ mod tests {
         let (base, _captured) = one_shot_server(403, r#"{"error":"Forbidden"}"#).await;
         let (client, _dir) = client_with_fresh_tokens(base);
         let err = get_assets(&client, 7).await.expect_err("403 must error");
+        assert!(needs_reauthorize(&err), "error: {err:?}");
+    }
+
+    #[tokio::test]
+    async fn structure_lookup_sends_bearer_token_and_parses_name() {
+        let (base, captured) = one_shot_server(
+            200,
+            r#"{"name":"Test Keepstar","solar_system_id":30000142,"type_id":35834}"#,
+        )
+        .await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let info = get_structure_for_character(&client, 1030000000001, 7)
+            .await
+            .expect("structure");
+        assert_eq!(info.name, "Test Keepstar");
+        let request = captured.await.expect("captured");
+        assert!(
+            request.contains("/universe/structures/1030000000001/"),
+            "request: {request}"
+        );
+        assert!(
+            request.contains("Bearer test-access"),
+            "authenticated lookup must send the bearer token, request: {request}"
+        );
+    }
+
+    #[tokio::test]
+    async fn structure_scope_failure_needs_reauthorize() {
+        let (base, _captured) = one_shot_server(403, r#"{"error":"Forbidden"}"#).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = get_structure_for_character(&client, 1030000000001, 7)
+            .await
+            .expect_err("403 must error");
         assert!(needs_reauthorize(&err), "error: {err:?}");
     }
 

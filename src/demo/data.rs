@@ -2405,4 +2405,24 @@ mod tests {
         assert!(matches!(state.fittings, LoadState::Empty));
         assert_eq!(state.fittings_selected_fitting_id, None);
     }
+
+    #[test]
+    fn demo_structure_location_resolves_through_seeded_names() {
+        // Structure-names design sections 11/14.5: the first demo
+        // character holds an asset inside a player structure whose
+        // name is seeded like every other demo name.
+        let bundle = load_demo_bundle().expect("bundled bundle loads");
+        let aria = bundle.character_data(90000001).expect("aria data");
+        assert!(
+            aria.assets
+                .iter()
+                .any(|a| a.location_id == 1_030_000_000_001),
+            "aria holds a structure-class asset"
+        );
+        let resolver = demo_resolver().expect("demo resolver");
+        assert_eq!(
+            resolver.location_name(1_030_000_000_001),
+            "Demo Astrahus - Voss Logistics Hub"
+        );
+    }
 }

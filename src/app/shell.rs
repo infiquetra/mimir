@@ -26,7 +26,9 @@ use crate::esi::models::{
 };
 use crate::names::exploration_ref::ExplorationRef;
 use crate::names::fitting_types::FittingTypes;
-use crate::names::resolver::NameResolver;
+use crate::names::resolver::{
+    is_displayable_name, is_structure_id, structure_lookup_batch, NameResolver,
+};
 use crate::names::sde::Sde;
 use crate::storage::repositories::{self, CharacterRow, TokenMetaRow};
 use crate::ui;
@@ -69,6 +71,11 @@ enum BackendMsg {
     },
     NamesResolved {
         names: Vec<UniverseName>,
+    },
+    StructuresResolved {
+        character_id: i64,
+        names: Vec<UniverseName>,
+        denied: Vec<i64>,
     },
     MarketFetched {
         generation: u64,
@@ -188,6 +195,20 @@ fn fittings_stepup_observed(request_scopes: &[String], state: &AppState) -> bool
         .iter()
         .any(|scope| EveConfig::FITTINGS_SCOPES.contains(&scope.as_str()))
         && matches!(&state.fittings, LoadState::Ready(d) if d.needs_fittings_stepup())
+}
+
+/// Structure-names design section 5.4 observed-reality arm: a
+/// name-resolution pass already found user-visible structure
+/// locations lacking the structures scope while the step-up
+/// request asks for that scope, so stored token metadata
+/// claiming the grant is stale and the already-granted
+/// shortcut must not be taken (it would loop the banner's own
+/// Re-authorize button without ever opening the browser).
+fn structures_stepup_observed(request_scopes: &[String], state: &AppState) -> bool {
+    request_scopes
+        .iter()
+        .any(|scope| EveConfig::STRUCTURE_SCOPES.contains(&scope.as_str()))
+        && state.structures_needs_reauthorize
 }
 
 /// Design section 8.3 freshness check: a lookup answer applies only
@@ -544,13 +565,14 @@ impl MimirApp {
 
     /// Resolve names for IDs visible in live state (corporations, wallet
     /// counterparties, items, stations) so views show names, not unknowns.
-    /// Player structures are excluded: `/universe/names/` cannot resolve
-    /// them and the authenticated structure lookup stays a follow-up.
+    /// Structure-class IDs are routed to the bounded authenticated pass
+    /// below: `/universe/names/` cannot resolve them.
     fn schedule_name_resolution(&mut self) {
         if self.state.demo {
             return;
         }
         let mut ids: Vec<i64> = Vec::new();
+        let mut structure_ids: Vec<i64> = Vec::new();
         for c in &self.state.characters {
             ids.push(c.corporation_id);
             ids.extend(c.alliance_id);
@@ -564,7 +586,9 @@ impl MimirApp {
             for tx in &wallet.transactions {
                 ids.push(tx.type_id);
                 ids.push(tx.client_id);
-                if !crate::names::resolver::is_structure_id(tx.location_id) {
+                if is_structure_id(tx.location_id) {
+                    structure_ids.push(tx.location_id);
+                } else {
                     ids.push(tx.location_id);
                 }
             }
@@ -575,7 +599,9 @@ impl MimirApp {
         if let LoadState::Ready(assets) = &self.state.assets {
             for item in &assets.items {
                 ids.push(item.type_id);
-                if !crate::names::resolver::is_structure_id(item.location_id) {
+                if is_structure_id(item.location_id) {
+                    structure_ids.push(item.location_id);
+                } else {
                     ids.push(item.location_id);
                 }
             }
@@ -589,13 +615,17 @@ impl MimirApp {
             }
             if let Ok(clones) = &bundle.clones {
                 for clone in &clones.jump_clones {
-                    if !crate::names::resolver::is_structure_id(clone.location_id) {
+                    if is_structure_id(clone.location_id) {
+                        structure_ids.push(clone.location_id);
+                    } else {
                         ids.push(clone.location_id);
                     }
                     ids.extend(clone.implants.iter().copied());
                 }
                 if let Some(home) = &clones.home_location {
-                    if !crate::names::resolver::is_structure_id(home.location_id) {
+                    if is_structure_id(home.location_id) {
+                        structure_ids.push(home.location_id);
+                    } else {
                         ids.push(home.location_id);
                     }
                 }
@@ -608,7 +638,9 @@ impl MimirApp {
             if let Ok(location) = &bundle.location {
                 ids.push(location.solar_system_id);
                 if let Some(docked_id) = location.docked_location_id() {
-                    if !crate::names::resolver::is_structure_id(docked_id) {
+                    if is_structure_id(docked_id) {
+                        structure_ids.push(docked_id);
+                    } else {
                         ids.push(docked_id);
                     }
                 }
@@ -629,7 +661,9 @@ impl MimirApp {
             if let Ok(public) = &bundle.public_orders {
                 let summary = ui::market::summarize_orders(&public.orders);
                 for order in summary.top_sells.iter().chain(summary.top_buys.iter()) {
-                    if !crate::names::resolver::is_structure_id(order.location_id) {
+                    if is_structure_id(order.location_id) {
+                        structure_ids.push(order.location_id);
+                    } else {
                         ids.push(order.location_id);
                     }
                 }
@@ -637,7 +671,9 @@ impl MimirApp {
             if let Ok(own) = &bundle.character_orders {
                 for order in &own.orders {
                     ids.push(order.type_id);
-                    if !crate::names::resolver::is_structure_id(order.location_id) {
+                    if is_structure_id(order.location_id) {
+                        structure_ids.push(order.location_id);
+                    } else {
                         ids.push(order.location_id);
                     }
                 }
@@ -651,7 +687,9 @@ impl MimirApp {
                 for job in &jobs_data.jobs {
                     ids.push(job.blueprint_type_id);
                     ids.extend(job.product_type_id);
-                    if !crate::names::resolver::is_structure_id(job.facility_id) {
+                    if is_structure_id(job.facility_id) {
+                        structure_ids.push(job.facility_id);
+                    } else {
                         ids.push(job.facility_id);
                     }
                 }
@@ -659,7 +697,9 @@ impl MimirApp {
             if let Ok(blueprints_data) = &bundle.blueprints {
                 for blueprint in &blueprints_data.blueprints {
                     ids.push(blueprint.type_id);
-                    if !crate::names::resolver::is_structure_id(blueprint.location_id) {
+                    if is_structure_id(blueprint.location_id) {
+                        structure_ids.push(blueprint.location_id);
+                    } else {
                         ids.push(blueprint.location_id);
                     }
                 }
@@ -674,7 +714,9 @@ impl MimirApp {
         if let LoadState::Ready(bundle) = &self.state.planetary {
             if let Ok(colonies) = &bundle.colonies {
                 for colony in colonies {
-                    if !crate::names::resolver::is_structure_id(colony.solar_system_id) {
+                    if is_structure_id(colony.solar_system_id) {
+                        structure_ids.push(colony.solar_system_id);
+                    } else {
                         ids.push(colony.solar_system_id);
                     }
                 }
@@ -708,31 +750,199 @@ impl MimirApp {
             }
         }
         let missing = self.resolver.missing(&ids);
-        if missing.is_empty() {
+        // Structure-class IDs take the bounded authenticated pass
+        // below; the batch only ever sees non-structure ids.
+        let structure_batch = structure_lookup_batch(&self.resolver.missing(&structure_ids));
+        if missing.is_empty() && structure_batch.is_empty() {
             return;
         }
         let (Some(backends), Some(runtime)) = (self.backends.as_ref(), self.runtime.as_ref())
         else {
             return;
         };
-        let esi = backends.esi.clone();
-        let tx = self.tx.clone();
-        tracing::info!("[ESI] resolving {} missing universe names", missing.len());
-        runtime.spawn(async move {
-            let mut all: Vec<UniverseName> = Vec::new();
-            for chunk in missing.chunks(1000) {
-                match endpoints::resolve_names(&esi, chunk).await {
-                    Ok(mut names) => all.append(&mut names),
-                    Err(e) => {
-                        tracing::warn!("[ESI] universe name resolution failed: {}", e);
-                        break;
+        if !missing.is_empty() {
+            let esi = backends.esi.clone();
+            let tx = self.tx.clone();
+            tracing::info!("[ESI] resolving {} missing universe names", missing.len());
+            runtime.spawn(async move {
+                let mut all: Vec<UniverseName> = Vec::new();
+                for chunk in missing.chunks(1000) {
+                    match endpoints::resolve_names(&esi, chunk).await {
+                        Ok(mut names) => all.append(&mut names),
+                        Err(e) => {
+                            tracing::warn!("[ESI] universe name resolution failed: {}", e);
+                            break;
+                        }
                     }
                 }
+                if !all.is_empty() {
+                    let _ = tx.send(BackendMsg::NamesResolved { names: all });
+                }
+            });
+        }
+        if structure_batch.is_empty() {
+            return;
+        }
+        // Bounded authenticated structure pass (design sections 5.2,
+        // 7, 10.2), independent of the batch spawn above: sequential
+        // per-ID GETs under the active character's token, capped per
+        // pass, with the structures scope pre-checked from stored
+        // token metadata before any request.
+        if let Some(character_id) = self.state.active_character_id {
+            // No active character means no token: skip without
+            // touching the flag (design section 4.2). When one is
+            // active, grant metadata decides whether any request is
+            // made at all (design section 5.2).
+            let granted: Vec<String> = match backends.db.lock() {
+                Ok(conn) => match repositories::get_token_meta(&conn, character_id) {
+                    Ok(Some(meta)) => oauth::split_scopes(&meta.scopes),
+                    Ok(None) => {
+                        tracing::debug!(
+                            "[ESI] structure pre-check no token_meta row; treating granted scopes as empty character_id={}",
+                            character_id
+                        );
+                        Vec::new()
+                    }
+                    Err(e) => {
+                        tracing::warn!(
+                            "[ESI] structure pre-check token_meta read failed character_id={} error={}",
+                            character_id,
+                            e
+                        );
+                        Vec::new()
+                    }
+                },
+                Err(e) => {
+                    tracing::warn!(
+                        "[ESI] structure pre-check token_meta lock failed character_id={} error={}",
+                        character_id,
+                        e
+                    );
+                    Vec::new()
+                }
+            };
+            let requested: Vec<String> = EveConfig::STRUCTURE_SCOPES
+                .iter()
+                .map(|scope| scope.to_string())
+                .collect();
+            if !oauth::missing_scopes(&granted, &requested).is_empty() {
+                // Scope absent: zero requests, every id stays
+                // unpinned, and the Assets banner offers the step-up.
+                self.state.structures_needs_reauthorize = true;
+                tracing::info!(
+                    "[ESI] structure name lookup skipped: structures scope not granted character_id={} pending={}",
+                    character_id,
+                    structure_batch.len()
+                );
+            } else {
+                // Scope present: the pass proves the grant and the
+                // banner clears; bounded lookups run below.
+                self.state.structures_needs_reauthorize = false;
+                let esi = backends.esi.clone();
+                let tx = self.tx.clone();
+                tracing::info!(
+                    "[ESI] resolving {} structure names character_id={}",
+                    structure_batch.len(),
+                    character_id
+                );
+                runtime.spawn(async move {
+                    let mut names: Vec<UniverseName> = Vec::new();
+                    let mut denied: Vec<i64> = Vec::new();
+                    for structure_id in structure_batch {
+                        match endpoints::get_structure_for_character(
+                            &esi,
+                            structure_id,
+                            character_id,
+                        )
+                        .await
+                        {
+                            Ok(info) if is_displayable_name(&info.name) => {
+                                names.push(UniverseName {
+                                    id: structure_id,
+                                    name: info.name,
+                                    category: "structure".to_string(),
+                                });
+                            }
+                            Ok(_) => {
+                                // ESI answered with no displayable name;
+                                // pin the id (design section 6.3).
+                                denied.push(structure_id);
+                            }
+                            Err(e)
+                                if matches!(
+                                    &e,
+                                    crate::error::AppError::Esi(
+                                        crate::error::EsiError::Reauthorize
+                                            | crate::error::EsiError::NotFound(_)
+                                    )
+                                ) =>
+                            {
+                                // 403 in a scope-present pass is an ACL
+                                // denial for this character, and 404 is a
+                                // destroyed structure or a parent item id
+                                // above the structure threshold: pin the
+                                // id and continue so one dead id never
+                                // head-of-line blocks larger ids.
+                                denied.push(structure_id);
+                            }
+                            Err(e) => {
+                                // 401 and transport-class failures abort
+                                // the rest of the pass, leaving the
+                                // remainder unpinned for the next
+                                // scheduled pass.
+                                tracing::warn!("[ESI] structure name lookup aborted: {}", e);
+                                break;
+                            }
+                        }
+                    }
+                    if !names.is_empty() || !denied.is_empty() {
+                        let _ = tx.send(BackendMsg::StructuresResolved {
+                            character_id,
+                            names,
+                            denied,
+                        });
+                    }
+                });
             }
-            if !all.is_empty() {
-                let _ = tx.send(BackendMsg::NamesResolved { names: all });
+        }
+    }
+
+    /// Landing tail shared by the batch and structure name passes
+    /// (design section 10.3): ingest the landed names, upgrade the
+    /// active character's summary strings, and persist the rows.
+    /// Never creates a summary entry that does not already exist.
+    fn apply_landed_names(&mut self, names: &[UniverseName]) {
+        self.resolver.extend_from_universe_names(names);
+        // Summary strings were frozen at Refreshed time; upgrade
+        // the active character's location/ship now that names
+        // landed (design section 6.5). Only the active bundle
+        // is in memory; never create a summary entry here.
+        if let Some(active_id) = self.state.active_character_id {
+            if let LoadState::Ready(bundle) = &self.state.character_details {
+                let (location_name, ship_name) = detail_summary_names(bundle, &self.resolver);
+                if let Some(summary) = self.state.summaries.get_mut(&active_id) {
+                    summary.location_name = location_name;
+                    summary.ship_name = ship_name;
+                    tracing::debug!(
+                        "[ESI] recomputed location/ship summary after name resolution character_id={}",
+                        active_id
+                    );
+                }
             }
-        });
+        }
+        if let Some(b) = &self.backends {
+            if let Ok(conn) = b.db.lock() {
+                let rows: Vec<repositories::UniverseNameRow> = names
+                    .iter()
+                    .map(|n| repositories::UniverseNameRow {
+                        id: n.id,
+                        name: n.name.clone(),
+                        category: n.category.clone(),
+                    })
+                    .collect();
+                let _ = repositories::upsert_universe_names(&conn, &rows);
+            }
+        }
     }
 
     fn drain_requests(&mut self) {
@@ -884,37 +1094,31 @@ impl MimirApp {
                 }
                 BackendMsg::NamesResolved { names } => {
                     tracing::info!("[ESI] resolved {} universe names", names.len());
-                    self.resolver.extend_from_universe_names(&names);
-                    // Summary strings were frozen at Refreshed time; upgrade
-                    // the active character's location/ship now that names
-                    // landed (design section 6.5). Only the active bundle
-                    // is in memory; never create a summary entry here.
-                    if let Some(active_id) = self.state.active_character_id {
-                        if let LoadState::Ready(bundle) = &self.state.character_details {
-                            let (location_name, ship_name) =
-                                detail_summary_names(bundle, &self.resolver);
-                            if let Some(summary) = self.state.summaries.get_mut(&active_id) {
-                                summary.location_name = location_name;
-                                summary.ship_name = ship_name;
-                                tracing::debug!(
-                                    "[ESI] recomputed location/ship summary after name resolution character_id={}",
-                                    active_id
-                                );
-                            }
-                        }
-                    }
-                    if let Some(b) = &self.backends {
-                        if let Ok(conn) = b.db.lock() {
-                            let rows: Vec<repositories::UniverseNameRow> = names
-                                .iter()
-                                .map(|n| repositories::UniverseNameRow {
-                                    id: n.id,
-                                    name: n.name.clone(),
-                                    category: n.category.clone(),
-                                })
-                                .collect();
-                            let _ = repositories::upsert_universe_names(&conn, &rows);
-                        }
+                    self.apply_landed_names(&names);
+                }
+                BackendMsg::StructuresResolved {
+                    character_id,
+                    names,
+                    denied,
+                } => {
+                    // Identity guard (design section 10.3): a late
+                    // result for a switched-away character drops
+                    // whole — neither the cache nor the pin set may
+                    // learn under another character's token.
+                    if Some(character_id) != self.state.active_character_id {
+                        tracing::warn!(
+                            "[ESI] dropping structure names for inactive character_id={}",
+                            character_id
+                        );
+                    } else {
+                        tracing::info!(
+                            "[ESI] resolved {} structure names ({} denied) character_id={}",
+                            names.len(),
+                            denied.len(),
+                            character_id
+                        );
+                        self.resolver.mark_unresolved(&denied);
+                        self.apply_landed_names(&names);
                     }
                 }
                 BackendMsg::RefreshFailed {
@@ -992,6 +1196,11 @@ impl MimirApp {
                         // The Refreshed Ok(assets) arm clears it once a
                         // refresh actually succeeds; a failed refresh leaves
                         // the Re-authorize panel in place.
+                        // Re-arm pinned structure ids: the post-stepup
+                        // refresh's scheduling tail re-offers them under
+                        // the new grant, and the structures banner clears
+                        // only when that pass's pre-check sees the scope.
+                        self.resolver.forget_unresolved_structures();
                         // request_refresh sets its own generic status, so the
                         // specific step-up status must be set after it.
                         self.state.request_refresh("post-stepup");
@@ -1091,6 +1300,10 @@ impl MimirApp {
                     crate::demo::data::apply_character(&mut self.state, &bundle, id);
                 }
             } else {
+                // Structure denials were for the previous character's
+                // token; re-arm pinned structure ids under the new
+                // active character (design section 6.3 rule 2).
+                self.resolver.forget_unresolved_structures();
                 self.state.request_refresh("character-switch");
                 // Design section 8.5: the switch reset the market
                 // bundle to Loading; refill it under the new character
@@ -2065,6 +2278,7 @@ impl MimirApp {
                 || (overlaps(EveConfig::PLANETS_SCOPES)
                     && matches!(&self.state.planetary, LoadState::Ready(d) if d.needs_planetary_stepup()))
                 || fittings_stepup_observed(&request.scopes, &self.state)
+                || structures_stepup_observed(&request.scopes, &self.state)
                 || (overlaps(EveConfig::MARKET_SCOPES)
                     && matches!(&self.state.market, LoadState::Ready(d) if matches!(&d.character_orders, Err(e) if e.needs_reauthorize)))
         };
@@ -2676,6 +2890,20 @@ mod tests {
             fittings: Ok(vec![fitting(1)]),
         });
         assert!(!fittings_stepup_observed(&fittings_scope, &state));
+    }
+
+    #[test]
+    fn structures_observed_reauthorize_blocks_shortcut_only_when_flag_set() {
+        let structures_scope = vec!["esi-universe.read_structures.v1".to_string()];
+        let other_scope = vec!["esi-assets.read_assets.v1".to_string()];
+        let mut state = AppState::new(false);
+        // Flag unset: shortcut allowed.
+        assert!(!structures_stepup_observed(&structures_scope, &state));
+        // Flag set + structures request blocks the shortcut.
+        state.structures_needs_reauthorize = true;
+        assert!(structures_stepup_observed(&structures_scope, &state));
+        // An unrelated request is not blocked by the structures arm.
+        assert!(!structures_stepup_observed(&other_scope, &state));
     }
 
     #[test]
