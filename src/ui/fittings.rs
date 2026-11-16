@@ -15,10 +15,16 @@ use crate::config::EveConfig;
 use crate::esi::models::CharacterFitting;
 use crate::fitting::dna::parse_import;
 use crate::fitting::eft::{EftImportOutcome, ImportFormat, ImportIssue, ImportedFitting};
-use crate::fitting::resources::{fitting_resources, FittingResources, ResourceBudget};
+#[cfg(test)]
+use crate::fitting::resources::fitting_resources;
+use crate::fitting::resources::{
+    fitting_resources_with_skills, resource_skill_levels, FittingResources, ResourceBudget,
+    ResourceSkillLevels, CPU_MANAGEMENT_SKILL_ID, POWER_GRID_MANAGEMENT_SKILL_ID,
+};
 use crate::fitting::write_map::{build_save_request, DropReason, DroppedFittingItem, SaveMapping};
 use crate::names::fitting_types::FittingTypes;
 use crate::names::resolver::NameResolver;
+use crate::names::sde::Sde;
 use std::collections::HashMap;
 
 pub const FITTINGS_RENDER_MAX: usize = 100;
@@ -1131,9 +1137,20 @@ fn render_fitting_items(ui: &mut egui::Ui, item_rows: &[FittingItemRow]) {
 /// Locked heading for the base resource block (design section 7).
 const FITTINGS_RESOURCES_HEADING: &str = "Fitting resources (base values)";
 
+/// Locked heading for the skill-applied block (fitting skill
+/// resources design section 6). Chosen only for an `Available`
+/// result with loaded skills; unavailable states keep the base
+/// heading.
+const FITTINGS_RESOURCES_APPLIED_HEADING: &str = "Fitting resources (with skill bonuses)";
+
 /// Locked disclosure: the numbers are base values only, never
 /// in-game totals (design section 4).
 const FITTING_RESOURCES_DISCLOSURE: &str = "Base values from Mimir's bundled item data. Skills, implants, and bonuses from modules, rigs, subsystems, and the ship itself are not applied, so these numbers can differ from EVE.";
+
+/// Locked applied disclosure (fitting skill resources design
+/// section 6): the two skill bonuses are applied, the rest
+/// stays named as excluded.
+const FITTING_RESOURCES_APPLIED_DISCLOSURE: &str = "Ship outputs include only the two skill bonuses above, from Mimir's bundled item data and this character's trained skill levels. Module need reductions, implants, and bonuses from modules, rigs, subsystems, and the ship itself are not applied, so these numbers can differ from EVE.";
 
 const FITTING_RESOURCES_NO_CATALOGUE: &str =
     "Fitting resources unavailable: Mimir's bundled item data failed to load.";
@@ -1183,45 +1200,106 @@ fn power_grid_excluded_line(excluded: usize) -> Option<String> {
     }
 }
 
-/// Base CPU and power grid block shared by the saved and imported
-/// fitting details (design section 7). Renders even when the
+/// One skill-bonus line (fitting skill resources design section 6),
+/// pure like `resource_line`: `dimension` is "CPU output" or "Power
+/// grid output", `skill_name` is the resolved SDE name. Levels arrive
+/// clamped to `0..=5` from `resource_skill_levels`; the clamp here
+/// keeps the displayed level consistent with the defensive re-clamp
+/// inside `fitting_resources_with_skills`.
+fn skill_line(dimension: &str, skill_name: &str, level: i32) -> String {
+    let level = level.clamp(0, 5);
+    if level > 0 {
+        format!(
+            "{dimension} includes {skill_name} level {level} (+{}%).",
+            level * 5
+        )
+    } else {
+        format!("{dimension} includes no bonus: {skill_name} is level 0.")
+    }
+}
+
+/// CPU and power grid block shared by the saved and imported
+/// fitting details (design section 7, extended by the fitting
+/// skill resources design sections 5-6). `levels` is `Some` only
+/// when the owning character's skills are loaded (`Ready`); `None`
+/// renders the base block byte-identically to before. The heading
+/// is chosen after the outcome is known, so the applied heading
+/// never sits over an unavailable sentence. Renders even when the
 /// fitting has no items. Logs nothing itself: the pure function
 /// already logged counts.
 fn render_fitting_resources(
     ui: &mut egui::Ui,
     fitting: &CharacterFitting,
     fitting_types: Option<&FittingTypes>,
+    levels: Option<ResourceSkillLevels>,
+    sde: &Sde,
 ) {
-    ui.heading(FITTINGS_RESOURCES_HEADING);
     let Some(catalogue) = fitting_types else {
+        ui.heading(FITTINGS_RESOURCES_HEADING);
         ui.label(FITTING_RESOURCES_NO_CATALOGUE);
         return;
     };
-    match fitting_resources(fitting, catalogue) {
+    match fitting_resources_with_skills(fitting, catalogue, levels) {
         FittingResources::ShipNoOutput => {
+            ui.heading(FITTINGS_RESOURCES_HEADING);
             ui.label(FITTING_RESOURCES_NO_SHIP_OUTPUT);
         }
-        FittingResources::Available { cpu, power } => {
-            let cpu_line = resource_line("CPU", &cpu, "tf");
-            if cpu.is_over() {
-                ui.colored_label(egui::Color32::LIGHT_RED, cpu_line);
-            } else {
-                ui.label(cpu_line);
+        FittingResources::Available { cpu, power } => match levels {
+            Some(levels) => {
+                ui.heading(FITTINGS_RESOURCES_APPLIED_HEADING);
+                let cpu_line = resource_line("CPU", &cpu, "tf");
+                if cpu.is_over() {
+                    ui.colored_label(egui::Color32::LIGHT_RED, cpu_line);
+                } else {
+                    ui.label(cpu_line);
+                }
+                let power_line = resource_line("Power grid", &power, "MW");
+                if power.is_over() {
+                    ui.colored_label(egui::Color32::LIGHT_RED, power_line);
+                } else {
+                    ui.label(power_line);
+                }
+                ui.label(skill_line(
+                    "CPU output",
+                    &sde.skill_name_quiet(CPU_MANAGEMENT_SKILL_ID),
+                    levels.cpu_management,
+                ));
+                ui.label(skill_line(
+                    "Power grid output",
+                    &sde.skill_name_quiet(POWER_GRID_MANAGEMENT_SKILL_ID),
+                    levels.power_grid_management,
+                ));
+                if let Some(line) = cpu_excluded_line(cpu.excluded_modules) {
+                    ui.label(line);
+                }
+                if let Some(line) = power_grid_excluded_line(power.excluded_modules) {
+                    ui.label(line);
+                }
+                ui.label(FITTING_RESOURCES_APPLIED_DISCLOSURE);
             }
-            let power_line = resource_line("Power grid", &power, "MW");
-            if power.is_over() {
-                ui.colored_label(egui::Color32::LIGHT_RED, power_line);
-            } else {
-                ui.label(power_line);
+            None => {
+                ui.heading(FITTINGS_RESOURCES_HEADING);
+                let cpu_line = resource_line("CPU", &cpu, "tf");
+                if cpu.is_over() {
+                    ui.colored_label(egui::Color32::LIGHT_RED, cpu_line);
+                } else {
+                    ui.label(cpu_line);
+                }
+                let power_line = resource_line("Power grid", &power, "MW");
+                if power.is_over() {
+                    ui.colored_label(egui::Color32::LIGHT_RED, power_line);
+                } else {
+                    ui.label(power_line);
+                }
+                if let Some(line) = cpu_excluded_line(cpu.excluded_modules) {
+                    ui.label(line);
+                }
+                if let Some(line) = power_grid_excluded_line(power.excluded_modules) {
+                    ui.label(line);
+                }
+                ui.label(FITTING_RESOURCES_DISCLOSURE);
             }
-            if let Some(line) = cpu_excluded_line(cpu.excluded_modules) {
-                ui.label(line);
-            }
-            if let Some(line) = power_grid_excluded_line(power.excluded_modules) {
-                ui.label(line);
-            }
-            ui.label(FITTING_RESOURCES_DISCLOSURE);
-        }
+        },
     }
 }
 
@@ -1234,6 +1312,7 @@ fn fittings_import_panel(
     ui: &mut egui::Ui,
     state: &mut AppState,
     fitting_types: Option<&FittingTypes>,
+    sde: &Sde,
 ) {
     ui.heading("Import a fitting from EFT or DNA text");
     ui.label("Paste an EFT block (the [Ship, Fitting name] text format) or a DNA fitting link (the single line of separated numbers the EVE client copies). The imported fitting stays in Mimir on this device unless you save it to EVE below, and it is gone when you switch characters or close Mimir.");
@@ -1344,7 +1423,11 @@ fn fittings_import_panel(
     } else {
         render_fitting_items(ui, &item_rows);
     }
-    render_fitting_resources(ui, &synth, fitting_types);
+    let levels = state
+        .skills
+        .as_ready()
+        .map(|data| resource_skill_levels(&data.skills));
+    render_fitting_resources(ui, &synth, fitting_types, levels, sde);
     // Loaded charges, in item order (design section 8.2).
     let charged_total = imported
         .items
@@ -1508,6 +1591,7 @@ pub fn show(
     state: &mut AppState,
     resolver: &NameResolver,
     fitting_types: Option<&FittingTypes>,
+    sde: &Sde,
 ) {
     ui.heading("Fittings");
     widgets::mode_notice(ui, state.demo, state.offline);
@@ -1518,7 +1602,7 @@ pub fn show(
     // Import needs no ESI read scope: render it before the LoadState
     // match so it works while saved fittings load, fail, or await a
     // step-up grant (design section 8.2).
-    fittings_import_panel(ui, state, fitting_types);
+    fittings_import_panel(ui, state, fitting_types, sde);
     ui.separator();
     // A confirmation never outlives the thing it confirms (write
     // design section 6): sweep stale armed values before any
@@ -1625,7 +1709,11 @@ pub fn show(
                     } else {
                         render_fitting_items(ui, &item_rows);
                     }
-                    render_fitting_resources(ui, selected, fitting_types);
+                    let levels = state
+                        .skills
+                        .as_ready()
+                        .map(|data| resource_skill_levels(&data.skills));
+                    render_fitting_resources(ui, selected, fitting_types, levels, sde);
                     if ui.button("Copy as EFT").clicked() {
                         tracing::info!(
                             "[FITTING] copy as EFT requested for fitting name={}",
@@ -3009,5 +3097,231 @@ mod tests {
         assert_eq!(sample.1.excluded_modules, 0);
         assert_eq!(cpu_excluded_line(sample.0.excluded_modules), None);
         assert_eq!(power_grid_excluded_line(sample.1.excluded_modules), None);
+    }
+
+    #[test]
+    fn fitting_resource_applied_wording() {
+        assert_eq!(
+            FITTINGS_RESOURCES_APPLIED_HEADING,
+            "Fitting resources (with skill bonuses)"
+        );
+        assert_eq!(
+            FITTING_RESOURCES_APPLIED_DISCLOSURE,
+            "Ship outputs include only the two skill bonuses above, from Mimir's bundled item data and this character's trained skill levels. Module need reductions, implants, and bonuses from modules, rigs, subsystems, and the ship itself are not applied, so these numbers can differ from EVE."
+        );
+        // Names resolve through the real bundled SDE, never raw ids.
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        let cpu_name = sde.skill_name_quiet(CPU_MANAGEMENT_SKILL_ID);
+        let pg_name = sde.skill_name_quiet(POWER_GRID_MANAGEMENT_SKILL_ID);
+        assert_eq!(cpu_name, "CPU Management");
+        assert_eq!(pg_name, "Power Grid Management");
+        // Level 5 is +25%; level 1 is +5%; level 0 states the absence.
+        assert_eq!(
+            skill_line("CPU output", &cpu_name, 5),
+            "CPU output includes CPU Management level 5 (+25%)."
+        );
+        assert_eq!(
+            skill_line("Power grid output", &pg_name, 5),
+            "Power grid output includes Power Grid Management level 5 (+25%)."
+        );
+        assert_eq!(
+            skill_line("CPU output", &cpu_name, 1),
+            "CPU output includes CPU Management level 1 (+5%)."
+        );
+        assert_eq!(
+            skill_line("Power grid output", &pg_name, 1),
+            "Power grid output includes Power Grid Management level 1 (+5%)."
+        );
+        assert_eq!(
+            skill_line("CPU output", &cpu_name, 0),
+            "CPU output includes no bonus: CPU Management is level 0."
+        );
+        assert_eq!(
+            skill_line("Power grid output", &pg_name, 0),
+            "Power grid output includes no bonus: Power Grid Management is level 0."
+        );
+    }
+
+    // Applied demo story (fitting skill resources design section 5):
+    // levels come from the real demo skill fixture through
+    // `resource_skill_levels`, outputs through the pure function,
+    // strings through `resource_line` and `skill_line`, so fixture,
+    // catalogue, or rounding drift fails here.
+    #[test]
+    fn demo_fixture_applied_resources_match_the_locked_demo_story() {
+        use crate::demo::data::{DEMO_FITTINGS_JSON, DEMO_SKILLQUEUE_JSON};
+        use crate::esi::models::CharacterSkills;
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoSkillEntry {
+            skills: CharacterSkills,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let skills: HashMap<String, DemoSkillEntry> =
+            serde_json::from_str(DEMO_SKILLQUEUE_JSON).expect("demo skill fixture parses");
+        let aria = skills
+            .get("90000001")
+            .unwrap_or_else(|| panic!("aria skills present"));
+        let marcus = skills
+            .get("90000002")
+            .unwrap_or_else(|| panic!("marcus skills present"));
+        let aria_levels = resource_skill_levels(&aria.skills);
+        let marcus_levels = resource_skill_levels(&marcus.skills);
+        // The split fixture is unchanged: Aria has 3413 L5 only,
+        // Marcus has 3426 L5 only.
+        assert_eq!(
+            aria_levels,
+            ResourceSkillLevels {
+                cpu_management: 0,
+                power_grid_management: 5
+            }
+        );
+        assert_eq!(
+            marcus_levels,
+            ResourceSkillLevels {
+                cpu_management: 5,
+                power_grid_management: 0
+            }
+        );
+
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        let cpu_name = sde.skill_name_quiet(CPU_MANAGEMENT_SKILL_ID);
+        let pg_name = sde.skill_name_quiet(POWER_GRID_MANAGEMENT_SKILL_ID);
+
+        // Demo Brawler (Aria, PG L5 only): CPU stays base, PG scales
+        // to 51.25, rendered half away from zero as 51.3.
+        let brawler = match fitting_resources_with_skills(
+            &find("Demo Brawler"),
+            &catalogue,
+            Some(aria_levels),
+        ) {
+            FittingResources::Available { cpu, power } => (cpu, power),
+            FittingResources::ShipNoOutput => panic!("Demo Brawler must have ship output"),
+        };
+        assert_eq!(
+            resource_line("CPU", &brawler.0, "tf"),
+            "CPU: 84.0 tf of 130.0 tf used (46.0 tf left)"
+        );
+        assert_eq!(
+            resource_line("Power grid", &brawler.1, "MW"),
+            "Power grid: 3.0 MW of 51.3 MW used (48.3 MW left)"
+        );
+        assert_eq!(brawler.0.excluded_modules, 2);
+        assert_eq!(brawler.1.excluded_modules, 2);
+        assert_eq!(
+            skill_line("CPU output", &cpu_name, aria_levels.cpu_management),
+            "CPU output includes no bonus: CPU Management is level 0."
+        );
+        assert_eq!(
+            skill_line(
+                "Power grid output",
+                &pg_name,
+                aria_levels.power_grid_management
+            ),
+            "Power grid output includes Power Grid Management level 5 (+25%)."
+        );
+
+        // Mission Runner (Aria).
+        let mission = match fitting_resources_with_skills(
+            &find("Mission Runner"),
+            &catalogue,
+            Some(aria_levels),
+        ) {
+            FittingResources::Available { cpu, power } => (cpu, power),
+            FittingResources::ShipNoOutput => panic!("Mission Runner must have ship output"),
+        };
+        assert_eq!(
+            resource_line("CPU", &mission.0, "tf"),
+            "CPU: 30.0 tf of 130.0 tf used (100.0 tf left)"
+        );
+        assert_eq!(
+            resource_line("Power grid", &mission.1, "MW"),
+            "Power grid: 1.0 MW of 51.3 MW used (50.3 MW left)"
+        );
+        assert_eq!(mission.0.excluded_modules, 1);
+        assert_eq!(mission.1.excluded_modules, 1);
+
+        // Demo Runner (Marcus, CPU L5 only): CPU scales to 175.0,
+        // PG stays base.
+        let runner = match fitting_resources_with_skills(
+            &find("Demo Runner"),
+            &catalogue,
+            Some(marcus_levels),
+        ) {
+            FittingResources::Available { cpu, power } => (cpu, power),
+            FittingResources::ShipNoOutput => panic!("Demo Runner must have ship output"),
+        };
+        assert_eq!(
+            resource_line("CPU", &runner.0, "tf"),
+            "CPU: 57.0 tf of 175.0 tf used (118.0 tf left)"
+        );
+        assert_eq!(
+            resource_line("Power grid", &runner.1, "MW"),
+            "Power grid: 2.0 MW of 67.0 MW used (65.0 MW left)"
+        );
+        assert_eq!(runner.0.excluded_modules, 1);
+        assert_eq!(runner.1.excluded_modules, 1);
+        assert_eq!(
+            skill_line("CPU output", &cpu_name, marcus_levels.cpu_management),
+            "CPU output includes CPU Management level 5 (+25%)."
+        );
+        assert_eq!(
+            skill_line(
+                "Power grid output",
+                &pg_name,
+                marcus_levels.power_grid_management
+            ),
+            "Power grid output includes no bonus: Power Grid Management is level 0."
+        );
+
+        // Sample import under both importers.
+        let synth = match parse_eft(DEMO_SAMPLE_EFT, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
+        };
+        let aria_sample = match fitting_resources_with_skills(&synth, &catalogue, Some(aria_levels))
+        {
+            FittingResources::Available { cpu, power } => (cpu, power),
+            FittingResources::ShipNoOutput => panic!("sample must have ship output"),
+        };
+        assert_eq!(
+            resource_line("CPU", &aria_sample.0, "tf"),
+            "CPU: 114.0 tf of 130.0 tf used (16.0 tf left)"
+        );
+        assert_eq!(
+            resource_line("Power grid", &aria_sample.1, "MW"),
+            "Power grid: 31.0 MW of 51.3 MW used (20.3 MW left)"
+        );
+        let marcus_sample =
+            match fitting_resources_with_skills(&synth, &catalogue, Some(marcus_levels)) {
+                FittingResources::Available { cpu, power } => (cpu, power),
+                FittingResources::ShipNoOutput => panic!("sample must have ship output"),
+            };
+        assert_eq!(
+            resource_line("CPU", &marcus_sample.0, "tf"),
+            "CPU: 114.0 tf of 162.5 tf used (48.5 tf left)"
+        );
+        assert_eq!(
+            resource_line("Power grid", &marcus_sample.1, "MW"),
+            "Power grid: 31.0 MW of 41.0 MW used (10.0 MW left)"
+        );
     }
 }
