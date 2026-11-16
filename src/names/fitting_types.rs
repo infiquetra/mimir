@@ -52,6 +52,41 @@ pub struct FittingType {
     pub capacitor_capacity: Option<f64>,
     #[serde(rename = "maxVelocity", default)]
     pub max_velocity: Option<f64>,
+    // Base ship resonances (docs/ship-resistances-design.md
+    // section 2): dogma attributes 271/274/273/272 shield,
+    // 267/270/269/268 armor, and 113/110/109/111 hull (the
+    // emDamageResonance family, NOT 974-977 hullEmDamageResonance
+    // et al., which are Damage Control bonus-attribute inputs).
+    // Fields hold resonances, never pre-converted percentages;
+    // the percentage exists only past the pure function. The
+    // hull catalogue keys keep the SDE names
+    // (`emDamageResonance` etc.) as the `hp` -> `hull_hp` field
+    // above keeps `hp`: the key keeps the SDE name and the field
+    // reads as what the value is.
+    #[serde(rename = "shieldEmDamageResonance", default)]
+    pub shield_em_resonance: Option<f64>,
+    #[serde(rename = "shieldThermalDamageResonance", default)]
+    pub shield_thermal_resonance: Option<f64>,
+    #[serde(rename = "shieldKineticDamageResonance", default)]
+    pub shield_kinetic_resonance: Option<f64>,
+    #[serde(rename = "shieldExplosiveDamageResonance", default)]
+    pub shield_explosive_resonance: Option<f64>,
+    #[serde(rename = "armorEmDamageResonance", default)]
+    pub armor_em_resonance: Option<f64>,
+    #[serde(rename = "armorThermalDamageResonance", default)]
+    pub armor_thermal_resonance: Option<f64>,
+    #[serde(rename = "armorKineticDamageResonance", default)]
+    pub armor_kinetic_resonance: Option<f64>,
+    #[serde(rename = "armorExplosiveDamageResonance", default)]
+    pub armor_explosive_resonance: Option<f64>,
+    #[serde(rename = "emDamageResonance", default)]
+    pub hull_em_resonance: Option<f64>,
+    #[serde(rename = "thermalDamageResonance", default)]
+    pub hull_thermal_resonance: Option<f64>,
+    #[serde(rename = "kineticDamageResonance", default)]
+    pub hull_kinetic_resonance: Option<f64>,
+    #[serde(rename = "explosiveDamageResonance", default)]
+    pub hull_explosive_resonance: Option<f64>,
 }
 
 /// Outcome of a reverse name lookup. `Found` carries the unique
@@ -426,6 +461,71 @@ mod tests {
                     row.name
                 );
             }
+            // Base ship resonances (docs/ship-resistances-design.md
+            // section 3): ships carry all twelve, every other row
+            // carries none. Present values are finite and
+            // non-negative with no upper bound (a resonance above
+            // 1 renders its true signed percent); absence is
+            // distinct from a present 0.0 or 1.0.
+            let has_resonance = row.shield_em_resonance.is_some()
+                || row.shield_thermal_resonance.is_some()
+                || row.shield_kinetic_resonance.is_some()
+                || row.shield_explosive_resonance.is_some()
+                || row.armor_em_resonance.is_some()
+                || row.armor_thermal_resonance.is_some()
+                || row.armor_kinetic_resonance.is_some()
+                || row.armor_explosive_resonance.is_some()
+                || row.hull_em_resonance.is_some()
+                || row.hull_thermal_resonance.is_some()
+                || row.hull_kinetic_resonance.is_some()
+                || row.hull_explosive_resonance.is_some();
+            for value in [
+                row.shield_em_resonance,
+                row.shield_thermal_resonance,
+                row.shield_kinetic_resonance,
+                row.shield_explosive_resonance,
+                row.armor_em_resonance,
+                row.armor_thermal_resonance,
+                row.armor_kinetic_resonance,
+                row.armor_explosive_resonance,
+                row.hull_em_resonance,
+                row.hull_thermal_resonance,
+                row.hull_kinetic_resonance,
+                row.hull_explosive_resonance,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                assert!(
+                    value.is_finite() && value >= 0.0,
+                    "negative or non-finite ship resonance on {:?}",
+                    row.name
+                );
+            }
+            if row.category_id == 6 {
+                assert!(
+                    row.shield_em_resonance.is_some()
+                        && row.shield_thermal_resonance.is_some()
+                        && row.shield_kinetic_resonance.is_some()
+                        && row.shield_explosive_resonance.is_some()
+                        && row.armor_em_resonance.is_some()
+                        && row.armor_thermal_resonance.is_some()
+                        && row.armor_kinetic_resonance.is_some()
+                        && row.armor_explosive_resonance.is_some()
+                        && row.hull_em_resonance.is_some()
+                        && row.hull_thermal_resonance.is_some()
+                        && row.hull_kinetic_resonance.is_some()
+                        && row.hull_explosive_resonance.is_some(),
+                    "ship without all twelve ship resonances: {:?}",
+                    row.name
+                );
+            } else {
+                assert!(
+                    !has_resonance,
+                    "non-ship carrying ship resonances: {:?}",
+                    row.name
+                );
+            }
         }
         // Spot pins mirroring the generator oracles (design section
         // 5), read from dgmTypeAttributes.csv.bz2 during design.
@@ -478,6 +578,63 @@ mod tests {
             assert_eq!(row.hull_hp, None);
             assert_eq!(row.capacitor_capacity, None);
             assert_eq!(row.max_velocity, None);
+        }
+        // Base ship resonance spot pins (docs/ship-resistances-design.md
+        // section 3), read from dgmTypeAttributes.csv.bz2 during design:
+        // Rifter 587 shield 1.0/0.8/0.6/0.5 armor 0.4/0.65/0.75/0.9
+        // hull 0.67 x4 (974-977 decoy rows at 1.0 never emitted);
+        // Punisher 597 shield 1.0/0.8/0.6/0.5 armor 0.5/0.65/0.75/0.8
+        // hull 0.67 x4.
+        let rifter = types.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(rifter.shield_em_resonance, Some(1.0));
+        assert_eq!(rifter.shield_thermal_resonance, Some(0.8));
+        assert_eq!(rifter.shield_kinetic_resonance, Some(0.6));
+        assert_eq!(rifter.shield_explosive_resonance, Some(0.5));
+        assert_eq!(rifter.armor_em_resonance, Some(0.4));
+        assert_eq!(rifter.armor_thermal_resonance, Some(0.65));
+        assert_eq!(rifter.armor_kinetic_resonance, Some(0.75));
+        assert_eq!(rifter.armor_explosive_resonance, Some(0.9));
+        assert_eq!(rifter.hull_em_resonance, Some(0.67));
+        assert_eq!(rifter.hull_thermal_resonance, Some(0.67));
+        assert_eq!(rifter.hull_kinetic_resonance, Some(0.67));
+        assert_eq!(rifter.hull_explosive_resonance, Some(0.67));
+        let punisher = types.lookup_by_id(597).expect("Punisher row");
+        assert_eq!(punisher.shield_em_resonance, Some(1.0));
+        assert_eq!(punisher.shield_thermal_resonance, Some(0.8));
+        assert_eq!(punisher.shield_kinetic_resonance, Some(0.6));
+        assert_eq!(punisher.shield_explosive_resonance, Some(0.5));
+        assert_eq!(punisher.armor_em_resonance, Some(0.5));
+        assert_eq!(punisher.armor_thermal_resonance, Some(0.65));
+        assert_eq!(punisher.armor_kinetic_resonance, Some(0.75));
+        assert_eq!(punisher.armor_explosive_resonance, Some(0.8));
+        assert_eq!(punisher.hull_em_resonance, Some(0.67));
+        assert_eq!(punisher.hull_thermal_resonance, Some(0.67));
+        assert_eq!(punisher.hull_kinetic_resonance, Some(0.67));
+        assert_eq!(punisher.hull_explosive_resonance, Some(0.67));
+        // Asymmetric and fractional pins: Mimir 32209 armor EM 0.1,
+        // armor thermal 0.325; Falcon 11957 armor kinetic 0.46875,
+        // armor thermal 0.20625.
+        let mimir = types.lookup_by_id(32209).expect("Mimir row");
+        assert_eq!(mimir.armor_em_resonance, Some(0.1));
+        assert_eq!(mimir.armor_thermal_resonance, Some(0.325));
+        let falcon = types.lookup_by_id(11957).expect("Falcon row");
+        assert_eq!(falcon.armor_kinetic_resonance, Some(0.46875));
+        assert_eq!(falcon.armor_thermal_resonance, Some(0.20625));
+        // Category gate pins: module, rig, and subsystem rows
+        // carry none of the twelve.
+        for row in [damage_control, rig, subsystem] {
+            assert_eq!(row.shield_em_resonance, None);
+            assert_eq!(row.shield_thermal_resonance, None);
+            assert_eq!(row.shield_kinetic_resonance, None);
+            assert_eq!(row.shield_explosive_resonance, None);
+            assert_eq!(row.armor_em_resonance, None);
+            assert_eq!(row.armor_thermal_resonance, None);
+            assert_eq!(row.armor_kinetic_resonance, None);
+            assert_eq!(row.armor_explosive_resonance, None);
+            assert_eq!(row.hull_em_resonance, None);
+            assert_eq!(row.hull_thermal_resonance, None);
+            assert_eq!(row.hull_kinetic_resonance, None);
+            assert_eq!(row.hull_explosive_resonance, None);
         }
     }
 }
