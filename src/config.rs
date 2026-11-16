@@ -14,6 +14,13 @@ impl EveConfig {
     pub const OAUTH_TOKEN_URL: &str = "https://login.eveonline.com/v2/oauth/token";
     pub const OAUTH_REVOKE_URL: &str = "https://login.eveonline.com/v2/oauth/revoke";
     pub const OAUTH_HOST: &str = "login.eveonline.com";
+    /// SSO metadata document (provenance for OAUTH_JWKS_URL; not
+    /// fetched at runtime in this slice — see JWT design J1).
+    pub const OAUTH_METADATA_URL: &str =
+        "https://login.eveonline.com/.well-known/oauth-authorization-server";
+    /// JWKS for EVE SSO access-token signatures, as linked from
+    /// OAUTH_METADATA_URL per CCP's JWT validation guide.
+    pub const OAUTH_JWKS_URL: &str = "https://login.eveonline.com/oauth/jwks";
     /// Rust uses the localhost callback only; the Flutter `eveauth-mimir://`
     /// deep-link path is dropped (see design decision table).
     pub const REDIRECT_URI: &str = "http://127.0.0.1:54321/callback";
@@ -141,6 +148,13 @@ mod tests {
             EveConfig::portrait_url(123, 128),
             "https://images.evetech.net/characters/123/portrait?size=128"
         );
+    }
+
+    #[test]
+    fn jwks_and_metadata_urls_are_on_oauth_host() {
+        let host_prefix = format!("https://{}/", EveConfig::OAUTH_HOST);
+        assert!(EveConfig::OAUTH_METADATA_URL.starts_with(&host_prefix));
+        assert!(EveConfig::OAUTH_JWKS_URL.starts_with(&host_prefix));
     }
 
     #[test]
