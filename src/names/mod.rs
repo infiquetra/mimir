@@ -2,6 +2,7 @@
 //! everything else resolves memory → database → ESI. The interface shows
 //! resolved names only, never raw numeric IDs.
 
+pub mod exploration_ref;
 pub mod resolver;
 pub mod sde;
 
