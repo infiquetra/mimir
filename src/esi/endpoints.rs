@@ -254,6 +254,177 @@ pub async fn get_asset_names(
         .await
 }
 
+/// Hard cap for market page walks. Regional orders for one type and
+/// one character's open orders are bounded populations; the cap is a
+/// runaway guard, and hitting it is always disclosed via the
+/// returned truncated flag rather than silent partial data.
+pub const MARKET_MAX_PAGES: u32 = 10;
+
+/// Public regional orders for exactly one type (`type_id` is always
+/// embedded in the path; there is no unfiltered regional fetch).
+/// Returns raw rows in fetch order plus a truncated flag (design 5.2).
+pub async fn get_regional_orders(
+    client: &EsiClient,
+    region_id: i64,
+    type_id: i64,
+) -> AppResult<(Vec<RegionalOrder>, bool)> {
+    get_regional_orders_capped(client, region_id, type_id, MARKET_MAX_PAGES).await
+}
+
+async fn get_regional_orders_capped(
+    client: &EsiClient,
+    region_id: i64,
+    type_id: i64,
+    max_pages: u32,
+) -> AppResult<(Vec<RegionalOrder>, bool)> {
+    let max_pages = max_pages.max(1);
+    let path = format!("/markets/{region_id}/orders/?type_id={type_id}&order_type=all");
+    tracing::debug!(
+        "[MARKET] GET /markets/{}/orders/ type_id={} order_type=all (capped pages={})",
+        region_id,
+        type_id,
+        max_pages
+    );
+    let mut page = 1u32;
+    let mut all: Vec<RegionalOrder> = Vec::new();
+    let mut truncated = false;
+    loop {
+        let (items, meta) = client
+            .public_get_page::<Vec<RegionalOrder>>(&path, page)
+            .await?;
+        let count = items.len();
+        tracing::debug!(
+            "[MARKET] regional orders page={} rows={} total={}",
+            page,
+            count,
+            all.len() + count
+        );
+        all.extend(items);
+        match meta.pages {
+            Some(total) if page >= total => break,
+            Some(_) => {
+                if page >= max_pages {
+                    truncated = true;
+                    break;
+                }
+            }
+            None => {
+                if count == 0 {
+                    break;
+                }
+                if page >= max_pages {
+                    truncated = true;
+                    break;
+                }
+            }
+        }
+        page += 1;
+    }
+    tracing::info!(
+        "[MARKET] regional orders fetched region_id={} type_id={} rows={} truncated={}",
+        region_id,
+        type_id,
+        all.len(),
+        truncated
+    );
+    Ok((all, truncated))
+}
+
+/// Public regional price history for exactly one type: one request,
+/// rows returned unsorted exactly as ESI sent them (design 5.2).
+pub async fn get_market_history(
+    client: &EsiClient,
+    region_id: i64,
+    type_id: i64,
+) -> AppResult<Vec<MarketHistoryEntry>> {
+    tracing::debug!(
+        "[MARKET] GET /markets/{}/history/ type_id={}",
+        region_id,
+        type_id
+    );
+    let rows: Vec<MarketHistoryEntry> = client
+        .public_get(&format!("/markets/{region_id}/history/?type_id={type_id}"))
+        .await?;
+    tracing::info!(
+        "[MARKET] history fetched region_id={} type_id={} rows={}",
+        region_id,
+        type_id,
+        rows.len()
+    );
+    Ok(rows)
+}
+
+/// The character's own open orders. Requires scope
+/// `esi-markets.read_character_orders.v1` (progressive step-up,
+/// never first-auth); a missing scope surfaces as HTTP 403 →
+/// `EsiError::Reauthorize`. Any page error propagates; partial page
+/// lists are never returned as success.
+pub async fn get_character_orders(
+    client: &EsiClient,
+    character_id: i64,
+) -> AppResult<(Vec<CharacterOrder>, bool)> {
+    get_character_orders_capped(client, character_id, MARKET_MAX_PAGES).await
+}
+
+async fn get_character_orders_capped(
+    client: &EsiClient,
+    character_id: i64,
+    max_pages: u32,
+) -> AppResult<(Vec<CharacterOrder>, bool)> {
+    let max_pages = max_pages.max(1);
+    tracing::debug!(
+        "[MARKET] GET /characters/{}/orders/ (capped pages={})",
+        character_id,
+        max_pages
+    );
+    let mut page = 1u32;
+    let mut all: Vec<CharacterOrder> = Vec::new();
+    let mut truncated = false;
+    loop {
+        let (items, meta) = client
+            .auth_get_page::<Vec<CharacterOrder>>(
+                &format!("/characters/{character_id}/orders/"),
+                character_id,
+                Some(page),
+            )
+            .await?;
+        let count = items.len();
+        tracing::debug!(
+            "[MARKET] character orders page={} rows={} total={}",
+            page,
+            count,
+            all.len() + count
+        );
+        all.extend(items);
+        match meta.pages {
+            Some(total) if page >= total => break,
+            Some(_) => {
+                if page >= max_pages {
+                    truncated = true;
+                    break;
+                }
+            }
+            None => {
+                if count == 0 {
+                    break;
+                }
+                if page >= max_pages {
+                    truncated = true;
+                    break;
+                }
+            }
+        }
+        page += 1;
+    }
+    tracing::info!(
+        "[MARKET] character orders fetched character_id={} rows={} truncated={}",
+        character_id,
+        all.len(),
+        truncated
+    );
+    Ok((all, truncated))
+}
+
 pub async fn get_location(client: &EsiClient, character_id: i64) -> AppResult<CharacterLocation> {
     tracing::debug!("[CHAR] GET /characters/{}/location/", character_id);
     client
@@ -585,6 +756,252 @@ mod tests {
         let (base, _captured) = one_shot_server(403, r#"{"error":"Forbidden"}"#).await;
         let (client, _dir) = client_with_fresh_tokens(base);
         let err = get_assets(&client, 7).await.expect_err("403 must error");
+        assert!(needs_reauthorize(&err), "error: {err:?}");
+    }
+
+    #[derive(Clone, Copy, PartialEq)]
+    enum SecondPage {
+        Rows,
+        Empty,
+        Error,
+    }
+
+    /// Paged market mock: counts and captures requests, serves one
+    /// order row per page (order_id encodes the page), and serves an
+    /// unsorted two-day history for `/history/` paths.
+    async fn market_server(
+        pages_header: Option<u32>,
+        second: SecondPage,
+    ) -> (
+        String,
+        std::sync::Arc<std::sync::atomic::AtomicUsize>,
+        std::sync::Arc<std::sync::Mutex<Vec<String>>>,
+    ) {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let addr = listener.local_addr().expect("addr");
+        let counter = std::sync::Arc::new(AtomicUsize::new(0));
+        let captured = std::sync::Arc::new(std::sync::Mutex::new(Vec::<String>::new()));
+        let task_counter = counter.clone();
+        let task_captured = captured.clone();
+        tokio::spawn(async move {
+            loop {
+                let Ok((mut socket, _peer)) = listener.accept().await else {
+                    break;
+                };
+                let counter = task_counter.clone();
+                let captured = task_captured.clone();
+                tokio::spawn(async move {
+                    let mut buffer = vec![0u8; 16384];
+                    let count = socket.read(&mut buffer).await.unwrap_or(0);
+                    let request = String::from_utf8_lossy(&buffer[..count]).into_owned();
+                    counter.fetch_add(1, Ordering::SeqCst);
+                    captured.lock().expect("capture lock").push(request.clone());
+                    let page: u32 = request
+                        .split("page=")
+                        .nth(1)
+                        .and_then(|rest| {
+                            rest.chars()
+                                .take_while(|c| c.is_ascii_digit())
+                                .collect::<String>()
+                                .parse()
+                                .ok()
+                        })
+                        .unwrap_or(1);
+                    let (status, body) = if request.contains("/history/") {
+                        (
+                            200,
+                            r#"[{"date":"2026-11-10","average":5.0,"highest":6.0,"lowest":4.0,"order_count":10,"volume":100},{"date":"2026-11-12","average":5.5,"highest":6.5,"lowest":4.5,"order_count":12,"volume":120}]"#
+                                .to_string(),
+                        )
+                    } else if page == 2 && second == SecondPage::Error {
+                        (500, r#"{"error":"boom"}"#.to_string())
+                    } else if page == 2 && second == SecondPage::Empty {
+                        (200, "[]".to_string())
+                    } else {
+                        (
+                            200,
+                            format!(
+                                r#"[{{"order_id":{},"type_id":34,"region_id":10000002,"location_id":60003760,"system_id":30000142,"price":5.0,"volume_remain":10,"volume_total":10,"min_volume":1,"is_buy_order":false,"issued":"2026-11-01T00:00:00Z","duration":90,"range":"station","is_corporation":false}}]"#,
+                                100 + page
+                            ),
+                        )
+                    };
+                    let pages = match pages_header {
+                        Some(total) => format!("X-Pages: {total}\r\n"),
+                        None => String::new(),
+                    };
+                    let payload = format!(
+                        "HTTP/1.1 {status} OK\r\nContent-Type: application/json\r\n{pages}Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                        body.len()
+                    );
+                    let _ = socket.write_all(payload.as_bytes()).await;
+                    let _ = socket.flush().await;
+                });
+            }
+        });
+        (format!("http://{addr}"), counter, captured)
+    }
+
+    fn public_client(base: String) -> EsiClient {
+        EsiClient::with_http(reqwest::Client::new(), base)
+    }
+
+    #[tokio::test]
+    async fn regional_orders_walk_two_pages_with_type_id_always_present() {
+        use std::sync::atomic::Ordering;
+        let (base, counter, captured) = market_server(Some(2), SecondPage::Rows).await;
+        // No token store attached: public endpoints must not need one.
+        let client = public_client(base);
+        let (orders, truncated) = get_regional_orders(&client, 10000002, 34)
+            .await
+            .expect("orders");
+        assert_eq!(orders.len(), 2);
+        assert_eq!(orders[0].order_id, 101);
+        assert_eq!(orders[1].order_id, 102);
+        assert!(!truncated);
+        assert_eq!(counter.load(Ordering::SeqCst), 2);
+        let requests = captured.lock().expect("capture lock").clone();
+        assert_eq!(requests.len(), 2);
+        for request in &requests {
+            assert!(request.contains("/markets/10000002/orders/"), "{request}");
+            assert!(request.contains("type_id=34"), "{request}");
+            assert!(request.contains("order_type=all"), "{request}");
+        }
+        assert!(requests[1].contains("page=2"), "{}", requests[1]);
+    }
+
+    #[tokio::test]
+    async fn regional_orders_cap_is_honored_and_reported_truncated() {
+        use std::sync::atomic::Ordering;
+        let (base, counter, _captured) = market_server(Some(5), SecondPage::Rows).await;
+        let client = public_client(base);
+        let (orders, truncated) = get_regional_orders_capped(&client, 10000002, 34, 2)
+            .await
+            .expect("orders");
+        assert_eq!(orders.len(), 2);
+        assert!(truncated);
+        assert_eq!(
+            counter.load(Ordering::SeqCst),
+            2,
+            "exactly the capped pages"
+        );
+    }
+
+    #[tokio::test]
+    async fn regional_orders_empty_region_returns_empty_not_truncated() {
+        let (base, _captured) = one_shot_server(200, "[]").await;
+        let client = public_client(base);
+        let (orders, truncated) = get_regional_orders(&client, 10000002, 34)
+            .await
+            .expect("orders");
+        assert!(orders.is_empty());
+        assert!(!truncated);
+    }
+
+    #[tokio::test]
+    async fn regional_orders_missing_xpages_empty_second_page_stops_clean() {
+        use std::sync::atomic::Ordering;
+        let (base, counter, _captured) = market_server(None, SecondPage::Empty).await;
+        let client = public_client(base);
+        let (orders, truncated) = get_regional_orders(&client, 10000002, 34)
+            .await
+            .expect("orders");
+        assert_eq!(orders.len(), 1);
+        assert!(!truncated);
+        assert_eq!(counter.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test]
+    async fn regional_orders_missing_xpages_nonempty_at_cap_is_truncated() {
+        let (base, _counter, _captured) = market_server(None, SecondPage::Rows).await;
+        let client = public_client(base);
+        let (orders, truncated) = get_regional_orders_capped(&client, 10000002, 34, 2)
+            .await
+            .expect("orders");
+        assert_eq!(orders.len(), 2);
+        assert!(truncated);
+    }
+
+    #[tokio::test]
+    async fn regional_orders_page_two_error_propagates() {
+        let (base, _counter, _captured) = market_server(Some(2), SecondPage::Error).await;
+        let client = public_client(base);
+        let err = get_regional_orders(&client, 10000002, 34)
+            .await
+            .expect_err("page-2 failure must not return partial rows");
+        assert!(!needs_reauthorize(&err), "error: {err:?}");
+    }
+
+    #[tokio::test]
+    async fn market_history_is_one_request_and_returns_rows_unsorted() {
+        use std::sync::atomic::Ordering;
+        let (base, counter, captured) = market_server(None, SecondPage::Rows).await;
+        let client = public_client(base);
+        let history = get_market_history(&client, 10000002, 34)
+            .await
+            .expect("history");
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].date, "2026-11-10");
+        assert_eq!(history[1].date, "2026-11-12");
+        assert_eq!(counter.load(Ordering::SeqCst), 1);
+        let requests = captured.lock().expect("capture lock").clone();
+        assert!(
+            requests[0].contains("/markets/10000002/history/"),
+            "{}",
+            requests[0]
+        );
+        assert!(requests[0].contains("type_id=34"), "{}", requests[0]);
+    }
+
+    #[tokio::test]
+    async fn character_orders_walk_pages() {
+        let (base, _counter, captured) = market_server(Some(2), SecondPage::Rows).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let (orders, truncated) = get_character_orders(&client, 7).await.expect("orders");
+        assert_eq!(orders.len(), 2);
+        assert_eq!(orders[0].order_id, 101);
+        assert_eq!(orders[1].order_id, 102);
+        assert!(!truncated);
+        let requests = captured.lock().expect("capture lock").clone();
+        assert!(
+            requests[0].contains("/characters/7/orders/"),
+            "{}",
+            requests[0]
+        );
+        assert!(requests[1].contains("page=2"), "{}", requests[1]);
+    }
+
+    #[tokio::test]
+    async fn character_orders_cap_is_honored_and_reported_truncated() {
+        use std::sync::atomic::Ordering;
+        let (base, counter, _captured) = market_server(Some(5), SecondPage::Rows).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let (orders, truncated) = get_character_orders_capped(&client, 7, 2)
+            .await
+            .expect("orders");
+        assert_eq!(orders.len(), 2);
+        assert!(truncated);
+        assert_eq!(counter.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test]
+    async fn character_orders_page_two_error_propagates() {
+        let (base, _counter, _captured) = market_server(Some(2), SecondPage::Error).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = get_character_orders(&client, 7)
+            .await
+            .expect_err("page-2 failure must not return partial rows");
+        assert!(!needs_reauthorize(&err), "error: {err:?}");
+    }
+
+    #[tokio::test]
+    async fn character_orders_scope_failure_needs_reauthorize() {
+        let (base, _captured) = one_shot_server(403, r#"{"error":"Forbidden"}"#).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = get_character_orders(&client, 7)
+            .await
+            .expect_err("403 must error");
         assert!(needs_reauthorize(&err), "error: {err:?}");
     }
 

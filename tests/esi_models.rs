@@ -150,6 +150,31 @@ fn assets_fixture_parses() {
 }
 
 #[test]
+fn market_fixture_parses() {
+    let root: serde_json::Value = parse(include_str!("fixtures/market.json"));
+    let regional: Vec<RegionalOrder> =
+        serde_json::from_value(root["regional_orders"].clone()).expect("regional parse");
+    assert_eq!(regional.len(), 2);
+    assert_eq!(regional[0].type_id, 34);
+    assert!(!regional[0].is_buy_order);
+    assert!(regional[1].is_buy_order);
+    assert_eq!(regional[1].system_id, 30000142);
+
+    let character: Vec<CharacterOrder> =
+        serde_json::from_value(root["character_orders"].clone()).expect("character parse");
+    assert_eq!(character.len(), 2);
+    assert_eq!(character[0].region_id, 10000002);
+    assert_eq!(character[0].escrow, None);
+    assert_eq!(character[1].escrow, Some(320000.0));
+
+    let history: Vec<MarketHistoryEntry> =
+        serde_json::from_value(root["history"].clone()).expect("history parses");
+    assert_eq!(history.len(), 2);
+    assert_eq!(history[1].date, "2026-11-14");
+    assert_eq!(history[1].volume, 3020000);
+}
+
+#[test]
 fn empty_payloads_default_instead_of_failing() {
     // ESI occasionally omits optional fields; models must tolerate `{}`.
     let info: CharacterPublicInfo = parse("{}");

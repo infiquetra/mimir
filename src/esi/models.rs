@@ -425,6 +425,90 @@ pub struct AssetName {
     pub name: String,
 }
 
+/// One public regional order from `GET /markets/{region_id}/orders/`.
+/// `order_id` is an invisible sort tie-break only: never rendered,
+/// never name-resolved, never logged per-row.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct RegionalOrder {
+    #[serde(default)]
+    pub order_id: i64,
+    #[serde(default)]
+    pub type_id: i64,
+    #[serde(default)]
+    pub location_id: i64,
+    #[serde(default)]
+    pub system_id: i64,
+    #[serde(default)]
+    pub price: f64,
+    #[serde(default)]
+    pub volume_remain: i64,
+    #[serde(default)]
+    pub volume_total: i64,
+    #[serde(default)]
+    pub min_volume: i64,
+    #[serde(default)]
+    pub is_buy_order: bool,
+    #[serde(default)]
+    pub issued: String,
+    #[serde(default)]
+    pub duration: i64,
+    #[serde(default)]
+    pub range: String,
+}
+
+/// One of a character's own open orders from
+/// `GET /characters/{character_id}/orders/`. `region_id` parses and
+/// is carried, but is never rendered or scheduled for naming.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct CharacterOrder {
+    #[serde(default)]
+    pub order_id: i64,
+    #[serde(default)]
+    pub type_id: i64,
+    #[serde(default)]
+    pub region_id: i64,
+    #[serde(default)]
+    pub location_id: i64,
+    #[serde(default)]
+    pub price: f64,
+    #[serde(default)]
+    pub volume_remain: i64,
+    #[serde(default)]
+    pub volume_total: i64,
+    #[serde(default)]
+    pub min_volume: i64,
+    #[serde(default)]
+    pub is_buy_order: bool,
+    #[serde(default)]
+    pub issued: String,
+    #[serde(default)]
+    pub duration: i64,
+    #[serde(default)]
+    pub range: String,
+    #[serde(default)]
+    pub is_corporation: bool,
+    #[serde(default)]
+    pub escrow: Option<f64>,
+}
+
+/// One day of `GET /markets/{region_id}/history/`. Volume and
+/// order-count sums over these rows saturate (design section 7.3).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct MarketHistoryEntry {
+    #[serde(default)]
+    pub date: String,
+    #[serde(default)]
+    pub average: f64,
+    #[serde(default)]
+    pub highest: f64,
+    #[serde(default)]
+    pub lowest: f64,
+    #[serde(default)]
+    pub order_count: i64,
+    #[serde(default)]
+    pub volume: i64,
+}
+
 /// ESI error body shape: `{"error": "..."}`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EsiErrorBody {
@@ -519,6 +603,114 @@ mod tests {
         let empty: AssetName = serde_json::from_str("{}").expect("parses");
         assert_eq!(empty.item_id, 0);
         assert!(empty.name.is_empty());
+    }
+
+    #[test]
+    fn regional_order_full_row_parses_and_defaults() {
+        let order: RegionalOrder = serde_json::from_str(
+            r#"{"order_id":123456,"type_id":34,"location_id":60003760,
+                "system_id":30000142,"price":5.5,"volume_remain":900,
+                "volume_total":1000,"min_volume":1,"is_buy_order":true,
+                "issued":"2026-11-01T12:00:00Z","duration":90,"range":"station",
+                "unknown_future_field":true}"#,
+        )
+        .expect("parses");
+        assert_eq!(order.order_id, 123456);
+        assert_eq!(order.type_id, 34);
+        assert_eq!(order.location_id, 60003760);
+        assert_eq!(order.system_id, 30000142);
+        assert_eq!(order.price, 5.5);
+        assert_eq!(order.volume_remain, 900);
+        assert_eq!(order.volume_total, 1000);
+        assert_eq!(order.min_volume, 1);
+        assert!(order.is_buy_order);
+        assert_eq!(order.issued, "2026-11-01T12:00:00Z");
+        assert_eq!(order.duration, 90);
+        assert_eq!(order.range, "station");
+
+        let empty: RegionalOrder = serde_json::from_str("{}").expect("parses");
+        assert_eq!(empty.order_id, 0);
+        assert_eq!(empty.type_id, 0);
+        assert_eq!(empty.location_id, 0);
+        assert_eq!(empty.system_id, 0);
+        assert_eq!(empty.price, 0.0);
+        assert_eq!(empty.volume_remain, 0);
+        assert_eq!(empty.volume_total, 0);
+        assert_eq!(empty.min_volume, 0);
+        assert!(!empty.is_buy_order);
+        assert!(empty.issued.is_empty());
+        assert_eq!(empty.duration, 0);
+        assert!(empty.range.is_empty());
+    }
+
+    #[test]
+    fn character_order_full_row_parses_defaults_and_escrow_variants() {
+        let order: CharacterOrder = serde_json::from_str(
+            r#"{"order_id":654321,"type_id":587,"region_id":10000002,
+                "location_id":60003760,"price":350000.0,"volume_remain":1,
+                "volume_total":2,"min_volume":1,"is_buy_order":false,
+                "issued":"2026-11-02T09:30:00Z","duration":30,"range":"station",
+                "is_corporation":true,"escrow":700000.0,
+                "unknown_future_field":"x"}"#,
+        )
+        .expect("parses");
+        assert_eq!(order.order_id, 654321);
+        assert_eq!(order.type_id, 587);
+        assert_eq!(order.region_id, 10000002);
+        assert_eq!(order.location_id, 60003760);
+        assert_eq!(order.price, 350000.0);
+        assert_eq!(order.volume_remain, 1);
+        assert_eq!(order.volume_total, 2);
+        assert_eq!(order.min_volume, 1);
+        assert!(!order.is_buy_order);
+        assert_eq!(order.issued, "2026-11-02T09:30:00Z");
+        assert_eq!(order.duration, 30);
+        assert_eq!(order.range, "station");
+        assert!(order.is_corporation);
+        assert_eq!(order.escrow, Some(700000.0));
+
+        let empty: CharacterOrder = serde_json::from_str("{}").expect("parses");
+        assert_eq!(empty.order_id, 0);
+        assert_eq!(empty.type_id, 0);
+        assert_eq!(empty.region_id, 0);
+        assert_eq!(empty.location_id, 0);
+        assert_eq!(empty.price, 0.0);
+        assert_eq!(empty.volume_remain, 0);
+        assert_eq!(empty.volume_total, 0);
+        assert_eq!(empty.min_volume, 0);
+        assert!(!empty.is_buy_order);
+        assert!(empty.issued.is_empty());
+        assert_eq!(empty.duration, 0);
+        assert!(empty.range.is_empty());
+        assert!(!empty.is_corporation);
+        assert_eq!(empty.escrow, None);
+
+        let null_escrow: CharacterOrder =
+            serde_json::from_str(r#"{"escrow":null}"#).expect("parses");
+        assert_eq!(null_escrow.escrow, None);
+    }
+
+    #[test]
+    fn market_history_entry_full_row_parses_and_defaults() {
+        let entry: MarketHistoryEntry = serde_json::from_str(
+            r#"{"date":"2026-11-14","average":5.25,"highest":6.0,"lowest":4.9,
+                "order_count":1234,"volume":987654,"unknown_future_field":1}"#,
+        )
+        .expect("parses");
+        assert_eq!(entry.date, "2026-11-14");
+        assert_eq!(entry.average, 5.25);
+        assert_eq!(entry.highest, 6.0);
+        assert_eq!(entry.lowest, 4.9);
+        assert_eq!(entry.order_count, 1234);
+        assert_eq!(entry.volume, 987654);
+
+        let empty: MarketHistoryEntry = serde_json::from_str("{}").expect("parses");
+        assert!(empty.date.is_empty());
+        assert_eq!(empty.average, 0.0);
+        assert_eq!(empty.highest, 0.0);
+        assert_eq!(empty.lowest, 0.0);
+        assert_eq!(empty.order_count, 0);
+        assert_eq!(empty.volume, 0);
     }
 
     #[test]

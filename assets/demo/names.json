@@ -17,5 +17,10 @@
   { "id": 30000142, "name": "Jita", "category": "solar_system" },
   { "id": 30002187, "name": "Amarr", "category": "solar_system" },
   { "id": 500001, "name": "Caldari State", "category": "faction" },
-  { "id": 99000001, "name": "Demo Alliance", "category": "alliance" }
+  { "id": 99000001, "name": "Demo Alliance", "category": "alliance" },
+  { "id": 10000002, "name": "The Forge", "category": "region" },
+  { "id": 10000043, "name": "Domain", "category": "region" },
+  { "id": 10000032, "name": "Sinq Laison", "category": "region" },
+  { "id": 10000042, "name": "Metropolis", "category": "region" },
+  { "id": 10000030, "name": "Heimatar", "category": "region" }
 ]

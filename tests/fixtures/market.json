@@ -1,0 +1,14 @@
+{
+  "regional_orders": [
+    {"order_id": 710000201, "type_id": 34, "location_id": 60003760, "system_id": 30000142, "price": 5.75, "volume_remain": 80000, "volume_total": 100000, "min_volume": 1, "is_buy_order": false, "issued": "2026-11-10T08:00:00Z", "duration": 90, "range": "station"},
+    {"order_id": 710000204, "type_id": 34, "location_id": 60003760, "system_id": 30000142, "price": 5.5, "volume_remain": 90000, "volume_total": 100000, "min_volume": 1, "is_buy_order": true, "issued": "2026-11-12T10:00:00Z", "duration": 90, "range": "station"}
+  ],
+  "character_orders": [
+    {"order_id": 710000301, "type_id": 34, "region_id": 10000002, "location_id": 60003760, "price": 5.8, "volume_remain": 25000, "volume_total": 50000, "min_volume": 1, "is_buy_order": false, "issued": "2026-11-13T11:00:00Z", "duration": 90, "range": "station", "is_corporation": false, "escrow": null},
+    {"order_id": 710000302, "type_id": 587, "region_id": 10000002, "location_id": 60003760, "price": 320000.0, "volume_remain": 1, "volume_total": 1, "min_volume": 1, "is_buy_order": true, "issued": "2026-11-12T15:00:00Z", "duration": 30, "range": "station", "is_corporation": false, "escrow": 320000.0}
+  ],
+  "history": [
+    {"date": "2026-11-13", "average": 5.65, "highest": 6.05, "lowest": 5.35, "order_count": 990, "volume": 2690000},
+    {"date": "2026-11-14", "average": 5.7, "highest": 6.1, "lowest": 5.4, "order_count": 1105, "volume": 3020000}
+  ]
+}
