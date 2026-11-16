@@ -328,9 +328,13 @@ fn demo_assets_render_with_resolved_names_for_both_characters() {
 
     // Aria is active after seeding: assets Ready, grouped, named.
     let aria_assets = state.assets.as_ready().expect("aria assets ready");
-    assert_eq!(aria_assets.items.len(), 5);
+    assert_eq!(aria_assets.items.len(), 6);
     let aria_groups = group_assets(aria_assets, &resolver);
-    assert_eq!(aria_groups.len(), 2, "aria assets span two stations");
+    assert_eq!(
+        aria_groups.len(),
+        3,
+        "aria assets span two stations and one player structure"
+    );
     assert!(aria_groups
         .iter()
         .flat_map(|g| &g.rows)
