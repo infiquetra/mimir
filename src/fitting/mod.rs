@@ -3,6 +3,7 @@
 
 pub mod dna;
 pub mod eft;
+pub mod resources;
 pub mod write_map;
 
 pub use dna::{parse_dna, parse_import, MAX_DNA_EXPANDED_ITEMS, MAX_DNA_SEGMENTS};
@@ -11,4 +12,5 @@ pub use eft::{
     ImportReport, ImportSection, ImportedCharge, ImportedFitting, ImportedItem,
     MAX_EFT_IMPORT_BYTES, MAX_EFT_IMPORT_LINES, MAX_STACK_QUANTITY,
 };
+pub use resources::{fitting_resources, FittingResources, ResourceBudget};
 pub use write_map::{build_save_request, DropReason, DroppedFittingItem, SaveMapping};
