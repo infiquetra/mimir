@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use crate::esi::models::*;
 use crate::storage::repositories::CharacterRow;
 
-/// The six views (keys 1-6 in the shell).
+/// The seven views (keys 1-7 in the shell).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum View {
     #[default]
@@ -21,16 +21,18 @@ pub enum View {
     Skills,
     Wallet,
     Assets,
+    Market,
     Settings,
 }
 
 impl View {
-    pub const ALL: [View; 6] = [
+    pub const ALL: [View; 7] = [
         View::Dashboard,
         View::Characters,
         View::Skills,
         View::Wallet,
         View::Assets,
+        View::Market,
         View::Settings,
     ];
 
@@ -41,6 +43,7 @@ impl View {
             View::Skills => "Skills",
             View::Wallet => "Wallet",
             View::Assets => "Assets",
+            View::Market => "Market",
             View::Settings => "Settings",
         }
     }
@@ -250,6 +253,83 @@ impl CharacterDetailData {
     }
 }
 
+/// What the user is looking at in Market, and under which character
+/// context (None = public sections only). Also the identity stamped
+/// on every market fetch/message: results that do not carry the
+/// current selection are dropped, never applied. `type_name` is the
+/// resolved name captured at selection time (words only; the numeric
+/// ids here are state, never rendered).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MarketSelection {
+    pub type_id: i64,
+    pub type_name: String,
+    pub region_id: i64,
+    pub character_id: Option<i64>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct PublicOrdersData {
+    pub orders: Vec<RegionalOrder>,
+    pub truncated: bool,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct CharacterOrdersData {
+    pub orders: Vec<CharacterOrder>,
+    pub truncated: bool,
+}
+
+/// Market bundle: three independent section results fetched for one
+/// selection. Field set is a cross-builder contract (the shell and
+/// demo seeding construct this literally); do not add fields here.
+#[derive(Debug, Clone)]
+pub struct MarketData {
+    pub selection: MarketSelection,
+    pub public_orders: SectionResult<PublicOrdersData>,
+    pub history: SectionResult<Vec<MarketHistoryEntry>>,
+    pub character_orders: SectionResult<CharacterOrdersData>,
+}
+
+/// One selectable market region. `name` is the curated display
+/// fallback (Flutter `kTradeHubRegions` parity); a resolver hit for
+/// `id` wins in the view. The numeric id is never rendered.
+pub struct MarketRegion {
+    pub id: i64,
+    pub name: &'static str,
+}
+
+pub const MARKET_REGIONS: [MarketRegion; 5] = [
+    MarketRegion {
+        id: 10000002,
+        name: "The Forge (Jita)",
+    },
+    MarketRegion {
+        id: 10000043,
+        name: "Domain (Amarr)",
+    },
+    MarketRegion {
+        id: 10000032,
+        name: "Sinq Laison (Dodixie)",
+    },
+    MarketRegion {
+        id: 10000042,
+        name: "Metropolis (Hek)",
+    },
+    MarketRegion {
+        id: 10000030,
+        name: "Heimatar (Rens)",
+    },
+];
+
+pub const DEFAULT_MARKET_REGION_ID: i64 = 10000002; // The Forge
+
+pub fn market_region_name(region_id: i64) -> Option<&'static str> {
+    MARKET_REGIONS
+        .iter()
+        .find(|r| r.id == region_id)
+        .map(|r| r.name)
+}
+
 /// Summary location string: docked name, else solar-system name, else
 /// `None` ("not loaded"). Inputs come from `resolver.cached()` so an
 /// unresolved id stays distinguishable from the `Unknown Location` word.
@@ -305,6 +385,7 @@ pub struct AppState {
     /// view shows step-up guidance instead of a retry panel.
     pub assets_needs_reauthorize: bool,
     pub character_details: LoadState<CharacterDetailData>,
+    pub market: LoadState<MarketData>,
     pub log_lines: Vec<String>,
     pub status_message: String,
 
@@ -325,6 +406,15 @@ pub struct AppState {
     pub confirm_delete_id: Option<i64>,
     pub focus_search: bool,
     pub text_input_focused: bool,
+    // View-local market UI state. The selection lives outside
+    // `LoadState<MarketData>` so it survives a failed fetch.
+    pub market_search: String,
+    pub market_selected_type_id: Option<i64>,
+    pub market_selected_type_name: Option<String>,
+    pub market_region_id: i64,
+    pub market_candidates: Vec<UniverseName>,
+    pub market_lookup_message: Option<String>,
+    pub market_generation: u64,
 
     // Request flags for the integrator to drain (set by views, never faked
     // as completed work). See the module comment.
@@ -334,6 +424,8 @@ pub struct AppState {
     pub stepup_requested: Option<StepUpRequest>,
     pub logout_requested_id: Option<i64>,
     pub delete_requested_id: Option<i64>,
+    pub market_fetch_requested: bool,
+    pub market_lookup_requested: Option<String>,
 }
 
 impl AppState {
@@ -341,6 +433,9 @@ impl AppState {
         tracing::info!("[STARTUP] AppState::new demo={}", demo);
         Self {
             demo,
+            // Explicit: `..Self::default()` would leave the region at
+            // 0, outside the locked hub set.
+            market_region_id: DEFAULT_MARKET_REGION_ID,
             status_message: if demo {
                 "Demo mode: sample data, no network.".to_string()
             } else {
@@ -353,6 +448,46 @@ impl AppState {
     pub fn active_character(&self) -> Option<&CharacterRow> {
         let id = self.active_character_id?;
         self.characters.iter().find(|c| c.character_id == id)
+    }
+
+    /// Select the one market type. A different type discards the
+    /// loaded bundle to Loading; reselecting the same type keeps the
+    /// rows and just refetches. Either way the generation bumps so a
+    /// slower earlier result can never win the race.
+    pub fn set_market_selection(&mut self, type_id: i64, type_name: String) {
+        let trimmed = type_name.trim();
+        let word = if trimmed.is_empty() || trimmed.parse::<i64>().is_ok() {
+            "Unknown Item".to_string()
+        } else {
+            trimmed.to_string()
+        };
+        let changed = self.market_selected_type_id != Some(type_id);
+        tracing::info!("[MARKET] selected item name={} changed={}", word, changed);
+        self.market_selected_type_id = Some(type_id);
+        self.market_selected_type_name = Some(word);
+        self.market_candidates.clear();
+        self.market_lookup_message = None;
+        if changed {
+            self.market = LoadState::Loading;
+        }
+        self.market_generation = self.market_generation.wrapping_add(1);
+        self.market_fetch_requested = true;
+    }
+
+    /// Select one of the locked hub regions; anything outside the
+    /// set is ignored with no state change.
+    pub fn set_market_region(&mut self, region_id: i64) {
+        let Some(name) = market_region_name(region_id) else {
+            tracing::warn!("[MARKET] ignoring region outside the hub set");
+            return;
+        };
+        tracing::info!("[MARKET] selected region name={}", name);
+        self.market_region_id = region_id;
+        self.market_generation = self.market_generation.wrapping_add(1);
+        if self.market_selected_type_id.is_some() {
+            self.market = LoadState::Loading;
+            self.market_fetch_requested = true;
+        }
     }
 
     pub fn set_active_character(&mut self, character_id: i64) {
@@ -395,6 +530,16 @@ impl AppState {
                     character_id
                 );
                 self.character_details = LoadState::Loading;
+                // Same ownership argument: the loaded bundle carries
+                // the previous character's own orders. Selection,
+                // region, and search text survive the switch.
+                tracing::debug!("[MARKET] clearing market on character switch");
+                if self.market_selected_type_id.is_some() {
+                    self.market = LoadState::Loading;
+                }
+                self.market_candidates.clear();
+                self.market_lookup_message = None;
+                self.market_generation = self.market_generation.wrapping_add(1);
             }
         }
         self.selected_queue_row = 0;
@@ -436,6 +581,13 @@ impl AppState {
             self.assets = LoadState::Loading;
             tracing::debug!("[CHAR] clearing character details of removed active character");
             self.character_details = LoadState::Loading;
+            tracing::debug!("[MARKET] clearing market of removed active character");
+            if self.market_selected_type_id.is_some() {
+                self.market = LoadState::Loading;
+            }
+            self.market_candidates.clear();
+            self.market_lookup_message = None;
+            self.market_generation = self.market_generation.wrapping_add(1);
             if let Some(first) = self.characters.first().map(|c| c.character_id) {
                 self.set_active_character(first);
             }
@@ -454,6 +606,8 @@ impl AppState {
             self.assets = LoadState::Empty;
             self.character_detail = LoadState::Empty;
             self.character_details = LoadState::Empty;
+            self.market = LoadState::Empty;
+            self.market_generation = self.market_generation.wrapping_add(1);
             self.dashboard = LoadState::Empty;
         }
     }
@@ -497,12 +651,17 @@ mod tests {
         assert_eq!(View::Dashboard.previous(), View::Settings);
         assert_eq!(View::from_index(3), Some(View::Wallet));
         assert_eq!(View::from_index(4), Some(View::Assets));
-        assert_eq!(View::from_index(5), Some(View::Settings));
+        assert_eq!(View::from_index(5), Some(View::Market));
+        assert_eq!(View::from_index(6), Some(View::Settings));
         assert_eq!(View::from_index(9), None);
         assert_eq!(View::Wallet.index(), 3);
         assert_eq!(View::Assets.index(), 4);
-        assert_eq!(View::Settings.index(), 5);
+        assert_eq!(View::Market.index(), 5);
+        assert_eq!(View::Settings.index(), 6);
         assert_eq!(View::Wallet.next(), View::Assets);
+        assert_eq!(View::Assets.next(), View::Market);
+        assert_eq!(View::Market.next(), View::Settings);
+        assert_eq!(View::Settings.previous(), View::Market);
         assert_eq!(View::Assets.previous(), View::Wallet);
     }
 
@@ -750,6 +909,133 @@ mod tests {
         // Removing the named character clears it.
         state.remove_character(1);
         assert_eq!(state.stepup_requested, None);
+    }
+
+    fn market_bundle(character_id: Option<i64>) -> MarketData {
+        MarketData {
+            selection: MarketSelection {
+                type_id: 34,
+                type_name: "Tritanium".to_string(),
+                region_id: DEFAULT_MARKET_REGION_ID,
+                character_id,
+            },
+            public_orders: Ok(PublicOrdersData::default()),
+            history: Ok(Vec::new()),
+            character_orders: Ok(CharacterOrdersData::default()),
+        }
+    }
+
+    #[test]
+    fn market_defaults_start_on_the_forge_with_no_selection() {
+        for demo in [false, true] {
+            let state = AppState::new(demo);
+            assert_eq!(state.market_region_id, DEFAULT_MARKET_REGION_ID);
+            assert_eq!(
+                market_region_name(state.market_region_id),
+                Some("The Forge (Jita)")
+            );
+            assert_eq!(state.market_selected_type_id, None);
+            assert_eq!(state.market_generation, 0);
+            assert!(!state.market_fetch_requested);
+            assert_eq!(state.market_lookup_requested, None);
+        }
+        assert_eq!(market_region_name(42), None);
+    }
+
+    #[test]
+    fn market_selection_change_loads_reselect_keeps_rows() {
+        let mut state = AppState::new(false);
+        state.set_market_selection(34, "Tritanium".to_string());
+        assert!(matches!(state.market, LoadState::Loading));
+        assert_eq!(state.market_generation, 1);
+        assert!(state.market_fetch_requested);
+        state.market = LoadState::Ready(market_bundle(None));
+        state.market_fetch_requested = false;
+        // Reselect keeps rows, still bumps generation and refetches.
+        state.set_market_selection(34, "Tritanium".to_string());
+        assert!(state.market.is_ready());
+        assert_eq!(state.market_generation, 2);
+        assert!(state.market_fetch_requested);
+        // A different type discards the bundle.
+        state.set_market_selection(587, "Rifter".to_string());
+        assert!(matches!(state.market, LoadState::Loading));
+        assert_eq!(state.market_selected_type_name.as_deref(), Some("Rifter"));
+        // Blank and numeric names become the word fallback.
+        state.set_market_selection(35, "  ".to_string());
+        assert_eq!(
+            state.market_selected_type_name.as_deref(),
+            Some("Unknown Item")
+        );
+        state.set_market_selection(36, "36".to_string());
+        assert_eq!(
+            state.market_selected_type_name.as_deref(),
+            Some("Unknown Item")
+        );
+    }
+
+    #[test]
+    fn market_region_rejects_non_hub_and_refetches_when_selected() {
+        let mut state = AppState::new(false);
+        state.set_market_region(42);
+        assert_eq!(state.market_region_id, DEFAULT_MARKET_REGION_ID);
+        assert_eq!(
+            state.market_generation, 0,
+            "rejected region changes nothing"
+        );
+        // No type selected: generation bumps, no fetch.
+        state.set_market_region(10000043);
+        assert_eq!(state.market_region_id, 10000043);
+        assert_eq!(state.market_generation, 1);
+        assert!(!state.market_fetch_requested);
+        // With a type selected the bundle resets and refetches.
+        state.set_market_selection(34, "Tritanium".to_string());
+        state.market = LoadState::Ready(market_bundle(None));
+        state.market_fetch_requested = false;
+        state.set_market_region(10000030);
+        assert!(matches!(state.market, LoadState::Loading));
+        assert!(state.market_fetch_requested);
+    }
+
+    #[test]
+    fn switching_character_clears_stale_market_bundle() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.set_market_selection(34, "Tritanium".to_string());
+        state.market = LoadState::Ready(market_bundle(Some(1)));
+        state.market_search = "Trit".to_string();
+        let generation = state.market_generation;
+        // Same-character reselect is a market no-op.
+        state.set_active_character(1);
+        assert!(state.market.is_ready());
+        assert_eq!(state.market_generation, generation);
+        // Switching resets rows but keeps selection, region, search.
+        state.set_active_character(2);
+        assert!(matches!(state.market, LoadState::Loading));
+        assert_eq!(state.market_generation, generation + 1);
+        assert_eq!(state.market_selected_type_id, Some(34));
+        assert_eq!(state.market_region_id, DEFAULT_MARKET_REGION_ID);
+        assert_eq!(state.market_search, "Trit");
+    }
+
+    #[test]
+    fn removing_active_character_clears_market_and_last_empties() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two"), row(3, "Three")];
+        state.set_active_character(1);
+        state.set_market_selection(34, "Tritanium".to_string());
+        state.market = LoadState::Ready(market_bundle(Some(1)));
+        state.remove_character(3);
+        assert!(state.market.is_ready(), "non-active removal keeps bundle");
+        let generation = state.market_generation;
+        state.remove_character(1);
+        assert_eq!(state.active_character_id, Some(2));
+        assert!(matches!(state.market, LoadState::Loading));
+        assert!(state.market_generation > generation);
+        state.market = LoadState::Ready(market_bundle(Some(2)));
+        state.remove_character(2);
+        assert!(state.characters.is_empty());
+        assert!(matches!(state.market, LoadState::Empty));
     }
 
     #[test]

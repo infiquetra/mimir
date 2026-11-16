@@ -16,19 +16,20 @@ Mimir aims to replace the need for multiple disconnected EVE tools (EVEMon, Pyfa
 - **Skills**: training queue with per-skill countdowns and progress, trained-skill catalogue grouped and searchable from the bundled SDE extract
 - **Wallet**: balance, journal and transactions with resolved counterparty/item/location names, period filters, income/expense/net analytics by reference type and counterparty, loyalty points
 - **Assets**: character asset list grouped by resolved location with search and custom ship names. Reading assets needs the EVE SSO scope `esi-assets.read_assets.v1`, which first sign-in deliberately does not request. The live view is reachable after an in-app step-up grant: when a character lacks the scope, the Assets view offers "Re-authorize with EVE SSO", which opens EVE SSO in your browser asking for the already-granted scopes plus this one; approving as a different character is rejected and nothing is saved. This step-up path has not been live-verified against a real EVE account yet. `--demo` mode shows the full view with sample data
-- **Settings**: startup view, keyboard shortcuts (1-6 views, Ctrl/Cmd+R refresh, `/` search, PgUp/PgDn character cycle), filterable in-app log view
+- **Market**: read-only market view for one item type at a time. Public regional orders and price history in five hub regions (The Forge, Domain, Sinq Laison, Metropolis, Heimatar) need no sign-in and no EVE scope. Your own open orders need the EVE SSO scope `esi-markets.read_character_orders.v1`, which first sign-in deliberately does not request; when a character lacks it, the Market view offers "Re-authorize with EVE SSO" through the same step-up flow as Assets (approving as a different character is rejected and nothing is saved), and a missing scope affects only that one section. Item name lookup needs the item's exact EVE name. Nothing market-related is stored, no order can be placed, and there is no profit or valuation feature. This path has not been live-verified against a real EVE account yet. `--demo` mode shows the full view with sample data
+- **Settings**: startup view, keyboard shortcuts (1-7 views, Ctrl/Cmd+R refresh, `/` search, PgUp/PgDn character cycle), filterable in-app log view
 - **Offline-first**: refreshes persist to local SQLite and render from cache at next launch; `--demo` mode runs the full UI on bundled sample data with no credentials or network
 
 ### Roadmap (specified, not yet ported from the retired Flutter app)
 
-- **Market Tools**: Price checking, trade tracking, profit analysis
+- **Market Tools**: profit analysis (not implemented; price checking for one item at a time and reading your own open orders are in the Market view above)
 - **Industry & Planetary Industry**: Blueprint browser, manufacturing calculator, PI management
 - **Fitting**: Ship fitting simulator with EFT/Pyfa import/export
 - **Intel, Combat Analyzer, Exploration, Corporation**: see the specifications below and `docs/rust-rewrite-design.md`
 
 ## Status
 
-**Rust rewrite in active development.** Phase 1 (dashboard, characters, skills, wallet, assets, settings, EVE SSO auth, ESI client, local persistence, demo mode) is implemented and covered by the Rust test suite (`cargo test`). Market, fitting, industry, exploration, corporation, and the other modules below were implemented in the retired Flutter app; their specifications are retained as the porting roadmap and they are **not** present in the Rust build yet. Visual verification on macOS (the primary target) is still pending; the Linux build is compile- and test-verified.
+**Rust rewrite in active development.** Phase 1 (dashboard, characters, skills, wallet, assets, market, settings, EVE SSO auth, ESI client, local persistence, demo mode) is implemented and covered by the Rust test suite (`cargo test`). Fitting, industry, exploration, corporation, and the other modules below were implemented in the retired Flutter app; their specifications are retained as the porting roadmap and they are **not** present in the Rust build yet. Visual verification on macOS (the primary target) is still pending; the Linux build is compile- and test-verified.
 
 See the [mimir-context-library](https://github.com/infiquetra/mimir-context-library) repository for detailed specifications and roadmap.
 

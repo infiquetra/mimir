@@ -82,8 +82,10 @@ impl NameResolver {
     }
 
     pub fn insert_with_category(&mut self, id: i64, name: String, category: String) {
-        if name.is_empty() {
-            tracing::debug!("[DB] ignoring empty name insert id={}", id);
+        if name.trim().is_empty() || name.trim().parse::<i64>().is_ok() {
+            // A purely numeric remote "name" would render as a raw ID;
+            // word fallbacks (Unknown Item/Location) are the contract.
+            tracing::debug!("[DB] ignoring empty or numeric name insert id={}", id);
             return;
         }
         self.unresolved.remove(&id);
@@ -356,6 +358,20 @@ mod tests {
         assert_eq!(r.category(34), None);
         r.insert_with_category(35, "Pyerite".to_string(), "inventory_type".to_string());
         assert_eq!(r.category(35), Some("inventory_type"));
+    }
+
+    #[test]
+    fn insert_rejects_numeric_names_so_lookup_never_returns_a_raw_id() {
+        let mut r = NameResolver::new();
+        // A numeric remote "name" would render exactly like the raw ID
+        // the word fallbacks exist to prevent; it must not be cached.
+        r.insert(10000002, "10000002".to_string());
+        r.insert(34, " 34 ".to_string());
+        assert_eq!(r.name(10000002), UNKNOWN_ITEM);
+        assert_eq!(r.location_name(34), UNKNOWN_LOCATION);
+        // Normal and whitespace-padded real names still insert.
+        r.insert(34, "Tritanium".to_string());
+        assert_eq!(r.name(34), "Tritanium");
     }
 
     #[test]

@@ -16,6 +16,7 @@ use mimir::ui::assets::group_assets;
 use mimir::ui::characters::{
     attribute_rows, clone_display_name, implant_names, standing_counts, standing_groups,
 };
+use mimir::ui::market::{character_order_rows, region_label, summarize_history, summarize_orders};
 
 const ARIA: i64 = 90000001;
 const MARCUS: i64 = 90000002;
@@ -433,4 +434,91 @@ fn demo_character_details_render_resolved_for_both() {
             assert!(row.name.parse::<i64>().is_err(), "raw id: {}", row.name);
         }
     }
+}
+
+#[test]
+fn demo_market_renders_resolved_for_both_characters() {
+    let bundle = load_demo_bundle().expect("bundle");
+    let resolver = demo_resolver().expect("demo resolver");
+
+    // Both bundled characters carry a market fixture whose every
+    // referenced type, location, and region resolves to words.
+    for character in &bundle.characters {
+        let per = bundle
+            .character_data(character.character_id)
+            .expect("per-character data");
+        let market = per.market.as_ref().expect("demo market present");
+        assert_ne!(resolver.name(market.selected_type_id), UNKNOWN_ITEM);
+        let region = region_label(market.region_id, &resolver);
+        assert_ne!(region, UNKNOWN_LOCATION);
+        assert!(region.parse::<i64>().is_err(), "raw region id: {region}");
+        for order in &market.public_orders {
+            assert_eq!(order.type_id, market.selected_type_id);
+            assert_ne!(
+                resolver.location_name(order.location_id),
+                UNKNOWN_LOCATION,
+                "public location {}",
+                order.location_id
+            );
+        }
+        for order in &market.character_orders {
+            assert_ne!(resolver.name(order.type_id), UNKNOWN_ITEM);
+            assert_ne!(resolver.location_name(order.location_id), UNKNOWN_LOCATION);
+        }
+        let summary = summarize_orders(&market.public_orders);
+        assert!(summary.best_sell.is_some() && summary.best_buy.is_some());
+        let history = summarize_history(&market.history);
+        assert!(history.days_returned >= 5);
+        let rows = character_order_rows(&market.character_orders, market.selected_type_id);
+        assert!(
+            rows.iter().any(|r| r.matches_selected_type),
+            "one own order matches the selected type"
+        );
+    }
+
+    // Seeding installs Aria's Tritanium book in The Forge; the equal
+    // 5.75 sell prices tie-break to the larger remaining volume first.
+    let mut state = AppState::new(true);
+    seed_demo_state(&mut state);
+    let aria = state.market.as_ready().expect("aria market ready");
+    assert_eq!(aria.selection.type_name, "Tritanium");
+    assert_eq!(aria.selection.character_id, Some(ARIA));
+    assert_eq!(state.market_selected_type_id, Some(34));
+    assert_eq!(region_label(state.market_region_id, &resolver), "The Forge");
+    let aria_public = aria.public_orders.as_ref().expect("public orders ok");
+    let aria_summary = summarize_orders(&aria_public.orders);
+    assert_eq!(aria_summary.best_sell, Some(5.75));
+    assert_eq!(aria_summary.top_sells[0].volume_remain, 120_000);
+    let aria_own = aria
+        .character_orders
+        .as_ref()
+        .expect("character orders ok")
+        .clone();
+    let aria_rows = character_order_rows(&aria_own.orders, aria.selection.type_id);
+    let partial = aria_rows
+        .iter()
+        .find(|r| r.matches_selected_type)
+        .expect("partially filled own order");
+    assert_eq!(partial.filled, 25_000);
+    assert_eq!(partial.volume_total, 50_000);
+
+    // Switching swaps in Marcus's Pyerite book in Domain.
+    state.set_active_character(MARCUS);
+    apply_character(&mut state, &bundle, MARCUS);
+    let marcus = state.market.as_ready().expect("marcus market ready");
+    assert_eq!(marcus.selection.type_name, "Pyerite");
+    assert_eq!(marcus.selection.character_id, Some(MARCUS));
+    assert_eq!(state.market_selected_type_id, Some(35));
+    assert_eq!(region_label(state.market_region_id, &resolver), "Domain");
+    assert_eq!(
+        summarize_orders(
+            &marcus
+                .public_orders
+                .as_ref()
+                .expect("public orders ok")
+                .orders
+        )
+        .best_sell,
+        Some(8.2)
+    );
 }

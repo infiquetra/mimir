@@ -63,6 +63,11 @@ impl EveConfig {
     /// step-up OAuth flow, never at first authorization.
     pub const ASSETS_SCOPES: &[&str] = &["esi-assets.read_assets.v1"];
 
+    /// Market step-up scopes: read the character's own open orders.
+    /// Granted after first sign-in via step-up, never at first auth.
+    /// Public regional orders and history need no scope at all.
+    pub const MARKET_SCOPES: &[&str] = &["esi-markets.read_character_orders.v1"];
+
     /// Character-detail step-up scopes (clones, standings, and the
     /// location trio). Implants and attributes are already covered
     /// by FIRST_AUTH_SCOPES and are deliberately absent.
@@ -151,6 +156,15 @@ mod tests {
     fn assets_scopes_is_the_single_stepup_scope() {
         assert_eq!(EveConfig::ASSETS_SCOPES, ["esi-assets.read_assets.v1"]);
         assert!(!EveConfig::FIRST_AUTH_SCOPES.contains(&"esi-assets.read_assets.v1"));
+    }
+
+    #[test]
+    fn market_scopes_is_the_single_stepup_scope() {
+        assert_eq!(
+            EveConfig::MARKET_SCOPES,
+            ["esi-markets.read_character_orders.v1"]
+        );
+        assert!(!EveConfig::FIRST_AUTH_SCOPES.contains(&"esi-markets.read_character_orders.v1"));
     }
 
     #[test]
