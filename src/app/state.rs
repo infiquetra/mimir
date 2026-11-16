@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::esi::models::*;
+use crate::fitting::eft::ImportedFitting;
 use crate::names::exploration_ref::{EffectFamily, ExplorationRef};
 use crate::storage::repositories::CharacterRow;
 
@@ -624,6 +625,14 @@ pub struct AppState {
     // View-local fittings UI state.
     pub fittings_search: String,
     pub fittings_selected_fitting_id: Option<i64>,
+    // View-local EFT import state (design section 8.1): the pasted text,
+    // the last imported fitting, its fatal error, and the character it
+    // was imported for. Memory only: never persisted, never ESI, never
+    // inserted into FittingsData, cleared on character switch/removal.
+    pub fittings_import_text: String,
+    pub fittings_imported: Option<ImportedFitting>,
+    pub fittings_import_error: Option<String>,
+    pub fittings_import_owner: Option<i64>,
     // View-local exploration UI state (design section 7.1). The
     // bundled reference is character-independent static data, so
     // character switches and removals never reset these fields or
@@ -812,6 +821,13 @@ impl AppState {
                 );
                 self.fittings = LoadState::Loading;
                 self.fittings_selected_fitting_id = None;
+                // The imported fitting is per-character working state; never
+                // carry it, its error, its owner, or its paste text across a
+                // character switch.
+                self.fittings_import_text.clear();
+                self.fittings_imported = None;
+                self.fittings_import_error = None;
+                self.fittings_import_owner = None;
             }
         }
         self.selected_queue_row = 0;
@@ -870,6 +886,12 @@ impl AppState {
             tracing::debug!("[FITTING] clearing fittings of removed active character");
             self.fittings = LoadState::Loading;
             self.fittings_selected_fitting_id = None;
+            // The removed character owned the import state; never show it
+            // under the replacement active character.
+            self.fittings_import_text.clear();
+            self.fittings_imported = None;
+            self.fittings_import_error = None;
+            self.fittings_import_owner = None;
             if let Some(first) = self.characters.first().map(|c| c.character_id) {
                 self.set_active_character(first);
             }
@@ -897,6 +919,10 @@ impl AppState {
             self.planetary_generation = self.planetary_generation.wrapping_add(1);
             self.fittings = LoadState::Empty;
             self.fittings_selected_fitting_id = None;
+            self.fittings_import_text.clear();
+            self.fittings_imported = None;
+            self.fittings_import_error = None;
+            self.fittings_import_owner = None;
             self.dashboard = LoadState::Empty;
         }
     }
@@ -922,6 +948,7 @@ impl AppState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fitting::eft::ImportReport;
 
     fn row(id: i64, name: &str) -> CharacterRow {
         CharacterRow {
@@ -1643,6 +1670,77 @@ mod tests {
         assert!(state.characters.is_empty());
         assert!(matches!(state.fittings, LoadState::Empty));
         assert_eq!(state.fittings_selected_fitting_id, None);
+    }
+
+    fn seed_import_state(state: &mut AppState) {
+        state.fittings_import_text = "[Rifter, Test]\nDamage Control II".to_string();
+        state.fittings_imported = Some(ImportedFitting {
+            name: "Test".to_string(),
+            ship_type_id: 587,
+            ship_name: "Rifter".to_string(),
+            items: Vec::new(),
+            report: ImportReport {
+                imported_lines: 0,
+                placeholder_lines: 0,
+                charges_noted: 0,
+                issues: Vec::new(),
+            },
+        });
+        state.fittings_import_error = None;
+        state.fittings_import_owner = state.active_character_id;
+    }
+
+    fn assert_import_cleared(state: &AppState) {
+        assert_eq!(state.fittings_import_text, "");
+        assert!(state.fittings_imported.is_none());
+        assert_eq!(state.fittings_import_error, None);
+        assert_eq!(state.fittings_import_owner, None);
+    }
+
+    #[test]
+    fn switching_character_clears_import_state() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        seed_import_state(&mut state);
+        // Same-character reselect keeps everything.
+        state.set_active_character(1);
+        assert!(state.fittings_imported.is_some());
+        assert_eq!(
+            state.fittings_import_text,
+            "[Rifter, Test]\nDamage Control II"
+        );
+        assert_eq!(state.fittings_import_owner, Some(1));
+        // Switching to a different character clears all four fields.
+        state.set_active_character(2);
+        assert_import_cleared(&state);
+    }
+
+    #[test]
+    fn removing_character_clears_import_only_when_active() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two"), row(3, "Three")];
+        state.set_active_character(1);
+        seed_import_state(&mut state);
+        // Removing a non-active character keeps import state.
+        state.remove_character(3);
+        assert!(state.fittings_imported.is_some());
+        assert_eq!(state.fittings_import_owner, Some(1));
+        // Removing the active character clears it.
+        state.remove_character(1);
+        assert_eq!(state.active_character_id, Some(2));
+        assert_import_cleared(&state);
+    }
+
+    #[test]
+    fn empty_roster_clears_import_state() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One")];
+        state.set_active_character(1);
+        seed_import_state(&mut state);
+        state.remove_character(1);
+        assert!(state.characters.is_empty());
+        assert_import_cleared(&state);
     }
 
     #[test]
