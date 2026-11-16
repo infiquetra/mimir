@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### A coinciding constant is not a shared grounding: the capacitor peak factor comes from differentiating the simulator's own closed form, not from the shield line
+
+**Author.** Muse Code (peak-recharge-rates workflow, integrator)
+**Context.** The peak recharge rates slice adds base peak shield recharge (HP/s) and peak capacitor recharge (GJ/s) to the existing "Ship (base values)" block, computed only from the bare hull's base capacity and base full recharge duration shipped by the earlier base-stats and recharge-duration slices, with no fitted modifiers, no recharge curve, and no capacitor stability simulation.
+**Evidence.** `docs/peak-recharge-rates-design.md` section 2 (the retired Flutter app at `ed698d3` has a production shield peak, `dogma_engine.dart:891-894`, `2.5 * shieldHp / (shieldRecharge / 1000)`, but no capacitor peak constant anywhere in production code — `dogma_engine.dart:914-933` is stability-only and a `2.5` grep over `lib/` hits only the shield line); `cap_simulator.dart:73-75` and `:272-275` (closed form `cap = ((1 + (sqrt(cap/C) − 1) * exp(−dt/tau))²) * C`) with `tau = rechargeMs / 5.0` at `:116`; `cap_simulator_test.dart:18-19` ("a peak recharge of 2.5 * 1000 / 60 = 41.7 GJ/s") and `:75` ("the peak recharge (0.5 * 1000 / 12s = 41.7 GJ/s)"); `src/fitting/ship_peak_recharge.rs:31` (`SHIELD_PEAK_FACTOR`) and `:46` (`CAPACITOR_PEAK_FACTOR`), each carrying its own grounding in its doc comment, and `:78` (`ship_base_peak_recharge`); `src/ui/fittings.rs:1385` (the two appended peak lines).
+**Mechanism.** Differentiating the simulator's closed form gives an instantaneous rate of `(2C/tau) * y * (1 − y)` with `y = sqrt(cap/C)`, maximized at `y = 1/2`, so the peak is `0.5 * C / tau = 2.5 * C / T` for full recharge duration `T` — numerically the shield factor, but reached through the capacitor simulator's own mathematics and corroborated by its two explicit test statements, not borrowed from the shield line by analogy. Borrowing would have been silently wrong to trust: nothing in the shield body says the capacitor curve shares its shape. Separately, no inspected body states in words at what fraction of capacity either peak occurs, so all wording says "peak" with no charge-level percentage, even though the derivation locates the maximum internally.
+**Fix (or queued).** Two separately grounded factor constants feed one private guarded helper in `src/fitting/ship_peak_recharge.rs`; the capacitor comment fixture (1000 GJ, 60 s) is asserted against `2500.0 / 60.0`, never the comments' rounded 41.7; no percentage is printed anywhere.
+**Validation.** Hand-derived bundled-catalogue oracles with divisions shown (Rifter 1.8 HP/s / 5.0 GJ/s, Punisher 1.4 HP/s / 6.25 GJ/s) and the full guard matrix in `src/fitting/ship_peak_recharge.rs`; locked line templates and absence matrix in `src/ui/fittings.rs`; full gates on branch `feat/rust-peak-recharge-rates`.
+**Generalizable rule.** When two systems end up with the same numeric constant, ground each one in its own authoritative body and record the grounding at each constant — a shared value proved twice is evidence, while a value copied by analogy is a guess wearing a citation.
+**Refs.** `docs/peak-recharge-rates-design.md` sections 2, 3 and 9.
+
 ### An EHP number without its damage profile named beside it is a lie by omission; compose it in resonance space and never adjust a rendered total to match its rendered layers
 
 **Author.** Muse Code (ship-base-ehp workflow, integrator)
