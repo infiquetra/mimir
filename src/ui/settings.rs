@@ -4,9 +4,10 @@
 use crate::app::state::{AppState, AuthState, View};
 
 /// Bracketed feature tags the log filter can select (design section 1).
-pub const LOG_TAGS: [&str; 9] = [
+pub const LOG_TAGS: [&str; 10] = [
     "[AUTH]",
     "[ESI]",
+    "[ASSETS]",
     "[WALLET]",
     "[SKILLS]",
     "[CHAR]",
@@ -108,7 +109,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
 
     // --- Keyboard help ---
     ui.heading("Keyboard");
-    ui.monospace("1-5 views | Ctrl/Cmd+R refresh | / focus search | PgUp/PgDn character | Up/Down table rows");
+    ui.monospace("1-6 views | Ctrl/Cmd+R refresh | / focus search | PgUp/PgDn character | Up/Down table rows");
     ui.separator();
 
     // --- Structured log / status view ---
@@ -195,5 +196,6 @@ mod tests {
         assert_eq!(filter_log_lines(&lines, "zzz", None).len(), 0);
         assert_eq!(filter_log_lines(&[], "", None).len(), 0);
         assert!(LOG_TAGS.contains(&"[WALLET]"));
+        assert!(LOG_TAGS.contains(&"[ASSETS]"));
     }
 }

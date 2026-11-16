@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use crate::esi::models::*;
 use crate::storage::repositories::CharacterRow;
 
-/// The five Phase-1 views (keys 1-5 in the shell).
+/// The six views (keys 1-6 in the shell).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum View {
     #[default]
@@ -19,15 +19,17 @@ pub enum View {
     Characters,
     Skills,
     Wallet,
+    Assets,
     Settings,
 }
 
 impl View {
-    pub const ALL: [View; 5] = [
+    pub const ALL: [View; 6] = [
         View::Dashboard,
         View::Characters,
         View::Skills,
         View::Wallet,
+        View::Assets,
         View::Settings,
     ];
 
@@ -37,6 +39,7 @@ impl View {
             View::Characters => "Characters",
             View::Skills => "Skills",
             View::Wallet => "Wallet",
+            View::Assets => "Assets",
             View::Settings => "Settings",
         }
     }
@@ -174,6 +177,15 @@ pub struct SkillsData {
     pub queue: Vec<SkillQueueItem>,
 }
 
+/// Assets view data bundle: raw ESI rows plus per-item custom names for
+/// singletons (ships, containers), keyed by item_id. Custom names are
+/// per-instance and never enter the universe name resolver.
+#[derive(Debug, Clone, Default)]
+pub struct AssetsData {
+    pub items: Vec<AssetItem>,
+    pub custom_names: HashMap<i64, String>,
+}
+
 /// One row of the multi-character overview grid. The integrator fills this
 /// from F2 repositories / F1 endpoints per character; `None` fields render
 /// as "not loaded" instead of a guessed value. Display strings (`training`,
@@ -201,6 +213,10 @@ pub struct AppState {
     pub character_detail: LoadState<CharacterPublicInfo>,
     pub skills: LoadState<SkillsData>,
     pub wallet: LoadState<WalletData>,
+    pub assets: LoadState<AssetsData>,
+    /// The assets fetch failed with the typed scope error, so the Assets
+    /// view shows step-up guidance instead of a retry panel.
+    pub assets_needs_reauthorize: bool,
     pub log_lines: Vec<String>,
     pub status_message: String,
 
@@ -210,6 +226,7 @@ pub struct AppState {
     // View-local UI state (survives across frames, unlike egui closures).
     pub skill_search: String,
     pub wallet_search: String,
+    pub assets_search: String,
     pub wallet_period: WalletPeriod,
     pub wallet_ref_filter: Option<String>,
     pub log_filter: String,
@@ -261,10 +278,27 @@ impl AppState {
             );
             return;
         }
+        let previous = self.active_character_id;
         tracing::info!("[CHAR] set active character_id={}", character_id);
         self.active_character_id = Some(character_id);
         for c in &mut self.characters {
             c.is_active = c.character_id == character_id;
+        }
+        if let Some(previous_id) = previous {
+            if previous_id != character_id {
+                // Assets are fetched tolerantly (a failed sub-fetch keeps
+                // Ready rows), so ownership must reset at the switch
+                // boundary or the previous character's rows would render
+                // under the new character. Same-character reselect keeps
+                // the loaded rows and grant flag.
+                tracing::debug!(
+                    "[ASSETS] clearing assets on character switch from={} to={}",
+                    previous_id,
+                    character_id
+                );
+                self.assets = LoadState::Loading;
+                self.assets_needs_reauthorize = false;
+            }
         }
         self.selected_queue_row = 0;
         self.selected_journal_row = 0;
@@ -297,13 +331,21 @@ impl AppState {
         self.summaries.remove(&character_id);
         if self.active_character_id == Some(character_id) {
             self.active_character_id = None;
+            // The removed character owned the loaded assets; never show
+            // them under the replacement active character. set_active
+            // below cannot detect this (previous is already None), and
+            // the is_empty branch further down overrides this to Empty.
+            tracing::debug!("[ASSETS] clearing assets of removed active character");
+            self.assets = LoadState::Loading;
             if let Some(first) = self.characters.first().map(|c| c.character_id) {
                 self.set_active_character(first);
             }
         }
+        self.assets_needs_reauthorize = false;
         if self.characters.is_empty() {
             self.skills = LoadState::Empty;
             self.wallet = LoadState::Empty;
+            self.assets = LoadState::Empty;
             self.character_detail = LoadState::Empty;
             self.dashboard = LoadState::Empty;
         }
@@ -347,8 +389,14 @@ mod tests {
         assert_eq!(View::Settings.next(), View::Dashboard);
         assert_eq!(View::Dashboard.previous(), View::Settings);
         assert_eq!(View::from_index(3), Some(View::Wallet));
+        assert_eq!(View::from_index(4), Some(View::Assets));
+        assert_eq!(View::from_index(5), Some(View::Settings));
         assert_eq!(View::from_index(9), None);
         assert_eq!(View::Wallet.index(), 3);
+        assert_eq!(View::Assets.index(), 4);
+        assert_eq!(View::Settings.index(), 5);
+        assert_eq!(View::Wallet.next(), View::Assets);
+        assert_eq!(View::Assets.previous(), View::Wallet);
     }
 
     #[test]
@@ -379,10 +427,34 @@ mod tests {
         assert_eq!(state.active_character_id, Some(3));
         state.remove_character(3); // active removed -> first becomes active
         assert_eq!(state.active_character_id, Some(1));
+        state.assets_needs_reauthorize = true;
         state.remove_character(1);
+        assert!(!state.assets_needs_reauthorize, "flag clears on removal");
         state.remove_character(2);
         assert_eq!(state.active_character_id, None);
         assert!(matches!(state.wallet, LoadState::Empty));
+        assert!(matches!(state.assets, LoadState::Empty));
+    }
+
+    #[test]
+    fn switching_character_clears_stale_assets() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.assets = LoadState::Ready(AssetsData {
+            items: Vec::new(),
+            custom_names: Default::default(),
+        });
+        state.assets_needs_reauthorize = true;
+        // Reselecting the same character keeps its rows and grant flag.
+        state.set_active_character(1);
+        assert!(state.assets.is_ready());
+        assert!(state.assets_needs_reauthorize);
+        // Switching clears them: tolerant sub-fetch errors must never
+        // present character One's rows as character Two's.
+        state.set_active_character(2);
+        assert!(matches!(state.assets, LoadState::Loading));
+        assert!(!state.assets_needs_reauthorize);
     }
 
     #[test]

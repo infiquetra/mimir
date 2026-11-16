@@ -12,6 +12,7 @@ use mimir::demo::data::{
 };
 use mimir::names::resolver::{UNKNOWN_ITEM, UNKNOWN_LOCATION};
 use mimir::names::sde::Sde;
+use mimir::ui::assets::group_assets;
 
 const ARIA: i64 = 90000001;
 const MARCUS: i64 = 90000002;
@@ -174,6 +175,21 @@ fn name_resolution_covers_every_demo_id_and_falls_back_safely() {
         for lp in &per.loyalty {
             assert_ne!(resolver.name(lp.corporation_id), UNKNOWN_ITEM);
         }
+        assert!(!per.assets.is_empty(), "assets for {}", character.name);
+        for asset in &per.assets {
+            assert_ne!(
+                resolver.name(asset.type_id),
+                UNKNOWN_ITEM,
+                "asset type {}",
+                asset.type_id
+            );
+            assert_ne!(
+                resolver.location_name(asset.location_id),
+                UNKNOWN_LOCATION,
+                "asset location {}",
+                asset.location_id
+            );
+        }
     }
 
     // Fallbacks for unknown ids are words, never the raw number.
@@ -224,4 +240,53 @@ fn demo_seed_populates_state_and_switching_characters_works() {
     assert_eq!(skills.queue[0].skill_id, 3327);
     let detail = state.character_detail.as_ready().expect("detail ready");
     assert_eq!(detail.name, "Marcus Hale");
+}
+
+#[test]
+fn demo_assets_render_with_resolved_names_for_both_characters() {
+    let bundle = load_demo_bundle().expect("bundle");
+    let resolver = demo_resolver().expect("demo resolver");
+    let mut state = AppState::new(true);
+    seed_demo_state(&mut state);
+
+    // Aria is active after seeding: assets Ready, grouped, named.
+    let aria_assets = state.assets.as_ready().expect("aria assets ready");
+    assert_eq!(aria_assets.items.len(), 5);
+    let aria_groups = group_assets(aria_assets, &resolver);
+    assert_eq!(aria_groups.len(), 2, "aria assets span two stations");
+    assert!(aria_groups
+        .iter()
+        .flat_map(|g| &g.rows)
+        .any(|r| r.display_name == "Aria's Rifter" && r.type_name == "Rifter"));
+    assert!(aria_groups
+        .iter()
+        .flat_map(|g| &g.rows)
+        .any(|r| r.display_name == "Bantam Blueprint (copy)"));
+
+    // Switching swaps in Marcus's assets, not Aria's.
+    state.set_active_character(MARCUS);
+    apply_character(&mut state, &bundle, MARCUS);
+    let marcus_assets = state.assets.as_ready().expect("marcus assets ready");
+    assert_eq!(marcus_assets.items.len(), 5);
+    assert!(marcus_assets.items.iter().all(|a| a.item_id >= 710000101));
+    let marcus_groups = group_assets(marcus_assets, &resolver);
+    assert_eq!(marcus_groups.len(), 2);
+    assert!(marcus_groups
+        .iter()
+        .flat_map(|g| &g.rows)
+        .any(|r| r.display_name == "Marcus's Rifter"));
+
+    // No group or row name is Unknown or a raw numeric ID for either.
+    for groups in [&aria_groups, &marcus_groups] {
+        for group in groups.iter() {
+            assert_ne!(group.location_name, UNKNOWN_LOCATION);
+            assert!(group.location_name.parse::<i64>().is_err());
+            for row in &group.rows {
+                assert_ne!(row.type_name, UNKNOWN_ITEM);
+                assert!(row.display_name.parse::<i64>().is_err());
+                assert!(row.type_name.parse::<i64>().is_err());
+            }
+        }
+    }
+    assert!(!state.assets_needs_reauthorize);
 }

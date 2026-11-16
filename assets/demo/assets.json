@@ -1,0 +1,27 @@
+{
+  "90000001": {
+    "assets": [
+      {"item_id": 710000001, "type_id": 34, "quantity": 150000, "location_id": 60003760, "location_flag": "Hangar", "is_singleton": false},
+      {"item_id": 710000002, "type_id": 587, "quantity": 1, "location_id": 60003760, "location_flag": "Hangar", "is_singleton": true},
+      {"item_id": 710000003, "type_id": 681, "quantity": 1, "location_id": 60011866, "location_flag": "Hangar", "is_singleton": true, "is_blueprint_copy": true},
+      {"item_id": 710000004, "type_id": 35, "quantity": 42000, "location_id": 60011866, "location_flag": "Hangar", "is_singleton": false},
+      {"item_id": 710000005, "type_id": 36, "quantity": 8000, "location_id": 60003760, "location_flag": "Hangar", "is_singleton": false}
+    ],
+    "custom_names": [
+      {"item_id": 710000002, "name": "Aria's Rifter"},
+      {"item_id": 710000003, "name": "None"}
+    ]
+  },
+  "90000002": {
+    "assets": [
+      {"item_id": 710000101, "type_id": 37, "quantity": 25000, "location_id": 60011866, "location_flag": "Hangar", "is_singleton": false},
+      {"item_id": 710000102, "type_id": 587, "quantity": 1, "location_id": 60011866, "location_flag": "Hangar", "is_singleton": true},
+      {"item_id": 710000103, "type_id": 34, "quantity": 90000, "location_id": 60003760, "location_flag": "Hangar", "is_singleton": false},
+      {"item_id": 710000104, "type_id": 681, "quantity": 1, "location_id": 60003760, "location_flag": "Hangar", "is_singleton": true, "is_blueprint_copy": true},
+      {"item_id": 710000105, "type_id": 35, "quantity": 12000, "location_id": 60011866, "location_flag": "Hangar", "is_singleton": false}
+    ],
+    "custom_names": [
+      {"item_id": 710000102, "name": "Marcus's Rifter"}
+    ]
+  }
+}

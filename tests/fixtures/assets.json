@@ -1,0 +1,49 @@
+{
+  "assets": [
+    {
+      "item_id": 710000001,
+      "type_id": 34,
+      "quantity": 150000,
+      "location_id": 60003760,
+      "location_flag": "Hangar",
+      "location_type": "station",
+      "is_singleton": false
+    },
+    {
+      "item_id": 710000002,
+      "type_id": 587,
+      "quantity": 1,
+      "location_id": 60003760,
+      "location_flag": "Hangar",
+      "location_type": "station",
+      "is_singleton": true,
+      "is_blueprint_copy": false
+    },
+    {
+      "item_id": 710000003,
+      "type_id": 681,
+      "quantity": 1,
+      "location_id": 60011866,
+      "location_flag": "Hangar",
+      "is_singleton": true,
+      "is_blueprint_copy": true
+    },
+    {
+      "item_id": 710000004,
+      "type_id": 35,
+      "quantity": 42,
+      "location_id": 60011866
+    },
+    {}
+  ],
+  "names": [
+    {
+      "item_id": 710000002,
+      "name": "Aria's Rifter"
+    },
+    {
+      "item_id": 710000003,
+      "name": "None"
+    }
+  ]
+}

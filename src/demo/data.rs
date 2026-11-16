@@ -9,7 +9,9 @@ use std::collections::{HashMap, HashSet};
 
 use chrono::{DateTime, Utc};
 
-use crate::app::state::{AppState, CharacterSummary, LoadState, SkillsData, WalletData};
+use crate::app::state::{
+    AppState, AssetsData, CharacterSummary, LoadState, SkillsData, WalletData,
+};
 use crate::error::{AppError, AppResult};
 use crate::esi::models::*;
 use crate::names::resolver::NameResolver;
@@ -23,6 +25,7 @@ pub const DEMO_CHARACTERS_JSON: &str = include_str!("../../assets/demo/character
 pub const DEMO_SKILLQUEUE_JSON: &str = include_str!("../../assets/demo/skillqueue.json");
 pub const DEMO_WALLET_JSON: &str = include_str!("../../assets/demo/wallet.json");
 pub const DEMO_NAMES_JSON: &str = include_str!("../../assets/demo/names.json");
+pub const DEMO_ASSETS_JSON: &str = include_str!("../../assets/demo/assets.json");
 
 /// Command-line flag that selects demo mode (design section 1).
 pub const DEMO_FLAG: &str = "--demo";
@@ -80,6 +83,8 @@ pub struct DemoCharacterData {
     pub journal: Vec<WalletJournalItem>,
     pub transactions: Vec<WalletTransactionItem>,
     pub loyalty: Vec<LoyaltyPointItem>,
+    pub assets: Vec<AssetItem>,
+    pub custom_names: Vec<AssetName>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -125,6 +130,14 @@ struct WalletFileEntry {
     loyalty: Vec<LoyaltyPointItem>,
 }
 
+#[derive(serde::Deserialize, Default)]
+struct AssetsFileEntry {
+    #[serde(default)]
+    assets: Vec<AssetItem>,
+    #[serde(default)]
+    custom_names: Vec<AssetName>,
+}
+
 fn parse_character_key(key: &str) -> AppResult<i64> {
     key.parse::<i64>().map_err(|_| {
         AppError::Message(format!(
@@ -135,15 +148,28 @@ fn parse_character_key(key: &str) -> AppResult<i64> {
 
 /// Parse a bundle from explicit JSON texts (the bundled constants in
 /// production, small literals in tests so error paths are reachable).
+/// Kept with its original meaning — a bundle with no assets — so existing
+/// three-argument callers and fixtures keep working unchanged.
 pub fn load_demo_bundle_from(
     characters_json: &str,
     skillqueue_json: &str,
     wallet_json: &str,
 ) -> AppResult<DemoBundle> {
+    load_demo_bundle_with_assets(characters_json, skillqueue_json, wallet_json, "{}")
+}
+
+/// Parse a bundle including the per-character assets file.
+pub fn load_demo_bundle_with_assets(
+    characters_json: &str,
+    skillqueue_json: &str,
+    wallet_json: &str,
+    assets_json: &str,
+) -> AppResult<DemoBundle> {
     tracing::debug!("[DEMO] parsing demo bundle");
     let characters: CharactersFile = serde_json::from_str(characters_json)?;
     let skills_by_id: HashMap<String, SkillFileEntry> = serde_json::from_str(skillqueue_json)?;
     let wallet_by_id: HashMap<String, WalletFileEntry> = serde_json::from_str(wallet_json)?;
+    let assets_by_id: HashMap<String, AssetsFileEntry> = serde_json::from_str(assets_json)?;
 
     let mut data: HashMap<i64, DemoCharacterData> = HashMap::new();
     for (key, entry) in skills_by_id {
@@ -160,6 +186,18 @@ pub fn load_demo_bundle_from(
         slot.journal = entry.journal;
         slot.transactions = entry.transactions;
         slot.loyalty = entry.loyalty;
+    }
+    for (key, entry) in assets_by_id {
+        let id = parse_character_key(&key)?;
+        tracing::debug!(
+            "[DEMO] character_id={} assets={} custom_names={}",
+            id,
+            entry.assets.len(),
+            entry.custom_names.len()
+        );
+        let slot = data.entry(id).or_default();
+        slot.assets = entry.assets;
+        slot.custom_names = entry.custom_names;
     }
 
     let bundle = DemoBundle {
@@ -178,7 +216,12 @@ pub fn load_demo_bundle_from(
 /// Load the bundled demo JSON files into typed structures.
 pub fn load_demo_bundle() -> AppResult<DemoBundle> {
     tracing::debug!("[DEMO] loading bundled demo fixtures");
-    load_demo_bundle_from(DEMO_CHARACTERS_JSON, DEMO_SKILLQUEUE_JSON, DEMO_WALLET_JSON)
+    load_demo_bundle_with_assets(
+        DEMO_CHARACTERS_JSON,
+        DEMO_SKILLQUEUE_JSON,
+        DEMO_WALLET_JSON,
+        DEMO_ASSETS_JSON,
+    )
 }
 
 /// Structural guarantees the views rely on: at least two fictional
@@ -240,6 +283,17 @@ pub fn validate_bundle(bundle: &DemoBundle) -> AppResult<()> {
         for entry in &per.journal {
             if !journal_ids.insert(entry.id) {
                 return Err(fail(format!("duplicate journal id {}", entry.id)));
+            }
+        }
+        // Assets are optional (old literals carry none); validate only
+        // what is present: item IDs unique within the character.
+        let mut asset_item_ids = HashSet::new();
+        for asset in &per.assets {
+            if !asset_item_ids.insert(asset.item_id) {
+                return Err(fail(format!(
+                    "character {} duplicate asset item_id {}",
+                    character.character_id, asset.item_id
+                )));
             }
         }
     }
@@ -454,6 +508,23 @@ pub fn apply_character(state: &mut AppState, bundle: &DemoBundle, character_id: 
         transactions: per.transactions.clone(),
         loyalty: per.loyalty.clone(),
     });
+    // Same filter as the live path: ESI's "None" placeholder and empty
+    // names never reach AssetsData.
+    let custom_names: HashMap<i64, String> = per
+        .custom_names
+        .iter()
+        .filter(|n| !n.name.trim().is_empty() && n.name.trim() != "None")
+        .map(|n| (n.item_id, n.name.clone()))
+        .collect();
+    state.assets = if per.assets.is_empty() {
+        LoadState::Empty
+    } else {
+        LoadState::Ready(AssetsData {
+            items: per.assets.clone(),
+            custom_names,
+        })
+    };
+    state.assets_needs_reauthorize = false;
 }
 
 /// Seed demo content into the UI state: both fictional characters, the
@@ -520,6 +591,7 @@ pub fn seed_demo_state(state: &mut AppState) {
             state.status_message = format!("Demo data failed to load: {e}");
             state.skills = LoadState::Error(format!("Demo data failed to load: {e}"));
             state.wallet = LoadState::Error(format!("Demo data failed to load: {e}"));
+            state.assets = LoadState::Error(format!("Demo data failed to load: {e}"));
         }
     }
 }
@@ -533,6 +605,7 @@ pub fn seed_bundle_into_db(conn: &rusqlite::Connection, bundle: &DemoBundle) -> 
         bundle.characters.len()
     );
     let first_id = bundle.first_character_id();
+    // Assets are in-memory only in this slice (no table); nothing to persist.
     for character in &bundle.characters {
         repositories::upsert_character(
             conn,
@@ -775,6 +848,47 @@ mod tests {
             assert!(!per.queue.is_empty());
             assert!(!per.journal.is_empty());
             assert!(per.balance > 0.0);
+            assert!(!per.assets.is_empty(), "demo assets for {}", character.name);
         }
+    }
+
+    #[test]
+    fn three_argument_loader_still_loads_with_empty_assets() {
+        // Backwards-compatibility proof: bundled texts through the
+        // original three-argument loader carry no assets.
+        let bundle =
+            load_demo_bundle_from(DEMO_CHARACTERS_JSON, DEMO_SKILLQUEUE_JSON, DEMO_WALLET_JSON)
+                .expect("three-argument bundle loads");
+        for per in bundle.data.values() {
+            assert!(per.assets.is_empty());
+            assert!(per.custom_names.is_empty());
+        }
+    }
+
+    #[test]
+    fn duplicate_asset_item_id_fails_validation() {
+        let mut bundle = load_demo_bundle().expect("bundled bundle loads");
+        let first = bundle.first_character_id().expect("first character");
+        let per = bundle.data.get_mut(&first).expect("per-character data");
+        let dupe = per.assets[0].clone();
+        per.assets.push(dupe);
+        assert!(validate_bundle(&bundle).is_err());
+    }
+
+    #[test]
+    fn none_custom_names_never_reach_assets_data() {
+        let bundle = load_demo_bundle().expect("bundled bundle loads");
+        let mut state = AppState::new(true);
+        apply_character(&mut state, &bundle, 90000001);
+        let assets = state.assets.as_ready().expect("assets ready");
+        assert_eq!(
+            assets.custom_names.get(&710000002).map(String::as_str),
+            Some("Aria's Rifter")
+        );
+        assert!(
+            !assets.custom_names.contains_key(&710000003),
+            "\"None\" filtered"
+        );
+        assert!(!state.assets_needs_reauthorize);
     }
 }

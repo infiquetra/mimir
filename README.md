@@ -15,7 +15,8 @@ Mimir aims to replace the need for multiple disconnected EVE tools (EVEMon, Pyfa
 - **Characters**: EVE SSO sign-in (OAuth2 PKCE on localhost), character detail with resolved corporation/alliance names, logout and delete
 - **Skills**: training queue with per-skill countdowns and progress, trained-skill catalogue grouped and searchable from the bundled SDE extract
 - **Wallet**: balance, journal and transactions with resolved counterparty/item/location names, period filters, income/expense/net analytics by reference type and counterparty, loyalty points
-- **Settings**: startup view, keyboard shortcuts (1-5 views, Ctrl/Cmd+R refresh, `/` search, PgUp/PgDn character cycle), filterable in-app log view
+- **Assets**: character asset list grouped by resolved location with search and custom ship names. One caveat: reading assets needs the EVE SSO scope `esi-assets.read_assets.v1`, which first sign-in does not request yet — until step-up sign-in (granting extra scopes after first sign-in) lands, the live view explains this and stays empty, while `--demo` mode shows the full view with sample data
+- **Settings**: startup view, keyboard shortcuts (1-6 views, Ctrl/Cmd+R refresh, `/` search, PgUp/PgDn character cycle), filterable in-app log view
 - **Offline-first**: refreshes persist to local SQLite and render from cache at next launch; `--demo` mode runs the full UI on bundled sample data with no credentials or network
 
 ### Roadmap (specified, not yet ported from the retired Flutter app)
@@ -23,11 +24,11 @@ Mimir aims to replace the need for multiple disconnected EVE tools (EVEMon, Pyfa
 - **Market Tools**: Price checking, trade tracking, profit analysis
 - **Industry & Planetary Industry**: Blueprint browser, manufacturing calculator, PI management
 - **Fitting**: Ship fitting simulator with EFT/Pyfa import/export
-- **Assets, Intel, Combat Analyzer, Exploration, Corporation**: see the specifications below and `docs/rust-rewrite-design.md`
+- **Intel, Combat Analyzer, Exploration, Corporation**: see the specifications below and `docs/rust-rewrite-design.md`
 
 ## Status
 
-**Rust rewrite in active development.** Phase 1 (dashboard, characters, skills, wallet, settings, EVE SSO auth, ESI client, local persistence, demo mode) is implemented and covered by the Rust test suite (`cargo test`). Market, fitting, industry, exploration, corporation, and the other modules below were implemented in the retired Flutter app; their specifications are retained as the porting roadmap and they are **not** present in the Rust build yet. Visual verification on macOS (the primary target) is still pending; the Linux build is compile- and test-verified.
+**Rust rewrite in active development.** Phase 1 (dashboard, characters, skills, wallet, assets, settings, EVE SSO auth, ESI client, local persistence, demo mode) is implemented and covered by the Rust test suite (`cargo test`). Market, fitting, industry, exploration, corporation, and the other modules below were implemented in the retired Flutter app; their specifications are retained as the porting roadmap and they are **not** present in the Rust build yet. Visual verification on macOS (the primary target) is still pending; the Linux build is compile- and test-verified.
 
 See the [mimir-context-library](https://github.com/infiquetra/mimir-context-library) repository for detailed specifications and roadmap.
 
