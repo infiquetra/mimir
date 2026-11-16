@@ -25,6 +25,7 @@ use crate::esi::models::{
     WalletTransactionItem,
 };
 use crate::names::exploration_ref::ExplorationRef;
+use crate::names::fitting_types::FittingTypes;
 use crate::names::resolver::NameResolver;
 use crate::names::sde::Sde;
 use crate::storage::repositories::{self, CharacterRow, TokenMetaRow};
@@ -95,6 +96,7 @@ const MARKET_LOOKUP_FAILED: &str = "Item name lookup failed. Check the connectio
 pub struct MimirApp {
     pub state: AppState,
     pub sde: Sde,
+    pub fitting_types: Option<Arc<FittingTypes>>,
     pub resolver: NameResolver,
     pub log_buffer: Arc<Mutex<Vec<String>>>,
     runtime: Option<tokio::runtime::Runtime>,
@@ -226,6 +228,28 @@ fn view_for_startup_label(saved: &str) -> View {
         .find(|v| v.label() == saved)
         .copied()
         .unwrap_or(View::Dashboard)
+}
+
+/// One-time startup load of the bundled fitting-types catalogue
+/// (fittings-import design section 10): success stores the validated
+/// catalogue and logs its count once; any failure logs a `[FITTING]`
+/// warning and stores `None`, so the import panel shows its fixed
+/// catalogue-unavailable sentence instead of treating an empty
+/// catalogue as valid (the Exploration rule, not the `Sde` fallback).
+fn fitting_types_load(result: crate::error::AppResult<FittingTypes>) -> Option<Arc<FittingTypes>> {
+    match result {
+        Ok(catalogue) => {
+            tracing::info!(
+                "[FITTING] bundled fitting types loaded types={}",
+                catalogue.type_count()
+            );
+            Some(Arc::new(catalogue))
+        }
+        Err(e) => {
+            tracing::warn!("[FITTING] bundled fitting types failed to load: {}", e);
+            None
+        }
+    }
 }
 
 /// One-time startup load of the bundled Exploration reference
@@ -395,6 +419,7 @@ impl MimirApp {
             tracing::warn!("[SKILLS] bundled SDE failed to load: {}", e);
             Sde::default()
         });
+        let fitting_types = fitting_types_load(FittingTypes::load_bundled());
         let (tx, rx) = std::sync::mpsc::channel();
         let mut state = AppState::new(demo);
         // Bundled offline reference, loaded exactly once (design
@@ -484,6 +509,7 @@ impl MimirApp {
         let mut app = Self {
             state,
             sde,
+            fitting_types,
             resolver,
             log_buffer,
             runtime,
@@ -2447,9 +2473,12 @@ impl eframe::App for MimirApp {
                 View::Market => ui::market::show(ui, &mut self.state, &self.resolver),
                 View::Industry => ui::industry::show(ui, &mut self.state, &self.resolver),
                 View::Planets => ui::planets::show(ui, &mut self.state, &self.resolver),
-                // Integrator: replace None with self.fitting_types.as_deref()
-                // once the field exists (design section 10).
-                View::Fittings => ui::fittings::show(ui, &mut self.state, &self.resolver, None),
+                View::Fittings => ui::fittings::show(
+                    ui,
+                    &mut self.state,
+                    &self.resolver,
+                    self.fitting_types.as_deref(),
+                ),
                 View::Settings => ui::settings::show(ui, &mut self.state),
                 View::Exploration => ui::exploration::show(ui, &mut self.state),
             });
@@ -2692,5 +2721,15 @@ mod tests {
             }
             _ => panic!("malformed bundled data must be the whole-view error state"),
         }
+    }
+
+    #[test]
+    fn fitting_types_startup_load_is_catalogue_or_none() {
+        let loaded = fitting_types_load(FittingTypes::load_bundled())
+            .expect("bundled fitting types must load");
+        assert!(loaded.type_count() > 20_000);
+        // A failed load stores None so the panel shows its fixed
+        // catalogue-unavailable sentence; never an empty catalogue.
+        assert!(fitting_types_load(FittingTypes::from_json("{not json")).is_none());
     }
 }

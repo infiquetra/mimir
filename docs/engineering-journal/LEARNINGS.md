@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### EFT slot identity must come from dogma effects, never from blank-line position
+
+**Author.** Muse Code (fittings-import workflow, integrator)
+**Context.** The retired Flutter importer inferred a module's slot from which blank-line-separated EFT section it sat in, falling back to high slot when position said nothing. The Rust EFT import had to round-trip with this repo's own EFT exporter, which forced a different rule.
+**Evidence.** `docs/fittings-import-design.md` sections 5.4 and 9 (exporter omits empty sections, so section position is not preserved across an export); `src/fitting/eft.rs` (slot inferred only from the bundled catalogue's dogma slot effects, in the Flutter `_slotTypeFor` order; a blank-line-independence test imports one fit with no blank lines and with scrambled sections to identical results); `src/names/fitting_types.rs` and `assets/sde/fitting_types.json` (per-type slot-effect subset bundled for exactly this).
+**Mechanism.** An exporter that omits empty sections makes section position a lossy signal: a fit with no rigs re-imports with every later section shifted up one group, so position-based slot inference silently reassigns modules. Dogma effects are a property of the type itself, so they survive any section layout the pasted text happens to use.
+**Fix (or queued).** Import classifies each module line by its catalogue slot effects only; a module with no slot effect is reported as a per-line issue instead of being guessed into a slot, and blank lines carry no meaning at all.
+**Validation.** Parser tests for blank-line independence and scrambled section order, plus the byte-identical export-to-import-to-export round-trip test, all pass on branch `feat/rust-fittings-import` under full `cargo test` / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check`.
+**Generalizable rule.** When an import format must round-trip with your own exporter, derive identity from data the exporter preserves verbatim; any signal the exporter is allowed to drop (empty sections, ordering, case) cannot carry meaning on the way back in.
+**Refs.** `docs/fittings-import-design.md`; `src/fitting/eft.rs`; `src/ui/fittings.rs` (`fitting_to_eft`).
+
 ### A malformed-data test whose fixture is itself invalid proves nothing about the validations it names
 
 **Author.** Muse Code (parent repair pass over the Exploration workflow)
