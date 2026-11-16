@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### All 404 published ships carry all five base attributes; the category gate is what keeps 40,923 non-ship rows out
+
+**Author.** Muse Code (ship-base-stats workflow, integrator)
+**Context.** The ship base-values slice reads base shield, armor, hull, capacitor capacity, and maximum velocity (dogma attributes 263, 265, 9, 482, 37) from the bundled fitting-types catalogue and shows them in saved and imported fitting details, with no modifiers applied.
+**Evidence.** `docs/ship-base-stats-design.md` sections 2-3 (coverage audit over `dgmTypeAttributes.csv.bz2` rows: all 404 published category-6 ships carry all five attributes, with no absent or explicit-zero rows; 40,923 wanted rows sit on non-ships); `scripts/sde/generate_fitting_types_sde.py:68` (`BASE_STAT_ATTR_IDS`) and `:320` (category-6-only emission); `src/names/fitting_types.rs:303` (`bundled_catalogue_invariants` proves all five `Some` on every ship row and none outside category 6); `src/fitting/ship_stats.rs:27` (five `Option<f64>` fields) and `:56` (`ship_base_stats`); SDE unit rows read at design time: hit points and capacitor use units 113/114, while maximum velocity (attribute 37) carries unit 11, named "Acceleration" and described in metres per second squared, yet holding a speed value.
+**Mechanism.** Because real data has no absent or zero base values, the honesty path that distinguishes a missing value (line omitted, or the block unavailable when all five are missing) from a present `0.0` (a real zero that renders) ships unexercised by real ships and is proven only by fixtures. Without the category-6 emission gate, the same attribute ids on modules, rigs, and other non-ships would enter the catalogue and could be mistaken for ship values. The unit-11 quirk means a unit's name or description cannot be trusted to label a velocity; the rendered string is locked as `m/s` (the retired Flutter display) over the English `m/sec` from the SDE unit row.
+**Fix (or queued).** Category-6-only sparse emission in the generator, optional fields end to end, fixture pins for absent-versus-zero in `src/fitting/ship_stats.rs` and `src/ui/fittings.rs`, and the `m/s` string locked in the renderer.
+**Validation.** `bundled_catalogue_invariants` plus literal oracles (Rifter, Punisher, Legion, Raven and fractional pins) in `src/fitting/ship_stats.rs`; regeneration byte-identity proofs in the catalogue commit; full gates on branch `feat/rust-ship-base-stats`.
+**Generalizable rule.** When real data happens to be complete, fixture-prove the missing-data path anyway, and gate generated attribute emission by category — an attribute id alone does not say which rows are ships, and an SDE unit's name does not prove the displayed unit string.
+**Refs.** `docs/ship-base-stats-design.md` sections 2-4 and 9; DECISIONS 2026-11-16 ship-base-values entry below.
+
 ### Tests built from the constants under test cannot catch a constant swap
 
 **Author.** Muse Code (parent repair pass over the fitting-skill-resources workflow)

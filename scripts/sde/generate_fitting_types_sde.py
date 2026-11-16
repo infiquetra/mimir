@@ -32,7 +32,8 @@ Output is deterministic: types sorted by typeId, compact separators,
 no timestamps. Shape: {"types":[{"typeId":..,"typeName":..,
 "categoryId":..,"slotEffects":[..]}, ...]} with camelCase keys
 matching assets/sde/skills.json, plus the four optional resource keys
-where present.
+where present and, on category 6 rows only, the five optional base
+ship stat keys (docs/ship-base-stats-design.md section 3).
 """
 
 import bz2
@@ -57,6 +58,19 @@ SHIP_CPU_OUTPUT_ATTR = 48
 SHIP_POWER_OUTPUT_ATTR = 11
 MODULE_CPU_NEED_ATTR = 50
 MODULE_POWER_NEED_ATTR = 30
+
+# Base ship attribute ids (docs/ship-base-stats-design.md section 2):
+# dogmaAttributes.jsonl _key 263 "shieldCapacity", 265 "armorHP",
+# 9 "hp", 482 "capacitorCapacity", 37 "maxVelocity"; Flutter
+# dogma_attributes.dart at ed698d3 (shieldCapacity = 263,
+# armorHp = 265, hullHp = 9, capacitorCapacity = 482,
+# maxVelocity = 37).
+BASE_STAT_ATTR_IDS = {263, 265, 9, 482, 37}
+SHIELD_CAPACITY_ATTR = 263
+ARMOR_HP_ATTR = 265
+HULL_HP_ATTR = 9
+CAPACITOR_CAPACITY_ATTR = 482
+MAX_VELOCITY_ATTR = 37
 
 CACHES = {
     "invTypes": "invTypes.csv.bz2",
@@ -111,6 +125,40 @@ RESOURCE_ORACLES = [
     (37303, "cpu", 126.5),
     (1355, "power", 0.0),
     (1236, None, None),
+]
+
+# Base ship attribute oracle pins (docs/ship-base-stats-design.md
+# section 3): each value read directly from
+# dgmTypeAttributes.csv.bz2 during design. Tuple shape:
+# (typeId, key-or-None, expected value-or-None). A None key means
+# none of the five new keys may be present on that row at all.
+SHIP_STAT_ORACLES = [
+    (587, "shieldCapacity", 450.0),
+    (587, "armorHP", 450.0),
+    (587, "hp", 350.0),
+    (587, "capacitorCapacity", 250.0),
+    (587, "maxVelocity", 365.0),
+    (597, "shieldCapacity", 350.0),
+    (597, "armorHP", 500.0),
+    (597, "hp", 450.0),
+    (597, "capacitorCapacity", 400.0),
+    (597, "maxVelocity", 355.0),
+    (29986, "shieldCapacity", 1800.0),
+    (29986, "armorHP", 2900.0),
+    (29986, "hp", 1800.0),
+    (29986, "capacitorCapacity", 1800.0),
+    (29986, "maxVelocity", 185.0),
+    (638, "shieldCapacity", 7700.0),
+    (638, "armorHP", 6380.0),
+    (638, "hp", 7040.0),
+    (638, "capacitorCapacity", 5500.0),
+    (638, "maxVelocity", 113.0),
+    (3532, "capacitorCapacity", 187.5),
+    (11172, "capacitorCapacity", 218.75),
+    (78333, "maxVelocity", 322.3),
+    (2048, None, None),
+    (31668, None, None),
+    (45623, None, None),
 ]
 
 _STACKED_SUFFIX_RE = re.compile(r" x[0-9]+$")
@@ -195,9 +243,47 @@ def main():
         seen_resource_keys.add(key)
         resources_by_type.setdefault(type_id, {})[attribute_id] = value
 
+    # Base ship attributes per type (design section 3): only the
+    # five locked attributes, each parsed from valueFloat. An
+    # unparseable, duplicated, non-finite, or negative wanted row
+    # fails loudly and writes nothing.
+    base_stats_by_type = {}
+    seen_base_stat_keys = set()
+    for row in type_attributes:
+        attribute_id = int(row["attributeID"])
+        if attribute_id not in BASE_STAT_ATTR_IDS:
+            continue
+        type_id = int(row["typeID"])
+        key = (type_id, attribute_id)
+        if key in seen_base_stat_keys:
+            fail(
+                f"duplicate ship base stat row (type {type_id}, "
+                f"attribute {attribute_id}) in dgmTypeAttributes"
+            )
+        try:
+            value = float(row["valueFloat"])
+        except (TypeError, ValueError):
+            fail(
+                f"unparseable ship base stat value {row['valueFloat']!r} "
+                f"for (type {type_id}, attribute {attribute_id})"
+            )
+        if not math.isfinite(value):
+            fail(
+                f"non-finite ship base stat value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        if value < 0:
+            fail(
+                f"negative ship base stat value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        seen_base_stat_keys.add(key)
+        base_stats_by_type.setdefault(type_id, {})[attribute_id] = value
+
     types = []
     missing_group = 0
     resource_key_counts = Counter()
+    base_stat_key_counts = Counter()
     for row in inv_types:
         if row["published"] != "1":
             continue
@@ -230,6 +316,26 @@ def main():
             if SHIP_POWER_OUTPUT_ATTR in resources:
                 entry["powerOutput"] = resources[SHIP_POWER_OUTPUT_ATTR]
                 resource_key_counts["powerOutput"] += 1
+            # Additive, sparse base ship stat emission (design
+            # section 3): category 6 rows gain the five stats
+            # after the resource keys in their existing order.
+            # Every other row is byte-identical.
+            base_stats = base_stats_by_type.get(type_id, {})
+            if SHIELD_CAPACITY_ATTR in base_stats:
+                entry["shieldCapacity"] = base_stats[SHIELD_CAPACITY_ATTR]
+                base_stat_key_counts["shieldCapacity"] += 1
+            if ARMOR_HP_ATTR in base_stats:
+                entry["armorHP"] = base_stats[ARMOR_HP_ATTR]
+                base_stat_key_counts["armorHP"] += 1
+            if HULL_HP_ATTR in base_stats:
+                entry["hp"] = base_stats[HULL_HP_ATTR]
+                base_stat_key_counts["hp"] += 1
+            if CAPACITOR_CAPACITY_ATTR in base_stats:
+                entry["capacitorCapacity"] = base_stats[CAPACITOR_CAPACITY_ATTR]
+                base_stat_key_counts["capacitorCapacity"] += 1
+            if MAX_VELOCITY_ATTR in base_stats:
+                entry["maxVelocity"] = base_stats[MAX_VELOCITY_ATTR]
+                base_stat_key_counts["maxVelocity"] += 1
         elif category_id == 7 and slot_effects:
             if MODULE_CPU_NEED_ATTR in resources:
                 entry["cpu"] = resources[MODULE_CPU_NEED_ATTR]
@@ -291,15 +397,58 @@ def main():
     if zero_power_entry is None or "power" not in zero_power_entry:
         fail("resource oracle type 1355 power key must be present as 0.0")
 
-    # Catalogue-wide invariant (design section 5): every category-6
-    # row carries both ship outputs, so a future cache refresh that
-    # drops a ship output fails loudly instead of blanking that ship.
+    # Base ship attribute oracles (design section 3). A None key
+    # means none of the five new keys may be present at all.
+    for type_id, key, expected in SHIP_STAT_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(f"ship stat oracle type {type_id} missing from extract")
+        if key is None:
+            present = [
+                name
+                for name in (
+                    "shieldCapacity",
+                    "armorHP",
+                    "hp",
+                    "capacitorCapacity",
+                    "maxVelocity",
+                )
+                if name in entry
+            ]
+            if present:
+                fail(
+                    f"ship stat oracle type {type_id} carries "
+                    f"{present}, expected no base stat keys"
+                )
+        elif entry.get(key) != expected:
+            fail(
+                f"ship stat oracle type {type_id} {key}="
+                f"{entry.get(key)!r}, expected {expected!r}"
+            )
+
+    # Catalogue-wide invariant (design sections 5 and 3): every
+    # category-6 row carries both ship outputs and all five base
+    # ship stats, so a future cache refresh that drops a ship row
+    # fails loudly instead of blanking that ship.
     for entry in types:
         if entry["categoryId"] == 6 and (
             "cpuOutput" not in entry or "powerOutput" not in entry
         ):
             fail(
                 f"ship type {entry['typeId']} missing cpuOutput/powerOutput"
+            )
+        if entry["categoryId"] == 6 and any(
+            key not in entry
+            for key in (
+                "shieldCapacity",
+                "armorHP",
+                "hp",
+                "capacitorCapacity",
+                "maxVelocity",
+            )
+        ):
+            fail(
+                f"ship type {entry['typeId']} missing base ship stats"
             )
 
     # Invariants the parser relies on (design sections 5.2, 6.3): no
@@ -338,6 +487,13 @@ def main():
         f"powerOutput={resource_key_counts['powerOutput']} "
         f"cpu={resource_key_counts['cpu']} "
         f"power={resource_key_counts['power']}"
+    )
+    print(
+        f"base_stat_keys shieldCapacity={base_stat_key_counts['shieldCapacity']} "
+        f"armorHP={base_stat_key_counts['armorHP']} "
+        f"hp={base_stat_key_counts['hp']} "
+        f"capacitorCapacity={base_stat_key_counts['capacitorCapacity']} "
+        f"maxVelocity={base_stat_key_counts['maxVelocity']}"
     )
 
 

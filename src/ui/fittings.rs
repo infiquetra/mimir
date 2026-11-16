@@ -21,6 +21,7 @@ use crate::fitting::resources::{
     fitting_resources_with_skills, resource_skill_levels, FittingResources, ResourceBudget,
     ResourceSkillLevels, CPU_MANAGEMENT_SKILL_ID, POWER_GRID_MANAGEMENT_SKILL_ID,
 };
+use crate::fitting::ship_stats::{ship_base_stats, ShipBaseStats, ShipBaseStatsOutcome};
 use crate::fitting::write_map::{build_save_request, DropReason, DroppedFittingItem, SaveMapping};
 use crate::names::fitting_types::FittingTypes;
 use crate::names::resolver::NameResolver;
@@ -1156,6 +1157,21 @@ const FITTING_RESOURCES_NO_CATALOGUE: &str =
     "Fitting resources unavailable: Mimir's bundled item data failed to load.";
 const FITTING_RESOURCES_NO_SHIP_OUTPUT: &str = "Fitting resources unavailable: Mimir's bundled item data has no ship output data for this fitting's ship.";
 
+/// Locked heading for the ship base values block (ship base stats
+/// design section 6). The "(base values)" qualifier keeps every
+/// base hull number from reading as a fitted total.
+const FITTINGS_SHIP_BASE_STATS_HEADING: &str = "Ship (base values)";
+
+/// Locked disclosure: the numbers are bare-hull base values,
+/// never modified by anything fitted or trained (design section
+/// 6). This block's own sentence; the resources disclosure above
+/// names different applied and excluded sets.
+const FITTING_SHIP_BASE_STATS_DISCLOSURE: &str = "Base ship values from Mimir's bundled item data. Fitted modules, rigs, subsystems, skills, implants, and ship bonuses are not applied, so these numbers can differ from EVE.";
+
+const FITTING_SHIP_BASE_STATS_NO_CATALOGUE: &str =
+    "Ship values unavailable: Mimir's bundled item data failed to load.";
+const FITTING_SHIP_BASE_STATS_NO_SHIP_DATA: &str = "Ship values unavailable: Mimir's bundled item data has no base ship data for this fitting's ship.";
+
 /// One CPU or power grid line (design section 7): `left` with the
 /// room remaining, or `over` with the positive overage. Exactly at
 /// budget is `0.0 left`, in the normal colour.
@@ -1303,6 +1319,66 @@ fn render_fitting_resources(
     }
 }
 
+/// One base ship value line (design section 6), pure like
+/// `resource_line`: `None` (absent or unusable data) renders no
+/// line at all — never a zero, a dash, or placeholder words. A
+/// present `0.0` renders like any other value.
+fn ship_stat_line(label: &str, value: Option<f64>, unit: &str) -> Option<String> {
+    value.map(|v| format!("{label}: {}", widgets::format_fitting_amount(v, unit)))
+}
+
+/// The block's stat lines in locked order (shield, armor, hull,
+/// capacitor, velocity — the Flutter stats panel's DEFENSE →
+/// CAPACITOR → NAVIGATION order). Absent stats are omitted, so a
+/// partial block still renders its available values plus the
+/// disclosure.
+fn ship_base_stat_lines(stats: &ShipBaseStats) -> Vec<String> {
+    [
+        ship_stat_line("Shield", stats.shield_capacity, "HP"),
+        ship_stat_line("Armor", stats.armor_hp, "HP"),
+        ship_stat_line("Hull", stats.hull_hp, "HP"),
+        ship_stat_line("Capacitor capacity", stats.capacitor_capacity, "GJ"),
+        ship_stat_line("Max speed", stats.max_velocity, "m/s"),
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
+}
+
+/// Ship base values block shared by the saved and imported
+/// fitting details (ship base stats design section 6). Depends
+/// only on the fitting's ship and the catalogue: no skill levels,
+/// no SDE handle, so it renders identically for every viewing
+/// character. The heading always renders, so the view never
+/// silently omits the feature; `Unavailable` swaps all stat lines
+/// and the disclosure for the fixed unavailable sentence. Renders
+/// even when the fitting has no items. Logs nothing itself: the
+/// pure function logs nothing (render cadence).
+fn render_ship_base_stats(
+    ui: &mut egui::Ui,
+    fitting: &CharacterFitting,
+    fitting_types: Option<&FittingTypes>,
+) {
+    let Some(catalogue) = fitting_types else {
+        ui.heading(FITTINGS_SHIP_BASE_STATS_HEADING);
+        ui.label(FITTING_SHIP_BASE_STATS_NO_CATALOGUE);
+        return;
+    };
+    match ship_base_stats(fitting, catalogue) {
+        ShipBaseStatsOutcome::Available(stats) => {
+            ui.heading(FITTINGS_SHIP_BASE_STATS_HEADING);
+            for line in ship_base_stat_lines(&stats) {
+                ui.label(line);
+            }
+            ui.label(FITTING_SHIP_BASE_STATS_DISCLOSURE);
+        }
+        ShipBaseStatsOutcome::Unavailable => {
+            ui.heading(FITTINGS_SHIP_BASE_STATS_HEADING);
+            ui.label(FITTING_SHIP_BASE_STATS_NO_SHIP_DATA);
+        }
+    }
+}
+
 /// The EFT import panel: paste box, Import/Clear/sample actions, the
 /// fatal error, and the imported fitting with its honest parse report.
 /// Reachable without the fittings read scope (design section 8.2):
@@ -1428,6 +1504,7 @@ fn fittings_import_panel(
         .as_ready()
         .map(|data| resource_skill_levels(&data.skills));
     render_fitting_resources(ui, &synth, fitting_types, levels, sde);
+    render_ship_base_stats(ui, &synth, fitting_types);
     // Loaded charges, in item order (design section 8.2).
     let charged_total = imported
         .items
@@ -1714,6 +1791,7 @@ pub fn show(
                         .as_ready()
                         .map(|data| resource_skill_levels(&data.skills));
                     render_fitting_resources(ui, selected, fitting_types, levels, sde);
+                    render_ship_base_stats(ui, selected, fitting_types);
                     if ui.button("Copy as EFT").clicked() {
                         tracing::info!(
                             "[FITTING] copy as EFT requested for fitting name={}",
@@ -3323,5 +3401,198 @@ mod tests {
             resource_line("Power grid", &marcus_sample.1, "MW"),
             "Power grid: 31.0 MW of 41.0 MW used (10.0 MW left)"
         );
+    }
+
+    // Ship base values (ship base stats design section 8): the
+    // locked five-line blocks, built from real `ship_base_stats`
+    // results over the bundled catalogue. Oracle values read from
+    // `scripts/sde/dgmTypeAttributes.csv.bz2` (valueInt None,
+    // valueFloat shown): Rifter 587: 263 450.0, 265 450.0, 9
+    // 350.0, 482 250.0, 37 365.0. Punisher 597: 350.0, 500.0,
+    // 450.0, 400.0, 355.0.
+    fn ship_stats_lines_for(catalogue: &FittingTypes, ship_type_id: i64) -> Vec<String> {
+        let fitting = CharacterFitting {
+            fitting_id: 1,
+            name: "pin".to_string(),
+            description: None,
+            ship_type_id,
+            items: vec![],
+        };
+        match ship_base_stats(&fitting, catalogue) {
+            ShipBaseStatsOutcome::Available(stats) => ship_base_stat_lines(&stats),
+            ShipBaseStatsOutcome::Unavailable => {
+                panic!("ship {ship_type_id} must have base stats")
+            }
+        }
+    }
+
+    #[test]
+    fn ship_base_stat_lines_match_the_locked_templates() {
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        assert_eq!(
+            ship_stats_lines_for(&catalogue, 587),
+            [
+                "Shield: 450.0 HP",
+                "Armor: 450.0 HP",
+                "Hull: 350.0 HP",
+                "Capacitor capacity: 250.0 GJ",
+                "Max speed: 365.0 m/s",
+            ]
+        );
+        assert_eq!(
+            ship_stats_lines_for(&catalogue, 597),
+            [
+                "Shield: 350.0 HP",
+                "Armor: 500.0 HP",
+                "Hull: 450.0 HP",
+                "Capacitor capacity: 400.0 GJ",
+                "Max speed: 355.0 m/s",
+            ]
+        );
+    }
+
+    // Formatting pins (design section 8): thousands grouping,
+    // catalogue magnitude, fractional values, and the one
+    // lossy display rounding. Raven 638 shield 7700.0, Komodo
+    // 45649 shield 950000.0, Echelon 3532 capacitor 187.5,
+    // Helios 11172 capacitor 218.75 (exact in the API, 218.8
+    // GJ on screen), Mekubal 78333 velocity 322.3.
+    #[test]
+    fn ship_base_stat_formatting_pins() {
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        assert_eq!(
+            ship_stats_lines_for(&catalogue, 638)[0],
+            "Shield: 7,700.0 HP"
+        );
+        assert_eq!(
+            ship_stats_lines_for(&catalogue, 45649)[0],
+            "Shield: 950,000.0 HP"
+        );
+        assert_eq!(
+            ship_stats_lines_for(&catalogue, 3532)[3],
+            "Capacitor capacity: 187.5 GJ"
+        );
+        assert_eq!(
+            ship_stats_lines_for(&catalogue, 11172)[3],
+            "Capacitor capacity: 218.8 GJ"
+        );
+        assert_eq!(
+            ship_stats_lines_for(&catalogue, 78333)[4],
+            "Max speed: 322.3 m/s"
+        );
+    }
+
+    // Absent versus zero (fixture catalogue; shipped data has no
+    // ship with a missing stat): a present 0.0 renders, an absent
+    // stat produces no line at all.
+    #[test]
+    fn ship_base_stat_present_zero_renders_and_absent_omits() {
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"armorHP":0.0,"hp":350.0,"capacitorCapacity":250.0,"maxVelocity":365.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let lines = ship_stats_lines_for(&catalogue, 42);
+        assert_eq!(
+            lines,
+            [
+                "Armor: 0.0 HP",
+                "Hull: 350.0 HP",
+                "Capacitor capacity: 250.0 GJ",
+                "Max speed: 365.0 m/s",
+            ]
+        );
+        assert!(
+            lines.iter().all(|line| !line.starts_with("Shield")),
+            "absent shield must produce no line: {lines:?}"
+        );
+    }
+
+    #[test]
+    fn ship_base_stats_unavailable_and_disclosure_wording() {
+        assert_eq!(FITTINGS_SHIP_BASE_STATS_HEADING, "Ship (base values)");
+        assert_eq!(
+            FITTING_SHIP_BASE_STATS_NO_CATALOGUE,
+            "Ship values unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            FITTING_SHIP_BASE_STATS_NO_SHIP_DATA,
+            "Ship values unavailable: Mimir's bundled item data has no base ship data for this fitting's ship."
+        );
+        assert_eq!(
+            FITTING_SHIP_BASE_STATS_DISCLOSURE,
+            "Base ship values from Mimir's bundled item data. Fitted modules, rigs, subsystems, skills, implants, and ship bonuses are not applied, so these numbers can differ from EVE."
+        );
+    }
+
+    // Demo story (design section 7): Demo Brawler and Mission
+    // Runner are both Rifter 587 and render identical blocks
+    // despite their invented sample rows; Demo Runner is Punisher
+    // 597. Built from the real demo fixture over the real
+    // catalogue, so fixture or catalogue drift fails here.
+    #[test]
+    fn demo_fixture_ship_stats_match_the_locked_demo_story() {
+        use crate::demo::data::DEMO_FITTINGS_JSON;
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let lines_for = |fitting: &CharacterFitting| match ship_base_stats(fitting, &catalogue) {
+            ShipBaseStatsOutcome::Available(stats) => ship_base_stat_lines(&stats),
+            ShipBaseStatsOutcome::Unavailable => panic!("demo fitting must have base stats"),
+        };
+
+        let rifter_block = [
+            "Shield: 450.0 HP",
+            "Armor: 450.0 HP",
+            "Hull: 350.0 HP",
+            "Capacitor capacity: 250.0 GJ",
+            "Max speed: 365.0 m/s",
+        ];
+        assert_eq!(lines_for(&find("Demo Brawler")), rifter_block);
+        assert_eq!(lines_for(&find("Mission Runner")), rifter_block);
+        assert_eq!(
+            lines_for(&find("Demo Runner")),
+            [
+                "Shield: 350.0 HP",
+                "Armor: 500.0 HP",
+                "Hull: 450.0 HP",
+                "Capacitor capacity: 400.0 GJ",
+                "Max speed: 355.0 m/s",
+            ]
+        );
+
+        // Imported path: the demo sample fit through the shared
+        // synthesis seam yields the same Rifter block.
+        let synth = match parse_eft(DEMO_SAMPLE_EFT, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
+        };
+        assert_eq!(lines_for(&synth), rifter_block);
+
+        // The DNA sample lands on the same hull, so its block is
+        // byte-identical too (stats key off the ship, not format).
+        let synth_dna = match parse_import(DEMO_SAMPLE_DNA, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => {
+                panic!("demo DNA sample must import, got {fatal:?}")
+            }
+        };
+        assert_eq!(lines_for(&synth_dna), rifter_block);
     }
 }
