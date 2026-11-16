@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use crate::esi::models::*;
 use crate::storage::repositories::CharacterRow;
 
-/// The seven views (keys 1-7 in the shell).
+/// The eight views (keys 1-8 in the shell).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum View {
     #[default]
@@ -22,17 +22,19 @@ pub enum View {
     Wallet,
     Assets,
     Market,
+    Industry,
     Settings,
 }
 
 impl View {
-    pub const ALL: [View; 7] = [
+    pub const ALL: [View; 8] = [
         View::Dashboard,
         View::Characters,
         View::Skills,
         View::Wallet,
         View::Assets,
         View::Market,
+        View::Industry,
         View::Settings,
     ];
 
@@ -44,6 +46,7 @@ impl View {
             View::Wallet => "Wallet",
             View::Assets => "Assets",
             View::Market => "Market",
+            View::Industry => "Industry",
             View::Settings => "Settings",
         }
     }
@@ -290,6 +293,64 @@ pub struct MarketData {
     pub character_orders: SectionResult<CharacterOrdersData>,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct IndustryJobsData {
+    pub jobs: Vec<IndustryJob>,
+    pub truncated: bool,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct BlueprintsData {
+    pub blueprints: Vec<CharacterBlueprint>,
+    pub truncated: bool,
+}
+
+/// Industry bundle: two independent section results for the
+/// active character. Field set is a cross-builder contract (the
+/// shell and demo seeding construct this literally); do not add
+/// fields here.
+#[derive(Debug, Clone)]
+pub struct IndustryData {
+    pub jobs: SectionResult<IndustryJobsData>,
+    pub blueprints: SectionResult<BlueprintsData>,
+}
+
+impl IndustryData {
+    /// True when either section failed for scope reasons.
+    pub fn needs_industry_stepup(&self) -> bool {
+        fn reauth<T>(result: &SectionResult<T>) -> bool {
+            matches!(result, Err(e) if e.needs_reauthorize)
+        }
+        reauth(&self.jobs) || reauth(&self.blueprints)
+    }
+}
+
+/// Blueprint library filter: every blueprint, originals only,
+/// or copies only. Classification is `runs == -1` (section 7.3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BlueprintKindFilter {
+    #[default]
+    All,
+    Originals,
+    Copies,
+}
+
+impl BlueprintKindFilter {
+    pub const ALL: [BlueprintKindFilter; 3] = [
+        BlueprintKindFilter::All,
+        BlueprintKindFilter::Originals,
+        BlueprintKindFilter::Copies,
+    ];
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            BlueprintKindFilter::All => "All",
+            BlueprintKindFilter::Originals => "Originals (BPO)",
+            BlueprintKindFilter::Copies => "Copies (BPC)",
+        }
+    }
+}
+
 /// One selectable market region. `name` is the curated display
 /// fallback (Flutter `kTradeHubRegions` parity); a resolver hit for
 /// `id` wins in the view. The numeric id is never rendered.
@@ -386,6 +447,7 @@ pub struct AppState {
     pub assets_needs_reauthorize: bool,
     pub character_details: LoadState<CharacterDetailData>,
     pub market: LoadState<MarketData>,
+    pub industry: LoadState<IndustryData>,
     pub log_lines: Vec<String>,
     pub status_message: String,
 
@@ -415,6 +477,9 @@ pub struct AppState {
     pub market_candidates: Vec<UniverseName>,
     pub market_lookup_message: Option<String>,
     pub market_generation: u64,
+    // View-local industry UI state.
+    pub industry_search: String,
+    pub industry_blueprint_kind: BlueprintKindFilter,
 
     // Request flags for the integrator to drain (set by views, never faked
     // as completed work). See the module comment.
@@ -540,6 +605,16 @@ impl AppState {
                 self.market_candidates.clear();
                 self.market_lookup_message = None;
                 self.market_generation = self.market_generation.wrapping_add(1);
+                // Same ownership argument as assets and detail: industry
+                // sections are fetched tolerantly, so reset at the switch
+                // boundary. Search text and kind filter are view-local
+                // and survive, like every other view's filter text.
+                tracing::debug!(
+                    "[INDUSTRY] clearing industry on character switch from={} to={}",
+                    previous_id,
+                    character_id
+                );
+                self.industry = LoadState::Loading;
             }
         }
         self.selected_queue_row = 0;
@@ -588,6 +663,8 @@ impl AppState {
             self.market_candidates.clear();
             self.market_lookup_message = None;
             self.market_generation = self.market_generation.wrapping_add(1);
+            tracing::debug!("[INDUSTRY] clearing industry of removed active character");
+            self.industry = LoadState::Loading;
             if let Some(first) = self.characters.first().map(|c| c.character_id) {
                 self.set_active_character(first);
             }
@@ -608,6 +685,7 @@ impl AppState {
             self.character_details = LoadState::Empty;
             self.market = LoadState::Empty;
             self.market_generation = self.market_generation.wrapping_add(1);
+            self.industry = LoadState::Empty;
             self.dashboard = LoadState::Empty;
         }
     }
@@ -652,16 +730,19 @@ mod tests {
         assert_eq!(View::from_index(3), Some(View::Wallet));
         assert_eq!(View::from_index(4), Some(View::Assets));
         assert_eq!(View::from_index(5), Some(View::Market));
-        assert_eq!(View::from_index(6), Some(View::Settings));
+        assert_eq!(View::from_index(6), Some(View::Industry));
+        assert_eq!(View::from_index(7), Some(View::Settings));
         assert_eq!(View::from_index(9), None);
         assert_eq!(View::Wallet.index(), 3);
         assert_eq!(View::Assets.index(), 4);
         assert_eq!(View::Market.index(), 5);
-        assert_eq!(View::Settings.index(), 6);
+        assert_eq!(View::Industry.index(), 6);
+        assert_eq!(View::Settings.index(), 7);
         assert_eq!(View::Wallet.next(), View::Assets);
         assert_eq!(View::Assets.next(), View::Market);
-        assert_eq!(View::Market.next(), View::Settings);
-        assert_eq!(View::Settings.previous(), View::Market);
+        assert_eq!(View::Market.next(), View::Industry);
+        assert_eq!(View::Industry.next(), View::Settings);
+        assert_eq!(View::Settings.previous(), View::Industry);
         assert_eq!(View::Assets.previous(), View::Wallet);
     }
 
@@ -1036,6 +1117,90 @@ mod tests {
         state.remove_character(2);
         assert!(state.characters.is_empty());
         assert!(matches!(state.market, LoadState::Empty));
+    }
+
+    fn industry_bundle() -> IndustryData {
+        IndustryData {
+            jobs: Ok(IndustryJobsData::default()),
+            blueprints: Ok(BlueprintsData::default()),
+        }
+    }
+
+    #[test]
+    fn switching_character_clears_stale_industry() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.industry = LoadState::Ready(industry_bundle());
+        state.industry_search = "Bantam".to_string();
+        state.industry_blueprint_kind = BlueprintKindFilter::Copies;
+        // Same-character reselect keeps the bundle.
+        state.set_active_character(1);
+        assert!(state.industry.is_ready());
+        // Switching clears rows but keeps filter text and kind.
+        state.set_active_character(2);
+        assert!(matches!(state.industry, LoadState::Loading));
+        assert_eq!(state.industry_search, "Bantam");
+        assert_eq!(state.industry_blueprint_kind, BlueprintKindFilter::Copies);
+    }
+
+    #[test]
+    fn removing_active_character_clears_industry_and_last_empties() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two"), row(3, "Three")];
+        state.set_active_character(1);
+        state.industry = LoadState::Ready(industry_bundle());
+        state.industry_search = "Bantam".to_string();
+        state.remove_character(3);
+        assert!(state.industry.is_ready(), "non-active removal keeps bundle");
+        state.remove_character(1);
+        assert_eq!(state.active_character_id, Some(2));
+        assert!(matches!(state.industry, LoadState::Loading));
+        assert_eq!(state.industry_search, "Bantam");
+        state.industry = LoadState::Ready(industry_bundle());
+        state.remove_character(2);
+        assert!(state.characters.is_empty());
+        assert!(matches!(state.industry, LoadState::Empty));
+    }
+
+    #[test]
+    fn needs_industry_stepup_matrix() {
+        assert!(!industry_bundle().needs_industry_stepup(), "all-Ok bundle");
+        let plain = SectionError {
+            message: "timeout".to_string(),
+            needs_reauthorize: false,
+        };
+        let mut jobs_plain = industry_bundle();
+        jobs_plain.jobs = Err(plain.clone());
+        assert!(!jobs_plain.needs_industry_stepup());
+        let mut blueprints_plain = industry_bundle();
+        blueprints_plain.blueprints = Err(plain);
+        assert!(!blueprints_plain.needs_industry_stepup());
+        let mut jobs_reauth = industry_bundle();
+        jobs_reauth.jobs = Err(reauth_error());
+        assert!(jobs_reauth.needs_industry_stepup(), "jobs reauth");
+        let mut blueprints_reauth = industry_bundle();
+        blueprints_reauth.blueprints = Err(reauth_error());
+        assert!(
+            blueprints_reauth.needs_industry_stepup(),
+            "blueprints reauth"
+        );
+        let mut both = industry_bundle();
+        both.jobs = Err(reauth_error());
+        both.blueprints = Err(reauth_error());
+        assert!(both.needs_industry_stepup(), "both reauth");
+    }
+
+    #[test]
+    fn industry_defaults_are_loading_empty_search_all_kind() {
+        let state = AppState::new(false);
+        assert!(matches!(state.industry, LoadState::Loading));
+        assert_eq!(state.industry_search, "");
+        assert_eq!(state.industry_blueprint_kind, BlueprintKindFilter::All);
+        assert_eq!(BlueprintKindFilter::All.label(), "All");
+        assert_eq!(BlueprintKindFilter::Originals.label(), "Originals (BPO)");
+        assert_eq!(BlueprintKindFilter::Copies.label(), "Copies (BPC)");
+        assert_eq!(BlueprintKindFilter::ALL.len(), 3);
     }
 
     #[test]

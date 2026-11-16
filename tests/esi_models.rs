@@ -175,6 +175,38 @@ fn market_fixture_parses() {
 }
 
 #[test]
+fn industry_fixture_parses() {
+    let root: serde_json::Value = parse(include_str!("fixtures/industry.json"));
+    let jobs: Vec<IndustryJob> =
+        serde_json::from_value(root["industry_jobs"].clone()).expect("jobs parse");
+    assert_eq!(jobs.len(), 3);
+    assert_eq!(jobs[0].job_id, 710000101);
+    assert_eq!(jobs[0].activity_id, 1);
+    assert_eq!(jobs[0].status, "active");
+    assert_eq!(jobs[0].cost, None, "null cost stays None, never 0.0");
+    assert_eq!(jobs[0].product_type_id, Some(587));
+    assert_eq!(jobs[1].activity_id, 11, "reaction job row");
+    assert_eq!(jobs[1].status, "ready");
+    assert_eq!(jobs[2].probability, Some(0.4));
+    assert_eq!(jobs[2].successful_runs, Some(1));
+    assert_eq!(jobs[2].completed_character_id, Some(90000001));
+
+    let blueprints: Vec<CharacterBlueprint> =
+        serde_json::from_value(root["blueprints"].clone()).expect("blueprints parse");
+    assert_eq!(blueprints.len(), 4);
+    assert_eq!(blueprints[0].quantity, -1);
+    assert_eq!(blueprints[0].runs, -1);
+    assert_eq!(blueprints[0].material_efficiency, 10);
+    assert_eq!(blueprints[1].quantity, -2, "copied blueprint sentinel");
+    assert_eq!(blueprints[1].runs, 5);
+    assert_eq!(blueprints[2].quantity, 3);
+    // Empty-object row defaults rather than failing.
+    assert_eq!(blueprints[3].item_id, 0);
+    assert_eq!(blueprints[3].type_id, 0);
+    assert_eq!(blueprints[3].runs, 0);
+}
+
+#[test]
 fn empty_payloads_default_instead_of_failing() {
     // ESI occasionally omits optional fields; models must tolerate `{}`.
     let info: CharacterPublicInfo = parse("{}");
@@ -186,4 +218,12 @@ fn empty_payloads_default_instead_of_failing() {
     let asset_item: AssetItem = parse("{}");
     assert_eq!(asset_item.item_id, 0);
     assert_eq!(asset_item.is_blueprint_copy, None);
+    let blueprint: CharacterBlueprint = parse("{}");
+    assert_eq!(blueprint.item_id, 0);
+    assert_eq!(blueprint.runs, 0);
+    let job: IndustryJob = parse("{}");
+    assert_eq!(job.job_id, 0);
+    assert_eq!(job.cost, None);
+    assert_eq!(job.product_type_id, None);
+    assert_eq!(job.successful_runs, None);
 }

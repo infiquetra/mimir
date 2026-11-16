@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### A boundary fix does not sanitize the fan-out paths that reuse the original error value
+
+**Author.** Muse Code (parent repair pass over the Industry workflow)
+**Context.** Adversarial review found two blockers in the Industry slice the green suite missed: a negative successful-runs count rendered raw, and server error text still reaching the Industry whole-view error panel even though per-section industry errors were already fixed wording.
+**Evidence.** Review findings in the Industry workflow synthesis; `src/ui/industry.rs` (row construction clamped runs and efficiencies but copied `successful_runs` verbatim), `src/app/shell.rs` (the whole-refresh failure arm assigned the unchanged remote error message to the industry load state, while the two industry sub-fetches already used fixed wording).
+**Mechanism.** Fixes applied at one construction boundary or one field do not propagate: every sibling field decoded from the same untrusted payload and every other apply path that forwards the same error value keeps the original defect until each is audited individually.
+**Fix (or queued).** Successful runs clamp at row construction like their sibling counters, and the whole-refresh industry assignment uses fixed wording with the full error kept in the existing `[ESI]` warn log.
+**Validation.** New unit test `job_rows_clamp_negative_successful_runs` in `src/ui/industry.rs` plus full `cargo test` / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` on branch `feat/rust-industry-port` in the repair commit. Shell drain paths have no test harness in this repo, so the fixed-wording arm is code-inspected with log evidence.
+**Generalizable rule.** When a review finds one untrusted field or error path, grep for every sibling field and every assignment of the same value before calling the class fixed.
+**Refs.** `docs/industry-port-design.md`; `src/ui/industry.rs`; `src/app/shell.rs`.
+
 ### Category-only errors belong at every construction site, and a short-circuit must still drive the state it gates
 
 **Author.** Muse Code (parent repair pass over the Market workflow)

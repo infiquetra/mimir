@@ -6,9 +6,10 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use super::state::{
-    ship_display_name, summary_location_name, AppState, AssetsData, AuthState, CharacterDetailData,
-    CharacterOrdersData, CharacterSummary, LoadState, MarketData, MarketSelection,
-    PublicOrdersData, SectionError, SkillsData, StepUpRequest, View, WalletData,
+    ship_display_name, summary_location_name, AppState, AssetsData, AuthState, BlueprintsData,
+    CharacterDetailData, CharacterOrdersData, CharacterSummary, IndustryData, IndustryJobsData,
+    LoadState, MarketData, MarketSelection, PublicOrdersData, SectionError, SkillsData,
+    StepUpRequest, View, WalletData,
 };
 use crate::auth::callback_server::CallbackServer;
 use crate::auth::jwt_verify::JwtVerifier;
@@ -44,6 +45,7 @@ enum BackendMsg {
         assets: Result<Box<AssetsData>, String>,
         assets_needs_reauthorize: bool,
         detail: Box<CharacterDetailData>,
+        industry: Box<IndustryData>,
     },
     RefreshFailed {
         character_id: i64,
@@ -494,6 +496,28 @@ impl MimirApp {
                 }
             }
         }
+        // Industry IDs (design section 6.4): only rendered type IDs and
+        // structure-guarded facility/location IDs. Job, blueprint-instance,
+        // installer, completer, and output IDs are never scheduled.
+        if let LoadState::Ready(bundle) = &self.state.industry {
+            if let Ok(jobs_data) = &bundle.jobs {
+                for job in &jobs_data.jobs {
+                    ids.push(job.blueprint_type_id);
+                    ids.extend(job.product_type_id);
+                    if !crate::names::resolver::is_structure_id(job.facility_id) {
+                        ids.push(job.facility_id);
+                    }
+                }
+            }
+            if let Ok(blueprints_data) = &bundle.blueprints {
+                for blueprint in &blueprints_data.blueprints {
+                    ids.push(blueprint.type_id);
+                    if !crate::names::resolver::is_structure_id(blueprint.location_id) {
+                        ids.push(blueprint.location_id);
+                    }
+                }
+            }
+        }
         let missing = self.resolver.missing(&ids);
         if missing.is_empty() {
             return;
@@ -534,6 +558,7 @@ impl MimirApp {
                     assets,
                     assets_needs_reauthorize,
                     detail,
+                    industry,
                 } => {
                     tracing::info!("[ESI] refresh complete character_id={}", character_id);
                     // A refresh landing after its character was removed
@@ -583,6 +608,7 @@ impl MimirApp {
                         self.state.skills = LoadState::Ready(*skills);
                         self.state.wallet = LoadState::Ready(*wallet);
                         self.state.character_details = LoadState::Ready(*detail);
+                        self.state.industry = LoadState::Ready(*industry);
                         match assets {
                             Ok(data) => {
                                 self.state.assets = LoadState::Ready(*data);
@@ -665,6 +691,15 @@ impl MimirApp {
                         }
                         if !self.state.character_details.is_ready() {
                             self.state.character_details = LoadState::Error(message.clone());
+                        }
+                        if !self.state.industry.is_ready() {
+                            // Industry's whole-view error panel renders this
+                            // string verbatim, and refresh error text can
+                            // carry server-controlled body text (including
+                            // numeric IDs): fixed wording here, full
+                            // detail stays in the [ESI] warn above.
+                            self.state.industry =
+                                LoadState::Error("character refresh request failed".to_string());
                         }
                         if !self.state.assets.is_ready() {
                             self.state.assets = LoadState::Error(message);
@@ -1197,6 +1232,48 @@ impl MimirApp {
                         .map_or(0, |c| c.jump_clones.len()),
                     detail.standings.as_ref().map_or(0, Vec::len)
                 );
+                // Industry is two tolerant sub-fetches (never `?`):
+                // a section failure degrades only that section.
+                // SectionError messages render verbatim in section
+                // panels, so they are fixed wording here; full error
+                // detail stays in the [INDUSTRY] warn logs above each.
+                let jobs = endpoints::get_character_industry_jobs(&esi, id)
+                    .await
+                    .map(|(jobs, truncated)| IndustryJobsData { jobs, truncated })
+                    .map_err(|e| {
+                        let needs_reauthorize = endpoints::needs_reauthorize(&e);
+                        tracing::warn!("[INDUSTRY] industry section failed character_id={} section=jobs needs_reauthorize={} error={}", id, needs_reauthorize, e);
+                        SectionError {
+                            message: "industry jobs request failed".to_string(),
+                            needs_reauthorize,
+                        }
+                    });
+                let blueprints = endpoints::get_character_blueprints(&esi, id)
+                    .await
+                    .map(|(blueprints, truncated)| BlueprintsData {
+                        blueprints,
+                        truncated,
+                    })
+                    .map_err(|e| {
+                        let needs_reauthorize = endpoints::needs_reauthorize(&e);
+                        tracing::warn!("[INDUSTRY] industry section failed character_id={} section=blueprints needs_reauthorize={} error={}", id, needs_reauthorize, e);
+                        SectionError {
+                            message: "blueprints request failed".to_string(),
+                            needs_reauthorize,
+                        }
+                    });
+                let industry = IndustryData { jobs, blueprints };
+                tracing::info!(
+                    "[INDUSTRY] industry ready character_id={} jobs={} jobs_truncated={} blueprints={} blueprints_truncated={}",
+                    id,
+                    industry.jobs.as_ref().map_or(0, |d| d.jobs.len()),
+                    industry.jobs.as_ref().is_ok_and(|d| d.truncated),
+                    industry
+                        .blueprints
+                        .as_ref()
+                        .map_or(0, |d| d.blueprints.len()),
+                    industry.blueprints.as_ref().is_ok_and(|d| d.truncated)
+                );
                 Ok::<_, crate::AppError>((
                     info,
                     SkillsData { skills, queue },
@@ -1204,11 +1281,20 @@ impl MimirApp {
                     assets,
                     assets_needs_reauthorize,
                     detail,
+                    industry,
                 ))
             }
             .await;
             match result {
-                Ok((info, skills, wallet, assets, assets_needs_reauthorize, detail)) => {
+                Ok((
+                    info,
+                    skills,
+                    wallet,
+                    assets,
+                    assets_needs_reauthorize,
+                    detail,
+                    industry,
+                )) => {
                     // Persist the full refresh so the next launch renders
                     // cached skills/wallet offline (load_cached_state).
                     if let Ok(conn) = db.lock() {
@@ -1314,6 +1400,7 @@ impl MimirApp {
                         assets: assets.map(Box::new),
                         assets_needs_reauthorize,
                         detail: Box::new(detail),
+                        industry: Box::new(industry),
                     });
                 }
                 Err(e) => {
@@ -1692,6 +1779,7 @@ impl MimirApp {
                 egui::Key::Num5,
                 egui::Key::Num6,
                 egui::Key::Num7,
+                egui::Key::Num8,
             ]
             .iter()
             .enumerate()
@@ -1738,10 +1826,20 @@ impl MimirApp {
         if self.state.auth.is_busy() {
             return true;
         }
-        match &self.state.skills {
-            LoadState::Ready(data) => data.queue.iter().any(|item| item.finish_date.is_some()),
-            _ => false,
+        if let LoadState::Ready(data) = &self.state.skills {
+            if data.queue.iter().any(|item| item.finish_date.is_some()) {
+                return true;
+            }
         }
+        if let LoadState::Ready(bundle) = &self.state.industry {
+            if let Ok(jobs_data) = &bundle.jobs {
+                return jobs_data
+                    .jobs
+                    .iter()
+                    .any(|job| ui::industry::is_in_progress_status(&job.status));
+            }
+        }
+        false
     }
 }
 
@@ -1831,7 +1929,7 @@ impl eframe::App for MimirApp {
                 ui.label("PageUp/PageDown switches character.");
             }
             ui.separator();
-            ui.heading("Views (keys 1-7)");
+            ui.heading("Views (keys 1-8)");
             for (idx, view) in View::ALL.iter().enumerate() {
                 let selected = self.state.view == *view;
                 if ui
@@ -1857,6 +1955,7 @@ impl eframe::App for MimirApp {
                 View::Wallet => ui::wallet::show(ui, &mut self.state, &self.resolver),
                 View::Assets => ui::assets::show(ui, &mut self.state, &self.resolver),
                 View::Market => ui::market::show(ui, &mut self.state, &self.resolver),
+                View::Industry => ui::industry::show(ui, &mut self.state, &self.resolver),
                 View::Settings => ui::settings::show(ui, &mut self.state),
             });
         });
@@ -1868,7 +1967,7 @@ impl eframe::App for MimirApp {
                 if self.state.refresh_requested {
                     ui.label("Refresh pending...");
                 }
-                ui.label("Keys: 1-7 views, Ctrl+R refresh, / search, PgUp/PgDn character");
+                ui.label("Keys: 1-8 views, Ctrl+R refresh, / search, PgUp/PgDn character");
             });
         });
     }

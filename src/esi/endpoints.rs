@@ -425,6 +425,155 @@ async fn get_character_orders_capped(
     Ok((all, truncated))
 }
 
+/// Hard cap for industry page walks. A character's jobs and
+/// blueprint library are character-bounded populations; the cap
+/// is a runaway guard, and hitting it is always disclosed via
+/// the returned truncated flag rather than silent partial data.
+pub const INDUSTRY_MAX_PAGES: u32 = 10;
+
+/// The character's industry jobs, completed jobs included (the
+/// one locked value, embedded in the path so `build_url` and the
+/// `page=` query compose). Requires scope
+/// `esi-industry.read_character_jobs.v1` (progressive step-up,
+/// never first-auth); a missing scope surfaces as HTTP 403 ->
+/// `EsiError::Reauthorize`. Any page error propagates; partial
+/// page lists are never returned as success. Rows return in
+/// fetch order, unsorted and unfiltered.
+pub async fn get_character_industry_jobs(
+    client: &EsiClient,
+    character_id: i64,
+) -> AppResult<(Vec<IndustryJob>, bool)> {
+    get_character_industry_jobs_capped(client, character_id, INDUSTRY_MAX_PAGES).await
+}
+
+async fn get_character_industry_jobs_capped(
+    client: &EsiClient,
+    character_id: i64,
+    max_pages: u32,
+) -> AppResult<(Vec<IndustryJob>, bool)> {
+    let max_pages = max_pages.max(1);
+    let path = format!("/characters/{character_id}/industry/jobs/?include_completed=true");
+    tracing::debug!(
+        "[INDUSTRY] GET /characters/{}/industry/jobs/?include_completed=true (capped pages={})",
+        character_id,
+        max_pages
+    );
+    let mut page = 1u32;
+    let mut all: Vec<IndustryJob> = Vec::new();
+    let mut truncated = false;
+    loop {
+        let (items, meta) = client
+            .auth_get_page::<Vec<IndustryJob>>(&path, character_id, Some(page))
+            .await?;
+        let count = items.len();
+        tracing::debug!(
+            "[INDUSTRY] industry jobs page={} rows={} total={}",
+            page,
+            count,
+            all.len() + count
+        );
+        all.extend(items);
+        match meta.pages {
+            Some(total) if page >= total => break,
+            Some(_) => {
+                if page >= max_pages {
+                    truncated = true;
+                    break;
+                }
+            }
+            None => {
+                if count == 0 {
+                    break;
+                }
+                if page >= max_pages {
+                    truncated = true;
+                    break;
+                }
+            }
+        }
+        page += 1;
+    }
+    tracing::info!(
+        "[INDUSTRY] industry jobs fetched character_id={} rows={} truncated={}",
+        character_id,
+        all.len(),
+        truncated
+    );
+    Ok((all, truncated))
+}
+
+/// The character's blueprint library. Requires scope
+/// `esi-characters.read_blueprints.v1` (progressive step-up,
+/// never first-auth); a missing scope surfaces as HTTP 403 ->
+/// `EsiError::Reauthorize`. Any page error propagates; partial
+/// page lists are never returned as success. Rows return in
+/// fetch order, unsorted and unfiltered.
+pub async fn get_character_blueprints(
+    client: &EsiClient,
+    character_id: i64,
+) -> AppResult<(Vec<CharacterBlueprint>, bool)> {
+    get_character_blueprints_capped(client, character_id, INDUSTRY_MAX_PAGES).await
+}
+
+async fn get_character_blueprints_capped(
+    client: &EsiClient,
+    character_id: i64,
+    max_pages: u32,
+) -> AppResult<(Vec<CharacterBlueprint>, bool)> {
+    let max_pages = max_pages.max(1);
+    tracing::debug!(
+        "[INDUSTRY] GET /characters/{}/blueprints/ (capped pages={})",
+        character_id,
+        max_pages
+    );
+    let mut page = 1u32;
+    let mut all: Vec<CharacterBlueprint> = Vec::new();
+    let mut truncated = false;
+    loop {
+        let (items, meta) = client
+            .auth_get_page::<Vec<CharacterBlueprint>>(
+                &format!("/characters/{character_id}/blueprints/"),
+                character_id,
+                Some(page),
+            )
+            .await?;
+        let count = items.len();
+        tracing::debug!(
+            "[INDUSTRY] blueprints page={} rows={} total={}",
+            page,
+            count,
+            all.len() + count
+        );
+        all.extend(items);
+        match meta.pages {
+            Some(total) if page >= total => break,
+            Some(_) => {
+                if page >= max_pages {
+                    truncated = true;
+                    break;
+                }
+            }
+            None => {
+                if count == 0 {
+                    break;
+                }
+                if page >= max_pages {
+                    truncated = true;
+                    break;
+                }
+            }
+        }
+        page += 1;
+    }
+    tracing::info!(
+        "[INDUSTRY] blueprints fetched character_id={} rows={} truncated={}",
+        character_id,
+        all.len(),
+        truncated
+    );
+    Ok((all, truncated))
+}
+
 pub async fn get_location(client: &EsiClient, character_id: i64) -> AppResult<CharacterLocation> {
     tracing::debug!("[CHAR] GET /characters/{}/location/", character_id);
     client
@@ -1003,6 +1152,262 @@ mod tests {
             .await
             .expect_err("403 must error");
         assert!(needs_reauthorize(&err), "error: {err:?}");
+    }
+
+    /// Paged industry mock: counts and captures requests and
+    /// serves one row per page (the row id encodes the page),
+    /// blueprints or jobs chosen by the request path.
+    async fn industry_server(
+        pages_header: Option<u32>,
+        second: SecondPage,
+    ) -> (
+        String,
+        std::sync::Arc<std::sync::atomic::AtomicUsize>,
+        std::sync::Arc<std::sync::Mutex<Vec<String>>>,
+    ) {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let addr = listener.local_addr().expect("addr");
+        let counter = std::sync::Arc::new(AtomicUsize::new(0));
+        let captured = std::sync::Arc::new(std::sync::Mutex::new(Vec::<String>::new()));
+        let task_counter = counter.clone();
+        let task_captured = captured.clone();
+        tokio::spawn(async move {
+            loop {
+                let Ok((mut socket, _peer)) = listener.accept().await else {
+                    break;
+                };
+                let counter = task_counter.clone();
+                let captured = task_captured.clone();
+                tokio::spawn(async move {
+                    let mut buffer = vec![0u8; 16384];
+                    let count = socket.read(&mut buffer).await.unwrap_or(0);
+                    let request = String::from_utf8_lossy(&buffer[..count]).into_owned();
+                    counter.fetch_add(1, Ordering::SeqCst);
+                    captured.lock().expect("capture lock").push(request.clone());
+                    let page: u32 = request
+                        .split("page=")
+                        .nth(1)
+                        .and_then(|rest| {
+                            rest.chars()
+                                .take_while(|c| c.is_ascii_digit())
+                                .collect::<String>()
+                                .parse()
+                                .ok()
+                        })
+                        .unwrap_or(1);
+                    let (status, body) = if page == 2 && second == SecondPage::Error {
+                        (500, r#"{"error":"boom"}"#.to_string())
+                    } else if page == 2 && second == SecondPage::Empty {
+                        (200, "[]".to_string())
+                    } else if request.contains("/blueprints/") {
+                        (
+                            200,
+                            format!(
+                                r#"[{{"item_id":{},"type_id":681,"location_id":60003760,"location_flag":"Hangar","quantity":-1,"time_efficiency":0,"material_efficiency":0,"runs":-1}}]"#,
+                                100 + page
+                            ),
+                        )
+                    } else {
+                        (
+                            200,
+                            format!(
+                                r#"[{{"job_id":{},"facility_id":60003760,"activity_id":1,"blueprint_type_id":681,"product_type_id":587,"status":"active","start_date":"2026-11-14T10:00:00Z","end_date":"2026-11-15T11:00:00Z"}}]"#,
+                                100 + page
+                            ),
+                        )
+                    };
+                    let pages = match pages_header {
+                        Some(total) => format!("X-Pages: {total}\r\n"),
+                        None => String::new(),
+                    };
+                    let payload = format!(
+                        "HTTP/1.1 {status} OK\r\nContent-Type: application/json\r\n{pages}Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                        body.len()
+                    );
+                    let _ = socket.write_all(payload.as_bytes()).await;
+                    let _ = socket.flush().await;
+                });
+            }
+        });
+        (format!("http://{addr}"), counter, captured)
+    }
+
+    #[tokio::test]
+    async fn blueprints_walk_two_pages_in_fetch_order() {
+        let (base, _counter, captured) = industry_server(Some(2), SecondPage::Rows).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let (blueprints, truncated) = get_character_blueprints(&client, 7)
+            .await
+            .expect("blueprints");
+        assert_eq!(blueprints.len(), 2);
+        assert_eq!(blueprints[0].item_id, 101);
+        assert_eq!(blueprints[1].item_id, 102);
+        assert_eq!(blueprints[0].quantity, -1);
+        assert_eq!(blueprints[0].runs, -1);
+        assert!(!truncated);
+        let requests = captured.lock().expect("capture lock").clone();
+        assert_eq!(requests.len(), 2);
+        assert!(
+            requests[0].contains("/characters/7/blueprints/"),
+            "{}",
+            requests[0]
+        );
+        assert!(requests[1].contains("page=2"), "{}", requests[1]);
+    }
+
+    #[tokio::test]
+    async fn industry_jobs_single_page_embeds_include_completed_true() {
+        use std::sync::atomic::Ordering;
+        let (base, counter, captured) = industry_server(Some(1), SecondPage::Rows).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let (jobs, truncated) = get_character_industry_jobs(&client, 7).await.expect("jobs");
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(jobs[0].job_id, 101);
+        assert_eq!(jobs[0].status, "active");
+        assert_eq!(jobs[0].product_type_id, Some(587));
+        assert!(!truncated);
+        assert_eq!(counter.load(Ordering::SeqCst), 1);
+        let requests = captured.lock().expect("capture lock").clone();
+        assert!(
+            requests[0].contains("/characters/7/industry/jobs/"),
+            "{}",
+            requests[0]
+        );
+        assert!(
+            requests[0].contains("include_completed=true"),
+            "{}",
+            requests[0]
+        );
+    }
+
+    #[tokio::test]
+    async fn industry_jobs_walk_two_pages_in_fetch_order() {
+        let (base, _counter, captured) = industry_server(Some(2), SecondPage::Rows).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let (jobs, truncated) = get_character_industry_jobs(&client, 7).await.expect("jobs");
+        assert_eq!(jobs.len(), 2);
+        assert_eq!(jobs[0].job_id, 101);
+        assert_eq!(jobs[1].job_id, 102);
+        assert!(!truncated);
+        let requests = captured.lock().expect("capture lock").clone();
+        assert_eq!(requests.len(), 2);
+        assert!(requests[1].contains("page=2"), "{}", requests[1]);
+        assert!(
+            requests[1].contains("include_completed=true"),
+            "{}",
+            requests[1]
+        );
+    }
+
+    #[tokio::test]
+    async fn industry_caps_are_honored_and_reported_truncated() {
+        use std::sync::atomic::Ordering;
+        let (base, counter, _captured) = industry_server(Some(5), SecondPage::Rows).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let (jobs, truncated) = get_character_industry_jobs_capped(&client, 7, 2)
+            .await
+            .expect("jobs");
+        assert_eq!(jobs.len(), 2);
+        assert!(truncated);
+        assert_eq!(counter.load(Ordering::SeqCst), 2);
+
+        let (base, counter, _captured) = industry_server(Some(5), SecondPage::Rows).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let (blueprints, truncated) = get_character_blueprints_capped(&client, 7, 2)
+            .await
+            .expect("blueprints");
+        assert_eq!(blueprints.len(), 2);
+        assert!(truncated);
+        assert_eq!(counter.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test]
+    async fn industry_empty_returns_empty_not_truncated() {
+        let (base, _captured) = one_shot_server(200, "[]").await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let (jobs, truncated) = get_character_industry_jobs(&client, 7).await.expect("jobs");
+        assert!(jobs.is_empty());
+        assert!(!truncated);
+
+        let (base, _captured) = one_shot_server(200, "[]").await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let (blueprints, truncated) = get_character_blueprints(&client, 7)
+            .await
+            .expect("blueprints");
+        assert!(blueprints.is_empty());
+        assert!(!truncated);
+    }
+
+    #[tokio::test]
+    async fn industry_missing_xpages_empty_second_page_stops_clean() {
+        use std::sync::atomic::Ordering;
+        let (base, counter, _captured) = industry_server(None, SecondPage::Empty).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let (blueprints, truncated) = get_character_blueprints(&client, 7)
+            .await
+            .expect("blueprints");
+        assert_eq!(blueprints.len(), 1);
+        assert!(!truncated);
+        assert_eq!(counter.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test]
+    async fn industry_missing_xpages_nonempty_at_cap_is_truncated() {
+        let (base, _counter, _captured) = industry_server(None, SecondPage::Rows).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let (blueprints, truncated) = get_character_blueprints_capped(&client, 7, 2)
+            .await
+            .expect("blueprints");
+        assert_eq!(blueprints.len(), 2);
+        assert!(truncated);
+    }
+
+    #[tokio::test]
+    async fn industry_page_two_errors_propagate() {
+        let (base, _counter, _captured) = industry_server(Some(2), SecondPage::Error).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = get_character_industry_jobs(&client, 7)
+            .await
+            .expect_err("page-2 failure must not return partial rows");
+        assert!(!needs_reauthorize(&err), "error: {err:?}");
+
+        let (base, _counter, _captured) = industry_server(Some(2), SecondPage::Error).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = get_character_blueprints(&client, 7)
+            .await
+            .expect_err("page-2 failure must not return partial rows");
+        assert!(!needs_reauthorize(&err), "error: {err:?}");
+    }
+
+    #[tokio::test]
+    async fn industry_scope_failures_need_reauthorize() {
+        let (base, _captured) = one_shot_server(403, r#"{"error":"Forbidden"}"#).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = get_character_industry_jobs(&client, 7)
+            .await
+            .expect_err("403 must error");
+        assert!(needs_reauthorize(&err), "error: {err:?}");
+
+        let (base, _captured) = one_shot_server(403, r#"{"error":"Forbidden"}"#).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = get_character_blueprints(&client, 7)
+            .await
+            .expect_err("403 must error");
+        assert!(needs_reauthorize(&err), "error: {err:?}");
+    }
+
+    #[tokio::test]
+    async fn industry_no_tokens_error_carries_no_character_id_text() {
+        let client = EsiClient::with_http(reqwest::Client::new(), "http://127.0.0.1:9".to_string());
+        let err = get_character_industry_jobs(&client, 90000001)
+            .await
+            .expect_err("no tokens must error");
+        assert!(!err.to_string().contains("90000001"), "error: {err}");
+        let err = get_character_blueprints(&client, 90000001)
+            .await
+            .expect_err("no tokens must error");
+        assert!(!err.to_string().contains("90000001"), "error: {err}");
     }
 
     #[test]
