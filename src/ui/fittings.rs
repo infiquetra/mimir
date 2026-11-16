@@ -673,8 +673,13 @@ fn fittings_import_panel(
             state.fittings_import_owner = None;
         }
     });
-    if let Some(error) = state.fittings_import_error.clone() {
-        ui.label(error);
+    // The fatal-error label belongs to its owner like the detail
+    // below (equality also covers no-character imports); resets
+    // clear it on switch, so this only matters as defense-in-depth.
+    if state.fittings_import_owner == state.active_character_id {
+        if let Some(error) = state.fittings_import_error.clone() {
+            ui.label(error);
+        }
     }
     // Render guard (design section 8.1): the imported detail renders only
     // for the character it was imported for. The resets make this an

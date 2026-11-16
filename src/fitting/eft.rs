@@ -350,6 +350,26 @@ fn classify_module(types: &FittingTypes, name: &str) -> ModuleOutcome {
     }
 }
 
+/// True when a name resolves to at least one catalogue row (found or
+/// ambiguous). Used so an exact real item name wins over the comma
+/// and bracket delimiter heuristics: 18 published names contain a
+/// comma or start with `[` and must not be misclassified.
+fn name_resolves(types: &FittingTypes, name: &str) -> bool {
+    !matches!(types.lookup(name), NameLookup::Unknown)
+}
+
+/// True when a stacked suffix looks like a malformed quantity rather
+/// than part of an item name: an optional sign followed by numeric
+/// characters (including non-ASCII digits). Pure ASCII-digit
+/// suffixes never reach here; `split_stack` claims them first.
+fn looks_like_bad_quantity(suffix: &str) -> bool {
+    let digits = suffix
+        .strip_prefix('+')
+        .or_else(|| suffix.strip_prefix('-'))
+        .unwrap_or(suffix);
+    !digits.is_empty() && digits.chars().all(|ch| ch.is_numeric())
+}
+
 /// Split a stacked `Name xN` line without regex (design 5.3 step 4):
 /// the last ` x` whose tail is all ASCII digits. Returns
 /// `(name part, digit suffix)` when the shape holds, else `None` and
@@ -423,7 +443,11 @@ pub fn parse_eft(text: &str, types: &FittingTypes) -> EftImportOutcome {
     }
     // AAR line-ending normalization: CRLF first, then lone CR.
     let normalized = text.replace("\r\n", "\n").replace('\r', "\n");
-    let raw_lines: Vec<&str> = normalized.split('\n').collect();
+    // A leading byte-order mark (U+FEFF, prepended by some editors)
+    // is dropped: Dart's trim() strips it in both Flutter parsers,
+    // and the invisible character must not reject a whole paste.
+    let body: &str = normalized.strip_prefix('\u{FEFF}').unwrap_or(&normalized);
+    let raw_lines: Vec<&str> = body.split('\n').collect();
     if raw_lines.len() > MAX_EFT_IMPORT_LINES {
         return failed(ImportFatal::TooManyLines);
     }
@@ -483,13 +507,20 @@ pub fn parse_eft(text: &str, types: &FittingTypes) -> EftImportOutcome {
             placeholder_lines = placeholder_lines.saturating_add(1);
             continue;
         }
+        // Exact catalogue names win over delimiter heuristics: one
+        // published name starts with `[` and must reach the stacked
+        // or plain path like any other name.
+        let exact_name_line = name_resolves(types, line)
+            || split_stack(line).is_some_and(|(name, _)| name_resolves(types, name));
         // Step 2: any other bracketed line is an issue.
-        if line.starts_with('[') {
+        if line.starts_with('[') && !exact_name_line {
             issues.push(issue(line_no, line, ImportIssueKind::BracketedLine));
             continue;
         }
-        // Step 3: comma lines are Module, Charge lines, never stacked.
-        if let Some(comma) = line.find(',') {
+        // Step 3: comma lines are Module, Charge lines, never stacked
+        // — unless the whole line (or its stacked name part) is itself
+        // an exact catalogue name containing a comma.
+        if let Some(comma) = line.find(',').filter(|_| !exact_name_line) {
             let module_part = line[..comma].trim();
             let charge_part = line[comma + 1..].trim();
             if module_part.is_empty() || charge_part.is_empty() || charge_part.contains(',') {
@@ -596,6 +627,19 @@ pub fn parse_eft(text: &str, types: &FittingTypes) -> EftImportOutcome {
                 imported_lines = imported_lines.saturating_add(1);
             }
             ModuleOutcome::Issue(kind) => {
+                // A known name followed by a malformed quantity
+                // (`x-1`, `x+5`, non-ASCII digits) is a quantity
+                // problem, not an unknown name: point the fixed
+                // reason at the part that is actually wrong.
+                let kind = if kind == ImportIssueKind::UnknownName
+                    && line.rfind(" x").is_some_and(|pos| {
+                        name_resolves(types, &line[..pos])
+                            && looks_like_bad_quantity(&line[pos + 2..])
+                    }) {
+                    ImportIssueKind::InvalidQuantity
+                } else {
+                    kind
+                };
                 issues.push(issue(line_no, line, kind));
             }
         }
@@ -867,9 +911,24 @@ mod tests {
                 "{line}"
             );
         }
-        // x-1 has no stacked shape, so it falls to the plain path and
-        // fails lookup as a whole line (the locked fall-through).
+        // x-1 has no stacked shape, so it falls to the plain path;
+        // the name resolves, so the reason names the quantity.
         let fitting = imported("[Rifter, T]\nHobgoblin II x-1", &types);
+        assert_eq!(
+            issue_kinds(&fitting),
+            vec![ImportIssueKind::InvalidQuantity]
+        );
+        // Same for an explicit plus sign and non-ASCII digits.
+        for line in ["Hobgoblin II x+5", "Hobgoblin II x\u{661}"] {
+            let fitting = imported(&format!("[Rifter, T]\n{line}"), &types);
+            assert_eq!(
+                issue_kinds(&fitting),
+                vec![ImportIssueKind::InvalidQuantity],
+                "{line}"
+            );
+        }
+        // An unknown name with a bad quantity stays an unknown name.
+        let fitting = imported("[Rifter, T]\nNot A Real Drone x-1", &types);
         assert_eq!(issue_kinds(&fitting), vec![ImportIssueKind::UnknownName]);
         // A 20-digit quantity never parses; it is InvalidQuantity.
         let fitting = imported("[Rifter, T]\nHobgoblin II x99999999999999999999", &types);
@@ -886,6 +945,45 @@ mod tests {
         let fitting = imported("[Rifter, T]\nHobgoblin II x2147483647", &types);
         assert!(fitting.report.issues.is_empty());
         assert_eq!(fitting.items[0].quantity, 2_147_483_647);
+    }
+
+    #[test]
+    fn leading_byte_order_mark_is_dropped() {
+        let types = bundled_types();
+        let fitting = imported("\u{FEFF}[Rifter, T]\nDamage Control II", &types);
+        assert!(fitting.report.issues.is_empty());
+        assert_eq!(fitting.items.len(), 1);
+        // A BOM-only paste is empty, not a malformed header.
+        match parse_eft("\u{FEFF}", &types) {
+            EftImportOutcome::Failed(fatal) => assert_eq!(fatal, ImportFatal::Empty),
+            EftImportOutcome::Imported(_) => panic!("BOM-only paste must not import"),
+        }
+    }
+
+    #[test]
+    fn exact_names_with_delimiters_import_as_cargo() {
+        let types = bundled_types();
+        // 17 published names contain a comma; the charge-comma
+        // heuristic must not claim an exact stacked name.
+        let fitting = imported("[Rifter, T]\nExotic Dancers, Male x5", &types);
+        assert!(fitting.report.issues.is_empty());
+        assert_eq!(fitting.items.len(), 1);
+        assert_eq!(fitting.items[0].section, ImportSection::Cargo);
+        assert_eq!(fitting.items[0].quantity, 5);
+        // One published name starts with `[`; it is not a bracketed
+        // marker line.
+        let fitting = imported(
+            "[Rifter, T]\n[CNS] Kiirasha Final Broadcast Fragment x2",
+            &types,
+        );
+        assert!(fitting.report.issues.is_empty());
+        assert_eq!(fitting.items.len(), 1);
+        assert_eq!(fitting.items[0].section, ImportSection::Cargo);
+        assert_eq!(fitting.items[0].quantity, 2);
+        // A duplicate header in the body still reports as bracketed.
+        let fitting = imported("[Rifter, T]\n[Rifter, T]\nDamage Control II", &types);
+        assert_eq!(fitting.items.len(), 1);
+        assert_eq!(issue_kinds(&fitting), vec![ImportIssueKind::BracketedLine]);
     }
 
     #[test]

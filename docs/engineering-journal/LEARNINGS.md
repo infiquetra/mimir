@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### Delimiter heuristics lose to exact catalogue names, and trim parity includes the byte-order mark
+
+**Author.** Muse Code (parent repair pass over the fittings-import workflow)
+**Context.** Adversarial review of the EFT importer scanned the bundled catalogue end to end and found real item names colliding with the parser's punctuation rules, plus one invisible character where Rust and Dart whitespace rules disagree.
+**Evidence.** `assets/sde/fitting_types.json` (25,818 types; 17 published names contain a comma, for example `Exotic Dancers, Male`, and one starts with `[`: `[CNS] Kiirasha Final Broadcast Fragment`); `src/fitting/eft.rs` (`parse_eft` treated any comma as a loaded-charge separator and any leading `[` as a bracketed line before name lookup, so `Exotic Dancers, Male x5` reported "no item has this exact name" about an item in the bundled data; and Rust `trim()` keeps U+FEFF while Dart `trim()` strips it — verified against the installed Dart runtime and both Flutter parser bodies at ed698d3 — so a byte-order-mark paste the Flutter parsers accept was rejected whole with an invisible cause); `src/ui/fittings.rs` (the fatal-error label rendered ahead of the per-character owner guard its own comment describes).
+**Mechanism.** Grammar heuristics classify by shape, but the catalogue is the authority on what names exist: when the two disagree, shape-based classification produces a confidently wrong reason, which is worse than an unresolved line because it tells the user the item does not exist. Separately, porting "trim each line" across languages is not semantics-preserving until each language's whitespace set is checked; U+FEFF is whitespace to Dart and not to Rust.
+**Fix (or queued).** A line (or its stacked name part) that resolves exactly in the catalogue bypasses the comma and bracket heuristics and takes the stacked/plain path; a leading U+FEFF is stripped once before parsing, matching Dart trim semantics (a BOM-only paste is now the honest "empty" failure); `x-1`/`x+5`/non-ASCII-digit quantities after a resolvable name now report the quantity reason instead of "unknown name"; the view's error label renders only for its owner. The exporter's pre-existing comma/bracket stripping of item names is unchanged, so those 18 names still do not round-trip through Mimir's own export; that asymmetry is named in the pull request rather than silently kept.
+**Validation.** New parser tests `leading_byte_order_mark_is_dropped` and `exact_names_with_delimiters_import_as_cargo` (including a duplicate body header still reporting as bracketed), extended `quantity_rules_are_strict`, full `cargo test` / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` on branch `feat/rust-fittings-import`, and a parent-inspected demo Fittings screenshot.
+**Generalizable rule.** In any name-based format, try the exact-name dictionary before punctuation heuristics, and verify whitespace definitions per language when porting trim-like calls; a heuristic may classify only what the dictionary does not claim.
+**Refs.** `docs/fittings-import-design.md`; `src/fitting/eft.rs` (`parse_eft`, `name_resolves`, `looks_like_bad_quantity`); `src/ui/fittings.rs`.
+
 ### EFT slot identity must come from dogma effects, never from blank-line position
 
 **Author.** Muse Code (fittings-import workflow, integrator)
