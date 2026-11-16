@@ -517,7 +517,12 @@ pub fn parse_eft(text: &str, types: &FittingTypes) -> EftImportOutcome {
     let Some(header_index) = header_index else {
         return failed(ImportFatal::Empty);
     };
-    let header = raw_lines[header_index].trim();
+    // Dart trim() drops a byte-order mark after leading
+    // whitespace; Rust trim() does not, so strip it post-trim.
+    let header_trimmed = raw_lines[header_index].trim();
+    let header = header_trimmed
+        .strip_prefix('\u{FEFF}')
+        .unwrap_or(header_trimmed);
     let Some(inner) = header
         .strip_prefix('[')
         .and_then(|rest| rest.strip_suffix(']'))

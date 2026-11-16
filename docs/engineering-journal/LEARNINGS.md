@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### An assumption about generated data belongs in the generated-data invariant test, not in the design prose
+
+**Author.** Muse Code (parent repair pass over the DNA-import workflow)
+**Context.** DNA import classifies bare type ids into slots with the shared first-match slot helper. The design recorded that this is safe because no bundled catalogue row carries more than one slot effect — and then nothing enforced that fact.
+**Evidence.** `assets/sde/fitting_types.json` (25,818 rows; reviewer scripted the whole file: 0 rows with more than one slot effect, all 48 subsystem-category rows carry exactly effect 3772, 0 module-category rows carry 3772); `src/fitting/dna.rs` (classification accepts any module/subsystem row whose effects yield any slot, where the strict Flutter adapter additionally required unanimity and a subsystem slot for subsystems); `src/names/fitting_types.rs` (`bundled_catalogue_invariants` pinned only name shape before this repair).
+**Mechanism.** Data a script regenerates will eventually change under the code that consumes it. An assumption written only in a design document decays silently: the next SDE refresh could introduce a dual-slot-effect type and every importer would quietly change its slot, with all tests green because the tests use the same regenerated file. The invariant has to live where regeneration is checked.
+**Fix (or queued).** `bundled_catalogue_invariants` now asserts at most one slot effect per row, subsystem rows carry only effect 3772 (or none), and module rows never carry 3772 — so a future catalogue that breaks the assumption fails tests loudly at regeneration time. The same repair dropped a byte-order mark after leading whitespace in both parsers and the format router, matching Dart `trim()` semantics the Flutter parsers relied on.
+**Validation.** Extended `bundled_catalogue_invariants` and `routing_colon_in_fit_name_and_no_fallback` (padded-BOM cases for both routes), full `cargo test` / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` on branch `feat/rust-fittings-dna-import`, and a parent-inspected demo Fittings screenshot.
+**Generalizable rule.** Every "the data never does X" claim a design relies on gets an assertion in the generated-data invariant test in the same change; prose records why, the test enforces it.
+**Refs.** `docs/fittings-dna-import-design.md`; `src/names/fitting_types.rs` (`bundled_catalogue_invariants`); `src/fitting/dna.rs`.
+
 ### A refusal table inline in an imperative shell function is correct code with no test that can catch its deletion
 
 **Author.** Muse Code (parent repair pass over the fittings-write workflow)

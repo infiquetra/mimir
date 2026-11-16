@@ -78,9 +78,14 @@ pub fn parse_dna(text: &str, types: &FittingTypes) -> EftImportOutcome {
     }
     // AAR line-ending normalization: CRLF first, then lone CR.
     let normalized = text.replace("\r\n", "\n").replace('\r', "\n");
-    // A leading byte-order mark (U+FEFF) is dropped, as in `parse_eft`.
+    // A leading byte-order mark (U+FEFF) is dropped, as in
+    // `parse_eft`; Dart trim() also drops it after leading
+    // whitespace, so strip again after the trim.
     let body: &str = normalized.strip_prefix('\u{FEFF}').unwrap_or(&normalized);
-    let trimmed = body.trim();
+    let trimmed_body = body.trim();
+    let trimmed = trimmed_body
+        .strip_prefix('\u{FEFF}')
+        .unwrap_or(trimmed_body);
     if trimmed.is_empty() {
         return failed(ImportFatal::Empty);
     }
@@ -249,7 +254,11 @@ pub fn parse_import(text: &str, types: &FittingTypes) -> EftImportOutcome {
     let mut route_eft = true;
     let mut saw_non_blank = false;
     for line in body.split('\n') {
-        let line_trimmed = line.trim();
+        // Dart trim() drops a byte-order mark after leading
+        // whitespace; Rust trim() does not, so strip it here or a
+        // padded BOM header would misroute to DNA.
+        let scanned = line.trim();
+        let line_trimmed = scanned.strip_prefix('\u{FEFF}').unwrap_or(scanned);
         if line_trimmed.is_empty() {
             continue;
         }
@@ -474,6 +483,14 @@ mod tests {
         // Leading blank lines before a DNA link still route DNA.
         let fitting = imported_via_router("\n\n587:2048;1::", &types);
         assert_eq!(fitting.format, ImportFormat::Dna);
+        assert_eq!(fitting.items.len(), 1);
+        // A byte-order mark after leading whitespace is dropped
+        // the way Dart trim() drops it, for both routes.
+        let fitting = imported_via_router("\n\u{FEFF}587:2048;1::", &types);
+        assert_eq!(fitting.format, ImportFormat::Dna);
+        assert_eq!(fitting.items.len(), 1);
+        let fitting = imported_via_router(" \u{FEFF}[Rifter, X]\nDamage Control II", &types);
+        assert_eq!(fitting.format, ImportFormat::Eft);
         assert_eq!(fitting.items.len(), 1);
     }
 

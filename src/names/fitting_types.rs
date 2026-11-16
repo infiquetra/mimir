@@ -297,6 +297,30 @@ mod tests {
                     row.name
                 );
             }
+            // Slot classification assumes at most one slot effect
+            // per type (both importers take the shared first-match
+            // helper; the strict Flutter adapter required unanimity).
+            // A regenerated catalogue breaking this must fail here,
+            // loudly, instead of silently changing slots.
+            assert!(
+                row.slot_effects.len() <= 1,
+                "type with multiple slot effects: {:?}",
+                row.name
+            );
+            if row.category_id == 32 {
+                assert!(
+                    row.slot_effects.is_empty() || row.slot_effects == [3772],
+                    "subsystem without the subsystem slot effect: {:?}",
+                    row.name
+                );
+            }
+            if row.category_id == 7 {
+                assert!(
+                    !row.slot_effects.contains(&3772),
+                    "module carrying the subsystem slot effect: {:?}",
+                    row.name
+                );
+            }
         }
     }
 }
