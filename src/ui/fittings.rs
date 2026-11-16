@@ -10,10 +10,16 @@ use super::widgets;
 use crate::app::state::{AppState, FittingsData, LoadState, SectionError, StepUpRequest};
 use crate::config::EveConfig;
 use crate::esi::models::CharacterFitting;
+use crate::fitting::eft::{parse_eft, EftImportOutcome, ImportIssue, ImportedFitting};
+use crate::names::fitting_types::FittingTypes;
 use crate::names::resolver::NameResolver;
 use std::collections::HashMap;
 
 pub const FITTINGS_RENDER_MAX: usize = 100;
+
+/// Maximum per-line problems shown in the import report; the rest are
+/// disclosed by count (design section 8.2).
+pub const IMPORT_ISSUES_RENDER_MAX: usize = 20;
 
 /// Maximum EFT lines one fitted slot row may expand to. No EVE ship
 /// has more than eight slots in a section; quantities decode from
@@ -446,13 +452,332 @@ fn fittings_reauthorize_panel(ui: &mut egui::Ui, state: &mut AppState) {
     }
 }
 
-pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
+/// Demo sample EFT block (design section 8.3): real catalogue names,
+/// zero issues, one empty-slot marker, one noted loaded charge. Shown
+/// by the `Use sample EFT` button in demo mode only.
+const DEMO_SAMPLE_EFT: &str = concat!(
+    "[Rifter, Sample Brawler]\n",
+    "Damage Control II\n",
+    "Small Armor Repairer II\n",
+    "\n",
+    "1MN Afterburner II\n",
+    "Warp Scrambler II\n",
+    "\n",
+    "200mm AutoCannon II, Republic Fleet EMP S\n",
+    "200mm AutoCannon II\n",
+    "200mm AutoCannon II\n",
+    "\n",
+    "Small Projectile Burst Aerator I\n",
+    "[Empty Rig slot]\n",
+    "\n",
+    "Hobgoblin II x2\n",
+    "\n",
+    "EMP S x200\n",
+    "Nanite Repair Paste x8"
+);
+
+/// Truncate an issue line for display: the first 120 characters,
+/// plus `...` when longer (design section 8.2). User text only;
+/// never a type ID.
+fn truncate_issue_text(text: &str) -> String {
+    let mut chars = text.chars();
+    let truncated: String = chars.by_ref().take(120).collect();
+    if chars.next().is_some() {
+        format!("{truncated}...")
+    } else {
+        truncated
+    }
+}
+
+/// One issue row, exact template (design section 8.2):
+/// `Line {line}: "{text}" - {reason}.`
+fn format_import_issue(issue: &ImportIssue) -> String {
+    format!(
+        "Line {}: \"{}\" - {}.",
+        issue.line,
+        truncate_issue_text(&issue.text),
+        issue.kind.reason()
+    )
+}
+
+/// Issues heading, singular/plural (design section 8.2).
+fn import_issues_heading(issue_count: usize) -> String {
+    if issue_count == 1 {
+        "1 line could not be imported:".to_string()
+    } else {
+        format!("{issue_count} lines could not be imported:")
+    }
+}
+
+/// Overflow disclosure when more issues exist than are shown
+/// (design section 8.2).
+fn import_issues_overflow_label(remaining: usize) -> String {
+    if remaining == 1 {
+        "...and 1 more line that could not be imported. Fix the lines above and import again to see the rest.".to_string()
+    } else {
+        format!("...and {remaining} more lines that could not be imported. Fix the lines above and import again to see the rest.")
+    }
+}
+
+/// Imported-fitting summary line (design section 8.2).
+fn imported_summary_line(fitting: &ImportedFitting) -> String {
+    format!(
+        "Imported \"{}\" ({}): {} items from {} lines.",
+        fitting_display_name(&fitting.name),
+        fitting.ship_name,
+        fitting.items.len(),
+        fitting.report.imported_lines
+    )
+}
+
+/// Empty-slot-marker note, or `None` when there were none.
+fn placeholder_note(placeholder_lines: usize) -> Option<String> {
+    if placeholder_lines == 0 {
+        None
+    } else if placeholder_lines == 1 {
+        Some("1 empty-slot marker ignored.".to_string())
+    } else {
+        Some(format!("{placeholder_lines} empty-slot markers ignored."))
+    }
+}
+
+/// Loaded-charge disclosure, or `None` when there were none.
+fn charges_note(charges_noted: usize) -> Option<String> {
+    if charges_noted == 0 {
+        None
+    } else if charges_noted == 1 {
+        Some("1 loaded charge is listed below the items. It is not included when you copy this fitting as EFT.".to_string())
+    } else {
+        Some(format!("{charges_noted} loaded charges are listed below the items. They are not included when you copy this fitting as EFT."))
+    }
+}
+
+/// Copy status message for the imported fitting (design section 8.2).
+fn copy_imported_status_message(display_name: &str, charges_noted: usize) -> String {
+    if charges_noted == 0 {
+        format!("Copied \"{display_name}\" as EFT")
+    } else if charges_noted == 1 {
+        format!("Copied \"{display_name}\" as EFT (1 loaded charge left out: copied EFT fittings do not store loaded charges)")
+    } else {
+        format!("Copied \"{display_name}\" as EFT ({charges_noted} loaded charges left out: copied EFT fittings do not store loaded charges)")
+    }
+}
+
+/// Item-section rendering shared by the saved fitting detail and the
+/// imported fitting detail (design section 6.2). The empty-fitting
+/// sentence stays at the callers.
+fn render_fitting_items(ui: &mut egui::Ui, item_rows: &[FittingItemRow]) {
+    for section in SECTION_ORDER {
+        let in_section: Vec<&FittingItemRow> =
+            item_rows.iter().filter(|r| r.section == section).collect();
+        if in_section.is_empty() {
+            continue;
+        }
+        ui.heading(section_label(section));
+        let shown = in_section.len().min(FITTINGS_RENDER_MAX);
+        if in_section.len() > FITTINGS_RENDER_MAX {
+            ui.label(format!("Showing {shown} of {} items.", in_section.len()));
+        }
+        let is_slot = matches!(
+            section,
+            FittingSection::Low
+                | FittingSection::Medium
+                | FittingSection::High
+                | FittingSection::Rig
+                | FittingSection::Subsystem
+        );
+        for row in in_section.iter().take(FITTINGS_RENDER_MAX) {
+            if is_slot && row.quantity == 1 {
+                ui.label(&row.type_name);
+            } else {
+                ui.label(format!("{} x{}", row.type_name, row.quantity));
+            }
+        }
+    }
+}
+
+/// The EFT import panel: paste box, Import/Clear/sample actions, the
+/// fatal error, and the imported fitting with its honest parse report.
+/// Reachable without the fittings read scope (design section 8.2):
+/// `show` calls it before the `LoadState` match. Logs counts only,
+/// never pasted text.
+fn fittings_import_panel(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    fitting_types: Option<&FittingTypes>,
+) {
+    ui.heading("Import a fitting from EFT text");
+    ui.label("Paste an EFT block (the [Ship, Fitting name] text format). The imported fitting stays in Mimir on this device: it is not saved to EVE and is gone when you switch characters or close Mimir.");
+    let Some(catalogue) = fitting_types else {
+        ui.label("Could not import: Mimir's bundled item data failed to load. Restart Mimir and try again.");
+        return;
+    };
+    let response = ui.add(
+        egui::TextEdit::multiline(&mut state.fittings_import_text)
+            .hint_text("Paste EFT text: [Ship, Fitting name] then one item per line")
+            .desired_rows(8)
+            .desired_width(f32::INFINITY),
+    );
+    state.text_input_focused |= response.has_focus();
+    let import_enabled = !state.fittings_import_text.trim().is_empty();
+    let clear_enabled = !state.fittings_import_text.is_empty()
+        || state.fittings_imported.is_some()
+        || state.fittings_import_error.is_some();
+    ui.horizontal(|ui| {
+        if ui
+            .add_enabled(import_enabled, egui::Button::new("Import fitting"))
+            .clicked()
+        {
+            let text = state.fittings_import_text.clone();
+            tracing::info!(
+                "[FITTING] import requested bytes={} lines={}",
+                text.len(),
+                text.lines().count()
+            );
+            match parse_eft(&text, catalogue) {
+                EftImportOutcome::Imported(fitting) => {
+                    tracing::info!(
+                        "[FITTING] import complete items={} issues={} placeholders={} charges={}",
+                        fitting.items.len(),
+                        fitting.report.issues.len(),
+                        fitting.report.placeholder_lines,
+                        fitting.report.charges_noted
+                    );
+                    state.fittings_imported = Some(fitting);
+                    state.fittings_import_error = None;
+                    state.fittings_import_owner = state.active_character_id;
+                }
+                EftImportOutcome::Failed(fatal) => {
+                    tracing::info!("[FITTING] import failed fatal={fatal:?}");
+                    state.fittings_imported = None;
+                    state.fittings_import_error = Some(fatal.message().to_string());
+                    state.fittings_import_owner = state.active_character_id;
+                }
+            }
+        }
+        if ui
+            .add_enabled(clear_enabled, egui::Button::new("Clear import"))
+            .clicked()
+        {
+            tracing::debug!("[FITTING] import cleared");
+            state.fittings_import_text.clear();
+            state.fittings_imported = None;
+            state.fittings_import_error = None;
+            state.fittings_import_owner = None;
+        }
+        if state.demo && ui.button("Use sample EFT").clicked() {
+            tracing::debug!("[FITTING] demo sample EFT loaded");
+            state.fittings_import_text = DEMO_SAMPLE_EFT.to_string();
+            state.fittings_imported = None;
+            state.fittings_import_error = None;
+            state.fittings_import_owner = None;
+        }
+    });
+    if let Some(error) = state.fittings_import_error.clone() {
+        ui.label(error);
+    }
+    // Render guard (design section 8.1): the imported detail renders only
+    // for the character it was imported for. The resets make this an
+    // invariant; the check is defense-in-depth.
+    let owner_ok = state.fittings_import_owner.is_some()
+        && state.fittings_import_owner == state.active_character_id;
+    if !owner_ok {
+        return;
+    }
+    let Some(imported) = state.fittings_imported.clone() else {
+        return;
+    };
+    ui.label(imported_summary_line(&imported));
+    ui.label("Imported fitting (not saved in EVE)");
+    if let Some(note) = placeholder_note(imported.report.placeholder_lines) {
+        ui.label(note);
+    }
+    if let Some(note) = charges_note(imported.report.charges_noted) {
+        ui.label(note);
+    }
+    let synth = imported.to_character_fitting();
+    let local_resolver = imported.name_resolver();
+    let item_rows = fitting_item_rows(&synth, &local_resolver);
+    if item_rows.is_empty() {
+        ui.label("This fitting has no items to show.");
+    } else {
+        render_fitting_items(ui, &item_rows);
+    }
+    // Loaded charges, in item order (design section 8.2).
+    let charged_total = imported
+        .items
+        .iter()
+        .filter(|item| item.charge.is_some())
+        .count();
+    if charged_total > 0 {
+        ui.heading("Loaded charges");
+        let shown = charged_total.min(FITTINGS_RENDER_MAX);
+        if charged_total > FITTINGS_RENDER_MAX {
+            ui.label(format!("Showing {shown} of {} items.", charged_total));
+        }
+        let mut rendered = 0;
+        for item in &imported.items {
+            if rendered >= FITTINGS_RENDER_MAX {
+                break;
+            }
+            if let Some(charge) = &item.charge {
+                ui.label(format!("{} - {}", item.name, charge.name));
+                rendered += 1;
+            }
+        }
+    }
+    let issues = &imported.report.issues;
+    if !issues.is_empty() {
+        ui.heading(import_issues_heading(issues.len()));
+        let shown = issues.len().min(IMPORT_ISSUES_RENDER_MAX);
+        for issue in issues.iter().take(shown) {
+            ui.label(format_import_issue(issue));
+        }
+        if issues.len() > IMPORT_ISSUES_RENDER_MAX {
+            ui.label(import_issues_overflow_label(issues.len() - shown));
+        }
+    }
+    if ui.button("Copy imported fitting as EFT").clicked() {
+        match fitting_to_eft(&synth, &local_resolver) {
+            None => {
+                tracing::warn!("[FITTING] copy imported fitting blocked ship not resolved");
+                state.status_message = "That fitting cannot be copied yet: its ship name has not loaded. Refresh and try again.".to_string();
+            }
+            Some(export) => {
+                let line_count = export.text.lines().count();
+                tracing::info!(
+                    "[FITTING] copied imported fitting lines={} skipped_unknown={} skipped_empty={} charges_left_out={}",
+                    line_count,
+                    export.skipped_unknown,
+                    export.skipped_empty,
+                    imported.report.charges_noted
+                );
+                ui.ctx().copy_text(export.text.clone());
+                let display_name = fitting_display_name(&imported.name);
+                state.status_message =
+                    copy_imported_status_message(&display_name, imported.report.charges_noted);
+            }
+        }
+    }
+}
+
+pub fn show(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    resolver: &NameResolver,
+    fitting_types: Option<&FittingTypes>,
+) {
     ui.heading("Fittings");
     widgets::mode_notice(ui, state.demo, state.offline);
     if state.active_character().is_none() {
         widgets::no_character_panel(ui);
         return;
     }
+    // Import needs no ESI read scope: render it before the LoadState
+    // match so it works while saved fittings load, fail, or await a
+    // step-up grant (design section 8.2).
+    fittings_import_panel(ui, state, fitting_types);
+    ui.separator();
     let snapshot: LoadState<FittingsData> = state.fittings.clone();
     match snapshot {
         LoadState::Loading => widgets::loading_panel(ui, "Loading fittings data..."),
@@ -542,33 +867,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
                     if item_rows.is_empty() {
                         ui.label("This fitting has no items to show.");
                     } else {
-                        for section in SECTION_ORDER {
-                            let in_section: Vec<&FittingItemRow> =
-                                item_rows.iter().filter(|r| r.section == section).collect();
-                            if in_section.is_empty() {
-                                continue;
-                            }
-                            ui.heading(section_label(section));
-                            let shown = in_section.len().min(FITTINGS_RENDER_MAX);
-                            if in_section.len() > FITTINGS_RENDER_MAX {
-                                ui.label(format!("Showing {shown} of {} items.", in_section.len()));
-                            }
-                            let is_slot = matches!(
-                                section,
-                                FittingSection::Low
-                                    | FittingSection::Medium
-                                    | FittingSection::High
-                                    | FittingSection::Rig
-                                    | FittingSection::Subsystem
-                            );
-                            for row in in_section.iter().take(FITTINGS_RENDER_MAX) {
-                                if is_slot && row.quantity == 1 {
-                                    ui.label(&row.type_name);
-                                } else {
-                                    ui.label(format!("{} x{}", row.type_name, row.quantity));
-                                }
-                            }
-                        }
+                        render_fitting_items(ui, &item_rows);
                     }
                     if ui.button("Copy as EFT").clicked() {
                         tracing::info!(
@@ -617,6 +916,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
 mod tests {
     use super::*;
     use crate::esi::models::FittingItem;
+    use crate::fitting::eft::{ImportIssueKind, ImportReport};
 
     fn test_resolver() -> NameResolver {
         let mut r = NameResolver::new();
@@ -1046,5 +1346,149 @@ mod tests {
         // Cap is enforced at render time, not in builder; builder returns all rows.
         // The cap constant usage is verified by clippy and view code.
         assert_eq!(rows.len().min(FITTINGS_RENDER_MAX), 100);
+    }
+
+    #[test]
+    fn import_issue_row_matches_locked_template() {
+        let issue = ImportIssue {
+            line: 3,
+            text: "Nope".to_string(),
+            kind: ImportIssueKind::UnknownName,
+        };
+        assert_eq!(
+            format_import_issue(&issue),
+            "Line 3: \"Nope\" - no item in Mimir's bundled data has this exact name."
+        );
+    }
+
+    #[test]
+    fn import_issue_text_truncates_at_120_chars() {
+        let long = "a".repeat(200);
+        assert_eq!(
+            truncate_issue_text(&long),
+            format!("{}...", "a".repeat(120))
+        );
+        let exact = "b".repeat(120);
+        assert_eq!(truncate_issue_text(&exact), exact);
+        let over = "c".repeat(121);
+        assert_eq!(
+            truncate_issue_text(&over),
+            format!("{}...", "c".repeat(120))
+        );
+        // Truncation counts characters, not bytes.
+        let unicode = "é".repeat(200);
+        assert_eq!(
+            truncate_issue_text(&unicode),
+            format!("{}...", "é".repeat(120))
+        );
+        assert_eq!(truncate_issue_text("short"), "short");
+    }
+
+    #[test]
+    fn import_issues_heading_singular_and_plural() {
+        assert_eq!(import_issues_heading(1), "1 line could not be imported:");
+        assert_eq!(import_issues_heading(2), "2 lines could not be imported:");
+        assert_eq!(import_issues_heading(25), "25 lines could not be imported:");
+    }
+
+    #[test]
+    fn import_issues_overflow_label_singular_and_plural() {
+        assert_eq!(IMPORT_ISSUES_RENDER_MAX, 20);
+        // 25 issues: 20 shown, 5 disclosed.
+        let remaining = 25 - 25.min(IMPORT_ISSUES_RENDER_MAX);
+        assert_eq!(remaining, 5);
+        assert_eq!(
+            import_issues_overflow_label(remaining),
+            "...and 5 more lines that could not be imported. Fix the lines above and import again to see the rest."
+        );
+        assert_eq!(
+            import_issues_overflow_label(1),
+            "...and 1 more line that could not be imported. Fix the lines above and import again to see the rest."
+        );
+    }
+
+    #[test]
+    fn import_summary_notes_and_copy_status() {
+        let fitting = ImportedFitting {
+            name: "Sample Brawler".to_string(),
+            ship_type_id: 587,
+            ship_name: "Rifter".to_string(),
+            items: Vec::new(),
+            report: ImportReport {
+                imported_lines: 7,
+                placeholder_lines: 1,
+                charges_noted: 0,
+                issues: Vec::new(),
+            },
+        };
+        assert_eq!(
+            imported_summary_line(&fitting),
+            "Imported \"Sample Brawler\" (Rifter): 0 items from 7 lines."
+        );
+        assert_eq!(
+            placeholder_note(1).as_deref(),
+            Some("1 empty-slot marker ignored.")
+        );
+        assert_eq!(
+            placeholder_note(3).as_deref(),
+            Some("3 empty-slot markers ignored.")
+        );
+        assert_eq!(placeholder_note(0), None);
+        assert_eq!(charges_note(0), None);
+        assert_eq!(
+            charges_note(1).as_deref(),
+            Some("1 loaded charge is listed below the items. It is not included when you copy this fitting as EFT.")
+        );
+        assert_eq!(
+            charges_note(2).as_deref(),
+            Some("2 loaded charges are listed below the items. They are not included when you copy this fitting as EFT.")
+        );
+        assert_eq!(
+            copy_imported_status_message("Sample Brawler", 0),
+            "Copied \"Sample Brawler\" as EFT"
+        );
+        assert_eq!(
+            copy_imported_status_message("Sample Brawler", 1),
+            "Copied \"Sample Brawler\" as EFT (1 loaded charge left out: copied EFT fittings do not store loaded charges)"
+        );
+        assert_eq!(
+            copy_imported_status_message("Sample Brawler", 2),
+            "Copied \"Sample Brawler\" as EFT (2 loaded charges left out: copied EFT fittings do not store loaded charges)"
+        );
+    }
+
+    #[test]
+    fn demo_sample_parses_with_one_placeholder_and_one_charge() {
+        let types = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        match parse_eft(DEMO_SAMPLE_EFT, &types) {
+            EftImportOutcome::Imported(fitting) => {
+                assert!(fitting.report.issues.is_empty());
+                assert_eq!(fitting.report.placeholder_lines, 1);
+                assert_eq!(fitting.report.charges_noted, 1);
+                assert_eq!(fitting.report.imported_lines, 11);
+            }
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
+        }
+    }
+
+    #[test]
+    fn demo_sample_round_trips_through_exporter_with_zero_skips() {
+        let types = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let fitting = match parse_eft(DEMO_SAMPLE_EFT, &types) {
+            EftImportOutcome::Imported(fitting) => fitting,
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
+        };
+        let synth = fitting.to_character_fitting();
+        let resolver = fitting.name_resolver();
+        let export = fitting_to_eft(&synth, &resolver).expect("export");
+        assert_eq!(export.skipped_unknown, 0);
+        assert_eq!(export.skipped_empty, 0);
+        // The copy re-imports cleanly (the stored charge was display-only).
+        match parse_eft(&export.text, &types) {
+            EftImportOutcome::Imported(reimported) => {
+                assert!(reimported.report.issues.is_empty());
+            }
+            EftImportOutcome::Failed(fatal) => panic!("re-import must succeed, got {fatal:?}"),
+        }
     }
 }
