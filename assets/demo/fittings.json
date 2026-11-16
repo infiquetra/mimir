@@ -1,0 +1,57 @@
+{
+  "90000001": {
+    "fittings": [
+      {
+        "fitting_id": 1,
+        "name": "Demo Brawler",
+        "description": "Sample close-range fit",
+        "ship_type_id": 587,
+        "items": [
+          { "flag": "LoSlot0", "quantity": 1, "type_id": 2048 },
+          { "flag": "MedSlot0", "quantity": 1, "type_id": 2049 },
+          { "flag": "MedSlot1", "quantity": 1, "type_id": 1225 },
+          { "flag": "HiSlot0", "quantity": 1, "type_id": 2050 },
+          { "flag": "HiSlot1", "quantity": 1, "type_id": 2050 },
+          { "flag": "RigSlot0", "quantity": 1, "type_id": 1535 },
+          { "flag": "SubSystemSlot0", "quantity": 1, "type_id": 28270 },
+          { "flag": "DroneBay", "quantity": 5, "type_id": 2456 },
+          { "flag": "FighterBay", "quantity": 2, "type_id": 2457 },
+          { "flag": "Cargo", "quantity": 500, "type_id": 34 },
+          { "flag": "Cargo", "quantity": 200, "type_id": 636 },
+          { "flag": "Invalid", "quantity": 2, "type_id": 35 }
+        ]
+      },
+      {
+        "fitting_id": 2,
+        "name": "Mission Runner",
+        "description": null,
+        "ship_type_id": 587,
+        "items": [
+          { "flag": "HiSlot0", "quantity": 1, "type_id": 2048 },
+          { "flag": "LoSlot0", "quantity": 1, "type_id": 2049 },
+          { "flag": "DroneBay", "quantity": 3, "type_id": 2456 },
+          { "flag": "Cargo", "quantity": 10, "type_id": 37 }
+        ]
+      }
+    ],
+    "selected_fitting_id": 1
+  },
+  "90000002": {
+    "fittings": [
+      {
+        "fitting_id": 10,
+        "name": "Demo Runner",
+        "description": "Patrol and courier fit",
+        "ship_type_id": 597,
+        "items": [
+          { "flag": "LoSlot0", "quantity": 1, "type_id": 2048 },
+          { "flag": "HiSlot0", "quantity": 1, "type_id": 2050 },
+          { "flag": "MedSlot0", "quantity": 1, "type_id": 1225 },
+          { "flag": "DroneBay", "quantity": 3, "type_id": 2456 },
+          { "flag": "Cargo", "quantity": 20, "type_id": 36 }
+        ]
+      }
+    ],
+    "selected_fitting_id": 10
+  }
+}

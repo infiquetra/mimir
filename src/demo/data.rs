@@ -11,9 +11,9 @@ use chrono::{DateTime, Utc};
 
 use crate::app::state::{
     market_region_name, ship_display_name, summary_location_name, AppState, AssetsData,
-    BlueprintsData, CharacterDetailData, CharacterOrdersData, CharacterSummary, IndustryData,
-    IndustryJobsData, LoadState, MarketData, MarketSelection, PlanetSelection, PlanetaryData,
-    PublicOrdersData, SelectedColonyDetail, SkillsData, WalletData,
+    BlueprintsData, CharacterDetailData, CharacterOrdersData, CharacterSummary, FittingsData,
+    IndustryData, IndustryJobsData, LoadState, MarketData, MarketSelection, PlanetSelection,
+    PlanetaryData, PublicOrdersData, SelectedColonyDetail, SkillsData, WalletData,
 };
 use crate::error::{AppError, AppResult};
 use crate::esi::models::*;
@@ -34,6 +34,7 @@ pub const DEMO_CHARACTER_DETAIL_JSON: &str =
 pub const DEMO_MARKET_JSON: &str = include_str!("../../assets/demo/market.json");
 pub const DEMO_INDUSTRY_JSON: &str = include_str!("../../assets/demo/industry.json");
 pub const DEMO_PLANETS_JSON: &str = include_str!("../../assets/demo/planets.json");
+pub const DEMO_FITTINGS_JSON: &str = include_str!("../../assets/demo/fittings.json");
 
 /// Command-line flag that selects demo mode (design section 1).
 pub const DEMO_FLAG: &str = "--demo";
@@ -118,6 +119,16 @@ pub struct DemoPlanetaryData {
     pub details: HashMap<i64, PlanetColonyDetail>,
 }
 
+/// One demo character's fittings fixture: the fittings list and the
+/// pre-selected fitting. Demo seeding composes a `FittingsData`
+/// from this with the list Ok, so this is deliberately not
+/// `FittingsData`.
+#[derive(Debug, Clone, Default)]
+pub struct DemoFittingsData {
+    pub fittings: Vec<CharacterFitting>,
+    pub selected_fitting_id: Option<i64>,
+}
+
 /// Everything one demo character shows in the Phase-1 views.
 #[derive(Debug, Clone, Default)]
 pub struct DemoCharacterData {
@@ -133,6 +144,7 @@ pub struct DemoCharacterData {
     pub market: Option<DemoMarketData>,
     pub industry: Option<DemoIndustryData>,
     pub planets: Option<DemoPlanetaryData>,
+    pub fittings: Option<DemoFittingsData>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -244,6 +256,14 @@ struct PlanetsFileEntry {
     details: HashMap<String, PlanetColonyDetail>,
 }
 
+#[derive(serde::Deserialize, Default)]
+struct FittingsFileEntry {
+    #[serde(default)]
+    fittings: Vec<CharacterFitting>,
+    #[serde(default)]
+    selected_fitting_id: Option<i64>,
+}
+
 fn parse_character_key(key: &str) -> AppResult<i64> {
     key.parse::<i64>().map_err(|_| {
         AppError::Message(format!(
@@ -353,7 +373,9 @@ pub fn load_demo_bundle_with_industry(
 
 /// Parse a bundle including assets, character detail, market, the
 /// industry file, and the planets file. A `"{}"` planets text
-/// yields `planets: None` everywhere.
+/// yields `planets: None` everywhere. Kept with its original
+/// meaning — no fittings — so eight-argument callers keep working
+/// unchanged (`fittings: None` for everyone).
 #[allow(clippy::too_many_arguments)]
 pub fn load_demo_bundle_with_planets(
     characters_json: &str,
@@ -365,6 +387,34 @@ pub fn load_demo_bundle_with_planets(
     industry_json: &str,
     planets_json: &str,
 ) -> AppResult<DemoBundle> {
+    load_demo_bundle_with_fittings(
+        characters_json,
+        skillqueue_json,
+        wallet_json,
+        assets_json,
+        character_detail_json,
+        market_json,
+        industry_json,
+        planets_json,
+        "{}",
+    )
+}
+
+/// Parse a bundle including assets, character detail, market, the
+/// industry file, the planets file, and the fittings file. A `"{}"`
+/// fittings text is valid and yields `fittings: None` everywhere.
+#[allow(clippy::too_many_arguments)]
+pub fn load_demo_bundle_with_fittings(
+    characters_json: &str,
+    skillqueue_json: &str,
+    wallet_json: &str,
+    assets_json: &str,
+    character_detail_json: &str,
+    market_json: &str,
+    industry_json: &str,
+    planets_json: &str,
+    fittings_json: &str,
+) -> AppResult<DemoBundle> {
     tracing::debug!("[DEMO] parsing demo bundle");
     let characters: CharactersFile = serde_json::from_str(characters_json)?;
     let skills_by_id: HashMap<String, SkillFileEntry> = serde_json::from_str(skillqueue_json)?;
@@ -375,6 +425,7 @@ pub fn load_demo_bundle_with_planets(
     let market_by_id: HashMap<String, MarketFileEntry> = serde_json::from_str(market_json)?;
     let industry_by_id: HashMap<String, IndustryFileEntry> = serde_json::from_str(industry_json)?;
     let planets_by_id: HashMap<String, PlanetsFileEntry> = serde_json::from_str(planets_json)?;
+    let fittings_by_id: HashMap<String, FittingsFileEntry> = serde_json::from_str(fittings_json)?;
 
     let mut data: HashMap<i64, DemoCharacterData> = HashMap::new();
     for (key, entry) in skills_by_id {
@@ -484,6 +535,20 @@ pub fn load_demo_bundle_with_planets(
         });
     }
 
+    for (key, entry) in fittings_by_id {
+        let id = parse_character_key(&key)?;
+        tracing::debug!(
+            "[DEMO] character_id={} fittings={}",
+            id,
+            entry.fittings.len()
+        );
+        let slot = data.entry(id).or_default();
+        slot.fittings = Some(DemoFittingsData {
+            fittings: entry.fittings,
+            selected_fitting_id: entry.selected_fitting_id,
+        });
+    }
+
     let bundle = DemoBundle {
         characters: characters.characters,
         data,
@@ -500,7 +565,7 @@ pub fn load_demo_bundle_with_planets(
 /// Load the bundled demo JSON files into typed structures.
 pub fn load_demo_bundle() -> AppResult<DemoBundle> {
     tracing::debug!("[DEMO] loading bundled demo fixtures");
-    load_demo_bundle_with_planets(
+    load_demo_bundle_with_fittings(
         DEMO_CHARACTERS_JSON,
         DEMO_SKILLQUEUE_JSON,
         DEMO_WALLET_JSON,
@@ -509,6 +574,7 @@ pub fn load_demo_bundle() -> AppResult<DemoBundle> {
         DEMO_MARKET_JSON,
         DEMO_INDUSTRY_JSON,
         DEMO_PLANETS_JSON,
+        DEMO_FITTINGS_JSON,
     )
 }
 
@@ -781,6 +847,45 @@ pub fn validate_bundle(bundle: &DemoBundle) -> AppResult<()> {
                             character.character_id, pin.pin_id
                         )));
                     }
+                }
+            }
+        }
+        // Fittings are optional the same way; validate only when
+        // present: unique fitting IDs, ship and item type IDs
+        // present in the demo name set, and a selected fitting
+        // among the list.
+        if let Some(fittings) = &per.fittings {
+            let demo_names: HashSet<i64> = load_demo_names()?.into_iter().map(|n| n.id).collect();
+            let mut fitting_ids = HashSet::new();
+            for fitting in &fittings.fittings {
+                if !fitting_ids.insert(fitting.fitting_id) {
+                    return Err(fail(format!(
+                        "character {} duplicate fitting_id {}",
+                        character.character_id, fitting.fitting_id
+                    )));
+                }
+                if !demo_names.contains(&fitting.ship_type_id) {
+                    return Err(fail(format!(
+                        "character {} fitting fitting_id {} ship_type_id {} not in demo names",
+                        character.character_id, fitting.fitting_id, fitting.ship_type_id
+                    )));
+                }
+                for item in &fitting.items {
+                    if !demo_names.contains(&item.type_id) {
+                        return Err(fail(format!(
+                            "character {} fitting fitting_id {} item type_id {} not in demo names",
+                            character.character_id, fitting.fitting_id, item.type_id
+                        )));
+                    }
+                }
+            }
+            if !fittings.fittings.is_empty() {
+                let selected = fittings.selected_fitting_id.unwrap_or(0);
+                if !fitting_ids.contains(&selected) {
+                    return Err(fail(format!(
+                        "character {} selected fitting is not among fittings",
+                        character.character_id
+                    )));
                 }
             }
         }
@@ -1138,6 +1243,29 @@ pub fn apply_character(state: &mut AppState, bundle: &DemoBundle, character_id: 
             state.planetary_selected_planet_id = None;
         }
     }
+    // Empty-if-absent fittings, same rule: a demo switch can never
+    // leave the previous character's fittings or selection
+    // installed. Search text is view-local and untouched.
+    tracing::debug!(
+        "[DEMO] apply_character character_id={} fittings_present={}",
+        character_id,
+        per.fittings.is_some()
+    );
+    match &per.fittings {
+        Some(fixture) => {
+            let selection = fixture
+                .selected_fitting_id
+                .filter(|sel| fixture.fittings.iter().any(|f| f.fitting_id == *sel));
+            state.fittings_selected_fitting_id = selection;
+            state.fittings = LoadState::Ready(FittingsData {
+                fittings: Ok(fixture.fittings.clone()),
+            });
+        }
+        None => {
+            state.fittings = LoadState::Empty;
+            state.fittings_selected_fitting_id = None;
+        }
+    }
 }
 
 /// Seed demo content into the UI state: both fictional characters, the
@@ -1238,6 +1366,7 @@ pub fn seed_demo_state(state: &mut AppState) {
             state.market = LoadState::Error(format!("Demo data failed to load: {e}"));
             state.industry = LoadState::Error(format!("Demo data failed to load: {e}"));
             state.planetary = LoadState::Error(format!("Demo data failed to load: {e}"));
+            state.fittings = LoadState::Error(format!("Demo data failed to load: {e}"));
         }
     }
 }
@@ -1556,6 +1685,7 @@ mod tests {
             assert!(per.market.is_none(), "old loader yields no market");
             assert!(per.industry.is_none(), "old loader yields no industry");
             assert!(per.planets.is_none(), "old loader yields no planets");
+            assert!(per.fittings.is_none(), "old loader yields no fittings");
         }
     }
 
@@ -1585,6 +1715,10 @@ mod tests {
             assert!(
                 per.planets.is_none(),
                 "four-argument loader yields no planets"
+            );
+            assert!(
+                per.fittings.is_none(),
+                "four-argument loader yields no fittings"
             );
         }
     }
@@ -2135,5 +2269,140 @@ mod tests {
         assert!(matches!(state.planetary, LoadState::Empty));
         assert_eq!(state.planetary_selected_planet_id, None);
         assert!(!state.planetary_detail_fetch_requested);
+    }
+
+    #[test]
+    fn bundled_fittings_load_for_both_characters_and_empty_text_is_none() {
+        let bundle = load_demo_bundle().expect("bundled bundle loads");
+        for character in &bundle.characters {
+            let fittings = bundle
+                .character_data(character.character_id)
+                .and_then(|per| per.fittings.as_ref())
+                .unwrap_or_else(|| panic!("demo fittings for {}", character.name));
+            assert!(
+                !fittings.fittings.is_empty(),
+                "fittings for {}",
+                character.name
+            );
+            let selected = fittings.selected_fitting_id.expect("selected fitting");
+            assert!(fittings.fittings.iter().any(|f| f.fitting_id == selected));
+            for fitting in &fittings.fittings {
+                assert!(fitting.ship_type_id > 0);
+                for _ in &fitting.items {}
+            }
+        }
+        // "{}" fittings text and every older arity yield no fittings.
+        let empty = load_demo_bundle_with_fittings(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+            DEMO_CHARACTER_DETAIL_JSON,
+            DEMO_MARKET_JSON,
+            DEMO_INDUSTRY_JSON,
+            DEMO_PLANETS_JSON,
+            "{}",
+        )
+        .expect("empty fittings text loads");
+        assert!(empty.data.values().all(|per| per.fittings.is_none()));
+        let planets_only = load_demo_bundle_with_planets(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+            DEMO_CHARACTER_DETAIL_JSON,
+            DEMO_MARKET_JSON,
+            DEMO_INDUSTRY_JSON,
+            DEMO_PLANETS_JSON,
+        )
+        .expect("eight-argument bundle loads");
+        assert!(planets_only.data.values().all(|per| per.fittings.is_none()));
+        // Non-numeric character key in the fittings file.
+        assert!(load_demo_bundle_with_fittings(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+            DEMO_CHARACTER_DETAIL_JSON,
+            DEMO_MARKET_JSON,
+            DEMO_INDUSTRY_JSON,
+            DEMO_PLANETS_JSON,
+            r#"{"nope":{}}"#
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn fittings_validation_rejects_bad_fixtures() {
+        fn mutate(bundle: &mut DemoBundle, f: impl FnOnce(&mut DemoFittingsData)) {
+            let first = bundle.first_character_id().expect("first character");
+            let per = bundle.data.get_mut(&first).expect("per-character data");
+            f(per.fittings.as_mut().expect("fittings present"));
+        }
+        let mut dupe = load_demo_bundle().expect("bundle");
+        mutate(&mut dupe, |f| {
+            let dupe = f.fittings[0].clone();
+            f.fittings.push(dupe);
+        });
+        assert!(validate_bundle(&dupe).is_err(), "duplicate fitting id");
+
+        let mut bad_ship = load_demo_bundle().expect("bundle");
+        mutate(&mut bad_ship, |f| f.fittings[0].ship_type_id = 424242);
+        assert!(
+            validate_bundle(&bad_ship).is_err(),
+            "ship not in demo names"
+        );
+
+        let mut bad_item = load_demo_bundle().expect("bundle");
+        mutate(&mut bad_item, |f| {
+            if let Some(first) = f.fittings[0].items.first_mut() {
+                first.type_id = 424242;
+            }
+        });
+        assert!(
+            validate_bundle(&bad_item).is_err(),
+            "item not in demo names"
+        );
+
+        let mut bad_selected = load_demo_bundle().expect("bundle");
+        mutate(&mut bad_selected, |f| f.selected_fitting_id = Some(999999));
+        assert!(
+            validate_bundle(&bad_selected).is_err(),
+            "selected not among fittings"
+        );
+    }
+
+    #[test]
+    fn apply_character_installs_fittings_and_fittingsless_empties() {
+        let bundle = load_demo_bundle().expect("bundled bundle loads");
+        let mut state = AppState::new(true);
+        apply_character(&mut state, &bundle, 90000001);
+        let aria_fittings = state.fittings.as_ready().expect("aria fittings ready");
+        let aria_list = aria_fittings.fittings.as_ref().expect("fittings ok");
+        assert_eq!(aria_list.len(), 2);
+        assert_eq!(state.fittings_selected_fitting_id, Some(1));
+        assert!(aria_list.iter().any(|f| f.fitting_id == 1));
+        apply_character(&mut state, &bundle, 90000002);
+        let marcus_fittings = state.fittings.as_ready().expect("marcus fittings ready");
+        let marcus_list = marcus_fittings.fittings.as_ref().expect("fittings ok");
+        assert_eq!(marcus_list.len(), 1);
+        assert_eq!(state.fittings_selected_fitting_id, Some(10));
+        assert!(marcus_list.iter().any(|f| f.fitting_id == 10));
+        // Switching never leaks previous character's fittings or selection:
+        // a fittings-less bundle empties the view and clears the selection.
+        let fittingsless = load_demo_bundle_with_planets(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+            DEMO_CHARACTER_DETAIL_JSON,
+            DEMO_MARKET_JSON,
+            DEMO_INDUSTRY_JSON,
+            DEMO_PLANETS_JSON,
+        )
+        .expect("fittingsless bundle loads");
+        apply_character(&mut state, &fittingsless, 90000002);
+        assert!(matches!(state.fittings, LoadState::Empty));
+        assert_eq!(state.fittings_selected_fitting_id, None);
     }
 }
