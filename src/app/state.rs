@@ -8,11 +8,13 @@
 //! stored in this struct.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::esi::models::*;
+use crate::names::exploration_ref::{EffectFamily, ExplorationRef};
 use crate::storage::repositories::CharacterRow;
 
-/// The ten views (keys 1-9 and 0 in the shell).
+/// The eleven views (keys 1-9, 0 and E in the shell).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum View {
     #[default]
@@ -26,10 +28,11 @@ pub enum View {
     Planets,
     Fittings,
     Settings,
+    Exploration,
 }
 
 impl View {
-    pub const ALL: [View; 10] = [
+    pub const ALL: [View; 11] = [
         View::Dashboard,
         View::Characters,
         View::Skills,
@@ -40,6 +43,7 @@ impl View {
         View::Planets,
         View::Fittings,
         View::Settings,
+        View::Exploration,
     ];
 
     pub fn label(&self) -> &'static str {
@@ -54,6 +58,7 @@ impl View {
             View::Planets => "Planets",
             View::Fittings => "Fittings",
             View::Settings => "Settings",
+            View::Exploration => "Exploration",
         }
     }
 
@@ -385,6 +390,74 @@ impl FittingsData {
     }
 }
 
+/// Bundled Exploration reference: the one offline catalogue for the
+/// Exploration view. It is character-independent static data loaded
+/// once at startup, so character switches and removals never clear
+/// it (locked in design section 7.1).
+#[derive(Debug, Clone)]
+pub struct ExplorationData {
+    /// Shared behind `Arc` so the view can hold the catalogue across
+    /// a frame without deep-cloning 2,631 systems every render.
+    pub reference: Arc<ExplorationRef>,
+}
+
+/// Which Exploration section is shown (design section 7.1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ExplorationSection {
+    #[default]
+    Types,
+    Systems,
+    Effects,
+}
+
+impl ExplorationSection {
+    pub const ALL: [ExplorationSection; 3] = [
+        ExplorationSection::Types,
+        ExplorationSection::Systems,
+        ExplorationSection::Effects,
+    ];
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            ExplorationSection::Types => "Types",
+            ExplorationSection::Systems => "Systems",
+            ExplorationSection::Effects => "Effects",
+        }
+    }
+}
+
+/// Wormhole destination filter chip (design section 7.1). `JSpace`
+/// matches the six J-space class labels `C1`..`C6`; the other
+/// variants match their `destination_label()` exactly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DestinationFilter {
+    Highsec,
+    Lowsec,
+    Nullsec,
+    Pochven,
+    JSpace,
+}
+
+impl DestinationFilter {
+    pub const ALL: [DestinationFilter; 5] = [
+        DestinationFilter::Highsec,
+        DestinationFilter::Lowsec,
+        DestinationFilter::Nullsec,
+        DestinationFilter::Pochven,
+        DestinationFilter::JSpace,
+    ];
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            DestinationFilter::Highsec => "Highsec",
+            DestinationFilter::Lowsec => "Lowsec",
+            DestinationFilter::Nullsec => "Nullsec",
+            DestinationFilter::Pochven => "Pochven",
+            DestinationFilter::JSpace => "J-space",
+        }
+    }
+}
+
 /// Blueprint library filter: every blueprint, originals only,
 /// or copies only. Classification is `runs == -1` (section 7.3).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -510,6 +583,7 @@ pub struct AppState {
     pub industry: LoadState<IndustryData>,
     pub planetary: LoadState<PlanetaryData>,
     pub fittings: LoadState<FittingsData>,
+    pub exploration: LoadState<ExplorationData>,
     pub log_lines: Vec<String>,
     pub status_message: String,
 
@@ -550,6 +624,19 @@ pub struct AppState {
     // View-local fittings UI state.
     pub fittings_search: String,
     pub fittings_selected_fitting_id: Option<i64>,
+    // View-local exploration UI state (design section 7.1). The
+    // bundled reference is character-independent static data, so
+    // character switches and removals never reset these fields or
+    // the loaded catalogue; selections use stable keys, never row
+    // indices.
+    pub exploration_search: String,
+    pub exploration_section: ExplorationSection,
+    pub exploration_destination: Option<DestinationFilter>,
+    pub exploration_capital_only: bool,
+    pub exploration_selected_code: Option<String>,
+    pub exploration_selected_system_id: Option<i64>,
+    pub exploration_selected_family: Option<EffectFamily>,
+    pub exploration_selected_strength: u8,
 
     // Request flags for the integrator to drain (set by views, never faked
     // as completed work). See the module comment.
@@ -572,6 +659,9 @@ impl AppState {
             // Explicit: `..Self::default()` would leave the region at
             // 0, outside the locked hub set.
             market_region_id: DEFAULT_MARKET_REGION_ID,
+            // Effect strength defaults to 1 (design section 7.1) and
+            // is clamped to 1..=6 by the view on every use.
+            exploration_selected_strength: 1,
             status_message: if demo {
                 "Demo mode: sample data, no network.".to_string()
             } else {
@@ -846,8 +936,14 @@ mod tests {
     #[test]
     fn view_navigation_wraps_and_indexes() {
         assert_eq!(View::Dashboard.next(), View::Characters);
-        assert_eq!(View::Settings.next(), View::Dashboard);
-        assert_eq!(View::Dashboard.previous(), View::Settings);
+        // Exploration is appended after Settings (design section 6.1):
+        // every index 0-9 is unchanged, Settings.next() is now
+        // Exploration and Exploration wraps back to Dashboard.
+        assert_eq!(View::Settings.next(), View::Exploration);
+        assert_eq!(View::Exploration.next(), View::Dashboard);
+        assert_eq!(View::Dashboard.previous(), View::Exploration);
+        assert_eq!(View::Exploration.previous(), View::Settings);
+        assert_eq!(View::ALL.len(), 11);
         assert_eq!(View::from_index(3), Some(View::Wallet));
         assert_eq!(View::from_index(4), Some(View::Assets));
         assert_eq!(View::from_index(5), Some(View::Market));
@@ -855,7 +951,8 @@ mod tests {
         assert_eq!(View::from_index(7), Some(View::Planets));
         assert_eq!(View::from_index(8), Some(View::Fittings));
         assert_eq!(View::from_index(9), Some(View::Settings));
-        assert_eq!(View::from_index(10), None);
+        assert_eq!(View::from_index(10), Some(View::Exploration));
+        assert_eq!(View::from_index(11), None);
         assert_eq!(View::Wallet.index(), 3);
         assert_eq!(View::Assets.index(), 4);
         assert_eq!(View::Market.index(), 5);
@@ -863,6 +960,7 @@ mod tests {
         assert_eq!(View::Planets.index(), 7);
         assert_eq!(View::Fittings.index(), 8);
         assert_eq!(View::Settings.index(), 9);
+        assert_eq!(View::Exploration.index(), 10);
         assert_eq!(View::Wallet.next(), View::Assets);
         assert_eq!(View::Assets.next(), View::Market);
         assert_eq!(View::Market.next(), View::Industry);
@@ -1545,6 +1643,80 @@ mod tests {
         assert!(state.characters.is_empty());
         assert!(matches!(state.fittings, LoadState::Empty));
         assert_eq!(state.fittings_selected_fitting_id, None);
+    }
+
+    #[test]
+    fn exploration_state_is_character_independent_and_never_cleared() {
+        // Design section 7.1: the bundled reference is static and
+        // character-independent, so switches and removals leave the
+        // loaded catalogue and view-local selections untouched. This
+        // is the deliberate opposite of the per-character bundles
+        // above.
+        let reference = ExplorationRef::load_bundled().expect("bundled loads");
+        let catalogue_len = reference.types.len();
+        let mut state = AppState::new(false);
+        assert!(matches!(state.exploration, LoadState::Loading));
+        assert_eq!(state.exploration_search, "");
+        assert_eq!(state.exploration_section, ExplorationSection::Types);
+        assert_eq!(state.exploration_destination, None);
+        assert!(!state.exploration_capital_only);
+        assert_eq!(state.exploration_selected_code, None);
+        assert_eq!(state.exploration_selected_system_id, None);
+        assert_eq!(state.exploration_selected_family, None);
+        assert_eq!(
+            state.exploration_selected_strength, 1,
+            "effect strength defaults to 1"
+        );
+        assert_eq!(ExplorationSection::Types.label(), "Types");
+        assert_eq!(ExplorationSection::Effects.label(), "Effects");
+        assert_eq!(DestinationFilter::Highsec.label(), "Highsec");
+        assert_eq!(DestinationFilter::JSpace.label(), "J-space");
+        state.exploration = LoadState::Ready(ExplorationData {
+            reference: Arc::new(reference),
+        });
+        state.exploration_search = "B274".to_string();
+        state.exploration_section = ExplorationSection::Systems;
+        state.exploration_destination = Some(DestinationFilter::Pochven);
+        state.exploration_capital_only = true;
+        state.exploration_selected_code = Some("B274".to_string());
+        state.exploration_selected_system_id = Some(31000005);
+        state.exploration_selected_family = Some(EffectFamily::WolfRayet);
+        state.exploration_selected_strength = 6;
+        state.characters = vec![row(1, "One"), row(2, "Two"), row(3, "Three")];
+        state.set_active_character(1);
+        // Switching characters never touches exploration.
+        state.set_active_character(2);
+        let kept = state.exploration.as_ready().expect("keeps catalogue");
+        assert_eq!(kept.reference.types.len(), catalogue_len);
+        assert_eq!(state.exploration_search, "B274");
+        assert_eq!(state.exploration_section, ExplorationSection::Systems);
+        assert_eq!(
+            state.exploration_destination,
+            Some(DestinationFilter::Pochven)
+        );
+        assert!(state.exploration_capital_only);
+        assert_eq!(state.exploration_selected_code.as_deref(), Some("B274"));
+        assert_eq!(state.exploration_selected_system_id, Some(31000005));
+        assert_eq!(
+            state.exploration_selected_family,
+            Some(EffectFamily::WolfRayet)
+        );
+        assert_eq!(state.exploration_selected_strength, 6);
+        // Removing a non-active character never touches it either.
+        state.remove_character(3);
+        assert!(state.exploration.is_ready());
+        // Removing the active character never touches it.
+        state.remove_character(2);
+        assert_eq!(state.active_character_id, Some(1));
+        let after_remove = state.exploration.as_ready().expect("keeps catalogue");
+        assert_eq!(after_remove.reference.types.len(), catalogue_len);
+        assert_eq!(state.exploration_search, "B274");
+        // Removing the last character does not empty it either
+        // (no LoadState::Empty flip for this view).
+        state.remove_character(1);
+        assert!(state.characters.is_empty());
+        assert!(state.exploration.is_ready());
+        assert_eq!(state.exploration_search, "B274");
     }
 
     #[test]

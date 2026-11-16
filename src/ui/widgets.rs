@@ -142,8 +142,11 @@ pub fn empty_panel(ui: &mut egui::Ui, label: &str) {
     ui.label(label);
 }
 
+/// Plain error panel with no Retry button, for failures nothing can
+/// retry (for example bundled data that failed validation).
 pub fn error_panel(ui: &mut egui::Ui, message: &str) {
-    let _ = error_panel_with_retry(ui, message);
+    tracing::debug!("[UI] error panel without retry shown");
+    ui.colored_label(egui::Color32::LIGHT_RED, message);
 }
 
 /// Error panel whose Retry button reports the click back to the caller so
@@ -160,7 +163,7 @@ pub fn error_panel_with_retry(ui: &mut egui::Ui, message: &str) -> bool {
 pub fn no_character_panel(ui: &mut egui::Ui) {
     ui.heading("No character selected");
     ui.label("Add a character with EVE SSO, or try the offline demo.");
-    ui.label("Keys: 1-9, 0 switch views, PageUp/PageDown switch character.");
+    ui.label("Keys: 1-9, 0, E switch views, PageUp/PageDown switch character.");
 }
 
 /// Demo/offline notice shown at the top of data views.

@@ -7,10 +7,10 @@ use std::time::Duration;
 
 use super::state::{
     ship_display_name, summary_location_name, AppState, AssetsData, AuthState, BlueprintsData,
-    CharacterDetailData, CharacterOrdersData, CharacterSummary, FittingsData, IndustryData,
-    IndustryJobsData, LoadState, MarketData, MarketSelection, PlanetSelection, PlanetaryData,
-    PublicOrdersData, SectionError, SectionResult, SelectedColonyDetail, SkillsData, StepUpRequest,
-    View, WalletData,
+    CharacterDetailData, CharacterOrdersData, CharacterSummary, ExplorationData, FittingsData,
+    IndustryData, IndustryJobsData, LoadState, MarketData, MarketSelection, PlanetSelection,
+    PlanetaryData, PublicOrdersData, SectionError, SectionResult, SelectedColonyDetail, SkillsData,
+    StepUpRequest, View, WalletData,
 };
 use crate::auth::callback_server::CallbackServer;
 use crate::auth::jwt_verify::JwtVerifier;
@@ -24,6 +24,7 @@ use crate::esi::models::{
     PlanetColonyDetail, Skill, SkillQueueItem, UniverseName, WalletJournalItem,
     WalletTransactionItem,
 };
+use crate::names::exploration_ref::ExplorationRef;
 use crate::names::resolver::NameResolver;
 use crate::names::sde::Sde;
 use crate::storage::repositories::{self, CharacterRow, TokenMetaRow};
@@ -194,6 +195,74 @@ fn market_lookup_is_current(state: &AppState, generation: u64, query: &str) -> b
     generation == state.market_generation && query == state.market_search.trim()
 }
 
+/// Rail key hint per view (exploration design section 6.2): indices
+/// 0-8 keep digits 1-9, Settings (index 9) keeps 0, and the eleventh
+/// view takes the mnemonic letter E. Deriving the digit from
+/// `(idx + 1) % 10` would print "1" for Exploration, colliding with
+/// Dashboard, so the hint comes from the view itself.
+fn view_key_hint(view: View) -> &'static str {
+    match view {
+        View::Dashboard => "1",
+        View::Characters => "2",
+        View::Skills => "3",
+        View::Wallet => "4",
+        View::Assets => "5",
+        View::Market => "6",
+        View::Industry => "7",
+        View::Planets => "8",
+        View::Fittings => "9",
+        View::Settings => "0",
+        View::Exploration => "E",
+    }
+}
+
+/// Restore a persisted `startup_view` label (design section 6.4): the
+/// saved string is matched against `View::label()` values, so the
+/// appended "Exploration" label can never reinterpret a label saved
+/// before it existed; an unknown label falls back to Dashboard.
+fn view_for_startup_label(saved: &str) -> View {
+    View::ALL
+        .iter()
+        .find(|v| v.label() == saved)
+        .copied()
+        .unwrap_or(View::Dashboard)
+}
+
+/// One-time startup load of the bundled Exploration reference
+/// (design sections 5.2 and 9): success stores the validated
+/// catalogue and logs its counts once; any failure becomes the
+/// whole-view error state with the fixed section 8.4 sentence.
+/// Unlike the Sde load there is no empty-default fallback: an empty
+/// reference presented as valid data is exactly the failure this
+/// slice forbids. Demo and live modes both take this path, so demo
+/// routing stays zero-network and the catalogue is identical.
+fn exploration_load_state(
+    result: crate::error::AppResult<ExplorationRef>,
+) -> LoadState<ExplorationData> {
+    match result {
+        Ok(reference) => {
+            tracing::info!(
+                "[EXPLORE] bundled exploration reference loaded sde_build={} types={} systems={} effects={} statics={}",
+                reference.manifest.sde_build,
+                reference.types.len(),
+                reference.systems.len(),
+                reference.effects.len(),
+                reference.statics.len()
+            );
+            LoadState::Ready(ExplorationData {
+                reference: Arc::new(reference),
+            })
+        }
+        Err(e) => {
+            tracing::warn!(
+                "[EXPLORE] bundled exploration reference failed to load: {}",
+                e
+            );
+            LoadState::Error(crate::ui::exploration::EXPLORATION_ERROR.to_string())
+        }
+    }
+}
+
 /// Fill skills/wallet/summary state from the last persisted refresh so a
 /// live launch renders cached data before (or without) network access.
 fn load_cached_state(
@@ -328,6 +397,10 @@ impl MimirApp {
         });
         let (tx, rx) = std::sync::mpsc::channel();
         let mut state = AppState::new(demo);
+        // Bundled offline reference, loaded exactly once (design
+        // section 9): identical in demo and live modes, never
+        // refetched, and independent of characters and network.
+        state.exploration = exploration_load_state(ExplorationRef::load_bundled());
         let mut resolver = if demo {
             crate::demo::data::demo_resolver().unwrap_or_else(|e| {
                 tracing::warn!("[DEMO] demo resolver failed: {}", e);
@@ -391,11 +464,10 @@ impl MimirApp {
                 }
                 if let Ok(Some(saved)) = repositories::get_setting(&conn, "startup_view") {
                     persisted_startup_view = Some(saved.clone());
-                    if let Some(view) = View::ALL.iter().find(|v| v.label() == saved) {
-                        tracing::info!("[STARTUP] applying saved startup view {}", saved);
-                        state.startup_view = *view;
-                        state.view = *view;
-                    }
+                    let view = view_for_startup_label(&saved);
+                    tracing::info!("[STARTUP] applying saved startup view {}", saved);
+                    state.startup_view = view;
+                    state.view = view;
                 }
             }
             resolver.attach(b.esi.clone(), b.db.clone());
@@ -2197,6 +2269,12 @@ impl MimirApp {
             if i.key_pressed(egui::Key::Num0) && !i.modifiers.command && !i.modifiers.ctrl {
                 actions.switch_view = View::from_index(9);
             }
+            // Eleventh view (Exploration, index 10): every digit is
+            // taken, so it takes the mnemonic letter E under the same
+            // typing/modifier guards (exploration design section 6.2).
+            if i.key_pressed(egui::Key::E) && !i.modifiers.command && !i.modifiers.ctrl {
+                actions.switch_view = Some(View::Exploration);
+            }
             if i.key_pressed(egui::Key::PageDown) {
                 actions.cycle_character = 1;
             }
@@ -2338,11 +2416,14 @@ impl eframe::App for MimirApp {
                 ui.label("PageUp/PageDown switches character.");
             }
             ui.separator();
-            ui.heading("Views (keys 1-9, 0)");
-            for (idx, view) in View::ALL.iter().enumerate() {
+            ui.heading("Views (keys 1-9, 0, E)");
+            for view in View::ALL.iter() {
                 let selected = self.state.view == *view;
                 if ui
-                    .selectable_label(selected, format!("{} {}", (idx + 1) % 10, view.label()))
+                    .selectable_label(
+                        selected,
+                        format!("{} {}", view_key_hint(*view), view.label()),
+                    )
                     .clicked()
                 {
                     self.state.switch_view(*view);
@@ -2368,6 +2449,7 @@ impl eframe::App for MimirApp {
                 View::Planets => ui::planets::show(ui, &mut self.state, &self.resolver),
                 View::Fittings => ui::fittings::show(ui, &mut self.state, &self.resolver),
                 View::Settings => ui::settings::show(ui, &mut self.state),
+                View::Exploration => ui::exploration::show(ui, &mut self.state),
             });
         });
 
@@ -2378,7 +2460,7 @@ impl eframe::App for MimirApp {
                 if self.state.refresh_requested {
                     ui.label("Refresh pending...");
                 }
-                ui.label("Keys: 1-9, 0 views, Ctrl+R refresh, / search, PgUp/PgDn character");
+                ui.label("Keys: 1-9, 0, E views, Ctrl+R refresh, / search, PgUp/PgDn character");
             });
         });
     }
@@ -2563,5 +2645,50 @@ mod tests {
             fittings: Ok(vec![fitting(1)]),
         });
         assert!(!fittings_stepup_observed(&fittings_scope, &state));
+    }
+
+    #[test]
+    fn view_key_hints_keep_digits_and_give_exploration_e() {
+        assert_eq!(view_key_hint(View::Dashboard), "1");
+        assert_eq!(view_key_hint(View::Fittings), "9");
+        assert_eq!(view_key_hint(View::Settings), "0");
+        assert_eq!(view_key_hint(View::Exploration), "E");
+        let mut hints: Vec<&str> = View::ALL.iter().map(|v| view_key_hint(*v)).collect();
+        assert_eq!(hints.len(), 11);
+        hints.sort_unstable();
+        hints.dedup();
+        assert_eq!(hints.len(), 11, "every view hint is unique");
+    }
+
+    #[test]
+    fn startup_view_labels_round_trip_including_exploration() {
+        for view in View::ALL {
+            assert_eq!(view_for_startup_label(view.label()), view);
+        }
+        assert_eq!(view_for_startup_label("Exploration"), View::Exploration);
+        // A label saved by a newer build, or garbage, falls back.
+        assert_eq!(view_for_startup_label("No Such View"), View::Dashboard);
+        assert_eq!(view_for_startup_label(""), View::Dashboard);
+    }
+
+    #[test]
+    fn exploration_startup_load_is_ready_or_fixed_error_sentence() {
+        match exploration_load_state(ExplorationRef::load_bundled()) {
+            LoadState::Ready(data) => {
+                assert_eq!(data.reference.types.len(), 130);
+                assert_eq!(data.reference.systems.len(), 2631);
+                assert_eq!(data.reference.effects.len(), 36);
+                assert_eq!(data.reference.statics.len(), 0);
+                assert_eq!(data.reference.manifest.sde_build, 3503375);
+            }
+            _ => panic!("bundled exploration reference must load"),
+        }
+        let failed = exploration_load_state(ExplorationRef::from_json("{not json"));
+        match failed {
+            LoadState::Error(message) => {
+                assert_eq!(message, crate::ui::exploration::EXPLORATION_ERROR)
+            }
+            _ => panic!("malformed bundled data must be the whole-view error state"),
+        }
     }
 }
