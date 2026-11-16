@@ -3220,6 +3220,7 @@ impl eframe::App for MimirApp {
                     &mut self.state,
                     &self.resolver,
                     self.fitting_types.as_deref(),
+                    &self.sde,
                 ),
                 View::Settings => ui::settings::show(ui, &mut self.state),
                 View::Exploration => ui::exploration::show(ui, &mut self.state),
