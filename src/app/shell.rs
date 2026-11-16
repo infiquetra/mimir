@@ -245,6 +245,97 @@ struct FittingWriteLanding {
     set_reauthorize: bool,
 }
 
+/// Why a confirmed fitting write must not start (write design
+/// section 7.2 refusal table). Pure so the refusal order — and
+/// with it single-flight and zero-HTTP-before-scope — is
+/// table-testable instead of inspection-only.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FittingWriteRefusal {
+    Demo,
+    AuthBusy,
+    FlightActive,
+    UnknownCharacter,
+    NotActive,
+    BackendsMissing,
+    ScopeAbsent,
+}
+
+impl FittingWriteRefusal {
+    /// The exact status line the refusal shows. These are the
+    /// design's locked strings; the view never words them itself.
+    fn status_message(&self) -> &'static str {
+        match self {
+            FittingWriteRefusal::Demo => {
+                "Demo mode uses sample data. Saving or deleting fittings in EVE is disabled."
+            }
+            FittingWriteRefusal::AuthBusy => {
+                "Finish sign-in in your browser before changing fittings in EVE."
+            }
+            FittingWriteRefusal::FlightActive => {
+                "A fitting change is already in progress. Wait for it to finish."
+            }
+            FittingWriteRefusal::UnknownCharacter => {
+                "That character is no longer in Mimir. Nothing was sent to EVE."
+            }
+            FittingWriteRefusal::NotActive => {
+                "The active character changed. Nothing was sent to EVE."
+            }
+            FittingWriteRefusal::BackendsMissing => {
+                "Fitting changes are unavailable: live backends not wired."
+            }
+            FittingWriteRefusal::ScopeAbsent => {
+                "Saving and deleting fittings needs one more EVE permission. Re-authorize in the Fittings view."
+            }
+        }
+    }
+}
+
+/// Inputs to the refusal decision, captured by the shell before
+/// any spawn. `scope_granted` is only consulted after every
+/// earlier refusal, so the shell may pass `false` for it whenever
+/// the backends (and thus the token-metadata read) are absent.
+#[derive(Debug, Clone, Copy)]
+struct FittingWriteStart {
+    demo: bool,
+    auth_busy: bool,
+    flight_active: bool,
+    character_known: bool,
+    is_active: bool,
+    backends_wired: bool,
+    scope_granted: bool,
+}
+
+/// Decide whether a confirmed write may start. Order is the
+/// design refusal order: demo, sign-in busy, flight already
+/// active, character gone, active character changed, no
+/// backends, write scope absent. `None` means start exactly one
+/// write. Every `Some` refusal is synchronous: no flight record,
+/// no spawn, no HTTP.
+fn decide_fitting_write_start(start: FittingWriteStart) -> Option<FittingWriteRefusal> {
+    if start.demo {
+        return Some(FittingWriteRefusal::Demo);
+    }
+    if start.auth_busy {
+        return Some(FittingWriteRefusal::AuthBusy);
+    }
+    if start.flight_active {
+        return Some(FittingWriteRefusal::FlightActive);
+    }
+    if !start.character_known {
+        return Some(FittingWriteRefusal::UnknownCharacter);
+    }
+    if !start.is_active {
+        return Some(FittingWriteRefusal::NotActive);
+    }
+    if !start.backends_wired {
+        return Some(FittingWriteRefusal::BackendsMissing);
+    }
+    if !start.scope_granted {
+        return Some(FittingWriteRefusal::ScopeAbsent);
+    }
+    None
+}
+
 fn decide_fitting_write_landing(
     state: &AppState,
     character_id: i64,
@@ -316,13 +407,22 @@ fn fitting_write_status_message(
         WriteFailureClass::AlreadyGone => {
             "That fitting is already gone from EVE. Refreshing your fitting list...".to_string()
         }
-        WriteFailureClass::RateLimited { reset_secs } => format!(
-            "EVE is rate-limiting requests. Nothing was {}; wait {reset_secs} seconds and try again.",
-            match kind {
-                FittingWriteKind::Save => "saved",
-                FittingWriteKind::Delete => "deleted",
-            }
-        ),
+        WriteFailureClass::RateLimited { reset_secs } => {
+            // A missing reset header arrives as 0; never tell the
+            // user to wait zero seconds.
+            let wait = if reset_secs == 0 {
+                "wait a few seconds".to_string()
+            } else {
+                format!("wait {reset_secs} seconds")
+            };
+            format!(
+                "EVE is rate-limiting requests. Nothing was {}; {wait} and try again.",
+                match kind {
+                    FittingWriteKind::Save => "saved",
+                    FittingWriteKind::Delete => "deleted",
+                }
+            )
+        }
         WriteFailureClass::Unknown => match kind {
             FittingWriteKind::Save => "The save may or may not have reached EVE. Check the refreshed fitting list before saving again, so you do not create a duplicate.".to_string(),
             FittingWriteKind::Delete => "The delete may or may not have reached EVE. Check the refreshed fitting list; if the fitting is still there, you can delete it again.".to_string(),
@@ -2680,73 +2780,48 @@ impl MimirApp {
             }
         };
         let kind_label = kind.label();
-        // Demo performs no writes and offers none (section 10):
-        // this is the shell backstop, not the only defense.
-        if self.state.demo {
+        // Pre-scope refusals via the pure decision helper (demo is
+        // the shell backstop, not the only defense; section 10).
+        // scope_granted=true is a placeholder here: the helper
+        // consults it only after every refusal decided in this
+        // first call, and the token-metadata read below remains
+        // the only scope evidence before any HTTP.
+        let pre_scope = FittingWriteStart {
+            demo: self.state.demo,
+            auth_busy: self.state.auth.is_busy(),
+            flight_active: self.state.fittings_write_in_flight.is_some(),
+            character_known: self
+                .state
+                .characters
+                .iter()
+                .any(|c| c.character_id == character_id),
+            is_active: self.state.active_character_id == Some(character_id),
+            backends_wired: self.backends.is_some() && self.runtime.is_some(),
+            scope_granted: true,
+        };
+        if let Some(refusal) = decide_fitting_write_start(pre_scope) {
             tracing::warn!(
-                "[FITTING] fitting write refused in demo character_id={} kind={}",
+                "[FITTING] fitting write refused character_id={} kind={} refusal={:?}",
                 character_id,
-                kind_label
+                kind_label,
+                refusal
             );
-            self.state.status_message =
-                "Demo mode uses sample data. Saving or deleting fittings in EVE is disabled."
-                    .to_string();
-            return;
-        }
-        if self.state.auth.is_busy() {
-            tracing::warn!(
-                "[FITTING] fitting write refused; sign-in in progress character_id={} kind={}",
-                character_id,
-                kind_label
-            );
-            self.state.status_message =
-                "Finish sign-in in your browser before changing fittings in EVE.".to_string();
-            return;
-        }
-        if self.state.fittings_write_in_flight.is_some() {
-            tracing::warn!(
-                "[FITTING] fitting write refused; one already in flight character_id={} kind={}",
-                character_id,
-                kind_label
-            );
-            self.state.status_message =
-                "A fitting change is already in progress. Wait for it to finish.".to_string();
-            return;
-        }
-        if !self
-            .state
-            .characters
-            .iter()
-            .any(|c| c.character_id == character_id)
-        {
-            tracing::warn!(
-                "[FITTING] fitting write refused for unknown character_id={} kind={}",
-                character_id,
-                kind_label
-            );
-            self.state.status_message =
-                "That character is no longer in Mimir. Nothing was sent to EVE.".to_string();
-            return;
-        }
-        if self.state.active_character_id != Some(character_id) {
-            tracing::warn!(
-                "[FITTING] fitting write refused; active character changed character_id={} kind={}",
-                character_id,
-                kind_label
-            );
-            self.state.status_message =
-                "The active character changed. Nothing was sent to EVE.".to_string();
+            self.state.status_message = refusal.status_message().to_string();
             return;
         }
         let (Some(backends), Some(runtime)) = (self.backends.as_ref(), self.runtime.as_ref())
         else {
+            // Unreachable: the decision above already refused when
+            // either handle is missing. Kept as a typed unwrap of
+            // the two handles, never a panic path.
             tracing::warn!(
                 "[FITTING] fitting write refused; backends not wired character_id={} kind={}",
                 character_id,
                 kind_label
             );
-            self.state.status_message =
-                "Fitting changes are unavailable: live backends not wired.".to_string();
+            self.state.status_message = FittingWriteRefusal::BackendsMissing
+                .status_message()
+                .to_string();
             return;
         };
         // Scope pre-check (section 3.3): stored token metadata
@@ -2779,14 +2854,19 @@ impl MimirApp {
             .iter()
             .map(|s| s.to_string())
             .collect();
-        if !oauth::missing_scopes(&granted, &wanted).is_empty() {
+        let scope_granted = oauth::missing_scopes(&granted, &wanted).is_empty();
+        if let Some(refusal) = decide_fitting_write_start(FittingWriteStart {
+            scope_granted,
+            ..pre_scope
+        }) {
             tracing::info!(
-                "[FITTING] fitting write refused; write scope absent character_id={} kind={}",
+                "[FITTING] fitting write refused; write scope absent character_id={} kind={} refusal={:?}",
                 character_id,
-                kind_label
+                kind_label,
+                refusal
             );
             self.state.fittings_write_needs_reauthorize = true;
-            self.state.status_message = "Saving and deleting fittings needs one more EVE permission. Re-authorize in the Fittings view.".to_string();
+            self.state.status_message = refusal.status_message().to_string();
             return;
         }
         let esi = backends.esi.clone();
@@ -3548,6 +3628,15 @@ mod tests {
             ),
             "EVE is rate-limiting requests. Nothing was deleted; wait 42 seconds and try again."
         );
+        // A missing reset header arrives as 0; never "wait 0 seconds".
+        assert_eq!(
+            fitting_write_status_message(
+                Save,
+                WriteFailureClass::RateLimited { reset_secs: 0 },
+                false
+            ),
+            "EVE is rate-limiting requests. Nothing was saved; wait a few seconds and try again."
+        );
         // Unknown row.
         assert_eq!(
             fitting_write_status_message(Save, WriteFailureClass::Unknown, false),
@@ -3556,6 +3645,112 @@ mod tests {
         assert_eq!(
             fitting_write_status_message(Delete, WriteFailureClass::Unknown, false),
             "The delete may or may not have reached EVE. Check the refreshed fitting list; if the fitting is still there, you can delete it again."
+        );
+    }
+
+    #[test]
+    fn fitting_write_start_refusals_follow_design_order() {
+        // Every input permissive: the write may start.
+        let ready = FittingWriteStart {
+            demo: false,
+            auth_busy: false,
+            flight_active: false,
+            character_known: true,
+            is_active: true,
+            backends_wired: true,
+            scope_granted: true,
+        };
+        assert_eq!(decide_fitting_write_start(ready), None);
+        // Each single blocker refuses with its own kind; removing
+        // any one guard must fail this table (the reviewer F1
+        // mutations: single-flight, scope pre-check, demo).
+        let cases: Vec<(FittingWriteStart, FittingWriteRefusal)> = vec![
+            (
+                FittingWriteStart {
+                    demo: true,
+                    ..ready
+                },
+                FittingWriteRefusal::Demo,
+            ),
+            (
+                FittingWriteStart {
+                    auth_busy: true,
+                    ..ready
+                },
+                FittingWriteRefusal::AuthBusy,
+            ),
+            (
+                FittingWriteStart {
+                    flight_active: true,
+                    ..ready
+                },
+                FittingWriteRefusal::FlightActive,
+            ),
+            (
+                FittingWriteStart {
+                    character_known: false,
+                    ..ready
+                },
+                FittingWriteRefusal::UnknownCharacter,
+            ),
+            (
+                FittingWriteStart {
+                    is_active: false,
+                    ..ready
+                },
+                FittingWriteRefusal::NotActive,
+            ),
+            (
+                FittingWriteStart {
+                    backends_wired: false,
+                    ..ready
+                },
+                FittingWriteRefusal::BackendsMissing,
+            ),
+            (
+                FittingWriteStart {
+                    scope_granted: false,
+                    ..ready
+                },
+                FittingWriteRefusal::ScopeAbsent,
+            ),
+        ];
+        for (start, want) in cases {
+            assert_eq!(decide_fitting_write_start(start), Some(want));
+        }
+        // Order: earlier refusals win over later ones, so a demo
+        // session with a flight active and no scope still reports
+        // the demo refusal, and missing backends outrank the
+        // scope (whose evidence needs the backends to exist).
+        assert_eq!(
+            decide_fitting_write_start(FittingWriteStart {
+                demo: true,
+                flight_active: true,
+                scope_granted: false,
+                ..ready
+            }),
+            Some(FittingWriteRefusal::Demo)
+        );
+        assert_eq!(
+            decide_fitting_write_start(FittingWriteStart {
+                backends_wired: false,
+                scope_granted: false,
+                ..ready
+            }),
+            Some(FittingWriteRefusal::BackendsMissing)
+        );
+        // Locked wording pins (independent literals).
+        assert_eq!(
+            FittingWriteRefusal::Demo.status_message(),
+            "Demo mode uses sample data. Saving or deleting fittings in EVE is disabled."
+        );
+        assert_eq!(
+            FittingWriteRefusal::FlightActive.status_message(),
+            "A fitting change is already in progress. Wait for it to finish."
+        );
+        assert_eq!(
+            FittingWriteRefusal::ScopeAbsent.status_message(),
+            "Saving and deleting fittings needs one more EVE permission. Re-authorize in the Fittings view."
         );
     }
 

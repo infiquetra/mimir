@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### A refusal table inline in an imperative shell function is correct code with no test that can catch its deletion
+
+**Author.** Muse Code (parent repair pass over the fittings-write workflow)
+**Context.** The fittings-write adversarial review mutation-tested the slice and killed the landing identity guard, the transport classification, and the first-sign-in scope wall — then found three guards no test could kill: disabling the single-flight refusal, the token-metadata scope pre-check, or the demo refusal in `start_fitting_write` left all 401 library tests passing.
+**Evidence.** Review finding F1 in the fittings-write workflow synthesis (each guard gated with `false &&`, full suite green each time); `src/app/shell.rs` (`start_fitting_write` held seven early-return refusals inline, reachable only through a fully wired shell — the same reason every prior slice's shell logic that mattered was extracted into pure helpers like `decide_fitting_write_landing`, which the mutations did kill).
+**Mechanism.** Guards written as sequential early returns inside a method that needs live backends, a runtime, and a database lock cannot be unit-tested as a table, so their only coverage is inspection — and inspection does not survive refactoring. The three unkillable guards were precisely the slice's headline invariants (at most one write per confirmation, zero HTTP without the scope, demo cannot write), so the most safety-critical code had the weakest proof.
+**Fix (or queued).** The refusal decision is now the pure `decide_fitting_write_start` over a captured input struct, with locked wording on the refusal enum; the shell computes inputs (reading token metadata only after the pre-scope refusals pass) and a table test pins every refusal kind plus precedence. The same pass fixed the review's rate-limit nit: a missing reset header arrives as 0 and no longer renders "wait 0 seconds".
+**Validation.** New tests `fitting_write_start_refusals_follow_design_order` and the zero-reset rate-limit pin in `src/app/shell.rs`, full `cargo test` / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` on branch `feat/rust-fittings-write`, and a parent-inspected demo Fittings screenshot. Live write behavior remains unverified against a real EVE account.
+**Generalizable rule.** Any ordered refusal/precedence table that guards a side effect belongs in a pure function over plain inputs, table-tested per row; if deleting a guard leaves the suite green, the guard is documentation, not protection.
+**Refs.** `docs/fittings-write-design.md` section 7.2; `src/app/shell.rs` (`decide_fitting_write_start`, `FittingWriteRefusal`, `start_fitting_write`).
+
 ### First ESI writes: an unanswered write is an unknown outcome
 
 **Author.** Muse Code (fittings-write workflow, integrator)
