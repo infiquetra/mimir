@@ -63,6 +63,17 @@ impl EveConfig {
     /// step-up OAuth flow, never at first authorization.
     pub const ASSETS_SCOPES: &[&str] = &["esi-assets.read_assets.v1"];
 
+    /// Character-detail step-up scopes (clones, standings, and the
+    /// location trio). Implants and attributes are already covered
+    /// by FIRST_AUTH_SCOPES and are deliberately absent.
+    pub const CHARACTER_DETAIL_SCOPES: &[&str] = &[
+        "esi-clones.read_clones.v1",
+        "esi-characters.read_standings.v1",
+        "esi-location.read_location.v1",
+        "esi-location.read_ship_type.v1",
+        "esi-location.read_online.v1",
+    ];
+
     /// Scopes the Phase-1 Rust endpoint set actually needs, beyond the
     /// first-auth set (location/ship/online/clones/standings/loyalty).
     pub const PHASE1_ENDPOINT_SCOPES: &[&str] = &[
@@ -140,6 +151,30 @@ mod tests {
     fn assets_scopes_is_the_single_stepup_scope() {
         assert_eq!(EveConfig::ASSETS_SCOPES, ["esi-assets.read_assets.v1"]);
         assert!(!EveConfig::FIRST_AUTH_SCOPES.contains(&"esi-assets.read_assets.v1"));
+    }
+
+    #[test]
+    fn character_detail_scopes_are_the_five_stepup_scopes() {
+        assert_eq!(
+            EveConfig::CHARACTER_DETAIL_SCOPES,
+            [
+                "esi-clones.read_clones.v1",
+                "esi-characters.read_standings.v1",
+                "esi-location.read_location.v1",
+                "esi-location.read_ship_type.v1",
+                "esi-location.read_online.v1",
+            ]
+        );
+        assert!(
+            !EveConfig::CHARACTER_DETAIL_SCOPES.contains(&"esi-clones.read_implants.v1"),
+            "implants is first-auth and stays out of the step-up set"
+        );
+        for scope in EveConfig::CHARACTER_DETAIL_SCOPES {
+            assert!(
+                !EveConfig::FIRST_AUTH_SCOPES.contains(scope),
+                "step-up scope {scope} must be disjoint from first-auth"
+            );
+        }
     }
 
     #[test]

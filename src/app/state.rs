@@ -210,6 +210,69 @@ pub struct AssetsData {
     pub custom_names: HashMap<i64, String>,
 }
 
+/// One character-detail section's failure. `needs_reauthorize` is the
+/// typed scope outcome (HTTP 401/403 via
+/// `endpoints::needs_reauthorize`), never parsed from `message`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SectionError {
+    pub message: String,
+    pub needs_reauthorize: bool,
+}
+
+pub type SectionResult<T> = Result<T, SectionError>;
+
+/// Character-detail bundle: seven independent section results.
+/// Field set is a cross-builder contract (demo seeding and the
+/// shell construct this literally); do not add fields here.
+#[derive(Debug, Clone)]
+pub struct CharacterDetailData {
+    pub attributes: SectionResult<CharacterAttributes>,
+    pub implants: SectionResult<Vec<i64>>,
+    pub clones: SectionResult<CharacterClones>,
+    pub standings: SectionResult<Vec<Standing>>,
+    pub location: SectionResult<CharacterLocation>,
+    pub ship: SectionResult<CharacterShip>,
+    pub online: SectionResult<CharacterOnline>,
+}
+
+impl CharacterDetailData {
+    /// True when a step-up-protected section failed for scope reasons.
+    /// Attributes and implants are first-auth and never trigger this.
+    pub fn needs_detail_stepup(&self) -> bool {
+        fn reauth<T>(result: &SectionResult<T>) -> bool {
+            matches!(result, Err(e) if e.needs_reauthorize)
+        }
+        reauth(&self.clones)
+            || reauth(&self.standings)
+            || reauth(&self.location)
+            || reauth(&self.ship)
+            || reauth(&self.online)
+    }
+}
+
+/// Summary location string: docked name, else solar-system name, else
+/// `None` ("not loaded"). Inputs come from `resolver.cached()` so an
+/// unresolved id stays distinguishable from the `Unknown Location` word.
+pub fn summary_location_name(docked: Option<&str>, solar_system: Option<&str>) -> Option<String> {
+    docked.or(solar_system).map(str::to_string)
+}
+
+/// Summary ship string from the custom ship name and the resolved type
+/// name. Trimmed empty and trimmed `"None"` custom names are absent
+/// (the Assets placeholder filter); both present and different gives
+/// `"{custom} ({type})"`, one present gives that one, neither `None`.
+pub fn ship_display_name(custom_name: &str, resolved_type: Option<&str>) -> Option<String> {
+    let custom = custom_name.trim();
+    let custom = (!custom.is_empty() && custom != "None").then_some(custom);
+    let resolved = resolved_type.map(str::trim).filter(|t| !t.is_empty());
+    match (custom, resolved) {
+        (Some(c), Some(t)) if c != t => Some(format!("{c} ({t})")),
+        (Some(c), _) => Some(c.to_string()),
+        (None, Some(t)) => Some(t.to_string()),
+        (None, None) => None,
+    }
+}
+
 /// One row of the multi-character overview grid. The integrator fills this
 /// from F2 repositories / F1 endpoints per character; `None` fields render
 /// as "not loaded" instead of a guessed value. Display strings (`training`,
@@ -241,6 +304,7 @@ pub struct AppState {
     /// The assets fetch failed with the typed scope error, so the Assets
     /// view shows step-up guidance instead of a retry panel.
     pub assets_needs_reauthorize: bool,
+    pub character_details: LoadState<CharacterDetailData>,
     pub log_lines: Vec<String>,
     pub status_message: String,
 
@@ -323,6 +387,14 @@ impl AppState {
                 );
                 self.assets = LoadState::Loading;
                 self.assets_needs_reauthorize = false;
+                // Same ownership argument as assets: detail sections are
+                // fetched tolerantly, so reset at the switch boundary.
+                tracing::debug!(
+                    "[CHAR] clearing character details on character switch from={} to={}",
+                    previous_id,
+                    character_id
+                );
+                self.character_details = LoadState::Loading;
             }
         }
         self.selected_queue_row = 0;
@@ -362,6 +434,8 @@ impl AppState {
             // the is_empty branch further down overrides this to Empty.
             tracing::debug!("[ASSETS] clearing assets of removed active character");
             self.assets = LoadState::Loading;
+            tracing::debug!("[CHAR] clearing character details of removed active character");
+            self.character_details = LoadState::Loading;
             if let Some(first) = self.characters.first().map(|c| c.character_id) {
                 self.set_active_character(first);
             }
@@ -379,6 +453,7 @@ impl AppState {
             self.wallet = LoadState::Empty;
             self.assets = LoadState::Empty;
             self.character_detail = LoadState::Empty;
+            self.character_details = LoadState::Empty;
             self.dashboard = LoadState::Empty;
         }
     }
@@ -466,6 +541,7 @@ mod tests {
         assert_eq!(state.active_character_id, None);
         assert!(matches!(state.wallet, LoadState::Empty));
         assert!(matches!(state.assets, LoadState::Empty));
+        assert!(matches!(state.character_details, LoadState::Empty));
     }
 
     #[test]
@@ -487,6 +563,154 @@ mod tests {
         state.set_active_character(2);
         assert!(matches!(state.assets, LoadState::Loading));
         assert!(!state.assets_needs_reauthorize);
+    }
+
+    fn detail_bundle(intelligence: i32) -> CharacterDetailData {
+        CharacterDetailData {
+            attributes: Ok(CharacterAttributes {
+                intelligence,
+                ..Default::default()
+            }),
+            implants: Ok(Vec::new()),
+            clones: Ok(CharacterClones::default()),
+            standings: Ok(Vec::new()),
+            location: Ok(CharacterLocation::default()),
+            ship: Ok(CharacterShip::default()),
+            online: Ok(CharacterOnline::default()),
+        }
+    }
+
+    fn reauth_error() -> SectionError {
+        SectionError {
+            message: "forbidden".to_string(),
+            needs_reauthorize: true,
+        }
+    }
+
+    #[test]
+    fn switching_character_clears_stale_character_details() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        let mut bundle = detail_bundle(27);
+        bundle.clones = Err(reauth_error());
+        state.character_details = LoadState::Ready(bundle);
+        // Same-character reselect keeps the bundle and its step-up need.
+        state.set_active_character(1);
+        let kept = state
+            .character_details
+            .as_ready()
+            .expect("reselect keeps details");
+        assert_eq!(
+            kept.attributes
+                .as_ref()
+                .expect("attributes ok")
+                .intelligence,
+            27
+        );
+        assert!(kept.needs_detail_stepup());
+        // Switching clears them, mirroring assets.
+        state.set_active_character(2);
+        assert!(matches!(state.character_details, LoadState::Loading));
+    }
+
+    #[test]
+    fn removing_active_character_clears_character_details() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two"), row(3, "Three")];
+        state.set_active_character(1);
+        state.character_details = LoadState::Ready(detail_bundle(27));
+        // Removing a non-active character leaves the bundle ready.
+        state.remove_character(3);
+        assert!(state.character_details.is_ready());
+        // Removing the active character never shows its bundle under the
+        // replacement character.
+        state.remove_character(1);
+        assert_eq!(state.active_character_id, Some(2));
+        assert!(matches!(state.character_details, LoadState::Loading));
+        // Removing the last character empties it.
+        state.character_details = LoadState::Ready(detail_bundle(27));
+        state.remove_character(2);
+        assert!(state.characters.is_empty());
+        assert!(matches!(state.character_details, LoadState::Empty));
+    }
+
+    #[test]
+    fn needs_detail_stepup_only_for_protected_sections() {
+        assert!(!detail_bundle(27).needs_detail_stepup(), "all-Ok bundle");
+        let mut only_attributes = detail_bundle(27);
+        only_attributes.attributes = Err(reauth_error());
+        assert!(!only_attributes.needs_detail_stepup());
+        let mut only_implants = detail_bundle(27);
+        only_implants.implants = Err(reauth_error());
+        assert!(!only_implants.needs_detail_stepup());
+        let mut plain_failure = detail_bundle(27);
+        plain_failure.clones = Err(SectionError {
+            message: "timeout".to_string(),
+            needs_reauthorize: false,
+        });
+        assert!(!plain_failure.needs_detail_stepup());
+        let mut clones = detail_bundle(27);
+        clones.clones = Err(reauth_error());
+        assert!(clones.needs_detail_stepup(), "clones");
+        let mut standings = detail_bundle(27);
+        standings.standings = Err(reauth_error());
+        assert!(standings.needs_detail_stepup(), "standings");
+        let mut location = detail_bundle(27);
+        location.location = Err(reauth_error());
+        assert!(location.needs_detail_stepup(), "location");
+        let mut ship = detail_bundle(27);
+        ship.ship = Err(reauth_error());
+        assert!(ship.needs_detail_stepup(), "ship");
+        let mut online = detail_bundle(27);
+        online.online = Err(reauth_error());
+        assert!(online.needs_detail_stepup(), "online");
+    }
+
+    #[test]
+    fn summary_location_prefers_docked_then_solar() {
+        assert_eq!(
+            summary_location_name(Some("Jita IV Station"), Some("Jita")).as_deref(),
+            Some("Jita IV Station")
+        );
+        assert_eq!(
+            summary_location_name(None, Some("Jita")).as_deref(),
+            Some("Jita")
+        );
+        assert_eq!(summary_location_name(None, None), None);
+    }
+
+    #[test]
+    fn ship_display_name_combines_custom_and_type() {
+        assert_eq!(
+            ship_display_name("Fixture Frigate", Some("Rifter")).as_deref(),
+            Some("Fixture Frigate (Rifter)")
+        );
+        assert_eq!(
+            ship_display_name("Rifter", Some("Rifter")).as_deref(),
+            Some("Rifter"),
+            "custom equal to type shows once"
+        );
+        assert_eq!(
+            ship_display_name("Fixture Frigate", None).as_deref(),
+            Some("Fixture Frigate")
+        );
+        assert_eq!(
+            ship_display_name("", Some("Rifter")).as_deref(),
+            Some("Rifter")
+        );
+        assert_eq!(
+            ship_display_name("   ", Some("Rifter")).as_deref(),
+            Some("Rifter"),
+            "trimmed-empty custom is absent"
+        );
+        assert_eq!(
+            ship_display_name(" None ", Some("Rifter")).as_deref(),
+            Some("Rifter"),
+            "\"None\" placeholder is absent"
+        );
+        assert_eq!(ship_display_name("", None), None);
+        assert_eq!(ship_display_name("None", None), None);
     }
 
     #[test]

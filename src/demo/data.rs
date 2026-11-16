@@ -10,7 +10,8 @@ use std::collections::{HashMap, HashSet};
 use chrono::{DateTime, Utc};
 
 use crate::app::state::{
-    AppState, AssetsData, CharacterSummary, LoadState, SkillsData, WalletData,
+    ship_display_name, summary_location_name, AppState, AssetsData, CharacterDetailData,
+    CharacterSummary, LoadState, SkillsData, WalletData,
 };
 use crate::error::{AppError, AppResult};
 use crate::esi::models::*;
@@ -26,6 +27,8 @@ pub const DEMO_SKILLQUEUE_JSON: &str = include_str!("../../assets/demo/skillqueu
 pub const DEMO_WALLET_JSON: &str = include_str!("../../assets/demo/wallet.json");
 pub const DEMO_NAMES_JSON: &str = include_str!("../../assets/demo/names.json");
 pub const DEMO_ASSETS_JSON: &str = include_str!("../../assets/demo/assets.json");
+pub const DEMO_CHARACTER_DETAIL_JSON: &str =
+    include_str!("../../assets/demo/character_detail.json");
 
 /// Command-line flag that selects demo mode (design section 1).
 pub const DEMO_FLAG: &str = "--demo";
@@ -85,6 +88,7 @@ pub struct DemoCharacterData {
     pub loyalty: Vec<LoyaltyPointItem>,
     pub assets: Vec<AssetItem>,
     pub custom_names: Vec<AssetName>,
+    pub detail: Option<CharacterDetailData>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -138,6 +142,24 @@ struct AssetsFileEntry {
     custom_names: Vec<AssetName>,
 }
 
+#[derive(serde::Deserialize, Default)]
+struct CharacterDetailFileEntry {
+    #[serde(default)]
+    attributes: CharacterAttributes,
+    #[serde(default)]
+    implants: Vec<i64>,
+    #[serde(default)]
+    clones: CharacterClones,
+    #[serde(default)]
+    standings: Vec<Standing>,
+    #[serde(default)]
+    location: CharacterLocation,
+    #[serde(default)]
+    ship: CharacterShip,
+    #[serde(default)]
+    online: CharacterOnline,
+}
+
 fn parse_character_key(key: &str) -> AppResult<i64> {
     key.parse::<i64>().map_err(|_| {
         AppError::Message(format!(
@@ -158,18 +180,39 @@ pub fn load_demo_bundle_from(
     load_demo_bundle_with_assets(characters_json, skillqueue_json, wallet_json, "{}")
 }
 
-/// Parse a bundle including the per-character assets file.
+/// Parse a bundle including the per-character assets file. Kept with
+/// its original meaning — no character detail — so four-argument
+/// callers keep working unchanged (`detail: None` for everyone).
 pub fn load_demo_bundle_with_assets(
     characters_json: &str,
     skillqueue_json: &str,
     wallet_json: &str,
     assets_json: &str,
 ) -> AppResult<DemoBundle> {
+    load_demo_bundle_with_detail(
+        characters_json,
+        skillqueue_json,
+        wallet_json,
+        assets_json,
+        "{}",
+    )
+}
+
+/// Parse a bundle including assets and the character-detail file.
+pub fn load_demo_bundle_with_detail(
+    characters_json: &str,
+    skillqueue_json: &str,
+    wallet_json: &str,
+    assets_json: &str,
+    character_detail_json: &str,
+) -> AppResult<DemoBundle> {
     tracing::debug!("[DEMO] parsing demo bundle");
     let characters: CharactersFile = serde_json::from_str(characters_json)?;
     let skills_by_id: HashMap<String, SkillFileEntry> = serde_json::from_str(skillqueue_json)?;
     let wallet_by_id: HashMap<String, WalletFileEntry> = serde_json::from_str(wallet_json)?;
     let assets_by_id: HashMap<String, AssetsFileEntry> = serde_json::from_str(assets_json)?;
+    let detail_by_id: HashMap<String, CharacterDetailFileEntry> =
+        serde_json::from_str(character_detail_json)?;
 
     let mut data: HashMap<i64, DemoCharacterData> = HashMap::new();
     for (key, entry) in skills_by_id {
@@ -199,6 +242,26 @@ pub fn load_demo_bundle_with_assets(
         slot.assets = entry.assets;
         slot.custom_names = entry.custom_names;
     }
+    for (key, entry) in detail_by_id {
+        let id = parse_character_key(&key)?;
+        tracing::debug!(
+            "[DEMO] character_id={} detail implants={} clones={} standings={}",
+            id,
+            entry.implants.len(),
+            entry.clones.jump_clones.len(),
+            entry.standings.len()
+        );
+        let slot = data.entry(id).or_default();
+        slot.detail = Some(CharacterDetailData {
+            attributes: Ok(entry.attributes),
+            implants: Ok(entry.implants),
+            clones: Ok(entry.clones),
+            standings: Ok(entry.standings),
+            location: Ok(entry.location),
+            ship: Ok(entry.ship),
+            online: Ok(entry.online),
+        });
+    }
 
     let bundle = DemoBundle {
         characters: characters.characters,
@@ -216,11 +279,12 @@ pub fn load_demo_bundle_with_assets(
 /// Load the bundled demo JSON files into typed structures.
 pub fn load_demo_bundle() -> AppResult<DemoBundle> {
     tracing::debug!("[DEMO] loading bundled demo fixtures");
-    load_demo_bundle_with_assets(
+    load_demo_bundle_with_detail(
         DEMO_CHARACTERS_JSON,
         DEMO_SKILLQUEUE_JSON,
         DEMO_WALLET_JSON,
         DEMO_ASSETS_JSON,
+        DEMO_CHARACTER_DETAIL_JSON,
     )
 }
 
@@ -294,6 +358,45 @@ pub fn validate_bundle(bundle: &DemoBundle) -> AppResult<()> {
                     "character {} duplicate asset item_id {}",
                     character.character_id, asset.item_id
                 )));
+            }
+        }
+        // Character detail is optional the same way; validate only when
+        // present: jump clone IDs unique, every present date parses.
+        if let Some(detail) = &per.detail {
+            let check_dates = |dates: [&Option<String>; 2]| -> AppResult<()> {
+                for raw in dates.into_iter().flatten() {
+                    if parse_esi_datetime(raw).is_none() {
+                        return Err(fail(format!(
+                            "character {} detail date does not parse: {raw}",
+                            character.character_id
+                        )));
+                    }
+                }
+                Ok(())
+            };
+            if let Ok(attributes) = &detail.attributes {
+                check_dates([
+                    &attributes.last_remap_date,
+                    &attributes.accrued_remap_cooldown_date,
+                ])?;
+            }
+            if let Ok(clones) = &detail.clones {
+                let mut clone_ids = HashSet::new();
+                for clone in &clones.jump_clones {
+                    if !clone_ids.insert(clone.jump_clone_id) {
+                        return Err(fail(format!(
+                            "character {} duplicate jump_clone_id {}",
+                            character.character_id, clone.jump_clone_id
+                        )));
+                    }
+                }
+                check_dates([
+                    &clones.last_clone_jump_date,
+                    &clones.last_station_change_date,
+                ])?;
+            }
+            if let Ok(online) = &detail.online {
+                check_dates([&online.last_login, &online.last_logout])?;
             }
         }
     }
@@ -525,6 +628,17 @@ pub fn apply_character(state: &mut AppState, bundle: &DemoBundle, character_id: 
         })
     };
     state.assets_needs_reauthorize = false;
+    // Empty-if-absent, mirroring assets, so switching can never leave
+    // the previous demo character's bundle installed.
+    tracing::debug!(
+        "[DEMO] apply_character character_id={} detail_present={}",
+        character_id,
+        per.detail.is_some()
+    );
+    state.character_details = match &per.detail {
+        Some(detail) => LoadState::Ready(detail.clone()),
+        None => LoadState::Empty,
+    };
 }
 
 /// Seed demo content into the UI state: both fictional characters, the
@@ -551,6 +665,10 @@ pub fn seed_demo_state(state: &mut AppState) {
             if let Err(e) = &sde {
                 tracing::warn!("[DEMO] SDE unavailable for summaries: {}", e);
             }
+            let resolver = demo_resolver();
+            if let Err(e) = &resolver {
+                tracing::warn!("[DEMO] demo names unavailable for summaries: {}", e);
+            }
             let now = Utc::now();
             state.summaries.clear();
             for character in &bundle.characters {
@@ -558,6 +676,31 @@ pub fn seed_demo_state(state: &mut AppState) {
                     continue;
                 };
                 let training = currently_training(&per.queue, now).or_else(|| per.queue.first());
+                // Location/ship summaries come from the detail bundle
+                // through the same helpers the live path uses; resolved
+                // names only, `None` when anything is missing.
+                let (location_name, ship_name) = match (&resolver, &per.detail) {
+                    (Ok(resolver), Some(detail)) => {
+                        let location_name = match &detail.location {
+                            Ok(location) => summary_location_name(
+                                location
+                                    .docked_location_id()
+                                    .and_then(|id| resolver.cached(id)),
+                                resolver.cached(location.solar_system_id),
+                            ),
+                            Err(_) => None,
+                        };
+                        let ship_name = match &detail.ship {
+                            Ok(ship) => ship_display_name(
+                                &ship.ship_name,
+                                resolver.cached(ship.ship_type_id),
+                            ),
+                            Err(_) => None,
+                        };
+                        (location_name, ship_name)
+                    }
+                    _ => (None, None),
+                };
                 state.summaries.insert(
                     character.character_id,
                     CharacterSummary {
@@ -569,8 +712,8 @@ pub fn seed_demo_state(state: &mut AppState) {
                         training_finish_date: training.and_then(|item| item.finish_date.clone()),
                         queue_len: Some(per.queue.len()),
                         total_sp: Some(per.skills.total_sp),
-                        location_name: None,
-                        ship_name: None,
+                        location_name,
+                        ship_name,
                     },
                 );
             }
@@ -592,6 +735,7 @@ pub fn seed_demo_state(state: &mut AppState) {
             state.skills = LoadState::Error(format!("Demo data failed to load: {e}"));
             state.wallet = LoadState::Error(format!("Demo data failed to load: {e}"));
             state.assets = LoadState::Error(format!("Demo data failed to load: {e}"));
+            state.character_details = LoadState::Error(format!("Demo data failed to load: {e}"));
         }
     }
 }
@@ -605,7 +749,8 @@ pub fn seed_bundle_into_db(conn: &rusqlite::Connection, bundle: &DemoBundle) -> 
         bundle.characters.len()
     );
     let first_id = bundle.first_character_id();
-    // Assets are in-memory only in this slice (no table); nothing to persist.
+    // Assets and character detail are in-memory only (no tables);
+    // nothing to persist for either.
     for character in &bundle.characters {
         repositories::upsert_character(
             conn,
@@ -835,6 +980,25 @@ mod tests {
         let two =
             r#"{"characters":[{"character_id":1,"name":"One"},{"character_id":2,"name":"Two"}]}"#;
         assert!(load_demo_bundle_from(two, "{}", r#"{"nope":{}}"#).is_err());
+        // "{}" as the detail text is valid and yields no detail anywhere.
+        let bundle = load_demo_bundle_with_detail(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+            "{}",
+        )
+        .expect("empty detail text loads");
+        assert!(bundle.data.values().all(|per| per.detail.is_none()));
+        // Non-numeric character key in the detail file.
+        assert!(load_demo_bundle_with_detail(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+            r#"{"nope":{}}"#
+        )
+        .is_err());
     }
 
     #[test]
@@ -849,6 +1013,30 @@ mod tests {
             assert!(!per.journal.is_empty());
             assert!(per.balance > 0.0);
             assert!(!per.assets.is_empty(), "demo assets for {}", character.name);
+            let detail = per
+                .detail
+                .as_ref()
+                .unwrap_or_else(|| panic!("demo detail for {}", character.name));
+            assert!(
+                detail
+                    .attributes
+                    .as_ref()
+                    .expect("demo attributes ok")
+                    .intelligence
+                    > 0,
+                "non-trivial attributes for {}",
+                character.name
+            );
+            assert!(
+                !detail
+                    .standings
+                    .as_ref()
+                    .expect("demo standings ok")
+                    .is_empty(),
+                "standings for {}",
+                character.name
+            );
+            assert!(detail.location.is_ok() && detail.ship.is_ok() && detail.online.is_ok());
         }
     }
 
@@ -862,7 +1050,91 @@ mod tests {
         for per in bundle.data.values() {
             assert!(per.assets.is_empty());
             assert!(per.custom_names.is_empty());
+            assert!(per.detail.is_none(), "old loader yields no detail");
         }
+    }
+
+    #[test]
+    fn four_argument_loader_still_loads_without_detail() {
+        let bundle = load_demo_bundle_with_assets(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+        )
+        .expect("four-argument bundle loads");
+        for per in bundle.data.values() {
+            assert!(!per.assets.is_empty(), "assets still load");
+            assert!(
+                per.detail.is_none(),
+                "four-argument loader yields no detail"
+            );
+        }
+    }
+
+    #[test]
+    fn duplicate_jump_clone_id_fails_validation() {
+        let mut bundle = load_demo_bundle().expect("bundled bundle loads");
+        let first = bundle.first_character_id().expect("first character");
+        let per = bundle.data.get_mut(&first).expect("per-character data");
+        let clones = per
+            .detail
+            .as_mut()
+            .expect("detail present")
+            .clones
+            .as_mut()
+            .expect("clones ok");
+        let dupe = clones.jump_clones[0].clone();
+        clones.jump_clones.push(dupe);
+        assert!(validate_bundle(&bundle).is_err());
+    }
+
+    #[test]
+    fn bad_clone_date_fails_validation() {
+        let mut bundle = load_demo_bundle().expect("bundled bundle loads");
+        let first = bundle.first_character_id().expect("first character");
+        let per = bundle.data.get_mut(&first).expect("per-character data");
+        per.detail
+            .as_mut()
+            .expect("detail present")
+            .clones
+            .as_mut()
+            .expect("clones ok")
+            .last_clone_jump_date = Some("not a date".to_string());
+        assert!(validate_bundle(&bundle).is_err());
+    }
+
+    #[test]
+    fn apply_character_swaps_character_details() {
+        let bundle = load_demo_bundle().expect("bundled bundle loads");
+        let mut state = AppState::new(true);
+        apply_character(&mut state, &bundle, 90000001);
+        let aria = state.character_details.as_ready().expect("aria details");
+        assert_eq!(
+            aria.attributes
+                .as_ref()
+                .expect("aria attributes")
+                .intelligence,
+            27
+        );
+        assert_eq!(aria.implants.as_ref().expect("aria implants").len(), 2);
+        apply_character(&mut state, &bundle, 90000002);
+        let marcus = state.character_details.as_ready().expect("marcus details");
+        assert_eq!(
+            marcus
+                .attributes
+                .as_ref()
+                .expect("marcus attributes")
+                .intelligence,
+            20,
+            "switch installs Marcus's bundle, no stale Aria section"
+        );
+        assert!(marcus
+            .implants
+            .as_ref()
+            .expect("marcus implants")
+            .is_empty());
+        assert!(!marcus.online.as_ref().expect("marcus online").online);
     }
 
     #[test]

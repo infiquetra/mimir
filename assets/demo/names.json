@@ -11,5 +11,11 @@
   { "id": 587, "name": "Rifter", "category": "inventory_type" },
   { "id": 681, "name": "Bantam Blueprint", "category": "inventory_type" },
   { "id": 60003760, "name": "Jita IV - Moon 4 - Caldari Navy Assembly Plant", "category": "station" },
-  { "id": 60011866, "name": "Amarr VIII (Oris) - Emperor Family Academy", "category": "station" }
+  { "id": 60011866, "name": "Amarr VIII (Oris) - Emperor Family Academy", "category": "station" },
+  { "id": 22119, "name": "Demo Memory Implant", "category": "inventory_type" },
+  { "id": 22120, "name": "Demo Perception Implant", "category": "inventory_type" },
+  { "id": 30000142, "name": "Jita", "category": "solar_system" },
+  { "id": 30002187, "name": "Amarr", "category": "solar_system" },
+  { "id": 500001, "name": "Caldari State", "category": "faction" },
+  { "id": 99000001, "name": "Demo Alliance", "category": "alliance" }
 ]
