@@ -249,7 +249,9 @@ fn exploration_load_state(
                 reference.effects.len(),
                 reference.statics.len()
             );
-            LoadState::Ready(ExplorationData { reference })
+            LoadState::Ready(ExplorationData {
+                reference: Arc::new(reference),
+            })
         }
         Err(e) => {
             tracing::warn!(

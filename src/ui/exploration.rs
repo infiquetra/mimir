@@ -8,9 +8,12 @@
 
 use super::widgets;
 use crate::app::state::{AppState, DestinationFilter, ExplorationSection, LoadState};
+use std::sync::Arc;
+
 use crate::names::exploration_ref::{
-    effect_for_system, search_types, statics_label, CodeGroup, EffectFamily, EffectResolution,
-    ExplorationRef, RefEffect, RefSystem, TypeSearchQuery, WormholeType,
+    code_group_from_variants, effect_for_system, search_types, statics_label, CodeGroup,
+    EffectFamily, EffectResolution, ExplorationRef, RefEffect, RefSystem, TypeSearchQuery,
+    WormholeType,
 };
 
 /// Maximum group/system rows rendered at once, with the shown/total
@@ -100,6 +103,41 @@ pub fn destination_matches(label: &str, filter: DestinationFilter) -> bool {
     }
 }
 
+/// Narrow code groups to the variants whose destination passes a
+/// chip, dropping groups with no matching variant. Groups are
+/// rebuilt through `code_group_from_variants` so variant counts and
+/// shared lifetime/jump-mass values describe only kept variants,
+/// even if a future SDE pin gives one code divergent destinations.
+pub fn narrow_groups_to_destination(
+    groups: Vec<CodeGroup>,
+    types: &[WormholeType],
+    filter: DestinationFilter,
+) -> Vec<CodeGroup> {
+    let mut narrowed = Vec::new();
+    for group in groups {
+        let matching: Vec<usize> = group
+            .variants
+            .iter()
+            .copied()
+            .filter(|&i| {
+                types
+                    .get(i)
+                    .is_some_and(|t| destination_matches(&t.destination_label(), filter))
+            })
+            .collect();
+        if matching.is_empty() {
+            continue;
+        }
+        narrowed.push(code_group_from_variants(group.code, types, &matching));
+    }
+    tracing::debug!(
+        "[EXPLORE] narrowed groups to destination {:?} kept={}",
+        filter,
+        narrowed.len()
+    );
+    narrowed
+}
+
 /// Filter wormhole types for the Types section (design section 7.3).
 /// Text matching ports `ReferenceDeriver.search` via
 /// `search_types` (exact > prefix > substring rank, then code);
@@ -125,13 +163,7 @@ pub fn filtered_types(
         groups = sorted_groups(&groups, &reference.types);
     }
     if let Some(filter) = destination {
-        groups.retain(|group| {
-            group
-                .variants
-                .iter()
-                .filter_map(|&i| reference.types.get(i))
-                .any(|t| destination_matches(&t.destination_label(), filter))
-        });
+        groups = narrow_groups_to_destination(groups, &reference.types, filter);
     }
     tracing::debug!(
         "[EXPLORE] filtered types groups={} text_len={} destination={:?} capital={}",
@@ -594,45 +626,57 @@ fn show_effects(ui: &mut egui::Ui, state: &mut AppState, reference: &Exploration
 
 pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     ui.heading("Exploration");
-    let snapshot = state.exploration.clone();
-    match snapshot {
-        LoadState::Loading => widgets::loading_panel(ui, "Loading exploration reference..."),
+    // Clone only the `Arc` handle out of the load state so the frame
+    // can mutate view-local state while reading the catalogue; the
+    // catalogue itself (2,631 systems plus indexes) is never cloned.
+    let reference: Arc<ExplorationRef> = match &state.exploration {
+        LoadState::Loading => {
+            widgets::loading_panel(ui, "Loading exploration reference...");
+            return;
+        }
         LoadState::Error(_) => {
             widgets::error_panel(ui, EXPLORATION_ERROR);
+            return;
         }
-        LoadState::Empty => match state.exploration_section {
-            ExplorationSection::Types => widgets::empty_panel(ui, "No wormhole reference data."),
-            ExplorationSection::Systems => widgets::empty_panel(ui, "No system reference data."),
-            ExplorationSection::Effects => widgets::empty_panel(ui, "No effect reference data."),
-        },
-        LoadState::Ready(data) => {
-            let reference = data.reference.clone();
-            ui.label(format!(
-                "Reference data: CCP SDE {} (bundled, offline)",
-                reference.manifest.sde_build
-            ));
-            let hint = search_hint(state.exploration_section);
-            let focus =
-                widgets::search_box(ui, &mut state.exploration_search, hint, state.focus_search);
-            state.text_input_focused |= focus;
-            if focus {
-                state.focus_search = false;
-            }
-            ui.horizontal(|ui| {
-                for section in ExplorationSection::ALL {
-                    let selected = state.exploration_section == section;
-                    if ui.selectable_label(selected, section.label()).clicked() {
-                        tracing::info!("[EXPLORE] section {}", section.label());
-                        state.exploration_section = section;
-                    }
-                }
-            });
+        LoadState::Empty => {
             match state.exploration_section {
-                ExplorationSection::Types => show_types(ui, state, &reference),
-                ExplorationSection::Systems => show_systems(ui, state, &reference),
-                ExplorationSection::Effects => show_effects(ui, state, &reference),
+                ExplorationSection::Types => {
+                    widgets::empty_panel(ui, "No wormhole reference data.")
+                }
+                ExplorationSection::Systems => {
+                    widgets::empty_panel(ui, "No system reference data.")
+                }
+                ExplorationSection::Effects => {
+                    widgets::empty_panel(ui, "No effect reference data.")
+                }
+            }
+            return;
+        }
+        LoadState::Ready(data) => Arc::clone(&data.reference),
+    };
+    ui.label(format!(
+        "Reference data: CCP SDE {} (bundled, offline)",
+        reference.manifest.sde_build
+    ));
+    let hint = search_hint(state.exploration_section);
+    let focus = widgets::search_box(ui, &mut state.exploration_search, hint, state.focus_search);
+    state.text_input_focused |= focus;
+    if focus {
+        state.focus_search = false;
+    }
+    ui.horizontal(|ui| {
+        for section in ExplorationSection::ALL {
+            let selected = state.exploration_section == section;
+            if ui.selectable_label(selected, section.label()).clicked() {
+                tracing::info!("[EXPLORE] section {}", section.label());
+                state.exploration_section = section;
             }
         }
+    });
+    match state.exploration_section {
+        ExplorationSection::Types => show_types(ui, state, &reference),
+        ExplorationSection::Systems => show_systems(ui, state, &reference),
+        ExplorationSection::Effects => show_effects(ui, state, &reference),
     }
 }
 
@@ -1000,26 +1044,90 @@ mod tests {
     }
 
     #[test]
-    fn demo_parity_same_catalogue_in_live_and_demo() {
-        // Design section 8.5: the bundled reference is identical in
-        // live and demo modes, so loading it under either AppState
-        // yields the same catalogue (not demo-only content).
+    fn live_and_demo_states_start_with_same_exploration_defaults() {
+        // Design section 8.5: live and demo start from identical
+        // exploration defaults, and the one bundled catalogue the
+        // shell loads for both modes matches its own manifest row
+        // counts. The shell's single load path for both modes is
+        // covered by `exploration_startup_load_is_ready_or_fixed_error_sentence`.
         let live = AppState::new(false);
         let demo = AppState::new(true);
-        let live_ref = ExplorationRef::load_bundled().expect("bundled loads");
-        let demo_ref = ExplorationRef::load_bundled().expect("bundled loads");
-        assert_eq!(live_ref.types.len(), demo_ref.types.len());
-        assert_eq!(live_ref.systems.len(), demo_ref.systems.len());
-        assert_eq!(live_ref.effects.len(), demo_ref.effects.len());
-        assert_eq!(live_ref.statics.len(), demo_ref.statics.len());
-        assert_eq!(live_ref.manifest.sde_build, 3503375);
-        assert_eq!(live_ref.manifest.sde_build, demo_ref.manifest.sde_build);
         assert!(live.exploration_search.is_empty());
         assert!(demo.exploration_search.is_empty());
+        assert_eq!(live.exploration_section, demo.exploration_section);
         assert_eq!(
             live.exploration_selected_strength,
             demo.exploration_selected_strength
         );
         assert_eq!(live.exploration_selected_strength, 1);
+        let reference = ExplorationRef::load_bundled().expect("bundled loads");
+        assert_eq!(reference.manifest.sde_build, 3503375);
+        assert_eq!(
+            reference.manifest.row_counts.get("types"),
+            Some(&reference.types.len())
+        );
+        assert_eq!(
+            reference.manifest.row_counts.get("systems"),
+            Some(&reference.systems.len())
+        );
+        assert_eq!(
+            reference.manifest.row_counts.get("effects"),
+            Some(&reference.effects.len())
+        );
+        assert_eq!(
+            reference.manifest.row_counts.get("statics"),
+            Some(&reference.statics.len())
+        );
+    }
+
+    #[test]
+    fn destination_narrowing_drops_non_matching_variants_of_a_code() {
+        // One synthetic code whose two variants disagree on
+        // destination (no bundled code does today): narrowing must
+        // keep only the matching variant and recount from it alone.
+        let types = vec![
+            wormhole(
+                1,
+                "X001",
+                "Synthetic X001 highsec",
+                Some(7),
+                Some(1440),
+                Some(2e9),
+                Some(375e6),
+                Some(0.0),
+            ),
+            wormhole(
+                2,
+                "X001",
+                "Synthetic X001 lowsec",
+                Some(8),
+                Some(960),
+                Some(2e9),
+                Some(375e6),
+                Some(0.0),
+            ),
+            wormhole(
+                3,
+                "X002",
+                "Synthetic X002",
+                Some(9),
+                Some(960),
+                Some(2e9),
+                Some(375e6),
+                Some(0.0),
+            ),
+        ];
+        let groups = group_by_code(&types);
+        assert_eq!(group_result_counts(&groups), (2, 3));
+        let highsec =
+            narrow_groups_to_destination(groups.clone(), &types, DestinationFilter::Highsec);
+        assert_eq!(group_result_counts(&highsec), (1, 1));
+        assert_eq!(highsec[0].code, "X001");
+        assert_eq!(highsec[0].variants, vec![0]);
+        // Shared lifetime now describes only the kept variant
+        // (1440 minutes), not the dropped 960-minute one.
+        assert_eq!(highsec[0].shared_lifetime_seconds, Some(86400));
+        let jspace = narrow_groups_to_destination(groups, &types, DestinationFilter::JSpace);
+        assert!(jspace.is_empty());
     }
 }

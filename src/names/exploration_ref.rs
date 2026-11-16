@@ -116,7 +116,11 @@ pub struct WormholeType {
 
 impl WormholeType {
     pub fn lifetime_seconds(&self) -> Option<i64> {
-        self.raw_max_stable_time_minutes.map(|m| m * 60)
+        // Saturating so a directly-constructed row can never panic or
+        // wrap negative; validated catalogues reject overflow minutes
+        // in `validate()` before this is reachable with such a value.
+        self.raw_max_stable_time_minutes
+            .map(|m| m.saturating_mul(60))
     }
 
     pub fn destination_label(&self) -> String {
@@ -315,6 +319,11 @@ impl ExplorationRef {
     }
 
     fn validate(&self) -> AppResult<()> {
+        if self.types.is_empty() || self.systems.is_empty() {
+            return Err(AppError::Message(
+                "[EXPLORE] exploration catalogue is empty".to_string(),
+            ));
+        }
         if self.manifest.row_counts.get("types") != Some(&self.types.len()) {
             return Err(AppError::Message(
                 "[EXPLORE] manifest rowCounts.types mismatches parsed types".to_string(),
@@ -386,6 +395,11 @@ impl ExplorationRef {
                 if m < 0 {
                     return Err(AppError::Message(
                         "[EXPLORE] wormhole lifetime minutes is negative".to_string(),
+                    ));
+                }
+                if m > i64::MAX / 60 {
+                    return Err(AppError::Message(
+                        "[EXPLORE] wormhole lifetime minutes overflows seconds".to_string(),
                     ));
                 }
             }
@@ -559,7 +573,11 @@ pub fn statics_label(reference: &ExplorationRef, system_id: i64) -> String {
     codes.join(", ")
 }
 
-fn code_group_from_variants(
+/// Build one code group over an explicit variant-index subset,
+/// recomputing shared lifetime/jump-mass fields for exactly those
+/// variants. Filters that narrow a group must rebuild through here
+/// so counts and shared values never describe dropped variants.
+pub fn code_group_from_variants(
     code: String,
     catalog: &[WormholeType],
     variants: &[usize],
@@ -791,11 +809,12 @@ mod tests {
             "effects": (1..=6).flat_map(|s| {
                 ["pulsar", "blackHole", "cataclysmicVariable", "magnetar", "redGiant", "wolfRayet"]
                     .iter()
-                    .map(move |fam| {
+                    .enumerate()
+                    .map(move |(idx, fam)| {
                         serde_json::json!({
                             "family": fam,
                             "strength": s,
-                            "beaconTypeId": 90000 + s * 100 + fam.len() as i64,
+                            "beaconTypeId": 90000 + s * 100 + idx as i64,
                             "modifiers": []
                         })
                     })
@@ -1022,13 +1041,23 @@ mod tests {
     #[test]
     fn malformed_and_truncated_json_is_an_error_not_a_panic() {
         assert!(ExplorationRef::from_json("{not json").is_err());
-        // Manifest claims more rows than arrays hold.
+        // The unmutated fixture must load, so every mutation below
+        // fails for the reason its subcase names and not earlier.
         let valid = minimal_valid_json();
-        let truncated = valid.replace("\"types\": 1", "\"types\": 2");
-        assert!(ExplorationRef::from_json(&truncated).is_err());
-        // 35 effects.
+        assert!(
+            ExplorationRef::from_json(&valid).is_ok(),
+            "minimal fixture is itself valid"
+        );
+        // Manifest claims more rows than arrays hold.
+        let mut truncated: serde_json::Value =
+            serde_json::from_str(&valid).expect("minimal parses");
+        truncated["manifest"]["rowCounts"]["types"] = serde_json::json!(2);
+        assert!(ExplorationRef::from_json(&truncated.to_string()).is_err());
+        // 35 effects, with rowCounts agreeing, so only the
+        // effects-must-be-36 validation can reject it.
         let mut value: serde_json::Value = serde_json::from_str(&valid).expect("minimal parses");
         value["effects"] = serde_json::json!(value["effects"].as_array().expect("array")[..35]);
+        value["manifest"]["rowCounts"]["effects"] = serde_json::json!(35);
         assert!(ExplorationRef::from_json(&value.to_string()).is_err());
         // Duplicate type ids.
         let mut dup: serde_json::Value = serde_json::from_str(&valid).expect("minimal parses");
@@ -1044,6 +1073,32 @@ mod tests {
             serde_json::from_str(&valid).expect("minimal parses");
         no_manifest.as_object_mut().expect("obj").remove("manifest");
         assert!(ExplorationRef::from_json(&no_manifest.to_string()).is_err());
+        // Lifetime minutes that would overflow seconds.
+        let mut overflow: serde_json::Value = serde_json::from_str(&valid).expect("minimal parses");
+        overflow["types"][0]["rawMaxStableTimeMinutes"] = serde_json::json!(i64::MAX);
+        assert!(ExplorationRef::from_json(&overflow.to_string()).is_err());
+        // Empty catalogue with agreeing rowCounts is never valid.
+        let mut empty: serde_json::Value = serde_json::from_str(&valid).expect("minimal parses");
+        empty["types"] = serde_json::json!([]);
+        empty["systems"] = serde_json::json!([]);
+        empty["manifest"]["rowCounts"]["types"] = serde_json::json!(0);
+        empty["manifest"]["rowCounts"]["systems"] = serde_json::json!(0);
+        assert!(ExplorationRef::from_json(&empty.to_string()).is_err());
+    }
+
+    #[test]
+    fn lifetime_seconds_saturates_instead_of_overflowing() {
+        let extreme = wormhole(
+            1,
+            "X999",
+            "Synthetic X999",
+            Some(7),
+            Some(i64::MAX),
+            None,
+            None,
+            None,
+        );
+        assert_eq!(extreme.lifetime_seconds(), Some(i64::MAX));
     }
 
     #[test]

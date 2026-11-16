@@ -8,6 +8,7 @@
 //! stored in this struct.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::esi::models::*;
 use crate::names::exploration_ref::{EffectFamily, ExplorationRef};
@@ -395,7 +396,9 @@ impl FittingsData {
 /// it (locked in design section 7.1).
 #[derive(Debug, Clone)]
 pub struct ExplorationData {
-    pub reference: ExplorationRef,
+    /// Shared behind `Arc` so the view can hold the catalogue across
+    /// a frame without deep-cloning 2,631 systems every render.
+    pub reference: Arc<ExplorationRef>,
 }
 
 /// Which Exploration section is shown (design section 7.1).
@@ -1668,7 +1671,9 @@ mod tests {
         assert_eq!(ExplorationSection::Effects.label(), "Effects");
         assert_eq!(DestinationFilter::Highsec.label(), "Highsec");
         assert_eq!(DestinationFilter::JSpace.label(), "J-space");
-        state.exploration = LoadState::Ready(ExplorationData { reference });
+        state.exploration = LoadState::Ready(ExplorationData {
+            reference: Arc::new(reference),
+        });
         state.exploration_search = "B274".to_string();
         state.exploration_section = ExplorationSection::Systems;
         state.exploration_destination = Some(DestinationFilter::Pochven);

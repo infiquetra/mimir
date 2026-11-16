@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### A malformed-data test whose fixture is itself invalid proves nothing about the validations it names
+
+**Author.** Muse Code (parent repair pass over the Exploration workflow)
+**Context.** Adversarial review of the Exploration reference slice proved the bundled data clean by independent re-extraction, then falsified its own malformed-input test: the test fixture computed effect beacon IDs from family-name lengths, and two families share length 8, so the fixture failed the loader's duplicate-beacon check before any mutation was applied.
+**Evidence.** Review probes in the Exploration workflow synthesis (an unmutated copy of the fixture was rejected with `duplicate effect beacon id`); `src/names/exploration_ref.rs` (`minimal_valid_json` used `90000 + s * 100 + fam.len()`, `from_json` duplicate checks precede `validate()` row-count, effects-count, and mass checks, and the truncated case used a string replace that the compact JSON never matched). The same pass probe-confirmed `i64::MAX` lifetime minutes passing validation and panicking in `lifetime_seconds`, an empty catalogue loading as valid, and a roughly 2.4 ms double deep clone of the 2,631-system catalogue per frame in `src/ui/exploration.rs`.
+**Mechanism.** Error-path tests assert only "is an error"; when the baseline fixture already errors for an unrelated reason, every subcase stays green even if the validation it names is deleted. Validation order turns a fixture bug into silent coverage loss, and nothing fails loudly because the test's only oracle is the error bit.
+**Fix (or queued).** The fixture now enumerates families for unique beacon IDs and the test first asserts the unmutated fixture loads, each mutation goes through `serde_json::Value` (the 35-effects case sets agreeing row counts so only the effects-must-be-36 check can reject it), lifetime minutes above `i64::MAX / 60` are rejected in `validate()` while `lifetime_seconds` saturates, empty types/systems catalogues are rejected, destination chips narrow groups to matching variants only, and the catalogue is shared behind `Arc` so frames clone a handle, not the data.
+**Validation.** New tests `lifetime_seconds_saturates_instead_of_overflowing` and `destination_narrowing_drops_non_matching_variants_of_a_code`, extended `malformed_and_truncated_json_is_an_error_not_a_panic`, full `cargo test` (320 passed) / `cargo clippy --all-targets -- -D warnings` / `cargo fmt --check` on branch `feat/rust-exploration-reference`, plus a parent-inspected demo Exploration screenshot (102 code groups, C729 at the archive-true 27 variants).
+**Generalizable rule.** Every mutation-based rejection test must first assert its unmutated fixture is accepted; otherwise it cannot distinguish "rejected for the named reason" from "rejected for any reason at all".
+**Refs.** `docs/exploration-reference-design.md`; `src/names/exploration_ref.rs`; `src/ui/exploration.rs`; `src/app/state.rs` (`ExplorationData`).
+
 ### Clipboard formats are a trust boundary: sanitize every interpolated name, cap every expansion
 
 **Author.** Muse Code (parent repair pass over the saved-fittings workflow)
