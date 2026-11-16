@@ -194,6 +194,49 @@ fn reauthorize_panel(ui: &mut egui::Ui, state: &mut AppState) {
     }
 }
 
+/// Structure-names step-up guidance (design section 5.3): a
+/// non-blocking banner above the loaded assets. Structure names
+/// being unavailable must never hide asset data that loaded fine.
+fn structures_stepup_banner(ui: &mut egui::Ui, state: &mut AppState) {
+    ui.heading("Some location names need one more EVE permission.");
+    ui.label(
+        "This character has not granted esi-universe.read_structures.v1, the EVE SSO \
+         scope that lets Mimir look up player-built structure names. Locations inside \
+         player structures show as Unknown Location until it is granted; everything \
+         else is unaffected.",
+    );
+    let active_id = state.active_character_id;
+    if let Some(name) = state.active_character().map(|c| c.name.clone()) {
+        ui.label(format!(
+            "Choose Re-authorize and Mimir opens EVE SSO in your browser for {name}, \
+             asking for the permissions already granted plus this one. Sign in as \
+             {name}: approving as a different character is rejected and nothing \
+             is saved."
+        ));
+    }
+    let enabled = !state.demo && !state.auth.is_busy() && state.active_character_id.is_some();
+    if state.auth.is_busy() {
+        ui.spinner();
+        ui.label(state.auth.label());
+    }
+    if ui
+        .add_enabled(enabled, egui::Button::new("Re-authorize with EVE SSO"))
+        .clicked()
+    {
+        if let Some(active_id) = active_id {
+            tracing::info!(
+                "[AUTH] step-up re-authorize requested from Assets view character_id={} scopes={}",
+                active_id,
+                EveConfig::STRUCTURE_SCOPES.join(" ")
+            );
+            state.stepup_requested =
+                Some(StepUpRequest::new(active_id, EveConfig::STRUCTURE_SCOPES));
+            state.status_message =
+                "EVE SSO requested: your browser should open to login.eveonline.com.".to_string();
+        }
+    }
+}
+
 pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
     ui.heading("Assets");
     widgets::mode_notice(ui, state.demo, state.offline);
@@ -216,6 +259,13 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
                     "No assets yet. Press Ctrl+R (or Refresh) after signing in.",
                 );
                 return;
+            }
+            // Structure step-up banner (design section 5.3): only
+            // once assets have loaded (after the assets-scope panel
+            // above), and never by replacing the data.
+            if state.structures_needs_reauthorize {
+                tracing::debug!("[ASSETS] showing structure step-up guidance (missing scope)");
+                structures_stepup_banner(ui, state);
             }
             let focus = widgets::search_box(
                 ui,
