@@ -26,6 +26,15 @@
 
 ## 2026-11-16
 
+### Each base-attribute block ships as its own heading plus disclosure, available independently of its neighbours (feat/rust-ship-base-stats)
+
+**Author.** Muse Code (ship-base-stats workflow, integrator)
+**Decision.** The new "Ship (base values)" block (`src/ui/fittings.rs:1163`, rendered by `render_ship_base_stats` at `:1357` after the resources block in both fitting details) is its own heading with its own disclosure naming fitted modules, rigs, subsystems, skills, implants, and ship bonuses as not applied. Its availability is independent of the neighbouring resources block: `ship_base_stats` (`src/fitting/ship_stats.rs:56`) reads only the hull row and never the fitted items, so a ship with no usable CPU/power output can still show base values and the reverse. Each later base-attribute block follows the same shape rather than merging into one combined panel.
+**Rejected alternatives.** Folding the five values into the resources block or its disclosure: one unavailable block would then hide or mislabel the other, and the skill-applied resources state would imply skills also adjust the ship values (they do not in this slice). Waiting for a full simulator panel: delays a provable base readout, against the base-values-first decision below.
+**Rationale.** Implementation confirmed the two blocks fail and succeed on different catalogue facts (output rows versus the five base rows), and the bidirectional independence fixtures plus the real zero-output Echelon companion in `src/fitting/ship_stats.rs` prove neither block's availability implies the other's. Separate headings keep each disclosure exactly as wide as the numbers under it.
+**Revisit when.** A grounded modifier pipeline begins adjusting these base values (skills, modules, rigs, subsystems, implants, or ship bonuses) — then the heading, disclosure, and availability contract for this block must be redesigned in that change, not silently widened.
+**Refs.** `docs/ship-base-stats-design.md` sections 4, 6, and 9; `src/ui/fittings.rs:1169` (disclosure); LEARNINGS 2026-11-16 ship-base-attributes entry; DECISIONS 2026-11-16 base-values-first entry below.
+
 ### Two grounded skills join the resources readout; per-view character data resets at the switch boundary (feat/rust-fitting-skill-resources)
 
 **Author.** Muse Code (fitting-skill-resources workflow, integrator)
