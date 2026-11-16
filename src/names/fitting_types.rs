@@ -54,6 +54,10 @@ pub struct FittingTypes {
     /// Normalized name to catalogue row indices, de-duplicated by
     /// `type_id` (the AAR `_loadNameIndex` semantics).
     by_normalized: HashMap<String, Vec<usize>>,
+    /// Type number to catalogue row index. A duplicated type number
+    /// (absent from the shipped asset) resolves to the first row in
+    /// file order.
+    by_id: HashMap<i64, usize>,
 }
 
 /// Flutter `_normalizeName`: trim, collapse every whitespace run to
@@ -103,9 +107,14 @@ impl FittingTypes {
                 by_normalized.entry(key).or_default().push(index);
             }
         }
+        let mut by_id: HashMap<i64, usize> = HashMap::new();
+        for (index, row) in types.iter().enumerate() {
+            by_id.entry(row.type_id).or_insert(index);
+        }
         Ok(Self {
             types,
             by_normalized,
+            by_id,
         })
     }
 
@@ -125,6 +134,16 @@ impl FittingTypes {
             },
             _ => NameLookup::Ambiguous,
         }
+    }
+
+    /// Look up a catalogue row by type number. Logs nothing: the
+    /// number is pasted input and is never logged in any case.
+    /// Returns `None` for any number with no row, including zero and
+    /// negatives (such rows are filtered at load).
+    pub fn lookup_by_id(&self, type_id: i64) -> Option<&FittingType> {
+        self.by_id
+            .get(&type_id)
+            .and_then(|index| self.types.get(*index))
     }
 
     /// Number of usable types in the catalogue.
@@ -226,6 +245,34 @@ mod tests {
         assert!(all_invalid.is_err());
         let malformed = FittingTypes::from_json("not json at all");
         assert!(malformed.is_err());
+    }
+
+    #[test]
+    fn lookup_by_id_resolves_bundled_rows() {
+        let types = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let rifter = types.lookup_by_id(587).expect("Rifter by number");
+        assert_eq!(rifter.name, "Rifter");
+        assert_eq!(rifter.category_id, 6);
+        let damage_control = types
+            .lookup_by_id(2048)
+            .expect("Damage Control II by number");
+        assert_eq!(damage_control.name, "Damage Control II");
+        assert!(damage_control.slot_effects.contains(&11));
+        assert_eq!(types.lookup_by_id(999999), None);
+        assert_eq!(types.lookup_by_id(0), None);
+        assert_eq!(types.lookup_by_id(-5), None);
+    }
+
+    #[test]
+    fn lookup_by_id_duplicate_number_resolves_to_first_row() {
+        let types = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"First Row","categoryId":6,"slotEffects":[]},
+                {"typeId":42,"typeName":"Second Row","categoryId":7,"slotEffects":[11]}]}"#,
+        )
+        .expect("fixture parses");
+        let row = types.lookup_by_id(42).expect("duplicated number resolves");
+        assert_eq!(row.name, "First Row");
     }
 
     #[test]
