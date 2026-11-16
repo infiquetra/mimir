@@ -24,6 +24,17 @@
 
 ---
 
+## 2026-11-16
+
+### The fittings write scope is its own step-up group, never folded into the read group (feat/rust-fittings-write)
+
+**Author.** Muse Code (fittings-write workflow, integrator)
+**Decision.** Saving or deleting a character fitting requires `esi-fittings.write_fittings.v1` from a new `FITTINGS_WRITE_SCOPES` group in `src/config.rs`, granted only through the step-up flow and checked from stored token metadata before any write request is sent. The read group `FITTINGS_SCOPES` and first sign-in (`FIRST_AUTH_SCOPES`) are unchanged, so holding read permission says nothing about write permission.
+**Rejected alternatives.** Folding the write scope into the existing read group: every character that re-ran the read step-up would silently gain write permission, and "has the fittings group" would stop being evidence about which permission was actually granted. Adding the write scope to first sign-in was never in contention; it breaks least-privilege first auth for a feature most sign-ins never use.
+**Rationale.** Each step-up group in this app names exactly one permission (the player-structure name lookup set the precedent), which keeps the token-metadata pre-check, the re-authorize offer, and the audit question "could this token write?" answerable from one constant. Writes are also the first irreversible actions in the app, so their permission gets its own explicit grant moment in the browser.
+**Revisit when.** EVE merges the read and write fittings scopes, a second fittings-write feature needs a different scope, or live use shows the extra step-up round trip is the dominant friction and a combined ask at write time (still never at first sign-in) is demonstrably clearer.
+**Refs.** `docs/fittings-write-design.md` sections 3 and 15; `src/config.rs` (`FITTINGS_WRITE_SCOPES`); `src/app/shell.rs` (`fittings_write_stepup_observed`, `start_fitting_write`); LEARNINGS 2026-11-16 first-writes entry.
+
 ## 2026-11-15
 
 ### EVE access tokens are signature-verified with jsonwebtoken (rust_crypto) before any claims are trusted (feat/jwt-signature-verification)

@@ -287,6 +287,40 @@ impl EsiClient {
         Ok((parsed, meta))
     }
 
+    /// Sibling of `send` for operations whose success body is
+    /// defined as empty (the fitting DELETE answers 204 with
+    /// no body): identical error-limit, transport, and status
+    /// handling, but any 2xx returns `Ok(())` without decoding.
+    /// `send` itself is untouched, so no read path changes.
+    async fn send_unit(&self, request: reqwest::RequestBuilder, path: &str) -> AppResult<()> {
+        self.check_error_limit(path)?;
+        let response = request
+            .send()
+            .await
+            .map_err(|e| EsiError::from(e.without_url()))?;
+        let status = response.status();
+        self.update_error_limit_from_headers(response.headers());
+        let body = response
+            .text()
+            .await
+            .map_err(|e| EsiError::from(e.without_url()))?;
+        if !status.is_success() {
+            tracing::warn!(
+                "[ESI] request failed path={} status={}",
+                path,
+                status.as_u16()
+            );
+            return Err(EsiError::from_status(
+                status.as_u16(),
+                &body,
+                self.error_limit_reset_secs(),
+            )
+            .into());
+        }
+        tracing::debug!("[ESI] request ok path={} status={}", path, status.as_u16());
+        Ok(())
+    }
+
     pub async fn public_get<T: DeserializeOwned>(&self, path: &str) -> AppResult<T> {
         tracing::debug!("[ESI] GET {}", path);
         let (value, _meta) = self.send(self.http.get(self.build_url(path)), path).await?;
@@ -375,6 +409,16 @@ impl EsiClient {
             .json(body);
         let (value, _meta) = self.send(request, path).await?;
         Ok(value)
+    }
+
+    pub async fn auth_delete(&self, path: &str, character_id: i64) -> AppResult<()> {
+        tracing::debug!("[ESI] DELETE {} character_id={}", path, character_id);
+        let token = self.valid_access_token(character_id).await?;
+        let request = self
+            .http
+            .delete(self.build_url(path))
+            .bearer_auth(token.as_str());
+        self.send_unit(request, path).await
     }
 }
 

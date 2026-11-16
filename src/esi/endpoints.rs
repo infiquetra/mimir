@@ -621,10 +621,11 @@ pub async fn get_character_planet(
 /// first-auth); a missing scope surfaces as HTTP 401/403 →
 /// `EsiError::Reauthorize`/`Unauthorized`, detected only through
 /// `endpoints::needs_reauthorize`. The list carries each fitting's
-/// full item list, so selecting a fitting never fetches. The
-/// write scope is never requested; there is no fitting write in
-/// this slice. Rows return in fetch order, unsorted and
-/// unfiltered. The endpoint function adds no scope logic.
+/// full item list, so selecting a fitting never fetches. Fitting
+/// writes (`save_character_fitting` / `delete_character_fitting`)
+/// live beside this function but need the separate write scope.
+/// Rows return in fetch order, unsorted and unfiltered. The
+/// endpoint function adds no scope logic.
 pub async fn get_character_fittings(
     client: &EsiClient,
     character_id: i64,
@@ -633,6 +634,55 @@ pub async fn get_character_fittings(
     client
         .auth_get(
             &format!("/characters/{character_id}/fittings/"),
+            character_id,
+        )
+        .await
+}
+
+/// Save a fitting to the character's in-game fitting list. Requires
+/// scope `esi-fittings.write_fittings.v1` (progressive step-up,
+/// never first-auth); a missing scope surfaces as HTTP 401/403 →
+/// `EsiError::Reauthorize`/`Unauthorized`. Success is only a 2xx
+/// whose body decodes as `SaveFittingResponse`; the returned
+/// `fitting_id` is the caller's receipt. The trailing-slash path
+/// matches the shipped read path and the retired Flutter POST.
+pub async fn save_character_fitting(
+    client: &EsiClient,
+    character_id: i64,
+    request: &SaveFittingRequest,
+) -> AppResult<SaveFittingResponse> {
+    tracing::debug!(
+        "[FITTING] POST /characters/{}/fittings/ items={}",
+        character_id,
+        request.items.len()
+    );
+    client
+        .auth_post(
+            &format!("/characters/{character_id}/fittings/"),
+            character_id,
+            request,
+        )
+        .await
+}
+
+/// Delete a saved fitting from the character's in-game list.
+/// Requires scope `esi-fittings.write_fittings.v1` (progressive
+/// step-up, never first-auth). Success is the ESI 204 with no
+/// body. The caller guards `fitting_id > 0` before spawning, so
+/// only server-issued ids are ever delete targets.
+pub async fn delete_character_fitting(
+    client: &EsiClient,
+    character_id: i64,
+    fitting_id: i64,
+) -> AppResult<()> {
+    tracing::debug!(
+        "[FITTING] DELETE /characters/{}/fittings/{}/",
+        character_id,
+        fitting_id
+    );
+    client
+        .auth_delete(
+            &format!("/characters/{character_id}/fittings/{fitting_id}/"),
             character_id,
         )
         .await
@@ -779,6 +829,88 @@ pub fn needs_reauthorize(error: &crate::error::AppError) -> bool {
         error,
         crate::error::AppError::Esi(EsiError::Reauthorize | EsiError::Unauthorized)
     )
+}
+
+/// What a failed fitting write proves about the server state, for
+/// honest status wording. `NotSent` means the request provably
+/// never left this process (safe to retry by hand); `Definitive`
+/// means ESI answered 4xx (nothing was created or deleted);
+/// `AlreadyGone` is a DELETE 404 (the fitting is already gone);
+/// `RateLimited` carries the server reset duration;
+/// `Unknown` means no usable answer (transport, 5xx, or an
+/// undecodable success body — the server may have committed).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WriteFailureClass {
+    NotSent,
+    Definitive,
+    AlreadyGone,
+    RateLimited { reset_secs: u32 },
+    Unknown,
+}
+
+/// Classify a fitting write error into what it proves about the
+/// server state plus whether the remedy is re-authorization.
+/// Every error variant is matched by name so a future variant is
+/// a compile error here, not a silent miscategorization.
+///
+/// Every write 403 takes the re-authorize route: `EsiError`
+/// cannot distinguish a missing scope from any other 403, and
+/// this slice invents no body-sniffing discriminator. `NoTokens`
+/// also routes to re-authorize (the read path's
+/// `needs_reauthorize` covers only 401/403): with no stored
+/// tokens the honest remedy is signing in again, and the write
+/// panel is this view's route to it.
+pub fn classify_write_error(
+    error: &crate::error::AppError,
+    is_delete: bool,
+) -> (WriteFailureClass, bool) {
+    use crate::error::{AppError, AuthError};
+    match error {
+        AppError::Esi(esi) => match esi {
+            EsiError::Unauthorized => (WriteFailureClass::Definitive, true),
+            EsiError::Reauthorize => (WriteFailureClass::Definitive, true),
+            EsiError::NotFound(_) => {
+                if is_delete {
+                    (WriteFailureClass::AlreadyGone, false)
+                } else {
+                    (WriteFailureClass::Definitive, false)
+                }
+            }
+            EsiError::RateLimited { reset_secs } => (
+                WriteFailureClass::RateLimited {
+                    reset_secs: *reset_secs,
+                },
+                false,
+            ),
+            EsiError::ErrorLimitExhausted { reset_secs } => (
+                WriteFailureClass::RateLimited {
+                    reset_secs: *reset_secs,
+                },
+                false,
+            ),
+            EsiError::Status(code) | EsiError::StatusMessage(code, _) => {
+                if (400..500).contains(code) {
+                    (WriteFailureClass::Definitive, false)
+                } else {
+                    (WriteFailureClass::Unknown, false)
+                }
+            }
+            EsiError::NoTokens(_) => (WriteFailureClass::NotSent, true),
+            EsiError::Http(_) => (WriteFailureClass::Unknown, false),
+            EsiError::Decode(_) => (WriteFailureClass::Unknown, false),
+            EsiError::NotWired(_) => (WriteFailureClass::NotSent, false),
+            EsiError::Message(_) => (WriteFailureClass::NotSent, false),
+        },
+        AppError::Auth(auth) => (
+            WriteFailureClass::NotSent,
+            matches!(auth, AuthError::RefreshRejected),
+        ),
+        AppError::Db(_) => (WriteFailureClass::NotSent, false),
+        AppError::Io(_) => (WriteFailureClass::NotSent, false),
+        AppError::Json(_) => (WriteFailureClass::NotSent, false),
+        AppError::Url(_) => (WriteFailureClass::NotSent, false),
+        AppError::Message(_) => (WriteFailureClass::NotSent, false),
+    }
 }
 
 #[cfg(test)]
@@ -1699,5 +1831,333 @@ mod tests {
         assert!(needs_reauthorize(&err));
         let other = crate::error::AppError::from(EsiError::Status(500));
         assert!(!needs_reauthorize(&other));
+    }
+
+    fn sample_save_request() -> SaveFittingRequest {
+        SaveFittingRequest {
+            name: "My Rifter".to_string(),
+            description: "Saved from Mimir".to_string(),
+            ship_type_id: 587,
+            items: vec![
+                FittingItem {
+                    flag: "LoSlot0".to_string(),
+                    quantity: 1,
+                    type_id: 2048,
+                },
+                FittingItem {
+                    flag: "DroneBay".to_string(),
+                    quantity: 5,
+                    type_id: 2456,
+                },
+            ],
+        }
+    }
+
+    #[tokio::test]
+    async fn fitting_save_posts_exact_body_and_parses_id() {
+        let (base, captured) = one_shot_server(201, r#"{"fitting_id":4242}"#).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let response = save_character_fitting(&client, 7, &sample_save_request())
+            .await
+            .expect("save");
+        assert_eq!(response.fitting_id, 4242);
+        let request = captured.await.expect("captured");
+        assert!(
+            request.starts_with("POST /characters/7/fittings/?datasource=tranquility"),
+            "request: {request}"
+        );
+        assert!(
+            request.to_lowercase().contains("authorization: bearer "),
+            "request must carry the bearer header: {request}"
+        );
+        assert!(
+            request
+                .to_lowercase()
+                .contains("content-type: application/json"),
+            "request must be JSON: {request}"
+        );
+        let body = request.split("\r\n\r\n").nth(1).expect("body present");
+        assert_eq!(
+            body,
+            r#"{"name":"My Rifter","description":"Saved from Mimir","ship_type_id":587,"items":[{"flag":"LoSlot0","quantity":1,"type_id":2048},{"flag":"DroneBay","quantity":5,"type_id":2456}]}"#
+        );
+    }
+
+    #[tokio::test]
+    async fn fitting_delete_sends_delete_and_accepts_204_empty() {
+        let (base, captured) = one_shot_server(204, "").await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        delete_character_fitting(&client, 7, 4242)
+            .await
+            .expect("delete");
+        let request = captured.await.expect("captured");
+        assert!(
+            request.starts_with("DELETE /characters/7/fittings/4242/?datasource=tranquility"),
+            "request: {request}"
+        );
+        assert!(
+            request.to_lowercase().contains("authorization: bearer "),
+            "request must carry the bearer header: {request}"
+        );
+        let body = request
+            .split("\r\n\r\n")
+            .nth(1)
+            .expect("terminator present");
+        assert_eq!(body, "", "delete carries no body, request: {request}");
+    }
+
+    #[tokio::test]
+    async fn fitting_save_scope_failures_classify_as_definitive_reauthorize() {
+        for status in [401u16, 403] {
+            let (base, _captured) = one_shot_server(status, r#"{"error":"Forbidden"}"#).await;
+            let (client, _dir) = client_with_fresh_tokens(base);
+            let err = save_character_fitting(&client, 7, &sample_save_request())
+                .await
+                .expect_err("scope failure must error");
+            assert_eq!(
+                classify_write_error(&err, false),
+                (WriteFailureClass::Definitive, true),
+                "status {status} error: {err:?}"
+            );
+        }
+        let (base, _captured) = one_shot_server(403, r#"{"error":"Forbidden"}"#).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = delete_character_fitting(&client, 7, 4242)
+            .await
+            .expect_err("scope failure must error");
+        assert_eq!(
+            classify_write_error(&err, true),
+            (WriteFailureClass::Definitive, true),
+            "delete 403 error: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn fitting_save_server_error_classifies_unknown() {
+        let (base, _captured) = one_shot_server(500, r#"{"error":"boom"}"#).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = save_character_fitting(&client, 7, &sample_save_request())
+            .await
+            .expect_err("500 must error");
+        assert_eq!(
+            classify_write_error(&err, false),
+            (WriteFailureClass::Unknown, false),
+            "error: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn fitting_delete_404_is_already_gone_but_save_404_is_definitive() {
+        let (base, _captured) = one_shot_server(404, r#"{"error":"gone"}"#).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = delete_character_fitting(&client, 7, 4242)
+            .await
+            .expect_err("404 must error");
+        assert_eq!(
+            classify_write_error(&err, true),
+            (WriteFailureClass::AlreadyGone, false),
+            "error: {err:?}"
+        );
+        let (base, _captured) = one_shot_server(404, r#"{"error":"gone"}"#).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = save_character_fitting(&client, 7, &sample_save_request())
+            .await
+            .expect_err("404 must error");
+        assert_eq!(
+            classify_write_error(&err, false),
+            (WriteFailureClass::Definitive, false),
+            "error: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn fitting_save_rate_limited_classifies_rate_limited() {
+        let (base, _captured) = one_shot_server(420, r#"{"error":"slow down"}"#).await;
+        let (client, _dir) = client_with_fresh_tokens(base);
+        let err = save_character_fitting(&client, 7, &sample_save_request())
+            .await
+            .expect_err("420 must error");
+        assert_eq!(
+            classify_write_error(&err, false),
+            (WriteFailureClass::RateLimited { reset_secs: 0 }, false),
+            "error: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn fitting_save_malformed_success_body_classifies_unknown() {
+        for body in ["{}", "not json"] {
+            let (base, _captured) = one_shot_server(201, body).await;
+            let (client, _dir) = client_with_fresh_tokens(base);
+            let err = save_character_fitting(&client, 7, &sample_save_request())
+                .await
+                .expect_err("malformed receipt must error");
+            assert_eq!(
+                classify_write_error(&err, false),
+                (WriteFailureClass::Unknown, false),
+                "body {body} error: {err:?}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn fitting_writes_without_tokens_are_not_sent_and_carry_no_id_text() {
+        let client = EsiClient::with_http(reqwest::Client::new(), "http://127.0.0.1:9".to_string());
+        let err = save_character_fitting(&client, 90000001, &sample_save_request())
+            .await
+            .expect_err("no tokens must error");
+        assert_eq!(
+            classify_write_error(&err, false),
+            (WriteFailureClass::NotSent, true),
+            "error: {err:?}"
+        );
+        assert!(!err.to_string().contains("90000001"), "error: {err}");
+        let err = delete_character_fitting(&client, 90000001, 4242)
+            .await
+            .expect_err("no tokens must error");
+        assert_eq!(
+            classify_write_error(&err, true),
+            (WriteFailureClass::NotSent, true),
+            "error: {err:?}"
+        );
+        assert!(!err.to_string().contains("90000001"), "error: {err}");
+    }
+
+    #[test]
+    fn classify_write_error_covers_every_row() {
+        use crate::error::{AppError, AuthError};
+        let assert_class = |err: AppError, is_delete: bool, expected: (WriteFailureClass, bool)| {
+            assert_eq!(
+                classify_write_error(&err, is_delete),
+                expected,
+                "error: {err:?}"
+            );
+        };
+        assert_class(
+            AppError::from(EsiError::Unauthorized),
+            false,
+            (WriteFailureClass::Definitive, true),
+        );
+        assert_class(
+            AppError::from(EsiError::Reauthorize),
+            true,
+            (WriteFailureClass::Definitive, true),
+        );
+        assert_class(
+            AppError::from(EsiError::NotFound("gone".to_string())),
+            true,
+            (WriteFailureClass::AlreadyGone, false),
+        );
+        assert_class(
+            AppError::from(EsiError::NotFound("gone".to_string())),
+            false,
+            (WriteFailureClass::Definitive, false),
+        );
+        assert_class(
+            AppError::from(EsiError::RateLimited { reset_secs: 42 }),
+            false,
+            (WriteFailureClass::RateLimited { reset_secs: 42 }, false),
+        );
+        assert_class(
+            AppError::from(EsiError::ErrorLimitExhausted { reset_secs: 7 }),
+            true,
+            (WriteFailureClass::RateLimited { reset_secs: 7 }, false),
+        );
+        assert_class(
+            AppError::from(EsiError::Status(400)),
+            false,
+            (WriteFailureClass::Definitive, false),
+        );
+        assert_class(
+            AppError::from(EsiError::StatusMessage(422, "bad".to_string())),
+            false,
+            (WriteFailureClass::Definitive, false),
+        );
+        // 500 is the boundary: a `< 500` vs `<= 500` flip fails here.
+        assert_class(
+            AppError::from(EsiError::Status(500)),
+            false,
+            (WriteFailureClass::Unknown, false),
+        );
+        assert_class(
+            AppError::from(EsiError::Status(503)),
+            false,
+            (WriteFailureClass::Unknown, false),
+        );
+        assert_class(
+            AppError::from(EsiError::NoTokens(7)),
+            false,
+            (WriteFailureClass::NotSent, true),
+        );
+        assert_class(
+            AppError::from(EsiError::Decode("bad".to_string())),
+            false,
+            (WriteFailureClass::Unknown, false),
+        );
+        assert_class(
+            AppError::from(EsiError::NotWired("x".to_string())),
+            false,
+            (WriteFailureClass::NotSent, false),
+        );
+        assert_class(
+            AppError::from(EsiError::Message("x".to_string())),
+            false,
+            (WriteFailureClass::NotSent, false),
+        );
+        assert_class(
+            AppError::from(AuthError::RefreshRejected),
+            false,
+            (WriteFailureClass::NotSent, true),
+        );
+        assert_class(
+            AppError::from(AuthError::Message("x".to_string())),
+            true,
+            (WriteFailureClass::NotSent, false),
+        );
+        let db = rusqlite::Connection::open(":memory:")
+            .expect("memory db")
+            .prepare("select * from no_such_table")
+            .expect_err("missing table must error");
+        assert_class(
+            AppError::from(db),
+            false,
+            (WriteFailureClass::NotSent, false),
+        );
+        assert_class(
+            AppError::from(std::io::Error::other("boom")),
+            false,
+            (WriteFailureClass::NotSent, false),
+        );
+        assert_class(
+            AppError::from(serde_json::from_str::<serde_json::Value>("{").expect_err("bad json")),
+            false,
+            (WriteFailureClass::NotSent, false),
+        );
+        assert_class(
+            AppError::from("http://[::1".parse::<url::Url>().expect_err("bad url")),
+            false,
+            (WriteFailureClass::NotSent, false),
+        );
+        assert_class(
+            AppError::Message("x".to_string()),
+            false,
+            (WriteFailureClass::NotSent, false),
+        );
+    }
+
+    #[tokio::test]
+    async fn classify_write_error_http_transport_is_unknown() {
+        // Unreachable server: the request fails in transport with
+        // no stored tokens involved (fresh tokens are seeded, so
+        // the failure is the connection itself).
+        let (client, _dir) = client_with_fresh_tokens("http://127.0.0.1:9".to_string());
+        let err = save_character_fitting(&client, 7, &sample_save_request())
+            .await
+            .expect_err("unreachable must error");
+        assert_eq!(
+            classify_write_error(&err, false),
+            (WriteFailureClass::Unknown, false),
+            "error: {err:?}"
+        );
     }
 }

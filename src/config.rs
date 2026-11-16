@@ -94,11 +94,18 @@ impl EveConfig {
     /// never at first auth.
     pub const PLANETS_SCOPES: &[&str] = &["esi-planets.manage_planets.v1"];
 
-    /// Saved-fittings step-up scope: read the character's saved
-    /// fittings. Granted after first sign-in via step-up, never
-    /// at first auth. The write scope is never requested (no
-    /// fitting writes exist in the read-only slice).
+    /// Saved-fittings read step-up scope: read the character's
+    /// saved fittings. Granted after first sign-in via step-up,
+    /// never at first auth. Reading never implies permission to
+    /// change them; the write scope is its own group below.
     pub const FITTINGS_SCOPES: &[&str] = &["esi-fittings.read_fittings.v1"];
+
+    /// Saved-fittings write step-up scope: save a fitting to a
+    /// character's in-game list or delete one from it. Granted
+    /// after first sign-in via step-up, never at first auth.
+    /// Separate from FITTINGS_SCOPES: reading fittings must
+    /// never imply permission to change them.
+    pub const FITTINGS_WRITE_SCOPES: &[&str] = &["esi-fittings.write_fittings.v1"];
 
     /// Player-structure name step-up scope: look up a
     /// player-built structure's name with the active
@@ -256,6 +263,24 @@ mod tests {
             assert!(
                 !EveConfig::FIRST_AUTH_SCOPES.contains(scope),
                 "step-up scope {scope} must be disjoint from first-auth"
+            );
+        }
+    }
+
+    #[test]
+    fn fittings_write_scopes_is_the_single_stepup_scope() {
+        assert_eq!(
+            EveConfig::FITTINGS_WRITE_SCOPES,
+            ["esi-fittings.write_fittings.v1"]
+        );
+        for scope in EveConfig::FITTINGS_WRITE_SCOPES {
+            assert!(
+                !EveConfig::FIRST_AUTH_SCOPES.contains(scope),
+                "step-up scope {scope} must be disjoint from first-auth"
+            );
+            assert!(
+                !EveConfig::FITTINGS_SCOPES.contains(scope),
+                "write scope {scope} must be disjoint from the read group"
             );
         }
     }
