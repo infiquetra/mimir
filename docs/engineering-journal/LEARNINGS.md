@@ -31,6 +31,17 @@
 
 ## 2026-11-16
 
+### In dgmTypeAttributes, a missing row does not mean zero, and subsystem output rows are not ship output
+
+**Author.** Muse Code (fitting-resources workflow, integrator)
+**Context.** The first fitting-resources slice shows base CPU and power grid used against the ship's base output for saved and imported fittings, computed only from the bundled catalogue.
+**Evidence.** `docs/fitting-resources-design.md` sections 2-4 (cache facts read from `scripts/sde/dgmTypeAttributes.csv.bz2`: genuine zero-cost passive modules and Abyssal modules both have no 50/30 rows, while type 1355 carries a present power `0.0`; twelve offensive subsystems 45598-45609 carry 11/48 output rows); `src/names/fitting_types.rs:32` and `:36` (the four resource fields are `Option<f64>`); `src/fitting/resources.rs:30` (`excluded_modules`), `:65` (`usable`), `:97` (hull output only); `src/ui/fittings.rs:1136` (the in-view disclosure that skills, implants, and module, rig, subsystem, and ship bonuses are not applied).
+**Mechanism.** Absence in the static data export conflates "costs nothing" with "no base value exists" (per-item mutated Abyssal modules), so treating absence as `0.0` would silently understate some fits while looking exact. Present explicit `0.0` is different data and counts as a real zero. Subsystem output rows likewise exist in the data but reach a fitting total only through effect modifiers — the retired Flutter engine seeded ship attributes from the hull alone — so adding them to a base-only total would claim a modifier this slice does not apply.
+**Fix (or queued).** The catalogue keeps absence as `None`; the pure computation counts an absent or unusable dimension as an excluded row per dimension and the view names that count, and it reads output from the category-6 hull row only. Subsystem output rows are not emitted into the catalogue at all.
+**Validation.** `bundled_catalogue_invariants` in `src/names/fitting_types.rs` and the oracle tests in `src/fitting/resources.rs` (present-zero type 1355 counts with no exclusion, data-less rows exclude per dimension); full gates on branch `feat/rust-fitting-resources`.
+**Generalizable rule.** For SDE attribute data, missing is not zero: keep absence optional end to end, disclose what a total could not count, and never promote a data row into a total without the modifier path that grounds it.
+**Refs.** `docs/fitting-resources-design.md`; DECISIONS 2026-11-16 base-values-first entry.
+
 ### An assumption about generated data belongs in the generated-data invariant test, not in the design prose
 
 **Author.** Muse Code (parent repair pass over the DNA-import workflow)

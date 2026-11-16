@@ -26,6 +26,15 @@
 
 ## 2026-11-16
 
+### Fitting numbers ship base-values-first, labelled in the view for exactly what they exclude (feat/rust-fitting-resources)
+
+**Author.** Muse Code (fitting-resources workflow, integrator)
+**Decision.** A fitting number may ship as soon as its base (unmodified) values are hand-verifiable from bundled data, provided the view itself labels it as base values and names every modifier class not applied. The first application is the CPU and power grid readout: base need sums against hull base output, under the heading "Fitting resources (base values)" and the disclosure at `src/ui/fittings.rs:1136`. The words "simulator" and "statistics" do not attach to base-only numbers in the view or the README.
+**Rejected alternatives.** Waiting for the full modifier engine before showing any number: it delays a provable readout for an ungrounded one. Porting only the retired Flutter curated two-skill output table: still a partial total, with more inputs and the same disclosure duty.
+**Rationale.** An unlabeled partial total that looks like an in-game total is the failure mode; a labeled base total is honest, testable against cache rows, and gives the next simulator slice a labelled baseline to extend rather than a silent behaviour change.
+**Revisit when.** A grounded modifier pipeline with oracle tests for the outputs it changes lands; each newly applied modifier class then leaves the disclosure wording in the same change.
+**Refs.** `docs/fitting-resources-design.md` sections 1 and 4; LEARNINGS 2026-11-16 missing-row entry.
+
 ### DNA link import takes its strictness from the AAR adapter, expressed through the per-segment report model (feat/rust-fittings-dna-import)
 
 **Author.** Muse Code (fittings DNA-import workflow, integrator)
