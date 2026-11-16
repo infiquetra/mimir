@@ -89,6 +89,11 @@ impl EveConfig {
         "esi-industry.read_character_jobs.v1",
     ];
 
+    /// Planetary Industry step-up scope: read the character's colonies
+    /// and colony detail. Granted after first sign-in via step-up,
+    /// never at first auth.
+    pub const PLANETS_SCOPES: &[&str] = &["esi-planets.manage_planets.v1"];
+
     /// Scopes the Phase-1 Rust endpoint set actually needs, beyond the
     /// first-auth set (location/ship/online/clones/standings/loyalty).
     pub const PHASE1_ENDPOINT_SCOPES: &[&str] = &[
@@ -211,6 +216,17 @@ mod tests {
             ]
         );
         for scope in EveConfig::INDUSTRY_SCOPES {
+            assert!(
+                !EveConfig::FIRST_AUTH_SCOPES.contains(scope),
+                "step-up scope {scope} must be disjoint from first-auth"
+            );
+        }
+    }
+
+    #[test]
+    fn planets_scopes_is_the_single_stepup_scope() {
+        assert_eq!(EveConfig::PLANETS_SCOPES, ["esi-planets.manage_planets.v1"]);
+        for scope in EveConfig::PLANETS_SCOPES {
             assert!(
                 !EveConfig::FIRST_AUTH_SCOPES.contains(scope),
                 "step-up scope {scope} must be disjoint from first-auth"

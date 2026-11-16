@@ -1,0 +1,45 @@
+{
+  "90000001": {
+    "colonies": [
+      {"planet_id": 700000001, "planet_type": "temperate", "solar_system_id": 30000142, "last_update": "2026-11-14T10:00:00Z", "upgrade_level": 2, "num_pins": 4},
+      {"planet_id": 700000002, "planet_type": "oceanic", "solar_system_id": 30002187, "last_update": "2026-11-13T09:00:00Z", "upgrade_level": 1, "num_pins": 2}
+    ],
+    "selected_planet_id": 700000001,
+    "details": {
+      "700000001": {
+        "pins": [
+          {"pin_id": 700000011, "type_id": 20001, "latitude": 0.5, "longitude": -0.25, "install_time": "2026-11-01T08:00:00Z", "expiry_time": "2026-11-21T08:00:00Z", "last_cycle_start": "2026-11-14T10:00:00Z", "schematic_id": 15462, "extractor_details": {"product_type_id": 34, "qty_per_cycle": 120, "cycle_time": 7200}, "contents": [{"type_id": 35, "amount": 500}, {"type_id": 36, "amount": 250}]},
+          {"pin_id": 700000012, "type_id": 20001, "latitude": -0.4, "longitude": 0.3, "install_time": "2026-11-01T08:00:00Z", "expiry_time": "2026-11-21T08:00:00Z", "last_cycle_start": "2026-11-14T10:00:00Z", "schematic_id": 17361, "extractor_details": {"product_type_id": 36, "qty_per_cycle": null, "cycle_time": 10800}, "contents": [{"type_id": 35, "amount": 300}]},
+          {"pin_id": 700000013, "type_id": 20002, "latitude": 0.1, "longitude": 0.2, "install_time": "2026-11-02T08:00:00Z", "contents": [{"type_id": 37, "amount": -50}, {"type_id": 16679, "amount": 20}]},
+          {"pin_id": 700000014, "type_id": 20002, "latitude": -0.15, "longitude": -0.35, "install_time": "2026-11-02T08:00:00Z", "expiry_time": null, "last_cycle_start": null, "schematic_id": null, "contents": [{"type_id": 34, "amount": 1000}]}
+        ],
+        "links": [{"source_pin_id": 700000011, "destination_pin_id": 700000013}],
+        "routes": [{"source_pin_id": 700000011, "destination_pin_id": 700000013, "route_type": "basic"}]
+      },
+      "700000002": {
+        "pins": [
+          {"pin_id": 700000021, "type_id": 20001, "latitude": 0.2, "longitude": 0.8, "install_time": "2026-11-03T08:00:00Z", "expiry_time": "2026-11-19T08:00:00Z", "last_cycle_start": "2026-11-14T09:00:00Z", "schematic_id": 15462, "extractor_details": {"product_type_id": 37, "qty_per_cycle": 75, "cycle_time": 5400}, "contents": [{"type_id": 37, "amount": 800}]},
+          {"pin_id": 700000022, "type_id": 20003, "latitude": -0.2, "longitude": 0.1, "install_time": "2026-11-03T08:00:00Z", "contents": [{"type_id": 34, "amount": 1500}, {"type_id": 35, "amount": 150}]}
+        ],
+        "links": [{"source_pin_id": 700000021, "destination_pin_id": 700000022}],
+        "routes": []
+      }
+    }
+  },
+  "90000002": {
+    "colonies": [
+      {"planet_id": 700000101, "planet_type": "barren", "solar_system_id": 30000142, "last_update": "2026-11-12T08:00:00Z", "upgrade_level": 0, "num_pins": 2}
+    ],
+    "selected_planet_id": 700000101,
+    "details": {
+      "700000101": {
+        "pins": [
+          {"pin_id": 700000111, "type_id": 20001, "latitude": 0.3, "longitude": -0.1, "install_time": "2026-11-04T08:00:00Z", "expiry_time": "2026-11-20T08:00:00Z", "last_cycle_start": "2026-11-14T07:00:00Z", "schematic_id": 15462, "extractor_details": {"product_type_id": 34, "qty_per_cycle": 90, "cycle_time": 6600}, "contents": []},
+          {"pin_id": 700000112, "type_id": 20003, "latitude": 0.05, "longitude": 0.45, "install_time": "2026-11-04T08:00:00Z"}
+        ],
+        "links": [],
+        "routes": []
+      }
+    }
+  }
+}
