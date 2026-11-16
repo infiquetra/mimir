@@ -12,8 +12,8 @@ use chrono::{DateTime, Utc};
 use crate::app::state::{
     market_region_name, ship_display_name, summary_location_name, AppState, AssetsData,
     BlueprintsData, CharacterDetailData, CharacterOrdersData, CharacterSummary, IndustryData,
-    IndustryJobsData, LoadState, MarketData, MarketSelection, PublicOrdersData, SkillsData,
-    WalletData,
+    IndustryJobsData, LoadState, MarketData, MarketSelection, PlanetSelection, PlanetaryData,
+    PublicOrdersData, SelectedColonyDetail, SkillsData, WalletData,
 };
 use crate::error::{AppError, AppResult};
 use crate::esi::models::*;
@@ -33,6 +33,7 @@ pub const DEMO_CHARACTER_DETAIL_JSON: &str =
     include_str!("../../assets/demo/character_detail.json");
 pub const DEMO_MARKET_JSON: &str = include_str!("../../assets/demo/market.json");
 pub const DEMO_INDUSTRY_JSON: &str = include_str!("../../assets/demo/industry.json");
+pub const DEMO_PLANETS_JSON: &str = include_str!("../../assets/demo/planets.json");
 
 /// Command-line flag that selects demo mode (design section 1).
 pub const DEMO_FLAG: &str = "--demo";
@@ -106,6 +107,17 @@ pub struct DemoIndustryData {
     pub blueprints_truncated: bool,
 }
 
+/// One demo character's planetary fixture: the colonies list, the
+/// pre-selected colony, and one detail per colony. Demo seeding
+/// composes a `PlanetaryData` from this with both sections Ok, so
+/// this is deliberately not `PlanetaryData`.
+#[derive(Debug, Clone, Default)]
+pub struct DemoPlanetaryData {
+    pub colonies: Vec<PlanetColony>,
+    pub selected_planet_id: Option<i64>,
+    pub details: HashMap<i64, PlanetColonyDetail>,
+}
+
 /// Everything one demo character shows in the Phase-1 views.
 #[derive(Debug, Clone, Default)]
 pub struct DemoCharacterData {
@@ -120,6 +132,7 @@ pub struct DemoCharacterData {
     pub detail: Option<CharacterDetailData>,
     pub market: Option<DemoMarketData>,
     pub industry: Option<DemoIndustryData>,
+    pub planets: Option<DemoPlanetaryData>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -221,6 +234,16 @@ struct MarketFileEntry {
     character_orders_truncated: bool,
 }
 
+#[derive(serde::Deserialize, Default)]
+struct PlanetsFileEntry {
+    #[serde(default)]
+    colonies: Vec<PlanetColony>,
+    #[serde(default)]
+    selected_planet_id: Option<i64>,
+    #[serde(default)]
+    details: HashMap<String, PlanetColonyDetail>,
+}
+
 fn parse_character_key(key: &str) -> AppResult<i64> {
     key.parse::<i64>().map_err(|_| {
         AppError::Message(format!(
@@ -304,8 +327,9 @@ pub fn load_demo_bundle_with_market(
 }
 
 /// Parse a bundle including assets, character detail, market, and the
-/// industry file. A `"{}"` industry text yields `industry: None`
-/// everywhere.
+/// industry file. Kept with its original meaning — no planets — so
+/// seven-argument callers keep working unchanged (`planets: None`
+/// for everyone).
 pub fn load_demo_bundle_with_industry(
     characters_json: &str,
     skillqueue_json: &str,
@@ -314,6 +338,32 @@ pub fn load_demo_bundle_with_industry(
     character_detail_json: &str,
     market_json: &str,
     industry_json: &str,
+) -> AppResult<DemoBundle> {
+    load_demo_bundle_with_planets(
+        characters_json,
+        skillqueue_json,
+        wallet_json,
+        assets_json,
+        character_detail_json,
+        market_json,
+        industry_json,
+        "{}",
+    )
+}
+
+/// Parse a bundle including assets, character detail, market, the
+/// industry file, and the planets file. A `"{}"` planets text
+/// yields `planets: None` everywhere.
+#[allow(clippy::too_many_arguments)]
+pub fn load_demo_bundle_with_planets(
+    characters_json: &str,
+    skillqueue_json: &str,
+    wallet_json: &str,
+    assets_json: &str,
+    character_detail_json: &str,
+    market_json: &str,
+    industry_json: &str,
+    planets_json: &str,
 ) -> AppResult<DemoBundle> {
     tracing::debug!("[DEMO] parsing demo bundle");
     let characters: CharactersFile = serde_json::from_str(characters_json)?;
@@ -324,6 +374,7 @@ pub fn load_demo_bundle_with_industry(
         serde_json::from_str(character_detail_json)?;
     let market_by_id: HashMap<String, MarketFileEntry> = serde_json::from_str(market_json)?;
     let industry_by_id: HashMap<String, IndustryFileEntry> = serde_json::from_str(industry_json)?;
+    let planets_by_id: HashMap<String, PlanetsFileEntry> = serde_json::from_str(planets_json)?;
 
     let mut data: HashMap<i64, DemoCharacterData> = HashMap::new();
     for (key, entry) in skills_by_id {
@@ -412,6 +463,27 @@ pub fn load_demo_bundle_with_industry(
         });
     }
 
+    for (key, entry) in planets_by_id {
+        let id = parse_character_key(&key)?;
+        let mut details: HashMap<i64, PlanetColonyDetail> = HashMap::new();
+        for (planet_key, detail) in entry.details {
+            let planet_id = parse_character_key(&planet_key)?;
+            details.insert(planet_id, detail);
+        }
+        tracing::debug!(
+            "[DEMO] character_id={} planets colonies={} details={}",
+            id,
+            entry.colonies.len(),
+            details.len()
+        );
+        let slot = data.entry(id).or_default();
+        slot.planets = Some(DemoPlanetaryData {
+            colonies: entry.colonies,
+            selected_planet_id: entry.selected_planet_id,
+            details,
+        });
+    }
+
     let bundle = DemoBundle {
         characters: characters.characters,
         data,
@@ -428,7 +500,7 @@ pub fn load_demo_bundle_with_industry(
 /// Load the bundled demo JSON files into typed structures.
 pub fn load_demo_bundle() -> AppResult<DemoBundle> {
     tracing::debug!("[DEMO] loading bundled demo fixtures");
-    load_demo_bundle_with_industry(
+    load_demo_bundle_with_planets(
         DEMO_CHARACTERS_JSON,
         DEMO_SKILLQUEUE_JSON,
         DEMO_WALLET_JSON,
@@ -436,6 +508,7 @@ pub fn load_demo_bundle() -> AppResult<DemoBundle> {
         DEMO_CHARACTER_DETAIL_JSON,
         DEMO_MARKET_JSON,
         DEMO_INDUSTRY_JSON,
+        DEMO_PLANETS_JSON,
     )
 }
 
@@ -648,6 +721,66 @@ pub fn validate_bundle(bundle: &DemoBundle) -> AppResult<()> {
                         "character {} duplicate blueprint item_id {}",
                         character.character_id, blueprint.item_id
                     )));
+                }
+            }
+        }
+        // Planets are optional the same way; validate only when
+        // present: unique colony IDs, parseable last-update dates,
+        // a selected colony among the list, a detail for every
+        // selectable colony and none extra, unique pin IDs within
+        // each detail.
+        if let Some(planets) = &per.planets {
+            let mut colony_ids = HashSet::new();
+            for colony in &planets.colonies {
+                if !colony_ids.insert(colony.planet_id) {
+                    return Err(fail(format!(
+                        "character {} duplicate colony planet_id {}",
+                        character.character_id, colony.planet_id
+                    )));
+                }
+                if !colony.last_update.is_empty()
+                    && parse_esi_datetime(&colony.last_update).is_none()
+                {
+                    return Err(fail(format!(
+                        "character {} colony last_update does not parse: {}",
+                        character.character_id, colony.last_update
+                    )));
+                }
+            }
+            if !planets.colonies.is_empty() {
+                let selected = planets.selected_planet_id.unwrap_or(0);
+                if !colony_ids.contains(&selected) {
+                    return Err(fail(format!(
+                        "character {} selected planet is not among colonies",
+                        character.character_id
+                    )));
+                }
+            }
+            for colony_id in &colony_ids {
+                if !planets.details.contains_key(colony_id) {
+                    return Err(fail(format!(
+                        "character {} colony {} has no detail",
+                        character.character_id, colony_id
+                    )));
+                }
+            }
+            for detail_id in planets.details.keys() {
+                if !colony_ids.contains(detail_id) {
+                    return Err(fail(format!(
+                        "character {} detail for unknown colony {}",
+                        character.character_id, detail_id
+                    )));
+                }
+            }
+            for detail in planets.details.values() {
+                let mut pin_ids = HashSet::new();
+                for pin in &detail.pins {
+                    if !pin_ids.insert(pin.pin_id) {
+                        return Err(fail(format!(
+                            "character {} duplicate pin id {}",
+                            character.character_id, pin.pin_id
+                        )));
+                    }
                 }
             }
         }
@@ -964,6 +1097,47 @@ pub fn apply_character(state: &mut AppState, bundle: &DemoBundle, character_id: 
         }),
         None => LoadState::Empty,
     };
+    // Empty-if-absent planetary, same rule: a demo switch can never
+    // leave the previous character's colonies, selection, or
+    // detail installed.
+    tracing::debug!(
+        "[DEMO] apply_character character_id={} planets_present={}",
+        character_id,
+        per.planets.is_some()
+    );
+    state.planetary_generation = state.planetary_generation.wrapping_add(1);
+    state.planetary_detail_fetch_requested = false;
+    match &per.planets {
+        Some(fixture) if fixture.colonies.is_empty() => {
+            // An authored empty character, distinct from absent.
+            state.planetary_selected_planet_id = None;
+            state.planetary = LoadState::Ready(PlanetaryData {
+                colonies: Ok(Vec::new()),
+                detail: None,
+            });
+        }
+        Some(fixture) => {
+            state.planetary_selected_planet_id = fixture.selected_planet_id;
+            let detail = fixture
+                .selected_planet_id
+                .and_then(|planet_id| fixture.details.get(&planet_id))
+                .map(|detail| SelectedColonyDetail {
+                    selection: PlanetSelection {
+                        character_id,
+                        planet_id: fixture.selected_planet_id.unwrap_or(0),
+                    },
+                    result: Ok(detail.clone()),
+                });
+            state.planetary = LoadState::Ready(PlanetaryData {
+                colonies: Ok(fixture.colonies.clone()),
+                detail,
+            });
+        }
+        None => {
+            state.planetary = LoadState::Empty;
+            state.planetary_selected_planet_id = None;
+        }
+    }
 }
 
 /// Seed demo content into the UI state: both fictional characters, the
@@ -1380,6 +1554,7 @@ mod tests {
             assert!(per.detail.is_none(), "old loader yields no detail");
             assert!(per.market.is_none(), "old loader yields no market");
             assert!(per.industry.is_none(), "old loader yields no industry");
+            assert!(per.planets.is_none(), "old loader yields no planets");
         }
     }
 
@@ -1405,6 +1580,10 @@ mod tests {
             assert!(
                 per.industry.is_none(),
                 "four-argument loader yields no industry"
+            );
+            assert!(
+                per.planets.is_none(),
+                "four-argument loader yields no planets"
             );
         }
     }
@@ -1796,5 +1975,164 @@ mod tests {
         apply_character(&mut state, &industryless, 90000002);
         assert!(matches!(state.industry, LoadState::Empty));
         assert_eq!(state.industry_search, "Bantam");
+    }
+
+    #[test]
+    fn bundled_planets_load_for_both_characters_and_empty_text_is_none() {
+        let bundle = load_demo_bundle().expect("bundled bundle loads");
+        for character in &bundle.characters {
+            let planets = bundle
+                .character_data(character.character_id)
+                .and_then(|per| per.planets.as_ref())
+                .unwrap_or_else(|| panic!("demo planets for {}", character.name));
+            assert!(
+                !planets.colonies.is_empty(),
+                "colonies for {}",
+                character.name
+            );
+            let selected = planets.selected_planet_id.expect("selected planet");
+            assert!(planets.colonies.iter().any(|c| c.planet_id == selected));
+            for colony in &planets.colonies {
+                assert!(planets.details.contains_key(&colony.planet_id));
+            }
+            assert_eq!(planets.details.len(), planets.colonies.len());
+            for detail in planets.details.values() {
+                assert!(!detail.pins.is_empty());
+            }
+        }
+        // "{}" planets text and every older arity yield no planets.
+        let empty = load_demo_bundle_with_planets(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+            DEMO_CHARACTER_DETAIL_JSON,
+            DEMO_MARKET_JSON,
+            DEMO_INDUSTRY_JSON,
+            "{}",
+        )
+        .expect("empty planets text loads");
+        assert!(empty.data.values().all(|per| per.planets.is_none()));
+        let industry_only = load_demo_bundle_with_industry(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+            DEMO_CHARACTER_DETAIL_JSON,
+            DEMO_MARKET_JSON,
+            DEMO_INDUSTRY_JSON,
+        )
+        .expect("seven-argument bundle loads");
+        assert!(industry_only.data.values().all(|per| per.planets.is_none()));
+        // Non-numeric character key in the planets file.
+        assert!(load_demo_bundle_with_planets(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+            DEMO_CHARACTER_DETAIL_JSON,
+            DEMO_MARKET_JSON,
+            DEMO_INDUSTRY_JSON,
+            r#"{"nope":{}}"#
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn planets_validation_rejects_bad_fixtures() {
+        fn mutate(bundle: &mut DemoBundle, f: impl FnOnce(&mut DemoPlanetaryData)) {
+            let first = bundle.first_character_id().expect("first character");
+            let per = bundle.data.get_mut(&first).expect("per-character data");
+            f(per.planets.as_mut().expect("planets present"));
+        }
+        let mut dupe_colony = load_demo_bundle().expect("bundle");
+        mutate(&mut dupe_colony, |p| {
+            let dupe = p.colonies[0].clone();
+            p.colonies.push(dupe);
+        });
+        assert!(
+            validate_bundle(&dupe_colony).is_err(),
+            "duplicate colony id"
+        );
+
+        let mut bad_date = load_demo_bundle().expect("bundle");
+        mutate(&mut bad_date, |p| {
+            p.colonies[0].last_update = "not a date".to_string()
+        });
+        assert!(
+            validate_bundle(&bad_date).is_err(),
+            "unparseable last_update"
+        );
+
+        let mut missing_selected = load_demo_bundle().expect("bundle");
+        mutate(&mut missing_selected, |p| p.selected_planet_id = None);
+        assert!(validate_bundle(&missing_selected).is_err(), "no selection");
+
+        let mut missing_detail = load_demo_bundle().expect("bundle");
+        mutate(&mut missing_detail, |p| {
+            let id = p.colonies[0].planet_id;
+            p.details.remove(&id);
+        });
+        assert!(
+            validate_bundle(&missing_detail).is_err(),
+            "colony without detail"
+        );
+
+        let mut extra_detail = load_demo_bundle().expect("bundle");
+        mutate(&mut extra_detail, |p| {
+            p.details.insert(700000999, PlanetColonyDetail::default());
+        });
+        assert!(
+            validate_bundle(&extra_detail).is_err(),
+            "detail for unknown colony"
+        );
+
+        let mut dupe_pin = load_demo_bundle().expect("bundle");
+        mutate(&mut dupe_pin, |p| {
+            let id = p.colonies[0].planet_id;
+            let dupe = p.details[&id].pins[0].clone();
+            p.details.get_mut(&id).expect("detail").pins.push(dupe);
+        });
+        assert!(validate_bundle(&dupe_pin).is_err(), "duplicate pin id");
+    }
+
+    #[test]
+    fn apply_character_installs_planets_and_planetsless_empties() {
+        let bundle = load_demo_bundle().expect("bundled bundle loads");
+        let mut state = AppState::new(true);
+        apply_character(&mut state, &bundle, 90000001);
+        let aria = state.planetary.as_ready().expect("aria planetary ready");
+        let aria_colonies = aria.colonies.as_ref().expect("colonies ok");
+        assert_eq!(aria_colonies.len(), 2);
+        assert_eq!(state.planetary_selected_planet_id, Some(700000001));
+        assert!(!state.planetary_detail_fetch_requested);
+        let aria_detail = aria.detail.as_ref().expect("aria detail");
+        assert_eq!(aria_detail.selection.character_id, 90000001);
+        assert_eq!(aria_detail.selection.planet_id, 700000001);
+        assert!(aria_detail.result.is_ok());
+        // Switching swaps in Marcus's colony and detail.
+        apply_character(&mut state, &bundle, 90000002);
+        let marcus = state.planetary.as_ready().expect("marcus planetary ready");
+        assert_eq!(marcus.colonies.as_ref().expect("colonies ok").len(), 1);
+        assert_eq!(state.planetary_selected_planet_id, Some(700000101));
+        let marcus_detail = marcus.detail.as_ref().expect("marcus detail");
+        assert_eq!(marcus_detail.selection.character_id, 90000002);
+        assert_eq!(marcus_detail.selection.planet_id, 700000101);
+        // A planets-less bundle empties the view and clears the
+        // selection (stale-bundle regression guard).
+        let planetsless = load_demo_bundle_with_industry(
+            DEMO_CHARACTERS_JSON,
+            DEMO_SKILLQUEUE_JSON,
+            DEMO_WALLET_JSON,
+            DEMO_ASSETS_JSON,
+            DEMO_CHARACTER_DETAIL_JSON,
+            DEMO_MARKET_JSON,
+            DEMO_INDUSTRY_JSON,
+        )
+        .expect("planetsless bundle loads");
+        apply_character(&mut state, &planetsless, 90000002);
+        assert!(matches!(state.planetary, LoadState::Empty));
+        assert_eq!(state.planetary_selected_planet_id, None);
+        assert!(!state.planetary_detail_fetch_requested);
     }
 }

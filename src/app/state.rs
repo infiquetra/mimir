@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use crate::esi::models::*;
 use crate::storage::repositories::CharacterRow;
 
-/// The eight views (keys 1-8 in the shell).
+/// The nine views (keys 1-9 in the shell).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum View {
     #[default]
@@ -23,11 +23,12 @@ pub enum View {
     Assets,
     Market,
     Industry,
+    Planets,
     Settings,
 }
 
 impl View {
-    pub const ALL: [View; 8] = [
+    pub const ALL: [View; 9] = [
         View::Dashboard,
         View::Characters,
         View::Skills,
@@ -35,6 +36,7 @@ impl View {
         View::Assets,
         View::Market,
         View::Industry,
+        View::Planets,
         View::Settings,
     ];
 
@@ -47,6 +49,7 @@ impl View {
             View::Assets => "Assets",
             View::Market => "Market",
             View::Industry => "Industry",
+            View::Planets => "Planets",
             View::Settings => "Settings",
         }
     }
@@ -325,6 +328,44 @@ impl IndustryData {
     }
 }
 
+/// Fetch/message identity for one colony detail: the character and
+/// planet the fetch was stamped for. The numeric ids here are
+/// state, never rendered.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PlanetSelection {
+    pub character_id: i64,
+    pub planet_id: i64,
+}
+
+/// One selected colony's detail section, stamped with the selection
+/// it was fetched for so a stale result can never display.
+#[derive(Debug, Clone)]
+pub struct SelectedColonyDetail {
+    pub selection: PlanetSelection,
+    pub result: SectionResult<PlanetColonyDetail>,
+}
+
+/// Planetary bundle: the colonies list plus the one selected
+/// colony's detail. Field set is a cross-builder contract (the
+/// shell and demo seeding construct this literally); do not add
+/// fields here.
+#[derive(Debug, Clone)]
+pub struct PlanetaryData {
+    pub colonies: SectionResult<Vec<PlanetColony>>,
+    pub detail: Option<SelectedColonyDetail>,
+}
+
+impl PlanetaryData {
+    /// True when the colonies section or a present detail failed
+    /// for scope reasons.
+    pub fn needs_planetary_stepup(&self) -> bool {
+        fn reauth<T>(result: &SectionResult<T>) -> bool {
+            matches!(result, Err(e) if e.needs_reauthorize)
+        }
+        reauth(&self.colonies) || self.detail.as_ref().is_some_and(|d| reauth(&d.result))
+    }
+}
+
 /// Blueprint library filter: every blueprint, originals only,
 /// or copies only. Classification is `runs == -1` (section 7.3).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -448,6 +489,7 @@ pub struct AppState {
     pub character_details: LoadState<CharacterDetailData>,
     pub market: LoadState<MarketData>,
     pub industry: LoadState<IndustryData>,
+    pub planetary: LoadState<PlanetaryData>,
     pub log_lines: Vec<String>,
     pub status_message: String,
 
@@ -480,6 +522,11 @@ pub struct AppState {
     // View-local industry UI state.
     pub industry_search: String,
     pub industry_blueprint_kind: BlueprintKindFilter,
+    // View-local planetary UI state. The selected planet lives
+    // outside `LoadState<PlanetaryData>` so a failed detail fetch
+    // cannot lose the selection.
+    pub planetary_selected_planet_id: Option<i64>,
+    pub planetary_generation: u64,
 
     // Request flags for the integrator to drain (set by views, never faked
     // as completed work). See the module comment.
@@ -491,6 +538,7 @@ pub struct AppState {
     pub delete_requested_id: Option<i64>,
     pub market_fetch_requested: bool,
     pub market_lookup_requested: Option<String>,
+    pub planetary_detail_fetch_requested: bool,
 }
 
 impl AppState {
@@ -537,6 +585,23 @@ impl AppState {
         }
         self.market_generation = self.market_generation.wrapping_add(1);
         self.market_fetch_requested = true;
+    }
+
+    /// Select one colony. The generation always bumps (reselecting
+    /// the same planet refetches too), so a slower earlier detail
+    /// result can never win the race. The loaded bundle is left
+    /// untouched: staleness is handled by matching the detail's
+    /// stamped selection against this one.
+    pub fn set_planetary_selection(&mut self, planet_id: i64) {
+        self.planetary_selected_planet_id = Some(planet_id);
+        self.planetary_generation = self.planetary_generation.wrapping_add(1);
+        self.planetary_detail_fetch_requested = true;
+        tracing::info!(
+            "[PI] colony selected character_id={} planet_id={} generation={}",
+            self.active_character_id.unwrap_or(0),
+            planet_id,
+            self.planetary_generation
+        );
     }
 
     /// Select one of the locked hub regions; anything outside the
@@ -615,6 +680,18 @@ impl AppState {
                     character_id
                 );
                 self.industry = LoadState::Loading;
+                // Same ownership argument: colonies are fetched
+                // tolerantly and detail is identity-stamped, so
+                // reset at the switch boundary.
+                tracing::debug!(
+                    "[PI] clearing planetary on character switch from={} to={}",
+                    previous_id,
+                    character_id
+                );
+                self.planetary = LoadState::Loading;
+                self.planetary_selected_planet_id = None;
+                self.planetary_detail_fetch_requested = false;
+                self.planetary_generation = self.planetary_generation.wrapping_add(1);
             }
         }
         self.selected_queue_row = 0;
@@ -665,6 +742,11 @@ impl AppState {
             self.market_generation = self.market_generation.wrapping_add(1);
             tracing::debug!("[INDUSTRY] clearing industry of removed active character");
             self.industry = LoadState::Loading;
+            tracing::debug!("[PI] clearing planetary of removed active character");
+            self.planetary = LoadState::Loading;
+            self.planetary_selected_planet_id = None;
+            self.planetary_detail_fetch_requested = false;
+            self.planetary_generation = self.planetary_generation.wrapping_add(1);
             if let Some(first) = self.characters.first().map(|c| c.character_id) {
                 self.set_active_character(first);
             }
@@ -686,6 +768,10 @@ impl AppState {
             self.market = LoadState::Empty;
             self.market_generation = self.market_generation.wrapping_add(1);
             self.industry = LoadState::Empty;
+            self.planetary = LoadState::Empty;
+            self.planetary_selected_planet_id = None;
+            self.planetary_detail_fetch_requested = false;
+            self.planetary_generation = self.planetary_generation.wrapping_add(1);
             self.dashboard = LoadState::Empty;
         }
     }
@@ -731,18 +817,22 @@ mod tests {
         assert_eq!(View::from_index(4), Some(View::Assets));
         assert_eq!(View::from_index(5), Some(View::Market));
         assert_eq!(View::from_index(6), Some(View::Industry));
-        assert_eq!(View::from_index(7), Some(View::Settings));
+        assert_eq!(View::from_index(7), Some(View::Planets));
+        assert_eq!(View::from_index(8), Some(View::Settings));
         assert_eq!(View::from_index(9), None);
         assert_eq!(View::Wallet.index(), 3);
         assert_eq!(View::Assets.index(), 4);
         assert_eq!(View::Market.index(), 5);
         assert_eq!(View::Industry.index(), 6);
-        assert_eq!(View::Settings.index(), 7);
+        assert_eq!(View::Planets.index(), 7);
+        assert_eq!(View::Settings.index(), 8);
         assert_eq!(View::Wallet.next(), View::Assets);
         assert_eq!(View::Assets.next(), View::Market);
         assert_eq!(View::Market.next(), View::Industry);
-        assert_eq!(View::Industry.next(), View::Settings);
-        assert_eq!(View::Settings.previous(), View::Industry);
+        assert_eq!(View::Industry.next(), View::Planets);
+        assert_eq!(View::Planets.next(), View::Settings);
+        assert_eq!(View::Settings.previous(), View::Planets);
+        assert_eq!(View::Planets.previous(), View::Industry);
         assert_eq!(View::Assets.previous(), View::Wallet);
     }
 
@@ -1201,6 +1291,144 @@ mod tests {
         assert_eq!(BlueprintKindFilter::Originals.label(), "Originals (BPO)");
         assert_eq!(BlueprintKindFilter::Copies.label(), "Copies (BPC)");
         assert_eq!(BlueprintKindFilter::ALL.len(), 3);
+    }
+
+    fn planetary_bundle() -> PlanetaryData {
+        PlanetaryData {
+            colonies: Ok(vec![PlanetColony {
+                planet_id: 700000001,
+                planet_type: "temperate".to_string(),
+                solar_system_id: 30000142,
+                last_update: "2026-11-14T10:00:00Z".to_string(),
+                upgrade_level: 2,
+                num_pins: 4,
+            }]),
+            detail: None,
+        }
+    }
+
+    fn planetary_bundle_with_detail(planet_id: i64) -> PlanetaryData {
+        let mut bundle = planetary_bundle();
+        bundle.detail = Some(SelectedColonyDetail {
+            selection: PlanetSelection {
+                character_id: 700000099,
+                planet_id,
+            },
+            result: Ok(PlanetColonyDetail::default()),
+        });
+        bundle
+    }
+
+    #[test]
+    fn needs_planetary_stepup_matrix() {
+        assert!(
+            !planetary_bundle().needs_planetary_stepup(),
+            "all-Ok bundle, no detail"
+        );
+        let plain = SectionError {
+            message: "timeout".to_string(),
+            needs_reauthorize: false,
+        };
+        let mut colonies_plain = planetary_bundle();
+        colonies_plain.colonies = Err(plain.clone());
+        assert!(!colonies_plain.needs_planetary_stepup());
+        let mut colonies_reauth = planetary_bundle();
+        colonies_reauth.colonies = Err(reauth_error());
+        assert!(colonies_reauth.needs_planetary_stepup(), "colonies reauth");
+        let mut detail_plain = planetary_bundle_with_detail(700000001);
+        detail_plain.detail.as_mut().expect("detail").result = Err(plain.clone());
+        assert!(!detail_plain.needs_planetary_stepup());
+        let mut detail_reauth = planetary_bundle_with_detail(700000001);
+        detail_reauth.detail.as_mut().expect("detail").result = Err(reauth_error());
+        assert!(detail_reauth.needs_planetary_stepup(), "detail reauth");
+        // No detail at all never needs step-up on its own.
+        let mut no_detail = planetary_bundle();
+        no_detail.detail = None;
+        assert!(!no_detail.needs_planetary_stepup());
+    }
+
+    #[test]
+    fn planetary_defaults_are_loading_no_selection_zero_generation() {
+        let state = AppState::new(false);
+        assert!(matches!(state.planetary, LoadState::Loading));
+        assert_eq!(state.planetary_selected_planet_id, None);
+        assert_eq!(state.planetary_generation, 0);
+        assert!(!state.planetary_detail_fetch_requested);
+    }
+
+    #[test]
+    fn set_planetary_selection_bumps_generation_and_flags_fetch() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.planetary = LoadState::Ready(planetary_bundle_with_detail(700000001));
+        let generation = state.planetary_generation;
+        state.set_planetary_selection(700000001);
+        assert_eq!(state.planetary_selected_planet_id, Some(700000001));
+        assert_eq!(state.planetary_generation, generation + 1);
+        assert!(state.planetary_detail_fetch_requested);
+        // The bundle is untouched: the stamped detail is now stale
+        // (its generation no longer matches) but still installed.
+        assert!(state.planetary.is_ready());
+        // Reselecting the same planet also bumps and refetches.
+        state.planetary_detail_fetch_requested = false;
+        state.set_planetary_selection(700000001);
+        assert_eq!(state.planetary_generation, generation + 2);
+        assert!(state.planetary_detail_fetch_requested);
+        // Selecting another planet swaps the selection.
+        state.set_planetary_selection(700000002);
+        assert_eq!(state.planetary_selected_planet_id, Some(700000002));
+        assert_eq!(state.planetary_generation, generation + 3);
+    }
+
+    #[test]
+    fn switching_character_clears_stale_planetary() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.set_planetary_selection(700000001);
+        state.planetary = LoadState::Ready(planetary_bundle());
+        let generation = state.planetary_generation;
+        // Same-character reselect keeps the bundle and selection.
+        state.set_active_character(1);
+        assert!(state.planetary.is_ready());
+        assert_eq!(state.planetary_selected_planet_id, Some(700000001));
+        assert_eq!(state.planetary_generation, generation);
+        // Switching clears rows and selection and queues no fetch:
+        // the character-switch refresh refills the list instead.
+        state.set_active_character(2);
+        assert!(matches!(state.planetary, LoadState::Loading));
+        assert_eq!(state.planetary_selected_planet_id, None);
+        assert!(!state.planetary_detail_fetch_requested);
+        assert_eq!(state.planetary_generation, generation + 1);
+    }
+
+    #[test]
+    fn removing_active_character_clears_planetary_and_last_empties() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two"), row(3, "Three")];
+        state.set_active_character(1);
+        state.set_planetary_selection(700000001);
+        state.planetary = LoadState::Ready(planetary_bundle());
+        state.remove_character(3);
+        assert!(
+            state.planetary.is_ready(),
+            "non-active removal keeps bundle"
+        );
+        assert_eq!(state.planetary_selected_planet_id, Some(700000001));
+        let generation = state.planetary_generation;
+        state.remove_character(1);
+        assert_eq!(state.active_character_id, Some(2));
+        assert!(matches!(state.planetary, LoadState::Loading));
+        assert_eq!(state.planetary_selected_planet_id, None);
+        assert!(state.planetary_generation > generation);
+        state.set_planetary_selection(700000101);
+        state.planetary = LoadState::Ready(planetary_bundle());
+        state.remove_character(2);
+        assert!(state.characters.is_empty());
+        assert!(matches!(state.planetary, LoadState::Empty));
+        assert_eq!(state.planetary_selected_planet_id, None);
+        assert!(!state.planetary_detail_fetch_requested);
     }
 
     #[test]

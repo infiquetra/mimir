@@ -1956,6 +1956,7 @@ impl eframe::App for MimirApp {
                 View::Assets => ui::assets::show(ui, &mut self.state, &self.resolver),
                 View::Market => ui::market::show(ui, &mut self.state, &self.resolver),
                 View::Industry => ui::industry::show(ui, &mut self.state, &self.resolver),
+                View::Planets => ui::planets::show(ui, &mut self.state, &self.resolver),
                 View::Settings => ui::settings::show(ui, &mut self.state),
             });
         });
