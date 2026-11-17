@@ -202,9 +202,10 @@ pub fn ensure_logo_requested(state: &mut AppState, kind: ImageKind, id: i64) {
 /// rule as `ensure_logo_requested`: only a `NotRequested` key
 /// queues, a `Failed` icon never re-queues from the render path,
 /// and an unknown id queues nothing through the union guard
-/// (loaded saved fittings, the loaded assets, or the selected
-/// market type). Thin
-/// delegation so calling views never spell `ImageKind` or a size.
+/// (loaded saved fittings, the loaded assets, the selected
+/// market type, or the bundled skill catalogue's skill types).
+/// Thin delegation so calling views never spell `ImageKind` or
+/// a size.
 pub fn ensure_type_icon_requested(state: &mut AppState, type_id: i64) {
     ensure_logo_requested(state, ImageKind::Type, type_id);
 }
@@ -971,6 +972,58 @@ mod tests {
         // Selecting another item drops the old texture on prune.
         state.set_market_selection(12345, "Type Y".to_string());
         cache.prune(&state);
+        assert_eq!(cache.len(), 0);
+    }
+
+    #[test]
+    fn prune_keeps_skill_catalogue_type_icon_across_switch() {
+        let ctx = egui::Context::default();
+        // 3300 (Gunnery) is only a bundled catalogue skill type,
+        // never a fitting, held asset, or market selection.
+        let sde = crate::names::sde::Sde::load_bundled().expect("bundled SDE loads");
+        let mut state = type_fixture_state();
+        state.install_skill_catalogue_type_ids(&sde);
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Type, 3300),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        let uploaded = cache
+            .texture(&ctx, &state, ImageKind::Type, 3300)
+            .expect("upload")
+            .id();
+        assert_eq!(cache.len(), 1);
+
+        // A character switch keeps the catalogue texture with
+        // the same handle (no re-upload).
+        state.set_active_character(2);
+        cache.prune(&state);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 3300)
+                .expect("kept across switch")
+                .id(),
+            uploaded
+        );
+
+        // A catalogue search change keeps it too.
+        state.skill_search = "Gunnery".to_string();
+        cache.prune(&state);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 3300)
+                .expect("kept across search")
+                .id(),
+            uploaded
+        );
+
+        // Prune against a state with nothing installed drops
+        // the texture: guard loss is the only drop path.
+        let uninstalled = AppState::default();
+        assert!(!uninstalled.image_id_known(ImageKind::Type, 3300));
+        cache.prune(&uninstalled);
         assert_eq!(cache.len(), 0);
     }
 
