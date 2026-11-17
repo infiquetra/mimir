@@ -3816,7 +3816,13 @@ impl eframe::App for MimirApp {
                     &self.resolver,
                     &mut self.portrait_textures,
                 ),
-                View::Industry => ui::industry::show(ui, &mut self.state, &self.resolver),
+                View::Industry => ui::industry::show(
+                    ui,
+                    &mut self.state,
+                    &self.resolver,
+                    self.industry_data.as_deref(),
+                    self.fitting_types.as_deref(),
+                ),
                 View::Planets => ui::planets::show(ui, &mut self.state, &self.resolver),
                 View::Fittings => ui::fittings::show(
                     ui,
