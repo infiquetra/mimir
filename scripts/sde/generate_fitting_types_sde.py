@@ -45,7 +45,19 @@ column, `cargoCapacity` on every category 6 row from the invTypes
 calibration (docs/rig-calibration-design.md section 3.1) appends
 `upgradeCapacity` (dogma 1132) on category 6 rows and
 `upgradeCost` (dogma 1153) on slot-effect-2663 rows after the bay
-keys. Slot layout (docs/slot-layout-design.md section 3.1) appends
+keys. Navigation and targeting (docs/nav-targeting-design.md
+section 3) appends eleven further keys after `launcherFitted`
+in the locked order: `warpSpeedMultiplier` (dogma 600), `agility`
+(70), `signatureRadius` (552), `maxTargetRange` (76),
+`scanResolution` (564), `scanRadarStrength` (208),
+`scanLadarStrength` (209), `scanMagnetometricStrength` (210),
+`scanGravimetricStrength` (211), `maxLockedTargets` (192) — all
+dogma rows, sparse on category 6 rows only — plus `mass` from
+the invTypes `mass` column on category 6 rows only. Dogma 1281
+`baseWarpSpeed` is read only for a fail-loud tripwire (constant
+1.0 on every category-6 row, never emitted); dogma 4 `mass`,
+1169, and 1908 are never read.
+Slot layout (docs/slot-layout-design.md section 3.1) appends
 nine further keys after the calibration keys in the locked order:
 `hiSlots` (dogma 14), `medSlots` (13), `lowSlots` (12),
 `rigSlots` (1137), `maxSubSystems` (1367), `turretSlotsLeft`
@@ -190,6 +202,36 @@ LAUNCHER_SLOTS_LEFT_ATTR = 101
 # never read.
 LAUNCHER_FITTED_EFFECT = 40
 TURRET_FITTED_EFFECT = 42
+
+# Navigation and targeting (docs/nav-targeting-design.md section 2/3):
+# dogmaAttributes.jsonl _key 600 "warpSpeedMultiplier" (unit 104 "x"),
+# 70 "agility" ("Inertia Modifier", unit 104 "x"), 552
+# "signatureRadius" (unit 1 "m"), 76 "maxTargetRange" (unit 1 "m"),
+# 564 "scanResolution" (unit 102 "mm"), 208 "scanRadarStrength",
+# 209 "scanLadarStrength", 210 "scanMagnetometricStrength",
+# 211 "scanGravimetricStrength" (all unit 120 "points"), 192
+# "maxLockedTargets" (no unitID; a count). Catalogue keys are the
+# dogma names verbatim. Dogma 1281 "baseWarpSpeed" (unit 144
+# "AU/s") is the constant-1.0 tripwire input only, never emitted
+# (design section 2.1). Dogma 4 "mass" is barred as a value source
+# (zero ship rows, design section 2.4); mass comes from the
+# invTypes `mass` column under the `volume` precedent. Sensor
+# adjacents 238-241/1027-1030/1473-1476/1136/1371, agility
+# adjacents 151/169/559/2690, signature adjacents 554/652/973/
+# 983/1477, target-count adjacents 235/3034/193, dogma 101
+# (slot layout), 79, and 765 are barred (design section 2.7).
+NAV_TARGETING_ATTR_IDS = {600, 70, 552, 76, 564, 208, 209, 210, 211, 192}
+WARP_SPEED_MULTIPLIER_ATTR = 600
+AGILITY_ATTR = 70
+SIGNATURE_RADIUS_ATTR = 552
+MAX_TARGET_RANGE_ATTR = 76
+SCAN_RESOLUTION_ATTR = 564
+SCAN_RADAR_STRENGTH_ATTR = 208
+SCAN_LADAR_STRENGTH_ATTR = 209
+SCAN_MAGNETOMETRIC_STRENGTH_ATTR = 210
+SCAN_GRAVIMETRIC_STRENGTH_ATTR = 211
+MAX_LOCKED_TARGETS_ATTR = 192
+BASE_WARP_SPEED_ATTR = 1281
 
 CACHES = {
     "invTypes": "invTypes.csv.bz2",
@@ -583,6 +625,99 @@ SLOT_LAYOUT_EXPECTED_COUNTS = {
 # Pinned tech-3 carrier set (design section 3.4).
 TECH3_CARRIER_SET = {29984, 29986, 29988, 29990}
 
+# Navigation and targeting oracles (docs/nav-targeting-design.md
+# section 7): each value read directly from
+# dgmTypeAttributes.csv.bz2 / invTypes.csv.bz2 during design.
+# Tuple shape mirrors CALIBRATION_ORACLES: (typeId, key,
+# expected-or-None). A None expected means the key must be
+# absent from that row.
+NAV_TARGETING_ORACLES = [
+    # Rifter 587: warp 5.0, agility 3.2, mass 1067000.0,
+    # signature 35.0, range 22500.0, scan 660.0,
+    # sensors 0.0/8.0/0.0/0.0, targets 4.0.
+    (587, "warpSpeedMultiplier", 5.0),
+    (587, "agility", 3.2),
+    (587, "mass", 1067000.0),
+    (587, "signatureRadius", 35.0),
+    (587, "maxTargetRange", 22500.0),
+    (587, "scanResolution", 660.0),
+    (587, "scanRadarStrength", 0.0),
+    (587, "scanLadarStrength", 8.0),
+    (587, "scanMagnetometricStrength", 0.0),
+    (587, "scanGravimetricStrength", 0.0),
+    (587, "maxLockedTargets", 4.0),
+    # Punisher 597: warp 5.0, agility 2.9, mass 1190000.0,
+    # signature 37.0, range 25000.0, scan 640.0,
+    # sensors 10.0/0.0/0.0/0.0, targets 4.0.
+    (597, "warpSpeedMultiplier", 5.0),
+    (597, "agility", 2.9),
+    (597, "mass", 1190000.0),
+    (597, "signatureRadius", 37.0),
+    (597, "maxTargetRange", 25000.0),
+    (597, "scanResolution", 640.0),
+    (597, "scanRadarStrength", 10.0),
+    (597, "scanLadarStrength", 0.0),
+    (597, "scanMagnetometricStrength", 0.0),
+    (597, "scanGravimetricStrength", 0.0),
+    (597, "maxLockedTargets", 4.0),
+    # Capsule 670 explicit zeros + absence: range 0.0 present,
+    # targets 0.0 present, scanResolution absent.
+    (670, "maxTargetRange", 0.0),
+    (670, "maxLockedTargets", 0.0),
+    (670, "scanResolution", None),
+    (670, "scanRadarStrength", 0.0),
+    (670, "scanLadarStrength", 3.0),
+    (670, "scanMagnetometricStrength", 0.0),
+    (670, "scanGravimetricStrength", 0.0),
+    # Zephyr 2078 scanResolution absence pin.
+    (2078, "scanResolution", None),
+    # Apotheosis 29266 all-four-positive sensor pin + absence.
+    (29266, "scanRadarStrength", 10.0),
+    (29266, "scanLadarStrength", 10.0),
+    (29266, "scanMagnetometricStrength", 10.0),
+    (29266, "scanGravimetricStrength", 10.0),
+    (29266, "scanResolution", None),
+    # Category gates: module and commodity rows carry none of
+    # the eleven keys.
+    (2048, "warpSpeedMultiplier", None),
+    (2048, "agility", None),
+    (2048, "signatureRadius", None),
+    (2048, "maxTargetRange", None),
+    (2048, "scanResolution", None),
+    (2048, "scanRadarStrength", None),
+    (2048, "scanLadarStrength", None),
+    (2048, "scanMagnetometricStrength", None),
+    (2048, "scanGravimetricStrength", None),
+    (2048, "maxLockedTargets", None),
+    (2048, "mass", None),
+    (34, "warpSpeedMultiplier", None),
+    (34, "agility", None),
+    (34, "signatureRadius", None),
+    (34, "maxTargetRange", None),
+    (34, "scanResolution", None),
+    (34, "scanRadarStrength", None),
+    (34, "scanLadarStrength", None),
+    (34, "scanMagnetometricStrength", None),
+    (34, "scanGravimetricStrength", None),
+    (34, "maxLockedTargets", None),
+    (34, "mass", None),
+]
+
+# Expected navigation and targeting key counts (design section 3).
+NAV_TARGETING_EXPECTED_COUNTS = {
+    "warpSpeedMultiplier": 404,
+    "agility": 404,
+    "signatureRadius": 404,
+    "maxTargetRange": 404,
+    "scanResolution": 390,
+    "scanRadarStrength": 404,
+    "scanLadarStrength": 404,
+    "scanMagnetometricStrength": 404,
+    "scanGravimetricStrength": 404,
+    "maxLockedTargets": 404,
+    "mass": 404,
+}
+
 _STACKED_SUFFIX_RE = re.compile(r" x[0-9]+$")
 
 
@@ -623,6 +758,17 @@ def main():
     group_to_category = {}
     for row in inv_groups:
         group_to_category[int(row["groupID"])] = int(row["categoryID"])
+
+    # Published category-6 type ids, for the navigation and
+    # targeting negative/integral gate below (see its comment).
+    category6_ship_ids = {
+        int(row["typeID"])
+        for row in inv_types
+        if row["published"] == "1"
+        and int(row["typeID"]) > 0
+        and row["typeName"].strip()
+        and group_to_category.get(int(row["groupID"])) == 6
+    }
 
     effects_by_type = defaultdict(set)
     for row in type_effects:
@@ -860,6 +1006,102 @@ def main():
         seen_slot_layout_keys.add(key)
         slot_layouts_by_type.setdefault(type_id, {})[attribute_id] = value
 
+    # Base warp speed (design section 2.1): dogma 1281 is read
+    # only for the constant-1.0 tripwire. Fail-loud on duplicate,
+    # unparseable, or non-finite rows; the per-row == 1.0 check
+    # runs in the type loop where category is known. Never
+    # emitted.
+    base_warp_by_type = {}
+    seen_base_warp_keys = set()
+    for row in type_attributes:
+        attribute_id = int(row["attributeID"])
+        if attribute_id != BASE_WARP_SPEED_ATTR:
+            continue
+        type_id = int(row["typeID"])
+        key = (type_id, attribute_id)
+        if key in seen_base_warp_keys:
+            fail(
+                f"duplicate base warp speed row (type {type_id}, "
+                f"attribute {attribute_id}) in dgmTypeAttributes"
+            )
+        try:
+            value = float(row["valueFloat"])
+        except (TypeError, ValueError):
+            fail(
+                f"unparseable base warp speed value "
+                f"{row['valueFloat']!r} for (type {type_id}, "
+                f"attribute {attribute_id})"
+            )
+        if not math.isfinite(value):
+            fail(
+                f"non-finite base warp speed value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        seen_base_warp_keys.add(key)
+        base_warp_by_type[type_id] = value
+
+    # Navigation and targeting attributes per type (design
+    # section 3): only the ten locked attributes, each parsed
+    # from valueFloat. An unparseable, duplicated, or
+    # non-finite wanted row fails loudly and writes nothing.
+    # Attribute 192 additionally fails loud on non-integral
+    # values (the pure layer renders it as an integer count).
+    # DEVIATION from design section 3 ("existing shape binds
+    # negative/integral globally"): negative/integral checks
+    # are gated below on `category6_ship_ids`, because
+    # attribute 76 carries -20000.0 on four category-32
+    # subsystem rows (45610/45613/45616/45619) — subsystem
+    # modifier rows that are never emitted — which a global
+    # check would fail on. The gate preserves design intent:
+    # any row that can be emitted is validated, and nothing
+    # that is validated differently can ever render.
+    nav_targeting_by_type = {}
+    seen_nav_targeting_keys = set()
+    for row in type_attributes:
+        attribute_id = int(row["attributeID"])
+        if attribute_id not in NAV_TARGETING_ATTR_IDS:
+            continue
+        type_id = int(row["typeID"])
+        key = (type_id, attribute_id)
+        if key in seen_nav_targeting_keys:
+            fail(
+                f"duplicate navigation and targeting row "
+                f"(type {type_id}, attribute {attribute_id}) in "
+                "dgmTypeAttributes"
+            )
+        try:
+            value = float(row["valueFloat"])
+        except (TypeError, ValueError):
+            fail(
+                f"unparseable navigation and targeting value "
+                f"{row['valueFloat']!r} for (type {type_id}, "
+                f"attribute {attribute_id})"
+            )
+        if not math.isfinite(value):
+            fail(
+                f"non-finite navigation and targeting value "
+                f"{value!r} for (type {type_id}, "
+                f"attribute {attribute_id})"
+            )
+        if value < 0 and type_id in category6_ship_ids:
+            fail(
+                f"negative navigation and targeting value "
+                f"{value!r} for (type {type_id}, "
+                f"attribute {attribute_id})"
+            )
+        if (
+            attribute_id == MAX_LOCKED_TARGETS_ATTR
+            and float(value).is_integer() is False
+            and type_id in category6_ship_ids
+        ):
+            fail(
+                f"non-integral navigation and targeting value "
+                f"{value!r} for (type {type_id}, "
+                f"attribute {attribute_id})"
+            )
+        seen_nav_targeting_keys.add(key)
+        nav_targeting_by_type.setdefault(type_id, {})[attribute_id] = value
+
     types = []
     missing_group = 0
     resource_key_counts = Counter()
@@ -868,6 +1110,7 @@ def main():
     bay_key_counts = Counter()
     calibration_key_counts = Counter()
     slot_layout_key_counts = Counter()
+    nav_targeting_key_counts = Counter()
     for row in inv_types:
         if row["published"] != "1":
             continue
@@ -1087,6 +1330,71 @@ def main():
         if LAUNCHER_FITTED_EFFECT in type_effects_set:
             entry["launcherFitted"] = True
             slot_layout_key_counts["launcherFitted"] += 1
+        # Additive navigation and targeting emission (design
+        # section 3): ten dogma keys append after launcherFitted
+        # in the locked order, sparse by presence on category 6
+        # rows only, plus `mass` from the invTypes `mass`
+        # column on category 6 rows only (fail-loud float
+        # parse, the `cargoCapacity` shape). Dogma 1281 is
+        # never emitted; the tripwire asserts == 1.0 on every
+        # category-6 row (a missing or non-1.0 row fails loud
+        # before any wrong number can render).
+        if category_id == 6:
+            if base_warp_by_type.get(type_id) != 1.0:
+                fail(
+                    f"ship type {type_id} baseWarpSpeed="
+                    f"{base_warp_by_type.get(type_id)!r}, expected 1.0"
+                )
+            nav_targeting = nav_targeting_by_type.get(type_id, {})
+            if WARP_SPEED_MULTIPLIER_ATTR in nav_targeting:
+                entry["warpSpeedMultiplier"] = nav_targeting[WARP_SPEED_MULTIPLIER_ATTR]
+                nav_targeting_key_counts["warpSpeedMultiplier"] += 1
+            if AGILITY_ATTR in nav_targeting:
+                entry["agility"] = nav_targeting[AGILITY_ATTR]
+                nav_targeting_key_counts["agility"] += 1
+            if SIGNATURE_RADIUS_ATTR in nav_targeting:
+                entry["signatureRadius"] = nav_targeting[SIGNATURE_RADIUS_ATTR]
+                nav_targeting_key_counts["signatureRadius"] += 1
+            if MAX_TARGET_RANGE_ATTR in nav_targeting:
+                entry["maxTargetRange"] = nav_targeting[MAX_TARGET_RANGE_ATTR]
+                nav_targeting_key_counts["maxTargetRange"] += 1
+            if SCAN_RESOLUTION_ATTR in nav_targeting:
+                entry["scanResolution"] = nav_targeting[SCAN_RESOLUTION_ATTR]
+                nav_targeting_key_counts["scanResolution"] += 1
+            if SCAN_RADAR_STRENGTH_ATTR in nav_targeting:
+                entry["scanRadarStrength"] = nav_targeting[SCAN_RADAR_STRENGTH_ATTR]
+                nav_targeting_key_counts["scanRadarStrength"] += 1
+            if SCAN_LADAR_STRENGTH_ATTR in nav_targeting:
+                entry["scanLadarStrength"] = nav_targeting[SCAN_LADAR_STRENGTH_ATTR]
+                nav_targeting_key_counts["scanLadarStrength"] += 1
+            if SCAN_MAGNETOMETRIC_STRENGTH_ATTR in nav_targeting:
+                entry["scanMagnetometricStrength"] = nav_targeting[SCAN_MAGNETOMETRIC_STRENGTH_ATTR]
+                nav_targeting_key_counts["scanMagnetometricStrength"] += 1
+            if SCAN_GRAVIMETRIC_STRENGTH_ATTR in nav_targeting:
+                entry["scanGravimetricStrength"] = nav_targeting[SCAN_GRAVIMETRIC_STRENGTH_ATTR]
+                nav_targeting_key_counts["scanGravimetricStrength"] += 1
+            if MAX_LOCKED_TARGETS_ATTR in nav_targeting:
+                entry["maxLockedTargets"] = nav_targeting[MAX_LOCKED_TARGETS_ATTR]
+                nav_targeting_key_counts["maxLockedTargets"] += 1
+            try:
+                mass_value = float(row["mass"])
+            except (TypeError, ValueError):
+                fail(
+                    f"unparseable mass value {row['mass']!r} "
+                    f"for type {type_id}"
+                )
+            if not math.isfinite(mass_value):
+                fail(
+                    f"non-finite mass value {mass_value!r} for "
+                    f"type {type_id}"
+                )
+            if mass_value < 0:
+                fail(
+                    f"negative mass value {mass_value!r} for "
+                    f"type {type_id}"
+                )
+            entry["mass"] = mass_value
+            nav_targeting_key_counts["mass"] += 1
         types.append(entry)
 
     types.sort(key=lambda entry: entry["typeId"])
@@ -1479,6 +1787,46 @@ def main():
             fail(
                 f"type {entry['typeId']} carries both hardpoint markers"
             )
+        # Navigation and targeting invariants (design section
+        # 3.4): every present nav/targeting value is finite and
+        # >= 0.0 (not a bool), `maxLockedTargets` is integral;
+        # each of the eleven keys appears only on category 6
+        # rows (absence allowed, never required). Absence stays
+        # distinct from 0.0.
+        for key in (
+            "warpSpeedMultiplier",
+            "agility",
+            "signatureRadius",
+            "maxTargetRange",
+            "scanResolution",
+            "scanRadarStrength",
+            "scanLadarStrength",
+            "scanMagnetometricStrength",
+            "scanGravimetricStrength",
+            "maxLockedTargets",
+            "mass",
+        ):
+            if key in entry:
+                value = entry[key]
+                if (
+                    not isinstance(value, (int, float))
+                    or isinstance(value, bool)
+                    or not math.isfinite(float(value))
+                    or float(value) < 0
+                ):
+                    fail(
+                        f"type {entry['typeId']} {key}={value!r} "
+                        "is not finite and non-negative"
+                    )
+                if key == "maxLockedTargets" and float(value).is_integer() is False:
+                    fail(
+                        f"type {entry['typeId']} {key}={value!r} "
+                        "is not integral"
+                    )
+                if entry["categoryId"] != 6:
+                    fail(
+                        f"non-ship type {entry['typeId']} carries {key}"
+                    )
 
     # Invariants the parser relies on (design sections 5.2, 6.3): no
     # shipment name may contain the header delimiters, and no published
@@ -1511,6 +1859,45 @@ def main():
         if actual != expected:
             fail(
                 f"slot layout key {key} count {actual}, expected {expected}"
+            )
+
+    # Navigation and targeting oracles (design section 3.3). A
+    # None expected value means the key must be absent from
+    # that row.
+    for type_id, key, expected in NAV_TARGETING_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(f"navigation and targeting oracle type {type_id} missing")
+        if expected is None:
+            if key in entry:
+                fail(
+                    f"navigation and targeting oracle type {type_id} "
+                    f"carries {key}={entry[key]!r}, expected absent"
+                )
+        elif entry.get(key) != expected:
+            fail(
+                f"navigation and targeting oracle type {type_id} "
+                f"{key}={entry.get(key)!r}, expected {expected!r}"
+            )
+    # Explicit-zero pins: Capsule 670 range/targets present as
+    # 0.0, never absent (the two are distinct).
+    zero_nav_entry = by_id.get(670)
+    if (
+        zero_nav_entry is None
+        or "maxTargetRange" not in zero_nav_entry
+        or "maxLockedTargets" not in zero_nav_entry
+    ):
+        fail(
+            "navigation and targeting oracle type 670 "
+            "maxTargetRange/maxLockedTargets keys must be present "
+            "as 0.0"
+        )
+    for key, expected in NAV_TARGETING_EXPECTED_COUNTS.items():
+        actual = nav_targeting_key_counts[key]
+        if actual != expected:
+            fail(
+                f"navigation and targeting key {key} count {actual}, "
+                f"expected {expected}"
             )
 
     duplicate_names = sum(
@@ -1580,6 +1967,19 @@ def main():
         f"launcherSlotsLeft={slot_layout_key_counts['launcherSlotsLeft']} "
         f"turretFitted={slot_layout_key_counts['turretFitted']} "
         f"launcherFitted={slot_layout_key_counts['launcherFitted']}"
+    )
+    print(
+        f"nav_targeting_keys warpSpeedMultiplier={nav_targeting_key_counts['warpSpeedMultiplier']} "
+        f"agility={nav_targeting_key_counts['agility']} "
+        f"signatureRadius={nav_targeting_key_counts['signatureRadius']} "
+        f"maxTargetRange={nav_targeting_key_counts['maxTargetRange']} "
+        f"scanResolution={nav_targeting_key_counts['scanResolution']} "
+        f"scanRadarStrength={nav_targeting_key_counts['scanRadarStrength']} "
+        f"scanLadarStrength={nav_targeting_key_counts['scanLadarStrength']} "
+        f"scanMagnetometricStrength={nav_targeting_key_counts['scanMagnetometricStrength']} "
+        f"scanGravimetricStrength={nav_targeting_key_counts['scanGravimetricStrength']} "
+        f"maxLockedTargets={nav_targeting_key_counts['maxLockedTargets']} "
+        f"mass={nav_targeting_key_counts['mass']}"
     )
 
 
