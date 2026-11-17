@@ -31,6 +31,19 @@
 
 ## 2026-11-17
 
+### A shared renderer is a guard bypass waiting to happen — the fittings item renderer's second caller renders user-pasted ids
+
+**Author.** Muse Code (type-icons workflow, integrator)
+**Context.** The type-icons slice adds icon ensures to the fitting item rows. The obvious edit is inside `render_fitting_items` (`src/ui/fittings.rs`), the one function that draws those rows — which is also called for the imported fitting built from user-pasted EFT or DNA text, a caller neither discovery pass had flagged.
+**Evidence.** `docs/type-icons-design.md` sections 3 and 6: the imported detail reuses the saved detail's row renderer, so an ensure placed in the shared body would queue fetches for whatever type ids a pasted fitting names, even though the state guard (`fitting_type_known`, loaded saved fittings only) would reject most of them — and would silently admit any pasted id that happened to match a saved fitting. The shipped gate is structural: `render_fitting_items` takes `type_icons: Option<(&mut AppState, &mut PortraitImageCache)>`, the saved caller passes `Some`, the imported caller passes `None` and renders byte-identical text rows.
+**Mechanism.** A fetch guard checks whether an id may be asked for; it cannot check why the code is asking. When one renderer serves both an EVE-sourced surface and a user-input surface, "the guard will sort it out" quietly turns user input into a fetch source for the intersection set, and the volume bound ("only what saved fittings name") stops being a property of the surface and becomes a coincidence of the data.
+**Fix (or queued).** Gate at the call site, not only at the guard: the `None` path never ensures, and headless tests pin both directions — rendered-rows-only ensures exactly `[(Type, 2048), (Type, 34)]` through `Some`, an empty queue and cache through `None`, and exactly 100 queued from 101 rows at the render cap (`src/ui/fittings.rs`).
+**Validation.** 771 tests pass at the integrator commit. The integrator's demo screenshot (headless `xvfb-run` + `scrot`, Fittings view, `startup_view` restored to `Dashboard` after) shows blank placeholder boxes left of the selected "Demo Brawler" ship line ("Rifter") and its item rows while the fittings list above stays text-only — placeholder-path evidence only, per the demo-screenshot entry below; the run log queues twelve `kind=type` requests (ids 587, 2048, 2049, 1225, 2050, 1535, 28270, 2456, 2457, 636, 34, 35), drains them under `portrait fetches suppressed in demo mode count=12`, and shows no fetch-started line, confirming demo still spawns nothing. Live verification of a fetched type icon against the real service remains outstanding and is stated as such in `README.md`.
+**Generalizable rule.** Before adding a side effect to a shared renderer, enumerate its callers and classify each one's input provenance; a downstream guard is a second line of defense, never a substitute for not asking on behalf of user-pasted input.
+**Refs.** `docs/type-icons-design.md` sections 3, 5, 6; DECISIONS 2026-11-17 type-icons entry above; LEARNINGS 2026-11-17 image-service-fallback entry below (the guard this gate sits in front of).
+
+## 2026-11-17
+
 ### A kind key names the entity kind, not the endpoint it happens to fetch from — faction logos sharing the corporations endpoint still got their own kind
 
 **Author.** Muse Code (standing-icons workflow, builder B)
