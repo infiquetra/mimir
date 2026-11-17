@@ -195,6 +195,17 @@ impl EveConfig {
             size
         )
     }
+
+    /// Item type icon URL. The `icon` variant is the only general
+    /// type endpoint; `render` is ship-only.
+    pub fn type_icon_url(type_id: i64, size: u32) -> String {
+        format!(
+            "{}/types/{}/icon?size={}",
+            Self::IMAGE_SERVER_URL,
+            type_id,
+            size
+        )
+    }
 }
 
 /// Current Unix time in seconds (0 if the system clock is before 1970).
@@ -359,6 +370,18 @@ mod tests {
         assert_eq!(
             EveConfig::faction_logo_url(500001, 64),
             "https://images.evetech.net/corporations/500001/logo?size=64"
+        );
+    }
+
+    #[test]
+    fn type_icon_url_shape() {
+        assert_eq!(
+            EveConfig::type_icon_url(587, 64),
+            "https://images.evetech.net/types/587/icon?size=64"
+        );
+        assert_eq!(
+            EveConfig::type_icon_url(2048, 64),
+            "https://images.evetech.net/types/2048/icon?size=64"
         );
     }
 
