@@ -1112,15 +1112,36 @@ impl AppState {
             .character_detail
             .as_ready()
             .and_then(|info| info.alliance_id);
+        // Standings source, captured before the active-removal
+        // reset below (design section 5.3): the retain must see the
+        // pre-removal standings exactly as the detail lines do.
+        let standing_pairs: Vec<(String, i64)> = self
+            .character_details
+            .as_ready()
+            .and_then(|bundle| bundle.standings.as_ref().ok())
+            .map(|standings| {
+                standings
+                    .iter()
+                    .map(|s| (s.from_type.clone(), s.from_id))
+                    .collect()
+            })
+            .unwrap_or_default();
         let characters = &self.characters;
         let logo_known = |kind: &ImageKind, id: i64| match kind {
             ImageKind::Character => id != character_id,
             ImageKind::Corporation => {
-                characters.iter().any(|c| c.corporation_id == id) || detail_corp == Some(id)
+                characters.iter().any(|c| c.corporation_id == id)
+                    || detail_corp == Some(id)
+                    || standing_pairs.iter().any(|(from_type, from_id)| {
+                        *from_id == id && (from_type == "npc_corp" || from_type == "corporation")
+                    })
             }
             ImageKind::Alliance => {
                 characters.iter().any(|c| c.alliance_id == Some(id)) || detail_alliance == Some(id)
             }
+            ImageKind::Faction => standing_pairs
+                .iter()
+                .any(|(from_type, from_id)| *from_id == id && from_type == "faction"),
         };
         self.portraits.retain(|(kind, id), _| logo_known(kind, *id));
         self.portrait_requests
@@ -1253,13 +1274,15 @@ impl AppState {
 
     /// Whether one `(kind, id)` names an entity this state knows
     /// from EVE's own data: a character row for `Character`, a row
-    /// `corporation_id` or the loaded public info for `Corporation`,
-    /// a row `alliance_id` or the loaded public info for `Alliance`.
-    /// This is the single definition of "this id may be fetched",
-    /// shared by `request_portrait` and the shell landing. The
-    /// dashboard is deliberately not consulted: every landing
-    /// writes the same info to it and to `character_detail`
-    /// together, so it can know nothing the other two lack.
+    /// `corporation_id`, the loaded public info, or a standings
+    /// entry for `Corporation`, a row `alliance_id` or the loaded
+    /// public info for `Alliance`, and the loaded standings only
+    /// for `Faction`. This is the single definition of "this id
+    /// may be fetched", shared by `request_portrait`, the shell
+    /// landing, and texture prune. The dashboard is deliberately
+    /// not consulted: every landing writes the same info to it and
+    /// to `character_detail` together, so it can know nothing the
+    /// other two lack.
     pub fn image_id_known(&self, kind: ImageKind, id: i64) -> bool {
         match kind {
             ImageKind::Character => self.characters.iter().any(|c| c.character_id == id),
@@ -1269,6 +1292,7 @@ impl AppState {
                         .character_detail
                         .as_ready()
                         .is_some_and(|info| info.corporation_id == id)
+                    || self.standing_known(kind, id)
             }
             ImageKind::Alliance => {
                 self.characters.iter().any(|c| c.alliance_id == Some(id))
@@ -1277,7 +1301,27 @@ impl AppState {
                         .as_ready()
                         .is_some_and(|info| info.alliance_id == Some(id))
             }
+            ImageKind::Faction => self.standing_known(kind, id),
         }
+    }
+
+    /// Whether the loaded standings name `(kind, id)`: a `faction`
+    /// standing for `Faction`, an `npc_corp` or `corporation`
+    /// standing for `Corporation`, nothing for any other kind.
+    fn standing_known(&self, kind: ImageKind, id: i64) -> bool {
+        let wanted: &[&str] = match kind {
+            ImageKind::Faction => &["faction"],
+            ImageKind::Corporation => &["npc_corp", "corporation"],
+            ImageKind::Character | ImageKind::Alliance => return false,
+        };
+        self.character_details
+            .as_ready()
+            .and_then(|bundle| bundle.standings.as_ref().ok())
+            .is_some_and(|standings| {
+                standings
+                    .iter()
+                    .any(|s| s.from_id == id && wanted.contains(&s.from_type.as_str()))
+            })
     }
 
     /// Current image state for one `(kind, id)`; `NotRequested` when
@@ -2759,6 +2803,7 @@ mod tests {
             ImageKind::Character,
             ImageKind::Corporation,
             ImageKind::Alliance,
+            ImageKind::Faction,
         ] {
             for id in [0, -1] {
                 state.request_portrait(kind, id);
@@ -2811,5 +2856,186 @@ mod tests {
         state.portrait_requests = vec![(ImageKind::Corporation, 1000166)];
         state.remove_character(1);
         assert!(state.portrait_requests.is_empty());
+    }
+
+    fn standing(id: i64, from_type: &str) -> Standing {
+        Standing {
+            from_id: id,
+            from_type: from_type.to_string(),
+            standing: 5.0,
+        }
+    }
+
+    /// The design section 9 bundle: Ready `character_details`
+    /// with the six-entity standings list and every other section
+    /// an Err fixture.
+    fn standings_fixture_state() -> AppState {
+        let err = reauth_error();
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.character_details = LoadState::Ready(CharacterDetailData {
+            attributes: Err(err.clone()),
+            implants: Err(err.clone()),
+            clones: Err(err.clone()),
+            standings: Ok(vec![
+                standing(500001, "faction"),
+                standing(1000125, "npc_corp"),
+                standing(1000006, "corporation"),
+                standing(3000001, "agent"),
+                standing(99000001, "alliance"),
+                standing(424242, ""),
+            ]),
+            location: Err(err.clone()),
+            ship: Err(err.clone()),
+            online: Err(err),
+        });
+        state
+    }
+
+    #[test]
+    fn standings_authorize_only_their_own_kind() {
+        // row() carries corporation 1000166, so 1000125 and 1000006
+        // are known only from the standings list below.
+        let state = standings_fixture_state();
+        assert!(state.image_id_known(ImageKind::Faction, 500001));
+        assert!(!state.image_id_known(ImageKind::Corporation, 500001));
+        assert!(state.image_id_known(ImageKind::Corporation, 1000125));
+        assert!(state.image_id_known(ImageKind::Corporation, 1000006));
+        assert!(!state.image_id_known(ImageKind::Faction, 1000125));
+        assert!(!state.image_id_known(ImageKind::Character, 3000001));
+        assert!(!state.image_id_known(ImageKind::Alliance, 99000001));
+        for kind in [
+            ImageKind::Character,
+            ImageKind::Corporation,
+            ImageKind::Alliance,
+            ImageKind::Faction,
+        ] {
+            assert!(
+                !state.image_id_known(kind, 424242),
+                "kind {kind:?} at 424242 must be unknown"
+            );
+        }
+    }
+
+    #[test]
+    fn standings_known_kinds_queue_through_request_portrait() {
+        let mut state = standings_fixture_state();
+        state.request_portrait(ImageKind::Faction, 500001);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Faction, 500001)]);
+        assert!(matches!(
+            state.portrait_state(ImageKind::Faction, 500001),
+            PortraitState::Loading
+        ));
+        state.request_portrait(ImageKind::Faction, 500001);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Faction, 500001)]);
+        // Cross-kind: the faction id is not a corporation key.
+        state.request_portrait(ImageKind::Corporation, 500001);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Faction, 500001)]);
+        assert!(!state
+            .portraits
+            .contains_key(&(ImageKind::Corporation, 500001)));
+    }
+
+    #[test]
+    fn err_or_loading_standings_authorize_nothing() {
+        let mut state = standings_fixture_state();
+        let Some(bundle) = state.character_details.as_ready().cloned() else {
+            panic!("fixture bundle must be ready");
+        };
+        let mut err_bundle = bundle.clone();
+        err_bundle.standings = Err(reauth_error());
+        state.character_details = LoadState::Ready(err_bundle);
+        for kind in [
+            ImageKind::Character,
+            ImageKind::Corporation,
+            ImageKind::Alliance,
+            ImageKind::Faction,
+        ] {
+            for id in [500001, 1000125, 1000006] {
+                assert!(
+                    !state.image_id_known(kind, id),
+                    "Err standings must authorize nothing (kind {kind:?} id {id})"
+                );
+            }
+        }
+        state.request_portrait(ImageKind::Faction, 500001);
+        assert!(state.portrait_requests.is_empty());
+
+        let mut state = standings_fixture_state();
+        state.character_details = LoadState::Loading;
+        for kind in [
+            ImageKind::Character,
+            ImageKind::Corporation,
+            ImageKind::Alliance,
+            ImageKind::Faction,
+        ] {
+            for id in [500001, 1000125, 1000006] {
+                assert!(
+                    !state.image_id_known(kind, id),
+                    "Loading details must authorize nothing (kind {kind:?} id {id})"
+                );
+            }
+        }
+        state.request_portrait(ImageKind::Faction, 500001);
+        assert!(state.portrait_requests.is_empty());
+    }
+
+    #[test]
+    fn switching_character_revokes_standings_knowledge() {
+        // Standings belong to the active character: A's standings
+        // must never authorize a fetch under B (design section
+        // 5.2).
+        let mut state = standings_fixture_state();
+        state.request_portrait(ImageKind::Faction, 500001);
+        assert!(state.image_id_known(ImageKind::Faction, 500001));
+        state.set_active_character(2);
+        assert!(matches!(state.character_details, LoadState::Loading));
+        assert!(!state.image_id_known(ImageKind::Faction, 500001));
+        assert!(!state.image_id_known(ImageKind::Corporation, 1000125));
+    }
+
+    #[test]
+    fn removing_character_retains_standings_backed_images_until_guard_loses_them() {
+        let mut state = standings_fixture_state();
+        state.portraits.insert(
+            (ImageKind::Faction, 500001),
+            portrait_state_with_dimensions(8, 8),
+        );
+        state.portraits.insert(
+            (ImageKind::Corporation, 1000125),
+            portrait_state_with_dimensions(8, 8),
+        );
+        state.portrait_requests = vec![
+            (ImageKind::Faction, 500001),
+            (ImageKind::Corporation, 1000125),
+        ];
+        // Removing a non-active character keeps the active
+        // character's standings backing.
+        state.remove_character(2);
+        assert!(state.character_details.is_ready());
+        assert!(state.image_id_known(ImageKind::Faction, 500001));
+        assert!(state.image_id_known(ImageKind::Corporation, 1000125));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Faction, 500001),
+            PortraitState::Ready(_)
+        ));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Corporation, 1000125),
+            PortraitState::Ready(_)
+        ));
+        assert_eq!(
+            state.portrait_requests,
+            vec![
+                (ImageKind::Faction, 500001),
+                (ImageKind::Corporation, 1000125)
+            ]
+        );
+        // Removing the active character loses the bundle, so both
+        // become unknown (the retain ran pre-reset; prune and
+        // landing finish the cleanup).
+        state.remove_character(1);
+        assert!(!state.image_id_known(ImageKind::Faction, 500001));
+        assert!(!state.image_id_known(ImageKind::Corporation, 1000125));
     }
 }

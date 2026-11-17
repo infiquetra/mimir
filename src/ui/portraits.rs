@@ -59,10 +59,10 @@ impl PortraitImageCache {
     /// Drop textures for entities the state no longer knows,
     /// freeing the GPU texture so a removed entity's image cannot
     /// linger — and a later re-added entity re-uploads. Retention
-    /// uses the same `image_id_known` guard as fetching (rows OR
-    /// the loaded character detail), so a logo known only from
-    /// fresh detail data is not dropped and re-uploaded every
-    /// frame while rows are still stale.
+    /// uses the same `image_id_known` guard as fetching (rows, the
+    /// loaded character detail, or the loaded standings), so a logo
+    /// known only from standings is not dropped and re-uploaded
+    /// every frame while rows are still stale.
     pub fn prune(&mut self, state: &AppState) {
         let before = self.textures.len();
         self.textures
@@ -122,6 +122,7 @@ impl PortraitImageCache {
             ImageKind::Character => format!("portrait-{id}"),
             ImageKind::Corporation => format!("logo-corp-{id}"),
             ImageKind::Alliance => format!("logo-alliance-{id}"),
+            ImageKind::Faction => format!("logo-faction-{id}"),
         };
         let handle = ctx.load_texture(texture_name, color, egui::TextureOptions::default());
         if replaced {
@@ -165,8 +166,8 @@ pub fn ensure_portrait_requested(state: &mut AppState, character_id: i64) {
     }
 }
 
-/// Queue a logo fetch for one corporation or alliance, with the
-/// same rule as `ensure_portrait_requested`: only a
+/// Queue a logo fetch for one corporation, alliance, or faction,
+/// with the same rule as `ensure_portrait_requested`: only a
 /// `NotRequested` key queues, a `Failed` logo retries through the
 /// detail view's retry button, and an unknown id queues nothing
 /// through the state guard. In demo mode the queued request is
@@ -222,8 +223,8 @@ pub fn show_portrait(
     }
 }
 
-/// Render one corporation or alliance logo, `size_px` points
-/// square: the image when `Ready` for that exact `(kind, id)`,
+/// Render one corporation, alliance, or faction logo,
+/// `size_px` points square: the image when `Ready` for that exact `(kind, id)`,
 /// otherwise a blank box of the theme's faint background color —
 /// never a fabricated or stock mark. There is deliberately no
 /// `name` parameter: a logo placeholder shows no initial and no
@@ -254,6 +255,11 @@ pub fn show_logo(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::state::{CharacterDetailData, LoadState};
+    use crate::esi::models::{
+        CharacterAttributes, CharacterClones, CharacterLocation, CharacterOnline, CharacterShip,
+        Standing,
+    };
     use crate::storage::repositories::CharacterRow;
 
     fn test_row(id: i64, name: &str) -> CharacterRow {
@@ -551,6 +557,33 @@ mod tests {
     }
 
     #[test]
+    fn same_numeric_id_in_corporation_and_faction_uploads_two_textures() {
+        let ctx = egui::Context::default();
+        // State entries pin each kind to its own image; the cache
+        // must upload the same number under two kinds as two
+        // textures, never one shared upload.
+        let mut state = state_with_ids(&[1]);
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Corporation, 500001),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        state.portraits.insert(
+            (ImageKind::Faction, 500001),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+
+        let corp = cache
+            .texture(&ctx, &state, ImageKind::Corporation, 500001)
+            .expect("corp uploads");
+        let faction = cache
+            .texture(&ctx, &state, ImageKind::Faction, 500001)
+            .expect("faction uploads");
+        assert_eq!(cache.len(), 2);
+        assert_ne!(corp.id(), faction.id());
+    }
+
+    #[test]
     fn prune_is_kind_aware_for_corporation_logos() {
         let ctx = egui::Context::default();
         // Two rows share corporation 1000166 (the `test_row`
@@ -584,6 +617,63 @@ mod tests {
         assert_ne!(
             cache
                 .texture(&ctx, &state, ImageKind::Corporation, 1000166)
+                .expect("re-upload")
+                .id(),
+            uploaded
+        );
+    }
+
+    fn bundle_with_faction_standing() -> CharacterDetailData {
+        CharacterDetailData {
+            attributes: Ok(CharacterAttributes::default()),
+            implants: Ok(Vec::new()),
+            clones: Ok(CharacterClones::default()),
+            standings: Ok(vec![Standing {
+                from_id: 500001,
+                from_type: "faction".to_string(),
+                standing: 3.25,
+            }]),
+            location: Ok(CharacterLocation::default()),
+            ship: Ok(CharacterShip::default()),
+            online: Ok(CharacterOnline::default()),
+        }
+    }
+
+    #[test]
+    fn prune_is_kind_aware_for_standings_faction_logos() {
+        let ctx = egui::Context::default();
+        // The bundle's faction standing is 500001's only backing:
+        // prune retains the texture while the bundle is loaded and
+        // frees it once the bundle is gone (character switch puts
+        // `character_details` back to `Loading`).
+        let mut state = state_with_ids(&[1]);
+        state.character_details = LoadState::Ready(bundle_with_faction_standing());
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Faction, 500001),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        let uploaded = cache
+            .texture(&ctx, &state, ImageKind::Faction, 500001)
+            .expect("upload")
+            .id();
+        cache.prune(&state);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Faction, 500001)
+                .expect("kept")
+                .id(),
+            uploaded
+        );
+
+        let mut loading = state_with_ids(&[1]);
+        loading.character_details = LoadState::Loading;
+        cache.prune(&loading);
+        assert_eq!(cache.len(), 0);
+        assert_ne!(
+            cache
+                .texture(&ctx, &state, ImageKind::Faction, 500001)
                 .expect("re-upload")
                 .id(),
             uploaded

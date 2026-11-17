@@ -2239,6 +2239,19 @@ impl MimirApp {
                     .as_ref()
                     .expect("decide_portrait_start checked wiring");
                 for (kind, id) in requests {
+                    // Re-check the guard at drain time: the queue
+                    // may hold a request whose entity stopped being
+                    // known (character removed/switched) after it
+                    // queued. Skip the fetch; the state entry was
+                    // already dropped with its character.
+                    if !self.state.image_id_known(kind, id) {
+                        tracing::debug!(
+                            "[PORTRAIT] image fetch skipped, no longer known kind={} id={}",
+                            kind.as_str(),
+                            id
+                        );
+                        continue;
+                    }
                     tracing::info!(
                         "[PORTRAIT] image fetch started kind={} id={}",
                         kind.as_str(),
@@ -2249,7 +2262,9 @@ impl MimirApp {
                     runtime.spawn(async move {
                         let size = match kind {
                             ImageKind::Character => PORTRAIT_SIZE,
-                            ImageKind::Corporation | ImageKind::Alliance => LOGO_SIZE,
+                            ImageKind::Corporation | ImageKind::Alliance | ImageKind::Faction => {
+                                LOGO_SIZE
+                            }
                         };
                         let image = service.image(kind, id, size).await;
                         let _ = tx.send(BackendMsg::PortraitFetched { kind, id, image });
@@ -3785,6 +3800,7 @@ impl eframe::App for MimirApp {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::esi::models::Standing as StandingModel;
 
     fn selected_state() -> (AppState, MarketSelection) {
         let mut state = AppState::new(false);
@@ -4610,6 +4626,85 @@ mod tests {
         assert!(matches!(
             state.portrait_state(ImageKind::Corporation, 1000166),
             PortraitState::Ready(_)
+        ));
+    }
+
+    /// State whose loaded standings carry one faction entry
+    /// (500001); every other detail section is an Err fixture.
+    fn standings_state() -> AppState {
+        let mut state = two_character_state();
+        let err = || SectionError {
+            message: "forbidden".to_string(),
+            needs_reauthorize: true,
+        };
+        state.character_details = LoadState::Ready(CharacterDetailData {
+            attributes: Err(err()),
+            implants: Err(err()),
+            clones: Err(err()),
+            standings: Ok(vec![StandingModel {
+                from_id: 500001,
+                from_type: "faction".to_string(),
+                standing: 5.0,
+            }]),
+            location: Err(err()),
+            ship: Err(err()),
+            online: Err(err()),
+        });
+        state
+    }
+
+    #[test]
+    fn standings_landing_applies_then_drops_after_switch() {
+        let mut state = standings_state();
+        assert!(apply_portrait_landing(
+            &mut state,
+            ImageKind::Faction,
+            500001,
+            Ok(test_image(8, 8))
+        ));
+        match state.portrait_state(ImageKind::Faction, 500001) {
+            PortraitState::Ready(image) => {
+                assert_eq!(image.width(), 8);
+                assert_eq!(image.height(), 8);
+            }
+            other => panic!("known faction must land Ready, got {other:?}"),
+        }
+        // Mid-fetch switch: the bundle resets, so a second
+        // landing for the same entity drops whole and writes
+        // nothing new.
+        state.set_active_character(2);
+        assert!(!apply_portrait_landing(
+            &mut state,
+            ImageKind::Faction,
+            500001,
+            Ok(test_image(4, 4))
+        ));
+        match state.portrait_state(ImageKind::Faction, 500001) {
+            PortraitState::Ready(image) => {
+                assert_eq!(image.width(), 8, "dropped landing must write nothing");
+                assert_eq!(image.height(), 8);
+            }
+            other => panic!("dropped landing must leave the earlier image, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn standings_landing_rejects_the_wrong_kind() {
+        // A faction standing authorizes the faction key only, not
+        // the corporation key at the same number.
+        let mut state = standings_state();
+        assert!(!apply_portrait_landing(
+            &mut state,
+            ImageKind::Corporation,
+            500001,
+            Ok(test_image(8, 8))
+        ));
+        assert!(!state
+            .portraits
+            .contains_key(&(ImageKind::Corporation, 500001)));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Corporation, 500001),
+            PortraitState::NotRequested
         ));
     }
 }
