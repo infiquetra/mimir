@@ -13,6 +13,7 @@ use crate::app::state::{
 };
 use crate::config::EveConfig;
 use crate::esi::models::CharacterFitting;
+use crate::fitting::active_repair::{fitting_active_repair, FittingActiveRepair};
 use crate::fitting::bay_usage::{bay_usage, BayBudget, BayUsage, BayUsageOutcome};
 use crate::fitting::calibration::{rig_calibration, CalibrationBudget, CalibrationOutcome};
 use crate::fitting::dna::parse_import;
@@ -2218,6 +2219,108 @@ fn render_fitting_cap_stability(
     }
 }
 
+/// Locked heading for the active repair block
+/// (sustained tank design section 6). The "(base values)"
+/// qualifier keeps every base repair number from reading
+/// as a skill- or bonus-modified total. "Sustained tank"
+/// and "Tank" were rejected headings: both promise the
+/// resistance-applied, capacitor-checked steady-state
+/// figure this block does not compute.
+const FITTINGS_ACTIVE_REPAIR_HEADING: &str = "Active repair (base values)";
+
+/// Locked disclosure: the continuous-cycling assumption is
+/// stated here, never implied, and every unmodelled term is
+/// named (sustained tank design section 6). This block's
+/// own sentence; the ship base values disclosure names a
+/// different applied and excluded set.
+const FITTING_ACTIVE_REPAIR_DISCLOSURE: &str = "Assumes every counted repair module keeps cycling continuously. Base values from Mimir's bundled item data: base hit points restored per cycle at base cycle times, with resistances, skills, implants, and bonuses from modules, rigs, subsystems, and the ship itself not applied — raw hit points per second, not effective hit points per second. Ancillary repair modules are counted at their unloaded repair amount: loaded charges (such as Nanite Repair Paste) and reload time are not modelled, so an ancillary module's rate is its rate while cycling, not a long-run average. Remote repairers, which repair other ships, are not counted. Repair modules' capacitor use is counted in the Capacitor block above; this block does not model whether the capacitor can sustain continuous cycling. Passive shield recharge is shown as shield peak recharge in the Ship block and is not included here, so these numbers can differ from EVE.";
+
+const FITTING_ACTIVE_REPAIR_NO_CATALOGUE: &str =
+    "Active repair unavailable: Mimir's bundled item data failed to load.";
+
+fn active_repair_shield_line(shield_hp_per_sec: Option<f64>) -> Option<String> {
+    ship_stat_line("Shield boost", shield_hp_per_sec, "HP/s")
+}
+
+fn active_repair_armor_line(armor_hp_per_sec: Option<f64>) -> Option<String> {
+    ship_stat_line("Armor repair", armor_hp_per_sec, "HP/s")
+}
+
+fn active_repair_hull_line(hull_hp_per_sec: Option<f64>) -> Option<String> {
+    ship_stat_line("Hull repair", hull_hp_per_sec, "HP/s")
+}
+
+/// Per-block excluded-module disclosure, or `None` when every
+/// fitted slot module counted (design section 6): 0 (none),
+/// 1 (singular), 2+ (plural). "Fitted module" is used because
+/// counting is driven by the slot flags, one quantity unit
+/// each.
+fn active_repair_excluded_line(excluded: u64) -> Option<String> {
+    if excluded == 0 {
+        None
+    } else if excluded == 1 {
+        Some(
+            "1 fitted module is not counted because its base repair data is not in Mimir's bundled item data."
+                .to_string(),
+        )
+    } else {
+        Some(format!(
+            "{excluded} fitted modules are not counted because their base repair data is not in Mimir's bundled item data."
+        ))
+    }
+}
+
+/// The block's lines in locked order (shield boost, armor
+/// repair, hull repair, excluded-module disclosure —
+/// design section 6). A `None` layer contributes no line —
+/// never a zero, a dash, or placeholder words. Present
+/// zeros render like any other value, so an empty fitting
+/// still shows three `0.0 HP/s` lines.
+fn active_repair_lines(repair: &FittingActiveRepair) -> Vec<String> {
+    let mut lines: Vec<String> = [
+        active_repair_shield_line(repair.shield_hp_per_sec),
+        active_repair_armor_line(repair.armor_hp_per_sec),
+        active_repair_hull_line(repair.hull_hp_per_sec),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    if let Some(line) = active_repair_excluded_line(repair.excluded_modules) {
+        lines.push(line);
+    }
+    lines
+}
+
+/// Active repair block shared by the saved and imported
+/// fitting details (sustained tank design section 6).
+/// Depends only on the fitting and the catalogue: no skill
+/// levels, no SDE handle, so it renders identically for every
+/// viewing character. The saved site passes the fitting; the
+/// imported site passes its synthesized `CharacterFitting`.
+/// The heading always renders, so the view never silently
+/// omits the feature; a catalogue that failed to load swaps
+/// all lines and the disclosure for the fixed unavailable
+/// sentence. Renders even when the fitting has no items.
+/// Logs nothing itself: the pure function logs nothing
+/// (render cadence).
+fn render_fitting_active_repair(
+    ui: &mut egui::Ui,
+    fitting: &CharacterFitting,
+    fitting_types: Option<&FittingTypes>,
+) {
+    let Some(catalogue) = fitting_types else {
+        ui.heading(FITTINGS_ACTIVE_REPAIR_HEADING);
+        ui.label(FITTING_ACTIVE_REPAIR_NO_CATALOGUE);
+        return;
+    };
+    let repair = fitting_active_repair(fitting, catalogue);
+    ui.heading(FITTINGS_ACTIVE_REPAIR_HEADING);
+    for line in active_repair_lines(&repair) {
+        ui.label(line);
+    }
+    ui.label(FITTING_ACTIVE_REPAIR_DISCLOSURE);
+}
+
 /// Locked heading for the slot layout block (slot layout design
 /// section 6). The "(base values)" qualifier keeps every base
 /// hull number from reading as a fitted total.
@@ -2506,6 +2609,7 @@ fn fittings_import_panel(
     render_bay_usage(ui, &synth, fitting_types);
     render_fitting_dps(ui, &synth, Some(&imported), fitting_types);
     render_fitting_cap_stability(ui, &synth, fitting_types);
+    render_fitting_active_repair(ui, &synth, fitting_types);
     render_slot_layout(ui, &synth, fitting_types);
     render_ship_base_stats(ui, &synth, fitting_types);
     render_ship_resistances(ui, &synth, fitting_types);
@@ -2813,6 +2917,7 @@ pub fn show(
                     render_bay_usage(ui, selected, fitting_types);
                     render_fitting_dps(ui, selected, None, fitting_types);
                     render_fitting_cap_stability(ui, selected, fitting_types);
+                    render_fitting_active_repair(ui, selected, fitting_types);
                     render_slot_layout(ui, selected, fitting_types);
                     render_ship_base_stats(ui, selected, fitting_types);
                     render_ship_resistances(ui, selected, fitting_types);
@@ -4906,6 +5011,291 @@ mod tests {
         // identical block.
         let saved = CharacterFitting {
             fitting_id: 900000999,
+            name: "Saved replica".to_string(),
+            description: None,
+            ship_type_id: synth.ship_type_id,
+            items: synth.items.clone(),
+        };
+        assert_eq!(lines_for(&saved), lines_for(&synth));
+    }
+
+    #[test]
+    fn active_repair_wording_constants() {
+        assert_eq!(
+            FITTINGS_ACTIVE_REPAIR_HEADING,
+            "Active repair (base values)"
+        );
+        assert_eq!(
+            FITTING_ACTIVE_REPAIR_DISCLOSURE,
+            "Assumes every counted repair module keeps cycling continuously. Base values from Mimir's bundled item data: base hit points restored per cycle at base cycle times, with resistances, skills, implants, and bonuses from modules, rigs, subsystems, and the ship itself not applied — raw hit points per second, not effective hit points per second. Ancillary repair modules are counted at their unloaded repair amount: loaded charges (such as Nanite Repair Paste) and reload time are not modelled, so an ancillary module's rate is its rate while cycling, not a long-run average. Remote repairers, which repair other ships, are not counted. Repair modules' capacitor use is counted in the Capacitor block above; this block does not model whether the capacitor can sustain continuous cycling. Passive shield recharge is shown as shield peak recharge in the Ship block and is not included here, so these numbers can differ from EVE."
+        );
+        assert_eq!(
+            FITTING_ACTIVE_REPAIR_NO_CATALOGUE,
+            "Active repair unavailable: Mimir's bundled item data failed to load."
+        );
+    }
+
+    #[test]
+    fn active_repair_excluded_line_counts() {
+        assert_eq!(active_repair_excluded_line(0), None);
+        assert_eq!(
+            active_repair_excluded_line(1).as_deref(),
+            Some("1 fitted module is not counted because its base repair data is not in Mimir's bundled item data.")
+        );
+        assert_eq!(
+            active_repair_excluded_line(2).as_deref(),
+            Some("2 fitted modules are not counted because their base repair data is not in Mimir's bundled item data.")
+        );
+    }
+
+    #[test]
+    fn active_repair_lines_omit_none_layers() {
+        // `None` layers are omitted — never rendered as zeros
+        // or placeholder words. Only the missing layer drops
+        // out; the others keep their locked order.
+        let partial = FittingActiveRepair {
+            shield_hp_per_sec: None,
+            armor_hp_per_sec: Some(920.0 / 15.0),
+            hull_hp_per_sec: Some(30.0 / 24.0),
+            counted_modules: 2,
+            excluded_modules: 0,
+        };
+        assert_eq!(
+            active_repair_lines(&partial),
+            ["Armor repair: 61.3 HP/s", "Hull repair: 1.3 HP/s",]
+        );
+        // Known zeros render like any other value: an empty
+        // sum over proven data is a stated zero, not an
+        // absent line.
+        let zeros = FittingActiveRepair {
+            shield_hp_per_sec: Some(0.0),
+            armor_hp_per_sec: Some(0.0),
+            hull_hp_per_sec: Some(0.0),
+            counted_modules: 0,
+            excluded_modules: 1,
+        };
+        assert_eq!(
+            active_repair_lines(&zeros),
+            [
+                "Shield boost: 0.0 HP/s",
+                "Armor repair: 0.0 HP/s",
+                "Hull repair: 0.0 HP/s",
+                "1 fitted module is not counted because its base repair data is not in Mimir's bundled item data.",
+            ]
+        );
+    }
+
+    // Demo story (design section 7, verified by the pure
+    // module's pins): no shipped demo fitting carries a
+    // self-repair module, so every demo block is three known
+    // zeros, plus Demo Brawler's one excluded unknown type.
+    // Built from the real demo fixture over the real
+    // catalogue, so fixture or catalogue drift fails here.
+    #[test]
+    fn demo_fixture_active_repair_match_the_locked_demo_story() {
+        use crate::demo::data::DEMO_FITTINGS_JSON;
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let lines_for = |fitting: &CharacterFitting| {
+            active_repair_lines(&fitting_active_repair(fitting, &catalogue))
+        };
+
+        // Demo Brawler's rig slot carries type 1535, absent
+        // from the catalogue: the singular excluded sentence
+        // keeps the three zeros honest.
+        assert_eq!(
+            lines_for(&find("Demo Brawler")),
+            [
+                "Shield boost: 0.0 HP/s",
+                "Armor repair: 0.0 HP/s",
+                "Hull repair: 0.0 HP/s",
+                "1 fitted module is not counted because its base repair data is not in Mimir's bundled item data.",
+            ]
+        );
+        // Mission Runner and Demo Runner carry only known
+        // non-repairers: three zeros, no excluded sentence.
+        for name in ["Mission Runner", "Demo Runner"] {
+            assert_eq!(
+                lines_for(&find(name)),
+                [
+                    "Shield boost: 0.0 HP/s",
+                    "Armor repair: 0.0 HP/s",
+                    "Hull repair: 0.0 HP/s",
+                ]
+            );
+        }
+    }
+
+    // Non-demo one-decimal renderings (design section 7
+    // hand oracles over the bundled catalogue): each real
+    // repairer alone on a Rifter shows the formatter's
+    // one-decimal rounding with the other two layers at a
+    // stated zero.
+    #[test]
+    fn active_repair_renders_real_type_rates() {
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let lines_for = |type_id: i64, flag: &str| {
+            let fitting = fitting_with_items(vec![item(flag, 1, type_id)]);
+            active_repair_lines(&fitting_active_repair(&fitting, &catalogue))
+        };
+        // 920.0 / 15.0 = 61.333... → 61.3 (E2.1).
+        assert_eq!(
+            lines_for(3540, "LoSlot0"),
+            [
+                "Shield boost: 0.0 HP/s",
+                "Armor repair: 61.3 HP/s",
+                "Hull repair: 0.0 HP/s",
+            ]
+        );
+        // 104.0 / 3.0 = 34.666... → 34.7 (E2.2).
+        assert_eq!(
+            lines_for(10850, "MedSlot0"),
+            [
+                "Shield boost: 34.7 HP/s",
+                "Armor repair: 0.0 HP/s",
+                "Hull repair: 0.0 HP/s",
+            ]
+        );
+        // 30.0 / 24.0 = 1.25 exactly → 1.3.
+        assert_eq!(
+            lines_for(2355, "MedSlot1"),
+            [
+                "Shield boost: 0.0 HP/s",
+                "Armor repair: 0.0 HP/s",
+                "Hull repair: 1.3 HP/s",
+            ]
+        );
+        // 92.0 / 6.0 = 15.333... → 15.3.
+        assert_eq!(
+            lines_for(1183, "LoSlot1"),
+            [
+                "Shield boost: 0.0 HP/s",
+                "Armor repair: 15.3 HP/s",
+                "Hull repair: 0.0 HP/s",
+            ]
+        );
+        // 52.0 / 2.0 = 26.0 exactly: the reload-ignored pin.
+        assert_eq!(
+            lines_for(32774, "MedSlot2"),
+            [
+                "Shield boost: 26.0 HP/s",
+                "Armor repair: 0.0 HP/s",
+                "Hull repair: 0.0 HP/s",
+            ]
+        );
+        // 52.0 / 6.0 = 8.666... → 8.7 dry: the loaded 26.0
+        // is never an expectation here.
+        assert_eq!(
+            lines_for(33076, "LoSlot2"),
+            [
+                "Shield boost: 0.0 HP/s",
+                "Armor repair: 8.7 HP/s",
+                "Hull repair: 0.0 HP/s",
+            ]
+        );
+    }
+
+    // Plural excluded form (two excluded units) and the
+    // empty fitting (three stated zeros), per design
+    // section 8. The 30.0 / 24.0 = 1.25 exactness pin
+    // lives in the real-rate renderings above.
+    #[test]
+    fn active_repair_plural_excluded_and_empty_fitting() {
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        // Two rows of a catalogue-absent type render the
+        // plural excluded sentence (quantity units, the
+        // resources precedent).
+        let fitting =
+            fitting_with_items(vec![item("RigSlot0", 1, 1535), item("RigSlot1", 1, 1535)]);
+        assert_eq!(
+            active_repair_lines(&fitting_active_repair(&fitting, &catalogue)),
+            [
+                "Shield boost: 0.0 HP/s",
+                "Armor repair: 0.0 HP/s",
+                "Hull repair: 0.0 HP/s",
+                "2 fitted modules are not counted because their base repair data is not in Mimir's bundled item data.",
+            ]
+        );
+        // An empty fitting still shows three stated zeros.
+        let empty = fitting_with_items(Vec::new());
+        assert_eq!(
+            active_repair_lines(&fitting_active_repair(&empty, &catalogue)),
+            [
+                "Shield boost: 0.0 HP/s",
+                "Armor repair: 0.0 HP/s",
+                "Hull repair: 0.0 HP/s",
+            ]
+        );
+    }
+
+    // Surface symmetry (design section 8): an EFT import
+    // listing Nanite Repair Paste after its ancillary
+    // repairer renders the same dry number as the saved
+    // fitting carrying the synthesized items.
+    #[test]
+    fn active_repair_imported_and_saved_surfaces_match() {
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let sample = concat!(
+            "[Rifter, Sample Brawler]\n",
+            "Damage Control II\n",
+            "Small Ancillary Armor Repairer, Nanite Repair Paste\n",
+            "\n",
+            "1MN Afterburner II\n",
+            "Warp Scrambler II\n",
+            "\n",
+            "200mm AutoCannon II, Republic Fleet EMP S\n",
+            "200mm AutoCannon II\n",
+            "200mm AutoCannon II\n",
+            "\n",
+            "Small Projectile Burst Aerator I\n",
+            "[Empty Rig slot]\n",
+            "\n",
+            "Hobgoblin II x2\n",
+            "\n",
+            "EMP S x200\n",
+            "Nanite Repair Paste x8"
+        );
+        let synth = match parse_eft(sample, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => {
+                panic!("sample EFT must import, got {fatal:?}")
+            }
+        };
+        let lines_for = |fitting: &CharacterFitting| {
+            active_repair_lines(&fitting_active_repair(fitting, &catalogue))
+        };
+        // The dry ancillary rate renders identically with
+        // the paste charge listed: 52.0 / 6.0 = 8.666...
+        // → 8.7, never the loaded 26.0.
+        assert_eq!(
+            lines_for(&synth),
+            [
+                "Shield boost: 0.0 HP/s",
+                "Armor repair: 8.7 HP/s",
+                "Hull repair: 0.0 HP/s",
+            ]
+        );
+        // Surface symmetry: the same slot items through a
+        // saved fitting render the identical block.
+        let saved = CharacterFitting {
+            fitting_id: 900000998,
             name: "Saved replica".to_string(),
             description: None,
             ship_type_id: synth.ship_type_id,
