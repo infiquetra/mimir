@@ -10,6 +10,7 @@ pub mod ship_ehp;
 pub mod ship_peak_recharge;
 pub mod ship_resistances;
 pub mod ship_stats;
+pub mod slot_layout;
 pub mod write_map;
 
 pub use bay_usage::{bay_usage, BayBudget, BayUsage, BayUsageOutcome};
@@ -30,4 +31,5 @@ pub use ship_resistances::{
     ship_resistances, ResistLayer, ShipResistances, ShipResistancesOutcome,
 };
 pub use ship_stats::{ship_base_stats, ShipBaseStats, ShipBaseStatsOutcome};
+pub use slot_layout::{slot_layout, SlotBudget, SlotLayout, SlotLayoutOutcome};
 pub use write_map::{build_save_request, DropReason, DroppedFittingItem, SaveMapping};
