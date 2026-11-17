@@ -407,7 +407,14 @@ fn apply_portrait_landing(
                 character_id,
                 e
             );
-            state.portraits.insert(character_id, PortraitState::Failed);
+            // A slow failed fetch (e.g. from before a remove/re-add)
+            // must not overwrite a portrait that already landed.
+            if !matches!(
+                state.portraits.get(&character_id),
+                Some(PortraitState::Ready(_))
+            ) {
+                state.portraits.insert(character_id, PortraitState::Failed);
+            }
         }
     }
     true

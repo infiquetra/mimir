@@ -17,8 +17,9 @@ use crate::config::EveConfig;
 /// it; nothing upscales past what was decoded.
 pub const PORTRAIT_SIZE: u32 = 256;
 /// Maximum accepted portrait body (1 MiB). The streamed download
-/// aborts above this and decode rejects bodies above it, so a
-/// hostile or broken response can never fill memory.
+/// aborts above this and decode rejects bodies above it. Decode
+/// itself is bounded by explicit image-crate limits (dimensions
+/// and allocation), so a small body cannot expand unchecked.
 pub const MAX_IMAGE_BYTES: usize = 1 << 20;
 /// Maximum accepted decoded width or height. A body that decodes
 /// beyond this is rejected, never shown.
@@ -34,7 +35,7 @@ pub const MAX_CONCURRENT_FETCHES: usize = 4;
 #[derive(Debug, thiserror::Error)]
 pub enum PortraitError {
     #[error("[PORTRAIT] http error: {0}")]
-    Http(#[from] reqwest::Error),
+    Http(String),
     #[error("[PORTRAIT] portrait request failed with status {0}")]
     Status(u16),
     #[error("[PORTRAIT] portrait exceeds the size limit")]
@@ -48,11 +49,6 @@ pub enum PortraitError {
 /// Cache file name for one character portrait: `{id}_{size}.jpg`,
 /// so one character's bytes can never serve another's slot.
 pub fn cache_filename(character_id: i64, size: u32) -> String {
-    tracing::debug!(
-        "[PORTRAIT] cache filename character_id={} size={}",
-        character_id,
-        size
-    );
     format!("{character_id}_{size}.jpg")
 }
 
@@ -83,8 +79,23 @@ pub fn decode_portrait(bytes: &[u8]) -> Result<image::DynamicImage, PortraitErro
     if bytes.is_empty() {
         return Err(PortraitError::Decode("empty portrait body".to_string()));
     }
-    let decoded =
-        image::load_from_memory(bytes).map_err(|e| PortraitError::Decode(e.to_string()))?;
+    // Bound the decode itself, not just its result: a tiny body
+    // can expand to a huge allocation, so the dimension and
+    // allocation caps must apply inside the decoder.
+    let mut limits = image::Limits::default();
+    limits.max_image_width = Some(MAX_IMAGE_DIMENSION);
+    limits.max_image_height = Some(MAX_IMAGE_DIMENSION);
+    // 1024x1024 RGBA is 4 MiB; allow decoder scratch above that.
+    limits.max_alloc = Some(32 << 20);
+    let mut reader = image::ImageReader::new(std::io::Cursor::new(bytes))
+        .with_guessed_format()
+        .map_err(|e| PortraitError::Decode(e.to_string()))?;
+    reader.limits(limits);
+    let decoded = match reader.decode() {
+        Ok(d) => d,
+        Err(image::ImageError::Limits(_)) => return Err(PortraitError::TooLarge),
+        Err(e) => return Err(PortraitError::Decode(e.to_string())),
+    };
     if decoded.width() > MAX_IMAGE_DIMENSION || decoded.height() > MAX_IMAGE_DIMENSION {
         return Err(PortraitError::TooLarge);
     }
@@ -116,10 +127,7 @@ impl PortraitClient {
     }
 
     pub fn with_base_url(image_base_url: String) -> Self {
-        tracing::info!(
-            "[PORTRAIT] creating portrait client base={}",
-            image_base_url
-        );
+        tracing::info!("[PORTRAIT] creating portrait client");
         // Timeout and User-Agent are the only builder settings, and
         // both are infallible in practice; the fallback keeps
         // construction total so the caller never fails on it.
@@ -149,16 +157,32 @@ impl PortraitClient {
             character_id,
             size
         );
-        let url = format!(
-            "{}/characters/{}/portrait?size={}",
-            self.image_base_url, character_id, size
-        );
-        let mut response = self.http.get(&url).send().await?;
+        // Production goes through the one named URL seam so the
+        // host/path cannot drift; only the test seam (injected
+        // base) formats against its own base.
+        let url = if self.image_base_url == EveConfig::IMAGE_SERVER_URL {
+            EveConfig::portrait_url(character_id, size)
+        } else {
+            format!(
+                "{}/characters/{}/portrait?size={}",
+                self.image_base_url, character_id, size
+            )
+        };
+        let mut response = self
+            .http
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| PortraitError::Http(e.without_url().to_string()))?;
         if !response.status().is_success() {
             return Err(PortraitError::Status(response.status().as_u16()));
         }
         let mut bytes = Vec::new();
-        while let Some(chunk) = response.chunk().await? {
+        while let Some(chunk) = response
+            .chunk()
+            .await
+            .map_err(|e| PortraitError::Http(e.without_url().to_string()))?
+        {
             if bytes.len() + chunk.len() > MAX_IMAGE_BYTES {
                 return Err(PortraitError::TooLarge);
             }
@@ -177,7 +201,12 @@ impl PortraitClient {
 }
 
 /// On-disk portrait cache rooted at `{app_cache_dir}/portraits/`.
-/// All IO here is local filesystem, never network.
+/// All IO here is local filesystem, never network. Growth is
+/// bounded in practice by the user's own character count (one
+/// small JPEG per character at the fixed size); entries for
+/// removed characters are left on disk deliberately — they are
+/// inert, keyed by character id, and reused if the character
+/// returns.
 pub struct PortraitStore {
     dir: PathBuf,
 }
@@ -196,7 +225,14 @@ impl PortraitStore {
     /// file. A miss is silent on purpose: the caller refetches.
     pub fn read_cached(&self, character_id: i64, size: u32) -> Option<Vec<u8>> {
         let path = cache_path(&self.dir, character_id, size);
-        let bytes = std::fs::read(&path).ok()?;
+        // Bounded read: never load more than the decode cap, so a
+        // stray oversized file cannot fill memory before checks.
+        use std::io::Read as _;
+        let file = std::fs::File::open(&path).ok()?;
+        let mut bytes = Vec::new();
+        file.take((MAX_IMAGE_BYTES + 1) as u64)
+            .read_to_end(&mut bytes)
+            .ok()?;
         tracing::debug!(
             "[PORTRAIT] cache hit character_id={} bytes={}",
             character_id,
@@ -215,9 +251,11 @@ impl PortraitStore {
     ) -> Result<(), PortraitError> {
         std::fs::create_dir_all(&self.dir).map_err(|e| PortraitError::CacheIo(e.to_string()))?;
         let path = cache_path(&self.dir, character_id, size);
-        let tmp = self
-            .dir
-            .join(format!("{}.tmp", cache_filename(character_id, size)));
+        let tmp = self.dir.join(format!(
+            "{}.tmp{}",
+            cache_filename(character_id, size),
+            rand::random::<u64>()
+        ));
         std::fs::write(&tmp, bytes).map_err(|e| PortraitError::CacheIo(e.to_string()))?;
         if let Err(e) = std::fs::rename(&tmp, &path) {
             let _ = std::fs::remove_file(&tmp);
@@ -306,6 +344,9 @@ impl PortraitService {
             }
         }
         let bytes = self.client.fetch_bytes(character_id, size).await?;
+        // Validate before caching: a non-image 200 body must never
+        // persist and re-poison later launches.
+        let image = decode_portrait(&bytes)?;
         // The cache is an optimization: a failed write is logged and
         // the fetched portrait still shows.
         if let Err(e) = self.store.write_cached(character_id, size, &bytes) {
@@ -315,7 +356,6 @@ impl PortraitService {
                 e
             );
         }
-        let image = decode_portrait(&bytes)?;
         tracing::info!(
             "[PORTRAIT] portrait ready character_id={} size={}",
             character_id,
@@ -386,6 +426,20 @@ mod tests {
         assert_eq!(initial_for_name("  xana"), Some('X'));
         assert_eq!(initial_for_name(""), None);
         assert_eq!(initial_for_name("123"), None);
+    }
+
+    #[test]
+    fn decode_accepts_a_real_jpeg_body() {
+        // The live service sends JPEG; fixtures elsewhere are PNG.
+        let img = image::DynamicImage::ImageRgb8(image::RgbImage::new(4, 4));
+        let mut bytes = Vec::new();
+        img.write_to(
+            &mut std::io::Cursor::new(&mut bytes),
+            image::ImageFormat::Jpeg,
+        )
+        .expect("encode jpeg");
+        let decoded = decode_portrait(&bytes).expect("jpeg decodes");
+        assert_eq!((decoded.width(), decoded.height()), (4, 4));
     }
 
     #[test]

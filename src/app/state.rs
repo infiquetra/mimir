@@ -1112,10 +1112,6 @@ impl AppState {
     /// Current portrait state for one character; `NotRequested` when
     /// the character has no entry yet.
     pub fn portrait_state(&self, character_id: i64) -> &PortraitState {
-        tracing::debug!(
-            "[PORTRAIT] portrait state read character_id={}",
-            character_id
-        );
         self.portraits
             .get(&character_id)
             .unwrap_or(&PortraitState::NotRequested)
