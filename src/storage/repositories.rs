@@ -625,9 +625,22 @@ pub fn list_skill_plans(
             row.get::<_, i32>(2)?,
         ))
     })?;
+    let mut skipped_invalid = 0usize;
     for row in rows {
         let (plan_id, skill_id, target_level) = row?;
+        // Stored rows are validated again on read: a hand-corrupted
+        // entry (target outside 1..=5, or a duplicate skill) must
+        // never render as valid. App write paths already validate,
+        // so this only fires on out-of-band database edits.
+        if !(1..=5).contains(&target_level) {
+            skipped_invalid += 1;
+            continue;
+        }
         if let Some(index) = index_by_id.get(&plan_id).copied() {
+            if plans[index].entries.iter().any(|e| e.skill_id == skill_id) {
+                skipped_invalid += 1;
+                continue;
+            }
             plans[index].entries.push(SkillPlanEntry {
                 skill_id,
                 target_level,
@@ -636,6 +649,13 @@ pub fn list_skill_plans(
         // Entry rows whose plan vanished between the queries are
         // dropped defensively: they cannot occur under the single
         // Mutex<Connection> the shell holds.
+    }
+    if skipped_invalid > 0 {
+        tracing::warn!(
+            "[PLANS] skipped invalid stored plan entries character_id={} count={}",
+            character_id,
+            skipped_invalid
+        );
     }
     Ok(plans)
 }
@@ -1575,6 +1595,40 @@ mod tests {
     }
 
     // T13: skill_plans_are_isolated_per_character (design section 12).
+    #[test]
+    fn list_skill_plans_skips_corrupted_stored_entries() {
+        // Reviewer finding F1: rows written out-of-band (direct
+        // SQL) with targets outside 1..=5 must never render as
+        // valid; the read path filters them and keeps good rows.
+        let conn = db::open_in_memory().expect("db opens");
+        upsert_character(&conn, &char_row(42, "Alpha", true)).expect("char");
+        let plan_id =
+            create_skill_plan(&conn, 42, "Plan", "", "2026-11-17T00:00:00Z").expect("create");
+        assert!(replace_skill_plan_entries(
+            &conn,
+            42,
+            plan_id,
+            &[SkillPlanEntry {
+                skill_id: 3300,
+                target_level: 5
+            }],
+            "2026-11-17T00:00:00Z",
+        )
+        .expect("entries"));
+        conn.execute(
+            "INSERT INTO skill_plan_entries
+             (character_id, plan_id, sort_position, skill_id, target_level)
+             VALUES (42, ?1, 1, 3301, 6), (42, ?1, 2, 3302, 0)",
+            rusqlite::params![plan_id],
+        )
+        .expect("insert corrupt rows directly");
+        let plans = list_skill_plans(&conn, 42).expect("list");
+        assert_eq!(plans.len(), 1);
+        assert_eq!(plans[0].entries.len(), 1, "corrupt entries filtered");
+        assert_eq!(plans[0].entries[0].skill_id, 3300);
+        assert_eq!(plans[0].entries[0].target_level, 5);
+    }
+
     #[test]
     fn skill_plans_are_isolated_per_character() {
         let conn = db::open_in_memory().expect("db opens");

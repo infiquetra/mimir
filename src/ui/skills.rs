@@ -122,7 +122,7 @@ fn plan_totals_line(progress: &PlanProgress, trained_loaded: bool) -> String {
     };
     match progress.total_minutes {
         None => format!(
-            "Total remaining: {} — training time unavailable: character attributes are not loaded.",
+            "Total remaining: {} — training time unavailable.",
             widgets::format_sp(sp)
         ),
         Some(minutes) => format!(
@@ -1025,7 +1025,7 @@ mod tests {
         );
         assert_eq!(
             plan_totals_line(&sp_only, true),
-            "Total remaining: 210,745 SP — training time unavailable: character attributes are not loaded."
+            "Total remaining: 210,745 SP — training time unavailable."
         );
         let unknown = progress_with(vec![estimate(Some(4), false, None, None)], 0, None, None);
         assert_eq!(
