@@ -16,6 +16,7 @@ use crate::esi::models::CharacterFitting;
 use crate::fitting::bay_usage::{bay_usage, BayBudget, BayUsage, BayUsageOutcome};
 use crate::fitting::calibration::{rig_calibration, CalibrationBudget, CalibrationOutcome};
 use crate::fitting::dna::parse_import;
+use crate::fitting::dps::{fitting_dps, FamilyDps, FittingDps, FittingDpsOutcome};
 use crate::fitting::eft::{EftImportOutcome, ImportFormat, ImportIssue, ImportedFitting};
 #[cfg(test)]
 use crate::fitting::resources::fitting_resources;
@@ -1931,6 +1932,127 @@ fn render_bay_usage(
     }
 }
 
+/// Locked heading for the damage-per-second block (fitting DPS
+/// design section 6). The "(base values)" qualifier keeps every
+/// base damage rate from reading as a skill- or bonus-modified
+/// total.
+const FITTINGS_DPS_HEADING: &str = "Damage per second (base values)";
+
+/// Locked disclosure: base damage rates with every included
+/// and excluded factor named, and the no-total rule stated
+/// plainly (fitting DPS design section 6). This block's own
+/// sentence; it names the EFT charge-pairing surface, the
+/// online/launched assumptions, and every unapplied term,
+/// which the bay and calibration disclosures above do not
+/// cover in the same words.
+const FITTING_DPS_DISCLOSURE: &str = "Base damage per second from Mimir's bundled item data: base charge, drone, and fighter damage per firing cycle, with no skill, implant, ship, module, rig, or subsystem bonuses applied. Turret and launcher damage counts only a loaded charge listed after the module in imported EFT text, exactly as listed; saved and DNA fittings list no loaded charges, and no charge is assumed. Fitted weapons are treated as online, drones and fighters as launched up to the ship's base drone bandwidth and fighter tubes, and every shot is counted at full damage, with no range, falloff, tracking, missile application, reload time, or flight time applied. No total is shown, because any family's damage can be unknown while another's is counted.";
+
+const FITTING_DPS_NO_CATALOGUE: &str =
+    "Damage per second unavailable: Mimir's bundled item data failed to load.";
+const FITTING_DPS_NO_SHIP_DATA: &str = "Damage per second unavailable: Mimir's bundled item data has no damage data for this fitting's ship.";
+
+fn dps_family_line(label: &str, family: &FamilyDps) -> String {
+    let amount = widgets::format_fitting_amount(family.dps, "DPS");
+    format!("{label} DPS: {amount}")
+}
+
+fn dps_excluded_line(label: &str, excluded: usize) -> Option<String> {
+    if excluded == 0 {
+        None
+    } else if excluded == 1 {
+        Some(format!(
+            "{label} DPS does not count 1 item with no damage data in Mimir's bundled item data."
+        ))
+    } else {
+        Some(format!(
+            "{label} DPS does not count {excluded} items with no damage data in Mimir's bundled item data."
+        ))
+    }
+}
+
+fn dps_unloaded_line(unloaded: usize) -> Option<String> {
+    if unloaded == 0 {
+        None
+    } else if unloaded == 1 {
+        Some("1 fitted weapon has no loaded charge listed, so it is not counted above.".to_string())
+    } else {
+        Some(format!(
+            "{unloaded} fitted weapons have no loaded charge listed, so they are not counted above."
+        ))
+    }
+}
+
+/// The block's lines in locked order (turret, launcher,
+/// drones, fighters — fitting DPS design section 6). A `None`
+/// family contributes no line. Excluded-item lines follow
+/// the family lines in the same family order, only for
+/// families whose count is positive; the unloaded-weapons
+/// line comes last. No line ever renders in the
+/// over-capacity red.
+fn dps_lines(dps: &FittingDps) -> Vec<String> {
+    let families: [(&str, Option<FamilyDps>); 4] = [
+        ("Turret", dps.turrets),
+        ("Launcher", dps.launchers),
+        ("Drone", dps.drones),
+        ("Fighter", dps.fighters),
+    ];
+    let mut lines: Vec<String> = families
+        .iter()
+        .filter_map(|(label, family)| family.map(|f| dps_family_line(label, &f)))
+        .collect();
+    for (label, family) in families {
+        if let Some(family) = family {
+            if let Some(line) = dps_excluded_line(label, family.excluded_items) {
+                lines.push(line);
+            }
+        }
+    }
+    if let Some(line) = dps_unloaded_line(dps.unloaded_weapons) {
+        lines.push(line);
+    }
+    lines
+}
+
+/// Damage-per-second block shared by the saved and imported
+/// fitting details (fitting DPS design section 6). Depends
+/// only on the fitting, the imported fitting, and the
+/// catalogue: no skill levels, no SDE handle, so it renders
+/// identically for every viewing character. The saved site
+/// passes `None` for the imported argument; the imported
+/// site passes the `ImportedFitting` it already holds
+/// alongside its synthesis (the synthesis itself is
+/// unchanged and still charge-free). The heading always
+/// renders, so the view never silently omits the feature;
+/// `Unavailable` swaps all DPS lines and the disclosure
+/// for the fixed unavailable sentence. Renders even when
+/// the fitting has no items. Logs nothing itself: the pure
+/// function logs nothing (render cadence).
+fn render_fitting_dps(
+    ui: &mut egui::Ui,
+    fitting: &CharacterFitting,
+    imported: Option<&ImportedFitting>,
+    fitting_types: Option<&FittingTypes>,
+) {
+    let Some(catalogue) = fitting_types else {
+        ui.heading(FITTINGS_DPS_HEADING);
+        ui.label(FITTING_DPS_NO_CATALOGUE);
+        return;
+    };
+    match fitting_dps(fitting, imported, catalogue) {
+        FittingDpsOutcome::Available(dps) => {
+            ui.heading(FITTINGS_DPS_HEADING);
+            for line in dps_lines(&dps) {
+                ui.label(line);
+            }
+            ui.label(FITTING_DPS_DISCLOSURE);
+        }
+        FittingDpsOutcome::Unavailable => {
+            ui.heading(FITTINGS_DPS_HEADING);
+            ui.label(FITTING_DPS_NO_SHIP_DATA);
+        }
+    }
+}
+
 /// Locked heading for the slot layout block (slot layout design
 /// section 6). The "(base values)" qualifier keeps every base
 /// hull number from reading as a fitted total.
@@ -2217,6 +2339,7 @@ fn fittings_import_panel(
     render_fitting_resources(ui, &synth, fitting_types, levels, sde);
     render_rig_calibration(ui, &synth, fitting_types);
     render_bay_usage(ui, &synth, fitting_types);
+    render_fitting_dps(ui, &synth, Some(&imported), fitting_types);
     render_slot_layout(ui, &synth, fitting_types);
     render_ship_base_stats(ui, &synth, fitting_types);
     render_ship_resistances(ui, &synth, fitting_types);
@@ -2522,6 +2645,7 @@ pub fn show(
                     render_fitting_resources(ui, selected, fitting_types, levels, sde);
                     render_rig_calibration(ui, selected, fitting_types);
                     render_bay_usage(ui, selected, fitting_types);
+                    render_fitting_dps(ui, selected, None, fitting_types);
                     render_slot_layout(ui, selected, fitting_types);
                     render_ship_base_stats(ui, selected, fitting_types);
                     render_ship_resistances(ui, selected, fitting_types);
@@ -6063,6 +6187,267 @@ mod tests {
                     false
                 ),
             ]
+        );
+    }
+
+    fn dps_family(dps: f64, excluded: usize) -> FamilyDps {
+        FamilyDps {
+            dps,
+            excluded_items: excluded,
+        }
+    }
+
+    // Test 11: family lines byte-exact, including rounding of the
+    // computed values and present-zero lines. Sample-EFT
+    // arithmetic: 13.8 * 3.465 = 47.817; 47.817 / 3.75 = 12.7512
+    // renders as 12.8; real autocannon 3.4375 renders as 3.4.
+    #[test]
+    fn dps_family_lines_match_the_locked_templates() {
+        assert_eq!(
+            dps_family_line("Turret", &dps_family(12.7512, 0)),
+            "Turret DPS: 12.8 DPS"
+        );
+        assert_eq!(
+            dps_family_line("Turret", &dps_family(3.4375, 0)),
+            "Turret DPS: 3.4 DPS"
+        );
+        assert_eq!(
+            dps_family_line("Launcher", &dps_family(0.0, 0)),
+            "Launcher DPS: 0.0 DPS"
+        );
+        assert_eq!(
+            dps_family_line("Drone", &dps_family(39.0, 0)),
+            "Drone DPS: 39.0 DPS"
+        );
+        assert_eq!(
+            dps_family_line("Fighter", &dps_family(270.0, 0)),
+            "Fighter DPS: 270.0 DPS"
+        );
+        assert_eq!(
+            dps_family_line("Drone", &dps_family(0.0, 0)),
+            "Drone DPS: 0.0 DPS"
+        );
+    }
+
+    // Test 12: excluded and unloaded templates byte-exact for
+    // 0 (none), 1 (singular), 2+ (plural), in family order with
+    // the unloaded line last.
+    #[test]
+    fn dps_excluded_and_unloaded_templates_and_ordering() {
+        for label in ["Turret", "Launcher", "Drone", "Fighter"] {
+            assert_eq!(dps_excluded_line(label, 0), None);
+            assert_eq!(
+                dps_excluded_line(label, 1).as_deref(),
+                Some(
+                    "Turret DPS does not count 1 item with no damage data in Mimir's bundled item data."
+                        .replace("Turret", label)
+                        .as_str()
+                )
+            );
+            assert_eq!(
+                dps_excluded_line(label, 2).as_deref(),
+                Some(
+                    "Turret DPS does not count 2 items with no damage data in Mimir's bundled item data."
+                        .replace("Turret", label)
+                        .as_str()
+                )
+            );
+        }
+        assert_eq!(dps_unloaded_line(0), None);
+        assert_eq!(
+            dps_unloaded_line(1).as_deref(),
+            Some("1 fitted weapon has no loaded charge listed, so it is not counted above.")
+        );
+        assert_eq!(
+            dps_unloaded_line(3).as_deref(),
+            Some("3 fitted weapons have no loaded charge listed, so they are not counted above.")
+        );
+
+        // Ordering: family lines in Turret/Launcher/Drone/Fighter
+        // order, excluded lines in the same order, unloaded last.
+        let dps = FittingDps {
+            turrets: Some(dps_family(12.7512, 1)),
+            launchers: Some(dps_family(0.0, 2)),
+            drones: Some(dps_family(0.0, 0)),
+            fighters: Some(dps_family(270.0, 3)),
+            unloaded_weapons: 1,
+        };
+        assert_eq!(
+            dps_lines(&dps),
+            [
+                "Turret DPS: 12.8 DPS".to_string(),
+                "Launcher DPS: 0.0 DPS".to_string(),
+                "Drone DPS: 0.0 DPS".to_string(),
+                "Fighter DPS: 270.0 DPS".to_string(),
+                "Turret DPS does not count 1 item with no damage data in Mimir's bundled item data."
+                    .to_string(),
+                "Launcher DPS does not count 2 items with no damage data in Mimir's bundled item data."
+                    .to_string(),
+                "Fighter DPS does not count 3 items with no damage data in Mimir's bundled item data."
+                    .to_string(),
+                "1 fitted weapon has no loaded charge listed, so it is not counted above."
+                    .to_string(),
+            ]
+        );
+        // None families contribute no line.
+        let dps = FittingDps {
+            turrets: None,
+            launchers: None,
+            drones: Some(dps_family(0.0, 0)),
+            fighters: None,
+            unloaded_weapons: 0,
+        };
+        assert_eq!(dps_lines(&dps), ["Drone DPS: 0.0 DPS".to_string()]);
+    }
+
+    // Test 13: heading, disclosure, and both unavailable
+    // sentences byte-exact.
+    #[test]
+    fn dps_unavailable_and_disclosure_wording() {
+        assert_eq!(FITTINGS_DPS_HEADING, "Damage per second (base values)");
+        assert_eq!(
+            FITTING_DPS_NO_CATALOGUE,
+            "Damage per second unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            FITTING_DPS_NO_SHIP_DATA,
+            "Damage per second unavailable: Mimir's bundled item data has no damage data for this fitting's ship."
+        );
+        assert_eq!(
+            FITTING_DPS_DISCLOSURE,
+            "Base damage per second from Mimir's bundled item data: base charge, drone, and fighter damage per firing cycle, with no skill, implant, ship, module, rig, or subsystem bonuses applied. Turret and launcher damage counts only a loaded charge listed after the module in imported EFT text, exactly as listed; saved and DNA fittings list no loaded charges, and no charge is assumed. Fitted weapons are treated as online, drones and fighters as launched up to the ship's base drone bandwidth and fighter tubes, and every shot is counted at full damage, with no range, falloff, tracking, missile application, reload time, or flight time applied. No total is shown, because any family's damage can be unknown while another's is counted."
+        );
+    }
+
+    // Test 14: demo pins (fitting DPS design section 7). Demo
+    // Brawler/Mission Runner/Demo Runner are saved fittings on
+    // zero-bandwidth hulls: `Drone DPS: 0.0 DPS` only. Sample
+    // EFT: Turret DPS 12.8 from one listed charge plus a
+    // 2-unloaded line. Sample DNA: 3-unloaded line. No fighter
+    // line anywhere in demo.
+    #[test]
+    fn demo_fixture_fitting_dps_match_the_locked_demo_story() {
+        use crate::demo::data::DEMO_FITTINGS_JSON;
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let dps_for = |fitting: &CharacterFitting| match fitting_dps(fitting, None, &catalogue) {
+            FittingDpsOutcome::Available(dps) => dps,
+            FittingDpsOutcome::Unavailable => panic!("demo fitting must have damage data"),
+        };
+
+        for name in ["Demo Brawler", "Mission Runner", "Demo Runner"] {
+            let dps = dps_for(&find(name));
+            assert!(dps.turrets.is_none(), "{name} has no turret family");
+            assert!(dps.launchers.is_none(), "{name} has no launcher family");
+            let drones = dps.drones.expect("zero-bandwidth hull carries drones");
+            assert!(
+                (drones.dps - 0.0).abs() < 1e-9,
+                "{name} drone DPS is 0.0, got {}",
+                drones.dps
+            );
+            assert_eq!(drones.excluded_items, 0, "{name} drone excluded");
+            assert!(dps.fighters.is_none(), "{name} has no fighter family");
+            assert_eq!(dps.unloaded_weapons, 0, "{name} unloaded");
+            assert_eq!(dps_lines(&dps), ["Drone DPS: 0.0 DPS".to_string()]);
+        }
+
+        // Sample EFT: three 200mm AutoCannon II candidates, one
+        // with Republic Fleet EMP S (10.35 + 2.3 + 1.15 + 0.0
+        // = 13.8; 13.8 * 3.465 = 47.817; 47.817 / 3.75 = 12.7512).
+        let imported = match parse_eft(DEMO_SAMPLE_EFT, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting,
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
+        };
+        let synth = imported.to_character_fitting();
+        let sample = match fitting_dps(&synth, Some(&imported), &catalogue) {
+            FittingDpsOutcome::Available(dps) => dps,
+            FittingDpsOutcome::Unavailable => panic!("demo sample must have damage data"),
+        };
+        let turrets = sample.turrets.expect("EFT carries turrets");
+        assert!(
+            (turrets.dps - 12.7512).abs() < 1e-9,
+            "turret DPS is 12.7512, got {}",
+            turrets.dps
+        );
+        assert_eq!(turrets.excluded_items, 0);
+        let launchers = sample.launchers.expect("EFT carries launchers");
+        assert!((launchers.dps - 0.0).abs() < 1e-9);
+        assert_eq!(launchers.excluded_items, 0);
+        assert!((sample.drones.expect("drones").dps - 0.0).abs() < 1e-9);
+        assert!(sample.fighters.is_none());
+        assert_eq!(sample.unloaded_weapons, 2);
+        assert_eq!(
+            dps_lines(&sample),
+            [
+                "Turret DPS: 12.8 DPS".to_string(),
+                "Launcher DPS: 0.0 DPS".to_string(),
+                "Drone DPS: 0.0 DPS".to_string(),
+                "2 fitted weapons have no loaded charge listed, so they are not counted above."
+                    .to_string(),
+            ]
+        );
+
+        // Sample DNA: three turret candidates, no pairings.
+        let imported_dna = match parse_import(DEMO_SAMPLE_DNA, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting,
+            EftImportOutcome::Failed(fatal) => panic!("demo DNA must import, got {fatal:?}"),
+        };
+        let synth_dna = imported_dna.to_character_fitting();
+        let dna = match fitting_dps(&synth_dna, Some(&imported_dna), &catalogue) {
+            FittingDpsOutcome::Available(dps) => dps,
+            FittingDpsOutcome::Unavailable => panic!("demo DNA must have damage data"),
+        };
+        assert!(dna.turrets.is_none());
+        assert!(dna.launchers.is_none());
+        assert!((dna.drones.expect("DNA drones").dps - 0.0).abs() < 1e-9);
+        assert!(dna.fighters.is_none());
+        assert_eq!(dna.unloaded_weapons, 3);
+        assert_eq!(
+            dps_lines(&dna),
+            [
+                "Drone DPS: 0.0 DPS".to_string(),
+                "3 fitted weapons have no loaded charge listed, so they are not counted above."
+                    .to_string(),
+            ]
+        );
+
+        // No fighter line anywhere in demo.
+        for name in ["Demo Brawler", "Mission Runner", "Demo Runner"] {
+            assert!(
+                dps_lines(&dps_for(&find(name)))
+                    .iter()
+                    .all(|line| !line.starts_with("Fighter DPS")),
+                "demo has no fighter damage line"
+            );
+        }
+        assert!(
+            dps_lines(&sample)
+                .iter()
+                .all(|line| !line.starts_with("Fighter DPS")),
+            "sample has no fighter damage line"
+        );
+        assert!(
+            dps_lines(&dna)
+                .iter()
+                .all(|line| !line.starts_with("Fighter DPS")),
+            "DNA sample has no fighter damage line"
         );
     }
 
