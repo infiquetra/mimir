@@ -1,7 +1,7 @@
-//! Character portraits, corporation logos, and alliance logos:
-//! unauthenticated fetch from the EVE image service, on-disk
-//! caching under the app cache directory, and bounded decode. All
-//! three kinds share one pipeline keyed by `(ImageKind, id)` with
+//! Character portraits, corporation logos, alliance logos, and
+//! faction logos: unauthenticated fetch from the EVE image service,
+//! on-disk caching under the app cache directory, and bounded decode.
+//! All four kinds share one pipeline keyed by `(ImageKind, id)` with
 //! one semaphore; they are public, so this layer never fetches or
 //! attaches a token. Every public function logs with the
 //! `[PORTRAIT]` tag; ids are logged as plain integers (the
@@ -24,16 +24,19 @@ pub enum ImageKind {
     Character,
     Corporation,
     Alliance,
+    Faction,
 }
 
 impl ImageKind {
     /// Fixed lower-case word for log lines: "character",
-    /// "corporation", or "alliance". Never derived from user text.
+    /// "corporation", "alliance", or "faction". Never derived from
+    /// user text.
     pub fn as_str(&self) -> &'static str {
         match self {
             ImageKind::Character => "character",
             ImageKind::Corporation => "corporation",
             ImageKind::Alliance => "alliance",
+            ImageKind::Faction => "faction",
         }
     }
 }
@@ -41,8 +44,8 @@ impl ImageKind {
 /// The one portrait size the whole app requests. Renders downscale
 /// it; nothing upscales past what was decoded.
 pub const PORTRAIT_SIZE: u32 = 256;
-/// The one logo size the whole app requests (corporation and
-/// alliance). 512 would exceed `MAX_IMAGE_BYTES` on dense logos,
+/// The one logo size the whole app requests (corporation, alliance,
+/// and faction). 512 would exceed `MAX_IMAGE_BYTES` on dense logos,
 /// so the fixed logo size stays small and renders downscale it.
 pub const LOGO_SIZE: u32 = 64;
 /// Maximum accepted portrait body (1 MiB). The streamed download
@@ -54,7 +57,7 @@ pub const MAX_IMAGE_BYTES: usize = 1 << 20;
 /// beyond this is rejected, never shown.
 pub const MAX_IMAGE_DIMENSION: u32 = 1024;
 /// Maximum portraits and logos in flight app-wide. The shell spawns
-/// one task per requested key; this one semaphore bounds both kinds
+/// one task per requested key; this one semaphore bounds every kind
 /// together.
 pub const MAX_CONCURRENT_FETCHES: usize = 4;
 
@@ -78,15 +81,17 @@ pub enum PortraitError {
 
 /// Cache file name for one kind-keyed image: the character row is
 /// the shipped legacy `{id}_{size}.jpg`, corporation is
-/// `corp-{id}_{size}.png`, alliance is `alliance-{id}_{size}.png`.
-/// The kind prefix is load-bearing: one number in two kinds must
-/// never share a file, and extensions follow the observed service
-/// content types (JPEG portraits, PNG logos).
+/// `corp-{id}_{size}.png`, alliance is `alliance-{id}_{size}.png`,
+/// faction is `faction-{id}_{size}.png`. The kind prefix is
+/// load-bearing: one number in two kinds must never share a file,
+/// and extensions follow the observed service content types (JPEG
+/// portraits, PNG logos).
 pub fn cache_filename(kind: ImageKind, id: i64, size: u32) -> String {
     match kind {
         ImageKind::Character => format!("{id}_{size}.jpg"),
         ImageKind::Corporation => format!("corp-{id}_{size}.png"),
         ImageKind::Alliance => format!("alliance-{id}_{size}.png"),
+        ImageKind::Faction => format!("faction-{id}_{size}.png"),
     }
 }
 
@@ -109,7 +114,7 @@ pub fn initial_for_name(name: &str) -> Option<char> {
 /// Decode image bytes within the byte and dimension caps.
 /// Anything above a cap, or anything that is not a decodable image,
 /// is an error: the caller shows the placeholder, never a guess.
-/// This decodes character portraits and corporation/alliance
+/// This decodes character portraits and corporation/alliance/faction
 /// logos alike (JPEG portraits, PNG logos).
 pub fn decode_portrait(bytes: &[u8]) -> Result<image::DynamicImage, PortraitError> {
     tracing::debug!("[PORTRAIT] decoding portrait bytes={}", bytes.len());
@@ -207,6 +212,7 @@ impl PortraitClient {
                 ImageKind::Character => EveConfig::portrait_url(id, size),
                 ImageKind::Corporation => EveConfig::corporation_logo_url(id, size),
                 ImageKind::Alliance => EveConfig::alliance_logo_url(id, size),
+                ImageKind::Faction => EveConfig::faction_logo_url(id, size),
             }
         } else {
             match kind {
@@ -223,6 +229,12 @@ impl PortraitClient {
                 ImageKind::Alliance => {
                     format!(
                         "{}/alliances/{}/logo?size={}",
+                        self.image_base_url, id, size
+                    )
+                }
+                ImageKind::Faction => {
+                    format!(
+                        "{}/corporations/{}/logo?size={}",
                         self.image_base_url, id, size
                     )
                 }
@@ -261,11 +273,11 @@ impl PortraitClient {
     }
 }
 
-/// On-disk image cache (all three kinds) rooted at
+/// On-disk image cache (all four kinds) rooted at
 /// `{app_cache_dir}/portraits/`. All IO here is local filesystem,
 /// never network. Growth is bounded in practice by the user's own
 /// characters (one small JPEG per character, one small PNG per
-/// corporation/alliance at the fixed sizes); entries for removed
+/// corporation/alliance/faction at the fixed sizes); entries for removed
 /// characters are left on disk deliberately — they are inert,
 /// keyed by kind and id, and reused if the character returns.
 pub struct PortraitStore {
@@ -347,7 +359,7 @@ impl PortraitStore {
     }
 }
 
-/// App-wide image service (all three kinds): client + store + the
+/// App-wide image service (all four kinds): client + store + the
 /// one semaphore that bounds in-flight portraits and logos
 /// together.
 pub struct PortraitService {
@@ -514,14 +526,26 @@ mod tests {
             cache_filename(ImageKind::Alliance, 99003581, 64),
             "alliance-99003581_64.png"
         );
-        // The same number in three kinds names three distinct files:
+        assert_eq!(
+            cache_filename(ImageKind::Faction, 500001, 64),
+            "faction-500001_64.png"
+        );
+        assert_eq!(ImageKind::Character.as_str(), "character");
+        assert_eq!(ImageKind::Corporation.as_str(), "corporation");
+        assert_eq!(ImageKind::Alliance.as_str(), "alliance");
+        assert_eq!(ImageKind::Faction.as_str(), "faction");
+        // The same number in four kinds names four distinct files:
         // one kind's bytes can never serve another kind's slot.
         let character = cache_filename(ImageKind::Character, 1000166, 64);
         let corporation = cache_filename(ImageKind::Corporation, 1000166, 64);
         let alliance = cache_filename(ImageKind::Alliance, 1000166, 64);
-        assert_ne!(character, corporation);
-        assert_ne!(character, alliance);
-        assert_ne!(corporation, alliance);
+        let faction = cache_filename(ImageKind::Faction, 1000166, 64);
+        let names = [&character, &corporation, &alliance, &faction];
+        for i in 0..names.len() {
+            for j in (i + 1)..names.len() {
+                assert_ne!(names[i], names[j], "names {i} and {j} must differ");
+            }
+        }
         let dir = std::path::Path::new("/tmp/example-cache/portraits");
         assert_eq!(
             cache_path(dir, ImageKind::Character, 90000001, 256),
@@ -692,6 +716,31 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn fetch_decodes_a_faction_logo_from_the_image_service_shape() {
+        // Factions use the corporations endpoint in the image
+        // server (design section 2): the request line proves the
+        // test seam routes Faction to the corporations path.
+        let body = generated_png(8, 8);
+        let (base, captured) = mock_bytes_server(200, body).await;
+        let root = tempfile::tempdir().expect("temp dir");
+        let service = PortraitService::with_client(
+            PortraitClient::with_base_url(base),
+            root.path().to_path_buf(),
+        );
+        let image = service
+            .image(ImageKind::Faction, 500001, LOGO_SIZE)
+            .await
+            .expect("faction logo fetch decodes");
+        assert_eq!(image.width(), 8);
+        assert_eq!(image.height(), 8);
+        let request = captured.await.expect("request captured");
+        assert!(
+            request.contains("/corporations/500001/logo?size=64"),
+            "unexpected request: {request}"
+        );
+    }
+
+    #[tokio::test]
     async fn fetch_maps_404_to_a_status_error() {
         let (base, _captured) = mock_bytes_server(404, b"missing".to_vec()).await;
         let root = tempfile::tempdir().expect("temp dir");
@@ -788,6 +837,28 @@ mod tests {
             .expect("corporation cache serves without network");
         assert_eq!(image.width(), 8);
         assert_eq!(image.height(), 8);
+    }
+
+    #[tokio::test]
+    async fn faction_cache_is_isolated_from_corporation_cache() {
+        // Bytes written under one kind are not read back under
+        // another: the faction and corporation files are distinct
+        // even for the same number (design section 9).
+        let root = tempfile::tempdir().expect("temp dir");
+        let store = PortraitStore::new(root.path().to_path_buf());
+        let body = generated_png(8, 8);
+        store
+            .write_cached(ImageKind::Corporation, 500001, LOGO_SIZE, &body)
+            .expect("corporation write");
+        assert!(store
+            .read_cached(ImageKind::Faction, 500001, LOGO_SIZE)
+            .is_none());
+        assert_eq!(
+            store
+                .read_cached(ImageKind::Corporation, 500001, LOGO_SIZE)
+                .expect("corporation bytes readable"),
+            body
+        );
     }
 
     #[test]
