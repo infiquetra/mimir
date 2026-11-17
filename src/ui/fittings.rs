@@ -13,6 +13,7 @@ use crate::app::state::{
 };
 use crate::config::EveConfig;
 use crate::esi::models::CharacterFitting;
+use crate::fitting::bay_usage::{bay_usage, BayBudget, BayUsage, BayUsageOutcome};
 use crate::fitting::dna::parse_import;
 use crate::fitting::eft::{EftImportOutcome, ImportFormat, ImportIssue, ImportedFitting};
 #[cfg(test)]
@@ -1563,6 +1564,133 @@ fn render_ship_base_ehp(
     }
 }
 
+/// Locked heading for the bay usage block (bay capacities design
+/// section 6). The "(base values)" qualifier keeps every base
+/// capacity from reading as a skill- or module-modified total.
+const FITTINGS_BAYS_HEADING: &str = "Bays (base values)";
+
+/// Locked disclosure: the numbers are base capacities with plain
+/// item volumes (bay capacities design section 6). This block's
+/// own sentence; it names capacity bonuses and specialized holds,
+/// which the bare-hull ship disclosures above do not cover.
+const FITTING_BAYS_DISCLOSURE: &str = "Base bay capacities and plain item volumes from Mimir's bundled item data. Capacity bonuses from skills, modules (such as cargo expanders), rigs, subsystems, implants, and the ship itself are not applied, and specialized holds are not counted, so these numbers can differ from EVE.";
+
+const FITTING_BAYS_NO_CATALOGUE: &str =
+    "Bay usage unavailable: Mimir's bundled item data failed to load.";
+const FITTING_BAYS_NO_SHIP_DATA: &str = "Bay usage unavailable: Mimir's bundled item data has no bay capacity data for this fitting's ship.";
+
+/// One bay line (bay capacities design section 6): `left` with
+/// the room remaining, or `over` with the positive overage.
+/// Exactly at capacity is `0.0 left`, in the normal colour.
+/// Pure like `resource_line`.
+fn bay_line(label: &str, budget: &BayBudget, unit: &str) -> String {
+    let used = widgets::format_fitting_amount(budget.used, unit);
+    let capacity = widgets::format_fitting_amount(budget.capacity, unit);
+    if budget.is_over() {
+        let over = widgets::format_fitting_amount(budget.used - budget.capacity, unit);
+        format!("{label}: {used} of {capacity} used ({over} over)")
+    } else {
+        let remaining = widgets::format_fitting_amount(budget.remaining(), unit);
+        format!("{label}: {used} of {capacity} used ({remaining} left)")
+    }
+}
+
+/// Per-dimension excluded-item disclosure, or `None` when every
+/// counted item contributed (bay capacities design section 6):
+/// 0 (none), 1 (singular), 2+ (plural). `label` is one of the
+/// four bay labels; "item/items" is used uniformly because
+/// counting is flag-driven. `data_noun` is "volume" for the
+/// three volume bays and "bandwidth" for drone bandwidth.
+fn bay_excluded_line(label: &str, excluded: usize, data_noun: &str) -> Option<String> {
+    if excluded == 0 {
+        None
+    } else if excluded == 1 {
+        Some(format!(
+            "{label} does not count 1 item with no {data_noun} data in Mimir's bundled item data."
+        ))
+    } else {
+        Some(format!(
+            "{label} does not count {excluded} items with no {data_noun} data in Mimir's bundled item data."
+        ))
+    }
+}
+
+/// The block's lines in locked order (cargo bay, drone bay,
+/// drone bandwidth, fighter bay — bay capacities design section
+/// 6.2), each with whether it renders in the over-capacity red
+/// (design section 2.5 rule 4: every bay line carries the
+/// over colour, not only the fighter bay). A `None` bay
+/// contributes no line. Excluded-item lines follow the bay
+/// lines in the same dimension order, only for the bays whose
+/// count is positive; they are never over-capacity lines.
+fn bay_usage_lines(usage: &BayUsage) -> Vec<(String, bool)> {
+    let bays: [(&str, Option<BayBudget>, &str); 4] = [
+        ("Cargo bay", usage.cargo, "m3"),
+        ("Drone bay", usage.drone, "m3"),
+        ("Drone bandwidth", usage.drone_bandwidth, "Mbit/sec"),
+        ("Fighter bay", usage.fighter, "m3"),
+    ];
+    let mut lines: Vec<(String, bool)> = bays
+        .iter()
+        .filter_map(|(label, budget, unit)| {
+            budget.map(|b| (bay_line(label, &b, unit), b.is_over()))
+        })
+        .collect();
+    let excluded: [(&str, Option<BayBudget>, &str); 4] = [
+        ("Cargo bay", usage.cargo, "volume"),
+        ("Drone bay", usage.drone, "volume"),
+        ("Drone bandwidth", usage.drone_bandwidth, "bandwidth"),
+        ("Fighter bay", usage.fighter, "volume"),
+    ];
+    for (label, budget, data_noun) in excluded {
+        if let Some(budget) = budget {
+            if let Some(line) = bay_excluded_line(label, budget.excluded_items, data_noun) {
+                lines.push((line, false));
+            }
+        }
+    }
+    lines
+}
+
+/// Bay usage block shared by the saved and imported fitting
+/// details (bay capacities design section 6). Depends only on
+/// the fitting and the catalogue: no skill levels, no SDE
+/// handle, so it renders identically for every viewing
+/// character. The heading always renders, so the view never
+/// silently omits the feature; `Unavailable` swaps all bay
+/// lines and the disclosure for the fixed unavailable
+/// sentence. Renders even when the fitting has no items.
+/// Logs nothing itself: the pure function logs nothing (render
+/// cadence).
+fn render_bay_usage(
+    ui: &mut egui::Ui,
+    fitting: &CharacterFitting,
+    fitting_types: Option<&FittingTypes>,
+) {
+    let Some(catalogue) = fitting_types else {
+        ui.heading(FITTINGS_BAYS_HEADING);
+        ui.label(FITTING_BAYS_NO_CATALOGUE);
+        return;
+    };
+    match bay_usage(fitting, catalogue) {
+        BayUsageOutcome::Available(usage) => {
+            ui.heading(FITTINGS_BAYS_HEADING);
+            for (line, is_over) in bay_usage_lines(&usage) {
+                if is_over {
+                    ui.colored_label(egui::Color32::LIGHT_RED, line);
+                } else {
+                    ui.label(line);
+                }
+            }
+            ui.label(FITTING_BAYS_DISCLOSURE);
+        }
+        BayUsageOutcome::Unavailable => {
+            ui.heading(FITTINGS_BAYS_HEADING);
+            ui.label(FITTING_BAYS_NO_SHIP_DATA);
+        }
+    }
+}
+
 /// The EFT import panel: paste box, Import/Clear/sample actions, the
 /// fatal error, and the imported fitting with its honest parse report.
 /// Reachable without the fittings read scope (design section 8.2):
@@ -1688,6 +1816,7 @@ fn fittings_import_panel(
         .as_ready()
         .map(|data| resource_skill_levels(&data.skills));
     render_fitting_resources(ui, &synth, fitting_types, levels, sde);
+    render_bay_usage(ui, &synth, fitting_types);
     render_ship_base_stats(ui, &synth, fitting_types);
     render_ship_resistances(ui, &synth, fitting_types);
     render_ship_base_ehp(ui, &synth, fitting_types);
@@ -1977,6 +2106,7 @@ pub fn show(
                         .as_ready()
                         .map(|data| resource_skill_levels(&data.skills));
                     render_fitting_resources(ui, selected, fitting_types, levels, sde);
+                    render_bay_usage(ui, selected, fitting_types);
                     render_ship_base_stats(ui, selected, fitting_types);
                     render_ship_resistances(ui, selected, fitting_types);
                     render_ship_base_ehp(ui, selected, fitting_types);
@@ -4411,5 +4541,305 @@ mod tests {
             }
         };
         assert_eq!(lines_for(&synth_dna), rifter_block);
+    }
+
+    fn bay_budget(used: f64, capacity: f64) -> BayBudget {
+        BayBudget {
+            used,
+            capacity,
+            excluded_items: 0,
+        }
+    }
+
+    #[test]
+    fn bay_lines_match_the_locked_templates() {
+        // Under capacity: ordered lines, used of capacity, room left.
+        assert_eq!(
+            bay_line("Cargo bay", &bay_budget(5.0, 140.0), "m3"),
+            "Cargo bay: 5.0 m3 of 140.0 m3 used (135.0 m3 left)"
+        );
+        assert_eq!(
+            bay_line("Drone bay", &bay_budget(25.0, 40.0), "m3"),
+            "Drone bay: 25.0 m3 of 40.0 m3 used (15.0 m3 left)"
+        );
+        // At capacity is not over: 0.0 left, normal colour.
+        assert_eq!(
+            bay_line("Drone bandwidth", &bay_budget(25.0, 25.0), "Mbit/sec"),
+            "Drone bandwidth: 25.0 Mbit/sec of 25.0 Mbit/sec used (0.0 Mbit/sec left)"
+        );
+        // Over capacity: positive overage, flagged for red rendering.
+        assert_eq!(
+            bay_line("Drone bay", &bay_budget(25.0, 0.0), "m3"),
+            "Drone bay: 25.0 m3 of 0.0 m3 used (25.0 m3 over)"
+        );
+        assert_eq!(
+            bay_line("Drone bandwidth", &bay_budget(25.0, 0.0), "Mbit/sec"),
+            "Drone bandwidth: 25.0 Mbit/sec of 0.0 Mbit/sec used (25.0 Mbit/sec over)"
+        );
+        // Digit grouping and the shared one-decimal rounding: a
+        // computed 0.58 m3 renders as 0.6 m3.
+        assert_eq!(
+            bay_line("Fighter bay", &bay_budget(3_000.0, 40_000.0), "m3"),
+            "Fighter bay: 3,000.0 m3 of 40,000.0 m3 used (37,000.0 m3 left)"
+        );
+        assert_eq!(
+            bay_line("Cargo bay", &bay_budget(0.58, 140.0), "m3"),
+            "Cargo bay: 0.6 m3 of 140.0 m3 used (139.4 m3 left)"
+        );
+    }
+
+    #[test]
+    fn bay_excluded_lines_match_the_locked_templates() {
+        // Zero excluded renders no line on any dimension.
+        assert_eq!(bay_excluded_line("Cargo bay", 0, "volume"), None);
+        assert_eq!(bay_excluded_line("Drone bay", 0, "volume"), None);
+        assert_eq!(bay_excluded_line("Drone bandwidth", 0, "bandwidth"), None);
+        assert_eq!(bay_excluded_line("Fighter bay", 0, "volume"), None);
+        // Singular and plural for all four dimensions.
+        assert_eq!(
+            bay_excluded_line("Cargo bay", 1, "volume").as_deref(),
+            Some(
+                "Cargo bay does not count 1 item with no volume data in Mimir's bundled item data."
+            )
+        );
+        assert_eq!(
+            bay_excluded_line("Cargo bay", 2, "volume").as_deref(),
+            Some("Cargo bay does not count 2 items with no volume data in Mimir's bundled item data.")
+        );
+        assert_eq!(
+            bay_excluded_line("Drone bay", 1, "volume").as_deref(),
+            Some(
+                "Drone bay does not count 1 item with no volume data in Mimir's bundled item data."
+            )
+        );
+        assert_eq!(
+            bay_excluded_line("Drone bay", 2, "volume").as_deref(),
+            Some("Drone bay does not count 2 items with no volume data in Mimir's bundled item data.")
+        );
+        assert_eq!(
+            bay_excluded_line("Drone bandwidth", 1, "bandwidth").as_deref(),
+            Some("Drone bandwidth does not count 1 item with no bandwidth data in Mimir's bundled item data.")
+        );
+        assert_eq!(
+            bay_excluded_line("Drone bandwidth", 2, "bandwidth").as_deref(),
+            Some("Drone bandwidth does not count 2 items with no bandwidth data in Mimir's bundled item data.")
+        );
+        assert_eq!(
+            bay_excluded_line("Fighter bay", 1, "volume").as_deref(),
+            Some("Fighter bay does not count 1 item with no volume data in Mimir's bundled item data.")
+        );
+        assert_eq!(
+            bay_excluded_line("Fighter bay", 2, "volume").as_deref(),
+            Some("Fighter bay does not count 2 items with no volume data in Mimir's bundled item data.")
+        );
+    }
+
+    #[test]
+    fn bay_usage_unavailable_and_disclosure_wording() {
+        assert_eq!(FITTINGS_BAYS_HEADING, "Bays (base values)");
+        assert_eq!(
+            FITTING_BAYS_NO_CATALOGUE,
+            "Bay usage unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            FITTING_BAYS_NO_SHIP_DATA,
+            "Bay usage unavailable: Mimir's bundled item data has no bay capacity data for this fitting's ship."
+        );
+        assert_eq!(
+            FITTING_BAYS_DISCLOSURE,
+            "Base bay capacities and plain item volumes from Mimir's bundled item data. Capacity bonuses from skills, modules (such as cargo expanders), rigs, subsystems, implants, and the ship itself are not applied, and specialized holds are not counted, so these numbers can differ from EVE."
+        );
+    }
+
+    // Demo story (bay capacities design section 7): computed
+    // from the real demo fixture over the real bundled
+    // catalogue, so fixture or catalogue drift fails here.
+    // Demo Brawler cargo 5.02 excludes 200 (type 636, absent
+    // from the catalogue) and renders as 5.0; drone and
+    // bandwidth sit over the Rifter's present 0.0 capacities;
+    // no fighter line (no fighter capacity on the hull).
+    #[test]
+    fn demo_fixture_bay_usage_match_the_locked_demo_story() {
+        use crate::demo::data::DEMO_FITTINGS_JSON;
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let assert_close = |actual: f64, expected: f64| {
+            assert!(
+                (actual - expected).abs() < 1e-9,
+                "expected {expected}, got {actual}"
+            );
+        };
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let usage_for = |fitting: &CharacterFitting| match bay_usage(fitting, &catalogue) {
+            BayUsageOutcome::Available(usage) => usage,
+            BayUsageOutcome::Unavailable => panic!("demo fitting must have bay usage"),
+        };
+
+        // Demo Brawler (Rifter 587, cargo 140.0, drone 0.0,
+        // bandwidth 0.0): cargo = 500x0.01 + 2x0.01 (Invalid
+        // counts as cargo) = 5.02, 200 excluded; drones 5x5.0.
+        let brawler = usage_for(&find("Demo Brawler"));
+        let cargo = brawler.cargo.expect("Rifter carries cargo capacity");
+        assert_close(cargo.used, 5.02);
+        assert_close(cargo.capacity, 140.0);
+        assert_eq!(cargo.excluded_items, 200);
+        // Over-capacity bay lines flag true (red rendering);
+        // the excluded line and under-capacity line flag false.
+        assert_eq!(
+            bay_usage_lines(&brawler),
+            vec![
+                (
+                    "Cargo bay: 5.0 m3 of 140.0 m3 used (135.0 m3 left)".to_string(),
+                    false
+                ),
+                (
+                    "Drone bay: 25.0 m3 of 0.0 m3 used (25.0 m3 over)".to_string(),
+                    true
+                ),
+                (
+                    "Drone bandwidth: 25.0 Mbit/sec of 0.0 Mbit/sec used (25.0 Mbit/sec over)"
+                        .to_string(),
+                    true
+                ),
+                (
+                    "Cargo bay does not count 200 items with no volume data in Mimir's bundled item data."
+                        .to_string(),
+                    false
+                ),
+            ]
+        );
+        assert!(brawler.fighter.is_none());
+
+        // Mission Runner (Rifter): cargo 10x0.01 = 0.1, drones 3x5.0.
+        let mission = usage_for(&find("Mission Runner"));
+        assert_eq!(
+            bay_usage_lines(&mission),
+            vec![
+                (
+                    "Cargo bay: 0.1 m3 of 140.0 m3 used (139.9 m3 left)".to_string(),
+                    false
+                ),
+                (
+                    "Drone bay: 15.0 m3 of 0.0 m3 used (15.0 m3 over)".to_string(),
+                    true
+                ),
+                (
+                    "Drone bandwidth: 15.0 Mbit/sec of 0.0 Mbit/sec used (15.0 Mbit/sec over)"
+                        .to_string(),
+                    true
+                ),
+            ]
+        );
+        assert!(mission.fighter.is_none());
+
+        // Demo Runner (Punisher 597, cargo 135.0): cargo
+        // 20x0.01 = 0.2, drones 3x5.0.
+        let runner = usage_for(&find("Demo Runner"));
+        assert_eq!(
+            bay_usage_lines(&runner),
+            vec![
+                (
+                    "Cargo bay: 0.2 m3 of 135.0 m3 used (134.8 m3 left)".to_string(),
+                    false
+                ),
+                (
+                    "Drone bay: 15.0 m3 of 0.0 m3 used (15.0 m3 over)".to_string(),
+                    true
+                ),
+                (
+                    "Drone bandwidth: 15.0 Mbit/sec of 0.0 Mbit/sec used (15.0 Mbit/sec over)"
+                        .to_string(),
+                    true
+                ),
+            ]
+        );
+        assert!(runner.fighter.is_none());
+
+        // Imported path: the sample EFT through synthesis —
+        // cargo 200x0.0025 + 8x0.01 = 0.58, rendering as 0.6;
+        // the loaded charge counts nowhere.
+        let synth = match parse_eft(DEMO_SAMPLE_EFT, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
+        };
+        let sample = usage_for(&synth);
+        let cargo = sample.cargo.expect("Rifter carries cargo capacity");
+        assert_close(cargo.used, 0.58);
+        assert_eq!(cargo.excluded_items, 0);
+        assert_eq!(
+            bay_usage_lines(&sample),
+            vec![
+                (
+                    "Cargo bay: 0.6 m3 of 140.0 m3 used (139.4 m3 left)".to_string(),
+                    false
+                ),
+                (
+                    "Drone bay: 10.0 m3 of 0.0 m3 used (10.0 m3 over)".to_string(),
+                    true
+                ),
+                (
+                    "Drone bandwidth: 10.0 Mbit/sec of 0.0 Mbit/sec used (10.0 Mbit/sec over)"
+                        .to_string(),
+                    true
+                ),
+            ]
+        );
+
+        // The DNA sample is modules only, so the bays are
+        // present-zero by construction.
+        let synth_dna = match parse_import(DEMO_SAMPLE_DNA, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => {
+                panic!("demo DNA sample must import, got {fatal:?}")
+            }
+        };
+        assert_eq!(
+            bay_usage_lines(&usage_for(&synth_dna)),
+            vec![
+                (
+                    "Cargo bay: 0.0 m3 of 140.0 m3 used (140.0 m3 left)".to_string(),
+                    false
+                ),
+                (
+                    "Drone bay: 0.0 m3 of 0.0 m3 used (0.0 m3 left)".to_string(),
+                    false
+                ),
+                (
+                    "Drone bandwidth: 0.0 Mbit/sec of 0.0 Mbit/sec used (0.0 Mbit/sec left)"
+                        .to_string(),
+                    false
+                ),
+            ]
+        );
+
+        // No fighter line anywhere in demo.
+        for fitting in [
+            &find("Demo Brawler"),
+            &find("Mission Runner"),
+            &find("Demo Runner"),
+        ] {
+            assert!(
+                bay_usage_lines(&usage_for(fitting))
+                    .iter()
+                    .all(|(line, _)| !line.starts_with("Fighter bay")),
+                "demo has no fighter bay line"
+            );
+        }
     }
 }
