@@ -10,8 +10,8 @@ use super::state::{
     CharacterDetailData, CharacterOrdersData, CharacterSummary, ExplorationData,
     FittingWriteInFlight, FittingWriteKind, FittingWriteOutcome, FittingWriteRequest, FittingsData,
     IndustryData, IndustryJobsData, LoadState, MarketData, MarketSelection, PlanetSelection,
-    PlanetaryData, PublicOrdersData, SectionError, SectionResult, SelectedColonyDetail, SkillsData,
-    StepUpRequest, View, WalletData,
+    PlanetaryData, PortraitState, PublicOrdersData, SectionError, SectionResult,
+    SelectedColonyDetail, SkillsData, StepUpRequest, View, WalletData,
 };
 use crate::auth::callback_server::CallbackServer;
 use crate::auth::jwt_verify::JwtVerifier;
@@ -31,6 +31,7 @@ use crate::names::resolver::{
     is_displayable_name, is_structure_id, structure_lookup_batch, NameResolver,
 };
 use crate::names::sde::Sde;
+use crate::portraits::{PortraitError, PortraitService, PORTRAIT_SIZE};
 use crate::storage::repositories::{self, CharacterRow, TokenMetaRow};
 use crate::ui;
 use crate::EsiClient;
@@ -42,6 +43,11 @@ pub struct Backends {
     pub token_store: Arc<TokenStore>,
     pub db: Arc<Mutex<rusqlite::Connection>>,
     pub jwt_verifier: Option<Arc<JwtVerifier>>,
+    /// Portrait fetch/cache service: public image-service client,
+    /// on-disk cache under the app cache directory, and the one
+    /// semaphore bounding in-flight portraits. Construction performs
+    /// no network or disk I/O.
+    pub portraits: Arc<PortraitService>,
 }
 
 enum BackendMsg {
@@ -96,6 +102,10 @@ enum BackendMsg {
         character_id: i64,
         kind: FittingWriteKind,
         outcome: FittingWriteOutcome,
+    },
+    PortraitFetched {
+        character_id: i64,
+        image: Result<Arc<image::DynamicImage>, PortraitError>,
     },
 }
 
@@ -334,6 +344,68 @@ fn decide_fitting_write_start(start: FittingWriteStart) -> Option<FittingWriteRe
         return Some(FittingWriteRefusal::ScopeAbsent);
     }
     None
+}
+
+/// Why portrait fetches must not start (portrait design section
+/// 5). Pure so the refusal order — demo first (zero network calls,
+/// placeholder states), then missing backends — is table-testable
+/// instead of inspection-only.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PortraitStartRefusal {
+    Demo,
+    BackendsMissing,
+}
+
+/// Decide whether drained portrait requests may spawn. `None` means
+/// spawn one task per requested id. In demo mode the queue is
+/// drained without spawning, so demo makes zero network calls; with
+/// no live backends or runtime the requests become `Failed` so
+/// views show the failure placeholder instead of spinning forever.
+fn decide_portrait_start(demo: bool, backends_wired: bool) -> Option<PortraitStartRefusal> {
+    if demo {
+        return Some(PortraitStartRefusal::Demo);
+    }
+    if !backends_wired {
+        return Some(PortraitStartRefusal::BackendsMissing);
+    }
+    None
+}
+
+/// Portrait landing (portrait design section 5): insert the result
+/// under its own character id only when that character is still
+/// known, returning whether it applied. The keyed insert is the
+/// whole correctness argument for switched-away characters — a
+/// late result writes its own slot and can never paint the active
+/// character's portrait — while a result for a removed character
+/// is dropped whole (the `Refreshed` summary precedent).
+fn apply_portrait_landing(
+    state: &mut AppState,
+    character_id: i64,
+    image: Result<Arc<image::DynamicImage>, PortraitError>,
+) -> bool {
+    if !state
+        .characters
+        .iter()
+        .any(|c| c.character_id == character_id)
+    {
+        return false;
+    }
+    match image {
+        Ok(image) => {
+            state
+                .portraits
+                .insert(character_id, PortraitState::Ready(image));
+        }
+        Err(e) => {
+            tracing::warn!(
+                "[PORTRAIT] portrait fetch failed character_id={} error={}",
+                character_id,
+                e
+            );
+            state.portraits.insert(character_id, PortraitState::Failed);
+        }
+    }
+    true
 }
 
 fn decide_fitting_write_landing(
@@ -1618,6 +1690,19 @@ impl MimirApp {
                     self.state.auth = AuthState::Error;
                     self.state.status_message = format!("Sign-in failed: {message}");
                 }
+                BackendMsg::PortraitFetched {
+                    character_id,
+                    image,
+                } => {
+                    if apply_portrait_landing(&mut self.state, character_id, image) {
+                        tracing::info!("[PORTRAIT] portrait landed character_id={}", character_id);
+                    } else {
+                        tracing::warn!(
+                            "[PORTRAIT] dropping portrait for removed character_id={}",
+                            character_id
+                        );
+                    }
+                }
             }
         }
         // Demo character switching swaps per-view data from the cached bundle.
@@ -1669,6 +1754,9 @@ impl MimirApp {
         }
         if let Some(request) = self.state.fittings_write_requested.take() {
             self.start_fitting_write(request);
+        }
+        if !self.state.portrait_requests.is_empty() {
+            self.start_portrait_fetches();
         }
         if let Some(id) = self.state.logout_requested_id.take() {
             // UI disables these buttons while busy; this drain guard is
@@ -1722,6 +1810,63 @@ impl MimirApp {
                 );
                 self.state.market_candidates = candidates;
                 self.state.market_lookup_message = None;
+            }
+        }
+    }
+
+    /// Drain queued portrait requests (portrait design section 5):
+    /// one spawned task per requested id, each keyed by its own
+    /// character id end to end, bounded app-wide by the service
+    /// semaphore. Demo mode never spawns (zero network calls);
+    /// missing backends or runtime mark the requests `Failed` so
+    /// views render the failure placeholder, not a spinner.
+    fn start_portrait_fetches(&mut self) {
+        let requests = self.state.take_portrait_requests();
+        if requests.is_empty() {
+            return;
+        }
+        let backends_wired = self.backends.is_some() && self.runtime.is_some();
+        match decide_portrait_start(self.state.demo, backends_wired) {
+            Some(PortraitStartRefusal::Demo) => {
+                tracing::debug!(
+                    "[PORTRAIT] portrait fetches suppressed in demo mode count={}",
+                    requests.len()
+                );
+            }
+            Some(PortraitStartRefusal::BackendsMissing) => {
+                tracing::warn!("[PORTRAIT] portrait fetches unavailable: live backends not wired");
+                for character_id in requests {
+                    self.state
+                        .portraits
+                        .insert(character_id, PortraitState::Failed);
+                }
+            }
+            None => {
+                let service = self
+                    .backends
+                    .as_ref()
+                    .expect("decide_portrait_start checked wiring")
+                    .portraits
+                    .clone();
+                let runtime = self
+                    .runtime
+                    .as_ref()
+                    .expect("decide_portrait_start checked wiring");
+                for character_id in requests {
+                    tracing::info!(
+                        "[PORTRAIT] portrait fetch started character_id={}",
+                        character_id
+                    );
+                    let service = service.clone();
+                    let tx = self.tx.clone();
+                    runtime.spawn(async move {
+                        let image = service.portrait(character_id, PORTRAIT_SIZE).await;
+                        let _ = tx.send(BackendMsg::PortraitFetched {
+                            character_id,
+                            image,
+                        });
+                    });
+                }
             }
         }
     }
@@ -3842,5 +3987,88 @@ mod tests {
         // A failed load stores None so the panel shows its fixed
         // catalogue-unavailable sentence; never an empty catalogue.
         assert!(fitting_types_load(FittingTypes::from_json("{not json")).is_none());
+    }
+
+    #[test]
+    fn portrait_start_decision_table() {
+        use PortraitStartRefusal::*;
+        assert_eq!(decide_portrait_start(true, true), Some(Demo));
+        // Demo wins even with no backends: zero network calls first.
+        assert_eq!(decide_portrait_start(true, false), Some(Demo));
+        assert_eq!(decide_portrait_start(false, false), Some(BackendsMissing));
+        assert_eq!(decide_portrait_start(false, true), None);
+    }
+
+    fn two_character_state() -> AppState {
+        let mut state = AppState::new(false);
+        state.characters = vec![
+            CharacterRow {
+                character_id: 1,
+                name: "One".to_string(),
+                corporation_id: 1000166,
+                alliance_id: None,
+                is_active: true,
+            },
+            CharacterRow {
+                character_id: 2,
+                name: "Two".to_string(),
+                corporation_id: 1000166,
+                alliance_id: None,
+                is_active: false,
+            },
+        ];
+        state.set_active_character(1);
+        state
+    }
+
+    fn test_image(width: u32, height: u32) -> Arc<image::DynamicImage> {
+        Arc::new(image::DynamicImage::new_rgb8(width, height))
+    }
+
+    #[test]
+    fn portrait_landing_applies_to_a_known_character() {
+        let mut state = two_character_state();
+        assert!(apply_portrait_landing(&mut state, 1, Ok(test_image(8, 8))));
+        match state.portrait_state(1) {
+            PortraitState::Ready(image) => {
+                assert_eq!(image.width(), 8);
+                assert_eq!(image.height(), 8);
+            }
+            other => panic!("known character must land Ready, got {other:?}"),
+        }
+        assert!(apply_portrait_landing(
+            &mut state,
+            2,
+            Err(PortraitError::Status(404))
+        ));
+        assert!(matches!(state.portrait_state(2), PortraitState::Failed));
+    }
+
+    #[test]
+    fn portrait_landing_for_switched_away_character_never_touches_active() {
+        let mut state = two_character_state();
+        state.set_active_character(2);
+        // Late result for character 1 while character 2 is active:
+        // it lands in character 1's own slot; character 2's entry
+        // stays untouched (no entry, so still NotRequested).
+        assert!(apply_portrait_landing(&mut state, 1, Ok(test_image(8, 8))));
+        assert!(matches!(state.portrait_state(1), PortraitState::Ready(_)));
+        assert!(matches!(
+            state.portrait_state(2),
+            PortraitState::NotRequested
+        ));
+        assert_eq!(state.active_character_id, Some(2));
+    }
+
+    #[test]
+    fn portrait_landing_for_removed_character_drops_whole() {
+        let mut state = two_character_state();
+        state.remove_character(2);
+        assert!(!apply_portrait_landing(&mut state, 2, Ok(test_image(8, 8))));
+        assert!(matches!(
+            state.portrait_state(2),
+            PortraitState::NotRequested
+        ));
+        assert!(!state.portraits.contains_key(&2));
     }
 }
