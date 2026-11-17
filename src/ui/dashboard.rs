@@ -24,7 +24,7 @@ pub fn show(
     // character that has no portrait in flight or failed yet. In
     // demo mode the shell drains without spawning, so this makes
     // zero network calls and every portrait stays a placeholder.
-    cache.prune(&state.characters);
+    cache.prune(state);
     let visible_ids: Vec<i64> = state.characters.iter().map(|c| c.character_id).collect();
     for id in visible_ids {
         portraits::ensure_portrait_requested(state, id);

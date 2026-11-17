@@ -262,7 +262,7 @@ considered:
    character row or on the loaded public info for the active
    character. Such an id names a real corporation or alliance by
    construction, so the fallback case requires the entity to have
-   ceased to exist after EVE itself reported the membership. In
+   ceased to exist after EVE itself reported the membership, or never submitted a logo (unprobed); in both cases the image is the service's own shared fallback, never another entity's logo. In
    that residue the app shows exactly what the image service
    returns for that exact id; it fabricates nothing and shows no
    other entity's logo. The placeholder rules then cover the

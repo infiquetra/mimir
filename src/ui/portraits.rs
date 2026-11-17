@@ -57,21 +57,17 @@ impl PortraitImageCache {
         Self::default()
     }
 
-    /// Drop textures for entities the remaining rows no longer
-    /// reference, freeing the GPU texture so a removed entity's
-    /// image cannot linger — and a later re-added entity
-    /// re-uploads. The kind is part of the decision: a
-    /// corporation texture survives while some row still carries
-    /// that `corporation_id`, an alliance texture while some row
-    /// still carries that `alliance_id`, exactly like a character
-    /// texture survives while its row remains.
-    pub fn prune(&mut self, characters: &[CharacterRow]) {
+    /// Drop textures for entities the state no longer knows,
+    /// freeing the GPU texture so a removed entity's image cannot
+    /// linger — and a later re-added entity re-uploads. Retention
+    /// uses the same `image_id_known` guard as fetching (rows OR
+    /// the loaded character detail), so a logo known only from
+    /// fresh detail data is not dropped and re-uploaded every
+    /// frame while rows are still stale.
+    pub fn prune(&mut self, state: &AppState) {
         let before = self.textures.len();
-        self.textures.retain(|(kind, id), _| match kind {
-            ImageKind::Character => characters.iter().any(|c| c.character_id == *id),
-            ImageKind::Corporation => characters.iter().any(|c| c.corporation_id == *id),
-            ImageKind::Alliance => characters.iter().any(|c| c.alliance_id == Some(*id)),
-        });
+        self.textures
+            .retain(|(kind, id), _| state.image_id_known(*kind, *id));
         if self.textures.len() != before {
             tracing::debug!(
                 "[PORTRAIT] image textures pruned remaining={}",
@@ -356,8 +352,8 @@ mod tests {
     fn prune_on_an_empty_cache_keeps_it_empty() {
         let mut cache = PortraitImageCache::new();
         assert!(cache.is_empty());
-        cache.prune(&[]);
-        cache.prune(&[test_row(1, "Test Pilot")]);
+        cache.prune(&state_with_ids(&[]));
+        cache.prune(&state_with_ids(&[1]));
         assert!(cache.is_empty());
         assert_eq!(cache.len(), 0);
     }
@@ -448,7 +444,7 @@ mod tests {
             .texture(&ctx, &state, ImageKind::Character, 2)
             .expect("reuse")
             .id();
-        cache.prune(&[test_row(1, "Test Pilot")]);
+        cache.prune(&state_with_ids(&[1]));
         assert_eq!(cache.len(), 1);
 
         // The still-listed character keeps its texture; the pruned
@@ -467,7 +463,7 @@ mod tests {
                 .id(),
             old_id
         );
-        cache.prune(&[]);
+        cache.prune(&state_with_ids(&[]));
         assert!(cache.is_empty());
         assert!(cache
             .texture(&ctx, &state, ImageKind::Character, 1)
@@ -570,7 +566,7 @@ mod tests {
             .texture(&ctx, &state, ImageKind::Corporation, 1000166)
             .expect("upload")
             .id();
-        cache.prune(&[test_row(1, "Test Pilot")]);
+        cache.prune(&state_with_ids(&[1]));
         assert_eq!(cache.len(), 1);
         assert_eq!(
             cache
@@ -580,11 +576,11 @@ mod tests {
             uploaded
         );
 
-        // Pruning to a row with a different corporation frees it;
-        // the next lookup re-uploads.
-        let mut other = test_row(1, "Test Pilot");
-        other.corporation_id = 1000125;
-        cache.prune(&[other]);
+        // Pruning to a state whose only row carries a different
+        // corporation frees it; the next lookup re-uploads.
+        let mut other_state = state_with_ids(&[1]);
+        other_state.characters[0].corporation_id = 1000125;
+        cache.prune(&other_state);
         assert_eq!(cache.len(), 0);
         assert_ne!(
             cache

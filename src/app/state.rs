@@ -1101,17 +1101,30 @@ impl AppState {
             "[PORTRAIT] dropping image of removed character_id={}",
             character_id
         );
+        // A logo also survives while the loaded character detail
+        // references it (fresh EVE data the rows may not carry
+        // yet) — the same sources `image_id_known` consults.
+        let detail_corp = self
+            .character_detail
+            .as_ready()
+            .map(|info| info.corporation_id);
+        let detail_alliance = self
+            .character_detail
+            .as_ready()
+            .and_then(|info| info.alliance_id);
         let characters = &self.characters;
-        self.portraits.retain(|(kind, id), _| match kind {
-            ImageKind::Character => *id != character_id,
-            ImageKind::Corporation => characters.iter().any(|c| c.corporation_id == *id),
-            ImageKind::Alliance => characters.iter().any(|c| c.alliance_id == Some(*id)),
-        });
-        self.portrait_requests.retain(|(kind, id)| match kind {
-            ImageKind::Character => *id != character_id,
-            ImageKind::Corporation => characters.iter().any(|c| c.corporation_id == *id),
-            ImageKind::Alliance => characters.iter().any(|c| c.alliance_id == Some(*id)),
-        });
+        let logo_known = |kind: &ImageKind, id: i64| match kind {
+            ImageKind::Character => id != character_id,
+            ImageKind::Corporation => {
+                characters.iter().any(|c| c.corporation_id == id) || detail_corp == Some(id)
+            }
+            ImageKind::Alliance => {
+                characters.iter().any(|c| c.alliance_id == Some(id)) || detail_alliance == Some(id)
+            }
+        };
+        self.portraits.retain(|(kind, id), _| logo_known(kind, *id));
+        self.portrait_requests
+            .retain(|(kind, id)| logo_known(kind, *id));
         if self.active_character_id == Some(character_id) {
             self.active_character_id = None;
             // The removed character owned the loaded assets; never show
