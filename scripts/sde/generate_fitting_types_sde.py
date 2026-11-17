@@ -90,6 +90,16 @@ reads a drone's ranges). Catalogue keys are the dogma names
 verbatim (`speed`, never Flutter's `rateOfFire`; `maxRange`,
 never Flutter's `optimalRange`). Dogma 212 and 160 are never
 read here.
+Capacitor stability (docs/cap-stability-design.md section 3)
+appends three further keys after `falloff` in the locked order:
+`capacitorNeed` (dogma 6, unit 114 GJ per activation),
+`duration` (dogma 73, unit 101 milliseconds), and
+`reloadTime` (dogma 1795, unit 101 milliseconds; the SDE
+default 10000.0 is never substituted — an absent row adds 0
+to the cycle). All three are sparse on category 7 or 66 rows
+carrying a slot effect only. Dogma 67 `capacitorBonus` (the
+booster charge gain) is never read: booster injectors ship
+nothing (design section 9).
 """
 
 import bz2
@@ -314,6 +324,22 @@ FIGHTER_SUPPORT_SLOTS_ATTR = 2218
 FIGHTER_HEAVY_SLOTS_ATTR = 2219
 MAX_RANGE_ATTR = 54
 FALLOFF_ATTR = 158
+
+# Capacitor stability (docs/cap-stability-design.md section 3):
+# dogmaAttributes.jsonl _key 6 "capacitorNeed" (unit 114 GJ),
+# 73 "duration" (unit 101 Milliseconds), 1795 "reloadTime"
+# (unit 101 Milliseconds); Flutter dogma_attributes.dart at
+# ed698d3 (capacitorNeed = 6, duration = 73,
+# reactivationDelay = 1795). Values stay raw milliseconds in
+# the catalogue; absence loads as absent (the SDE default
+# 10000.0 for reloadTime is never substituted — Flutter's
+# `moduleAttr` returns 0.0 for a missing base row). The
+# booster gain (67 "capacitorBonus") is never read here:
+# booster injectors ship nothing (design section 9).
+CAP_ATTR_IDS = {6, 73, 1795}
+CAPACITOR_NEED_ATTR = 6
+DURATION_ATTR = 73
+RELOAD_TIME_ATTR = 1795
 
 # Fighter ability markers (docs/fitting-dps-design.md section
 # 2.5): dogmaEffects.jsonl _key 6465 "fighterAbilityAttackM"
@@ -946,6 +972,65 @@ DPS_EXPECTED_COUNTS = {
     "falloff": 681,
 }
 
+# Capacitor stability oracles (docs/cap-stability-design.md
+# section 7): each value read directly from
+# dgmTypeAttributes.csv.bz2 during build. Tuple shape mirrors
+# DPS_ORACLES: (typeId, key, expected-or-None). A None
+# expected means the key must be absent from that row.
+# Spot literals for 2050/1183/438/448 need + cycle, 2889
+# known-zero need with a 51-cycle (duration absent) plus a
+# present reload, 561 reload with a 51-cycle, the 522
+# battery decoy (carries only the never-emitted 67), a
+# category-66 gate pin (35921 reload emitted with no need),
+# a category-66 counted pin (35924), and ships absences.
+CAP_ORACLES = [
+    (2050, "capacitorNeed", 32.0),
+    (2050, "duration", 12000.0),
+    (2050, "reloadTime", None),
+    (1183, "capacitorNeed", 40.0),
+    (1183, "duration", 6000.0),
+    (1183, "reloadTime", None),
+    (438, "capacitorNeed", 22.0),
+    (438, "duration", 10000.0),
+    (448, "capacitorNeed", 6.0),
+    (448, "duration", 5000.0),
+    (2889, "capacitorNeed", 0.0),
+    (2889, "duration", None),
+    (2889, "reloadTime", 10000.0),
+    (561, "capacitorNeed", 1.169),
+    (561, "duration", None),
+    (561, "reloadTime", 5000.0),
+    (522, "capacitorNeed", None),
+    (522, "duration", None),
+    (522, "reloadTime", None),
+    (35921, "capacitorNeed", None),
+    (35921, "duration", None),
+    (35921, "reloadTime", 10000.0),
+    (35924, "capacitorNeed", 6000.0),
+    (35924, "duration", 30000.0),
+    (35924, "reloadTime", None),
+    (2048, "capacitorNeed", None),
+    (2048, "duration", None),
+    (2048, "reloadTime", None),
+    (587, "capacitorNeed", None),
+    (587, "duration", None),
+    (587, "reloadTime", None),
+]
+
+# Expected capacitor stability key counts (cap-stability-design
+# section 3, scripted over the cache joined to the catalogue
+# behind the emission gate: category 7 or 66 carrying a slot
+# effect, presence exactly source-row existence). The
+# 1,838 counted types (capacitorNeed > 0 with a 73-or-51
+# cycle) split 1,814 category 7 and 24 category 66; the
+# remaining emitted keys ride rows with no need or a
+# present-zero need.
+CAP_EXPECTED_COUNTS = {
+    "capacitorNeed": 2095,
+    "duration": 1489,
+    "reloadTime": 986,
+}
+
 _STACKED_SUFFIX_RE = re.compile(r" x[0-9]+$")
 
 
@@ -1380,6 +1465,48 @@ def main():
             continue
         dps_by_type.setdefault(type_id, {})[attribute_id] = value
 
+    # Capacitor stability attributes per type (design
+    # section 3): only the three locked attributes, each
+    # parsed from valueFloat. An unparseable, duplicated,
+    # non-finite, or negative wanted row fails loudly and
+    # writes nothing. (Unlike the DPS load above, which
+    # skips negative rows, the cache carries no negative
+    # capacitor rows at all — verified at build time — so a
+    # future negative fails loud instead of being dropped.)
+    cap_by_type = {}
+    seen_cap_keys = set()
+    for row in type_attributes:
+        attribute_id = int(row["attributeID"])
+        if attribute_id not in CAP_ATTR_IDS:
+            continue
+        type_id = int(row["typeID"])
+        key = (type_id, attribute_id)
+        if key in seen_cap_keys:
+            fail(
+                f"duplicate capacitor stability row (type {type_id}, "
+                f"attribute {attribute_id}) in dgmTypeAttributes"
+            )
+        try:
+            value = float(row["valueFloat"])
+        except (TypeError, ValueError):
+            fail(
+                f"unparseable capacitor stability value "
+                f"{row['valueFloat']!r} for (type {type_id}, "
+                f"attribute {attribute_id})"
+            )
+        if not math.isfinite(value):
+            fail(
+                f"non-finite capacitor stability value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        if value < 0:
+            fail(
+                f"negative capacitor stability value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        seen_cap_keys.add(key)
+        cap_by_type.setdefault(type_id, {})[attribute_id] = value
+
     types = []
     missing_group = 0
     resource_key_counts = Counter()
@@ -1390,6 +1517,7 @@ def main():
     slot_layout_key_counts = Counter()
     nav_targeting_key_counts = Counter()
     dps_key_counts = Counter()
+    cap_key_counts = Counter()
     for row in inv_types:
         if row["published"] != "1":
             continue
@@ -1788,6 +1916,26 @@ def main():
             if FALLOFF_ATTR in dps:
                 entry["falloff"] = dps[FALLOFF_ATTR]
                 dps_key_counts["falloff"] += 1
+        # Additive capacitor stability emission (design
+        # section 3): `capacitorNeed`, `duration`,
+        # `reloadTime` on category 7 or 66 rows carrying a
+        # slot effect only, appended after `falloff` in this
+        # locked key order. Presence is exactly source-row
+        # existence (present 0.0 kept, absence never rewritten
+        # as zero; the SDE default 10000.0 for reloadTime is
+        # never substituted). The 67 booster gain is never
+        # emitted.
+        if category_id in (7, 66) and slot_effects:
+            caps = cap_by_type.get(type_id, {})
+            if CAPACITOR_NEED_ATTR in caps:
+                entry["capacitorNeed"] = caps[CAPACITOR_NEED_ATTR]
+                cap_key_counts["capacitorNeed"] += 1
+            if DURATION_ATTR in caps:
+                entry["duration"] = caps[DURATION_ATTR]
+                cap_key_counts["duration"] += 1
+            if RELOAD_TIME_ATTR in caps:
+                entry["reloadTime"] = caps[RELOAD_TIME_ATTR]
+                cap_key_counts["reloadTime"] += 1
         types.append(entry)
 
     types.sort(key=lambda entry: entry["typeId"])
@@ -2337,6 +2485,30 @@ def main():
                 fail(
                     f"non-module type {entry['typeId']} carries {key}"
                 )
+        # Capacitor stability invariants (design section 3):
+        # every present value is finite and >= 0.0 (not a
+        # bool); any cap key implies category 7 or 66
+        # carrying a slot effect (absence is allowed, never
+        # required). Absence stays distinct from 0.0.
+        for key in ("capacitorNeed", "duration", "reloadTime"):
+            if key in entry:
+                value = entry[key]
+                if (
+                    not isinstance(value, (int, float))
+                    or isinstance(value, bool)
+                    or not math.isfinite(float(value))
+                    or float(value) < 0
+                ):
+                    fail(
+                        f"type {entry['typeId']} {key}={value!r} "
+                        "is not finite and non-negative"
+                    )
+                if entry["categoryId"] not in (7, 66) or not entry["slotEffects"]:
+                    fail(
+                        f"type {entry['typeId']} {key} on "
+                        f"non-slot category {entry['categoryId']} "
+                        f"with slotEffects {entry['slotEffects']}"
+                    )
 
     # Invariants the parser relies on (design sections 5.2, 6.3): no
     # shipment name may contain the header delimiters, and no published
@@ -2446,6 +2618,44 @@ def main():
         if actual != expected:
             fail(
                 f"damage-per-second key {key} count {actual}, "
+                f"expected {expected}"
+            )
+
+    # Capacitor stability oracles (design section 3). A None
+    # expected value means the key must be absent from that
+    # row.
+    for type_id, key, expected in CAP_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(f"capacitor stability oracle type {type_id} missing")
+        if expected is None:
+            if key in entry:
+                fail(
+                    f"capacitor stability oracle type {type_id} "
+                    f"carries {key}={entry[key]!r}, expected absent"
+                )
+        elif entry.get(key) != expected:
+            fail(
+                f"capacitor stability oracle type {type_id} "
+                f"{key}={entry.get(key)!r}, expected {expected!r}"
+            )
+    # Explicit-zero pin: type 2889 must carry capacitorNeed
+    # present as 0.0, never absent (the two are distinct, the
+    # 180 pin style).
+    zero_cap_entry = by_id.get(2889)
+    if (
+        zero_cap_entry is None
+        or "capacitorNeed" not in zero_cap_entry
+    ):
+        fail(
+            "capacitor stability oracle type 2889 capacitorNeed "
+            "key must be present as 0.0"
+        )
+    for key, expected in CAP_EXPECTED_COUNTS.items():
+        actual = cap_key_counts[key]
+        if actual != expected:
+            fail(
+                f"capacitor stability key {key} count {actual}, "
                 f"expected {expected}"
             )
 
@@ -2562,6 +2772,11 @@ def main():
         f"maxRange={dps_key_counts['maxRange']} "
         f"falloff={dps_key_counts['falloff']} "
         f"skipped_negative_rows={skipped_negative_dps_rows}"
+    )
+    print(
+        f"cap_keys capacitorNeed={cap_key_counts['capacitorNeed']} "
+        f"duration={cap_key_counts['duration']} "
+        f"reloadTime={cap_key_counts['reloadTime']}"
     )
 
 

@@ -24,6 +24,9 @@ use crate::fitting::resources::{
     fitting_resources_with_skills, resource_skill_levels, FittingResources, ResourceBudget,
     ResourceSkillLevels, CPU_MANAGEMENT_SKILL_ID, POWER_GRID_MANAGEMENT_SKILL_ID,
 };
+use crate::fitting::ship_cap_stability::{
+    fitting_cap_stability, CapStabilityOutcome, FittingCapStability,
+};
 use crate::fitting::ship_ehp::{ship_base_ehp, ShipBaseEhp, ShipBaseEhpOutcome};
 use crate::fitting::ship_nav_targeting::{
     ship_nav_targeting, ShipNavTargeting, ShipNavTargetingOutcome,
@@ -2087,6 +2090,134 @@ fn render_fitting_dps(
     }
 }
 
+/// Locked heading for the capacitor stability block
+/// (capacitor stability design section 6). The "(base values)"
+/// qualifier keeps every base capacitor number from reading
+/// as a skill- or bonus-modified total.
+const FITTINGS_CAP_STABILITY_HEADING: &str = "Capacitor (base values)";
+
+/// Locked disclosure: the continuous-cycling assumption is
+/// stated here, never implied, and every unmodelled term is
+/// named (capacitor stability design section 6). This block's
+/// own sentence; the ship base values disclosure names a
+/// different applied and excluded set.
+const FITTING_CAP_STABILITY_DISCLOSURE: &str = "Assumes every counted module keeps cycling continuously. Base values from Mimir's bundled item data. Fitted modules, rigs, subsystems, skills, implants, and ship bonuses are not applied to the capacitor, recharge, or module use. Capacitor boosters and effects on other ships (such as energy neutralizers and remote repairers) are not modelled, so these numbers can differ from EVE.";
+
+const FITTING_CAP_STABILITY_NO_CATALOGUE: &str =
+    "Capacitor unavailable: Mimir's bundled item data failed to load.";
+const FITTING_CAP_STABILITY_NO_SHIP_DATA: &str =
+    "No capacitor data is available for this ship in Mimir's bundled item data.";
+
+fn cap_stability_use_line(total_use_per_sec: Option<f64>) -> Option<String> {
+    ship_stat_line("Module capacitor use", total_use_per_sec, "GJ/s")
+}
+
+fn cap_stability_peak_line(peak_recharge_per_sec: Option<f64>) -> Option<String> {
+    ship_stat_line("Capacitor peak recharge", peak_recharge_per_sec, "GJ/s")
+}
+
+/// Human-readable form of one stability outcome (design section
+/// 6): `Stable at {percent}%` or `Depletes in about
+/// {seconds}s` with both figures rounded to whole numbers via
+/// `f64::round`. The "about" wording is locked: the seconds
+/// figure is the failing activation's event time, never an
+/// interpolated empty-instant. Returns `None` for
+/// `Unavailable`, whose fixed sentence the renderer prints
+/// instead.
+fn cap_stability_outcome_line(outcome: &CapStabilityOutcome) -> Option<String> {
+    match *outcome {
+        CapStabilityOutcome::Stable { percent } => {
+            Some(format!("Stable at {}%", percent.round() as i64))
+        }
+        CapStabilityOutcome::Depletes { seconds } => {
+            Some(format!("Depletes in about {}s", seconds.round() as i64))
+        }
+        CapStabilityOutcome::Unavailable => None,
+    }
+}
+
+/// Per-block excluded-module disclosure, or `None` when every
+/// fitted slot module counted (design section 6): 0 (none),
+/// 1 (singular), 2+ (plural). "Fitted module" is used because
+/// counting is driven by the slot flags, one quantity unit
+/// each.
+fn cap_stability_excluded_line(excluded: u64) -> Option<String> {
+    if excluded == 0 {
+        None
+    } else if excluded == 1 {
+        Some(
+            "1 fitted module is not counted because its base capacitor use is not in Mimir's bundled item data."
+                .to_string(),
+        )
+    } else {
+        Some(format!(
+            "{excluded} fitted modules are not counted because their base capacitor use is not in Mimir's bundled item data."
+        ))
+    }
+}
+
+/// The block's lines in locked order (module capacitor use,
+/// capacitor peak recharge, outcome, excluded-module
+/// disclosure — design section 6). A `None` use or peak
+/// contributes no line — never a zero, a dash, or placeholder
+/// words. For `Unavailable` this returns empty; the
+/// renderer's fixed unavailable sentence is the whole block
+/// in that case.
+fn cap_stability_lines(stability: &FittingCapStability) -> Vec<String> {
+    if let CapStabilityOutcome::Unavailable = stability.outcome {
+        return Vec::new();
+    }
+    let mut lines: Vec<String> = [
+        cap_stability_use_line(stability.total_use_per_sec),
+        cap_stability_peak_line(stability.peak_recharge_per_sec),
+        cap_stability_outcome_line(&stability.outcome),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    if let Some(line) = cap_stability_excluded_line(stability.excluded_modules) {
+        lines.push(line);
+    }
+    lines
+}
+
+/// Capacitor stability block shared by the saved and imported
+/// fitting details (capacitor stability design section 6).
+/// Depends only on the fitting and the catalogue: no skill
+/// levels, no SDE handle, so it renders identically for every
+/// viewing character. The saved site passes the fitting; the
+/// imported site passes its synthesized `CharacterFitting`.
+/// The heading always renders, so the view never silently
+/// omits the feature; `Unavailable` swaps all lines and the
+/// disclosure for the fixed unavailable sentence. Renders
+/// even when the fitting has no items. Logs nothing itself:
+/// the pure function logs nothing (render cadence).
+fn render_fitting_cap_stability(
+    ui: &mut egui::Ui,
+    fitting: &CharacterFitting,
+    fitting_types: Option<&FittingTypes>,
+) {
+    let Some(catalogue) = fitting_types else {
+        ui.heading(FITTINGS_CAP_STABILITY_HEADING);
+        ui.label(FITTING_CAP_STABILITY_NO_CATALOGUE);
+        return;
+    };
+    let stability = fitting_cap_stability(fitting, catalogue);
+    match stability.outcome {
+        CapStabilityOutcome::Unavailable => {
+            ui.heading(FITTINGS_CAP_STABILITY_HEADING);
+            ui.label(FITTING_CAP_STABILITY_NO_SHIP_DATA);
+        }
+        CapStabilityOutcome::Stable { .. } | CapStabilityOutcome::Depletes { .. } => {
+            ui.heading(FITTINGS_CAP_STABILITY_HEADING);
+            for line in cap_stability_lines(&stability) {
+                ui.label(line);
+            }
+            ui.label(FITTING_CAP_STABILITY_DISCLOSURE);
+        }
+    }
+}
+
 /// Locked heading for the slot layout block (slot layout design
 /// section 6). The "(base values)" qualifier keeps every base
 /// hull number from reading as a fitted total.
@@ -2374,6 +2505,7 @@ fn fittings_import_panel(
     render_rig_calibration(ui, &synth, fitting_types);
     render_bay_usage(ui, &synth, fitting_types);
     render_fitting_dps(ui, &synth, Some(&imported), fitting_types);
+    render_fitting_cap_stability(ui, &synth, fitting_types);
     render_slot_layout(ui, &synth, fitting_types);
     render_ship_base_stats(ui, &synth, fitting_types);
     render_ship_resistances(ui, &synth, fitting_types);
@@ -2680,6 +2812,7 @@ pub fn show(
                     render_rig_calibration(ui, selected, fitting_types);
                     render_bay_usage(ui, selected, fitting_types);
                     render_fitting_dps(ui, selected, None, fitting_types);
+                    render_fitting_cap_stability(ui, selected, fitting_types);
                     render_slot_layout(ui, selected, fitting_types);
                     render_ship_base_stats(ui, selected, fitting_types);
                     render_ship_resistances(ui, selected, fitting_types);
@@ -4595,6 +4728,190 @@ mod tests {
             }
         };
         assert_eq!(lines_for(&synth_dna), rifter_block);
+    }
+
+    #[test]
+    fn cap_stability_wording_constants() {
+        assert_eq!(FITTINGS_CAP_STABILITY_HEADING, "Capacitor (base values)");
+        assert_eq!(
+            FITTING_CAP_STABILITY_DISCLOSURE,
+            "Assumes every counted module keeps cycling continuously. Base values from Mimir's bundled item data. Fitted modules, rigs, subsystems, skills, implants, and ship bonuses are not applied to the capacitor, recharge, or module use. Capacitor boosters and effects on other ships (such as energy neutralizers and remote repairers) are not modelled, so these numbers can differ from EVE."
+        );
+        assert_eq!(
+            FITTING_CAP_STABILITY_NO_CATALOGUE,
+            "Capacitor unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            FITTING_CAP_STABILITY_NO_SHIP_DATA,
+            "No capacitor data is available for this ship in Mimir's bundled item data."
+        );
+    }
+
+    #[test]
+    fn cap_stability_excluded_line_counts() {
+        assert_eq!(cap_stability_excluded_line(0), None);
+        assert_eq!(
+            cap_stability_excluded_line(1).as_deref(),
+            Some("1 fitted module is not counted because its base capacitor use is not in Mimir's bundled item data.")
+        );
+        assert_eq!(
+            cap_stability_excluded_line(2).as_deref(),
+            Some("2 fitted modules are not counted because their base capacitor use is not in Mimir's bundled item data.")
+        );
+    }
+
+    #[test]
+    fn cap_stability_lines_omit_none_figures() {
+        // `None` use/peak lines are omitted — never rendered
+        // as zeros. A literal with no figures renders only
+        // the outcome line plus the excluded disclosure.
+        let bare = FittingCapStability {
+            outcome: CapStabilityOutcome::Stable { percent: 50.0 },
+            total_use_per_sec: None,
+            peak_recharge_per_sec: None,
+            counted_modules: 0,
+            excluded_modules: 3,
+        };
+        assert_eq!(
+            cap_stability_lines(&bare),
+            [
+                "Stable at 50%",
+                "3 fitted modules are not counted because their base capacitor use is not in Mimir's bundled item data.",
+            ]
+        );
+        // `Unavailable` contributes no lines at all: the
+        // renderer prints the fixed unavailable sentence
+        // instead of the lines.
+        let unavailable = FittingCapStability {
+            outcome: CapStabilityOutcome::Unavailable,
+            total_use_per_sec: None,
+            peak_recharge_per_sec: None,
+            counted_modules: 1,
+            excluded_modules: 2,
+        };
+        assert!(cap_stability_lines(&unavailable).is_empty());
+    }
+
+    // Demo story (design section 7, verified by the pure
+    // module's pins): Demo Brawler 1 (Rifter 587, 2× type
+    // 2050), Mission Runner 2 (Rifter 587, no counted
+    // drains), Demo Runner 10 (Punisher 597, 1× type 2050).
+    // Built from the real demo fixture over the real
+    // catalogue, so fixture or catalogue drift fails here.
+    #[test]
+    fn demo_fixture_cap_stability_match_the_locked_demo_story() {
+        use crate::demo::data::DEMO_FITTINGS_JSON;
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let lines_for = |fitting: &CharacterFitting| {
+            cap_stability_lines(&fitting_cap_stability(fitting, &catalogue))
+        };
+
+        // 2 × (32.0 / 12.0) = 64.0 / 12.0 = 5.333... GJ/s
+        // already exceeds the 5.0 GJ/s peak, so the event
+        // simulation depletes at the failing activation,
+        // 234.0 s exactly.
+        assert_eq!(
+            lines_for(&find("Demo Brawler")),
+            [
+                "Module capacitor use: 5.3 GJ/s",
+                "Capacitor peak recharge: 5.0 GJ/s",
+                "Depletes in about 234s",
+                "5 fitted modules are not counted because their base capacitor use is not in Mimir's bundled item data.",
+            ]
+        );
+        // No counted drains: 0.0 GJ/s and stable at 100%;
+        // the excluded count keeps the line honest.
+        assert_eq!(
+            lines_for(&find("Mission Runner")),
+            [
+                "Module capacitor use: 0.0 GJ/s",
+                "Capacitor peak recharge: 5.0 GJ/s",
+                "Stable at 100%",
+                "2 fitted modules are not counted because their base capacitor use is not in Mimir's bundled item data.",
+            ]
+        );
+        // 32.0 / 12.0 = 2.666... GJ/s against the 6.25 GJ/s
+        // peak; the port's stable percent 76.95496917307892
+        // rounds to 77.
+        assert_eq!(
+            lines_for(&find("Demo Runner")),
+            [
+                "Module capacitor use: 2.7 GJ/s",
+                "Capacitor peak recharge: 6.3 GJ/s",
+                "Stable at 77%",
+                "2 fitted modules are not counted because their base capacitor use is not in Mimir's bundled item data.",
+            ]
+        );
+
+        // Imported path: the EFT oracle through the shared
+        // synthesis seam. 40.0/6.0 + 22.0/10.0 + 6.0/5.0
+        // = 6.666... + 2.2 + 1.2 = 10.066... GJ/s vs the
+        // Rifter 5.0 GJ/s peak → depletes at 36.0 s exactly.
+        let sample = concat!(
+            "[Rifter, Sample Brawler]\n",
+            "Damage Control II\n",
+            "Small Armor Repairer II\n",
+            "\n",
+            "1MN Afterburner II\n",
+            "Warp Scrambler II\n",
+            "\n",
+            "200mm AutoCannon II, Republic Fleet EMP S\n",
+            "200mm AutoCannon II\n",
+            "200mm AutoCannon II\n",
+            "\n",
+            "Small Projectile Burst Aerator I\n",
+            "[Empty Rig slot]\n",
+            "\n",
+            "Hobgoblin II x2\n",
+            "\n",
+            "EMP S x200\n",
+            "Nanite Repair Paste x8"
+        );
+        let synth = match parse_eft(sample, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => {
+                panic!("sample EFT must import, got {fatal:?}")
+            }
+        };
+        assert_eq!(
+            lines_for(&synth),
+            [
+                "Module capacitor use: 10.1 GJ/s",
+                "Capacitor peak recharge: 5.0 GJ/s",
+                "Depletes in about 36s",
+                "2 fitted modules are not counted because their base capacitor use is not in Mimir's bundled item data.",
+            ]
+        );
+
+        // Surface symmetry (design section 4): the same
+        // slot items through a saved fitting render the
+        // identical block.
+        let saved = CharacterFitting {
+            fitting_id: 900000999,
+            name: "Saved replica".to_string(),
+            description: None,
+            ship_type_id: synth.ship_type_id,
+            items: synth.items.clone(),
+        };
+        assert_eq!(lines_for(&saved), lines_for(&synth));
     }
 
     // Ship base resistances (ship resistances design section 8):
