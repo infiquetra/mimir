@@ -14,6 +14,7 @@ use crate::esi::endpoints::WriteFailureClass;
 use crate::esi::models::*;
 use crate::fitting::eft::ImportedFitting;
 use crate::names::exploration_ref::{EffectFamily, ExplorationRef};
+use crate::skills::plans::{SkillPlan, SkillPlanAction};
 use crate::storage::repositories::CharacterRow;
 
 /// The eleven views (keys 1-9, 0 and E in the shell).
@@ -237,6 +238,35 @@ pub enum FittingWriteOutcome {
         class: WriteFailureClass,
         needs_reauthorize: bool,
     },
+}
+
+/// Armed (not yet confirmed) skill-plan mutation, stamped with
+/// the character and plan it was armed for (design section 7).
+/// Arming swaps the arm button for the confirmation block; at
+/// most one is armed app-wide. Memory only: never persisted,
+/// and cleared whenever the stamped target is no longer visible
+/// — a confirmation never outlives the thing it confirms.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SkillPlanConfirm {
+    DeletePlan {
+        character_id: i64,
+        plan_id: i64,
+    },
+    RemoveEntry {
+        character_id: i64,
+        plan_id: i64,
+        skill_id: i64,
+    },
+}
+
+/// The inline create/rename editor, stamped with the character
+/// (and, for `Edit`, the plan) it edits (design section 7).
+/// Memory only: drafts are user text, never logged, never
+/// persisted except through a confirmed action.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SkillPlanEditor {
+    Create { character_id: i64 },
+    Edit { character_id: i64, plan_id: i64 },
 }
 
 /// Wallet period filter shared by the wallet view and the dashboard.
@@ -748,6 +778,30 @@ pub struct AppState {
     pub fittings_write_requested: Option<FittingWriteRequest>,
     pub fittings_write_in_flight: Option<FittingWriteInFlight>,
     pub fittings_pending_selection: Option<(i64, i64)>,
+    // View-local skill-plan state (design section 7). The loaded
+    // plans are storage-confirmed truth (or the demo applier's);
+    // everything else is memory-only view state: selection,
+    // editor drafts, the armed confirmation, the one-slot drain
+    // channel, and the picker. `skill_plans_owner` is the
+    // `fittings_import_owner` precedent: the view renders plans
+    // only when it equals the active character, so a list can
+    // never display under the wrong character. Demo plans live
+    // in `demo_skill_plans` keyed by demo character id, plus a
+    // session counter starting at 1; they are never written to
+    // the live database (the app's first non-ESI rows are the
+    // live plan tables, which demo never touches).
+    pub skill_plans: LoadState<Vec<SkillPlan>>,
+    pub skill_plans_owner: Option<i64>,
+    pub selected_skill_plan_id: Option<i64>,
+    pub skill_plan_editor: Option<SkillPlanEditor>,
+    pub skill_plan_name_draft: String,
+    pub skill_plan_description_draft: String,
+    pub skill_plan_confirm: Option<SkillPlanConfirm>,
+    pub skill_plan_action: Option<SkillPlanAction>,
+    pub skill_plan_picker_open: bool,
+    pub skill_plan_picker_search: String,
+    pub demo_skill_plans: HashMap<i64, Vec<SkillPlan>>,
+    pub demo_next_plan_id: i64,
     // View-local exploration UI state (design section 7.1). The
     // bundled reference is character-independent static data, so
     // character switches and removals never reset these fields or
@@ -786,6 +840,10 @@ impl AppState {
             // Effect strength defaults to 1 (design section 7.1) and
             // is clamped to 1..=6 by the view on every use.
             exploration_selected_strength: 1,
+            // Demo plan ids are session-assigned starting at 1
+            // (design section 9); the derived default 0 would hand
+            // out a zero id first.
+            demo_next_plan_id: 1,
             status_message: if demo {
                 "Demo mode: sample data, no network.".to_string()
             } else {
@@ -968,6 +1026,27 @@ impl AppState {
                 self.fittings_write_confirm = None;
                 self.fittings_write_requested = None;
                 self.fittings_pending_selection = None;
+                // Same ownership argument as the fittings blocks:
+                // the loaded plan list and every piece of
+                // plan working state are stamped for the previous
+                // character. `demo_skill_plans` is keyed by
+                // character and is deliberately NOT cleared here
+                // (the `summaries`/`portraits` keyed-map precedent).
+                tracing::debug!(
+                    "[PLANS] clearing skill plans on character switch from={} to={}",
+                    previous_id,
+                    character_id
+                );
+                self.skill_plans = LoadState::Loading;
+                self.skill_plans_owner = None;
+                self.selected_skill_plan_id = None;
+                self.skill_plan_editor = None;
+                self.skill_plan_name_draft.clear();
+                self.skill_plan_description_draft.clear();
+                self.skill_plan_confirm = None;
+                self.skill_plan_action = None;
+                self.skill_plan_picker_open = false;
+                self.skill_plan_picker_search.clear();
             }
         }
         self.selected_queue_row = 0;
@@ -999,6 +1078,16 @@ impl AppState {
         tracing::info!("[CHAR] remove character_id={}", character_id);
         self.characters.retain(|c| c.character_id != character_id);
         self.summaries.remove(&character_id);
+        // Demo plans are keyed per character (design section 7):
+        // removing a character drops its demo entry too, so a
+        // late landing can never resurrect plans for a gone
+        // character. Unconditional — harmless for live characters,
+        // whose map entries never exist.
+        tracing::debug!(
+            "[PLANS] dropping demo skill plans of removed character_id={}",
+            character_id
+        );
+        self.demo_skill_plans.remove(&character_id);
         // The portrait entry is keyed to the removed character:
         // drop it and any queued fetch so a late landing can never
         // resurrect it.
@@ -1049,6 +1138,20 @@ impl AppState {
             self.fittings_write_confirm = None;
             self.fittings_write_requested = None;
             self.fittings_pending_selection = None;
+            // Plan state reset (design section 7): the removed
+            // active character owned the loaded list and every
+            // piece of working state.
+            tracing::debug!("[PLANS] clearing skill plans of removed active character");
+            self.skill_plans = LoadState::Loading;
+            self.skill_plans_owner = None;
+            self.selected_skill_plan_id = None;
+            self.skill_plan_editor = None;
+            self.skill_plan_name_draft.clear();
+            self.skill_plan_description_draft.clear();
+            self.skill_plan_confirm = None;
+            self.skill_plan_action = None;
+            self.skill_plan_picker_open = false;
+            self.skill_plan_picker_search.clear();
             if let Some(first) = self.characters.first().map(|c| c.character_id) {
                 self.set_active_character(first);
             }
@@ -1088,6 +1191,17 @@ impl AppState {
             self.fittings_write_confirm = None;
             self.fittings_write_requested = None;
             self.fittings_pending_selection = None;
+            tracing::debug!("[PLANS] clearing skill plans when no characters remain");
+            self.skill_plans = LoadState::Empty;
+            self.skill_plans_owner = None;
+            self.selected_skill_plan_id = None;
+            self.skill_plan_editor = None;
+            self.skill_plan_name_draft.clear();
+            self.skill_plan_description_draft.clear();
+            self.skill_plan_confirm = None;
+            self.skill_plan_action = None;
+            self.skill_plan_picker_open = false;
+            self.skill_plan_picker_search.clear();
             self.dashboard = LoadState::Empty;
         }
     }
@@ -1371,6 +1485,139 @@ mod tests {
         state.remove_character(2);
         assert!(state.characters.is_empty());
         assert!(matches!(state.character_details, LoadState::Empty));
+    }
+
+    fn test_plan(plan_id: i64, character_id: i64, name: &str) -> SkillPlan {
+        SkillPlan {
+            plan_id,
+            character_id,
+            name: name.to_string(),
+            description: String::new(),
+            created_at: "2026-11-15T00:00:00Z".to_string(),
+            updated_at: "2026-11-15T00:00:00Z".to_string(),
+            entries: vec![],
+        }
+    }
+
+    /// Saturate every skill-plan working field so the reset tests
+    /// prove each one clears, not just the loaded list.
+    fn fill_skill_plan_state(state: &mut AppState, character_id: i64) {
+        state.skill_plans = LoadState::Ready(vec![test_plan(7, character_id, "PvP")]);
+        state.skill_plans_owner = Some(character_id);
+        state.selected_skill_plan_id = Some(7);
+        state.skill_plan_editor = Some(SkillPlanEditor::Create { character_id });
+        state.skill_plan_name_draft = "Draft name".to_string();
+        state.skill_plan_description_draft = "Draft description".to_string();
+        state.skill_plan_confirm = Some(SkillPlanConfirm::DeletePlan {
+            character_id,
+            plan_id: 7,
+        });
+        state.skill_plan_action = Some(SkillPlanAction::DeletePlan {
+            character_id,
+            plan_id: 7,
+        });
+        state.skill_plan_picker_open = true;
+        state.skill_plan_picker_search = "hybrid".to_string();
+    }
+
+    fn assert_skill_plan_state_cleared(state: &AppState, loaded: LoadState<Vec<SkillPlan>>) {
+        // Loading (switch/removal) or Empty (no characters) — the
+        // two states the three reset sites set (design section 7).
+        match (&state.skill_plans, &loaded) {
+            (LoadState::Loading, LoadState::Loading) => {}
+            (LoadState::Empty, LoadState::Empty) => {}
+            (actual, expected) => {
+                panic!("skill_plans state mismatch: got {actual:?}, want {expected:?}")
+            }
+        }
+        assert_eq!(state.skill_plans_owner, None);
+        assert_eq!(state.selected_skill_plan_id, None);
+        assert_eq!(state.skill_plan_editor, None);
+        assert!(state.skill_plan_name_draft.is_empty());
+        assert!(state.skill_plan_description_draft.is_empty());
+        assert_eq!(state.skill_plan_confirm, None);
+        assert_eq!(state.skill_plan_action, None);
+        assert!(!state.skill_plan_picker_open);
+        assert!(state.skill_plan_picker_search.is_empty());
+    }
+
+    // T16: switching_character_clears_skill_plan_state,
+    // removing_active_character_clears_skill_plan_state,
+    // removing_last_character_empties_skill_plan_state
+    // (design section 12) — the three reset sites, in the shape
+    // of the existing character-details reset tests. Companion:
+    // reselecting_same_character_keeps_skill_plan_state.
+    #[test]
+    fn switching_character_clears_skill_plan_state() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        fill_skill_plan_state(&mut state, 1);
+        // Same-character reselect keeps everything.
+        state.set_active_character(1);
+        assert!(state.skill_plans.is_ready());
+        assert_eq!(state.skill_plans_owner, Some(1));
+        assert_eq!(state.selected_skill_plan_id, Some(7));
+        // Switching to a different character clears the whole
+        // working set (the demo map is covered by T17).
+        state.set_active_character(2);
+        assert_skill_plan_state_cleared(&state, LoadState::<Vec<SkillPlan>>::Loading);
+    }
+
+    #[test]
+    fn removing_active_character_clears_skill_plan_state() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two"), row(3, "Three")];
+        state.set_active_character(1);
+        fill_skill_plan_state(&mut state, 1);
+        // Removing a non-active character leaves the plans ready.
+        state.remove_character(3);
+        assert!(state.skill_plans.is_ready());
+        assert_eq!(state.skill_plans_owner, Some(1));
+        // Removing the active character never shows its plans
+        // under the replacement character.
+        state.remove_character(1);
+        assert_eq!(state.active_character_id, Some(2));
+        assert_skill_plan_state_cleared(&state, LoadState::<Vec<SkillPlan>>::Loading);
+    }
+
+    #[test]
+    fn removing_last_character_empties_skill_plan_state() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One")];
+        state.set_active_character(1);
+        fill_skill_plan_state(&mut state, 1);
+        // Removing the last character empties the plans.
+        state.remove_character(1);
+        assert!(state.characters.is_empty());
+        assert_skill_plan_state_cleared(&state, LoadState::<Vec<SkillPlan>>::Empty);
+    }
+
+    // T17: demo_plans_survive_demo_character_switch (design
+    // section 12): the keyed demo map is untouched by a switch;
+    // a removed character's entry is dropped.
+    #[test]
+    fn demo_plans_survive_demo_character_switch() {
+        let mut state = AppState::new(true);
+        state.characters = vec![row(90000001, "Demo One"), row(90000002, "Demo Two")];
+        state.set_active_character(90000001);
+        state
+            .demo_skill_plans
+            .insert(90000001, vec![test_plan(1, 90000001, "Demo PvP")]);
+        state.demo_next_plan_id = 2;
+        // Switching keeps the demo entry (keyed-map precedent).
+        state.set_active_character(90000002);
+        let kept = state
+            .demo_skill_plans
+            .get(&90000001)
+            .expect("demo entry survives switch");
+        assert_eq!(kept.len(), 1);
+        assert_eq!(kept[0].name, "Demo PvP");
+        assert_eq!(state.demo_next_plan_id, 2, "counter is session-wide");
+        // Removing the demo character drops its entry.
+        state.remove_character(90000001);
+        assert!(!state.demo_skill_plans.contains_key(&90000001));
+        assert!(state.demo_skill_plans.is_empty());
     }
 
     #[test]
