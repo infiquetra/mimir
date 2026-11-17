@@ -31,6 +31,17 @@
 
 ## 2026-11-17
 
+### A demo-mode screenshot of a network-backed visual feature proves only the placeholder path, never the fetched rendering
+
+**Author.** Muse Code (portraits workflow, integrator)
+**Context.** The portraits slice renders EVE character portraits fetched from the public image service, with demo mode deliberately making zero network calls. The integrator verification included a headless screenshot (`xvfb-run` + `scrot`) of the Characters view in `--demo` mode, with `startup_view` set to `Characters` in `~/.local/share/mimir/mimir.db` for the run and restored to `Dashboard` after.
+**Evidence.** The screenshot (2026-11-17 integrator run) shows the switcher list initials (A / M), the detail 96px initial, and the status line "Portraits are not fetched in demo mode." — every one of those is the placeholder path by design. The run log shows `[PORTRAIT] portrait fetches suppressed in demo mode count=2` and no fetch, decode, cache, or texture-upload lines, because the shell drain never spawns in demo mode (`decide_portrait_start`, `src/app/shell.rs`). The fetched rendering path (mock-server fetch, decode caps, cache-first second fetch, keyed landing, upload-once texture) is instead proven by the unit tests in `src/portraits.rs`, `src/app/state.rs`, `src/app/shell.rs`, and `src/ui/portraits.rs` — 675 tests total at the integrator commit.
+**Mechanism.** Demo mode's zero-network guarantee and the honesty rule (only `Ready` for that exact character id renders an image) together mean a demo screenshot structurally cannot contain a real portrait. It can prove the placeholder layout, the status wording, and that suppression fired; it says nothing about whether a live fetch decodes, lands, and uploads correctly.
+**Fix (or queued).** None needed: report the screenshot as placeholder-path evidence only, and cite the mock-server and headless-render tests for the fetched path. Live verification against the real EVE image service remains outstanding and is stated as such in `README.md`.
+**Validation.** Screenshot inspected directly this session; `startup_view` confirmed restored to `Dashboard` in the database after the run; all four gates green (`cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test`, `cargo build`).
+**Generalizable rule.** Match the visual evidence to the mode that can produce it: a screenshot taken in a no-network mode is evidence about placeholders and suppression, not about the fetched rendering, and presenting it as the latter overclaims exactly the path the mode disables.
+**Refs.** `docs/portraits-design.md` sections 3, 5, 6, 9; DECISIONS 2026-11-17 character-portraits entry above.
+
 ### A dogma attribute can carry negative modifier values on non-ship rows, so a global negative check in the catalogue generator is not safe for every attribute set
 
 **Author.** Muse Code (nav-targeting workflow, integrator)
