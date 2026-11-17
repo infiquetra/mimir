@@ -4,6 +4,7 @@
 pub mod bay_usage;
 pub mod calibration;
 pub mod dna;
+pub mod dps;
 pub mod eft;
 pub mod resources;
 pub mod ship_ehp;
@@ -17,6 +18,7 @@ pub mod write_map;
 pub use bay_usage::{bay_usage, BayBudget, BayUsage, BayUsageOutcome};
 pub use calibration::{rig_calibration, CalibrationBudget, CalibrationOutcome};
 pub use dna::{parse_dna, parse_import, MAX_DNA_EXPANDED_ITEMS, MAX_DNA_SEGMENTS};
+pub use dps::{fitting_dps, FamilyDps, FittingDps, FittingDpsOutcome};
 pub use eft::{
     parse_eft, EftImportOutcome, ImportFatal, ImportFormat, ImportIssue, ImportIssueKind,
     ImportReport, ImportSection, ImportedCharge, ImportedFitting, ImportedItem,

@@ -186,6 +186,78 @@ pub struct FittingType {
     pub max_locked_targets: Option<f64>,
     #[serde(rename = "mass", default)]
     pub mass: Option<f64>,
+    // Damage per second (docs/fitting-dps-design.md
+    // section 3.1): dogma 51 `speed` (raw milliseconds,
+    // never converted here), 64 `damageMultiplier` on
+    // category 7/18 rows; 114 `emDamage`,
+    // 116 `explosiveDamage`, 117 `kineticDamage`,
+    // 118 `thermalDamage` on category 8/18 rows; the
+    // fighter per-type keys (2215 squadron size, 2212/2213/
+    // 2214 class flags, 2226/2227/2228/2229/2230/2233
+    // attack ability, 2130/2131/2132/2133/2134/2182
+    // missiles ability) on category 87 rows; 2216 tubes
+    // plus 2217/2218/2219 class caps on category 6 rows;
+    // sparse true-only ability markers for effects 6465
+    // `fighterAbilityAttackM` (truncated in the SDE) and
+    // 6431 `fighterAbilityMissiles`, loaded as `false` when
+    // absent (the `turret_fitted` precedent). Dogma 212 is
+    // never emitted and never read here.
+    #[serde(rename = "speed", default)]
+    pub speed: Option<f64>,
+    #[serde(rename = "damageMultiplier", default)]
+    pub damage_multiplier: Option<f64>,
+    #[serde(rename = "emDamage", default)]
+    pub em_damage: Option<f64>,
+    #[serde(rename = "explosiveDamage", default)]
+    pub explosive_damage: Option<f64>,
+    #[serde(rename = "kineticDamage", default)]
+    pub kinetic_damage: Option<f64>,
+    #[serde(rename = "thermalDamage", default)]
+    pub thermal_damage: Option<f64>,
+    #[serde(rename = "fighterSquadronMaxSize", default)]
+    pub fighter_squadron_max_size: Option<f64>,
+    #[serde(rename = "fighterSquadronIsLight", default)]
+    pub fighter_squadron_is_light: Option<f64>,
+    #[serde(rename = "fighterSquadronIsSupport", default)]
+    pub fighter_squadron_is_support: Option<f64>,
+    #[serde(rename = "fighterSquadronIsHeavy", default)]
+    pub fighter_squadron_is_heavy: Option<f64>,
+    #[serde(rename = "fighterAbilityAttackMissileDamageMultiplier", default)]
+    pub fighter_attack_damage_multiplier: Option<f64>,
+    #[serde(rename = "fighterAbilityAttackMissileDamageEM", default)]
+    pub fighter_attack_damage_em: Option<f64>,
+    #[serde(rename = "fighterAbilityAttackMissileDamageTherm", default)]
+    pub fighter_attack_damage_therm: Option<f64>,
+    #[serde(rename = "fighterAbilityAttackMissileDamageKin", default)]
+    pub fighter_attack_damage_kin: Option<f64>,
+    #[serde(rename = "fighterAbilityAttackMissileDamageExp", default)]
+    pub fighter_attack_damage_exp: Option<f64>,
+    #[serde(rename = "fighterAbilityAttackMissileDuration", default)]
+    pub fighter_attack_duration: Option<f64>,
+    #[serde(rename = "fighterAbilityMissilesDamageMultiplier", default)]
+    pub fighter_missiles_damage_multiplier: Option<f64>,
+    #[serde(rename = "fighterAbilityMissilesDamageEM", default)]
+    pub fighter_missiles_damage_em: Option<f64>,
+    #[serde(rename = "fighterAbilityMissilesDamageTherm", default)]
+    pub fighter_missiles_damage_therm: Option<f64>,
+    #[serde(rename = "fighterAbilityMissilesDamageKin", default)]
+    pub fighter_missiles_damage_kin: Option<f64>,
+    #[serde(rename = "fighterAbilityMissilesDamageExp", default)]
+    pub fighter_missiles_damage_exp: Option<f64>,
+    #[serde(rename = "fighterAbilityMissilesDuration", default)]
+    pub fighter_missiles_duration: Option<f64>,
+    #[serde(rename = "fighterTubes", default)]
+    pub fighter_tubes: Option<f64>,
+    #[serde(rename = "fighterLightSlots", default)]
+    pub fighter_light_slots: Option<f64>,
+    #[serde(rename = "fighterSupportSlots", default)]
+    pub fighter_support_slots: Option<f64>,
+    #[serde(rename = "fighterHeavySlots", default)]
+    pub fighter_heavy_slots: Option<f64>,
+    #[serde(rename = "fighterAbilityAttackM", default)]
+    pub fighter_ability_attack: bool,
+    #[serde(rename = "fighterAbilityMissiles", default)]
+    pub fighter_ability_missiles: bool,
 }
 
 /// Outcome of a reverse name lookup. `Found` carries the unique
@@ -843,6 +915,107 @@ mod tests {
                     row.name
                 );
             }
+            // Damage-per-second values
+            // (docs/fitting-dps-design.md section 3.3):
+            // every present DPS value is finite and
+            // non-negative; `speed`/`damage_multiplier`
+            // appear only on category 7 or 18 rows; the
+            // four damage components only on category 8 or
+            // 18 rows; the fighter per-type keys and both
+            // ability markers only on category-87 rows;
+            // the four tube/slot keys only on category-6
+            // rows. Absence stays distinct from 0.0.
+            for value in [
+                row.speed,
+                row.damage_multiplier,
+                row.em_damage,
+                row.explosive_damage,
+                row.kinetic_damage,
+                row.thermal_damage,
+                row.fighter_squadron_max_size,
+                row.fighter_squadron_is_light,
+                row.fighter_squadron_is_support,
+                row.fighter_squadron_is_heavy,
+                row.fighter_attack_damage_multiplier,
+                row.fighter_attack_damage_em,
+                row.fighter_attack_damage_therm,
+                row.fighter_attack_damage_kin,
+                row.fighter_attack_damage_exp,
+                row.fighter_attack_duration,
+                row.fighter_missiles_damage_multiplier,
+                row.fighter_missiles_damage_em,
+                row.fighter_missiles_damage_therm,
+                row.fighter_missiles_damage_kin,
+                row.fighter_missiles_damage_exp,
+                row.fighter_missiles_duration,
+                row.fighter_tubes,
+                row.fighter_light_slots,
+                row.fighter_support_slots,
+                row.fighter_heavy_slots,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                assert!(
+                    value.is_finite() && value >= 0.0,
+                    "negative or non-finite damage-per-second value on {:?}",
+                    row.name
+                );
+            }
+            if row.speed.is_some() || row.damage_multiplier.is_some() {
+                assert!(
+                    matches!(row.category_id, 7 | 18),
+                    "non-module/drone carrying cycle key: {:?}",
+                    row.name
+                );
+            }
+            if row.em_damage.is_some()
+                || row.explosive_damage.is_some()
+                || row.kinetic_damage.is_some()
+                || row.thermal_damage.is_some()
+            {
+                assert!(
+                    matches!(row.category_id, 8 | 18),
+                    "non-charge/drone carrying damage key: {:?}",
+                    row.name
+                );
+            }
+            if row.fighter_squadron_max_size.is_some()
+                || row.fighter_squadron_is_light.is_some()
+                || row.fighter_squadron_is_support.is_some()
+                || row.fighter_squadron_is_heavy.is_some()
+                || row.fighter_attack_damage_multiplier.is_some()
+                || row.fighter_attack_damage_em.is_some()
+                || row.fighter_attack_damage_therm.is_some()
+                || row.fighter_attack_damage_kin.is_some()
+                || row.fighter_attack_damage_exp.is_some()
+                || row.fighter_attack_duration.is_some()
+                || row.fighter_missiles_damage_multiplier.is_some()
+                || row.fighter_missiles_damage_em.is_some()
+                || row.fighter_missiles_damage_therm.is_some()
+                || row.fighter_missiles_damage_kin.is_some()
+                || row.fighter_missiles_damage_exp.is_some()
+                || row.fighter_missiles_duration.is_some()
+                || row.fighter_ability_attack
+                || row.fighter_ability_missiles
+            {
+                assert_eq!(
+                    row.category_id, 87,
+                    "non-fighter carrying fighter key: {:?}",
+                    row.name
+                );
+            }
+            if row.fighter_tubes.is_some()
+                || row.fighter_light_slots.is_some()
+                || row.fighter_support_slots.is_some()
+                || row.fighter_heavy_slots.is_some()
+            {
+                assert_eq!(
+                    row.category_id, 6,
+                    "non-ship carrying fighter tube key: {:?}",
+                    row.name
+                );
+            }
         }
         // Spot pins mirroring the generator oracles (design section
         // 5), read from dgmTypeAttributes.csv.bz2 during design.
@@ -1169,6 +1342,93 @@ mod tests {
             assert_eq!(row.max_locked_targets, None);
             assert_eq!(row.mass, None);
         }
+        // Damage-per-second spot pins
+        // (docs/fitting-dps-design.md section 3.2), read
+        // from dgmTypeAttributes.csv.bz2 / dgmTypeEffects.csv.bz2
+        // during design: 484 cycle 3000.0 (dogma 51, raw
+        // milliseconds) and modifier 2.0625 (64); 2404
+        // Light Missile Launcher II cycle 12800.0 with no
+        // modifier row (a launcher must never gain 64);
+        // 180 Proton S damage 3.0/0.0/2.0/0.0 (114/116/117/
+        // 118, explicit zeros present, never absent);
+        // 23059 Firbolg I both ability markers true (effects
+        // 6465/6431), squadron size 9.0, attack thermal
+        // 75.0, attack duration 5000.0; 23911 Thanatos
+        // tubes 3.0 with heavy slots absent (the pure layer
+        // reads absent as a 0 cap, the catalogue never
+        // invents it).
+        let autocannon = types
+            .lookup_by_id(484)
+            .expect("125mm Gatling AutoCannon I row");
+        assert_eq!(autocannon.speed, Some(3000.0));
+        assert_eq!(autocannon.damage_multiplier, Some(2.0625));
+        let launcher = types
+            .lookup_by_id(2404)
+            .expect("Light Missile Launcher II row");
+        assert_eq!(launcher.speed, Some(12800.0));
+        assert_eq!(launcher.damage_multiplier, None);
+        let proton = types.lookup_by_id(180).expect("Proton S row");
+        assert_eq!(proton.em_damage, Some(3.0));
+        assert_eq!(proton.kinetic_damage, Some(2.0));
+        assert_eq!(proton.explosive_damage, Some(0.0));
+        assert_eq!(proton.thermal_damage, Some(0.0));
+        let firbolg = types.lookup_by_id(23059).expect("Firbolg I row");
+        assert!(firbolg.fighter_ability_attack);
+        assert!(firbolg.fighter_ability_missiles);
+        assert_eq!(firbolg.fighter_squadron_max_size, Some(9.0));
+        assert_eq!(firbolg.fighter_attack_damage_therm, Some(75.0));
+        assert_eq!(firbolg.fighter_attack_duration, Some(5000.0));
+        let thanatos = types.lookup_by_id(23911).expect("Thanatos row");
+        assert_eq!(thanatos.fighter_tubes, Some(3.0));
+        assert_eq!(thanatos.fighter_heavy_slots, None);
+        // No DPS keys on module, rig, and subsystem rows,
+        // and no tube keys on a non-carrier hull.
+        for row in [damage_control, rig, subsystem] {
+            assert_eq!(row.speed, None);
+            assert_eq!(row.damage_multiplier, None);
+            assert_eq!(row.em_damage, None);
+            assert_eq!(row.fighter_tubes, None);
+            assert!(!row.fighter_ability_attack);
+            assert!(!row.fighter_ability_missiles);
+        }
+        let rifter = types.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(rifter.fighter_tubes, None);
+        assert_eq!(rifter.speed, None);
+    }
+
+    #[test]
+    fn fixture_parse_dps_fields() {
+        // A row with the new keys loads into the new fields;
+        // a row without them loads with all None/false (old-
+        // catalogue tolerance, the twins' `default` pattern).
+        let with_keys = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":484,"typeName":"125mm Gatling AutoCannon I","categoryId":7,"slotEffects":[12],"speed":3000.0,"damageMultiplier":2.0625},
+                {"typeId":23059,"typeName":"Firbolg I","categoryId":87,"slotEffects":[],"fighterSquadronMaxSize":9.0,"fighterAbilityAttackM":true}]}"#,
+        )
+        .expect("fixture parses");
+        let gun = with_keys.lookup_by_id(484).expect("gun row");
+        assert_eq!(gun.speed, Some(3000.0));
+        assert_eq!(gun.damage_multiplier, Some(2.0625));
+        let firbolg = with_keys.lookup_by_id(23059).expect("fighter row");
+        assert_eq!(firbolg.fighter_squadron_max_size, Some(9.0));
+        assert!(firbolg.fighter_ability_attack);
+        assert!(!firbolg.fighter_ability_missiles);
+
+        let without_keys = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[]}]}"#,
+        )
+        .expect("fixture parses");
+        let ship = without_keys.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(ship.speed, None);
+        assert_eq!(ship.damage_multiplier, None);
+        assert_eq!(ship.em_damage, None);
+        assert_eq!(ship.fighter_squadron_max_size, None);
+        assert_eq!(ship.fighter_tubes, None);
+        assert_eq!(ship.fighter_heavy_slots, None);
+        assert!(!ship.fighter_ability_attack);
+        assert!(!ship.fighter_ability_missiles);
     }
 
     #[test]
