@@ -1,12 +1,13 @@
-//! Portrait rendering for the character surfaces (Characters list
-//! and detail, Dashboard grid): upload each decoded portrait to an
-//! egui texture exactly once per character, and draw the honest
-//! initial placeholder for every other state. Fetch, cache, and
-//! landing live in `crate::portraits` and `crate::app::state` /
-//! `crate::app::shell`; this module only turns ready state into
-//! widgets. The shell owns the `PortraitImageCache`: a
-//! `TextureHandle` must outlive the frame that created it, so
-//! textures can never be per-frame uploads.
+//! Portrait and logo rendering for the character surfaces
+//! (Characters list and detail, Dashboard grid): upload each
+//! decoded image to an egui texture exactly once per
+//! `(ImageKind, id)`, and draw the honest placeholder for every
+//! other state (the name initial for portraits, a blank box for
+//! logos). Fetch, cache, and landing live in `crate::portraits`
+//! and `crate::app::state` / `crate::app::shell`; this module
+//! only turns ready state into widgets. The shell owns the
+//! `PortraitImageCache`: a `TextureHandle` must outlive the frame
+//! that created it, so textures can never be per-frame uploads.
 //!
 //! Logging follows the view-layer convention: the per-frame render
 //! path is log-free (one visible portrait renders once per frame,
@@ -29,21 +30,25 @@ use crate::storage::repositories::CharacterRow;
 pub const LIST_PORTRAIT_PX: f32 = 32.0;
 /// Render size of the active-character detail portrait, in points.
 pub const DETAIL_PORTRAIT_PX: f32 = 96.0;
+/// Render size of a detail corporation or alliance logo, in
+/// points: left of the resolved name, matching the Flutter
+/// overview tab's icon size.
+pub const DETAIL_LOGO_PX: f32 = 20.0;
 
-/// One uploaded portrait: the decoded image it was built from
+/// One uploaded image: the decoded image it was built from
 /// (identity check via `Arc::ptr_eq`) plus its live texture.
 struct CachedTexture {
     source: Arc<image::DynamicImage>,
     handle: egui::TextureHandle,
 }
 
-/// Per-application portrait textures, owned by `MimirApp` and
+/// Per-application image textures, owned by `MimirApp` and
 /// passed into the character views. Upload happens once per
-/// character image; a replaced image (remove and re-add) uploads
-/// anew and never shows the old face.
+/// `(kind, id)` image; a replaced image (remove and re-add)
+/// uploads anew and never shows the old one.
 #[derive(Default)]
 pub struct PortraitImageCache {
-    textures: HashMap<i64, CachedTexture>,
+    textures: HashMap<(ImageKind, i64), CachedTexture>,
 }
 
 impl PortraitImageCache {
@@ -52,16 +57,24 @@ impl PortraitImageCache {
         Self::default()
     }
 
-    /// Drop textures for characters that no longer exist, freeing
-    /// the GPU texture so a removed character's face cannot
-    /// linger — and a later re-added character re-uploads.
+    /// Drop textures for entities the remaining rows no longer
+    /// reference, freeing the GPU texture so a removed entity's
+    /// image cannot linger — and a later re-added entity
+    /// re-uploads. The kind is part of the decision: a
+    /// corporation texture survives while some row still carries
+    /// that `corporation_id`, an alliance texture while some row
+    /// still carries that `alliance_id`, exactly like a character
+    /// texture survives while its row remains.
     pub fn prune(&mut self, characters: &[CharacterRow]) {
         let before = self.textures.len();
-        self.textures
-            .retain(|id, _| characters.iter().any(|c| c.character_id == *id));
+        self.textures.retain(|(kind, id), _| match kind {
+            ImageKind::Character => characters.iter().any(|c| c.character_id == *id),
+            ImageKind::Corporation => characters.iter().any(|c| c.corporation_id == *id),
+            ImageKind::Alliance => characters.iter().any(|c| c.alliance_id == Some(*id)),
+        });
         if self.textures.len() != before {
             tracing::debug!(
-                "[PORTRAIT] portrait textures pruned remaining={}",
+                "[PORTRAIT] image textures pruned remaining={}",
                 self.textures.len()
             );
         }
@@ -77,23 +90,27 @@ impl PortraitImageCache {
         self.textures.is_empty()
     }
 
-    /// The texture for one character's `Ready` portrait, uploading
+    /// The texture for one `(kind, id)`'s `Ready` image, uploading
     /// the decoded image exactly once. `None` for every non-Ready
-    /// state: only `Ready` for that exact character id renders an
-    /// image, never a fabricated face, never another character's.
+    /// state: only `Ready` under that exact key renders an image,
+    /// never a fabricated face, never another entity's. The
+    /// `to_rgba8` into `from_rgba_unmultiplied` upload carries
+    /// PNG logo alpha to the screen unchanged; the kind is part
+    /// of the texture name so two kinds never share a texture.
     pub fn texture(
         &mut self,
         ctx: &egui::Context,
         state: &AppState,
-        character_id: i64,
+        kind: ImageKind,
+        id: i64,
     ) -> Option<egui::TextureHandle> {
-        let image = match state.portrait_state(ImageKind::Character, character_id) {
+        let image = match state.portrait_state(kind, id) {
             PortraitState::Ready(image) => image,
             PortraitState::NotRequested | PortraitState::Loading | PortraitState::Failed => {
                 return None;
             }
         };
-        let replaced = match self.textures.get(&character_id) {
+        let replaced = match self.textures.get(&(kind, id)) {
             Some(cached) if Arc::ptr_eq(&cached.source, image) => {
                 return Some(cached.handle.clone());
             }
@@ -106,24 +123,27 @@ impl PortraitImageCache {
             [width as usize, height as usize],
             rgba.as_raw(),
         );
-        let handle = ctx.load_texture(
-            format!("portrait-{character_id}"),
-            color,
-            egui::TextureOptions::default(),
-        );
+        let texture_name = match kind {
+            ImageKind::Character => format!("portrait-{id}"),
+            ImageKind::Corporation => format!("logo-corp-{id}"),
+            ImageKind::Alliance => format!("logo-alliance-{id}"),
+        };
+        let handle = ctx.load_texture(texture_name, color, egui::TextureOptions::default());
         if replaced {
             tracing::info!(
-                "[PORTRAIT] portrait texture replaced character_id={}",
-                character_id
+                "[PORTRAIT] image texture replaced kind={} id={}",
+                kind.as_str(),
+                id
             );
         } else {
             tracing::info!(
-                "[PORTRAIT] portrait texture uploaded character_id={} {width}x{height}",
-                character_id
+                "[PORTRAIT] image texture uploaded kind={} id={} {width}x{height}",
+                kind.as_str(),
+                id
             );
         }
         self.textures.insert(
-            character_id,
+            (kind, id),
             CachedTexture {
                 source: Arc::clone(image),
                 handle: handle.clone(),
@@ -150,6 +170,19 @@ pub fn ensure_portrait_requested(state: &mut AppState, character_id: i64) {
     }
 }
 
+/// Queue a logo fetch for one corporation or alliance, with the
+/// same rule as `ensure_portrait_requested`: only a
+/// `NotRequested` key queues, a `Failed` logo retries through the
+/// detail view's retry button, and an unknown id queues nothing
+/// through the state guard. In demo mode the queued request is
+/// drained by the shell without spawning, so demo still makes
+/// zero network calls.
+pub fn ensure_logo_requested(state: &mut AppState, kind: ImageKind, id: i64) {
+    if matches!(state.portrait_state(kind, id), PortraitState::NotRequested) {
+        state.request_portrait(kind, id);
+    }
+}
+
 /// Status line for a placeholder portrait: what the user is
 /// looking at and why there is no image. `Ready` maps to `""`
 /// because an image, not a placeholder, renders.
@@ -173,7 +206,7 @@ pub fn show_portrait(
     name: &str,
     size_px: f32,
 ) -> egui::Response {
-    if let Some(handle) = cache.texture(ui.ctx(), state, character_id) {
+    if let Some(handle) = cache.texture(ui.ctx(), state, ImageKind::Character, character_id) {
         let image = egui::Image::new((handle.id(), handle.size_vec2()))
             .fit_to_exact_size(egui::Vec2::splat(size_px));
         ui.add(image)
@@ -190,6 +223,35 @@ pub fn show_portrait(
             egui::FontId::proportional(size_px * 0.5),
             ui.visuals().text_color(),
         );
+        response
+    }
+}
+
+/// Render one corporation or alliance logo, `size_px` points
+/// square: the image when `Ready` for that exact `(kind, id)`,
+/// otherwise a blank box of the theme's faint background color —
+/// never a fabricated or stock mark. There is deliberately no
+/// `name` parameter: a logo placeholder shows no initial and no
+/// letter, so a name cannot be formatted into its slot by
+/// accident, and no raw id is formatted either. The resolved
+/// name the caller draws beside the box carries the meaning,
+/// so nothing is lost while the logo loads or after it fails.
+pub fn show_logo(
+    ui: &mut egui::Ui,
+    cache: &mut PortraitImageCache,
+    state: &AppState,
+    kind: ImageKind,
+    id: i64,
+    size_px: f32,
+) -> egui::Response {
+    if let Some(handle) = cache.texture(ui.ctx(), state, kind, id) {
+        let image = egui::Image::new((handle.id(), handle.size_vec2()))
+            .fit_to_exact_size(egui::Vec2::splat(size_px));
+        ui.add(image)
+    } else {
+        let (response, painter) =
+            ui.allocate_painter(egui::Vec2::splat(size_px), egui::Sense::hover());
+        painter.rect_filled(response.rect, 2.0, ui.visuals().faint_bg_color);
         response
     }
 }
@@ -306,20 +368,28 @@ mod tests {
         let mut state = state_with_ids(&[1, 2, 3, 4]);
         let mut cache = PortraitImageCache::new();
 
-        assert!(cache.texture(&ctx, &state, 1).is_none());
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Character, 1)
+            .is_none());
         state
             .portraits
             .insert((ImageKind::Character, 2), PortraitState::Loading);
-        assert!(cache.texture(&ctx, &state, 2).is_none());
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Character, 2)
+            .is_none());
         state
             .portraits
             .insert((ImageKind::Character, 3), PortraitState::Failed);
-        assert!(cache.texture(&ctx, &state, 3).is_none());
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Character, 3)
+            .is_none());
         state.portraits.insert(
             (ImageKind::Character, 4),
             PortraitState::Ready(ready_image(8, 8)),
         );
-        assert!(cache.texture(&ctx, &state, 4).is_some());
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Character, 4)
+            .is_some());
         assert_eq!(cache.len(), 1);
     }
 
@@ -333,8 +403,12 @@ mod tests {
             PortraitState::Ready(ready_image(8, 8)),
         );
 
-        let first = cache.texture(&ctx, &state, 1).expect("ready uploads");
-        let again = cache.texture(&ctx, &state, 1).expect("ready reuses");
+        let first = cache
+            .texture(&ctx, &state, ImageKind::Character, 1)
+            .expect("ready uploads");
+        let again = cache
+            .texture(&ctx, &state, ImageKind::Character, 1)
+            .expect("ready reuses");
         assert_eq!(first.id(), again.id(), "one upload per image");
 
         // A replaced image object for the same character uploads
@@ -343,7 +417,9 @@ mod tests {
             (ImageKind::Character, 1),
             PortraitState::Ready(ready_image(8, 8)),
         );
-        let replaced = cache.texture(&ctx, &state, 1).expect("replaced uploads");
+        let replaced = cache
+            .texture(&ctx, &state, ImageKind::Character, 1)
+            .expect("replaced uploads");
         assert_ne!(first.id(), replaced.id());
         assert_eq!(cache.len(), 1);
     }
@@ -358,25 +434,44 @@ mod tests {
                 (ImageKind::Character, id),
                 PortraitState::Ready(ready_image(8, 8)),
             );
-            let _ = cache.texture(&ctx, &state, id).expect("upload");
+            let _ = cache
+                .texture(&ctx, &state, ImageKind::Character, id)
+                .expect("upload");
         }
         assert_eq!(cache.len(), 2);
 
-        let kept_id = cache.texture(&ctx, &state, 1).expect("reuse").id();
-        let old_id = cache.texture(&ctx, &state, 2).expect("reuse").id();
+        let kept_id = cache
+            .texture(&ctx, &state, ImageKind::Character, 1)
+            .expect("reuse")
+            .id();
+        let old_id = cache
+            .texture(&ctx, &state, ImageKind::Character, 2)
+            .expect("reuse")
+            .id();
         cache.prune(&[test_row(1, "Test Pilot")]);
         assert_eq!(cache.len(), 1);
 
         // The still-listed character keeps its texture; the pruned
         // one re-uploads when it returns.
-        assert_eq!(cache.texture(&ctx, &state, 1).expect("kept").id(), kept_id);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Character, 1)
+                .expect("kept")
+                .id(),
+            kept_id
+        );
         assert_ne!(
-            cache.texture(&ctx, &state, 2).expect("re-upload").id(),
+            cache
+                .texture(&ctx, &state, ImageKind::Character, 2)
+                .expect("re-upload")
+                .id(),
             old_id
         );
         cache.prune(&[]);
         assert!(cache.is_empty());
-        assert!(cache.texture(&ctx, &state, 1).is_some());
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Character, 1)
+            .is_some());
         assert_eq!(cache.len(), 1);
     }
 
@@ -396,5 +491,171 @@ mod tests {
             });
         });
         assert_eq!(cache.len(), 1, "only the Ready portrait uploaded");
+    }
+
+    #[test]
+    fn ensure_logo_requests_only_unrequested_known_logos() {
+        // `test_row` carries corporation 1000166, so that key is
+        // known by row; each state below isolates one status.
+        let mut unrequested = state_with_ids(&[1]);
+        ensure_logo_requested(&mut unrequested, ImageKind::Corporation, 1000166);
+        assert_eq!(
+            unrequested.portrait_requests,
+            vec![(ImageKind::Corporation, 1000166)]
+        );
+        assert!(matches!(
+            unrequested.portrait_state(ImageKind::Corporation, 1000166),
+            PortraitState::Loading
+        ));
+
+        for (label, entry) in [
+            ("loading", PortraitState::Loading),
+            ("ready", PortraitState::Ready(ready_image(8, 8))),
+            ("failed", PortraitState::Failed),
+        ] {
+            let mut state = state_with_ids(&[1]);
+            state
+                .portraits
+                .insert((ImageKind::Corporation, 1000166), entry);
+            ensure_logo_requested(&mut state, ImageKind::Corporation, 1000166);
+            assert!(
+                state.portrait_requests.is_empty(),
+                "{label} must queue nothing"
+            );
+        }
+
+        // Unknown ids queue nothing and fabricate no entry.
+        let mut unknown = state_with_ids(&[1]);
+        ensure_logo_requested(&mut unknown, ImageKind::Corporation, 9999999);
+        assert!(unknown.portrait_requests.is_empty());
+    }
+
+    #[test]
+    fn same_numeric_id_in_two_kinds_uploads_two_textures() {
+        let ctx = egui::Context::default();
+        // Row id 1000166 doubles as corporation 1000166.
+        let mut state = state_with_ids(&[1000166]);
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Character, 1000166),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        state.portraits.insert(
+            (ImageKind::Corporation, 1000166),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+
+        let portrait = cache
+            .texture(&ctx, &state, ImageKind::Character, 1000166)
+            .expect("portrait uploads");
+        let logo = cache
+            .texture(&ctx, &state, ImageKind::Corporation, 1000166)
+            .expect("logo uploads");
+        assert_eq!(cache.len(), 2);
+        assert_ne!(portrait.id(), logo.id());
+    }
+
+    #[test]
+    fn prune_is_kind_aware_for_corporation_logos() {
+        let ctx = egui::Context::default();
+        // Two rows share corporation 1000166 (the `test_row`
+        // default); pruning to one such row keeps the logo.
+        let mut state = state_with_ids(&[1, 2]);
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Corporation, 1000166),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        let uploaded = cache
+            .texture(&ctx, &state, ImageKind::Corporation, 1000166)
+            .expect("upload")
+            .id();
+        cache.prune(&[test_row(1, "Test Pilot")]);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Corporation, 1000166)
+                .expect("kept")
+                .id(),
+            uploaded
+        );
+
+        // Pruning to a row with a different corporation frees it;
+        // the next lookup re-uploads.
+        let mut other = test_row(1, "Test Pilot");
+        other.corporation_id = 1000125;
+        cache.prune(&[other]);
+        assert_eq!(cache.len(), 0);
+        assert_ne!(
+            cache
+                .texture(&ctx, &state, ImageKind::Corporation, 1000166)
+                .expect("re-upload")
+                .id(),
+            uploaded
+        );
+    }
+
+    #[test]
+    fn logo_texture_is_some_only_when_ready() {
+        let ctx = egui::Context::default();
+        let mut state = state_with_ids(&[1]);
+        let mut cache = PortraitImageCache::new();
+
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Corporation, 1000166)
+            .is_none());
+        state
+            .portraits
+            .insert((ImageKind::Corporation, 1000166), PortraitState::Loading);
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Corporation, 1000166)
+            .is_none());
+        state
+            .portraits
+            .insert((ImageKind::Corporation, 1000166), PortraitState::Failed);
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Corporation, 1000166)
+            .is_none());
+        state.portraits.insert(
+            (ImageKind::Corporation, 1000166),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        assert!(cache
+            .texture(&ctx, &state, ImageKind::Corporation, 1000166)
+            .is_some());
+        assert_eq!(cache.len(), 1);
+    }
+
+    #[test]
+    fn show_logo_runs_headless() {
+        let ctx = egui::Context::default();
+        let mut state = state_with_ids(&[1]);
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Corporation, 1000166),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        // Corporation 1000125 has no entry: the placeholder.
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show_logo(
+                    ui,
+                    &mut cache,
+                    &state,
+                    ImageKind::Corporation,
+                    1000166,
+                    DETAIL_LOGO_PX,
+                );
+                show_logo(
+                    ui,
+                    &mut cache,
+                    &state,
+                    ImageKind::Corporation,
+                    1000125,
+                    DETAIL_LOGO_PX,
+                );
+            });
+        });
+        assert_eq!(cache.len(), 1, "only the Ready logo uploaded");
     }
 }
