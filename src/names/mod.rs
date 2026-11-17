@@ -4,6 +4,7 @@
 
 pub mod exploration_ref;
 pub mod fitting_types;
+pub mod industry_ref;
 pub mod resolver;
 pub mod sde;
 
