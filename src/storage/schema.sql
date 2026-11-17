@@ -3,6 +3,8 @@
 -- esi_cache and token_meta are F2 additions; token_meta never holds token
 -- values, only non-secret metadata (the tokens themselves live in the F1
 -- keyring / 0600-file store).
+-- v2 adds skill_plans and skill_plan_entries (docs/skill-plans-design.md
+-- section 5); v1 DDL above is unchanged.
 CREATE TABLE IF NOT EXISTS characters (
     character_id INTEGER PRIMARY KEY,
     name TEXT NOT NULL DEFAULT '',
@@ -100,3 +102,27 @@ CREATE INDEX IF NOT EXISTS idx_universe_names_category
     ON universe_names (category);
 CREATE INDEX IF NOT EXISTS idx_esi_cache_expires
     ON esi_cache (expires_at);
+-- User-authored skill plans (the app's first non-ESI rows;
+-- see docs/skill-plans-design.md section 5). plan_id is
+-- storage-assigned; entries carry character_id so
+-- delete_character can cascade by its table list.
+CREATE TABLE IF NOT EXISTS skill_plans (
+    plan_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    character_id INTEGER NOT NULL,
+    name TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS skill_plan_entries (
+    character_id INTEGER NOT NULL,
+    plan_id INTEGER NOT NULL,
+    sort_position INTEGER NOT NULL,
+    skill_id INTEGER NOT NULL,
+    target_level INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (character_id, plan_id, sort_position)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_skill_plan_entries_skill
+    ON skill_plan_entries (character_id, plan_id, skill_id);
+CREATE INDEX IF NOT EXISTS idx_skill_plans_character
+    ON skill_plans (character_id, updated_at DESC);

@@ -6,7 +6,7 @@ use crate::config::EveConfig;
 use crate::error::AppResult;
 
 pub const SCHEMA_SQL: &str = include_str!("schema.sql");
-pub const SCHEMA_VERSION: i64 = 1;
+pub const SCHEMA_VERSION: i64 = 2;
 
 pub fn app_data_dir() -> PathBuf {
     tracing::debug!("[DB] resolving app data dir");
@@ -108,7 +108,7 @@ mod tests {
     fn migrate_is_idempotent_and_sets_version() {
         let conn = open_in_memory().expect("in-memory db opens");
         migrate(&conn).expect("second migrate is a no-op success");
-        assert_eq!(schema_version(&conn).expect("version readable"), 1);
+        assert_eq!(schema_version(&conn).expect("version readable"), 2);
     }
 
     #[test]
@@ -125,5 +125,61 @@ mod tests {
             )
             .expect("table count readable");
         assert_eq!(count, 11);
+    }
+
+    #[test]
+    fn schema_creates_plan_tables() {
+        let conn = open_in_memory().expect("in-memory db opens");
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN \
+                 ('skill_plans','skill_plan_entries')",
+                [],
+                |row| row.get(0),
+            )
+            .expect("plan table count readable");
+        assert_eq!(count, 2);
+    }
+
+    // T11: migrate_from_v1_adds_plan_tables_and_keeps_rows (design section 5.2).
+    #[test]
+    fn migrate_from_v1_adds_plan_tables_and_keeps_rows() {
+        // Simulate a v1 file: open in-memory, migrate fully, then strip
+        // back to v1 shape (stamp user_version = 1, drop the plan
+        // tables), insert one character, then re-run migrate(). This is
+        // the only honest way to test an upgrade when open_in_memory()
+        // always migrates to current.
+        let conn = rusqlite::Connection::open_in_memory().expect("in-memory db opens");
+        conn.pragma_update(None, "user_version", 1_i64)
+            .expect("stamp v1");
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS characters (\
+               character_id INTEGER PRIMARY KEY, name TEXT NOT NULL DEFAULT '', \
+               corporation_id INTEGER NOT NULL DEFAULT 0, alliance_id INTEGER, \
+               is_active INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT '');\
+             INSERT INTO characters (character_id, name, corporation_id, is_active, updated_at) \
+               VALUES (90000001, 'Aria', 1000166, 1, '2026-11-15T00:00:00Z');",
+        )
+        .expect("v1 character row");
+        // No plan tables exist yet on a v1 file; migrate() adds them.
+        migrate(&conn).expect("upgrade migrate");
+        assert_eq!(schema_version(&conn).expect("version readable"), 2);
+        let plan_tables: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN \
+                 ('skill_plans','skill_plan_entries')",
+                [],
+                |row| row.get(0),
+            )
+            .expect("plan table count readable after upgrade");
+        assert_eq!(plan_tables, 2);
+        let name: String = conn
+            .query_row(
+                "SELECT name FROM characters WHERE character_id = 90000001",
+                [],
+                |row| row.get(0),
+            )
+            .expect("character row survived");
+        assert_eq!(name, "Aria");
     }
 }
