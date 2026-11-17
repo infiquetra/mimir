@@ -122,6 +122,36 @@ pub struct FittingType {
     pub upgrade_capacity: Option<f64>,
     #[serde(rename = "upgradeCost", default)]
     pub upgrade_cost: Option<f64>,
+    // Slot layout (docs/slot-layout-design.md section 3.1):
+    // dogma 14 `hiSlots`, 13 `medSlots`, 12 `lowSlots`, 1137
+    // `rigSlots`, 1367 `maxSubSystems`, 102 `turretSlotsLeft`,
+    // 101 `launcherSlotsLeft` on category 6 rows only, sparse.
+    // The hardware field names read as what the value is used
+    // as (`turretSlotsLeft` -> `turret_hardpoints`,
+    // `launcherSlotsLeft` -> `launcher_hardpoints`, the `hp` ->
+    // `hull_hp` precedent). Hardpoint markers are effect 40
+    // `launcherFitted` and effect 42 `turretFitted`, sparse
+    // true-only; absence loads as `false`. Dogma 1154,
+    // attribute 47, and the subsystem modifiers are never
+    // emitted and never read here.
+    #[serde(rename = "hiSlots", default)]
+    pub hi_slots: Option<f64>,
+    #[serde(rename = "medSlots", default)]
+    pub med_slots: Option<f64>,
+    #[serde(rename = "lowSlots", default)]
+    pub low_slots: Option<f64>,
+    #[serde(rename = "rigSlots", default)]
+    pub rig_slots: Option<f64>,
+    #[serde(rename = "maxSubSystems", default)]
+    pub max_sub_systems: Option<f64>,
+    #[serde(rename = "turretSlotsLeft", default)]
+    pub turret_hardpoints: Option<f64>,
+    #[serde(rename = "launcherSlotsLeft", default)]
+    pub launcher_hardpoints: Option<f64>,
+    #[serde(rename = "turretFitted", default)]
+    pub turret_fitted: bool,
+    #[serde(rename = "launcherFitted", default)]
+    pub launcher_fitted: bool,
 }
 
 /// Outcome of a reverse name lookup. `Found` carries the unique
@@ -666,6 +696,66 @@ mod tests {
                 "row carrying both calibration keys: {:?}",
                 row.name
             );
+            // Slot layout values (docs/slot-layout-design.md
+            // section 3.4): every present layout value is finite,
+            // non-negative, and integral; any layout key implies
+            // category 6 (absence is allowed, never required);
+            // `turret_fitted || launcher_fitted` implies
+            // `slot_effects == [12]`; never both markers true;
+            // `max_sub_systems` present only on the four pinned
+            // type ids. Absence stays distinct from 0.0.
+            for value in [
+                row.hi_slots,
+                row.med_slots,
+                row.low_slots,
+                row.rig_slots,
+                row.max_sub_systems,
+                row.turret_hardpoints,
+                row.launcher_hardpoints,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                assert!(
+                    value.is_finite() && value >= 0.0 && value.fract() == 0.0,
+                    "negative, non-finite, or non-integral slot layout value on {:?}",
+                    row.name
+                );
+            }
+            if row.hi_slots.is_some()
+                || row.med_slots.is_some()
+                || row.low_slots.is_some()
+                || row.rig_slots.is_some()
+                || row.max_sub_systems.is_some()
+                || row.turret_hardpoints.is_some()
+                || row.launcher_hardpoints.is_some()
+            {
+                assert_eq!(
+                    row.category_id, 6,
+                    "non-ship carrying slot layout key: {:?}",
+                    row.name
+                );
+            }
+            if row.turret_fitted || row.launcher_fitted {
+                assert_eq!(
+                    row.slot_effects.as_slice(),
+                    [12],
+                    "hardpoint marker without slotEffects [12]: {:?}",
+                    row.name
+                );
+            }
+            assert!(
+                !(row.turret_fitted && row.launcher_fitted),
+                "row carrying both hardpoint markers: {:?}",
+                row.name
+            );
+            if row.max_sub_systems.is_some() {
+                assert!(
+                    matches!(row.type_id, 29984 | 29986 | 29988 | 29990),
+                    "maxSubSystems on unpinned hull {:?}",
+                    row.name
+                );
+            }
         }
         // Spot pins mirroring the generator oracles (design section
         // 5), read from dgmTypeAttributes.csv.bz2 during design.
@@ -859,5 +949,116 @@ mod tests {
         assert_eq!(structure_rig.upgrade_capacity, None);
         let raitaru = types.lookup_by_id(35825).expect("Raitaru row");
         assert_eq!(raitaru.upgrade_capacity, None);
+        // Slot layout spot pins (docs/slot-layout-design.md
+        // section 3.4), read from dgmTypeAttributes.csv.bz2 /
+        // dgmTypeEffects.csv.bz2 during design: Rifter 587 full
+        // layout (low 4.0, med 3.0, high 3.0, turret 3.0,
+        // launcher 2.0, rig 3.0, maxSubSystems absent); Legion
+        // 29986 zeros + 5.0; Capsule 670 absent/present split;
+        // Primae 2863 turret absent; Reaper 588 rig absent
+        // (1154 trap); 2889/499/405 markers; 37450 turret
+        // marker; 35921 launcher marker; no layout keys on
+        // 2048/31668/45623.
+        let rifter = types.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(rifter.low_slots, Some(4.0));
+        assert_eq!(rifter.med_slots, Some(3.0));
+        assert_eq!(rifter.hi_slots, Some(3.0));
+        assert_eq!(rifter.turret_hardpoints, Some(3.0));
+        assert_eq!(rifter.launcher_hardpoints, Some(2.0));
+        assert_eq!(rifter.rig_slots, Some(3.0));
+        assert_eq!(rifter.max_sub_systems, None);
+        let legion = types.lookup_by_id(29986).expect("Legion row");
+        assert_eq!(legion.low_slots, Some(0.0));
+        assert_eq!(legion.med_slots, Some(0.0));
+        assert_eq!(legion.hi_slots, Some(0.0));
+        assert_eq!(legion.turret_hardpoints, Some(0.0));
+        assert_eq!(legion.launcher_hardpoints, Some(0.0));
+        assert_eq!(legion.rig_slots, Some(3.0));
+        assert_eq!(legion.max_sub_systems, Some(5.0));
+        let capsule = types.lookup_by_id(670).expect("Capsule row");
+        assert_eq!(capsule.low_slots, None);
+        assert_eq!(capsule.med_slots, None);
+        assert_eq!(capsule.hi_slots, None);
+        assert_eq!(capsule.rig_slots, None);
+        assert_eq!(capsule.max_sub_systems, None);
+        assert_eq!(capsule.turret_hardpoints, Some(0.0));
+        assert_eq!(capsule.launcher_hardpoints, Some(0.0));
+        let primae = types.lookup_by_id(2863).expect("Primae row");
+        assert_eq!(primae.turret_hardpoints, None);
+        assert_eq!(primae.rig_slots, None);
+        assert_eq!(primae.med_slots, Some(0.0));
+        assert_eq!(primae.hi_slots, Some(0.0));
+        assert_eq!(primae.low_slots, Some(4.0));
+        assert_eq!(primae.launcher_hardpoints, Some(0.0));
+        let reaper = types.lookup_by_id(588).expect("Reaper row");
+        assert_eq!(reaper.rig_slots, None);
+        let autocannon = types.lookup_by_id(2889).expect("200mm AutoCannon II row");
+        assert!(autocannon.turret_fitted);
+        assert!(!autocannon.launcher_fitted);
+        let launcher = types
+            .lookup_by_id(499)
+            .expect("Light Missile Launcher I row");
+        assert!(launcher.launcher_fitted);
+        assert!(!launcher.turret_fitted);
+        let shield_booster = types
+            .lookup_by_id(405)
+            .expect("Micro Remote Shield Booster row");
+        assert!(!shield_booster.turret_fitted);
+        assert!(!shield_booster.launcher_fitted);
+        let ice_laser = types.lookup_by_id(37450).expect("Ice Mining Laser I row");
+        assert!(ice_laser.turret_fitted);
+        assert!(!ice_laser.launcher_fitted);
+        let standup = types
+            .lookup_by_id(35921)
+            .expect("Standup Anticapital Missile Launcher I row");
+        assert!(standup.launcher_fitted);
+        assert!(!standup.turret_fitted);
+        // No layout keys on module, rig, and subsystem rows.
+        for row in [damage_control, rig, subsystem] {
+            assert_eq!(row.hi_slots, None);
+            assert_eq!(row.med_slots, None);
+            assert_eq!(row.low_slots, None);
+            assert_eq!(row.rig_slots, None);
+            assert_eq!(row.max_sub_systems, None);
+            assert_eq!(row.turret_hardpoints, None);
+            assert_eq!(row.launcher_hardpoints, None);
+            assert!(!row.turret_fitted);
+            assert!(!row.launcher_fitted);
+        }
+    }
+
+    #[test]
+    fn fixture_parse_slot_layout_fields() {
+        // A row with the new keys loads into the new fields; a
+        // row without them loads with all None/false (old-
+        // catalogue tolerance, the twins' `default` pattern).
+        let with_keys = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[],"hiSlots":3.0,"turretFitted":true},
+                {"typeId":2889,"typeName":"200mm AutoCannon II","categoryId":7,"slotEffects":[12],"turretFitted":true}]}"#,
+        )
+        .expect("fixture parses");
+        let ship = with_keys.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(ship.hi_slots, Some(3.0));
+        assert!(ship.turret_fitted);
+        assert!(!ship.launcher_fitted);
+        let module = with_keys.lookup_by_id(2889).expect("module row");
+        assert!(module.turret_fitted);
+
+        let without_keys = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[]}]}"#,
+        )
+        .expect("fixture parses");
+        let ship = without_keys.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(ship.hi_slots, None);
+        assert_eq!(ship.med_slots, None);
+        assert_eq!(ship.low_slots, None);
+        assert_eq!(ship.rig_slots, None);
+        assert_eq!(ship.max_sub_systems, None);
+        assert_eq!(ship.turret_hardpoints, None);
+        assert_eq!(ship.launcher_hardpoints, None);
+        assert!(!ship.turret_fitted);
+        assert!(!ship.launcher_fitted);
     }
 }

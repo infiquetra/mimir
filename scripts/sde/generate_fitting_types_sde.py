@@ -45,7 +45,15 @@ column, `cargoCapacity` on every category 6 row from the invTypes
 calibration (docs/rig-calibration-design.md section 3.1) appends
 `upgradeCapacity` (dogma 1132) on category 6 rows and
 `upgradeCost` (dogma 1153) on slot-effect-2663 rows after the bay
-keys.
+keys. Slot layout (docs/slot-layout-design.md section 3.1) appends
+nine further keys after the calibration keys in the locked order:
+`hiSlots` (dogma 14), `medSlots` (13), `lowSlots` (12),
+`rigSlots` (1137), `maxSubSystems` (1367), `turretSlotsLeft`
+(102), `launcherSlotsLeft` (101) on category 6 rows only, sparse
+by presence, and sparse boolean markers `turretFitted` (effect
+42) and `launcherFitted` (effect 40) wherever a marker row
+exists. Dogma 1154 `upgradeSlotsLeft`, attribute 47 `slots`, and
+the subsystem modifiers 1368/1369/1374-1376 are never read here.
 """
 
 import bz2
@@ -155,6 +163,33 @@ DRONE_BANDWIDTH_USED_ATTR = 1272
 CALIBRATION_ATTR_IDS = {1132, 1153}
 SHIP_CALIBRATION_ATTR = 1132
 RIG_CALIBRATION_ATTR = 1153
+
+# Slot layout (docs/slot-layout-design.md section 2.1):
+# dogmaAttributes.jsonl _key 14 "hiSlots", 13 "medSlots",
+# 12 "lowSlots", 1137 "rigSlots", 1367 "maxSubSystems",
+# 102 "turretSlotsLeft", 101 "launcherSlotsLeft", each dataType
+# 4 (float) with valueFloat present and valueInt the string
+# "None". Catalogue keys are the dogma names verbatim. Dogma
+# 1154 "upgradeSlotsLeft" is the unchosen rig source and is
+# never read; attribute 47 "slots", 64, 106, 212, 1366, 2056,
+# and the subsystem modifiers 1368/1369/1374-1376 are barred.
+SLOT_LAYOUT_ATTR_IDS = {14, 13, 12, 1137, 1367, 102, 101}
+HI_SLOTS_ATTR = 14
+MED_SLOTS_ATTR = 13
+LOW_SLOTS_ATTR = 12
+RIG_SLOTS_ATTR = 1137
+MAX_SUBSYSTEMS_ATTR = 1367
+TURRET_SLOTS_LEFT_ATTR = 102
+LAUNCHER_SLOTS_LEFT_ATTR = 101
+
+# Hardpoint consumption markers (docs/slot-layout-design.md
+# section 2.3): dogmaEffects.jsonl _key 40 "launcherFitted"
+# ("Requires a launcher hardpoint") and 42 "turretFitted"
+# ("Requires a turret hardpoint"), both pure markers with no
+# modifier payload. Attribute 47 is not a substitute and is
+# never read.
+LAUNCHER_FITTED_EFFECT = 40
+TURRET_FITTED_EFFECT = 42
 
 CACHES = {
     "invTypes": "invTypes.csv.bz2",
@@ -369,6 +404,184 @@ CALIBRATION_ORACLES = [
     (2048, "upgradeCost", None),
     (35825, "upgradeCapacity", None),
 ]
+
+# Slot layout oracles (docs/slot-layout-design.md section 3.3):
+# each value read directly from dgmTypeAttributes.csv.bz2 /
+# dgmTypeEffects.csv.bz2 during design. Tuple shape mirrors
+# CALIBRATION_ORACLES: (typeId, key, expected-or-None). A None
+# expected means the key must be absent from that row.
+SLOT_LAYOUT_ORACLES = [
+    # Rifter 587: low 4.0, med 3.0, high 3.0, launcher 2.0,
+    # turret 3.0, rig 3.0, maxSubSystems absent.
+    (587, "lowSlots", 4.0),
+    (587, "medSlots", 3.0),
+    (587, "hiSlots", 3.0),
+    (587, "launcherSlotsLeft", 2.0),
+    (587, "turretSlotsLeft", 3.0),
+    (587, "rigSlots", 3.0),
+    (587, "maxSubSystems", None),
+    # Osprey 620: 3.0 / 5.0 / 5.0 / 2.0 / 1.0 / 3.0 / absent.
+    (620, "lowSlots", 3.0),
+    (620, "medSlots", 5.0),
+    (620, "hiSlots", 5.0),
+    (620, "launcherSlotsLeft", 2.0),
+    (620, "turretSlotsLeft", 1.0),
+    (620, "rigSlots", 3.0),
+    (620, "maxSubSystems", None),
+    # Raven 638: 5.0 / 7.0 / 7.0 / 6.0 / 4.0 / 3.0 / absent.
+    (638, "lowSlots", 5.0),
+    (638, "medSlots", 7.0),
+    (638, "hiSlots", 7.0),
+    (638, "launcherSlotsLeft", 6.0),
+    (638, "turretSlotsLeft", 4.0),
+    (638, "rigSlots", 3.0),
+    (638, "maxSubSystems", None),
+    # Erebus 671: 7.0 / 6.0 / 8.0 / 0.0 / 6.0 / 3.0 / absent.
+    (671, "lowSlots", 7.0),
+    (671, "medSlots", 6.0),
+    (671, "hiSlots", 8.0),
+    (671, "launcherSlotsLeft", 0.0),
+    (671, "turretSlotsLeft", 6.0),
+    (671, "rigSlots", 3.0),
+    (671, "maxSubSystems", None),
+    # Legion 29986 (and identically 29984 Tengu, 29988 Proteus,
+    # 29990 Loki): 0.0 / 0.0 / 0.0 / 0.0 / 0.0 / 3.0 / 5.0.
+    (29986, "lowSlots", 0.0),
+    (29986, "medSlots", 0.0),
+    (29986, "hiSlots", 0.0),
+    (29986, "launcherSlotsLeft", 0.0),
+    (29986, "turretSlotsLeft", 0.0),
+    (29986, "rigSlots", 3.0),
+    (29986, "maxSubSystems", 5.0),
+    (29984, "maxSubSystems", 5.0),
+    (29988, "maxSubSystems", 5.0),
+    (29990, "maxSubSystems", 5.0),
+    # Capsule 670: low/med/high/rig/maxSubSystems absent,
+    # launcherSlotsLeft 0.0 present, turretSlotsLeft 0.0 present.
+    # (33328 identical on presence.)
+    (670, "lowSlots", None),
+    (670, "medSlots", None),
+    (670, "hiSlots", None),
+    (670, "rigSlots", None),
+    (670, "maxSubSystems", None),
+    (670, "launcherSlotsLeft", 0.0),
+    (670, "turretSlotsLeft", 0.0),
+    (33328, "lowSlots", None),
+    (33328, "medSlots", None),
+    (33328, "hiSlots", None),
+    (33328, "rigSlots", None),
+    (33328, "maxSubSystems", None),
+    (33328, "launcherSlotsLeft", 0.0),
+    (33328, "turretSlotsLeft", 0.0),
+    # Primae 2863: turretSlotsLeft absent, rigSlots absent,
+    # medSlots 0.0, hiSlots 0.0, lowSlots 4.0,
+    # launcherSlotsLeft 0.0. Noctis 2998: turretSlotsLeft
+    # absent, high 8.0, rig 3.0.
+    (2863, "turretSlotsLeft", None),
+    (2863, "rigSlots", None),
+    (2863, "medSlots", 0.0),
+    (2863, "hiSlots", 0.0),
+    (2863, "lowSlots", 4.0),
+    (2863, "launcherSlotsLeft", 0.0),
+    (2998, "turretSlotsLeft", None),
+    (2998, "hiSlots", 8.0),
+    (2998, "rigSlots", 3.0),
+    # Echelon 3532 present-zero pin: lowSlots 0.0 and hiSlots
+    # 0.0 present.
+    (3532, "lowSlots", 0.0),
+    (3532, "hiSlots", 0.0),
+    # Reaper 588 un-chosen-source pin: rigSlots absent even
+    # though 1154 = 0.0 exists in the cache.
+    (588, "rigSlots", None),
+    (596, "rigSlots", None),
+    (601, "rigSlots", None),
+    (606, "rigSlots", None),
+    (33079, "rigSlots", None),
+    (33081, "rigSlots", None),
+    (33083, "rigSlots", None),
+    # Punisher 597 (demo hull): launcherSlotsLeft 0.0 present,
+    # turretSlotsLeft 4.0, low 5.0, med 2.0, high 4.0, rig 3.0.
+    (597, "launcherSlotsLeft", 0.0),
+    (597, "turretSlotsLeft", 4.0),
+    (597, "lowSlots", 5.0),
+    (597, "medSlots", 2.0),
+    (597, "hiSlots", 4.0),
+    (597, "rigSlots", 3.0),
+    # Category gates: module, rig, subsystem, and material rows
+    # carry none of the seven ship keys.
+    (2048, "hiSlots", None),
+    (2048, "medSlots", None),
+    (2048, "lowSlots", None),
+    (2048, "rigSlots", None),
+    (2048, "maxSubSystems", None),
+    (2048, "turretSlotsLeft", None),
+    (2048, "launcherSlotsLeft", None),
+    (31668, "hiSlots", None),
+    (31668, "medSlots", None),
+    (31668, "lowSlots", None),
+    (31668, "rigSlots", None),
+    (31668, "maxSubSystems", None),
+    (31668, "turretSlotsLeft", None),
+    (31668, "launcherSlotsLeft", None),
+    (45623, "hiSlots", None),
+    (45623, "medSlots", None),
+    (45623, "lowSlots", None),
+    (45623, "rigSlots", None),
+    (45623, "maxSubSystems", None),
+    (45623, "turretSlotsLeft", None),
+    (45623, "launcherSlotsLeft", None),
+    (34, "hiSlots", None),
+    (34, "medSlots", None),
+    (34, "lowSlots", None),
+    (34, "rigSlots", None),
+    (34, "maxSubSystems", None),
+    (34, "turretSlotsLeft", None),
+    (34, "launcherSlotsLeft", None),
+    # Markers: effect 42 turretFitted / effect 40
+    # launcherFitted.
+    (2889, "turretFitted", True),
+    (2889, "launcherFitted", None),
+    (499, "launcherFitted", True),
+    (499, "turretFitted", None),
+    (10631, "launcherFitted", True),
+    (2410, "launcherFitted", True),
+    # 405 carries neither marker (known neither).
+    (405, "turretFitted", None),
+    (405, "launcherFitted", None),
+    # Decoy pins: attribute 47 present, markers absent.
+    (27914, "turretFitted", None),
+    (27914, "launcherFitted", None),
+    (24348, "turretFitted", None),
+    (24348, "launcherFitted", None),
+    (60313, "turretFitted", None),
+    (60313, "launcherFitted", None),
+    (443, "turretFitted", None),
+    (443, "launcherFitted", None),
+    # False-negative pin: 37450 carries turretFitted true
+    # with no 47 row.
+    (37450, "turretFitted", True),
+    # Category-66 pin: no category gate.
+    (35921, "launcherFitted", True),
+    # 587 carries neither marker key.
+    (587, "turretFitted", None),
+    (587, "launcherFitted", None),
+]
+
+# Expected slot layout key counts (design section 3.1).
+SLOT_LAYOUT_EXPECTED_COUNTS = {
+    "hiSlots": 402,
+    "medSlots": 402,
+    "lowSlots": 402,
+    "rigSlots": 380,
+    "maxSubSystems": 4,
+    "turretSlotsLeft": 402,
+    "launcherSlotsLeft": 404,
+    "turretFitted": 658,
+    "launcherFitted": 147,
+}
+
+# Pinned tech-3 carrier set (design section 3.4).
+TECH3_CARRIER_SET = {29984, 29986, 29988, 29990}
 
 _STACKED_SUFFIX_RE = re.compile(r" x[0-9]+$")
 
@@ -603,6 +816,50 @@ def main():
         seen_calibration_keys.add(key)
         calibrations_by_type.setdefault(type_id, {})[attribute_id] = value
 
+    # Slot layout attributes per type (design section 3.1):
+    # only the seven locked attributes, each parsed from
+    # valueFloat. An unparseable, duplicated, non-finite,
+    # negative, or non-integral wanted row fails loudly and
+    # writes nothing. Integrality is locked: every cached
+    # value of all seven attributes is an integral float.
+    slot_layouts_by_type = {}
+    seen_slot_layout_keys = set()
+    for row in type_attributes:
+        attribute_id = int(row["attributeID"])
+        if attribute_id not in SLOT_LAYOUT_ATTR_IDS:
+            continue
+        type_id = int(row["typeID"])
+        key = (type_id, attribute_id)
+        if key in seen_slot_layout_keys:
+            fail(
+                f"duplicate slot layout row (type {type_id}, "
+                f"attribute {attribute_id}) in dgmTypeAttributes"
+            )
+        try:
+            value = float(row["valueFloat"])
+        except (TypeError, ValueError):
+            fail(
+                f"unparseable slot layout value {row['valueFloat']!r} "
+                f"for (type {type_id}, attribute {attribute_id})"
+            )
+        if not math.isfinite(value):
+            fail(
+                f"non-finite slot layout value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        if value < 0:
+            fail(
+                f"negative slot layout value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        if float(value).is_integer() is False:
+            fail(
+                f"non-integral slot layout value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        seen_slot_layout_keys.add(key)
+        slot_layouts_by_type.setdefault(type_id, {})[attribute_id] = value
+
     types = []
     missing_group = 0
     resource_key_counts = Counter()
@@ -610,6 +867,7 @@ def main():
     resonance_key_counts = Counter()
     bay_key_counts = Counter()
     calibration_key_counts = Counter()
+    slot_layout_key_counts = Counter()
     for row in inv_types:
         if row["published"] != "1":
             continue
@@ -791,6 +1049,44 @@ def main():
         if slot_effects == [2663] and RIG_CALIBRATION_ATTR in calibrations:
             entry["upgradeCost"] = calibrations[RIG_CALIBRATION_ATTR]
             calibration_key_counts["upgradeCost"] += 1
+        # Additive slot layout emission (design section 3.1):
+        # nine keys append after the calibration keys in the
+        # locked order hiSlots, medSlots, lowSlots, rigSlots,
+        # maxSubSystems, turretSlotsLeft, launcherSlotsLeft,
+        # turretFitted, launcherFitted. The seven ship keys are
+        # sparse by presence on category 6 rows only; the two
+        # markers are sparse true-only on any published row with
+        # no category gate.
+        layouts = slot_layouts_by_type.get(type_id, {})
+        if category_id == 6:
+            if HI_SLOTS_ATTR in layouts:
+                entry["hiSlots"] = layouts[HI_SLOTS_ATTR]
+                slot_layout_key_counts["hiSlots"] += 1
+            if MED_SLOTS_ATTR in layouts:
+                entry["medSlots"] = layouts[MED_SLOTS_ATTR]
+                slot_layout_key_counts["medSlots"] += 1
+            if LOW_SLOTS_ATTR in layouts:
+                entry["lowSlots"] = layouts[LOW_SLOTS_ATTR]
+                slot_layout_key_counts["lowSlots"] += 1
+            if RIG_SLOTS_ATTR in layouts:
+                entry["rigSlots"] = layouts[RIG_SLOTS_ATTR]
+                slot_layout_key_counts["rigSlots"] += 1
+            if MAX_SUBSYSTEMS_ATTR in layouts:
+                entry["maxSubSystems"] = layouts[MAX_SUBSYSTEMS_ATTR]
+                slot_layout_key_counts["maxSubSystems"] += 1
+            if TURRET_SLOTS_LEFT_ATTR in layouts:
+                entry["turretSlotsLeft"] = layouts[TURRET_SLOTS_LEFT_ATTR]
+                slot_layout_key_counts["turretSlotsLeft"] += 1
+            if LAUNCHER_SLOTS_LEFT_ATTR in layouts:
+                entry["launcherSlotsLeft"] = layouts[LAUNCHER_SLOTS_LEFT_ATTR]
+                slot_layout_key_counts["launcherSlotsLeft"] += 1
+        type_effects_set = effects_by_type.get(type_id, set())
+        if TURRET_FITTED_EFFECT in type_effects_set:
+            entry["turretFitted"] = True
+            slot_layout_key_counts["turretFitted"] += 1
+        if LAUNCHER_FITTED_EFFECT in type_effects_set:
+            entry["launcherFitted"] = True
+            slot_layout_key_counts["launcherFitted"] += 1
         types.append(entry)
 
     types.sort(key=lambda entry: entry["typeId"])
@@ -964,6 +1260,50 @@ def main():
             "present as 0.0"
         )
 
+    # Slot layout oracles (design section 3.3). A None expected
+    # value means the key must be absent from that row. Markers
+    # compare as booleans: the emitted value is JSON true.
+    for type_id, key, expected in SLOT_LAYOUT_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(f"slot layout oracle type {type_id} missing from extract")
+        if expected is None:
+            if key in entry:
+                fail(
+                    f"slot layout oracle type {type_id} carries {key}="
+                    f"{entry[key]!r}, expected absent"
+                )
+        elif entry.get(key) != expected:
+            fail(
+                f"slot layout oracle type {type_id} {key}="
+                f"{entry.get(key)!r}, expected {expected!r}"
+            )
+    # Explicit-zero pin: type 3532 must carry lowSlots and
+    # hiSlots present as 0.0, never absent (the two are
+    # distinct, the calibration 588 pin style).
+    zero_slot_entry = by_id.get(3532)
+    if (
+        zero_slot_entry is None
+        or "lowSlots" not in zero_slot_entry
+        or "hiSlots" not in zero_slot_entry
+    ):
+        fail(
+            "slot layout oracle type 3532 lowSlots/hiSlots keys must "
+            "be present as 0.0"
+        )
+    # Un-chosen-source pin: rigSlots must be absent on all
+    # seven 1154-only hulls. A regression to 1154 or a 1154
+    # fallback fails here (design section 3.3).
+    for type_id in (588, 596, 601, 606, 33079, 33081, 33083):
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(f"slot layout oracle type {type_id} missing from extract")
+        if "rigSlots" in entry:
+            fail(
+                f"slot layout oracle type {type_id} carries rigSlots="
+                f"{entry['rigSlots']!r}, expected absent (1154 trap)"
+            )
+
     # Catalogue-wide invariant (design sections 5 and 3): every
     # category-6 row carries both ship outputs and all seven base
     # ship stats, so a future cache refresh that drops a ship row
@@ -1089,6 +1429,56 @@ def main():
             fail(f"rig type {entry['typeId']} missing upgradeCost")
         if "upgradeCapacity" in entry and "upgradeCost" in entry:
             fail(f"type {entry['typeId']} carries both calibration keys")
+        # Slot layout invariants (design section 3.4): every
+        # present ship layout value is finite, non-negative,
+        # and integral (not a bool); each of the seven keys
+        # appears only on category 6 rows (absence allowed,
+        # never required); markers are true-only, only on
+        # rows whose slotEffects is exactly [12], and never on
+        # the same row.
+        for key in (
+            "hiSlots",
+            "medSlots",
+            "lowSlots",
+            "rigSlots",
+            "maxSubSystems",
+            "turretSlotsLeft",
+            "launcherSlotsLeft",
+        ):
+            if key in entry:
+                value = entry[key]
+                if (
+                    not isinstance(value, (int, float))
+                    or isinstance(value, bool)
+                    or not math.isfinite(float(value))
+                    or float(value) < 0
+                    or float(value).is_integer() is False
+                ):
+                    fail(
+                        f"type {entry['typeId']} {key}={value!r} "
+                        "is not finite, non-negative, and integral"
+                    )
+                if entry["categoryId"] != 6:
+                    fail(
+                        f"non-ship type {entry['typeId']} carries {key}"
+                    )
+        for key in ("turretFitted", "launcherFitted"):
+            if key in entry and entry[key] is not True:
+                fail(
+                    f"type {entry['typeId']} {key}={entry[key]!r} "
+                    "is not true-only"
+                )
+        if (
+            "turretFitted" in entry or "launcherFitted" in entry
+        ) and entry["slotEffects"] != [12]:
+            fail(
+                f"type {entry['typeId']} carries a hardpoint marker "
+                f"without slotEffects [12]: {entry['slotEffects']}"
+            )
+        if "turretFitted" in entry and "launcherFitted" in entry:
+            fail(
+                f"type {entry['typeId']} carries both hardpoint markers"
+            )
 
     # Invariants the parser relies on (design sections 5.2, 6.3): no
     # shipment name may contain the header delimiters, and no published
@@ -1103,6 +1493,24 @@ def main():
         if _STACKED_SUFFIX_RE.search(entry["typeName"]):
             fail(
                 f"type {entry['typeId']} name looks like a stacked line"
+            )
+
+    # Slot layout catalogue-wide locks (design section 3.4):
+    # maxSubSystems carriers are exactly the four tech-3 hulls,
+    # and key counts equal the section 3.1 expectations.
+    max_sub_carriers = {
+        entry["typeId"] for entry in types if "maxSubSystems" in entry
+    }
+    if max_sub_carriers != TECH3_CARRIER_SET:
+        fail(
+            f"maxSubSystems carriers {sorted(max_sub_carriers)}, "
+            f"expected {sorted(TECH3_CARRIER_SET)}"
+        )
+    for key, expected in SLOT_LAYOUT_EXPECTED_COUNTS.items():
+        actual = slot_layout_key_counts[key]
+        if actual != expected:
+            fail(
+                f"slot layout key {key} count {actual}, expected {expected}"
             )
 
     duplicate_names = sum(
@@ -1161,6 +1569,17 @@ def main():
     print(
         f"calibration_keys upgradeCapacity={calibration_key_counts['upgradeCapacity']} "
         f"upgradeCost={calibration_key_counts['upgradeCost']}"
+    )
+    print(
+        f"slot_layout_keys hiSlots={slot_layout_key_counts['hiSlots']} "
+        f"medSlots={slot_layout_key_counts['medSlots']} "
+        f"lowSlots={slot_layout_key_counts['lowSlots']} "
+        f"rigSlots={slot_layout_key_counts['rigSlots']} "
+        f"maxSubSystems={slot_layout_key_counts['maxSubSystems']} "
+        f"turretSlotsLeft={slot_layout_key_counts['turretSlotsLeft']} "
+        f"launcherSlotsLeft={slot_layout_key_counts['launcherSlotsLeft']} "
+        f"turretFitted={slot_layout_key_counts['turretFitted']} "
+        f"launcherFitted={slot_layout_key_counts['launcherFitted']}"
     )
 
 
