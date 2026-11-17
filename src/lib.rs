@@ -18,6 +18,7 @@ pub mod error;
 pub mod esi;
 pub mod fitting;
 pub mod names;
+pub mod portraits;
 pub mod storage;
 pub mod ui;
 

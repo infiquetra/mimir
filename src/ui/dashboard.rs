@@ -3,15 +3,32 @@
 
 use chrono::Utc;
 
+use super::portraits::{self, PortraitImageCache};
 use super::wallet::compute_analytics;
 use super::widgets;
 use crate::app::state::{AppState, LoadState, View};
 use crate::names::resolver::NameResolver;
 use crate::names::sde::Sde;
 
-pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde, resolver: &NameResolver) {
+pub fn show(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    sde: &Sde,
+    resolver: &NameResolver,
+    cache: &mut PortraitImageCache,
+) {
     ui.heading("Dashboard");
     widgets::mode_notice(ui, state.demo, state.offline);
+    // Portraits for every visible character: freed textures for
+    // removed characters go first, then one fetch is queued per
+    // character that has no portrait in flight or failed yet. In
+    // demo mode the shell drains without spawning, so this makes
+    // zero network calls and every portrait stays a placeholder.
+    cache.prune(&state.characters);
+    let visible_ids: Vec<i64> = state.characters.iter().map(|c| c.character_id).collect();
+    for id in visible_ids {
+        portraits::ensure_portrait_requested(state, id);
+    }
     if state.characters.is_empty() {
         widgets::no_character_panel(ui);
         ui.horizontal(|ui| {
@@ -53,6 +70,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde, resolver: &NameR
     egui::Grid::new("dashboard_overview")
         .striped(true)
         .show(ui, |ui| {
+            ui.label("Portrait");
             ui.label("Character (click to switch)");
             ui.label("Corporation");
             ui.label("Wallet");
@@ -62,6 +80,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde, resolver: &NameR
             ui.label("Location / ship");
             ui.end_row();
             for (id, name, corp, is_active) in &rows {
+                portraits::show_portrait(ui, cache, state, *id, name, portraits::LIST_PORTRAIT_PX);
                 let summary = state.summaries.get(id);
                 if ui
                     .selectable_label(

@@ -5,18 +5,34 @@
 //! Auth and persistence run in F1/F2: this view only sets the request
 //! flags on `AppState` and reflects `AuthState`.
 
+use super::portraits::{self, PortraitImageCache};
 use super::widgets;
 use crate::app::state::{
-    ship_display_name, AppState, AuthState, CharacterDetailData, LoadState, SectionError,
-    StepUpRequest,
+    ship_display_name, AppState, AuthState, CharacterDetailData, LoadState, PortraitState,
+    SectionError, StepUpRequest,
 };
 use crate::config::EveConfig;
 use crate::esi::models::{CharacterAttributes, JumpClone, Standing};
 use crate::names::resolver::NameResolver;
 
-pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
+pub fn show(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    resolver: &NameResolver,
+    cache: &mut PortraitImageCache,
+) {
     ui.heading("Characters");
     widgets::mode_notice(ui, state.demo, state.offline);
+    // Portraits for every visible character: freed textures for
+    // removed characters go first, then one fetch is queued per
+    // character that has no portrait in flight or failed yet. In
+    // demo mode the shell drains without spawning, so this makes
+    // zero network calls and every portrait stays a placeholder.
+    cache.prune(&state.characters);
+    let visible_ids: Vec<i64> = state.characters.iter().map(|c| c.character_id).collect();
+    for id in visible_ids {
+        portraits::ensure_portrait_requested(state, id);
+    }
 
     // --- Auth status + add-character ---
     ui.label(format!("Sign-in: {}", state.auth.label()));
@@ -70,18 +86,22 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
             )
         })
         .collect();
-    for (id, name, corp, alliance, is_active) in &rows {
-        let mut label = format!("{} — {}", name, corp);
-        if let Some(alliance) = alliance {
-            label.push_str(&format!(" / {}", alliance));
+    egui::Grid::new("switcher_portraits").show(ui, |ui| {
+        for (id, name, corp, alliance, is_active) in &rows {
+            portraits::show_portrait(ui, cache, state, *id, name, portraits::LIST_PORTRAIT_PX);
+            let mut label = format!("{} — {}", name, corp);
+            if let Some(alliance) = alliance {
+                label.push_str(&format!(" / {}", alliance));
+            }
+            if *is_active {
+                label.push_str(" (active)");
+            }
+            if ui.selectable_label(*is_active, label).clicked() {
+                switch_to = Some(*id);
+            }
+            ui.end_row();
         }
-        if *is_active {
-            label.push_str(" (active)");
-        }
-        if ui.selectable_label(*is_active, label).clicked() {
-            switch_to = Some(*id);
-        }
-    }
+    });
     if let Some(id) = switch_to {
         state.set_active_character(id);
     }
@@ -100,6 +120,35 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
             } else {
                 info.name.clone()
             };
+            let portrait_id = state.active_character_id;
+            // The portrait renders above the detail grid, not as a
+            // grid row: a 96px cell inside `egui::Grid` does not
+            // grow its row, so the image would paint over the rows
+            // below (observed in the demo screenshot).
+            match portrait_id {
+                Some(active_id) => {
+                    ui.horizontal(|ui| {
+                        portraits::show_portrait(
+                            ui,
+                            cache,
+                            state,
+                            active_id,
+                            &portrait_name,
+                            portraits::DETAIL_PORTRAIT_PX,
+                        );
+                        let status = portraits::placeholder_status(
+                            state.demo,
+                            state.portrait_state(active_id),
+                        );
+                        if !status.is_empty() {
+                            ui.label(status);
+                        }
+                    });
+                }
+                None => {
+                    ui.label("No character selected.");
+                }
+            }
             egui::Grid::new("character_detail")
                 .striped(true)
                 .show(ui, |ui| {
@@ -145,6 +194,22 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
                 tracing::warn!("[CHAR] retry requested after detail load error");
                 state.retry_requested = true;
             }
+        }
+    }
+
+    // A failed portrait retries only from here, never from the
+    // render path (which would loop at frame rate). Demo mode
+    // never shows the button: no fetch is ever attempted there.
+    if let Some(active_id) = state.active_character_id {
+        if !state.demo
+            && matches!(state.portrait_state(active_id), PortraitState::Failed)
+            && ui.button("Retry portrait").clicked()
+        {
+            tracing::info!(
+                "[PORTRAIT] portrait retry requested from Characters view character_id={}",
+                active_id
+            );
+            state.request_portrait(active_id);
         }
     }
 

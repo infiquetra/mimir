@@ -624,6 +624,20 @@ pub fn ship_display_name(custom_name: &str, resolved_type: Option<&str>) -> Opti
     }
 }
 
+/// Portrait load state for one character, keyed by character id in
+/// `AppState::portraits`. `Ready` carries the decoded image (decode
+/// happens once at landing, never per frame); every other variant
+/// renders as the name/initial placeholder — never a fabricated or
+/// stock face, never another character's image.
+#[derive(Debug, Clone, Default)]
+pub enum PortraitState {
+    #[default]
+    NotRequested,
+    Loading,
+    Ready(Arc<image::DynamicImage>),
+    Failed,
+}
+
 /// One row of the multi-character overview grid. The integrator fills this
 /// from F2 repositories / F1 endpoints per character; `None` fields render
 /// as "not loaded" instead of a guessed value. Display strings (`training`,
@@ -671,6 +685,14 @@ pub struct AppState {
 
     // Multi-character overview, keyed by character id (integrator-filled).
     pub summaries: HashMap<i64, CharacterSummary>,
+
+    // Per-character portrait states, keyed by character id. Keyed like
+    // `summaries`, so a late landing writes only its own slot and a
+    // character switch never clears the map; `remove_character` drops
+    // the removed id's entry. `portrait_requests` is the drained
+    // request queue (views call `request_portrait`).
+    pub portraits: HashMap<i64, PortraitState>,
+    pub portrait_requests: Vec<i64>,
 
     // View-local UI state (survives across frames, unlike egui closures).
     pub skill_search: String,
@@ -977,6 +999,15 @@ impl AppState {
         tracing::info!("[CHAR] remove character_id={}", character_id);
         self.characters.retain(|c| c.character_id != character_id);
         self.summaries.remove(&character_id);
+        // The portrait entry is keyed to the removed character:
+        // drop it and any queued fetch so a late landing can never
+        // resurrect it.
+        tracing::debug!(
+            "[PORTRAIT] dropping portrait of removed character_id={}",
+            character_id
+        );
+        self.portraits.remove(&character_id);
+        self.portrait_requests.retain(|id| *id != character_id);
         if self.active_character_id == Some(character_id) {
             self.active_character_id = None;
             // The removed character owned the loaded assets; never show
@@ -1032,6 +1063,9 @@ impl AppState {
             self.stepup_requested = None;
         }
         if self.characters.is_empty() {
+            tracing::debug!("[PORTRAIT] clearing portraits when no characters remain");
+            self.portraits.clear();
+            self.portrait_requests.clear();
             self.skills = LoadState::Empty;
             self.wallet = LoadState::Empty;
             self.assets = LoadState::Empty;
@@ -1073,6 +1107,62 @@ impl AppState {
         } else {
             "Refresh requested...".to_string()
         };
+    }
+
+    /// Current portrait state for one character; `NotRequested` when
+    /// the character has no entry yet.
+    pub fn portrait_state(&self, character_id: i64) -> &PortraitState {
+        self.portraits
+            .get(&character_id)
+            .unwrap_or(&PortraitState::NotRequested)
+    }
+
+    /// Queue one portrait fetch for a known character. Unknown ids
+    /// are ignored; `Ready`/`Loading` entries no-op; `NotRequested`
+    /// and `Failed` entries move to `Loading` with one queued id
+    /// (deduped). The shell drains with `take_portrait_requests`.
+    pub fn request_portrait(&mut self, character_id: i64) {
+        if !self
+            .characters
+            .iter()
+            .any(|c| c.character_id == character_id)
+        {
+            tracing::warn!(
+                "[PORTRAIT] ignoring portrait request for unknown character_id={}",
+                character_id
+            );
+            return;
+        }
+        match self.portrait_state(character_id) {
+            PortraitState::Ready(_) | PortraitState::Loading => {
+                tracing::debug!(
+                    "[PORTRAIT] portrait request skipped character_id={}",
+                    character_id
+                );
+            }
+            PortraitState::NotRequested | PortraitState::Failed => {
+                tracing::info!(
+                    "[PORTRAIT] portrait requested character_id={}",
+                    character_id
+                );
+                self.portraits.insert(character_id, PortraitState::Loading);
+                if !self.portrait_requests.contains(&character_id) {
+                    self.portrait_requests.push(character_id);
+                }
+            }
+        }
+    }
+
+    /// Drain the queued portrait requests (shell side). The queue is
+    /// cleared even when the shell ends up spawning nothing (demo
+    /// mode, missing backends): a stale id must never fetch later.
+    pub fn take_portrait_requests(&mut self) -> Vec<i64> {
+        let drained = std::mem::take(&mut self.portrait_requests);
+        tracing::debug!(
+            "[PORTRAIT] portrait requests drained count={}",
+            drained.len()
+        );
+        drained
     }
 }
 
@@ -2144,5 +2234,95 @@ mod tests {
         state.remove_character(1);
         assert!(state.characters.is_empty());
         assert_write_state_cleared(&state);
+    }
+
+    fn portrait_state_with_dimensions(width: u32, height: u32) -> PortraitState {
+        PortraitState::Ready(Arc::new(image::DynamicImage::new_rgb8(width, height)))
+    }
+
+    #[test]
+    fn portrait_request_queues_once_and_sets_loading() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.request_portrait(1);
+        // Second request while Loading: no duplicate queue entry.
+        state.request_portrait(1);
+        assert_eq!(state.portrait_requests, vec![1]);
+        assert!(matches!(state.portrait_state(1), PortraitState::Loading));
+        assert_eq!(state.take_portrait_requests(), vec![1]);
+        assert!(state.portrait_requests.is_empty());
+    }
+
+    #[test]
+    fn portrait_request_ignores_unknown_characters() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One")];
+        state.set_active_character(1);
+        state.request_portrait(999);
+        assert!(state.portrait_requests.is_empty());
+        assert!(matches!(
+            state.portrait_state(999),
+            PortraitState::NotRequested
+        ));
+    }
+
+    #[test]
+    fn portrait_request_skips_ready_and_requeues_failed() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state
+            .portraits
+            .insert(1, portrait_state_with_dimensions(8, 8));
+        state.request_portrait(1);
+        assert!(state.portrait_requests.is_empty());
+        assert!(matches!(state.portrait_state(1), PortraitState::Ready(_)));
+        // A failed portrait is retried on the next request.
+        state.portraits.insert(2, PortraitState::Failed);
+        state.request_portrait(2);
+        assert_eq!(state.portrait_requests, vec![2]);
+        assert!(matches!(state.portrait_state(2), PortraitState::Loading));
+    }
+
+    #[test]
+    fn portrait_map_survives_character_switch() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state
+            .portraits
+            .insert(1, portrait_state_with_dimensions(8, 8));
+        state.set_active_character(2);
+        // Keyed like summaries: the switched-away character's
+        // portrait stays in its own slot for when the user returns.
+        assert!(matches!(state.portrait_state(1), PortraitState::Ready(_)));
+        assert!(matches!(
+            state.portrait_state(2),
+            PortraitState::NotRequested
+        ));
+    }
+
+    #[test]
+    fn removing_character_drops_its_portrait_and_queue() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state
+            .portraits
+            .insert(1, portrait_state_with_dimensions(8, 8));
+        state.portraits.insert(2, PortraitState::Loading);
+        state.portrait_requests = vec![2];
+        state.remove_character(2);
+        assert!(matches!(
+            state.portrait_state(2),
+            PortraitState::NotRequested
+        ));
+        assert!(state.portrait_requests.is_empty());
+        assert!(matches!(state.portrait_state(1), PortraitState::Ready(_)));
+        // Removing the last character clears the whole map.
+        state.remove_character(1);
+        assert!(state.characters.is_empty());
+        assert!(state.portraits.is_empty());
     }
 }

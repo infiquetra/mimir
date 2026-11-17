@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use mimir::app::shell::{Backends, MimirApp};
 use mimir::auth::jwt_verify::JwtVerifier;
 use mimir::auth::token_store::TokenStore;
+use mimir::portraits::PortraitService;
 use mimir::storage::db;
 use mimir::EsiClient;
 
@@ -101,6 +102,10 @@ fn main() -> eframe::Result<()> {
                 Some(verifier) => client.with_jwt_verifier(verifier.clone()),
                 None => client,
             };
+            // Portrait service construction performs no network or
+            // disk I/O, so it runs in demo mode too; the shell
+            // drain guarantees demo mode never spawns a fetch.
+            let portraits = Arc::new(PortraitService::new(db::app_cache_dir()));
             match EsiClient::new() {
                 Ok(client) => Some(Backends {
                     esi: Arc::new(attach_verifier(
@@ -109,6 +114,7 @@ fn main() -> eframe::Result<()> {
                     token_store,
                     db: Arc::new(Mutex::new(conn)),
                     jwt_verifier,
+                    portraits,
                 }),
                 Err(e) => {
                     tracing::warn!("[ESI] client construction failed: {}", e);
@@ -117,6 +123,7 @@ fn main() -> eframe::Result<()> {
                         token_store,
                         db: Arc::new(Mutex::new(conn)),
                         jwt_verifier,
+                        portraits,
                     })
                 }
             }
