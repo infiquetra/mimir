@@ -164,6 +164,24 @@ impl EveConfig {
             size
         )
     }
+
+    pub fn corporation_logo_url(corporation_id: i64, size: u32) -> String {
+        format!(
+            "{}/corporations/{}/logo?size={}",
+            Self::IMAGE_SERVER_URL,
+            corporation_id,
+            size
+        )
+    }
+
+    pub fn alliance_logo_url(alliance_id: i64, size: u32) -> String {
+        format!(
+            "{}/alliances/{}/logo?size={}",
+            Self::IMAGE_SERVER_URL,
+            alliance_id,
+            size
+        )
+    }
 }
 
 /// Current Unix time in seconds (0 if the system clock is before 1970).
@@ -304,6 +322,22 @@ mod tests {
         assert_eq!(
             EveConfig::portrait_url(123, 128),
             "https://images.evetech.net/characters/123/portrait?size=128"
+        );
+    }
+
+    #[test]
+    fn corporation_logo_url_shape() {
+        assert_eq!(
+            EveConfig::corporation_logo_url(1000166, 64),
+            "https://images.evetech.net/corporations/1000166/logo?size=64"
+        );
+    }
+
+    #[test]
+    fn alliance_logo_url_shape() {
+        assert_eq!(
+            EveConfig::alliance_logo_url(99003581, 64),
+            "https://images.evetech.net/alliances/99003581/logo?size=64"
         );
     }
 

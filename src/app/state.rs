@@ -14,6 +14,7 @@ use crate::esi::endpoints::WriteFailureClass;
 use crate::esi::models::*;
 use crate::fitting::eft::ImportedFitting;
 use crate::names::exploration_ref::{EffectFamily, ExplorationRef};
+use crate::portraits::ImageKind;
 use crate::skills::plans::{SkillPlan, SkillPlanAction};
 use crate::storage::repositories::CharacterRow;
 
@@ -654,11 +655,11 @@ pub fn ship_display_name(custom_name: &str, resolved_type: Option<&str>) -> Opti
     }
 }
 
-/// Portrait load state for one character, keyed by character id in
-/// `AppState::portraits`. `Ready` carries the decoded image (decode
-/// happens once at landing, never per frame); every other variant
-/// renders as the name/initial placeholder — never a fabricated or
-/// stock face, never another character's image.
+/// Image load state for one `(kind, id)` key in `AppState::portraits`.
+/// `Ready` carries the decoded image (decode happens once at
+/// landing, never per frame); every other variant renders as the
+/// name/initial (character) or blank-box (logo) placeholder — never
+/// a fabricated or stock face, never another entity's image.
 #[derive(Debug, Clone, Default)]
 pub enum PortraitState {
     #[default]
@@ -716,13 +717,15 @@ pub struct AppState {
     // Multi-character overview, keyed by character id (integrator-filled).
     pub summaries: HashMap<i64, CharacterSummary>,
 
-    // Per-character portrait states, keyed by character id. Keyed like
+    // Per-entity image states (character portraits plus corporation
+    // and alliance logos), keyed by `(kind, id)`. Keyed like
     // `summaries`, so a late landing writes only its own slot and a
-    // character switch never clears the map; `remove_character` drops
-    // the removed id's entry. `portrait_requests` is the drained
+    // character switch never clears the map; `remove_character`
+    // drops the removed character's entry and any logo entry no
+    // remaining row references. `portrait_requests` is the drained
     // request queue (views call `request_portrait`).
-    pub portraits: HashMap<i64, PortraitState>,
-    pub portrait_requests: Vec<i64>,
+    pub portraits: HashMap<(ImageKind, i64), PortraitState>,
+    pub portrait_requests: Vec<(ImageKind, i64)>,
 
     // View-local UI state (survives across frames, unlike egui closures).
     pub skill_search: String,
@@ -1088,15 +1091,40 @@ impl AppState {
             character_id
         );
         self.demo_skill_plans.remove(&character_id);
-        // The portrait entry is keyed to the removed character:
-        // drop it and any queued fetch so a late landing can never
-        // resurrect it.
+        // Image entries are keyed by (kind, id): a character entry
+        // drops only with its own character, while a corporation or
+        // alliance entry survives while any remaining row still
+        // references it. Evaluated against the retained character
+        // list above, so a late landing can never resurrect a
+        // dropped entry.
         tracing::debug!(
-            "[PORTRAIT] dropping portrait of removed character_id={}",
+            "[PORTRAIT] dropping image of removed character_id={}",
             character_id
         );
-        self.portraits.remove(&character_id);
-        self.portrait_requests.retain(|id| *id != character_id);
+        // A logo also survives while the loaded character detail
+        // references it (fresh EVE data the rows may not carry
+        // yet) — the same sources `image_id_known` consults.
+        let detail_corp = self
+            .character_detail
+            .as_ready()
+            .map(|info| info.corporation_id);
+        let detail_alliance = self
+            .character_detail
+            .as_ready()
+            .and_then(|info| info.alliance_id);
+        let characters = &self.characters;
+        let logo_known = |kind: &ImageKind, id: i64| match kind {
+            ImageKind::Character => id != character_id,
+            ImageKind::Corporation => {
+                characters.iter().any(|c| c.corporation_id == id) || detail_corp == Some(id)
+            }
+            ImageKind::Alliance => {
+                characters.iter().any(|c| c.alliance_id == Some(id)) || detail_alliance == Some(id)
+            }
+        };
+        self.portraits.retain(|(kind, id), _| logo_known(kind, *id));
+        self.portrait_requests
+            .retain(|(kind, id)| logo_known(kind, *id));
         if self.active_character_id == Some(character_id) {
             self.active_character_id = None;
             // The removed character owned the loaded assets; never show
@@ -1223,59 +1251,93 @@ impl AppState {
         };
     }
 
-    /// Current portrait state for one character; `NotRequested` when
-    /// the character has no entry yet.
-    pub fn portrait_state(&self, character_id: i64) -> &PortraitState {
+    /// Whether one `(kind, id)` names an entity this state knows
+    /// from EVE's own data: a character row for `Character`, a row
+    /// `corporation_id` or the loaded public info for `Corporation`,
+    /// a row `alliance_id` or the loaded public info for `Alliance`.
+    /// This is the single definition of "this id may be fetched",
+    /// shared by `request_portrait` and the shell landing. The
+    /// dashboard is deliberately not consulted: every landing
+    /// writes the same info to it and to `character_detail`
+    /// together, so it can know nothing the other two lack.
+    pub fn image_id_known(&self, kind: ImageKind, id: i64) -> bool {
+        match kind {
+            ImageKind::Character => self.characters.iter().any(|c| c.character_id == id),
+            ImageKind::Corporation => {
+                self.characters.iter().any(|c| c.corporation_id == id)
+                    || self
+                        .character_detail
+                        .as_ready()
+                        .is_some_and(|info| info.corporation_id == id)
+            }
+            ImageKind::Alliance => {
+                self.characters.iter().any(|c| c.alliance_id == Some(id))
+                    || self
+                        .character_detail
+                        .as_ready()
+                        .is_some_and(|info| info.alliance_id == Some(id))
+            }
+        }
+    }
+
+    /// Current image state for one `(kind, id)`; `NotRequested` when
+    /// the key has no entry yet.
+    pub fn portrait_state(&self, kind: ImageKind, id: i64) -> &PortraitState {
         self.portraits
-            .get(&character_id)
+            .get(&(kind, id))
             .unwrap_or(&PortraitState::NotRequested)
     }
 
-    /// Queue one portrait fetch for a known character. Unknown ids
-    /// are ignored; `Ready`/`Loading` entries no-op; `NotRequested`
-    /// and `Failed` entries move to `Loading` with one queued id
-    /// (deduped). The shell drains with `take_portrait_requests`.
-    pub fn request_portrait(&mut self, character_id: i64) {
-        if !self
-            .characters
-            .iter()
-            .any(|c| c.character_id == character_id)
-        {
+    /// Queue one image fetch for a known `(kind, id)`. Ids at or
+    /// below zero and ids unknown per `image_id_known` are ignored;
+    /// `Ready`/`Loading` entries no-op; `NotRequested` and `Failed`
+    /// entries move to `Loading` with one queued key (deduped). The
+    /// shell drains with `take_portrait_requests`.
+    pub fn request_portrait(&mut self, kind: ImageKind, id: i64) {
+        if id <= 0 {
             tracing::warn!(
-                "[PORTRAIT] ignoring portrait request for unknown character_id={}",
-                character_id
+                "[PORTRAIT] ignoring image request for nonpositive id kind={} id={}",
+                kind.as_str(),
+                id
             );
             return;
         }
-        match self.portrait_state(character_id) {
+        if !self.image_id_known(kind, id) {
+            tracing::warn!(
+                "[PORTRAIT] ignoring image request for unknown kind={} id={}",
+                kind.as_str(),
+                id
+            );
+            return;
+        }
+        match self.portrait_state(kind, id) {
             PortraitState::Ready(_) | PortraitState::Loading => {
                 tracing::debug!(
-                    "[PORTRAIT] portrait request skipped character_id={}",
-                    character_id
+                    "[PORTRAIT] image request skipped kind={} id={}",
+                    kind.as_str(),
+                    id
                 );
             }
             PortraitState::NotRequested | PortraitState::Failed => {
                 tracing::info!(
-                    "[PORTRAIT] portrait requested character_id={}",
-                    character_id
+                    "[PORTRAIT] image requested kind={} id={}",
+                    kind.as_str(),
+                    id
                 );
-                self.portraits.insert(character_id, PortraitState::Loading);
-                if !self.portrait_requests.contains(&character_id) {
-                    self.portrait_requests.push(character_id);
+                self.portraits.insert((kind, id), PortraitState::Loading);
+                if !self.portrait_requests.contains(&(kind, id)) {
+                    self.portrait_requests.push((kind, id));
                 }
             }
         }
     }
 
-    /// Drain the queued portrait requests (shell side). The queue is
+    /// Drain the queued image requests (shell side). The queue is
     /// cleared even when the shell ends up spawning nothing (demo
-    /// mode, missing backends): a stale id must never fetch later.
-    pub fn take_portrait_requests(&mut self) -> Vec<i64> {
+    /// mode, missing backends): a stale key must never fetch later.
+    pub fn take_portrait_requests(&mut self) -> Vec<(ImageKind, i64)> {
         let drained = std::mem::take(&mut self.portrait_requests);
-        tracing::debug!(
-            "[PORTRAIT] portrait requests drained count={}",
-            drained.len()
-        );
+        tracing::debug!("[PORTRAIT] image requests drained count={}", drained.len());
         drained
     }
 }
@@ -2492,12 +2554,18 @@ mod tests {
         let mut state = AppState::new(false);
         state.characters = vec![row(1, "One"), row(2, "Two")];
         state.set_active_character(1);
-        state.request_portrait(1);
+        state.request_portrait(ImageKind::Character, 1);
         // Second request while Loading: no duplicate queue entry.
-        state.request_portrait(1);
-        assert_eq!(state.portrait_requests, vec![1]);
-        assert!(matches!(state.portrait_state(1), PortraitState::Loading));
-        assert_eq!(state.take_portrait_requests(), vec![1]);
+        state.request_portrait(ImageKind::Character, 1);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Character, 1)]);
+        assert!(matches!(
+            state.portrait_state(ImageKind::Character, 1),
+            PortraitState::Loading
+        ));
+        assert_eq!(
+            state.take_portrait_requests(),
+            vec![(ImageKind::Character, 1)]
+        );
         assert!(state.portrait_requests.is_empty());
     }
 
@@ -2506,10 +2574,10 @@ mod tests {
         let mut state = AppState::new(false);
         state.characters = vec![row(1, "One")];
         state.set_active_character(1);
-        state.request_portrait(999);
+        state.request_portrait(ImageKind::Character, 999);
         assert!(state.portrait_requests.is_empty());
         assert!(matches!(
-            state.portrait_state(999),
+            state.portrait_state(ImageKind::Character, 999),
             PortraitState::NotRequested
         ));
     }
@@ -2519,17 +2587,26 @@ mod tests {
         let mut state = AppState::new(false);
         state.characters = vec![row(1, "One"), row(2, "Two")];
         state.set_active_character(1);
+        state.portraits.insert(
+            (ImageKind::Character, 1),
+            portrait_state_with_dimensions(8, 8),
+        );
+        state.request_portrait(ImageKind::Character, 1);
+        assert!(state.portrait_requests.is_empty());
+        assert!(matches!(
+            state.portrait_state(ImageKind::Character, 1),
+            PortraitState::Ready(_)
+        ));
+        // A failed portrait is retried on the next request.
         state
             .portraits
-            .insert(1, portrait_state_with_dimensions(8, 8));
-        state.request_portrait(1);
-        assert!(state.portrait_requests.is_empty());
-        assert!(matches!(state.portrait_state(1), PortraitState::Ready(_)));
-        // A failed portrait is retried on the next request.
-        state.portraits.insert(2, PortraitState::Failed);
-        state.request_portrait(2);
-        assert_eq!(state.portrait_requests, vec![2]);
-        assert!(matches!(state.portrait_state(2), PortraitState::Loading));
+            .insert((ImageKind::Character, 2), PortraitState::Failed);
+        state.request_portrait(ImageKind::Character, 2);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Character, 2)]);
+        assert!(matches!(
+            state.portrait_state(ImageKind::Character, 2),
+            PortraitState::Loading
+        ));
     }
 
     #[test]
@@ -2537,15 +2614,19 @@ mod tests {
         let mut state = AppState::new(false);
         state.characters = vec![row(1, "One"), row(2, "Two")];
         state.set_active_character(1);
-        state
-            .portraits
-            .insert(1, portrait_state_with_dimensions(8, 8));
+        state.portraits.insert(
+            (ImageKind::Character, 1),
+            portrait_state_with_dimensions(8, 8),
+        );
         state.set_active_character(2);
         // Keyed like summaries: the switched-away character's
         // portrait stays in its own slot for when the user returns.
-        assert!(matches!(state.portrait_state(1), PortraitState::Ready(_)));
         assert!(matches!(
-            state.portrait_state(2),
+            state.portrait_state(ImageKind::Character, 1),
+            PortraitState::Ready(_)
+        ));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Character, 2),
             PortraitState::NotRequested
         ));
     }
@@ -2555,21 +2636,180 @@ mod tests {
         let mut state = AppState::new(false);
         state.characters = vec![row(1, "One"), row(2, "Two")];
         state.set_active_character(1);
+        state.portraits.insert(
+            (ImageKind::Character, 1),
+            portrait_state_with_dimensions(8, 8),
+        );
         state
             .portraits
-            .insert(1, portrait_state_with_dimensions(8, 8));
-        state.portraits.insert(2, PortraitState::Loading);
-        state.portrait_requests = vec![2];
+            .insert((ImageKind::Character, 2), PortraitState::Loading);
+        state.portrait_requests = vec![(ImageKind::Character, 2)];
         state.remove_character(2);
         assert!(matches!(
-            state.portrait_state(2),
+            state.portrait_state(ImageKind::Character, 2),
             PortraitState::NotRequested
         ));
         assert!(state.portrait_requests.is_empty());
-        assert!(matches!(state.portrait_state(1), PortraitState::Ready(_)));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Character, 1),
+            PortraitState::Ready(_)
+        ));
         // Removing the last character clears the whole map.
         state.remove_character(1);
         assert!(state.characters.is_empty());
         assert!(state.portraits.is_empty());
+    }
+
+    #[test]
+    fn same_numeric_id_in_different_kinds_queues_independently() {
+        let mut state = AppState::new(false);
+        // row() carries corporation 1000166; no character row has
+        // character id 1000166.
+        state.characters = vec![row(1, "One")];
+        state.set_active_character(1);
+        state.request_portrait(ImageKind::Character, 1000166);
+        assert!(state.portrait_requests.is_empty());
+        state.request_portrait(ImageKind::Corporation, 1000166);
+        assert_eq!(
+            state.portrait_requests,
+            vec![(ImageKind::Corporation, 1000166)]
+        );
+        assert!(matches!(
+            state.portrait_state(ImageKind::Corporation, 1000166),
+            PortraitState::Loading
+        ));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Character, 1000166),
+            PortraitState::NotRequested
+        ));
+    }
+
+    #[test]
+    fn logo_requests_guard_by_source() {
+        // Corporation and alliance known only via the loaded public
+        // info queue; in neither source queue nothing.
+        let ready_info = |corporation_id: i64, alliance_id: Option<i64>| {
+            LoadState::Ready(CharacterPublicInfo {
+                corporation_id,
+                alliance_id,
+                ..Default::default()
+            })
+        };
+        let mut state = AppState::new(false);
+        let mut other = row(1, "One");
+        other.corporation_id = 1000125;
+        state.characters = vec![other];
+        state.set_active_character(1);
+        // Corporation 1000166 is in neither source yet.
+        state.request_portrait(ImageKind::Corporation, 1000166);
+        assert!(state.portrait_requests.is_empty());
+        // Known via the loaded public info: queues.
+        state.character_detail = ready_info(1000166, Some(99003581));
+        state.request_portrait(ImageKind::Corporation, 1000166);
+        assert_eq!(
+            state.portrait_requests,
+            vec![(ImageKind::Corporation, 1000166)]
+        );
+        state.request_portrait(ImageKind::Alliance, 99003581);
+        assert_eq!(
+            state.portrait_requests,
+            vec![
+                (ImageKind::Corporation, 1000166),
+                (ImageKind::Alliance, 99003581)
+            ]
+        );
+        // An alliance in neither source queues nothing (the row
+        // has alliance_id None and the info has 99003581, not this
+        // id).
+        state.request_portrait(ImageKind::Alliance, 99000001);
+        assert_eq!(state.portrait_requests.len(), 2);
+        // Known via a row: queues (detail agrees with nothing).
+        let mut state = AppState::new(false);
+        let mut by_row = row(1, "One");
+        by_row.corporation_id = 1000166;
+        by_row.alliance_id = Some(99003581);
+        state.characters = vec![by_row];
+        state.set_active_character(1);
+        state.character_detail = ready_info(1000125, None);
+        state.request_portrait(ImageKind::Corporation, 1000166);
+        assert_eq!(
+            state.portrait_requests,
+            vec![(ImageKind::Corporation, 1000166)]
+        );
+        state.request_portrait(ImageKind::Alliance, 99003581);
+        assert_eq!(
+            state.portrait_requests,
+            vec![
+                (ImageKind::Corporation, 1000166),
+                (ImageKind::Alliance, 99003581)
+            ]
+        );
+        // A corporation in neither source (rows say 1000166, the
+        // loaded info says 1000125) queues nothing.
+        state.request_portrait(ImageKind::Corporation, 1000199);
+        assert_eq!(state.portrait_requests.len(), 2);
+    }
+
+    #[test]
+    fn nonpositive_ids_queue_nothing_for_any_kind() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One")];
+        state.set_active_character(1);
+        for kind in [
+            ImageKind::Character,
+            ImageKind::Corporation,
+            ImageKind::Alliance,
+        ] {
+            for id in [0, -1] {
+                state.request_portrait(kind, id);
+                assert!(
+                    state.portrait_requests.is_empty(),
+                    "kind {kind:?} id {id} must queue nothing"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn shared_corporation_logo_survives_until_last_row_removed() {
+        let mut state = AppState::new(false);
+        // Both rows carry corporation 1000166 (the row() default).
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.portraits.insert(
+            (ImageKind::Corporation, 1000166),
+            portrait_state_with_dimensions(8, 8),
+        );
+        state.remove_character(1);
+        assert!(matches!(
+            state.portrait_state(ImageKind::Corporation, 1000166),
+            PortraitState::Ready(_)
+        ));
+        state.remove_character(2);
+        assert!(state.characters.is_empty());
+        assert!(state.portraits.is_empty());
+    }
+
+    #[test]
+    fn queued_logo_request_drops_only_when_last_reference_goes() {
+        // Survives while a remaining row references it.
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.portrait_requests = vec![(ImageKind::Corporation, 1000166)];
+        state.remove_character(1);
+        assert_eq!(
+            state.portrait_requests,
+            vec![(ImageKind::Corporation, 1000166)]
+        );
+        // Drops when no remaining row references it.
+        let mut state = AppState::new(false);
+        let mut other = row(2, "Two");
+        other.corporation_id = 1000125;
+        state.characters = vec![row(1, "One"), other];
+        state.set_active_character(1);
+        state.portrait_requests = vec![(ImageKind::Corporation, 1000166)];
+        state.remove_character(1);
+        assert!(state.portrait_requests.is_empty());
     }
 }
