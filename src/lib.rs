@@ -21,6 +21,7 @@ pub mod names;
 pub mod portraits;
 pub mod skills;
 pub mod storage;
+pub mod trade_calculator;
 pub mod ui;
 
 pub use app::shell::MimirApp;
