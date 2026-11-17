@@ -31,7 +31,7 @@ use crate::names::resolver::{
     is_displayable_name, is_structure_id, structure_lookup_batch, NameResolver,
 };
 use crate::names::sde::Sde;
-use crate::portraits::{PortraitError, PortraitService, PORTRAIT_SIZE};
+use crate::portraits::{ImageKind, PortraitError, PortraitService, LOGO_SIZE, PORTRAIT_SIZE};
 use crate::skills::plans::{apply_demo_action, DemoApplyOutcome, SkillPlan, SkillPlanAction};
 use crate::storage::repositories::{self, CharacterRow, TokenMetaRow};
 use crate::ui;
@@ -105,7 +105,8 @@ enum BackendMsg {
         outcome: FittingWriteOutcome,
     },
     PortraitFetched {
-        character_id: i64,
+        kind: ImageKind,
+        id: i64,
         image: Result<Arc<image::DynamicImage>, PortraitError>,
     },
 }
@@ -437,44 +438,44 @@ fn skill_plan_success_status(action: &SkillPlanAction) -> &'static str {
     }
 }
 
-/// Portrait landing (portrait design section 5): insert the result
-/// under its own character id only when that character is still
-/// known, returning whether it applied. The keyed insert is the
-/// whole correctness argument for switched-away characters — a
-/// late result writes its own slot and can never paint the active
-/// character's portrait — while a result for a removed character
-/// is dropped whole (the `Refreshed` summary precedent).
+/// Image landing (portrait design section 5): insert the result
+/// under its own `(kind, id)` only when that entity is still known
+/// per `AppState::image_id_known`, returning whether it applied.
+/// The keyed insert is the whole correctness argument for
+/// switched-away characters — a late result writes its own slot
+/// and can never paint the active character's image, because the
+/// kind is part of the key — while a result for an unknown or
+/// no-longer-referenced id is dropped whole (the `Refreshed`
+/// summary precedent).
 fn apply_portrait_landing(
     state: &mut AppState,
-    character_id: i64,
+    kind: ImageKind,
+    id: i64,
     image: Result<Arc<image::DynamicImage>, PortraitError>,
 ) -> bool {
-    if !state
-        .characters
-        .iter()
-        .any(|c| c.character_id == character_id)
-    {
+    if !state.image_id_known(kind, id) {
         return false;
     }
     match image {
         Ok(image) => {
             state
                 .portraits
-                .insert(character_id, PortraitState::Ready(image));
+                .insert((kind, id), PortraitState::Ready(image));
         }
         Err(e) => {
             tracing::warn!(
-                "[PORTRAIT] portrait fetch failed character_id={} error={}",
-                character_id,
+                "[PORTRAIT] image fetch failed kind={} id={} error={}",
+                kind.as_str(),
+                id,
                 e
             );
             // A slow failed fetch (e.g. from before a remove/re-add)
-            // must not overwrite a portrait that already landed.
+            // must not overwrite an image that already landed.
             if !matches!(
-                state.portraits.get(&character_id),
+                state.portraits.get(&(kind, id)),
                 Some(PortraitState::Ready(_))
             ) {
-                state.portraits.insert(character_id, PortraitState::Failed);
+                state.portraits.insert((kind, id), PortraitState::Failed);
             }
         }
     }
@@ -1770,16 +1771,14 @@ impl MimirApp {
                     self.state.auth = AuthState::Error;
                     self.state.status_message = format!("Sign-in failed: {message}");
                 }
-                BackendMsg::PortraitFetched {
-                    character_id,
-                    image,
-                } => {
-                    if apply_portrait_landing(&mut self.state, character_id, image) {
-                        tracing::info!("[PORTRAIT] portrait landed character_id={}", character_id);
+                BackendMsg::PortraitFetched { kind, id, image } => {
+                    if apply_portrait_landing(&mut self.state, kind, id, image) {
+                        tracing::info!("[PORTRAIT] image landed kind={} id={}", kind.as_str(), id);
                     } else {
                         tracing::warn!(
-                            "[PORTRAIT] dropping portrait for removed character_id={}",
-                            character_id
+                            "[PORTRAIT] dropping image for unreferenced kind={} id={}",
+                            kind.as_str(),
+                            id
                         );
                     }
                 }
@@ -2201,12 +2200,12 @@ impl MimirApp {
         }
     }
 
-    /// Drain queued portrait requests (portrait design section 5):
-    /// one spawned task per requested id, each keyed by its own
-    /// character id end to end, bounded app-wide by the service
-    /// semaphore. Demo mode never spawns (zero network calls);
-    /// missing backends or runtime mark the requests `Failed` so
-    /// views render the failure placeholder, not a spinner.
+    /// Drain queued image requests (portrait design section 5): one
+    /// spawned task per requested `(kind, id)`, each keyed end to
+    /// end, bounded app-wide by the service semaphore. Demo mode
+    /// never spawns (zero network calls); missing backends or
+    /// runtime mark the requests `Failed` so views render the
+    /// failure placeholder, not a spinner.
     fn start_portrait_fetches(&mut self) {
         let requests = self.state.take_portrait_requests();
         if requests.is_empty() {
@@ -2222,10 +2221,10 @@ impl MimirApp {
             }
             Some(PortraitStartRefusal::BackendsMissing) => {
                 tracing::warn!("[PORTRAIT] portrait fetches unavailable: live backends not wired");
-                for character_id in requests {
+                for (kind, id) in requests {
                     self.state
                         .portraits
-                        .insert(character_id, PortraitState::Failed);
+                        .insert((kind, id), PortraitState::Failed);
                 }
             }
             None => {
@@ -2239,19 +2238,21 @@ impl MimirApp {
                     .runtime
                     .as_ref()
                     .expect("decide_portrait_start checked wiring");
-                for character_id in requests {
+                for (kind, id) in requests {
                     tracing::info!(
-                        "[PORTRAIT] portrait fetch started character_id={}",
-                        character_id
+                        "[PORTRAIT] image fetch started kind={} id={}",
+                        kind.as_str(),
+                        id
                     );
                     let service = service.clone();
                     let tx = self.tx.clone();
                     runtime.spawn(async move {
-                        let image = service.portrait(character_id, PORTRAIT_SIZE).await;
-                        let _ = tx.send(BackendMsg::PortraitFetched {
-                            character_id,
-                            image,
-                        });
+                        let size = match kind {
+                            ImageKind::Character => PORTRAIT_SIZE,
+                            ImageKind::Corporation | ImageKind::Alliance => LOGO_SIZE,
+                        };
+                        let image = service.image(kind, id, size).await;
+                        let _ = tx.send(BackendMsg::PortraitFetched { kind, id, image });
                     });
                 }
             }
@@ -4424,8 +4425,13 @@ mod tests {
     #[test]
     fn portrait_landing_applies_to_a_known_character() {
         let mut state = two_character_state();
-        assert!(apply_portrait_landing(&mut state, 1, Ok(test_image(8, 8))));
-        match state.portrait_state(1) {
+        assert!(apply_portrait_landing(
+            &mut state,
+            ImageKind::Character,
+            1,
+            Ok(test_image(8, 8))
+        ));
+        match state.portrait_state(ImageKind::Character, 1) {
             PortraitState::Ready(image) => {
                 assert_eq!(image.width(), 8);
                 assert_eq!(image.height(), 8);
@@ -4434,10 +4440,14 @@ mod tests {
         }
         assert!(apply_portrait_landing(
             &mut state,
+            ImageKind::Character,
             2,
             Err(PortraitError::Status(404))
         ));
-        assert!(matches!(state.portrait_state(2), PortraitState::Failed));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Character, 2),
+            PortraitState::Failed
+        ));
     }
 
     #[test]
@@ -4447,10 +4457,18 @@ mod tests {
         // Late result for character 1 while character 2 is active:
         // it lands in character 1's own slot; character 2's entry
         // stays untouched (no entry, so still NotRequested).
-        assert!(apply_portrait_landing(&mut state, 1, Ok(test_image(8, 8))));
-        assert!(matches!(state.portrait_state(1), PortraitState::Ready(_)));
+        assert!(apply_portrait_landing(
+            &mut state,
+            ImageKind::Character,
+            1,
+            Ok(test_image(8, 8))
+        ));
         assert!(matches!(
-            state.portrait_state(2),
+            state.portrait_state(ImageKind::Character, 1),
+            PortraitState::Ready(_)
+        ));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Character, 2),
             PortraitState::NotRequested
         ));
         assert_eq!(state.active_character_id, Some(2));
@@ -4484,11 +4502,114 @@ mod tests {
     fn portrait_landing_for_removed_character_drops_whole() {
         let mut state = two_character_state();
         state.remove_character(2);
-        assert!(!apply_portrait_landing(&mut state, 2, Ok(test_image(8, 8))));
+        assert!(!apply_portrait_landing(
+            &mut state,
+            ImageKind::Character,
+            2,
+            Ok(test_image(8, 8))
+        ));
         assert!(matches!(
-            state.portrait_state(2),
+            state.portrait_state(ImageKind::Character, 2),
             PortraitState::NotRequested
         ));
-        assert!(!state.portraits.contains_key(&2));
+        assert!(!state.portraits.contains_key(&(ImageKind::Character, 2)));
+    }
+
+    #[test]
+    fn corporation_landing_writes_only_its_slot() {
+        let mut state = two_character_state();
+        state.set_active_character(2);
+        // A corporation landing writes only its own slot: the
+        // corporation 1000125 key stays NotRequested and the
+        // character keys are untouched. A logo for corporation A
+        // never paints under corporation B.
+        assert!(apply_portrait_landing(
+            &mut state,
+            ImageKind::Corporation,
+            1000166,
+            Ok(test_image(8, 8))
+        ));
+        match state.portrait_state(ImageKind::Corporation, 1000166) {
+            PortraitState::Ready(image) => {
+                assert_eq!(image.width(), 8);
+                assert_eq!(image.height(), 8);
+            }
+            other => panic!("known corporation must land Ready, got {other:?}"),
+        }
+        assert!(matches!(
+            state.portrait_state(ImageKind::Corporation, 1000125),
+            PortraitState::NotRequested
+        ));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Character, 1),
+            PortraitState::NotRequested
+        ));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Character, 2),
+            PortraitState::NotRequested
+        ));
+    }
+
+    #[test]
+    fn landing_with_the_wrong_kind_for_an_id_drops_whole() {
+        let mut state = two_character_state();
+        // 2 is a character id but no row's corporation; 1000166 is a
+        // corporation but not a character.
+        assert!(!apply_portrait_landing(
+            &mut state,
+            ImageKind::Corporation,
+            2,
+            Ok(test_image(8, 8))
+        ));
+        assert!(!state.portraits.contains_key(&(ImageKind::Corporation, 2)));
+        assert!(!apply_portrait_landing(
+            &mut state,
+            ImageKind::Character,
+            1000166,
+            Ok(test_image(8, 8))
+        ));
+        assert!(!state
+            .portraits
+            .contains_key(&(ImageKind::Character, 1000166)));
+    }
+
+    #[test]
+    fn landing_for_an_unreferenced_alliance_drops_whole() {
+        let mut state = two_character_state();
+        // Every row has alliance_id None, and no detail is loaded.
+        assert!(!apply_portrait_landing(
+            &mut state,
+            ImageKind::Alliance,
+            99003581,
+            Ok(test_image(8, 8))
+        ));
+        assert!(!state
+            .portraits
+            .contains_key(&(ImageKind::Alliance, 99003581)));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Alliance, 99003581),
+            PortraitState::NotRequested
+        ));
+    }
+
+    #[test]
+    fn late_failure_does_not_overwrite_a_ready_logo() {
+        let mut state = two_character_state();
+        assert!(apply_portrait_landing(
+            &mut state,
+            ImageKind::Corporation,
+            1000166,
+            Ok(test_image(8, 8))
+        ));
+        assert!(apply_portrait_landing(
+            &mut state,
+            ImageKind::Corporation,
+            1000166,
+            Err(PortraitError::Status(404))
+        ));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Corporation, 1000166),
+            PortraitState::Ready(_)
+        ));
     }
 }

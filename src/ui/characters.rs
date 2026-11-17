@@ -14,6 +14,7 @@ use crate::app::state::{
 use crate::config::EveConfig;
 use crate::esi::models::{CharacterAttributes, JumpClone, Standing};
 use crate::names::resolver::NameResolver;
+use crate::portraits::ImageKind;
 
 pub fn show(
     ui: &mut egui::Ui,
@@ -138,7 +139,7 @@ pub fn show(
                         );
                         let status = portraits::placeholder_status(
                             state.demo,
-                            state.portrait_state(active_id),
+                            state.portrait_state(ImageKind::Character, active_id),
                         );
                         if !status.is_empty() {
                             ui.label(status);
@@ -202,14 +203,17 @@ pub fn show(
     // never shows the button: no fetch is ever attempted there.
     if let Some(active_id) = state.active_character_id {
         if !state.demo
-            && matches!(state.portrait_state(active_id), PortraitState::Failed)
+            && matches!(
+                state.portrait_state(ImageKind::Character, active_id),
+                PortraitState::Failed
+            )
             && ui.button("Retry portrait").clicked()
         {
             tracing::info!(
                 "[PORTRAIT] portrait retry requested from Characters view character_id={}",
                 active_id
             );
-            state.request_portrait(active_id);
+            state.request_portrait(ImageKind::Character, active_id);
         }
     }
 

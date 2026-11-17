@@ -21,7 +21,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::app::state::{AppState, PortraitState};
-use crate::portraits::initial_for_name;
+use crate::portraits::{initial_for_name, ImageKind};
 use crate::storage::repositories::CharacterRow;
 
 /// Render size of a list or grid-row portrait, in points. The
@@ -87,7 +87,7 @@ impl PortraitImageCache {
         state: &AppState,
         character_id: i64,
     ) -> Option<egui::TextureHandle> {
-        let image = match state.portrait_state(character_id) {
+        let image = match state.portrait_state(ImageKind::Character, character_id) {
             PortraitState::Ready(image) => image,
             PortraitState::NotRequested | PortraitState::Loading | PortraitState::Failed => {
                 return None;
@@ -143,10 +143,10 @@ impl PortraitImageCache {
 /// without spawning, so demo still makes zero network calls.
 pub fn ensure_portrait_requested(state: &mut AppState, character_id: i64) {
     if matches!(
-        state.portrait_state(character_id),
+        state.portrait_state(ImageKind::Character, character_id),
         PortraitState::NotRequested
     ) {
-        state.request_portrait(character_id);
+        state.request_portrait(ImageKind::Character, character_id);
     }
 }
 
@@ -255,15 +255,23 @@ mod tests {
     #[test]
     fn ensure_requests_only_unrequested_portraits() {
         let mut state = state_with_ids(&[1, 2, 3, 4]);
-        state.portraits.insert(2, PortraitState::Loading);
         state
             .portraits
-            .insert(3, PortraitState::Ready(ready_image(8, 8)));
-        state.portraits.insert(4, PortraitState::Failed);
+            .insert((ImageKind::Character, 2), PortraitState::Loading);
+        state.portraits.insert(
+            (ImageKind::Character, 3),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        state
+            .portraits
+            .insert((ImageKind::Character, 4), PortraitState::Failed);
 
         ensure_portrait_requested(&mut state, 1);
-        assert_eq!(state.portrait_requests, vec![1]);
-        assert!(matches!(state.portrait_state(1), PortraitState::Loading));
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Character, 1)]);
+        assert!(matches!(
+            state.portrait_state(ImageKind::Character, 1),
+            PortraitState::Loading
+        ));
 
         // Loading, Ready, and Failed are all left alone: Failed in
         // particular never re-queues from the render path, so a
@@ -271,12 +279,15 @@ mod tests {
         ensure_portrait_requested(&mut state, 2);
         ensure_portrait_requested(&mut state, 3);
         ensure_portrait_requested(&mut state, 4);
-        assert_eq!(state.portrait_requests, vec![1]);
-        assert!(matches!(state.portrait_state(4), PortraitState::Failed));
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Character, 1)]);
+        assert!(matches!(
+            state.portrait_state(ImageKind::Character, 4),
+            PortraitState::Failed
+        ));
 
         // Unknown ids queue nothing and fabricate no entry.
         ensure_portrait_requested(&mut state, 999);
-        assert_eq!(state.portrait_requests, vec![1]);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Character, 1)]);
     }
 
     #[test]
@@ -296,13 +307,18 @@ mod tests {
         let mut cache = PortraitImageCache::new();
 
         assert!(cache.texture(&ctx, &state, 1).is_none());
-        state.portraits.insert(2, PortraitState::Loading);
-        assert!(cache.texture(&ctx, &state, 2).is_none());
-        state.portraits.insert(3, PortraitState::Failed);
-        assert!(cache.texture(&ctx, &state, 3).is_none());
         state
             .portraits
-            .insert(4, PortraitState::Ready(ready_image(8, 8)));
+            .insert((ImageKind::Character, 2), PortraitState::Loading);
+        assert!(cache.texture(&ctx, &state, 2).is_none());
+        state
+            .portraits
+            .insert((ImageKind::Character, 3), PortraitState::Failed);
+        assert!(cache.texture(&ctx, &state, 3).is_none());
+        state.portraits.insert(
+            (ImageKind::Character, 4),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
         assert!(cache.texture(&ctx, &state, 4).is_some());
         assert_eq!(cache.len(), 1);
     }
@@ -312,9 +328,10 @@ mod tests {
         let ctx = egui::Context::default();
         let mut state = state_with_ids(&[1]);
         let mut cache = PortraitImageCache::new();
-        state
-            .portraits
-            .insert(1, PortraitState::Ready(ready_image(8, 8)));
+        state.portraits.insert(
+            (ImageKind::Character, 1),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
 
         let first = cache.texture(&ctx, &state, 1).expect("ready uploads");
         let again = cache.texture(&ctx, &state, 1).expect("ready reuses");
@@ -322,9 +339,10 @@ mod tests {
 
         // A replaced image object for the same character uploads
         // anew instead of showing the old face.
-        state
-            .portraits
-            .insert(1, PortraitState::Ready(ready_image(8, 8)));
+        state.portraits.insert(
+            (ImageKind::Character, 1),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
         let replaced = cache.texture(&ctx, &state, 1).expect("replaced uploads");
         assert_ne!(first.id(), replaced.id());
         assert_eq!(cache.len(), 1);
@@ -336,9 +354,10 @@ mod tests {
         let mut state = state_with_ids(&[1, 2]);
         let mut cache = PortraitImageCache::new();
         for id in [1i64, 2] {
-            state
-                .portraits
-                .insert(id, PortraitState::Ready(ready_image(8, 8)));
+            state.portraits.insert(
+                (ImageKind::Character, id),
+                PortraitState::Ready(ready_image(8, 8)),
+            );
             let _ = cache.texture(&ctx, &state, id).expect("upload");
         }
         assert_eq!(cache.len(), 2);
@@ -366,9 +385,10 @@ mod tests {
         let ctx = egui::Context::default();
         let mut state = state_with_ids(&[1, 2]);
         let mut cache = PortraitImageCache::new();
-        state
-            .portraits
-            .insert(1, PortraitState::Ready(ready_image(8, 8)));
+        state.portraits.insert(
+            (ImageKind::Character, 1),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
                 show_portrait(ui, &mut cache, &state, 1, "Test Pilot", LIST_PORTRAIT_PX);

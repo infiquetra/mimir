@@ -1,10 +1,12 @@
-//! Character portraits: unauthenticated fetch from the EVE image
-//! service, on-disk caching under the app cache directory, and
-//! bounded decode. Portraits are public, so this layer never
-//! fetches or attaches a token. Every public function logs with the
-//! `[PORTRAIT]` tag; character ids are logged as plain integers
-//! (the `[CHAR]`/`[ESI]` convention). URLs, tokens, character names,
-//! and error bodies never appear in logs.
+//! Character portraits, corporation logos, and alliance logos:
+//! unauthenticated fetch from the EVE image service, on-disk
+//! caching under the app cache directory, and bounded decode. All
+//! three kinds share one pipeline keyed by `(ImageKind, id)` with
+//! one semaphore; they are public, so this layer never fetches or
+//! attaches a token. Every public function logs with the
+//! `[PORTRAIT]` tag; ids are logged as plain integers (the
+//! `[CHAR]`/`[ESI]` convention). URLs, tokens, entity names, and
+//! error bodies never appear in logs.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -13,9 +15,36 @@ use tokio::sync::Semaphore;
 
 use crate::config::EveConfig;
 
+/// Which kind of image one pipeline key names. The kind is part of
+/// every key: the same number in two kinds is two different
+/// entities (a corporation and a character can share an id), so
+/// one kind's bytes must never serve another kind's slot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ImageKind {
+    Character,
+    Corporation,
+    Alliance,
+}
+
+impl ImageKind {
+    /// Fixed lower-case word for log lines: "character",
+    /// "corporation", or "alliance". Never derived from user text.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ImageKind::Character => "character",
+            ImageKind::Corporation => "corporation",
+            ImageKind::Alliance => "alliance",
+        }
+    }
+}
+
 /// The one portrait size the whole app requests. Renders downscale
 /// it; nothing upscales past what was decoded.
 pub const PORTRAIT_SIZE: u32 = 256;
+/// The one logo size the whole app requests (corporation and
+/// alliance). 512 would exceed `MAX_IMAGE_BYTES` on dense logos,
+/// so the fixed logo size stays small and renders downscale it.
+pub const LOGO_SIZE: u32 = 64;
 /// Maximum accepted portrait body (1 MiB). The streamed download
 /// aborts above this and decode rejects bodies above it. Decode
 /// itself is bounded by explicit image-crate limits (dimensions
@@ -24,8 +53,9 @@ pub const MAX_IMAGE_BYTES: usize = 1 << 20;
 /// Maximum accepted decoded width or height. A body that decodes
 /// beyond this is rejected, never shown.
 pub const MAX_IMAGE_DIMENSION: u32 = 1024;
-/// Maximum portraits in flight app-wide. The shell spawns one task
-/// per requested id; this semaphore is the limiter.
+/// Maximum portraits and logos in flight app-wide. The shell spawns
+/// one task per requested key; this one semaphore bounds both kinds
+/// together.
 pub const MAX_CONCURRENT_FETCHES: usize = 4;
 
 /// Portrait fetch/cache/decode failure. Display text is fixed words
@@ -46,16 +76,24 @@ pub enum PortraitError {
     CacheIo(String),
 }
 
-/// Cache file name for one character portrait: `{id}_{size}.jpg`,
-/// so one character's bytes can never serve another's slot.
-pub fn cache_filename(character_id: i64, size: u32) -> String {
-    format!("{character_id}_{size}.jpg")
+/// Cache file name for one kind-keyed image: the character row is
+/// the shipped legacy `{id}_{size}.jpg`, corporation is
+/// `corp-{id}_{size}.png`, alliance is `alliance-{id}_{size}.png`.
+/// The kind prefix is load-bearing: one number in two kinds must
+/// never share a file, and extensions follow the observed service
+/// content types (JPEG portraits, PNG logos).
+pub fn cache_filename(kind: ImageKind, id: i64, size: u32) -> String {
+    match kind {
+        ImageKind::Character => format!("{id}_{size}.jpg"),
+        ImageKind::Corporation => format!("corp-{id}_{size}.png"),
+        ImageKind::Alliance => format!("alliance-{id}_{size}.png"),
+    }
 }
 
-/// Full path of one cached portrait under the portraits directory
+/// Full path of one cached image under the portraits directory
 /// (`{app_cache_dir}/portraits/`, never the database).
-pub fn cache_path(portrait_dir: &Path, character_id: i64, size: u32) -> PathBuf {
-    portrait_dir.join(cache_filename(character_id, size))
+pub fn cache_path(portrait_dir: &Path, kind: ImageKind, id: i64, size: u32) -> PathBuf {
+    portrait_dir.join(cache_filename(kind, id, size))
 }
 
 /// Placeholder initial for one character name: the first alphabetic
@@ -68,9 +106,11 @@ pub fn initial_for_name(name: &str) -> Option<char> {
         .map(|c| c.to_ascii_uppercase())
 }
 
-/// Decode portrait bytes within the byte and dimension caps.
+/// Decode image bytes within the byte and dimension caps.
 /// Anything above a cap, or anything that is not a decodable image,
 /// is an error: the caller shows the placeholder, never a guess.
+/// This decodes character portraits and corporation/alliance
+/// logos alike (JPEG portraits, PNG logos).
 pub fn decode_portrait(bytes: &[u8]) -> Result<image::DynamicImage, PortraitError> {
     tracing::debug!("[PORTRAIT] decoding portrait bytes={}", bytes.len());
     if bytes.len() > MAX_IMAGE_BYTES {
@@ -144,29 +184,49 @@ impl PortraitClient {
         }
     }
 
-    /// Fetch one portrait body, aborting the download as soon as it exceeds `MAX_IMAGE_BYTES`.
+    /// Fetch one image body (any kind), aborting the download as soon as it exceeds `MAX_IMAGE_BYTES`.
     /// Non-success statuses map to
     /// `PortraitError::Status`; the URL never appears in logs.
     pub async fn fetch_bytes(
         &self,
-        character_id: i64,
+        kind: ImageKind,
+        id: i64,
         size: u32,
     ) -> Result<Vec<u8>, PortraitError> {
         tracing::info!(
-            "[PORTRAIT] fetching portrait character_id={} size={}",
-            character_id,
+            "[PORTRAIT] fetching image kind={} id={} size={}",
+            kind.as_str(),
+            id,
             size
         );
         // Production goes through the one named URL seam so the
         // host/path cannot drift; only the test seam (injected
         // base) formats against its own base.
         let url = if self.image_base_url == EveConfig::IMAGE_SERVER_URL {
-            EveConfig::portrait_url(character_id, size)
+            match kind {
+                ImageKind::Character => EveConfig::portrait_url(id, size),
+                ImageKind::Corporation => EveConfig::corporation_logo_url(id, size),
+                ImageKind::Alliance => EveConfig::alliance_logo_url(id, size),
+            }
         } else {
-            format!(
-                "{}/characters/{}/portrait?size={}",
-                self.image_base_url, character_id, size
-            )
+            match kind {
+                ImageKind::Character => format!(
+                    "{}/characters/{}/portrait?size={}",
+                    self.image_base_url, id, size
+                ),
+                ImageKind::Corporation => {
+                    format!(
+                        "{}/corporations/{}/logo?size={}",
+                        self.image_base_url, id, size
+                    )
+                }
+                ImageKind::Alliance => {
+                    format!(
+                        "{}/alliances/{}/logo?size={}",
+                        self.image_base_url, id, size
+                    )
+                }
+            }
         };
         let mut response = self
             .http
@@ -192,21 +252,22 @@ impl PortraitClient {
             return Err(PortraitError::Decode("empty portrait body".to_string()));
         }
         tracing::debug!(
-            "[PORTRAIT] fetched portrait character_id={} bytes={}",
-            character_id,
+            "[PORTRAIT] fetched image kind={} id={} bytes={}",
+            kind.as_str(),
+            id,
             bytes.len()
         );
         Ok(bytes)
     }
 }
 
-/// On-disk portrait cache rooted at `{app_cache_dir}/portraits/`.
-/// All IO here is local filesystem, never network. Growth is
-/// bounded in practice by the user's own character count (one
-/// small JPEG per character at the fixed size); entries for
-/// removed characters are left on disk deliberately — they are
-/// inert, keyed by character id, and reused if the character
-/// returns.
+/// On-disk image cache (all three kinds) rooted at
+/// `{app_cache_dir}/portraits/`. All IO here is local filesystem,
+/// never network. Growth is bounded in practice by the user's own
+/// characters (one small JPEG per character, one small PNG per
+/// corporation/alliance at the fixed sizes); entries for removed
+/// characters are left on disk deliberately — they are inert,
+/// keyed by kind and id, and reused if the character returns.
 pub struct PortraitStore {
     dir: PathBuf,
 }
@@ -221,10 +282,11 @@ impl PortraitStore {
         Self { dir }
     }
 
-    /// Cached body for one character, or `None` on a miss or unreadable
-    /// file. A miss is silent on purpose: the caller refetches.
-    pub fn read_cached(&self, character_id: i64, size: u32) -> Option<Vec<u8>> {
-        let path = cache_path(&self.dir, character_id, size);
+    /// Cached body for one kind-keyed image, or `None` on a miss or
+    /// unreadable file. A miss is silent on purpose: the caller
+    /// refetches.
+    pub fn read_cached(&self, kind: ImageKind, id: i64, size: u32) -> Option<Vec<u8>> {
+        let path = cache_path(&self.dir, kind, id, size);
         // Bounded read: never load more than the decode cap, so a
         // stray oversized file cannot fill memory before checks.
         use std::io::Read as _;
@@ -234,8 +296,9 @@ impl PortraitStore {
             .read_to_end(&mut bytes)
             .ok()?;
         tracing::debug!(
-            "[PORTRAIT] cache hit character_id={} bytes={}",
-            character_id,
+            "[PORTRAIT] cache hit kind={} id={} bytes={}",
+            kind.as_str(),
+            id,
             bytes.len()
         );
         Some(bytes)
@@ -245,15 +308,16 @@ impl PortraitStore {
     /// then rename, so a torn write never poisons the next read.
     pub fn write_cached(
         &self,
-        character_id: i64,
+        kind: ImageKind,
+        id: i64,
         size: u32,
         bytes: &[u8],
     ) -> Result<(), PortraitError> {
         std::fs::create_dir_all(&self.dir).map_err(|e| PortraitError::CacheIo(e.to_string()))?;
-        let path = cache_path(&self.dir, character_id, size);
+        let path = cache_path(&self.dir, kind, id, size);
         let tmp = self.dir.join(format!(
             "{}.tmp{}",
-            cache_filename(character_id, size),
+            cache_filename(kind, id, size),
             rand::random::<u64>()
         ));
         std::fs::write(&tmp, bytes).map_err(|e| PortraitError::CacheIo(e.to_string()))?;
@@ -262,8 +326,9 @@ impl PortraitStore {
             return Err(PortraitError::CacheIo(e.to_string()));
         }
         tracing::debug!(
-            "[PORTRAIT] cache write character_id={} bytes={}",
-            character_id,
+            "[PORTRAIT] cache write kind={} id={} bytes={}",
+            kind.as_str(),
+            id,
             bytes.len()
         );
         Ok(())
@@ -271,18 +336,20 @@ impl PortraitStore {
 
     /// Drop one entry (a poisoned cache file that failed decode).
     /// Best-effort: the entry is already known unreadable.
-    pub fn remove_cached(&self, character_id: i64, size: u32) {
-        let path = cache_path(&self.dir, character_id, size);
+    pub fn remove_cached(&self, kind: ImageKind, id: i64, size: u32) {
+        let path = cache_path(&self.dir, kind, id, size);
         let _ = std::fs::remove_file(&path);
         tracing::debug!(
-            "[PORTRAIT] cache entry removed character_id={}",
-            character_id
+            "[PORTRAIT] cache entry removed kind={} id={}",
+            kind.as_str(),
+            id
         );
     }
 }
 
-/// App-wide portrait service: client + store + the one semaphore
-/// that bounds how many portraits are in flight.
+/// App-wide image service (all three kinds): client + store + the
+/// one semaphore that bounds in-flight portraits and logos
+/// together.
 pub struct PortraitService {
     client: PortraitClient,
     store: PortraitStore,
@@ -306,20 +373,22 @@ impl PortraitService {
         }
     }
 
-    /// One portrait, cache-first: a cache hit decodes and returns
-    /// with zero network calls; a miss fetches (under the semaphore,
-    /// so at most `MAX_CONCURRENT_FETCHES` are ever in flight),
-    /// writes the cache best-effort, and decodes. A cached body
-    /// that fails decode is a miss (the entry is dropped and
+    /// One kind-keyed image, cache-first: a cache hit decodes and
+    /// returns with zero network calls; a miss fetches (under the
+    /// semaphore, so at most `MAX_CONCURRENT_FETCHES` are ever in
+    /// flight), writes the cache best-effort, and decodes. A cached
+    /// body that fails decode is a miss (the entry is dropped and
     /// refetched once).
-    pub async fn portrait(
+    pub async fn image(
         &self,
-        character_id: i64,
+        kind: ImageKind,
+        id: i64,
         size: u32,
     ) -> Result<Arc<image::DynamicImage>, PortraitError> {
         tracing::info!(
-            "[PORTRAIT] portrait requested character_id={} size={}",
-            character_id,
+            "[PORTRAIT] image requested kind={} id={} size={}",
+            kind.as_str(),
+            id,
             size
         );
         // The semaphore outlives every task that holds a permit, so
@@ -329,36 +398,39 @@ impl PortraitService {
             .clone()
             .acquire_owned()
             .await
-            .expect("portrait semaphore is app-lifetime, never closed");
-        if let Some(bytes) = self.store.read_cached(character_id, size) {
+            .expect("image semaphore is app-lifetime, never closed");
+        if let Some(bytes) = self.store.read_cached(kind, id, size) {
             match decode_portrait(&bytes) {
                 Ok(image) => return Ok(Arc::new(image)),
                 Err(e) => {
                     tracing::warn!(
-                        "[PORTRAIT] poisoned cache entry dropped character_id={} error={}",
-                        character_id,
+                        "[PORTRAIT] poisoned cache entry dropped kind={} id={} error={}",
+                        kind.as_str(),
+                        id,
                         e
                     );
-                    self.store.remove_cached(character_id, size);
+                    self.store.remove_cached(kind, id, size);
                 }
             }
         }
-        let bytes = self.client.fetch_bytes(character_id, size).await?;
+        let bytes = self.client.fetch_bytes(kind, id, size).await?;
         // Validate before caching: a non-image 200 body must never
         // persist and re-poison later launches.
         let image = decode_portrait(&bytes)?;
         // The cache is an optimization: a failed write is logged and
-        // the fetched portrait still shows.
-        if let Err(e) = self.store.write_cached(character_id, size, &bytes) {
+        // the fetched image still shows.
+        if let Err(e) = self.store.write_cached(kind, id, size, &bytes) {
             tracing::warn!(
-                "[PORTRAIT] cache write failed character_id={} error={}",
-                character_id,
+                "[PORTRAIT] cache write failed kind={} id={} error={}",
+                kind.as_str(),
+                id,
                 e
             );
         }
         tracing::info!(
-            "[PORTRAIT] portrait ready character_id={} size={}",
-            character_id,
+            "[PORTRAIT] image ready kind={} id={} size={}",
+            kind.as_str(),
+            id,
             size
         );
         Ok(Arc::new(image))
@@ -410,13 +482,54 @@ mod tests {
         bytes
     }
 
+    /// A real decodable RGBA PNG whose pixels are exactly the given
+    /// literals, in row-major order, so alpha is assertable. The
+    /// opaque helper above cannot express alpha.
+    fn generated_rgba_png(pixels: &[[u8; 4]]) -> Vec<u8> {
+        let mut img = image::RgbaImage::new(pixels.len() as u32, 1);
+        for (x, pixel) in pixels.iter().enumerate() {
+            img.put_pixel(x as u32, 0, image::Rgba(*pixel));
+        }
+        let mut bytes = Vec::new();
+        image::DynamicImage::ImageRgba8(img)
+            .write_to(
+                &mut std::io::Cursor::new(&mut bytes),
+                image::ImageFormat::Png,
+            )
+            .expect("encode rgba png");
+        bytes
+    }
+
     #[test]
     fn cache_naming_is_character_keyed() {
-        assert_eq!(cache_filename(90000001, 256), "90000001_256.jpg");
+        assert_eq!(
+            cache_filename(ImageKind::Character, 90000001, 256),
+            "90000001_256.jpg"
+        );
+        assert_eq!(
+            cache_filename(ImageKind::Corporation, 1000166, 64),
+            "corp-1000166_64.png"
+        );
+        assert_eq!(
+            cache_filename(ImageKind::Alliance, 99003581, 64),
+            "alliance-99003581_64.png"
+        );
+        // The same number in three kinds names three distinct files:
+        // one kind's bytes can never serve another kind's slot.
+        let character = cache_filename(ImageKind::Character, 1000166, 64);
+        let corporation = cache_filename(ImageKind::Corporation, 1000166, 64);
+        let alliance = cache_filename(ImageKind::Alliance, 1000166, 64);
+        assert_ne!(character, corporation);
+        assert_ne!(character, alliance);
+        assert_ne!(corporation, alliance);
         let dir = std::path::Path::new("/tmp/example-cache/portraits");
         assert_eq!(
-            cache_path(dir, 90000001, 256),
+            cache_path(dir, ImageKind::Character, 90000001, 256),
             std::path::Path::new("/tmp/example-cache/portraits/90000001_256.jpg")
+        );
+        assert_eq!(
+            cache_path(dir, ImageKind::Corporation, 1000166, 64),
+            std::path::Path::new("/tmp/example-cache/portraits/corp-1000166_64.png")
         );
     }
 
@@ -480,20 +593,26 @@ mod tests {
     fn store_round_trips_and_misses() {
         let root = tempfile::tempdir().expect("temp dir");
         let store = PortraitStore::new(root.path().to_path_buf());
-        assert_eq!(store.read_cached(90000001, PORTRAIT_SIZE), None);
+        assert_eq!(
+            store.read_cached(ImageKind::Character, 90000001, PORTRAIT_SIZE),
+            None
+        );
         let bytes = generated_png(8, 8);
         store
-            .write_cached(90000001, PORTRAIT_SIZE, &bytes)
+            .write_cached(ImageKind::Character, 90000001, PORTRAIT_SIZE, &bytes)
             .expect("cache write");
         assert!(root.path().join("portraits/90000001_256.jpg").is_file());
         assert_eq!(
             store
-                .read_cached(90000001, PORTRAIT_SIZE)
+                .read_cached(ImageKind::Character, 90000001, PORTRAIT_SIZE)
                 .expect("cached bytes"),
             bytes
         );
-        store.remove_cached(90000001, PORTRAIT_SIZE);
-        assert_eq!(store.read_cached(90000001, PORTRAIT_SIZE), None);
+        store.remove_cached(ImageKind::Character, 90000001, PORTRAIT_SIZE);
+        assert_eq!(
+            store.read_cached(ImageKind::Character, 90000001, PORTRAIT_SIZE),
+            None
+        );
     }
 
     #[test]
@@ -516,7 +635,7 @@ mod tests {
             root.path().to_path_buf(),
         );
         let image = service
-            .portrait(90000001, PORTRAIT_SIZE)
+            .image(ImageKind::Character, 90000001, PORTRAIT_SIZE)
             .await
             .expect("fetch decodes");
         assert_eq!(image.width(), 8);
@@ -524,6 +643,50 @@ mod tests {
         let request = captured.await.expect("request captured");
         assert!(
             request.contains("GET /characters/90000001/portrait?size=256"),
+            "unexpected request: {request}"
+        );
+    }
+
+    #[tokio::test]
+    async fn fetch_decodes_a_corporation_logo_from_the_image_service_shape() {
+        let body = generated_png(8, 8);
+        let (base, captured) = mock_bytes_server(200, body).await;
+        let root = tempfile::tempdir().expect("temp dir");
+        let service = PortraitService::with_client(
+            PortraitClient::with_base_url(base),
+            root.path().to_path_buf(),
+        );
+        let image = service
+            .image(ImageKind::Corporation, 1000166, LOGO_SIZE)
+            .await
+            .expect("logo fetch decodes");
+        assert_eq!(image.width(), 8);
+        assert_eq!(image.height(), 8);
+        let request = captured.await.expect("request captured");
+        assert!(
+            request.contains("GET /corporations/1000166/logo?size=64"),
+            "unexpected request: {request}"
+        );
+    }
+
+    #[tokio::test]
+    async fn fetch_decodes_an_alliance_logo_from_the_image_service_shape() {
+        let body = generated_png(8, 8);
+        let (base, captured) = mock_bytes_server(200, body).await;
+        let root = tempfile::tempdir().expect("temp dir");
+        let service = PortraitService::with_client(
+            PortraitClient::with_base_url(base),
+            root.path().to_path_buf(),
+        );
+        let image = service
+            .image(ImageKind::Alliance, 99003581, LOGO_SIZE)
+            .await
+            .expect("logo fetch decodes");
+        assert_eq!(image.width(), 8);
+        assert_eq!(image.height(), 8);
+        let request = captured.await.expect("request captured");
+        assert!(
+            request.contains("GET /alliances/99003581/logo?size=64"),
             "unexpected request: {request}"
         );
     }
@@ -537,9 +700,14 @@ mod tests {
             root.path().to_path_buf(),
         );
         assert!(matches!(
-            service.portrait(90000001, PORTRAIT_SIZE).await,
+            service
+                .image(ImageKind::Corporation, 1000166, LOGO_SIZE)
+                .await,
             Err(PortraitError::Status(404))
         ));
+        // The live service does not 404 unknown ids: it returns a
+        // shared 200 fallback image (logos design section 5). This
+        // test only documents the status mapping against the mock.
     }
 
     #[tokio::test]
@@ -552,7 +720,9 @@ mod tests {
             root.path().to_path_buf(),
         );
         assert!(matches!(
-            service.portrait(90000001, PORTRAIT_SIZE).await,
+            service
+                .image(ImageKind::Alliance, 99003581, LOGO_SIZE)
+                .await,
             Err(PortraitError::TooLarge)
         ));
     }
@@ -567,7 +737,7 @@ mod tests {
             root.path().to_path_buf(),
         );
         first
-            .portrait(90000001, PORTRAIT_SIZE)
+            .image(ImageKind::Character, 90000001, PORTRAIT_SIZE)
             .await
             .expect("first fetch fills cache");
         // Port 9 is unroutable: any network attempt here would fail,
@@ -577,7 +747,7 @@ mod tests {
             root.path().to_path_buf(),
         );
         let image = second
-            .portrait(90000001, PORTRAIT_SIZE)
+            .image(ImageKind::Character, 90000001, PORTRAIT_SIZE)
             .await
             .expect("cache serves without network");
         assert_eq!(image.width(), 8);
@@ -585,11 +755,59 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn cache_is_isolated_by_kind() {
+        let body = generated_png(8, 8);
+        let (base, _captured) = mock_bytes_server(200, body).await;
+        let root = tempfile::tempdir().expect("temp dir");
+        let first = PortraitService::with_client(
+            PortraitClient::with_base_url(base),
+            root.path().to_path_buf(),
+        );
+        first
+            .image(ImageKind::Corporation, 1000166, LOGO_SIZE)
+            .await
+            .expect("corporation fetch fills cache");
+        // The same numeric id in another kind must not be served by
+        // the corporation bytes: against an unroutable base the
+        // alliance request fails, while a second corporation
+        // request succeeds from cache with no network.
+        let second = PortraitService::with_client(
+            PortraitClient::with_base_url("http://127.0.0.1:9".to_string()),
+            root.path().to_path_buf(),
+        );
+        assert!(
+            second
+                .image(ImageKind::Alliance, 1000166, LOGO_SIZE)
+                .await
+                .is_err(),
+            "corporation bytes must not serve the alliance slot"
+        );
+        let image = second
+            .image(ImageKind::Corporation, 1000166, LOGO_SIZE)
+            .await
+            .expect("corporation cache serves without network");
+        assert_eq!(image.width(), 8);
+        assert_eq!(image.height(), 8);
+    }
+
+    #[test]
+    fn decode_preserves_png_alpha() {
+        let bytes = generated_rgba_png(&[[255, 0, 0, 0], [0, 255, 0, 128], [0, 0, 255, 255]]);
+        let decoded = decode_portrait(&bytes).expect("rgba png decodes");
+        let rgba = decoded.to_rgba8();
+        let pixels: Vec<[u8; 4]> = rgba.pixels().map(|p| p.0).collect();
+        assert_eq!(
+            pixels,
+            vec![[255, 0, 0, 0], [0, 255, 0, 128], [0, 0, 255, 255]]
+        );
+    }
+
+    #[tokio::test]
     async fn poisoned_cache_entry_is_refetched() {
         let root = tempfile::tempdir().expect("temp dir");
         let store = PortraitStore::new(root.path().to_path_buf());
         store
-            .write_cached(90000001, PORTRAIT_SIZE, b"not an image")
+            .write_cached(ImageKind::Corporation, 1000166, LOGO_SIZE, b"not an image")
             .expect("poisoned write");
         let body = generated_png(8, 8);
         let (base, _captured) = mock_bytes_server(200, body).await;
@@ -598,7 +816,7 @@ mod tests {
             root.path().to_path_buf(),
         );
         let image = service
-            .portrait(90000001, PORTRAIT_SIZE)
+            .image(ImageKind::Corporation, 1000166, LOGO_SIZE)
             .await
             .expect("poisoned entry refetches");
         assert_eq!(image.width(), 8);
