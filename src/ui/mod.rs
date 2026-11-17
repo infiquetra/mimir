@@ -6,6 +6,7 @@ pub mod fittings;
 pub mod industry;
 pub mod market;
 pub mod planets;
+pub mod portraits;
 pub mod settings;
 pub mod skills;
 pub mod wallet;
