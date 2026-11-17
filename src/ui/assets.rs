@@ -4,16 +4,24 @@
 
 use std::collections::{BTreeMap, HashMap};
 
+use super::portraits::{
+    ensure_type_icon_requested, show_type_icon, PortraitImageCache, TYPE_ICON_PX,
+};
 use super::widgets;
 use crate::app::state::{AppState, AssetsData, LoadState, StepUpRequest};
 use crate::config::EveConfig;
 use crate::esi::models::AssetItem;
 use crate::names::resolver::NameResolver;
 
+pub const ASSETS_RENDER_MAX: usize = 100;
+
 /// One display row: names already resolved, never a raw numeric ID.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct AssetRow {
     pub item_id: i64,
+    // State-only image key for the row's type icon: never formatted
+    // into any rendered string and never logged.
+    pub type_id: i64,
     pub display_name: String,
     pub type_name: String,
     pub quantity: i64,
@@ -74,6 +82,7 @@ pub fn group_assets(data: &AssetsData, resolver: &NameResolver) -> Vec<AssetLoca
             .or_default()
             .push(AssetRow {
                 item_id: item.item_id,
+                type_id: item.type_id,
                 display_name: display,
                 type_name,
                 quantity: item.quantity,
@@ -237,9 +246,15 @@ fn structures_stepup_banner(ui: &mut egui::Ui, state: &mut AppState) {
     }
 }
 
-pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
+pub fn show(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    resolver: &NameResolver,
+    cache: &mut PortraitImageCache,
+) {
     ui.heading("Assets");
     widgets::mode_notice(ui, state.demo, state.offline);
+    cache.prune(state);
     if state.active_character().is_none() {
         widgets::no_character_panel(ui);
         return;
@@ -282,21 +297,37 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
                 widgets::empty_panel(ui, "No assets match the search.");
                 return;
             }
+            let total_filtered: usize = groups.iter().map(|g| g.rows.len()).sum();
+            let mut remaining = ASSETS_RENDER_MAX;
             for group in &groups {
+                if remaining == 0 {
+                    break;
+                }
                 ui.heading(format!(
                     "{} — {} item types, {} total items",
                     group.location_name, group.type_count, group.item_count
                 ));
-                for row in &group.rows {
-                    if row.has_custom_name {
-                        ui.label(format!(
-                            "{} x{} ({})",
-                            row.display_name, row.quantity, row.type_name
-                        ));
+                let to_render = remaining.min(group.rows.len());
+                for row in group.rows.iter().take(to_render) {
+                    ensure_type_icon_requested(state, row.type_id);
+                    let label = if row.has_custom_name {
+                        format!("{} x{} ({})", row.display_name, row.quantity, row.type_name)
                     } else {
-                        ui.label(format!("{} x{}", row.display_name, row.quantity));
-                    }
+                        format!("{} x{}", row.display_name, row.quantity)
+                    };
+                    ui.horizontal(|ui| {
+                        show_type_icon(ui, cache, state, row.type_id, TYPE_ICON_PX);
+                        ui.label(label);
+                    });
                 }
+                remaining -= to_render;
+            }
+            if total_filtered > ASSETS_RENDER_MAX {
+                ui.label(format!(
+                    "Showing {} of {} items.",
+                    total_filtered.min(ASSETS_RENDER_MAX),
+                    total_filtered
+                ));
             }
         }
         LoadState::Loading => widgets::loading_panel(ui, "Loading assets..."),
@@ -406,6 +437,35 @@ mod tests {
     }
 
     #[test]
+    fn group_assets_carries_type_id_onto_rows() {
+        let groups = group_assets(&data(), &resolver());
+        let by_item: HashMap<i64, i64> = groups
+            .iter()
+            .flat_map(|g| &g.rows)
+            .map(|r| (r.item_id, r.type_id))
+            .collect();
+        assert_eq!(by_item[&1], 34);
+        assert_eq!(by_item[&2], 587);
+        assert_eq!(by_item[&3], 681);
+        assert_eq!(by_item[&4], 34);
+        // Both filter branches keep the carried id intact.
+        let by_location = filter_groups(&groups, "jita");
+        assert_eq!(
+            by_location[0]
+                .rows
+                .iter()
+                .map(|r| (r.item_id, r.type_id))
+                .collect::<Vec<_>>(),
+            vec![(2, 587), (1, 34)]
+        );
+        let by_item_name = filter_groups(&groups, "tritanium");
+        assert!(by_item_name
+            .iter()
+            .flat_map(|g| &g.rows)
+            .all(|r| r.type_id == 34));
+    }
+
+    #[test]
     fn filter_recomputes_counts() {
         let groups = group_assets(&data(), &resolver());
         // Empty query is the identity.
@@ -428,6 +488,225 @@ mod tests {
         assert_eq!(by_type[0].rows[0].display_name, "Aria's Rifter");
         // Nothing matches -> no groups.
         assert!(filter_groups(&groups, "zzzzz").is_empty());
+    }
+
+    #[test]
+    fn assets_render_max_is_100() {
+        assert_eq!(ASSETS_RENDER_MAX, 100);
+    }
+
+    #[test]
+    fn assets_show_queues_icons_for_rendered_rows_only() {
+        use crate::app::state::PortraitState;
+        use crate::portraits::ImageKind;
+        use crate::storage::repositories::CharacterRow;
+
+        fn character_row(id: i64) -> CharacterRow {
+            CharacterRow {
+                character_id: id,
+                name: "Test Pilot".to_string(),
+                corporation_id: 1000166,
+                alliance_id: None,
+                is_active: false,
+            }
+        }
+
+        fn state_with_assets(items: Vec<AssetItem>) -> AppState {
+            let mut state = AppState::new(false);
+            state.characters = vec![character_row(1)];
+            state.set_active_character(1);
+            state.assets = LoadState::Ready(AssetsData {
+                items,
+                custom_names: HashMap::new(),
+            });
+            state.fittings = LoadState::Loading;
+            state
+        }
+
+        fn numbered_resolver(type_ids: &[i64], locations: &[(i64, &str)]) -> NameResolver {
+            let mut r = NameResolver::new();
+            for id in type_ids {
+                r.insert(*id, format!("Item {id}"));
+            }
+            for (lid, name) in locations {
+                r.insert(*lid, (*name).to_string());
+            }
+            r
+        }
+
+        // No active character: show returns at the no-character panel.
+        {
+            let mut state = AppState::new(false);
+            let resolver = NameResolver::new();
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &resolver, &mut cache);
+                });
+            });
+            assert!(state.portrait_requests.is_empty());
+            assert!(cache.is_empty());
+        }
+
+        // 125 rows in one location: exactly one full 100-row window.
+        {
+            let ids: Vec<i64> = (1001..=1125).collect();
+            let items: Vec<AssetItem> = ids
+                .iter()
+                .enumerate()
+                .map(|(idx, id)| item(idx as i64 + 1, *id, 1, 60003760, false, None))
+                .collect();
+            let mut state = state_with_assets(items);
+            let resolver = numbered_resolver(&ids, &[(60003760, "Jita Station")]);
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &resolver, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests.len(), 100);
+            assert!(cache.is_empty());
+            assert!(!state.portrait_requests.contains(&(ImageKind::Type, 1125)));
+            // Every queued key has left NotRequested; a second frame
+            // queues nothing new.
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &resolver, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests.len(), 100);
+            assert!(cache.is_empty());
+            // Filter before the cap: searching for the 125th row's
+            // name reveals the row beyond the window and queues
+            // exactly that one additional key.
+            state.assets_search = "Item 1125".to_string();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &resolver, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests.len(), 101);
+            assert!(state.portrait_requests.contains(&(ImageKind::Type, 1125)));
+        }
+
+        // 60 + 60 rows across two locations: still exactly 100,
+        // proving the budget is global rather than per group.
+        {
+            let ids_a: Vec<i64> = (2001..=2060).collect();
+            let ids_b: Vec<i64> = (3001..=3060).collect();
+            let mut items = Vec::new();
+            for (idx, id) in ids_a.iter().enumerate() {
+                items.push(item(idx as i64 + 1, *id, 1, 60003760, false, None));
+            }
+            for (idx, id) in ids_b.iter().enumerate() {
+                items.push(item(1000 + idx as i64, *id, 1, 60011866, false, None));
+            }
+            let mut all_ids = ids_a.clone();
+            all_ids.extend(ids_b.iter().copied());
+            let mut state = state_with_assets(items);
+            let resolver = numbered_resolver(
+                &all_ids,
+                &[(60003760, "Jita Station"), (60011866, "Amarr Station")],
+            );
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &resolver, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests.len(), 100);
+            assert!(cache.is_empty());
+        }
+
+        // A type repeated on three rendered rows queues once.
+        {
+            let items = vec![
+                item(1, 4001, 1, 60003760, false, None),
+                item(2, 4001, 1, 60003760, false, None),
+                item(3, 4001, 1, 60003760, false, None),
+            ];
+            let mut state = state_with_assets(items);
+            let resolver = numbered_resolver(&[4001], &[(60003760, "Jita Station")]);
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &resolver, &mut cache);
+                });
+            });
+            assert_eq!(
+                state.portrait_requests,
+                vec![(ImageKind::Type, 4001)],
+                "duplicate rows must queue once"
+            );
+            assert!(matches!(
+                state.portrait_state(ImageKind::Type, 4001),
+                PortraitState::Loading
+            ));
+        }
+
+        // A row with type_id == 0 queues nothing.
+        {
+            let items = vec![item(1, 0, 1, 60003760, false, None)];
+            let mut state = state_with_assets(items);
+            let resolver = NameResolver::new();
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &resolver, &mut cache);
+                });
+            });
+            assert!(state.portrait_requests.is_empty());
+            assert!(cache.is_empty());
+            assert!(!state.portraits.contains_key(&(ImageKind::Type, 0)));
+        }
+    }
+
+    #[test]
+    fn assets_demo_queues_held_types_but_never_ready() {
+        use crate::demo::data::seed_demo_state;
+        use crate::portraits::ImageKind;
+
+        // Demo installs Ready assets for its first character (6
+        // rows, 5 distinct held types); a headless show queues
+        // exactly those five keys and uploads nothing. The shell
+        // drain refusal guarantees none spawn in demo, so the
+        // keys stay Loading and never become Ready.
+        let mut state = AppState::new(true);
+        seed_demo_state(&mut state);
+        assert!(state.assets.is_ready(), "demo must install Ready assets");
+        let assets = state.assets.as_ready().expect("demo assets ready").clone();
+        let mut distinct: Vec<i64> = assets.items.iter().map(|i| i.type_id).collect();
+        distinct.sort_unstable();
+        distinct.dedup();
+        assert_eq!(distinct.len(), 5, "demo fixture carries five types");
+        let resolver = crate::demo::data::demo_resolver().expect("demo resolver loads");
+        let mut cache = PortraitImageCache::new();
+        let ctx = egui::Context::default();
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show(ui, &mut state, &resolver, &mut cache);
+            });
+        });
+        let mut queued_ids: Vec<i64> = state
+            .portrait_requests
+            .iter()
+            .filter(|(kind, _)| *kind == ImageKind::Type)
+            .map(|(_, id)| *id)
+            .collect();
+        queued_ids.sort_unstable();
+        assert_eq!(queued_ids, distinct, "demo queues exactly the held types");
+        assert!(cache.is_empty(), "blank-box path uploads nothing in demo");
+        for (_, id) in &state.portrait_requests {
+            assert!(!matches!(
+                state.portrait_state(ImageKind::Type, *id),
+                crate::app::state::PortraitState::Ready(_)
+            ));
+        }
     }
 
     #[test]
