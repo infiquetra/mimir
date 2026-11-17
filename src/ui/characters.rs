@@ -110,6 +110,26 @@ pub fn show(
     // --- Active character detail ---
     ui.separator();
     ui.heading("Active character");
+    // Logo fetches queue only for the loaded detail, the only two
+    // logo ensure calls in the app: the switcher and dashboard
+    // ensure loops stay character-only, so opening this view never
+    // fetches every listed character's corporation. In demo mode
+    // the shell drains without spawning, so this makes zero
+    // network calls and every logo stays a blank box.
+    let detail_logo_ids = state
+        .character_detail
+        .as_ready()
+        .map(|info| (info.corporation_id, info.alliance_id));
+    if let Some((corporation_id, alliance_id)) = detail_logo_ids {
+        if corporation_id > 0 {
+            portraits::ensure_logo_requested(state, ImageKind::Corporation, corporation_id);
+        }
+        if let Some(alliance_id) = alliance_id {
+            if alliance_id > 0 {
+                portraits::ensure_logo_requested(state, ImageKind::Alliance, alliance_id);
+            }
+        }
+    }
     match &state.character_detail {
         LoadState::Ready(info) => {
             let corp = resolver.name(info.corporation_id);
@@ -157,11 +177,40 @@ pub fn show(
                     ui.label(&portrait_name);
                     ui.end_row();
                     ui.label("Corporation");
-                    ui.label(&corp);
+                    if info.corporation_id > 0 {
+                        ui.horizontal(|ui| {
+                            portraits::show_logo(
+                                ui,
+                                cache,
+                                state,
+                                ImageKind::Corporation,
+                                info.corporation_id,
+                                portraits::DETAIL_LOGO_PX,
+                            );
+                            ui.label(&corp);
+                        });
+                    } else {
+                        ui.label(&corp);
+                    }
                     ui.end_row();
                     if let Some(alliance_id) = info.alliance_id {
+                        let alliance_name = resolver.name(alliance_id);
                         ui.label("Alliance");
-                        ui.label(resolver.name(alliance_id));
+                        if alliance_id > 0 {
+                            ui.horizontal(|ui| {
+                                portraits::show_logo(
+                                    ui,
+                                    cache,
+                                    state,
+                                    ImageKind::Alliance,
+                                    alliance_id,
+                                    portraits::DETAIL_LOGO_PX,
+                                );
+                                ui.label(&alliance_name);
+                            });
+                        } else {
+                            ui.label(&alliance_name);
+                        }
                         ui.end_row();
                     }
                     ui.label("Security status");
@@ -214,6 +263,46 @@ pub fn show(
                 active_id
             );
             state.request_portrait(ImageKind::Character, active_id);
+        }
+    }
+
+    // Failed logos retry only from here, never from the render
+    // path (which would loop at frame rate). Demo mode never
+    // shows the buttons: no fetch is ever attempted there. The
+    // ids come from the loaded detail, so nothing renders when
+    // no detail is ready.
+    if !state.demo {
+        let detail_ids = state
+            .character_detail
+            .as_ready()
+            .map(|info| (info.corporation_id, info.alliance_id));
+        if let Some((corporation_id, alliance_id)) = detail_ids {
+            if matches!(
+                state.portrait_state(ImageKind::Corporation, corporation_id),
+                PortraitState::Failed
+            ) && ui.button("Retry corporation logo").clicked()
+            {
+                tracing::info!(
+                    "[PORTRAIT] logo retry requested from Characters view kind=corporation id={}",
+                    corporation_id
+                );
+                state.request_portrait(ImageKind::Corporation, corporation_id);
+            }
+            if let Some(alliance_id) = alliance_id {
+                if alliance_id > 0
+                    && matches!(
+                        state.portrait_state(ImageKind::Alliance, alliance_id),
+                        PortraitState::Failed
+                    )
+                    && ui.button("Retry alliance logo").clicked()
+                {
+                    tracing::info!(
+                        "[PORTRAIT] logo retry requested from Characters view kind=alliance id={}",
+                        alliance_id
+                    );
+                    state.request_portrait(ImageKind::Alliance, alliance_id);
+                }
+            }
         }
     }
 
