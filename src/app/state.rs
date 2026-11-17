@@ -18,6 +18,7 @@ use crate::names::sde::Sde;
 use crate::portraits::ImageKind;
 use crate::skills::plans::{SkillPlan, SkillPlanAction};
 use crate::storage::repositories::CharacterRow;
+use crate::trade_calculator::{DEFAULT_BROKER_FEE_PERCENT, DEFAULT_SALES_TAX_PERCENT};
 
 /// The eleven views (keys 1-9, 0 and E in the shell).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -756,6 +757,17 @@ pub struct AppState {
     pub market_candidates: Vec<UniverseName>,
     pub market_lookup_message: Option<String>,
     pub market_generation: u64,
+    // View-local trade calculator drafts (market trade calculator
+    // design section 3): session-only String drafts for the
+    // Market view's Trade Calculator block. Prices start empty;
+    // fee drafts seed from the pure module's starting-value
+    // constants in `AppState::new`. Selection changes, region
+    // changes, refreshes, and character switches never touch
+    // them; nothing is stored.
+    pub market_trade_buy_price: String,
+    pub market_trade_sell_price: String,
+    pub market_trade_broker_fee_percent: String,
+    pub market_trade_sales_tax_percent: String,
     // View-local industry UI state.
     pub industry_search: String,
     pub industry_blueprint_kind: BlueprintKindFilter,
@@ -846,6 +858,13 @@ impl AppState {
             // Explicit: `..Self::default()` would leave the region at
             // 0, outside the locked hub set.
             market_region_id: DEFAULT_MARKET_REGION_ID,
+            // Trade calculator fee drafts seed from the pure
+            // module's starting values: the derived Default would
+            // leave them empty, and an empty fee must mean
+            // "reader cleared it", not the app's starting state
+            // (design section 3). Price drafts start empty.
+            market_trade_broker_fee_percent: format!("{:.1}", DEFAULT_BROKER_FEE_PERCENT),
+            market_trade_sales_tax_percent: format!("{:.1}", DEFAULT_SALES_TAX_PERCENT),
             // Effect strength defaults to 1 (design section 7.1) and
             // is clamped to 1..=6 by the view on every use.
             exploration_selected_strength: 1,
@@ -1983,6 +2002,40 @@ mod tests {
             assert_eq!(state.market_lookup_requested, None);
         }
         assert_eq!(market_region_name(42), None);
+    }
+
+    #[test]
+    fn trade_calculator_drafts_seed_empty_prices_and_starting_fees() {
+        for demo in [false, true] {
+            let state = AppState::new(demo);
+            assert_eq!(state.market_trade_buy_price, "");
+            assert_eq!(state.market_trade_sell_price, "");
+            assert_eq!(
+                state.market_trade_broker_fee_percent,
+                format!("{:.1}", DEFAULT_BROKER_FEE_PERCENT)
+            );
+            assert_eq!(
+                state.market_trade_sales_tax_percent,
+                format!("{:.1}", DEFAULT_SALES_TAX_PERCENT)
+            );
+            assert_eq!(state.market_trade_broker_fee_percent, "1.0");
+            assert_eq!(state.market_trade_sales_tax_percent, "2.0");
+        }
+    }
+
+    #[test]
+    fn trade_calculator_drafts_survive_selection_and_region_changes() {
+        let mut state = AppState::new(false);
+        state.market_trade_buy_price = "100".to_string();
+        state.market_trade_sell_price = "120".to_string();
+        state.market_trade_broker_fee_percent = "2.5".to_string();
+        state.market_trade_sales_tax_percent = "4.0".to_string();
+        state.set_market_selection(34, "Tritanium".to_string());
+        state.set_market_region(10000043);
+        assert_eq!(state.market_trade_buy_price, "100");
+        assert_eq!(state.market_trade_sell_price, "120");
+        assert_eq!(state.market_trade_broker_fee_percent, "2.5");
+        assert_eq!(state.market_trade_sales_tax_percent, "4.0");
     }
 
     #[test]
