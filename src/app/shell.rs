@@ -3772,7 +3772,12 @@ impl eframe::App for MimirApp {
                 View::Skills => ui::skills::show(ui, &mut self.state, &self.sde),
                 View::Wallet => ui::wallet::show(ui, &mut self.state, &self.resolver),
                 View::Assets => ui::assets::show(ui, &mut self.state, &self.resolver),
-                View::Market => ui::market::show(ui, &mut self.state, &self.resolver),
+                View::Market => ui::market::show(
+                    ui,
+                    &mut self.state,
+                    &self.resolver,
+                    &mut self.portrait_textures,
+                ),
                 View::Industry => ui::industry::show(ui, &mut self.state, &self.resolver),
                 View::Planets => ui::planets::show(ui, &mut self.state, &self.resolver),
                 View::Fittings => ui::fittings::show(
@@ -4778,6 +4783,64 @@ mod tests {
             }
             other => panic!("dropped landing must leave the earlier image, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn market_type_icon_landing_drops_after_deselect() {
+        // X is not in any loaded saved fitting: only the market
+        // selection authorizes its type icon.
+        let mut state = two_character_state();
+        state.set_market_selection(3300, "Type X".to_string());
+        assert!(apply_portrait_landing(
+            &mut state,
+            ImageKind::Type,
+            3300,
+            Ok(test_image(8, 8))
+        ));
+        match state.portrait_state(ImageKind::Type, 3300) {
+            PortraitState::Ready(image) => {
+                assert_eq!(image.width(), 8);
+                assert_eq!(image.height(), 8);
+            }
+            other => panic!("selected type must land Ready, got {other:?}"),
+        }
+        // Selecting another item revokes X: a late landing for X
+        // drops whole and writes nothing new.
+        state.set_market_selection(12345, "Type Y".to_string());
+        assert!(!apply_portrait_landing(
+            &mut state,
+            ImageKind::Type,
+            3300,
+            Ok(test_image(4, 4))
+        ));
+        match state.portrait_state(ImageKind::Type, 3300) {
+            PortraitState::Ready(image) => {
+                assert_eq!(image.width(), 8, "dropped landing must write nothing");
+                assert_eq!(image.height(), 8);
+            }
+            other => panic!("dropped landing must leave the earlier image, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn market_type_icon_demo_selection_never_goes_ready() {
+        // Demo selection queues normally, but the drain refusal
+        // governs: nothing spawns, so the key never becomes Ready.
+        let mut state = AppState::new(true);
+        state.set_market_selection(3300, "Type X".to_string());
+        crate::ui::portraits::ensure_type_icon_requested(&mut state, 3300);
+        assert_eq!(
+            state.take_portrait_requests(),
+            vec![(ImageKind::Type, 3300)]
+        );
+        assert_eq!(
+            decide_portrait_start(true, false),
+            Some(PortraitStartRefusal::Demo)
+        );
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 3300),
+            PortraitState::Loading
+        ));
     }
 
     #[test]

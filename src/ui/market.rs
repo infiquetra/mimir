@@ -7,6 +7,9 @@
 
 use std::cmp::Ordering;
 
+use super::portraits::{
+    ensure_type_icon_requested, show_type_icon, PortraitImageCache, MARKET_TYPE_ICON_PX,
+};
 use super::widgets;
 use crate::app::state::{
     market_region_name, AppState, LoadState, MarketData, SectionError, StepUpRequest,
@@ -554,9 +557,19 @@ fn show_character_orders(
     }
 }
 
-pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
+pub fn show(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    resolver: &NameResolver,
+    cache: &mut PortraitImageCache,
+) {
     ui.heading("Market");
     widgets::mode_notice(ui, state.demo, state.offline);
+    // Freed textures for no-longer-known types go first, mirroring
+    // Characters and Dashboard: without this the market icon
+    // texture is never pruned and a stale texture could linger past
+    // a character switch or a selection change.
+    cache.prune(state);
     show_picker(ui, state, resolver);
 
     let Some(type_id) = state.market_selected_type_id else {
@@ -567,17 +580,31 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
         return;
     };
 
+    // Exactly one ensure per selected type, inside the `Some`
+    // branch: the icon and labels are built every frame (no
+    // virtualization claim), bounded at one.
+    ensure_type_icon_requested(state, type_id);
     let heading = resolver
         .cached(type_id)
         .map(str::to_string)
         .or_else(|| state.market_selected_type_name.clone())
         .unwrap_or_else(|| "Unknown Item".to_string());
     ui.separator();
-    ui.heading(heading);
-    ui.label(format!(
-        "Region: {}",
-        region_label(state.market_region_id, resolver)
-    ));
+    // Detail-header layout per the Flutter market precedent: the
+    // 64pt type icon at the left, then the resolved heading with
+    // the region as its second line. The id itself is never
+    // formatted; the resolved name beside the icon carries the
+    // meaning.
+    ui.horizontal(|ui| {
+        show_type_icon(ui, cache, state, type_id, MARKET_TYPE_ICON_PX);
+        ui.vertical(|ui| {
+            ui.heading(heading);
+            ui.label(format!(
+                "Region: {}",
+                region_label(state.market_region_id, resolver)
+            ));
+        });
+    });
     if ui.button("Refresh market data").clicked() {
         tracing::info!("[MARKET] refresh requested from Market view");
         state.market_fetch_requested = true;
@@ -879,6 +906,53 @@ mod tests {
         });
         state.wallet = LoadState::Loading;
         assert_eq!(quick_pick_types(&state, &named).len(), 12);
+    }
+
+    #[test]
+    fn market_header_runs_headless_and_queues_one_type_icon() {
+        use crate::app::state::PortraitState;
+        use crate::portraits::ImageKind;
+
+        let ctx = egui::Context::default();
+        // Type 3300 is only the market selection, never a fitting;
+        // the fixture has no loaded saved fittings.
+        let mut state = AppState::new(false);
+        state.set_market_selection(3300, "Type X".to_string());
+        let resolver = NameResolver::new();
+        let mut cache = PortraitImageCache::new();
+
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show(ui, &mut state, &resolver, &mut cache);
+            });
+        });
+        // Exactly one queued request for the selected type, and
+        // the blank-box path uploads nothing.
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 3300),
+            PortraitState::Loading
+        ));
+        assert!(cache.is_empty(), "no Ready image means no texture upload");
+
+        // A second frame queues nothing new (already Loading).
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show(ui, &mut state, &resolver, &mut cache);
+            });
+        });
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+
+        // With no selection the header queues nothing at all.
+        let mut unselected = AppState::new(false);
+        assert_eq!(unselected.market_selected_type_id, None);
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show(ui, &mut unselected, &resolver, &mut cache);
+            });
+        });
+        assert!(unselected.portrait_requests.is_empty());
+        assert!(cache.is_empty());
     }
 
     #[test]

@@ -39,6 +39,12 @@ pub const DETAIL_LOGO_PX: f32 = 20.0;
 /// visual size. Its own constant so a later row-density
 /// decision does not move logos.
 pub const TYPE_ICON_PX: f32 = 20.0;
+/// Render size of the selected item's type icon in the market
+/// detail header, in points: the Flutter detail header draws
+/// its icon at 64px, one-to-one with the 64px fetch
+/// (`TYPE_ICON_SIZE`), so the header is not a row and does
+/// not share the fittings rows' 20pt.
+pub const MARKET_TYPE_ICON_PX: f32 = 64.0;
 
 /// One uploaded image: the decoded image it was built from
 /// (identity check via `Arc::ptr_eq`) plus its live texture.
@@ -189,9 +195,9 @@ pub fn ensure_logo_requested(state: &mut AppState, kind: ImageKind, id: i64) {
 /// Queue a type-icon fetch for one item type id, with the same
 /// rule as `ensure_logo_requested`: only a `NotRequested` key
 /// queues, a `Failed` icon never re-queues from the render path,
-/// and an unknown id queues nothing through the saved-fittings
-/// guard. Thin delegation so the fittings view never spells
-/// `ImageKind` or a size.
+/// and an unknown id queues nothing through the union guard
+/// (loaded saved fittings or the selected market type). Thin
+/// delegation so calling views never spell `ImageKind` or a size.
 pub fn ensure_type_icon_requested(state: &mut AppState, type_id: i64) {
     ensure_logo_requested(state, ImageKind::Type, type_id);
 }
@@ -909,6 +915,55 @@ mod tests {
         let mut loading = type_fixture_state();
         loading.fittings = LoadState::Loading;
         cache.prune(&loading);
+        assert_eq!(cache.len(), 0);
+    }
+
+    #[test]
+    fn prune_keeps_selected_market_type_icon_across_switch() {
+        let ctx = egui::Context::default();
+        // Type 3300 is only the market selection, never a fitting.
+        let mut state = type_fixture_state();
+        state.set_market_selection(3300, "Type X".to_string());
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Type, 3300),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        let uploaded = cache
+            .texture(&ctx, &state, ImageKind::Type, 3300)
+            .expect("upload")
+            .id();
+        assert_eq!(cache.len(), 1);
+
+        // A fittings selection change keeps the market texture.
+        state.fittings_selected_fitting_id = Some(597);
+        cache.prune(&state);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 3300)
+                .expect("kept")
+                .id(),
+            uploaded,
+            "no re-upload while selected"
+        );
+
+        // A character switch resets the fittings bundle but keeps
+        // the selection, so the texture survives with no re-upload.
+        state.set_active_character(2);
+        cache.prune(&state);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 3300)
+                .expect("kept across switch")
+                .id(),
+            uploaded
+        );
+
+        // Selecting another item drops the old texture on prune.
+        state.set_market_selection(12345, "Type Y".to_string());
+        cache.prune(&state);
         assert_eq!(cache.len(), 0);
     }
 
