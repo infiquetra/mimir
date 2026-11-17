@@ -121,35 +121,37 @@ pub fn show(
                 info.name.clone()
             };
             let portrait_id = state.active_character_id;
+            // The portrait renders above the detail grid, not as a
+            // grid row: a 96px cell inside `egui::Grid` does not
+            // grow its row, so the image would paint over the rows
+            // below (observed in the demo screenshot).
+            match portrait_id {
+                Some(active_id) => {
+                    ui.horizontal(|ui| {
+                        portraits::show_portrait(
+                            ui,
+                            cache,
+                            state,
+                            active_id,
+                            &portrait_name,
+                            portraits::DETAIL_PORTRAIT_PX,
+                        );
+                        let status = portraits::placeholder_status(
+                            state.demo,
+                            state.portrait_state(active_id),
+                        );
+                        if !status.is_empty() {
+                            ui.label(status);
+                        }
+                    });
+                }
+                None => {
+                    ui.label("No character selected.");
+                }
+            }
             egui::Grid::new("character_detail")
                 .striped(true)
                 .show(ui, |ui| {
-                    ui.label("Portrait");
-                    match portrait_id {
-                        Some(active_id) => {
-                            ui.horizontal(|ui| {
-                                portraits::show_portrait(
-                                    ui,
-                                    cache,
-                                    state,
-                                    active_id,
-                                    &portrait_name,
-                                    portraits::DETAIL_PORTRAIT_PX,
-                                );
-                                let status = portraits::placeholder_status(
-                                    state.demo,
-                                    state.portrait_state(active_id),
-                                );
-                                if !status.is_empty() {
-                                    ui.label(status);
-                                }
-                            });
-                        }
-                        None => {
-                            ui.label("No character selected.");
-                        }
-                    }
-                    ui.end_row();
                     ui.label("Name");
                     ui.label(&portrait_name);
                     ui.end_row();
