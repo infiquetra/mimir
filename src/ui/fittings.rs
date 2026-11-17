@@ -1939,13 +1939,14 @@ fn render_bay_usage(
 const FITTINGS_DPS_HEADING: &str = "Damage per second (base values)";
 
 /// Locked disclosure: base damage rates with every included
-/// and excluded factor named, and the no-total rule stated
-/// plainly (fitting DPS design section 6). This block's own
-/// sentence; it names the EFT charge-pairing surface, the
+/// and excluded factor named, and the no-combined-DPS-total
+/// rule stated plainly (fitting DPS design section 6, as
+/// extended by volley-ranges design section 6.2). This block's
+/// own sentence; it names the EFT charge-pairing surface, the
 /// online/launched assumptions, and every unapplied term,
 /// which the bay and calibration disclosures above do not
 /// cover in the same words.
-const FITTING_DPS_DISCLOSURE: &str = "Base damage per second from Mimir's bundled item data: base charge, drone, and fighter damage per firing cycle, with no skill, implant, ship, module, rig, or subsystem bonuses applied. Turret and launcher damage counts only a loaded charge listed after the module in imported EFT text, exactly as listed; saved and DNA fittings list no loaded charges, and no charge is assumed. Fitted weapons are treated as online, drones and fighters as launched up to the ship's base drone bandwidth and fighter tubes, and every shot is counted at full damage, with no range, falloff, tracking, missile application, reload time, or flight time applied. No total is shown, because any family's damage can be unknown while another's is counted.";
+const FITTING_DPS_DISCLOSURE: &str = "Base damage per second from Mimir's bundled item data: base charge, drone, and fighter damage per firing cycle, with no skill, implant, ship, module, rig, or subsystem bonuses applied. Turret and launcher damage counts only a loaded charge listed after the module in imported EFT text, exactly as listed; saved and DNA fittings list no loaded charges, and no charge is assumed. Volley is the turret and launcher damage in one firing cycle from those same listed charges; drone and fighter damage is not in the volley. Turret optimal and falloff ranges are averages of the fitted turrets' base ranges, weighted by each turret's share of the turret volley, and each is shown only when every counted turret has that range in the bundled data. Fitted weapons are treated as online, drones and fighters as launched up to the ship's base drone bandwidth and fighter tubes, and every shot is counted at full damage, with no tracking, missile application, reload time, or flight time applied. No combined damage-per-second total is shown, because any family's damage can be unknown while another's is counted.";
 
 const FITTING_DPS_NO_CATALOGUE: &str =
     "Damage per second unavailable: Mimir's bundled item data failed to load.";
@@ -1954,6 +1955,27 @@ const FITTING_DPS_NO_SHIP_DATA: &str = "Damage per second unavailable: Mimir's b
 fn dps_family_line(label: &str, family: &FamilyDps) -> String {
     let amount = widgets::format_fitting_amount(family.dps, "DPS");
     format!("{label} DPS: {amount}")
+}
+
+fn dps_volley_line(volley: Option<f64>) -> Option<String> {
+    volley.map(|value| {
+        let amount = widgets::format_fitting_amount(value, "damage");
+        format!("Volley: {amount}")
+    })
+}
+
+fn dps_optimal_range_line(optimal_range: Option<f64>) -> Option<String> {
+    optimal_range.map(|value| {
+        let amount = widgets::format_fitting_amount(value / 1000.0, "km");
+        format!("Turret optimal range: {amount}")
+    })
+}
+
+fn dps_falloff_range_line(falloff_range: Option<f64>) -> Option<String> {
+    falloff_range.map(|value| {
+        let amount = widgets::format_fitting_amount(value / 1000.0, "km");
+        format!("Turret falloff range: {amount}")
+    })
 }
 
 fn dps_excluded_line(label: &str, excluded: usize) -> Option<String> {
@@ -1983,9 +2005,12 @@ fn dps_unloaded_line(unloaded: usize) -> Option<String> {
 }
 
 /// The block's lines in locked order (turret, launcher,
-/// drones, fighters — fitting DPS design section 6). A `None`
-/// family contributes no line. Excluded-item lines follow
-/// the family lines in the same family order, only for
+/// drones, fighters, volley, turret optimal range, turret
+/// falloff range — fitting DPS design section 6, as
+/// extended by volley-ranges design section 6). A `None`
+/// family, volley, or range contributes no line; each range
+/// is independently conditional on its own field. Excluded-item
+/// lines follow in the same family order, only for
 /// families whose count is positive; the unloaded-weapons
 /// line comes last. No line ever renders in the
 /// over-capacity red.
@@ -2000,6 +2025,15 @@ fn dps_lines(dps: &FittingDps) -> Vec<String> {
         .iter()
         .filter_map(|(label, family)| family.map(|f| dps_family_line(label, &f)))
         .collect();
+    if let Some(line) = dps_volley_line(dps.volley) {
+        lines.push(line);
+    }
+    if let Some(line) = dps_optimal_range_line(dps.optimal_range) {
+        lines.push(line);
+    }
+    if let Some(line) = dps_falloff_range_line(dps.falloff_range) {
+        lines.push(line);
+    }
     for (label, family) in families {
         if let Some(family) = family {
             if let Some(line) = dps_excluded_line(label, family.excluded_items) {
@@ -6229,6 +6263,106 @@ mod tests {
         );
     }
 
+    // Test 10 (volley-ranges design section 8): volley and
+    // range templates byte-exact, including rounding, line
+    // order, and the `None`-contributes-no-line rule.
+    // Sample-EFT arithmetic: volley 13.8 * 3.465 = 47.817
+    // renders as 47.8; ranges 1200.0 / 1000.0 = 1.2,
+    // 5160.0 / 1000.0 = 5.16 renders as 5.2. Real autocannon
+    // 484 ranges: 800.0 / 1000.0 = 0.8, 4300.0 / 1000.0 = 4.3.
+    #[test]
+    fn dps_volley_and_range_lines_match_the_locked_templates() {
+        assert_eq!(
+            dps_volley_line(Some(47.817)).as_deref(),
+            Some("Volley: 47.8 damage")
+        );
+        assert_eq!(
+            dps_volley_line(Some(0.0)).as_deref(),
+            Some("Volley: 0.0 damage")
+        );
+        assert_eq!(dps_volley_line(None), None);
+        assert_eq!(
+            dps_optimal_range_line(Some(1200.0)).as_deref(),
+            Some("Turret optimal range: 1.2 km")
+        );
+        assert_eq!(
+            dps_optimal_range_line(Some(800.0)).as_deref(),
+            Some("Turret optimal range: 0.8 km")
+        );
+        assert_eq!(dps_optimal_range_line(None), None);
+        assert_eq!(
+            dps_falloff_range_line(Some(5160.0)).as_deref(),
+            Some("Turret falloff range: 5.2 km")
+        );
+        assert_eq!(
+            dps_falloff_range_line(Some(4300.0)).as_deref(),
+            Some("Turret falloff range: 4.3 km")
+        );
+        assert_eq!(dps_falloff_range_line(None), None);
+
+        // Locked order: family lines, volley, optimal,
+        // falloff, excluded, unloaded.
+        let dps = FittingDps {
+            turrets: Some(dps_family(12.7512, 0)),
+            launchers: Some(dps_family(0.0, 1)),
+            drones: Some(dps_family(0.0, 0)),
+            fighters: None,
+            unloaded_weapons: 2,
+            volley: Some(47.817),
+            optimal_range: Some(1200.0),
+            falloff_range: Some(5160.0),
+        };
+        assert_eq!(
+            dps_lines(&dps),
+            [
+                "Turret DPS: 12.8 DPS".to_string(),
+                "Launcher DPS: 0.0 DPS".to_string(),
+                "Drone DPS: 0.0 DPS".to_string(),
+                "Volley: 47.8 damage".to_string(),
+                "Turret optimal range: 1.2 km".to_string(),
+                "Turret falloff range: 5.2 km".to_string(),
+                "Launcher DPS does not count 1 item with no damage data in Mimir's bundled item data."
+                    .to_string(),
+                "2 fitted weapons have no loaded charge listed, so they are not counted above."
+                    .to_string(),
+            ]
+        );
+
+        // Missile-only shape: volley present, no ranges.
+        let dps = FittingDps {
+            turrets: Some(dps_family(0.0, 0)),
+            launchers: Some(dps_family(6.484375, 0)),
+            drones: Some(dps_family(0.0, 0)),
+            fighters: None,
+            unloaded_weapons: 0,
+            volley: Some(83.0),
+            optimal_range: None,
+            falloff_range: None,
+        };
+        assert_eq!(
+            dps_lines(&dps),
+            [
+                "Turret DPS: 0.0 DPS".to_string(),
+                "Launcher DPS: 6.5 DPS".to_string(),
+                "Drone DPS: 0.0 DPS".to_string(),
+                "Volley: 83.0 damage".to_string(),
+            ]
+        );
+
+        // No volley and no ranges: family lines only.
+        let dps = FittingDps {
+            turrets: None,
+            launchers: None,
+            drones: Some(dps_family(0.0, 0)),
+            fighters: None,
+            unloaded_weapons: 0,
+            volley: None,
+            optimal_range: None,
+            falloff_range: None,
+        };
+        assert_eq!(dps_lines(&dps), ["Drone DPS: 0.0 DPS".to_string()]);
+    }
+
     // Test 12: excluded and unloaded templates byte-exact for
     // 0 (none), 1 (singular), 2+ (plural), in family order with
     // the unloaded line last.
@@ -6306,8 +6440,10 @@ mod tests {
         assert_eq!(dps_lines(&dps), ["Drone DPS: 0.0 DPS".to_string()]);
     }
 
-    // Test 13: heading, disclosure, and both unavailable
-    // sentences byte-exact.
+    // Test 13 (volley-ranges design section 8): heading,
+    // disclosure, and both unavailable sentences byte-exact.
+    // Only the disclosure moves; heading and unavailable
+    // sentences are byte-identical to shipped.
     #[test]
     fn dps_unavailable_and_disclosure_wording() {
         assert_eq!(FITTINGS_DPS_HEADING, "Damage per second (base values)");
@@ -6321,16 +6457,21 @@ mod tests {
         );
         assert_eq!(
             FITTING_DPS_DISCLOSURE,
-            "Base damage per second from Mimir's bundled item data: base charge, drone, and fighter damage per firing cycle, with no skill, implant, ship, module, rig, or subsystem bonuses applied. Turret and launcher damage counts only a loaded charge listed after the module in imported EFT text, exactly as listed; saved and DNA fittings list no loaded charges, and no charge is assumed. Fitted weapons are treated as online, drones and fighters as launched up to the ship's base drone bandwidth and fighter tubes, and every shot is counted at full damage, with no range, falloff, tracking, missile application, reload time, or flight time applied. No total is shown, because any family's damage can be unknown while another's is counted."
+            "Base damage per second from Mimir's bundled item data: base charge, drone, and fighter damage per firing cycle, with no skill, implant, ship, module, rig, or subsystem bonuses applied. Turret and launcher damage counts only a loaded charge listed after the module in imported EFT text, exactly as listed; saved and DNA fittings list no loaded charges, and no charge is assumed. Volley is the turret and launcher damage in one firing cycle from those same listed charges; drone and fighter damage is not in the volley. Turret optimal and falloff ranges are averages of the fitted turrets' base ranges, weighted by each turret's share of the turret volley, and each is shown only when every counted turret has that range in the bundled data. Fitted weapons are treated as online, drones and fighters as launched up to the ship's base drone bandwidth and fighter tubes, and every shot is counted at full damage, with no tracking, missile application, reload time, or flight time applied. No combined damage-per-second total is shown, because any family's damage can be unknown while another's is counted."
         );
     }
 
-    // Test 14: demo pins (fitting DPS design section 7). Demo
-    // Brawler/Mission Runner/Demo Runner are saved fittings on
-    // zero-bandwidth hulls: `Drone DPS: 0.0 DPS` only. Sample
-    // EFT: Turret DPS 12.8 from one listed charge plus a
-    // 2-unloaded line. Sample DNA: 3-unloaded line. No fighter
-    // line anywhere in demo.
+    // Test 14 (volley-ranges design section 8, demo pins):
+    // demo pins extended by volley-ranges design section 7.
+    // Demo Brawler/Mission Runner/Demo Runner are saved
+    // fittings on zero-bandwidth hulls: `Drone DPS: 0.0 DPS`
+    // only, no volley or range lines. Sample EFT: Turret DPS
+    // 12.8 from one listed charge (13.8 * 3.465 = 47.817;
+    // 47.817 / 3.75 = 12.7512), volley 47.817 rendering as
+    // 47.8, optimal 1200.0 rendering as 1.2 km, falloff
+    // 5160.0 / 1000.0 = 5.16 rendering as 5.2 km, plus a
+    // 2-unloaded line. Sample DNA: no volley or range
+    // lines, 3-unloaded line. No fighter line anywhere.
     #[test]
     fn demo_fixture_fitting_dps_match_the_locked_demo_story() {
         use crate::demo::data::DEMO_FITTINGS_JSON;
@@ -6371,12 +6512,24 @@ mod tests {
             assert_eq!(drones.excluded_items, 0, "{name} drone excluded");
             assert!(dps.fighters.is_none(), "{name} has no fighter family");
             assert_eq!(dps.unloaded_weapons, 0, "{name} unloaded");
+            assert_eq!(dps.volley, None, "{name} has no volley on saved surface");
+            assert_eq!(
+                dps.optimal_range, None,
+                "{name} has no optimal range on saved surface"
+            );
+            assert_eq!(
+                dps.falloff_range, None,
+                "{name} has no falloff range on saved surface"
+            );
             assert_eq!(dps_lines(&dps), ["Drone DPS: 0.0 DPS".to_string()]);
         }
 
         // Sample EFT: three 200mm AutoCannon II candidates, one
         // with Republic Fleet EMP S (10.35 + 2.3 + 1.15 + 0.0
         // = 13.8; 13.8 * 3.465 = 47.817; 47.817 / 3.75 = 12.7512).
+        // The counted turret is the whole turret volley, so both
+        // weighted averages are its own ranges: 2889 maxRange
+        // 1200.0, falloff 5160.0.
         let imported = match parse_eft(DEMO_SAMPLE_EFT, &catalogue) {
             EftImportOutcome::Imported(fitting) => fitting,
             EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
@@ -6399,12 +6552,30 @@ mod tests {
         assert!((sample.drones.expect("drones").dps - 0.0).abs() < 1e-9);
         assert!(sample.fighters.is_none());
         assert_eq!(sample.unloaded_weapons, 2);
+        let volley = sample.volley.expect("EFT sample carries volley");
+        assert!(
+            (volley - 47.817).abs() < 1e-9,
+            "volley is 47.817, got {volley}"
+        );
+        let optimal = sample.optimal_range.expect("EFT sample carries optimal");
+        assert!(
+            (optimal - 1200.0).abs() < 1e-9,
+            "optimal is 1200.0, got {optimal}"
+        );
+        let falloff = sample.falloff_range.expect("EFT sample carries falloff");
+        assert!(
+            (falloff - 5160.0).abs() < 1e-9,
+            "falloff is 5160.0, got {falloff}"
+        );
         assert_eq!(
             dps_lines(&sample),
             [
                 "Turret DPS: 12.8 DPS".to_string(),
                 "Launcher DPS: 0.0 DPS".to_string(),
                 "Drone DPS: 0.0 DPS".to_string(),
+                "Volley: 47.8 damage".to_string(),
+                "Turret optimal range: 1.2 km".to_string(),
+                "Turret falloff range: 5.2 km".to_string(),
                 "2 fitted weapons have no loaded charge listed, so they are not counted above."
                     .to_string(),
             ]
@@ -6425,6 +6596,9 @@ mod tests {
         assert!((dna.drones.expect("DNA drones").dps - 0.0).abs() < 1e-9);
         assert!(dna.fighters.is_none());
         assert_eq!(dna.unloaded_weapons, 3);
+        assert_eq!(dna.volley, None);
+        assert_eq!(dna.optimal_range, None);
+        assert_eq!(dna.falloff_range, None);
         assert_eq!(
             dps_lines(&dna),
             [
