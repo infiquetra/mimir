@@ -350,9 +350,12 @@ these holds — the full list, no others:
 Consequences, locked:
 
 - No `NaN`, infinity, negative, or above-100% figure can
-  be produced: every `Some` chance is finite and lies
-  above 0 and at most 1, so the rendered percent lies in
-  `0.0%`–`100.0%` display rounding of a value in (0, 1].
+  be produced: every `Some` chance is finite, at least 0,
+  and at most 1 (a present input whose product underflows
+  to exactly 0.0 at subnormal magnitudes is still a
+  computed result, never an absent one), so the rendered
+  percent lies in `0.0%`–`100.0%` display rounding of a
+  value in [0, 1].
 - An absent input never renders as a computed zero. When
   no result exists the block shows one guidance line and
   no percentage of any kind (section 7); presence is
