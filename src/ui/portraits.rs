@@ -123,6 +123,7 @@ impl PortraitImageCache {
             ImageKind::Corporation => format!("logo-corp-{id}"),
             ImageKind::Alliance => format!("logo-alliance-{id}"),
             ImageKind::Faction => format!("logo-faction-{id}"),
+            ImageKind::Type => format!("type-{id}"),
         };
         let handle = ctx.load_texture(texture_name, color, egui::TextureOptions::default());
         if replaced {

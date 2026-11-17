@@ -31,7 +31,9 @@ use crate::names::resolver::{
     is_displayable_name, is_structure_id, structure_lookup_batch, NameResolver,
 };
 use crate::names::sde::Sde;
-use crate::portraits::{ImageKind, PortraitError, PortraitService, LOGO_SIZE, PORTRAIT_SIZE};
+use crate::portraits::{
+    ImageKind, PortraitError, PortraitService, LOGO_SIZE, PORTRAIT_SIZE, TYPE_ICON_SIZE,
+};
 use crate::skills::plans::{apply_demo_action, DemoApplyOutcome, SkillPlan, SkillPlanAction};
 use crate::storage::repositories::{self, CharacterRow, TokenMetaRow};
 use crate::ui;
@@ -2265,6 +2267,7 @@ impl MimirApp {
                             ImageKind::Corporation | ImageKind::Alliance | ImageKind::Faction => {
                                 LOGO_SIZE
                             }
+                            ImageKind::Type => TYPE_ICON_SIZE,
                         };
                         let image = service.image(kind, id, size).await;
                         let _ = tx.send(BackendMsg::PortraitFetched { kind, id, image });
