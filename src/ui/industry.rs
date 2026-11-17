@@ -14,7 +14,29 @@ use crate::app::state::{
 };
 use crate::config::EveConfig;
 use crate::esi::models::{CharacterBlueprint, IndustryJob};
+use crate::invention_calculator::{
+    invention_calculator_result, parse_base_probability, parse_decryptor_multiplier,
+    parse_skill_level,
+};
 use crate::names::resolver::NameResolver;
+
+/// Invention Calculator block wording (industry calculators design
+/// section 7): heading, input labels, guidance lines, and
+/// disclosure, all verbatim. Named constants so tests assert them
+/// byte-exactly without an egui frame.
+pub const INVENTION_CALCULATOR_HEADING: &str = "Invention Calculator";
+pub const INVENTION_CALCULATOR_INPUT_LABELS: [&str; 5] = [
+    "Base Probability (0 to 1, entered by you)",
+    "Encryption Skill Level (1 to 5, entered by you)",
+    "Datacore Skill 1 Level (1 to 5, entered by you)",
+    "Datacore Skill 2 Level (1 to 5, entered by you)",
+    "Decryptor Multiplier (entered by you)",
+];
+pub const INVENTION_CALCULATOR_INPUT_GUIDANCE: &str =
+    "Enter a base probability above 0 and at most 1 (for example 0.30 for 30%), skill levels from 1 to 5, and a decryptor multiplier above 0, to see the result.";
+pub const INVENTION_CALCULATOR_NO_RESULT_GUIDANCE: &str =
+    "No result: the entered values are too large to calculate with.";
+pub const INVENTION_CALCULATOR_DISCLOSURE: &str = "Estimate using only the base probability, skill levels, and decryptor multiplier you entered. The starting values (base probability 0.30, each skill level 4, decryptor multiplier 1.0) are starting values to replace with your own: Mimir does not read the base probability from any blueprint, the skill levels from your character, or the multiplier from any decryptor you own. The decryptor choices in the retired app were None x1.0, Symmetry x1.1, Process x1.2, Parity x1.8, and Optimized x0.6; type the multiplier for the decryptor you mean. The chance is capped at 100%. There are no reaction or production-chain calculators. Figures are rounded only for display, so these numbers can differ from EVE.";
 
 pub fn activity_label(activity_id: i64) -> &'static str {
     match activity_id {
@@ -451,9 +473,80 @@ fn show_blueprints_section(
     }
 }
 
+/// Every line the Invention Calculator block renders after the
+/// heading and input rows: the result block plus the disclosure, or
+/// one guidance line plus the disclosure. Pure over the drafts so
+/// tests assert the rendered strings without an egui frame, like
+/// the file's other pure summaries.
+fn invention_calculator_lines(state: &AppState) -> Vec<String> {
+    let mut lines = match invention_calculator_result(
+        &state.industry_invention_base_probability,
+        &state.industry_invention_encryption_skill,
+        &state.industry_invention_datacore_skill1,
+        &state.industry_invention_datacore_skill2,
+        &state.industry_invention_decryptor_multiplier,
+    ) {
+        Some(chance) => vec![
+            format!("Invention Chance: {:.1}%", chance * 100.0),
+            "With entered skills and decryptor".to_string(),
+        ],
+        None => {
+            // Guidance selection only: no calculation is duplicated
+            // here. All five drafts parse but the calculation
+            // rejects them means the product overflowed.
+            let all_parse = parse_base_probability(&state.industry_invention_base_probability)
+                .is_some()
+                && parse_skill_level(&state.industry_invention_encryption_skill).is_some()
+                && parse_skill_level(&state.industry_invention_datacore_skill1).is_some()
+                && parse_skill_level(&state.industry_invention_datacore_skill2).is_some()
+                && parse_decryptor_multiplier(&state.industry_invention_decryptor_multiplier)
+                    .is_some();
+            if all_parse {
+                vec![INVENTION_CALCULATOR_NO_RESULT_GUIDANCE.to_string()]
+            } else {
+                vec![INVENTION_CALCULATOR_INPUT_GUIDANCE.to_string()]
+            }
+        }
+    };
+    lines.push(INVENTION_CALCULATOR_DISCLOSURE.to_string());
+    lines
+}
+
+fn show_invention_calculator(ui: &mut egui::Ui, state: &mut AppState) {
+    ui.heading(INVENTION_CALCULATOR_HEADING);
+    let mut changed = false;
+    ui.label(INVENTION_CALCULATOR_INPUT_LABELS[0]);
+    let response = ui.text_edit_singleline(&mut state.industry_invention_base_probability);
+    state.text_input_focused |= response.has_focus();
+    changed |= response.changed();
+    ui.label(INVENTION_CALCULATOR_INPUT_LABELS[1]);
+    let response = ui.text_edit_singleline(&mut state.industry_invention_encryption_skill);
+    state.text_input_focused |= response.has_focus();
+    changed |= response.changed();
+    ui.label(INVENTION_CALCULATOR_INPUT_LABELS[2]);
+    let response = ui.text_edit_singleline(&mut state.industry_invention_datacore_skill1);
+    state.text_input_focused |= response.has_focus();
+    changed |= response.changed();
+    ui.label(INVENTION_CALCULATOR_INPUT_LABELS[3]);
+    let response = ui.text_edit_singleline(&mut state.industry_invention_datacore_skill2);
+    state.text_input_focused |= response.has_focus();
+    changed |= response.changed();
+    ui.label(INVENTION_CALCULATOR_INPUT_LABELS[4]);
+    let response = ui.text_edit_singleline(&mut state.industry_invention_decryptor_multiplier);
+    state.text_input_focused |= response.has_focus();
+    changed |= response.changed();
+    if changed {
+        tracing::debug!("[INDUSTRY] invention calculator input changed");
+    }
+    for line in invention_calculator_lines(state) {
+        ui.label(line);
+    }
+}
+
 pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
     ui.heading("Industry");
     widgets::mode_notice(ui, state.demo, state.offline);
+    show_invention_calculator(ui, state);
     if state.active_character().is_none() {
         widgets::no_character_panel(ui);
         return;
@@ -816,5 +909,184 @@ mod tests {
         }
         assert_eq!(brows[0].quantity_label, "Original");
         assert_eq!(brows[1].quantity_label, "Copy");
+    }
+
+    fn invention_state(
+        base: &str,
+        encryption: &str,
+        datacore1: &str,
+        datacore2: &str,
+        multiplier: &str,
+    ) -> AppState {
+        let mut state = AppState::new(false);
+        state.industry_invention_base_probability = base.to_string();
+        state.industry_invention_encryption_skill = encryption.to_string();
+        state.industry_invention_datacore_skill1 = datacore1.to_string();
+        state.industry_invention_datacore_skill2 = datacore2.to_string();
+        state.industry_invention_decryptor_multiplier = multiplier.to_string();
+        state
+    }
+
+    #[test]
+    fn invention_calculator_wording_is_verbatim() {
+        assert_eq!(INVENTION_CALCULATOR_HEADING, "Invention Calculator");
+        assert_eq!(
+            INVENTION_CALCULATOR_INPUT_LABELS,
+            [
+                "Base Probability (0 to 1, entered by you)",
+                "Encryption Skill Level (1 to 5, entered by you)",
+                "Datacore Skill 1 Level (1 to 5, entered by you)",
+                "Datacore Skill 2 Level (1 to 5, entered by you)",
+                "Decryptor Multiplier (entered by you)",
+            ]
+        );
+        assert_eq!(
+            INVENTION_CALCULATOR_INPUT_GUIDANCE,
+            "Enter a base probability above 0 and at most 1 (for example 0.30 for 30%), skill levels from 1 to 5, and a decryptor multiplier above 0, to see the result."
+        );
+        assert_eq!(
+            INVENTION_CALCULATOR_NO_RESULT_GUIDANCE,
+            "No result: the entered values are too large to calculate with."
+        );
+        assert_eq!(
+            INVENTION_CALCULATOR_DISCLOSURE,
+            "Estimate using only the base probability, skill levels, \
+             and decryptor multiplier you entered. \
+             The starting values (base probability 0.30, each skill level 4, \
+             decryptor multiplier 1.0) are starting values to replace with your own: \
+             Mimir does not read the base probability from any blueprint, \
+             the skill levels from your character, or the multiplier from any decryptor \
+             you own. \
+             The decryptor choices in the retired app were None x1.0, Symmetry x1.1, \
+             Process x1.2, Parity x1.8, and Optimized x0.6; \
+             type the multiplier for the decryptor you mean. \
+             The chance is capped at 100%. \
+             There are no reaction or production-chain calculators. \
+             Figures are rounded only for display, so these numbers can differ from EVE."
+        );
+    }
+
+    #[test]
+    fn invention_calculator_full_result_block() {
+        // Starting values: 0.30 * 1.3 * 1.0 = 0.39 -> 39.0%.
+        let state = invention_state("0.30", "4", "4", "4", "1.0");
+        assert_eq!(
+            invention_calculator_lines(&state),
+            vec![
+                "Invention Chance: 39.0%",
+                "With entered skills and decryptor",
+                INVENTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn invention_calculator_oracle_3_result() {
+        // Flutter oracle 3: 0.40 * 1.3 * 0.6 = 0.312 -> 31.2%.
+        let state = invention_state("0.40", "4", "4", "4", "0.6");
+        assert_eq!(
+            invention_calculator_lines(&state),
+            vec![
+                "Invention Chance: 31.2%",
+                "With entered skills and decryptor",
+                INVENTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn invention_calculator_oracle_4_cap_result() {
+        // Flutter oracle 4: 0.90 * 1.375 * 1.8 = 2.2275, capped
+        // to 1.0 -> 100.0%. A genuinely computed boundary.
+        let state = invention_state("0.90", "5", "5", "5", "1.8");
+        assert_eq!(
+            invention_calculator_lines(&state),
+            vec![
+                "Invention Chance: 100.0%",
+                "With entered skills and decryptor",
+                INVENTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn invention_calculator_guidance_selection() {
+        // Any one draft emptied or invalid: exactly the input
+        // guidance plus disclosure, with no result line. One case
+        // per field, including base 0 and skill 0.
+        let expected = vec![
+            INVENTION_CALCULATOR_INPUT_GUIDANCE,
+            INVENTION_CALCULATOR_DISCLOSURE,
+        ];
+        assert_eq!(
+            invention_calculator_lines(&invention_state("", "4", "4", "4", "1.0")),
+            expected
+        );
+        assert_eq!(
+            invention_calculator_lines(&invention_state("0", "4", "4", "4", "1.0")),
+            expected
+        );
+        assert_eq!(
+            invention_calculator_lines(&invention_state("0.30", "", "4", "4", "1.0")),
+            expected
+        );
+        assert_eq!(
+            invention_calculator_lines(&invention_state("0.30", "0", "4", "4", "1.0")),
+            expected
+        );
+        assert_eq!(
+            invention_calculator_lines(&invention_state("0.30", "4", "", "4", "1.0")),
+            expected
+        );
+        assert_eq!(
+            invention_calculator_lines(&invention_state("0.30", "4", "4", "", "1.0")),
+            expected
+        );
+        assert_eq!(
+            invention_calculator_lines(&invention_state("0.30", "4", "4", "4", "")),
+            expected
+        );
+        // All parse but the product overflows: the no-result
+        // guidance plus disclosure.
+        assert_eq!(
+            invention_calculator_lines(&invention_state("1", "5", "5", "5", "1.5e308")),
+            vec![
+                INVENTION_CALCULATOR_NO_RESULT_GUIDANCE,
+                INVENTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn invention_calculator_demo_independence() {
+        use crate::demo::data::seed_demo_state;
+
+        let mut state = invention_state("0.40", "5", "3", "2", "0.6");
+        seed_demo_state(&mut state);
+        // Seeding installs the demo industry bundle and leaves the
+        // five drafts exactly as constructed: no prefill from the
+        // demo invention job's 0.4 probability or any demo
+        // blueprint.
+        assert!(state.industry.is_ready());
+        assert_eq!(state.industry_invention_base_probability, "0.40");
+        assert_eq!(state.industry_invention_encryption_skill, "5");
+        assert_eq!(state.industry_invention_datacore_skill1, "3");
+        assert_eq!(state.industry_invention_datacore_skill2, "2");
+        assert_eq!(state.industry_invention_decryptor_multiplier, "0.6");
+        // The seeded starting drafts render the 39.0% block in
+        // that state.
+        state.industry_invention_base_probability = "0.30".to_string();
+        state.industry_invention_encryption_skill = "4".to_string();
+        state.industry_invention_datacore_skill1 = "4".to_string();
+        state.industry_invention_datacore_skill2 = "4".to_string();
+        state.industry_invention_decryptor_multiplier = "1.0".to_string();
+        assert_eq!(
+            invention_calculator_lines(&state),
+            vec![
+                "Invention Chance: 39.0%",
+                "With entered skills and decryptor",
+                INVENTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
     }
 }
