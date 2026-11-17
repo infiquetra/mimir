@@ -18,10 +18,27 @@ use crate::app::state::{
 use crate::config::EveConfig;
 use crate::esi::models::{CharacterOrder, MarketHistoryEntry, RegionalOrder, UniverseName};
 use crate::names::resolver::NameResolver;
+use crate::trade_calculator::{parse_fee_percent, parse_trade_price, trade_calculator_result};
 
 pub const MARKET_TOP_N: usize = 10;
 pub const MARKET_HISTORY_ROWS: usize = 30;
 const QUICK_PICK_MAX: usize = 12;
+
+/// Trade Calculator block wording (market trade calculator design
+/// section 7): heading, input labels, guidance lines, and
+/// disclosure, all verbatim. Named constants so tests assert them
+/// byte-exactly without an egui frame.
+pub const TRADE_CALCULATOR_HEADING: &str = "Trade Calculator";
+pub const TRADE_CALCULATOR_INPUT_LABELS: [&str; 4] = [
+    "Buy Price (ISK)",
+    "Sell Price (ISK)",
+    "Broker Fee % (entered by you)",
+    "Sales Tax % (entered by you)",
+];
+pub const TRADE_CALCULATOR_INPUT_GUIDANCE: &str =
+    "Enter a buy price and a sell price above 0 ISK, and fee percents from 0 to 100, to see the result.";
+pub const TRADE_CALCULATOR_NO_RESULT_GUIDANCE: &str = "No result: the broker fee and sales tax together must be below 100%, and the prices must be small enough to calculate with.";
+pub const TRADE_CALCULATOR_DISCLOSURE: &str = "Per-unit estimate using only the prices and percents you entered. The broker fee is charged on both the buy and sell orders; sales tax is charged on the sell order only. The starting percents (broker fee 1.0%, sales tax 2.0%) are starting values to replace with your own rates: Mimir does not read them from your character's skills, standings, or the station or structure, and they may not be the rates you actually pay. Relist fees and any quantity total are not included. Figures are rounded only for display, so these numbers can differ from EVE.";
 
 #[derive(Debug, Clone, Default)]
 pub struct OrderBookSummary {
@@ -340,6 +357,95 @@ fn show_picker(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver)
     });
 }
 
+/// Every line the Trade Calculator block renders after the heading
+/// and input rows: the full result block plus the disclosure, or
+/// one guidance line plus the disclosure. Pure over the drafts so
+/// tests assert the rendered strings without an egui frame, like
+/// the file's other pure summaries.
+fn trade_calculator_lines(state: &AppState) -> Vec<String> {
+    let mut lines = match trade_calculator_result(
+        &state.market_trade_buy_price,
+        &state.market_trade_sell_price,
+        &state.market_trade_broker_fee_percent,
+        &state.market_trade_sales_tax_percent,
+    ) {
+        Some((margin, break_even)) => {
+            let mut lines = vec![
+                if margin.is_profitable() {
+                    "PROFITABLE".to_string()
+                } else {
+                    "LOSS".to_string()
+                },
+                price_label(margin.profit),
+                format!("{:.1}% margin", margin.margin_percent),
+                format!("Buy Price: {}", price_label(margin.buy_price)),
+                format!("+ Broker Fee (buy): {}", price_label(margin.broker_fee_buy)),
+                format!("= Total Cost: {}", price_label(margin.buy_total)),
+                format!("Sell Price: {}", price_label(margin.sell_price)),
+                format!(
+                    "- Broker Fee (sell): {}",
+                    price_label(margin.broker_fee_sell)
+                ),
+                format!("- Sales Tax: {}", price_label(margin.sales_tax)),
+                format!("= Net Revenue: {}", price_label(margin.sell_net)),
+                format!("Profit / Unit: {}", price_label(margin.profit)),
+                format!("Total Fees: {}", price_label(margin.total_fees())),
+            ];
+            if let Some(break_even) = break_even {
+                lines.push(format!(
+                    "Break-Even Sell Price: {}",
+                    price_label(break_even)
+                ));
+            }
+            lines
+        }
+        None => {
+            // Guidance selection only: no calculation is duplicated
+            // here. All four drafts parse but the calculation
+            // rejects them means the percents sum to 100 or more or
+            // a huge-price output overflowed.
+            let all_parse = parse_trade_price(&state.market_trade_buy_price).is_some()
+                && parse_trade_price(&state.market_trade_sell_price).is_some()
+                && parse_fee_percent(&state.market_trade_broker_fee_percent).is_some()
+                && parse_fee_percent(&state.market_trade_sales_tax_percent).is_some();
+            if all_parse {
+                vec![TRADE_CALCULATOR_NO_RESULT_GUIDANCE.to_string()]
+            } else {
+                vec![TRADE_CALCULATOR_INPUT_GUIDANCE.to_string()]
+            }
+        }
+    };
+    lines.push(TRADE_CALCULATOR_DISCLOSURE.to_string());
+    lines
+}
+
+fn show_trade_calculator(ui: &mut egui::Ui, state: &mut AppState) {
+    ui.heading(TRADE_CALCULATOR_HEADING);
+    let mut changed = false;
+    ui.label(TRADE_CALCULATOR_INPUT_LABELS[0]);
+    let response = ui.text_edit_singleline(&mut state.market_trade_buy_price);
+    state.text_input_focused |= response.has_focus();
+    changed |= response.changed();
+    ui.label(TRADE_CALCULATOR_INPUT_LABELS[1]);
+    let response = ui.text_edit_singleline(&mut state.market_trade_sell_price);
+    state.text_input_focused |= response.has_focus();
+    changed |= response.changed();
+    ui.label(TRADE_CALCULATOR_INPUT_LABELS[2]);
+    let response = ui.text_edit_singleline(&mut state.market_trade_broker_fee_percent);
+    state.text_input_focused |= response.has_focus();
+    changed |= response.changed();
+    ui.label(TRADE_CALCULATOR_INPUT_LABELS[3]);
+    let response = ui.text_edit_singleline(&mut state.market_trade_sales_tax_percent);
+    state.text_input_focused |= response.has_focus();
+    changed |= response.changed();
+    if changed {
+        tracing::debug!("[MARKET] trade calculator input changed");
+    }
+    for line in trade_calculator_lines(state) {
+        ui.label(line);
+    }
+}
+
 fn section_error_line(ui: &mut egui::Ui, section: &str, error: &SectionError) {
     ui.label(format!("Could not load {section}: {}", error.message));
 }
@@ -571,6 +677,9 @@ pub fn show(
     // a character switch or a selection change.
     cache.prune(state);
     show_picker(ui, state, resolver);
+    // The calculator needs no item and no character, so it renders
+    // before the no-selection early return in every Market state.
+    show_trade_calculator(ui, state);
 
     let Some(type_id) = state.market_selected_type_id else {
         ui.label(
@@ -973,5 +1082,140 @@ mod tests {
         assert!(state.market_candidates.is_empty());
         assert!(state.market_lookup_message.is_some());
         assert_eq!(state.market_generation, 1);
+    }
+
+    fn trade_state(buy: &str, sell: &str, broker: &str, tax: &str) -> AppState {
+        let mut state = AppState::new(false);
+        state.market_trade_buy_price = buy.to_string();
+        state.market_trade_sell_price = sell.to_string();
+        state.market_trade_broker_fee_percent = broker.to_string();
+        state.market_trade_sales_tax_percent = tax.to_string();
+        state
+    }
+
+    #[test]
+    fn trade_calculator_wording_is_verbatim() {
+        assert_eq!(TRADE_CALCULATOR_HEADING, "Trade Calculator");
+        assert_eq!(
+            TRADE_CALCULATOR_INPUT_LABELS,
+            [
+                "Buy Price (ISK)",
+                "Sell Price (ISK)",
+                "Broker Fee % (entered by you)",
+                "Sales Tax % (entered by you)",
+            ]
+        );
+        assert_eq!(
+            TRADE_CALCULATOR_INPUT_GUIDANCE,
+            "Enter a buy price and a sell price above 0 ISK, and fee percents from 0 to 100, to see the result."
+        );
+        assert_eq!(
+            TRADE_CALCULATOR_NO_RESULT_GUIDANCE,
+            "No result: the broker fee and sales tax together must be below 100%, and the prices must be small enough to calculate with."
+        );
+        assert_eq!(
+            TRADE_CALCULATOR_DISCLOSURE,
+            "Per-unit estimate using only the prices and percents you entered. \
+             The broker fee is charged on both the buy and sell orders; sales tax is charged on the sell order only. \
+             The starting percents (broker fee 1.0%, sales tax 2.0%) are starting values to replace with your own rates: \
+             Mimir does not read them from your character's skills, standings, or the station or structure, and they may not be the rates you actually pay. \
+             Relist fees and any quantity total are not included. \
+             Figures are rounded only for display, so these numbers can differ from EVE."
+        );
+    }
+
+    #[test]
+    fn trade_calculator_full_result_block() {
+        // buy_total = 101; sell_net = 116.4; profit = 15.4;
+        // margin = 15.2475...; broker = 2.2; tax = 2.4; fees = 4.6;
+        // break_even = 104.1237...
+        let state = trade_state("100", "120", "1.0", "2.0");
+        assert_eq!(
+            trade_calculator_lines(&state),
+            vec![
+                "PROFITABLE",
+                "15.40 ISK",
+                "15.2% margin",
+                "Buy Price: 100.00 ISK",
+                "+ Broker Fee (buy): 1.00 ISK",
+                "= Total Cost: 101.00 ISK",
+                "Sell Price: 120.00 ISK",
+                "- Broker Fee (sell): 1.20 ISK",
+                "- Sales Tax: 2.40 ISK",
+                "= Net Revenue: 116.40 ISK",
+                "Profit / Unit: 15.40 ISK",
+                "Total Fees: 4.60 ISK",
+                "Break-Even Sell Price: 104.12 ISK",
+                TRADE_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn trade_calculator_loss_wording() {
+        // Equal prices at the starting percents: profit -4.
+        let loss = trade_calculator_lines(&trade_state("100", "100", "1.0", "2.0"));
+        assert_eq!(loss[0], "LOSS");
+        assert_eq!(loss[2], "-4.0% margin");
+        // Zero fees and equal prices: a computed zero is shown.
+        let zero = trade_calculator_lines(&trade_state("100", "100", "0.0", "0.0"));
+        assert_eq!(zero[0], "LOSS");
+        assert_eq!(zero[1], "0.00 ISK");
+        assert_eq!(zero[2], "0.0% margin");
+    }
+
+    #[test]
+    fn trade_calculator_guidance_selection() {
+        // Empty drafts: exactly the input guidance plus disclosure.
+        assert_eq!(
+            trade_calculator_lines(&AppState::new(false)),
+            vec![TRADE_CALCULATOR_INPUT_GUIDANCE, TRADE_CALCULATOR_DISCLOSURE,]
+        );
+        // Invalid drafts: the same, with no computed figure.
+        assert_eq!(
+            trade_calculator_lines(&trade_state("abc", "120", "1.0", "2.0")),
+            vec![TRADE_CALCULATOR_INPUT_GUIDANCE, TRADE_CALCULATOR_DISCLOSURE,]
+        );
+        // All parse but 60 + 40 = 100: the no-result guidance.
+        assert_eq!(
+            trade_calculator_lines(&trade_state("100", "120", "60", "40")),
+            vec![
+                TRADE_CALCULATOR_NO_RESULT_GUIDANCE,
+                TRADE_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn trade_calculator_demo_independence() {
+        use crate::demo::data::seed_demo_state;
+
+        let mut state = trade_state("100", "120", "1.0", "2.0");
+        seed_demo_state(&mut state);
+        // Seeding installs the demo Tritanium book and leaves the
+        // four drafts exactly as constructed: no prefill.
+        assert!(state.market.is_ready());
+        assert_eq!(state.market_selected_type_id, Some(34));
+        assert_eq!(
+            state
+                .market
+                .as_ready()
+                .expect("demo market ready")
+                .selection
+                .type_name,
+            "Tritanium"
+        );
+        assert_eq!(state.market_trade_buy_price, "100");
+        assert_eq!(state.market_trade_sell_price, "120");
+        assert_eq!(state.market_trade_broker_fee_percent, "1.0");
+        assert_eq!(state.market_trade_sales_tax_percent, "2.0");
+        // Typing the demo prices (best buy 5.50, best sell 5.75)
+        // computes the section 8 case: profit 0.0225, margin 0.4%.
+        state.market_trade_buy_price = "5.50".to_string();
+        state.market_trade_sell_price = "5.75".to_string();
+        let lines = trade_calculator_lines(&state);
+        assert_eq!(lines[0], "PROFITABLE");
+        assert_eq!(lines[1], "0.02 ISK");
+        assert_eq!(lines[2], "0.4% margin");
     }
 }
