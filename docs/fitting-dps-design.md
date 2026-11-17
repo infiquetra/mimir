@@ -384,7 +384,7 @@ the generator summary, in the `NAV_TARGETING_EXPECTED_COUNTS` shape.
 | `emDamage` | `em_damage` | dgm 114 | Categories 8 and 18, sparse | 897 |
 | `explosiveDamage` | `explosive_damage` | dgm 116 | Categories 8 and 18, sparse | 897 |
 | `kineticDamage` | `kinetic_damage` | dgm 117 | Categories 8 and 18, sparse | 897 |
-| `thermalDamage` | `thermal_damage` | dgm 118 | Categories 8 and 18, sparse | 898 |
+| `thermalDamage` | `thermal_damage` | dgm 118 | Categories 8 and 18, sparse | 897 (see the negative-row rule below; the design-time scripted count was 898) |
 | `fighterSquadronMaxSize` | `fighter_squadron_max_size` | dgm 2215 | Category 87, sparse | 94 |
 | `fighterSquadronIsLight` | `fighter_squadron_is_light` | dgm 2212 | Category 87, sparse | 24 |
 | `fighterSquadronIsSupport` | `fighter_squadron_is_support` | dgm 2213 | Category 87, sparse | 12 |
@@ -423,6 +423,16 @@ Rules:
   the SDE itself), exactly as `turretFitted` / `launcherFitted` use
   effect names 42 / 40, and are emitted from `dgmTypeEffects` only on
   category-87 rows.
+- Negative source rows are never emitted (integrator amendment,
+  Builder A deviation at `df1b584`): the committed cache carries six
+  negative damage-per-second source rows, including published
+  category-8 type 53343 (Yoiul Festival Snowball) with a sole
+  `thermalDamage` row of -10.0, which the finite-and-non-negative
+  invariant in section 3.3 cannot admit and a global fail-loud
+  would let block the whole catalogue. The generator therefore
+  skips negative rows at load and counts them in its summary;
+  absence is data, negative damage is not. This is why the shipped
+  `thermalDamage` count is 897, not the design-time 898.
 - `speed` values are milliseconds. Nothing converts them at load or
   in the catalogue; the pure layer divides by 1000 in the formula,
   mirroring the engine's `(cycleMs / 1000)` and avoiding the
