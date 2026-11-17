@@ -4,4 +4,5 @@
 //! following the `src/fitting/` pure-module precedent (design section 4).
 
 pub mod plans;
+pub mod prereqs;
 pub mod training;

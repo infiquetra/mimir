@@ -24,6 +24,17 @@ pub struct SdeGroup {
     pub category_id: i64,
 }
 
+/// One direct prerequisite edge from the bundled
+/// extract: another skill and the level it must be
+/// trained to before the owning skill can train.
+#[derive(Debug, Clone, Default, Deserialize, PartialEq)]
+pub struct SdePrerequisite {
+    #[serde(rename = "skillId", default)]
+    pub skill_id: i64,
+    #[serde(default)]
+    pub level: i32,
+}
+
 #[derive(Debug, Clone, Default, Deserialize, PartialEq)]
 pub struct SdeSkillType {
     #[serde(rename = "typeId", default)]
@@ -39,6 +50,11 @@ pub struct SdeSkillType {
     pub primary_attribute: String,
     #[serde(rename = "secondaryAttribute", default)]
     pub secondary_attribute: String,
+    /// Direct prerequisites, in extract file order.
+    /// Empty for the 29 root skills whose JSON omits
+    /// the key.
+    #[serde(default)]
+    pub prerequisites: Vec<SdePrerequisite>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -77,11 +93,13 @@ impl Sde {
         for (i, g) in file.groups.iter().enumerate() {
             group_by_id.insert(g.group_id, i);
         }
+        let prerequisite_count: usize = file.types.iter().map(|t| t.prerequisites.len()).sum();
         tracing::info!(
-            "[SKILLS] SDE loaded skills={} groups={} categories={}",
+            "[SKILLS] SDE loaded skills={} groups={} categories={} prerequisites={}",
             file.types.len(),
             file.groups.len(),
-            file.categories.len()
+            file.categories.len(),
+            prerequisite_count
         );
         Ok(Self {
             categories: file.categories,
@@ -220,5 +238,81 @@ mod tests {
     #[test]
     fn malformed_json_is_an_error_not_a_panic() {
         assert!(Sde::from_json("{not json").is_err());
+    }
+
+    // P1: prerequisites_parse_in_file_order (design section 12.1).
+    #[test]
+    fn prerequisites_parse_in_file_order() {
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        let pairs = |skill_id: i64| -> Vec<(i64, i32)> {
+            sde.skill(skill_id)
+                .expect("skill present")
+                .prerequisites
+                .iter()
+                .map(|p| (p.skill_id, p.level))
+                .collect()
+        };
+        assert_eq!(pairs(3304), vec![(3300, 3), (3301, 3)]);
+        assert_eq!(pairs(3301), vec![(3300, 1)]);
+        assert_eq!(pairs(3344), vec![(20533, 5), (3336, 3), (3348, 5)]);
+    }
+
+    // P2: root_skills_empty_and_bundled_edges_resolve (design section 12.1).
+    #[test]
+    fn root_skills_empty_and_bundled_edges_resolve() {
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        assert!(sde
+            .skill(3300)
+            .expect("gunnery present")
+            .prerequisites
+            .is_empty());
+        let total_edges: usize = sde.types.iter().map(|t| t.prerequisites.len()).sum();
+        assert_eq!(total_edges, 749);
+        let with_edges = sde
+            .types
+            .iter()
+            .filter(|t| !t.prerequisites.is_empty())
+            .count();
+        assert_eq!(with_edges, 466);
+        for t in &sde.types {
+            for edge in &t.prerequisites {
+                assert!(
+                    (1..=5).contains(&edge.level),
+                    "edge level {} out of 1..=5",
+                    edge.level
+                );
+                assert!(
+                    sde.contains(edge.skill_id),
+                    "edge skill_id {}",
+                    edge.skill_id
+                );
+            }
+        }
+    }
+
+    // P3: prerequisites_default_on_partial_json (design section 12.1).
+    #[test]
+    fn prerequisites_default_on_partial_json() {
+        let json = r#"{"categories":[],"groups":[],"types":[{"typeId":1,"typeName":"No Key"},{"typeId":2,"typeName":"Partial Skill Id","prerequisites":[{"skillId":3300}]},{"typeId":3,"typeName":"Partial Level","prerequisites":[{"level":2}]}]}"#;
+        let sde = Sde::from_json(json).expect("partial SDE loads");
+        assert!(sde
+            .skill(1)
+            .expect("type 1 present")
+            .prerequisites
+            .is_empty());
+        assert_eq!(
+            sde.skill(2).expect("type 2 present").prerequisites,
+            vec![SdePrerequisite {
+                skill_id: 3300,
+                level: 0
+            }]
+        );
+        assert_eq!(
+            sde.skill(3).expect("type 3 present").prerequisites,
+            vec![SdePrerequisite {
+                skill_id: 0,
+                level: 2
+            }]
+        );
     }
 }
