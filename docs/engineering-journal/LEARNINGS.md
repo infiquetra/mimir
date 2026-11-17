@@ -31,6 +31,17 @@
 
 ## 2026-11-17
 
+### The retired Flutter app's skill-point formula understates rank-1 training by 33x; the SDE cumulative form is the one the committed fixtures prove
+
+**Author.** Muse Code (skill-plans workflow, integrator)
+**Context.** The skill-plans slice shows per-entry and total training-time estimates, so it needs skill points per level and a training rate. The retired Flutter app (commit `ed698d3`) carried both formulas, and porting them unchanged was the obvious-looking move.
+**Evidence.** `docs/skill-plans-design.md` sections 3.1–3.3, from bodies read during design: Flutter priced each level at `250 × rank × 2^(L-1)` SP summed, giving 7,750 SP for rank 1 level 0→5, and its tests pin that family (7,750 / 38,750 / 2,000). SDE dogma attribute 275 instead states skill points as `250 * skillTimeConstant * sqrt(32)^(skillLevel - 1)`, which read as the cumulative total at which a level is reached gives rank-1 levels of 250 / 1,414 / 8,000 / 45,255 / 256,000 SP. Every rank-1 row in the committed demo fixtures matches the SDE cumulative values (8,000 / 45,255 / 256,000), and the queue `level_start_sp`→`level_end_sp` pairs confirm the cumulative reading — so Flutter reproduces none of the fixture totals and understates rank-1 0→5 by a factor of 33 (7,750 against 256,000).
+**Mechanism.** The Flutter calculator summed per-level increments of the wrong geometric ratio: doubling per level instead of multiplying by `sqrt(32)` per level, and treating the result as increments to sum rather than the cumulative total ESI reports. Its own tests pinned the wrong numbers, so the test suite could never catch it — the tests encoded the formula, not the game.
+**Fix (or queued).** The Rust slice implements the SDE cumulative form with round-once-on-the-full-product (`src/skills/training.rs`), bans the Flutter literals from test expectations, and derives every test expectation by hand from the SDE text with the arithmetic in comments. The training rate (primary + secondary/2 SP per minute, ceiling to whole minutes, per entry at its own attribute pair, totals as the sum of per-entry times) is kept because two independent in-repo witnesses agree on it; Flutter's 20/20 attribute default and rank-1 fallback are rejected, so missing inputs show estimates as unavailable instead of guessed.
+**Validation.** T1–T9 in `src/skills/training.rs` pin the SDE literals (including the round-once distinguisher: rank-5 level 4 is 226,274, where rank-1-base-times-5 would give 226,275), and all 699 tests pass at the integrator commit. Live verification of the SP table against a real EVE account has not happened and stays recorded as an open risk in design section 15.
+**Generalizable rule.** A ported formula is a claim — check it against committed data fixtures before shipping its numbers, especially when the old code's tests pin the formula's own outputs and so cannot falsify it.
+**Refs.** `docs/skill-plans-design.md` sections 3, 6, 14, 15; `src/skills/training.rs`; DECISIONS 2026-11-17 skill-plans entry below.
+
 ### A demo-mode screenshot of a network-backed visual feature proves only the placeholder path, never the fetched rendering
 
 **Author.** Muse Code (portraits workflow, integrator)
