@@ -269,6 +269,21 @@ pub struct FittingType {
     pub max_range: Option<f64>,
     #[serde(rename = "falloff", default)]
     pub falloff: Option<f64>,
+    // Capacitor stability (docs/cap-stability-design.md
+    // section 3): dogma 6 `capacitorNeed` (GJ per
+    // activation), 73 `duration` (raw milliseconds), 1795
+    // `reloadTime` (raw milliseconds) on category 7 or 66
+    // rows carrying a slot effect only, sparse. The SDE
+    // default 10000.0 for reloadTime is never substituted:
+    // absence loads as `None` and adds 0 to the cycle. Dogma
+    // 67 `capacitorBonus` is never emitted and never read
+    // here.
+    #[serde(rename = "capacitorNeed", default)]
+    pub capacitor_need: Option<f64>,
+    #[serde(rename = "duration", default)]
+    pub duration: Option<f64>,
+    #[serde(rename = "reloadTime", default)]
+    pub reload_time: Option<f64>,
 }
 
 /// Outcome of a reverse name lookup. `Found` carries the unique
@@ -1039,6 +1054,32 @@ mod tests {
                     row.name
                 );
             }
+            // Capacitor stability values
+            // (docs/cap-stability-design.md section 3): every
+            // present value is finite and non-negative; any
+            // of the three keys appears only on category 7
+            // or 66 rows carrying a slot effect (absence is
+            // allowed, never required; the 18 category-18
+            // maintenance drones and 3 EC drones carry cache
+            // 6 rows the gate never emits). Absence stays
+            // distinct from 0.0.
+            for value in [row.capacitor_need, row.duration, row.reload_time]
+                .into_iter()
+                .flatten()
+            {
+                assert!(
+                    value.is_finite() && value >= 0.0,
+                    "negative or non-finite capacitor stability value on {:?}",
+                    row.name
+                );
+            }
+            if row.capacitor_need.is_some() || row.duration.is_some() || row.reload_time.is_some() {
+                assert!(
+                    matches!(row.category_id, 7 | 66) && !row.slot_effects.is_empty(),
+                    "non-slot row carrying capacitor stability key: {:?}",
+                    row.name
+                );
+            }
         }
         // Spot pins mirroring the generator oracles (design section
         // 5), read from dgmTypeAttributes.csv.bz2 during design.
@@ -1457,6 +1498,130 @@ mod tests {
             .filter(|row| row.falloff.is_some())
             .count();
         assert_eq!(falloff_count, 681);
+        // Capacitor stability spot pins
+        // (docs/cap-stability-design.md section 7), read from
+        // dgmTypeAttributes.csv.bz2 during build: 2050
+        // 32.0/12000.0 with reload absent (never substituted);
+        // 2889 explicit-zero need with a 51-cycle (duration
+        // absent) and a present 10000.0 reload; 561 reload
+        // 5000.0 with a 51-cycle; 522 battery decoy (carries
+        // only the never-emitted 67); 35921 category-66 gate
+        // pin; 35924 category-66 counted pin; 2048 absent.
+        let hardener = types
+            .lookup_by_id(2050)
+            .expect("Gistum C-Type Multispectrum Shield Hardener row");
+        assert_eq!(hardener.capacitor_need, Some(32.0));
+        assert_eq!(hardener.duration, Some(12000.0));
+        assert_eq!(hardener.reload_time, None);
+        let armor_repairer = types
+            .lookup_by_id(1183)
+            .expect("Small Armor Repairer II row");
+        assert_eq!(armor_repairer.capacitor_need, Some(40.0));
+        assert_eq!(armor_repairer.duration, Some(6000.0));
+        assert_eq!(armor_repairer.reload_time, None);
+        let afterburner = types.lookup_by_id(438).expect("1MN Afterburner II row");
+        assert_eq!(afterburner.capacitor_need, Some(22.0));
+        assert_eq!(afterburner.duration, Some(10000.0));
+        assert_eq!(afterburner.reload_time, None);
+        let scrambler = types.lookup_by_id(448).expect("Warp Scrambler II row");
+        assert_eq!(scrambler.capacitor_need, Some(6.0));
+        assert_eq!(scrambler.duration, Some(5000.0));
+        assert_eq!(scrambler.reload_time, None);
+        let autocannon = types.lookup_by_id(2889).expect("200mm AutoCannon II row");
+        assert_eq!(autocannon.capacitor_need, Some(0.0));
+        assert_eq!(autocannon.duration, None);
+        assert_eq!(autocannon.reload_time, Some(10000.0));
+        let railgun = types.lookup_by_id(561).expect("75mm Gatling Rail I row");
+        assert_eq!(railgun.capacitor_need, Some(1.169));
+        assert_eq!(railgun.duration, None);
+        assert_eq!(railgun.reload_time, Some(5000.0));
+        let battery = types.lookup_by_id(522).expect("'Micro' Cap Battery row");
+        assert_eq!(battery.capacitor_need, None);
+        assert_eq!(battery.duration, None);
+        assert_eq!(battery.reload_time, None);
+        let standup_launcher = types
+            .lookup_by_id(35921)
+            .expect("Standup Anticapital Missile Launcher I row");
+        assert_eq!(standup_launcher.capacitor_need, None);
+        assert_eq!(standup_launcher.duration, None);
+        assert_eq!(standup_launcher.reload_time, Some(10000.0));
+        let standup_neutralizer = types
+            .lookup_by_id(35924)
+            .expect("Standup XL Energy Neutralizer I row");
+        assert_eq!(standup_neutralizer.capacitor_need, Some(6000.0));
+        assert_eq!(standup_neutralizer.duration, Some(30000.0));
+        assert_eq!(standup_neutralizer.reload_time, None);
+        let damage_control = types.lookup_by_id(2048).expect("DC II row");
+        assert_eq!(damage_control.capacitor_need, None);
+        assert_eq!(damage_control.duration, None);
+        assert_eq!(damage_control.reload_time, None);
+        // No cap keys on ship, rig, and subsystem rows, and
+        // no DPS keys on a counted drain row (the named
+        // `duration` field never collides with the fighter
+        // duration fields).
+        for row in [rifter, rig, subsystem] {
+            assert_eq!(row.capacitor_need, None);
+            assert_eq!(row.duration, None);
+            assert_eq!(row.reload_time, None);
+        }
+        // Capacitor stability key counts over the bundled
+        // catalogue (cap-stability-design section 3, scripted
+        // over the cache behind the emission gate; the
+        // generator's CAP_EXPECTED_COUNTS twins).
+        let need_count = types
+            .types
+            .iter()
+            .filter(|row| row.capacitor_need.is_some())
+            .count();
+        assert_eq!(need_count, 2095);
+        let duration_count = types
+            .types
+            .iter()
+            .filter(|row| row.duration.is_some())
+            .count();
+        assert_eq!(duration_count, 1489);
+        let reload_count = types
+            .types
+            .iter()
+            .filter(|row| row.reload_time.is_some())
+            .count();
+        assert_eq!(reload_count, 986);
+        // Eligibility breakdown over shipped rows:
+        // need > 0 with a 73-or-51 cycle counts 1,838 (all
+        // 24 category-66 counted types cycle on 73; no
+        // category-66 row needs the 51 fallback the old
+        // catalogue never emitted for category 66).
+        // Known-zero (need present as 0.0) counts 240 and
+        // need>0 without a cycle counts 17 — bundled-
+        // catalogue denominators, not the design's
+        // published-cache totals (258 and 20, which include
+        // 18 category-18 maintenance drones and 3 EC drones
+        // the emission gate never emits).
+        let counted_types = types
+            .types
+            .iter()
+            .filter(|row| {
+                row.capacitor_need.is_some_and(|need| need > 0.0)
+                    && (row.duration.is_some() || row.speed.is_some())
+            })
+            .count();
+        assert_eq!(counted_types, 1838);
+        let known_zero = types
+            .types
+            .iter()
+            .filter(|row| row.capacitor_need == Some(0.0))
+            .count();
+        assert_eq!(known_zero, 240);
+        let no_cycle = types
+            .types
+            .iter()
+            .filter(|row| {
+                row.capacitor_need.is_some_and(|need| need > 0.0)
+                    && row.duration.is_none()
+                    && row.speed.is_none()
+            })
+            .count();
+        assert_eq!(no_cycle, 17);
     }
 
     #[test]
@@ -1531,5 +1696,41 @@ mod tests {
         assert_eq!(ship.launcher_hardpoints, None);
         assert!(!ship.turret_fitted);
         assert!(!ship.launcher_fitted);
+    }
+
+    #[test]
+    fn fixture_parse_cap_stability_fields() {
+        // A row with the new keys loads into the new fields;
+        // a row without them loads as None (old-catalogue
+        // tolerance, the `default` pattern).
+        let with_keys = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":2050,"typeName":"Gistum C-Type Multispectrum Shield Hardener","categoryId":7,"slotEffects":[13],"capacitorNeed":32.0,"duration":12000.0},
+                {"typeId":561,"typeName":"75mm Gatling Rail I","categoryId":7,"slotEffects":[12],"capacitorNeed":1.169,"speed":2600.0,"reloadTime":5000.0},
+                {"typeId":2889,"typeName":"200mm AutoCannon II","categoryId":7,"slotEffects":[12],"capacitorNeed":0.0,"speed":3750.0,"reloadTime":10000.0}]}"#,
+        )
+        .expect("fixture parses");
+        let hardener = with_keys.lookup_by_id(2050).expect("hardener row");
+        assert_eq!(hardener.capacitor_need, Some(32.0));
+        assert_eq!(hardener.duration, Some(12000.0));
+        assert_eq!(hardener.reload_time, None);
+        let railgun = with_keys.lookup_by_id(561).expect("railgun row");
+        assert_eq!(railgun.capacitor_need, Some(1.169));
+        assert_eq!(railgun.duration, None);
+        assert_eq!(railgun.reload_time, Some(5000.0));
+        let autocannon = with_keys.lookup_by_id(2889).expect("autocannon row");
+        assert_eq!(autocannon.capacitor_need, Some(0.0));
+        assert_eq!(autocannon.duration, None);
+        assert_eq!(autocannon.reload_time, Some(10000.0));
+
+        let without_keys = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[]}]}"#,
+        )
+        .expect("fixture parses");
+        let ship = without_keys.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(ship.capacitor_need, None);
+        assert_eq!(ship.duration, None);
+        assert_eq!(ship.reload_time, None);
     }
 }
