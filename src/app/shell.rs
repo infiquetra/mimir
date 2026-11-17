@@ -130,6 +130,11 @@ pub struct MimirApp {
     rx: Receiver<BackendMsg>,
     demo_names_loaded: bool,
     persisted_startup_view: Option<String>,
+    /// Uploaded portrait textures, one per character with a Ready
+    /// portrait. A `TextureHandle` must outlive the frame that
+    /// created it, so this cache lives on the app (the view layer)
+    /// and is passed into the character views each frame.
+    pub portrait_textures: ui::portraits::PortraitImageCache,
 }
 
 #[derive(Default)]
@@ -871,6 +876,7 @@ impl MimirApp {
             rx,
             demo_names_loaded: false,
             persisted_startup_view,
+            portrait_textures: ui::portraits::PortraitImageCache::new(),
         };
         app.ensure_demo_names();
         if !demo && app.state.active_character_id.is_some() {
@@ -3350,10 +3356,19 @@ impl eframe::App for MimirApp {
                 ui.separator();
             }
             egui::ScrollArea::vertical().show(ui, |ui| match self.state.view {
-                View::Dashboard => {
-                    ui::dashboard::show(ui, &mut self.state, &self.sde, &self.resolver)
-                }
-                View::Characters => ui::characters::show(ui, &mut self.state, &self.resolver),
+                View::Dashboard => ui::dashboard::show(
+                    ui,
+                    &mut self.state,
+                    &self.sde,
+                    &self.resolver,
+                    &mut self.portrait_textures,
+                ),
+                View::Characters => ui::characters::show(
+                    ui,
+                    &mut self.state,
+                    &self.resolver,
+                    &mut self.portrait_textures,
+                ),
                 View::Skills => ui::skills::show(ui, &mut self.state, &self.sde),
                 View::Wallet => ui::wallet::show(ui, &mut self.state, &self.resolver),
                 View::Assets => ui::assets::show(ui, &mut self.state, &self.resolver),
