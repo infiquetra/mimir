@@ -6098,16 +6098,17 @@ mod tests {
     /// `fittings` Ready with fitting A (ship 587, items 2048
     /// and 34) and fitting B (ship 597, item 178).
     fn type_fixture_state() -> AppState {
-        let mut state = AppState::default();
-        state.characters = vec![type_fixture_row(1), type_fixture_row(2)];
         let mut fitting_a = type_fixture_ship(587);
         fitting_a.items = vec![type_fixture_item(2048), type_fixture_item(34)];
         let mut fitting_b = type_fixture_ship(597);
         fitting_b.items = vec![type_fixture_item(178)];
-        state.fittings = LoadState::Ready(FittingsData {
-            fittings: Ok(vec![fitting_a, fitting_b]),
-        });
-        state
+        AppState {
+            characters: vec![type_fixture_row(1), type_fixture_row(2)],
+            fittings: LoadState::Ready(FittingsData {
+                fittings: Ok(vec![fitting_a, fitting_b]),
+            }),
+            ..AppState::default()
+        }
     }
 
     #[test]
@@ -6160,8 +6161,8 @@ mod tests {
             item("Cargo", 1, 34),
         ]);
         let rows = fitting_item_rows(&fitting, &resolver);
-        let mut state = type_fixture_state();
-        let mut cache = PortraitImageCache::new();
+        let state = type_fixture_state();
+        let cache = PortraitImageCache::new();
         let ctx = egui::Context::default();
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
@@ -6181,13 +6182,15 @@ mod tests {
         let resolver = test_resolver();
         let rows = fitting_item_rows(&fitting, &resolver);
         assert_eq!(rows.len(), 101);
-        let mut state = AppState::default();
-        state.characters = vec![type_fixture_row(1), type_fixture_row(2)];
         let mut guard_fitting = type_fixture_ship(587);
         guard_fitting.items = (1001..=1101).map(type_fixture_item).collect();
-        state.fittings = LoadState::Ready(FittingsData {
-            fittings: Ok(vec![guard_fitting]),
-        });
+        let mut state = AppState {
+            characters: vec![type_fixture_row(1), type_fixture_row(2)],
+            fittings: LoadState::Ready(FittingsData {
+                fittings: Ok(vec![guard_fitting]),
+            }),
+            ..AppState::default()
+        };
         let mut cache = PortraitImageCache::new();
         let ctx = egui::Context::default();
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
