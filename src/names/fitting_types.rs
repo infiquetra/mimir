@@ -152,6 +152,40 @@ pub struct FittingType {
     pub turret_fitted: bool,
     #[serde(rename = "launcherFitted", default)]
     pub launcher_fitted: bool,
+    // Navigation and targeting (docs/nav-targeting-design.md
+    // section 4): dogma 600 `warpSpeedMultiplier` (unit `x`;
+    // rendered as AU/s under the 1281 base-warp-speed
+    // invariant of design section 2.1, 1281 never emitted),
+    // 70 `agility`, 552 `signatureRadius`, 76 `maxTargetRange`
+    // (raw metres), 564 `scanResolution`, 208
+    // `scanRadarStrength`, 209 `scanLadarStrength`, 210
+    // `scanMagnetometricStrength`, 211 `scanGravimetricStrength`,
+    // 192 `maxLockedTargets` (a count, no unit) on category 6
+    // rows only, sparse, plus `mass` from the invTypes `mass`
+    // column (the `volume` precedent). Dogma 4, 1169, and 1908
+    // are never emitted and never read here.
+    #[serde(rename = "warpSpeedMultiplier", default)]
+    pub warp_speed_multiplier: Option<f64>,
+    #[serde(rename = "agility", default)]
+    pub agility: Option<f64>,
+    #[serde(rename = "signatureRadius", default)]
+    pub signature_radius: Option<f64>,
+    #[serde(rename = "maxTargetRange", default)]
+    pub max_target_range: Option<f64>,
+    #[serde(rename = "scanResolution", default)]
+    pub scan_resolution: Option<f64>,
+    #[serde(rename = "scanRadarStrength", default)]
+    pub scan_radar_strength: Option<f64>,
+    #[serde(rename = "scanLadarStrength", default)]
+    pub scan_ladar_strength: Option<f64>,
+    #[serde(rename = "scanMagnetometricStrength", default)]
+    pub scan_magnetometric_strength: Option<f64>,
+    #[serde(rename = "scanGravimetricStrength", default)]
+    pub scan_gravimetric_strength: Option<f64>,
+    #[serde(rename = "maxLockedTargets", default)]
+    pub max_locked_targets: Option<f64>,
+    #[serde(rename = "mass", default)]
+    pub mass: Option<f64>,
 }
 
 /// Outcome of a reverse name lookup. `Found` carries the unique
@@ -756,6 +790,59 @@ mod tests {
                     row.name
                 );
             }
+            // Navigation and targeting values
+            // (docs/nav-targeting-design.md section 4): every
+            // present value is finite and non-negative;
+            // `max_locked_targets` is integral; any nav/targeting
+            // key implies category 6 (absence is allowed, never
+            // required). Absence stays distinct from 0.0.
+            for value in [
+                row.warp_speed_multiplier,
+                row.agility,
+                row.signature_radius,
+                row.max_target_range,
+                row.scan_resolution,
+                row.scan_radar_strength,
+                row.scan_ladar_strength,
+                row.scan_magnetometric_strength,
+                row.scan_gravimetric_strength,
+                row.max_locked_targets,
+                row.mass,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                assert!(
+                    value.is_finite() && value >= 0.0,
+                    "negative or non-finite navigation and targeting value on {:?}",
+                    row.name
+                );
+            }
+            if let Some(targets) = row.max_locked_targets {
+                assert!(
+                    targets.fract() == 0.0,
+                    "non-integral maxLockedTargets on {:?}",
+                    row.name
+                );
+            }
+            if row.warp_speed_multiplier.is_some()
+                || row.agility.is_some()
+                || row.signature_radius.is_some()
+                || row.max_target_range.is_some()
+                || row.scan_resolution.is_some()
+                || row.scan_radar_strength.is_some()
+                || row.scan_ladar_strength.is_some()
+                || row.scan_magnetometric_strength.is_some()
+                || row.scan_gravimetric_strength.is_some()
+                || row.max_locked_targets.is_some()
+                || row.mass.is_some()
+            {
+                assert_eq!(
+                    row.category_id, 6,
+                    "non-ship carrying navigation and targeting key: {:?}",
+                    row.name
+                );
+            }
         }
         // Spot pins mirroring the generator oracles (design section
         // 5), read from dgmTypeAttributes.csv.bz2 during design.
@@ -1024,6 +1111,63 @@ mod tests {
             assert_eq!(row.launcher_hardpoints, None);
             assert!(!row.turret_fitted);
             assert!(!row.launcher_fitted);
+        }
+        // Navigation and targeting spot pins
+        // (docs/nav-targeting-design.md section 7), read from
+        // dgmTypeAttributes.csv.bz2 / invTypes.csv.bz2 during
+        // design: Rifter 587 warp 5.0 agility 3.2 mass 1067000.0
+        // signature 35.0 range 22500.0 scan 660.0 sensors
+        // 0.0/8.0/0.0/0.0 targets 4.0; Punisher 597 warp 5.0
+        // agility 2.9 mass 1190000.0 signature 37.0 range
+        // 25000.0 scan 640.0 sensors 10.0/0.0/0.0/0.0 targets
+        // 4.0; Capsule 670 range 0.0 present, targets 0.0
+        // present, scanResolution absent, sensors 0.0/3.0/0.0/0.0.
+        let rifter = types.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(rifter.warp_speed_multiplier, Some(5.0));
+        assert_eq!(rifter.agility, Some(3.2));
+        assert_eq!(rifter.mass, Some(1067000.0));
+        assert_eq!(rifter.signature_radius, Some(35.0));
+        assert_eq!(rifter.max_target_range, Some(22500.0));
+        assert_eq!(rifter.scan_resolution, Some(660.0));
+        assert_eq!(rifter.scan_radar_strength, Some(0.0));
+        assert_eq!(rifter.scan_ladar_strength, Some(8.0));
+        assert_eq!(rifter.scan_magnetometric_strength, Some(0.0));
+        assert_eq!(rifter.scan_gravimetric_strength, Some(0.0));
+        assert_eq!(rifter.max_locked_targets, Some(4.0));
+        let punisher = types.lookup_by_id(597).expect("Punisher row");
+        assert_eq!(punisher.warp_speed_multiplier, Some(5.0));
+        assert_eq!(punisher.agility, Some(2.9));
+        assert_eq!(punisher.mass, Some(1190000.0));
+        assert_eq!(punisher.signature_radius, Some(37.0));
+        assert_eq!(punisher.max_target_range, Some(25000.0));
+        assert_eq!(punisher.scan_resolution, Some(640.0));
+        assert_eq!(punisher.scan_radar_strength, Some(10.0));
+        assert_eq!(punisher.scan_ladar_strength, Some(0.0));
+        assert_eq!(punisher.scan_magnetometric_strength, Some(0.0));
+        assert_eq!(punisher.scan_gravimetric_strength, Some(0.0));
+        assert_eq!(punisher.max_locked_targets, Some(4.0));
+        let capsule = types.lookup_by_id(670).expect("Capsule row");
+        assert_eq!(capsule.max_target_range, Some(0.0));
+        assert_eq!(capsule.max_locked_targets, Some(0.0));
+        assert_eq!(capsule.scan_resolution, None);
+        assert_eq!(capsule.scan_radar_strength, Some(0.0));
+        assert_eq!(capsule.scan_ladar_strength, Some(3.0));
+        assert_eq!(capsule.scan_magnetometric_strength, Some(0.0));
+        assert_eq!(capsule.scan_gravimetric_strength, Some(0.0));
+        // No navigation and targeting keys on module, rig, and
+        // subsystem rows.
+        for row in [damage_control, rig, subsystem] {
+            assert_eq!(row.warp_speed_multiplier, None);
+            assert_eq!(row.agility, None);
+            assert_eq!(row.signature_radius, None);
+            assert_eq!(row.max_target_range, None);
+            assert_eq!(row.scan_resolution, None);
+            assert_eq!(row.scan_radar_strength, None);
+            assert_eq!(row.scan_ladar_strength, None);
+            assert_eq!(row.scan_magnetometric_strength, None);
+            assert_eq!(row.scan_gravimetric_strength, None);
+            assert_eq!(row.max_locked_targets, None);
+            assert_eq!(row.mass, None);
         }
     }
 
