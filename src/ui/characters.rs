@@ -110,12 +110,13 @@ pub fn show(
     // --- Active character detail ---
     ui.separator();
     ui.heading("Active character");
-    // Logo fetches queue only for the loaded detail, the only two
-    // logo ensure calls in the app: the switcher and dashboard
-    // ensure loops stay character-only, so opening this view never
-    // fetches every listed character's corporation. In demo mode
-    // the shell drains without spawning, so this makes zero
-    // network calls and every logo stays a blank box.
+    // Logo fetches queue only for the loaded detail and the
+    // loaded standings beside it below: the switcher and
+    // dashboard ensure loops stay character-only, so opening
+    // this view never fetches every listed character's
+    // corporation. In demo mode the shell drains without
+    // spawning, so this makes zero network calls and every
+    // logo stays a blank box.
     let detail_logo_ids = state
         .character_detail
         .as_ready()
@@ -128,6 +129,26 @@ pub fn show(
             if alliance_id > 0 {
                 portraits::ensure_logo_requested(state, ImageKind::Alliance, alliance_id);
             }
+        }
+    }
+    // Standings logos queue beside the detail logos, from the
+    // same loaded bundle only: an `Err` standings section queues
+    // nothing, and a row whose `from_type` has no icon kind
+    // queues nothing.
+    let standing_logo_ids: Vec<(ImageKind, i64)> = state
+        .character_details
+        .as_ready()
+        .and_then(|bundle| bundle.standings.as_ref().ok())
+        .map(|standings| {
+            standings
+                .iter()
+                .filter_map(|s| standing_icon_kind(&s.from_type).map(|kind| (kind, s.from_id)))
+                .collect()
+        })
+        .unwrap_or_default();
+    for (kind, id) in standing_logo_ids {
+        if id > 0 {
+            portraits::ensure_logo_requested(state, kind, id);
         }
     }
     match &state.character_detail {
@@ -308,7 +329,7 @@ pub fn show(
 
     // --- Character details (status, attributes, implants, clones,
     // standings), stacked below the public-info block ---
-    show_character_details(ui, state, resolver);
+    show_character_details(ui, state, resolver, cache);
 
     // --- Logout / delete (two-step inline confirm, no modal traps) ---
     if let Some(active) = state
@@ -384,11 +405,14 @@ pub fn clone_display_name(clone: &JumpClone) -> String {
 }
 
 /// One standings display row: resolved name plus formatted value.
+/// `from_id`/`from_type` are image state, never rendered or logged.
 #[derive(Debug, Clone, PartialEq)]
 pub struct StandingRow {
     pub name: String,
     pub standing: f64,
     pub standing_text: String,
+    pub from_id: i64,
+    pub from_type: String,
 }
 
 /// All standings under one fixed heading, sorted for display.
@@ -411,17 +435,28 @@ fn standing_group_index(from_type: &str) -> usize {
     }
 }
 
+/// The image kind one standing's entity may show, or `None` when
+/// the row is text-only. Agents never fetch a portrait.
+pub fn standing_icon_kind(from_type: &str) -> Option<ImageKind> {
+    match from_type {
+        "faction" => Some(ImageKind::Faction),
+        "npc_corp" | "corporation" => Some(ImageKind::Corporation),
+        _ => None,
+    }
+}
+
 /// Group standings for display: fixed group order (empty groups
 /// omitted), rows sorted by value descending with resolved name and
 /// then `from_id` as invisible tie-breaks. A non-finite value sorts
 /// last in its group and renders "not available", never a number.
 pub fn standing_groups(standings: &[Standing], resolver: &NameResolver) -> Vec<StandingGroup> {
-    let mut buckets: [Vec<(String, f64, i64)>; 4] = Default::default();
+    let mut buckets: [Vec<(String, f64, i64, String)>; 4] = Default::default();
     for standing in standings {
         buckets[standing_group_index(&standing.from_type)].push((
             resolver.name(standing.from_id),
             standing.standing,
             standing.from_id,
+            standing.from_type.clone(),
         ));
     }
     let mut groups = Vec::new();
@@ -442,7 +477,7 @@ pub fn standing_groups(standings: &[Standing], resolver: &NameResolver) -> Vec<S
             heading,
             rows: rows
                 .into_iter()
-                .map(|(name, standing, _from_id)| StandingRow {
+                .map(|(name, standing, from_id, from_type)| StandingRow {
                     name,
                     standing,
                     standing_text: if standing.is_finite() {
@@ -450,6 +485,8 @@ pub fn standing_groups(standings: &[Standing], resolver: &NameResolver) -> Vec<S
                     } else {
                         "not available".to_string()
                     },
+                    from_id,
+                    from_type,
                 })
                 .collect(),
         });
@@ -540,7 +577,12 @@ fn detail_reauthorize_panel(ui: &mut egui::Ui, state: &mut AppState) {
 
 /// The character-detail block under the public-info grid. Renders from
 /// a cloned snapshot so the step-up button can borrow `state` mutably.
-fn show_character_details(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
+fn show_character_details(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    resolver: &NameResolver,
+    cache: &mut PortraitImageCache,
+) {
     let snapshot = state.character_details.clone();
     match snapshot {
         LoadState::Loading => widgets::loading_panel(ui, "Loading character details..."),
@@ -564,7 +606,7 @@ fn show_character_details(ui: &mut egui::Ui, state: &mut AppState, resolver: &Na
             show_attributes_section(ui, &bundle, panel_shown);
             show_implants_section(ui, &bundle, resolver, panel_shown);
             show_clones_section(ui, &bundle, resolver, panel_shown);
-            show_standings_section(ui, &bundle, resolver, panel_shown);
+            show_standings_section(ui, &bundle, resolver, panel_shown, state, cache);
         }
     }
 }
@@ -751,6 +793,8 @@ fn show_standings_section(
     bundle: &CharacterDetailData,
     resolver: &NameResolver,
     panel_shown: bool,
+    state: &AppState,
+    cache: &mut PortraitImageCache,
 ) {
     ui.separator();
     ui.heading("Standings");
@@ -767,7 +811,24 @@ fn show_standings_section(
             for group in standing_groups(standings, resolver) {
                 ui.strong(group.heading);
                 for row in &group.rows {
-                    ui.label(format!("{} {}", row.name, row.standing_text));
+                    match standing_icon_kind(&row.from_type) {
+                        Some(kind) if row.from_id > 0 => {
+                            ui.horizontal(|ui| {
+                                portraits::show_logo(
+                                    ui,
+                                    cache,
+                                    state,
+                                    kind,
+                                    row.from_id,
+                                    portraits::DETAIL_LOGO_PX,
+                                );
+                                ui.label(format!("{} {}", row.name, row.standing_text));
+                            });
+                        }
+                        _ => {
+                            ui.label(format!("{} {}", row.name, row.standing_text));
+                        }
+                    }
                 }
             }
         }
@@ -876,25 +937,55 @@ mod tests {
         // Factions sort descending; fixture precision survives the format.
         assert_eq!(groups[0].rows[0].name, "Caldari State");
         assert_eq!(groups[0].rows[0].standing_text, "+3.25");
+        assert_eq!(groups[0].rows[0].from_id, 500001);
+        assert_eq!(groups[0].rows[0].from_type, "faction");
         assert_eq!(groups[0].rows[1].name, "Minmatar Republic");
         assert_eq!(groups[0].rows[1].standing_text, "-1.50");
+        assert_eq!(groups[0].rows[1].from_id, 500002);
+        assert_eq!(groups[0].rows[1].from_type, "faction");
         // npc_corp and corporation merge; equal values tie-break by name.
         assert_eq!(groups[1].rows.len(), 2);
         assert_eq!(groups[1].rows[0].name, "Caldari Navy");
+        assert_eq!(groups[1].rows[0].from_id, 1000125);
+        assert_eq!(groups[1].rows[0].from_type, "npc_corp");
         assert_eq!(groups[1].rows[1].name, "Kaalakiota Corporation");
+        assert_eq!(groups[1].rows[1].from_id, 1000006);
+        assert_eq!(groups[1].rows[1].from_type, "corporation");
+        // Agents keep their row too.
+        assert_eq!(groups[2].rows[0].name, "Agent Person");
+        assert_eq!(groups[2].rows[0].from_id, 3000001);
+        assert_eq!(groups[2].rows[0].from_type, "agent");
         // Unknown and empty from_type are kept under Other; zero shows
         // +0.00 and the non-finite value sorts last as words.
         assert_eq!(groups[3].rows.len(), 2);
         assert_eq!(groups[3].rows[0].name, "Demo Alliance");
         assert_eq!(groups[3].rows[0].standing_text, "+0.00");
+        assert_eq!(groups[3].rows[0].from_id, 99000001);
+        assert_eq!(groups[3].rows[0].from_type, "alliance");
         assert!(groups[3].rows[1].standing.is_nan());
         assert_eq!(groups[3].rows[1].standing_text, "not available");
+        assert_eq!(groups[3].rows[1].from_id, 424242);
+        assert_eq!(groups[3].rows[1].from_type, "");
         for group in &groups {
             for row in &group.rows {
                 assert!(row.name.parse::<i64>().is_err());
             }
         }
         assert!(standing_groups(&[], &resolver()).is_empty());
+    }
+
+    #[test]
+    fn standing_icon_kind_maps_entity_types() {
+        assert_eq!(standing_icon_kind("faction"), Some(ImageKind::Faction));
+        assert_eq!(standing_icon_kind("npc_corp"), Some(ImageKind::Corporation));
+        assert_eq!(
+            standing_icon_kind("corporation"),
+            Some(ImageKind::Corporation)
+        );
+        assert_eq!(standing_icon_kind("agent"), None);
+        assert_eq!(standing_icon_kind("alliance"), None);
+        assert_eq!(standing_icon_kind("character"), None);
+        assert_eq!(standing_icon_kind(""), None);
     }
 
     #[test]

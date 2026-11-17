@@ -31,6 +31,20 @@
 
 ## 2026-11-17
 
+### A kind key names the entity kind, not the endpoint it happens to fetch from — faction logos sharing the corporations endpoint still got their own kind
+
+**Author.** Muse Code (standing-icons workflow, builder B)
+**Context.** The standings list renders rows keyed by an ESI `from_type` string (`faction`, `npc_corp`, `corporation`, `agent`, `alliance`, empty). Faction ids are served real logos by the image service's corporations endpoint (admitted in the retired Flutter app's `FactionLogo`), so the cheapest implementation keyed faction standings as `ImageKind::Corporation`: same endpoint, same bytes, zero new match arms. Design had to settle whether the kind names the entity or the fetch path.
+**Evidence.** `src/portraits.rs`: the kind is part of every cache/texture/log key; a comment states the same number in two kinds is two different entities. The one piece of live proof is disjointness today: faction ids at 500001–500002 against corporation ids at 1000006/1000125/1000166 — an allocation observation, not a contract anything enforces. The branch cost of a fourth kind is bounded and compiler-checked: 8 exhaustive-match arms.
+**Mechanism.** Reusing `Corporation` stores faction bytes under `corp-500001_64.png` and logs `kind=corporation id=500001` — false statements about what the bytes depict, baked into cache files that outlive the code. And guard precision degrades in the same direction: every current and future corporation source would equally authorize a faction number, because the guard cannot tell the two apart once the key conflates them. Disjoint numeric ranges made the collision impossible today and silent tomorrow.
+**Fix (or queued).** New `ImageKind::Faction` with its own key, cache file (`faction-{id}_64.png`), texture name, and standings-only guard arm; the URL helper is faction-named but corporations-pathed, with a doc comment saying so, so a future real factions endpoint is a one-body change and no cache file ever moves.
+**Validation.** Design sections 3–5 with the rejection reasoning; tests pin the four-kind cache distinctness, the corporations-path faction fetch, cross-kind cache isolation, the guard truth table with cross-kind rejection, and same-number texture separation (`src/portraits.rs`, `src/app/state.rs`, `src/app/shell.rs`, `src/ui/portraits.rs`).
+**What surprised.** That the strongest argument was not a bug: with today's id ranges reuse is observationally identical. The decision paid a one-time mechanical cost to avoid a permanent dishonesty in keys, logs, and the guard's meaning.
+**Generalizable rule.** When a key system's name doubles as a truth claim, keep the key honest about the entity, not the transport: a shared endpoint never justifies conflating two entity kinds, and numeric-range luck is never a contract.
+**Refs.** `docs/standing-icons-design.md` sections 3–5; LEARNINGS 2026-11-17 image-service-fallback entry (the guard this kind extends).
+
+## 2026-11-17
+
 ### The EVE image service never errors on an unknown id — it returns 200 with a shared fallback — so logo honesty must be enforced at the request, not read off the response
 
 **Author.** Muse Code (logos workflow, integrator)
