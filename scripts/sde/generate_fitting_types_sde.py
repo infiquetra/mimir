@@ -35,7 +35,13 @@ matching assets/sde/skills.json, plus the four optional resource keys
 where present and, on category 6 rows only, the five optional base
 ship stat keys (docs/ship-base-stats-design.md section 3) plus the
 twelve optional base ship resonance keys (docs/ship-resistances-design.md
-section 3).
+section 3). Bay capacities and usage (docs/bay-capacities-design.md
+section 3) append six further keys after the existing ones in the
+locked order: `volume` on every row from the invTypes `volume`
+column, `cargoCapacity` on every category 6 row from the invTypes
+`capacity` column, and sparse `droneCapacity`/`droneBandwidth`/
+`fighterCapacity` (dogma 283/1271/2055) on category 6 rows and
+`droneBandwidthUsed` (dogma 1272) wherever a row exists.
 """
 
 import bz2
@@ -117,6 +123,22 @@ HULL_EM_RESONANCE_ATTR = 113
 HULL_THERMAL_RESONANCE_ATTR = 110
 HULL_KINETIC_RESONANCE_ATTR = 109
 HULL_EXPLOSIVE_RESONANCE_ATTR = 111
+
+# Bay attributes (docs/bay-capacities-design.md section 3):
+# dogmaAttributes.jsonl _key 283 "droneCapacity", 1271
+# "droneBandwidth", 2055 "fighterCapacity", 1272
+# "droneBandwidthUsed" (units 9 "m3" and 128 "Mbit/sec"); Flutter
+# dogma_attributes.dart at ed698d3 gives the same four numbers.
+# Ship cargo capacity and per-type volume come from the invTypes
+# columns instead: dgmTypeAttributes carries zero rows for dogma
+# 38 "capacity", dogma 161 "volume" is a decoy (6 rows, none in
+# the catalogue), and Flutter's key 38 was its synthesized
+# invTypes.volume — never a dogma read.
+BAY_ATTR_IDS = {283, 1271, 2055, 1272}
+DRONE_CAPACITY_ATTR = 283
+DRONE_BANDWIDTH_ATTR = 1271
+FIGHTER_CAPACITY_ATTR = 2055
+DRONE_BANDWIDTH_USED_ATTR = 1272
 
 CACHES = {
     "invTypes": "invTypes.csv.bz2",
@@ -255,6 +277,54 @@ RESIST_ORACLES = [
     (2048, None, None),
     (31668, None, None),
     (45623, None, None),
+]
+
+# Bay oracles (docs/bay-capacities-design.md section 3.3): each
+# value read directly from invTypes.csv.bz2 / dgmTypeAttributes.csv.bz2
+# during design. Tuple shape mirrors RESIST_ORACLES:
+# (typeId, key-or-None, expected-or-None). A None key means the key
+# must be absent from that row.
+BAY_ORACLES = [
+    (587, "cargoCapacity", 140.0),
+    (587, "droneCapacity", 0.0),
+    (587, "droneBandwidth", 0.0),
+    (587, "volume", 27289.0),
+    (593, "cargoCapacity", 140.0),
+    (593, "droneCapacity", 40.0),
+    (593, "droneBandwidth", 25.0),
+    (638, "cargoCapacity", 830.0),
+    (638, "droneCapacity", 75.0),
+    (638, "droneBandwidth", 50.0),
+    (670, "cargoCapacity", 0.0),
+    (2863, "cargoCapacity", 100.0),
+    (23911, "fighterCapacity", 70000.0),
+    (23911, "cargoCapacity", 875.0),
+    (23911, "droneCapacity", 0.0),
+    (45647, "fighterCapacity", 40000.0),
+    (45647, "cargoCapacity", 2750.0),
+    (2456, "volume", 5.0),
+    (2456, "droneBandwidthUsed", 5.0),
+    (2488, "volume", 5.0),
+    (2488, "droneBandwidthUsed", 5.0),
+    (34, "volume", 0.01),
+    (185, "volume", 0.0025),
+    (28668, "volume", 0.01),
+    (40556, "volume", 1000.0),
+    (23059, "volume", 1000.0),
+    (60478, "volume", 5.0),
+    (587, "fighterCapacity", None),
+    (593, "fighterCapacity", None),
+    (2863, "droneCapacity", None),
+    (2863, "droneBandwidth", None),
+    (2863, "fighterCapacity", None),
+    (60478, "droneBandwidthUsed", None),
+    (60479, "droneBandwidthUsed", None),
+    (60480, "droneBandwidthUsed", None),
+    (60481, "droneBandwidthUsed", None),
+    (2456, "cargoCapacity", None),
+    (34, "cargoCapacity", None),
+    (34, "droneBandwidthUsed", None),
+    (587, "droneBandwidthUsed", None),
 ]
 
 _STACKED_SUFFIX_RE = re.compile(r" x[0-9]+$")
@@ -416,11 +486,49 @@ def main():
         seen_resonance_keys.add(key)
         resonances_by_type.setdefault(type_id, {})[attribute_id] = value
 
+    # Bay attributes per type (design section 3): only the four
+    # locked attributes, each parsed from valueFloat. An
+    # unparseable, duplicated, non-finite, or negative wanted row
+    # fails loudly and writes nothing.
+    bays_by_type = {}
+    seen_bay_keys = set()
+    for row in type_attributes:
+        attribute_id = int(row["attributeID"])
+        if attribute_id not in BAY_ATTR_IDS:
+            continue
+        type_id = int(row["typeID"])
+        key = (type_id, attribute_id)
+        if key in seen_bay_keys:
+            fail(
+                f"duplicate bay row (type {type_id}, "
+                f"attribute {attribute_id}) in dgmTypeAttributes"
+            )
+        try:
+            value = float(row["valueFloat"])
+        except (TypeError, ValueError):
+            fail(
+                f"unparseable bay value {row['valueFloat']!r} "
+                f"for (type {type_id}, attribute {attribute_id})"
+            )
+        if not math.isfinite(value):
+            fail(
+                f"non-finite bay value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        if value < 0:
+            fail(
+                f"negative bay value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        seen_bay_keys.add(key)
+        bays_by_type.setdefault(type_id, {})[attribute_id] = value
+
     types = []
     missing_group = 0
     resource_key_counts = Counter()
     base_stat_key_counts = Counter()
     resonance_key_counts = Counter()
+    bay_key_counts = Counter()
     for row in inv_types:
         if row["published"] != "1":
             continue
@@ -528,6 +636,70 @@ def main():
             if MODULE_POWER_NEED_ATTR in resources:
                 entry["power"] = resources[MODULE_POWER_NEED_ATTR]
                 resource_key_counts["power"] += 1
+        # Additive bay emission (design section 3.1): new keys
+        # append after the existing keys in the locked order
+        # volume, cargoCapacity, droneCapacity, droneBandwidth,
+        # fighterCapacity, droneBandwidthUsed. `volume` comes from
+        # the invTypes `volume` column on every row (validated
+        # fail-loud, "0E-10" parses to a present 0.0);
+        # `cargoCapacity` comes from the invTypes `capacity`
+        # column on every category 6 row; the four dogma keys are
+        # sparse, present exactly when a source row exists.
+        try:
+            volume_value = float(row["volume"])
+        except (TypeError, ValueError):
+            fail(
+                f"unparseable volume value {row['volume']!r} "
+                f"for type {type_id}"
+            )
+        if not math.isfinite(volume_value):
+            fail(
+                f"non-finite volume value {volume_value!r} for "
+                f"type {type_id}"
+            )
+        if volume_value < 0:
+            fail(
+                f"negative volume value {volume_value!r} for "
+                f"type {type_id}"
+            )
+        entry["volume"] = volume_value
+        bay_key_counts["volume"] += 1
+        if category_id == 6:
+            try:
+                cargo_capacity_value = float(row["capacity"])
+            except (TypeError, ValueError):
+                fail(
+                    f"unparseable capacity value {row['capacity']!r} "
+                    f"for type {type_id}"
+                )
+            if not math.isfinite(cargo_capacity_value):
+                fail(
+                    f"non-finite capacity value {cargo_capacity_value!r} "
+                    f"for type {type_id}"
+                )
+            if cargo_capacity_value < 0:
+                fail(
+                    f"negative capacity value {cargo_capacity_value!r} "
+                    f"for type {type_id}"
+                )
+            entry["cargoCapacity"] = cargo_capacity_value
+            bay_key_counts["cargoCapacity"] += 1
+            bays = bays_by_type.get(type_id, {})
+            if DRONE_CAPACITY_ATTR in bays:
+                entry["droneCapacity"] = bays[DRONE_CAPACITY_ATTR]
+                bay_key_counts["droneCapacity"] += 1
+            if DRONE_BANDWIDTH_ATTR in bays:
+                entry["droneBandwidth"] = bays[DRONE_BANDWIDTH_ATTR]
+                bay_key_counts["droneBandwidth"] += 1
+            if FIGHTER_CAPACITY_ATTR in bays:
+                entry["fighterCapacity"] = bays[FIGHTER_CAPACITY_ATTR]
+                bay_key_counts["fighterCapacity"] += 1
+        bays = bays_by_type.get(type_id, {})
+        if DRONE_BANDWIDTH_USED_ATTR in bays:
+            # Sparse wherever a 1272 row exists; the loader
+            # invariant asserts every such row is category 18.
+            entry["droneBandwidthUsed"] = bays[DRONE_BANDWIDTH_USED_ATTR]
+            bay_key_counts["droneBandwidthUsed"] += 1
         types.append(entry)
 
     types.sort(key=lambda entry: entry["typeId"])
@@ -649,6 +821,29 @@ def main():
                 f"{entry.get(key)!r}, expected {expected!r}"
             )
 
+    # Bay oracles (design section 3.3). A None expected value
+    # means the key must be absent from that row.
+    for type_id, key, expected in BAY_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(f"bay oracle type {type_id} missing from extract")
+        if expected is None:
+            if key in entry:
+                fail(
+                    f"bay oracle type {type_id} carries {key}="
+                    f"{entry[key]!r}, expected absent"
+                )
+        elif entry.get(key) != expected:
+            fail(
+                f"bay oracle type {type_id} {key}="
+                f"{entry.get(key)!r}, expected {expected!r}"
+            )
+    # Explicit-zero pin: type 670 must carry cargoCapacity
+    # present as 0.0, never absent (the two are distinct).
+    zero_cargo_entry = by_id.get(670)
+    if zero_cargo_entry is None or "cargoCapacity" not in zero_cargo_entry:
+        fail("bay oracle type 670 cargoCapacity key must be present as 0.0")
+
     # Catalogue-wide invariant (design sections 5 and 3): every
     # category-6 row carries both ship outputs and all seven base
     # ship stats, so a future cache refresh that drops a ship row
@@ -694,6 +889,55 @@ def main():
         ):
             fail(
                 f"ship type {entry['typeId']} missing ship resistances"
+            )
+        # Bay invariants (design section 3.4): every present bay
+        # value is finite and >= 0.0; `volume` is present on every
+        # row; `cargoCapacity` is present on every category 6 row
+        # and on no other row; the three ship bay keys appear only
+        # on category 6 rows (absence is allowed, never required);
+        # `droneBandwidthUsed` appears only on category 18 rows.
+        # Absence stays distinct from 0.0.
+        for key in (
+            "volume",
+            "cargoCapacity",
+            "droneCapacity",
+            "droneBandwidth",
+            "fighterCapacity",
+            "droneBandwidthUsed",
+        ):
+            if key in entry:
+                value = entry[key]
+                if (
+                    not isinstance(value, (int, float))
+                    or isinstance(value, bool)
+                    or not math.isfinite(float(value))
+                    or float(value) < 0
+                ):
+                    fail(
+                        f"type {entry['typeId']} {key}={value!r} "
+                        "is not finite and non-negative"
+                    )
+        if "volume" not in entry:
+            fail(f"type {entry['typeId']} missing volume")
+        if entry["categoryId"] == 6 and "cargoCapacity" not in entry:
+            fail(f"ship type {entry['typeId']} missing cargoCapacity")
+        if entry["categoryId"] != 6 and "cargoCapacity" in entry:
+            fail(
+                f"non-ship type {entry['typeId']} carries cargoCapacity"
+            )
+        for key in (
+            "droneCapacity",
+            "droneBandwidth",
+            "fighterCapacity",
+        ):
+            if key in entry and entry["categoryId"] != 6:
+                fail(
+                    f"non-ship type {entry['typeId']} carries {key}"
+                )
+        if "droneBandwidthUsed" in entry and entry["categoryId"] != 18:
+            fail(
+                f"non-drone type {entry['typeId']} carries "
+                "droneBandwidthUsed"
             )
 
     # Invariants the parser relies on (design sections 5.2, 6.3): no
@@ -755,6 +999,14 @@ def main():
         f"thermalDamageResonance={resonance_key_counts['thermalDamageResonance']} "
         f"kineticDamageResonance={resonance_key_counts['kineticDamageResonance']} "
         f"explosiveDamageResonance={resonance_key_counts['explosiveDamageResonance']}"
+    )
+    print(
+        f"bay_keys volume={bay_key_counts['volume']} "
+        f"cargoCapacity={bay_key_counts['cargoCapacity']} "
+        f"droneCapacity={bay_key_counts['droneCapacity']} "
+        f"droneBandwidth={bay_key_counts['droneBandwidth']} "
+        f"fighterCapacity={bay_key_counts['fighterCapacity']} "
+        f"droneBandwidthUsed={bay_key_counts['droneBandwidthUsed']}"
     )
 
 
