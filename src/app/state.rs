@@ -7,13 +7,14 @@
 //! here performs network or disk work, and no token material is ever
 //! stored in this struct.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::esi::endpoints::WriteFailureClass;
 use crate::esi::models::*;
 use crate::fitting::eft::ImportedFitting;
 use crate::names::exploration_ref::{EffectFamily, ExplorationRef};
+use crate::names::sde::Sde;
 use crate::portraits::ImageKind;
 use crate::skills::plans::{SkillPlan, SkillPlanAction};
 use crate::storage::repositories::CharacterRow;
@@ -727,6 +728,11 @@ pub struct AppState {
     pub portraits: HashMap<(ImageKind, i64), PortraitState>,
     pub portrait_requests: Vec<(ImageKind, i64)>,
 
+    // Bundled skill catalogue type ids, installed once at
+    // startup from the SDE extract (design skill-icons section
+    // 4). State-only: never rendered, never logged as a list.
+    pub skill_catalogue_type_ids: HashSet<i64>,
+
     // View-local UI state (survives across frames, unlike egui closures).
     pub skill_search: String,
     pub wallet_search: String,
@@ -1156,6 +1162,11 @@ impl AppState {
         // the detail lines do; the selection itself survives the
         // active-removal reset below.
         let market_type_id = self.market_selected_type_id;
+        // Bundled-skill-catalogue source (design skill-icons
+        // section 4): static bundled data, identical before and
+        // after any removal.
+        let skill_catalogue_type_ids: Vec<i64> =
+            self.skill_catalogue_type_ids.iter().copied().collect();
         let characters = &self.characters;
         let logo_known = |kind: &ImageKind, id: i64| match kind {
             ImageKind::Character => id != character_id,
@@ -1176,6 +1187,7 @@ impl AppState {
                 fitting_type_ids.contains(&id)
                     || asset_type_ids.contains(&id)
                     || market_type_id == Some(id)
+                    || skill_catalogue_type_ids.contains(&id)
             }
         };
         self.portraits.retain(|(kind, id), _| logo_known(kind, *id));
@@ -1314,8 +1326,11 @@ impl AppState {
     /// public info for `Alliance`, the loaded standings only for
     /// `Faction`, and the active character's loaded saved fittings
     /// (ship and fitted items), the active character's loaded
-    /// assets, or the selected market type for `Type`. This is the
-    /// single definition of "this id may be
+    /// assets, the selected market type, or one of the bundled
+    /// skill catalogue's skill types (static bundled data
+    /// installed at startup; the one non-loaded-state source,
+    /// locked by the skill-icons design section 3) for `Type`.
+    /// This is the single definition of "this id may be
     /// fetched", shared by `request_portrait`, the shell landing,
     /// and texture prune. The dashboard is deliberately not
     /// consulted: every landing writes the same info to it and to
@@ -1344,6 +1359,7 @@ impl AppState {
                 self.fitting_type_known(id)
                     || self.asset_type_known(id)
                     || self.market_selected_type_id == Some(id)
+                    || self.skill_catalogue_type_known(id)
             }
         }
     }
@@ -1351,9 +1367,9 @@ impl AppState {
     /// Whether the active character's loaded saved fittings name
     /// this item type (a fitting's ship or any fitted item).
     /// EVE-sourced state only: the imported fitting, the loaded
-    /// assets, the market selection, and the bundled catalogue are
-    /// deliberately not consulted, so nothing user-typed ever
-    /// authorizes a fetch.
+    /// assets, the market selection, the bundled skill catalogue,
+    /// and the bundled catalogue are deliberately not consulted,
+    /// so nothing user-typed ever authorizes a fetch.
     fn fitting_type_known(&self, id: i64) -> bool {
         self.fittings
             .as_ready()
@@ -1374,6 +1390,30 @@ impl AppState {
         self.assets
             .as_ready()
             .is_some_and(|data| data.items.iter().any(|item| item.type_id == id))
+    }
+
+    /// Whether this item type is one of the bundled skill
+    /// catalogue's skill types (installed once at startup from
+    /// the SDE extract). Static bundled data, deliberately not
+    /// character state: the skills catalogue renders bundled
+    /// types no loaded state names (untrained skills), and no
+    /// user input can add an id to this set — the catalogue
+    /// search only filters bundled rows by name.
+    fn skill_catalogue_type_known(&self, id: i64) -> bool {
+        self.skill_catalogue_type_ids.contains(&id)
+    }
+
+    /// Install the bundled skill catalogue's type ids as a
+    /// fetch-authorization source (design skill-icons section
+    /// 4). Called once at startup with the already-loaded SDE;
+    /// an SDE that failed to load installs an empty set and
+    /// authorizes nothing.
+    pub fn install_skill_catalogue_type_ids(&mut self, sde: &Sde) {
+        self.skill_catalogue_type_ids = sde.types.iter().map(|t| t.type_id).collect();
+        tracing::info!(
+            "[SKILLS] skill catalogue guard installed count={}",
+            self.skill_catalogue_type_ids.len()
+        );
     }
 
     /// Whether the loaded standings name `(kind, id)`: a `faction`
@@ -3590,5 +3630,128 @@ mod tests {
             PortraitState::Ready(_)
         ));
         assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+    }
+
+    #[test]
+    fn skill_catalogue_membership_authorizes_only_bundled_skill_types() {
+        // Bundled catalogue membership authorizes (design
+        // skill-icons sections 3-4); nothing else loaded.
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        let mut state = AppState::new(false);
+        state.install_skill_catalogue_type_ids(&sde);
+        assert_eq!(state.skill_catalogue_type_ids.len(), 495);
+        // 3300 (Gunnery) is a bundled skill type; it queues once.
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+        state.request_portrait(ImageKind::Type, 3300);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 3300),
+            PortraitState::Loading
+        ));
+        state.request_portrait(ImageKind::Type, 3300);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+        // 34 is not a bundled skill type and 999999 is in no
+        // catalogue: both unknown, and neither queues anything.
+        assert!(!state.image_id_known(ImageKind::Type, 34));
+        assert!(!state.image_id_known(ImageKind::Type, 999999));
+        state.request_portrait(ImageKind::Type, 34);
+        state.request_portrait(ImageKind::Type, 999999);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+        assert!(!state.portraits.contains_key(&(ImageKind::Type, 34)));
+        assert!(!state.portraits.contains_key(&(ImageKind::Type, 999999)));
+        // Nothing installed authorizes nothing.
+        let state = AppState::default();
+        assert!(!state.image_id_known(ImageKind::Type, 3300));
+        // Search text never authorizes, numeric or not.
+        let mut state = AppState::new(false);
+        state.skill_search = "3300".to_string();
+        assert!(!state.image_id_known(ImageKind::Type, 3300));
+        state.request_portrait(ImageKind::Type, 3300);
+        assert!(state.portrait_requests.is_empty());
+        assert!(!state.portraits.contains_key(&(ImageKind::Type, 3300)));
+        // Trained state is not the source: Ready with an empty
+        // trained list still authorizes via the installed set.
+        let mut state = AppState::new(false);
+        state.install_skill_catalogue_type_ids(&sde);
+        state.skills = LoadState::Ready(SkillsData::default());
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+        // Kind isolation: a catalogue type id is not an entity key.
+        assert!(!state.image_id_known(ImageKind::Character, 3300));
+        // Non-positive ids queue nothing.
+        state.request_portrait(ImageKind::Type, 0);
+        state.request_portrait(ImageKind::Type, -1);
+        assert!(state.portrait_requests.is_empty());
+    }
+
+    #[test]
+    fn skill_catalogue_knowledge_survives_character_switch() {
+        // The catalogue arm is static bundled data, not character
+        // state, so a switch never revokes it — the opposite of
+        // the character-keyed arms (design section 4). The
+        // survival is the design, not an oversight.
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.install_skill_catalogue_type_ids(&sde);
+        state.skills = LoadState::Ready(SkillsData::default());
+        state.portraits.insert(
+            (ImageKind::Type, 3300),
+            portrait_state_with_dimensions(8, 8),
+        );
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+        // Same-character reselect keeps the knowledge.
+        state.set_active_character(1);
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+        // Switch: the loaded skills reset, the catalogue arm stays.
+        state.set_active_character(2);
+        assert!(matches!(state.skills, LoadState::Loading));
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 3300),
+            PortraitState::Ready(_)
+        ));
+    }
+
+    #[test]
+    fn removing_character_retains_skill_catalogue_icon() {
+        // Three characters so neither removal hits the
+        // last-removal branch (which clears all portraits).
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two"), row(3, "Three")];
+        state.set_active_character(1);
+        state.install_skill_catalogue_type_ids(&sde);
+        state.portraits.insert(
+            (ImageKind::Type, 3300),
+            portrait_state_with_dimensions(8, 8),
+        );
+        state.portrait_requests = vec![(ImageKind::Type, 3300)];
+        // Removing a non-active character keeps the icon.
+        state.remove_character(2);
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 3300),
+            PortraitState::Ready(_)
+        ));
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+        // Removing the active character keeps the entry and the
+        // guard still reads true (static arm, unlike the assets
+        // retain test where the guard reads false afterwards).
+        state.remove_character(1);
+        assert_eq!(state.active_character_id, Some(3));
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 3300),
+            PortraitState::Ready(_)
+        ));
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+        // The stated exception: removing down to zero characters
+        // clears all portrait state, but the installed set stays.
+        state.remove_character(3);
+        assert!(state.characters.is_empty());
+        assert!(state.portraits.is_empty());
+        assert!(state.portrait_requests.is_empty());
+        assert_eq!(state.skill_catalogue_type_ids.len(), 495);
     }
 }
