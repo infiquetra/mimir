@@ -187,6 +187,12 @@ pub fn ensure_portrait_requested(state: &mut AppState, character_id: i64) {
 /// drained by the shell without spawning, so demo still makes
 /// zero network calls.
 pub fn ensure_logo_requested(state: &mut AppState, kind: ImageKind, id: i64) {
+    // Nonpositive ids can never be requested (the state layer
+    // refuses them and records nothing), so asking every frame
+    // would re-warn every frame. Never queue them.
+    if id <= 0 {
+        return;
+    }
     if matches!(state.portrait_state(kind, id), PortraitState::NotRequested) {
         state.request_portrait(kind, id);
     }
