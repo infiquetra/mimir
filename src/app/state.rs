@@ -1126,6 +1126,22 @@ impl AppState {
                     .collect()
             })
             .unwrap_or_default();
+        // Saved-fittings source, captured before the
+        // active-removal reset below: the retain must see the
+        // pre-removal fittings exactly as the detail lines do.
+        let fitting_type_ids: Vec<i64> = self
+            .fittings
+            .as_ready()
+            .and_then(|bundle| bundle.fittings.as_ref().ok())
+            .map(|fittings| {
+                let mut ids = Vec::new();
+                for fitting in fittings {
+                    ids.push(fitting.ship_type_id);
+                    ids.extend(fitting.items.iter().map(|item| item.type_id));
+                }
+                ids
+            })
+            .unwrap_or_default();
         let characters = &self.characters;
         let logo_known = |kind: &ImageKind, id: i64| match kind {
             ImageKind::Character => id != character_id,
@@ -1142,6 +1158,7 @@ impl AppState {
             ImageKind::Faction => standing_pairs
                 .iter()
                 .any(|(from_type, from_id)| *from_id == id && from_type == "faction"),
+            ImageKind::Type => fitting_type_ids.contains(&id),
         };
         self.portraits.retain(|(kind, id), _| logo_known(kind, *id));
         self.portrait_requests
@@ -1276,13 +1293,14 @@ impl AppState {
     /// from EVE's own data: a character row for `Character`, a row
     /// `corporation_id`, the loaded public info, or a standings
     /// entry for `Corporation`, a row `alliance_id` or the loaded
-    /// public info for `Alliance`, and the loaded standings only
-    /// for `Faction`. This is the single definition of "this id
-    /// may be fetched", shared by `request_portrait`, the shell
-    /// landing, and texture prune. The dashboard is deliberately
-    /// not consulted: every landing writes the same info to it and
-    /// to `character_detail` together, so it can know nothing the
-    /// other two lack.
+    /// public info for `Alliance`, the loaded standings only for
+    /// `Faction`, and the active character's loaded saved fittings
+    /// (ship and fitted items) for `Type`. This is the single
+    /// definition of "this id may be fetched", shared by
+    /// `request_portrait`, the shell landing, and texture prune.
+    /// The dashboard is deliberately not consulted: every landing
+    /// writes the same info to it and to `character_detail`
+    /// together, so it can know nothing the other two lack.
     pub fn image_id_known(&self, kind: ImageKind, id: i64) -> bool {
         match kind {
             ImageKind::Character => self.characters.iter().any(|c| c.character_id == id),
@@ -1302,7 +1320,25 @@ impl AppState {
                         .is_some_and(|info| info.alliance_id == Some(id))
             }
             ImageKind::Faction => self.standing_known(kind, id),
+            ImageKind::Type => self.fitting_type_known(id),
         }
+    }
+
+    /// Whether the active character's loaded saved fittings name
+    /// this item type (a fitting's ship or any fitted item).
+    /// EVE-sourced state only: the imported fitting, the market
+    /// selection, and the bundled catalogue are deliberately not
+    /// consulted, so nothing user-typed ever authorizes a fetch.
+    fn fitting_type_known(&self, id: i64) -> bool {
+        self.fittings
+            .as_ready()
+            .and_then(|bundle| bundle.fittings.as_ref().ok())
+            .is_some_and(|fittings| {
+                fittings.iter().any(|fitting| {
+                    fitting.ship_type_id == id
+                        || fitting.items.iter().any(|item| item.type_id == id)
+                })
+            })
     }
 
     /// Whether the loaded standings name `(kind, id)`: a `faction`
@@ -1312,7 +1348,7 @@ impl AppState {
         let wanted: &[&str] = match kind {
             ImageKind::Faction => &["faction"],
             ImageKind::Corporation => &["npc_corp", "corporation"],
-            ImageKind::Character | ImageKind::Alliance => return false,
+            ImageKind::Character | ImageKind::Alliance | ImageKind::Type => return false,
         };
         self.character_details
             .as_ready()
@@ -1389,7 +1425,7 @@ impl AppState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fitting::eft::{ImportFormat, ImportReport};
+    use crate::fitting::eft::{ImportFormat, ImportReport, ImportSection, ImportedItem};
 
     fn row(id: i64, name: &str) -> CharacterRow {
         CharacterRow {
@@ -2804,6 +2840,7 @@ mod tests {
             ImageKind::Corporation,
             ImageKind::Alliance,
             ImageKind::Faction,
+            ImageKind::Type,
         ] {
             for id in [0, -1] {
                 state.request_portrait(kind, id);
@@ -2910,6 +2947,7 @@ mod tests {
             ImageKind::Corporation,
             ImageKind::Alliance,
             ImageKind::Faction,
+            ImageKind::Type,
         ] {
             assert!(
                 !state.image_id_known(kind, 424242),
@@ -2951,6 +2989,7 @@ mod tests {
             ImageKind::Corporation,
             ImageKind::Alliance,
             ImageKind::Faction,
+            ImageKind::Type,
         ] {
             for id in [500001, 1000125, 1000006] {
                 assert!(
@@ -2969,6 +3008,7 @@ mod tests {
             ImageKind::Corporation,
             ImageKind::Alliance,
             ImageKind::Faction,
+            ImageKind::Type,
         ] {
             for id in [500001, 1000125, 1000006] {
                 assert!(
@@ -3037,5 +3077,214 @@ mod tests {
         state.remove_character(1);
         assert!(!state.image_id_known(ImageKind::Faction, 500001));
         assert!(!state.image_id_known(ImageKind::Corporation, 1000125));
+    }
+
+    fn fitting_item(type_id: i64) -> FittingItem {
+        FittingItem {
+            flag: "Cargo".to_string(),
+            quantity: 1,
+            type_id,
+        }
+    }
+
+    fn fitting_ship(ship_type_id: i64) -> CharacterFitting {
+        CharacterFitting {
+            fitting_id: ship_type_id,
+            name: "Fitting".to_string(),
+            description: None,
+            ship_type_id,
+            items: Vec::new(),
+        }
+    }
+
+    /// The design section 10 fixture: characters 1 (active) and 2,
+    /// `fittings` Ready with fitting A (ship 587, items 2048 and 34)
+    /// and fitting B (ship 597, item 178).
+    fn fitting_type_fixture_state() -> AppState {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        let mut fitting_a = fitting_ship(587);
+        fitting_a.items = vec![fitting_item(2048), fitting_item(34)];
+        let mut fitting_b = fitting_ship(597);
+        fitting_b.items = vec![fitting_item(178)];
+        state.fittings = LoadState::Ready(FittingsData {
+            fittings: Ok(vec![fitting_a, fitting_b]),
+        });
+        state
+    }
+
+    #[test]
+    fn fitting_types_authorize_only_the_type_kind() {
+        // row() carries corporation 1000166, so no fixture id below
+        // is known by row under any entity kind.
+        let state = fitting_type_fixture_state();
+        assert!(state.image_id_known(ImageKind::Type, 587));
+        assert!(state.image_id_known(ImageKind::Type, 2048));
+        assert!(state.image_id_known(ImageKind::Type, 34));
+        assert!(state.image_id_known(ImageKind::Type, 597));
+        assert!(state.image_id_known(ImageKind::Type, 178));
+        // Unknown everywhere, a catalogue-real skill type named by
+        // no saved fitting, and a faction id.
+        assert!(!state.image_id_known(ImageKind::Type, 99999999));
+        assert!(!state.image_id_known(ImageKind::Type, 3300));
+        assert!(!state.image_id_known(ImageKind::Type, 500001));
+        // Cross-kind: a fitting type id is not an entity key.
+        for kind in [
+            ImageKind::Character,
+            ImageKind::Corporation,
+            ImageKind::Alliance,
+            ImageKind::Faction,
+        ] {
+            for id in [587, 2048, 34, 597, 178] {
+                assert!(
+                    !state.image_id_known(kind, id),
+                    "kind {kind:?} at {id} must be unknown"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn fitting_types_queue_through_request_portrait() {
+        let mut state = fitting_type_fixture_state();
+        state.request_portrait(ImageKind::Type, 2048);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 2048)]);
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 2048),
+            PortraitState::Loading
+        ));
+        state.request_portrait(ImageKind::Type, 2048);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 2048)]);
+        // Unknown ids queue nothing and create no entry.
+        state.request_portrait(ImageKind::Type, 99999999);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 2048)]);
+        assert!(!state.portraits.contains_key(&(ImageKind::Type, 99999999)));
+        state.request_portrait(ImageKind::Type, 3300);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 2048)]);
+        assert!(!state.portraits.contains_key(&(ImageKind::Type, 3300)));
+        // Non-positive ids queue nothing.
+        state.request_portrait(ImageKind::Type, 0);
+        state.request_portrait(ImageKind::Type, -1);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 2048)]);
+    }
+
+    #[test]
+    fn imported_fitting_type_authorizes_nothing() {
+        // User-pasted import text is not a guard source: even an
+        // imported fitting that names 2048 authorizes nothing while
+        // the saved-fittings bundle is still Loading.
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        assert!(matches!(state.fittings, LoadState::Loading));
+        state.fittings_imported = Some(ImportedFitting {
+            name: "Test".to_string(),
+            ship_type_id: 587,
+            ship_name: "Rifter".to_string(),
+            format: ImportFormat::Eft,
+            items: vec![ImportedItem {
+                type_id: 2048,
+                name: "Pasted Module".to_string(),
+                section: ImportSection::Low,
+                quantity: 1,
+                charge: None,
+            }],
+            report: ImportReport {
+                imported_lines: 1,
+                placeholder_lines: 0,
+                charges_noted: 0,
+                issues: Vec::new(),
+            },
+        });
+        assert!(!state.image_id_known(ImageKind::Type, 2048));
+        state.request_portrait(ImageKind::Type, 2048);
+        assert!(state.portrait_requests.is_empty());
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 2048),
+            PortraitState::NotRequested
+        ));
+    }
+
+    #[test]
+    fn err_or_loading_fittings_authorize_nothing() {
+        let mut state = fitting_type_fixture_state();
+        let Some(bundle) = state.fittings.as_ready().cloned() else {
+            panic!("fixture bundle must be ready");
+        };
+        let mut err_bundle = bundle.clone();
+        err_bundle.fittings = Err(reauth_error());
+        state.fittings = LoadState::Ready(err_bundle);
+        for id in [587, 2048, 34, 597, 178] {
+            assert!(
+                !state.image_id_known(ImageKind::Type, id),
+                "Err fittings must authorize nothing (id {id})"
+            );
+        }
+        state.request_portrait(ImageKind::Type, 2048);
+        assert!(state.portrait_requests.is_empty());
+
+        let mut state = fitting_type_fixture_state();
+        state.fittings = LoadState::Loading;
+        for id in [587, 2048, 34, 597, 178] {
+            assert!(
+                !state.image_id_known(ImageKind::Type, id),
+                "Loading fittings must authorize nothing (id {id})"
+            );
+        }
+        state.request_portrait(ImageKind::Type, 2048);
+        assert!(state.portrait_requests.is_empty());
+
+        let mut state = fitting_type_fixture_state();
+        state.fittings = LoadState::Empty;
+        for id in [587, 2048, 34, 597, 178] {
+            assert!(
+                !state.image_id_known(ImageKind::Type, id),
+                "Empty fittings must authorize nothing (id {id})"
+            );
+        }
+        state.request_portrait(ImageKind::Type, 2048);
+        assert!(state.portrait_requests.is_empty());
+    }
+
+    #[test]
+    fn switching_character_revokes_fitting_type_knowledge() {
+        // Saved fittings belong to the active character: A's
+        // fitting types must never authorize a fetch under B.
+        let mut state = fitting_type_fixture_state();
+        state.request_portrait(ImageKind::Type, 2048);
+        assert!(state.image_id_known(ImageKind::Type, 587));
+        // Same-character reselect keeps the knowledge.
+        state.set_active_character(1);
+        assert!(state.image_id_known(ImageKind::Type, 587));
+        state.set_active_character(2);
+        assert!(matches!(state.fittings, LoadState::Loading));
+        assert!(!state.image_id_known(ImageKind::Type, 587));
+        assert!(!state.image_id_known(ImageKind::Type, 2048));
+    }
+
+    #[test]
+    fn removing_character_retains_fitting_type_images_until_guard_loses_them() {
+        let mut state = fitting_type_fixture_state();
+        state.portraits.insert(
+            (ImageKind::Type, 2048),
+            portrait_state_with_dimensions(8, 8),
+        );
+        state.portrait_requests = vec![(ImageKind::Type, 2048)];
+        // Removing a non-active character keeps the active
+        // character's fittings backing.
+        state.remove_character(2);
+        assert!(state.fittings.is_ready());
+        assert!(state.image_id_known(ImageKind::Type, 2048));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 2048),
+            PortraitState::Ready(_)
+        ));
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 2048)]);
+        // Removing the active character loses the bundle, so the
+        // type becomes unknown (the retain ran pre-reset; prune
+        // and landing finish the cleanup).
+        state.remove_character(1);
+        assert!(!state.image_id_known(ImageKind::Type, 2048));
     }
 }

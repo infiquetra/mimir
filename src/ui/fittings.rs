@@ -37,6 +37,9 @@ use crate::fitting::write_map::{build_save_request, DropReason, DroppedFittingIt
 use crate::names::fitting_types::FittingTypes;
 use crate::names::resolver::NameResolver;
 use crate::names::sde::Sde;
+use crate::ui::portraits::{
+    ensure_type_icon_requested, show_type_icon, PortraitImageCache, TYPE_ICON_PX,
+};
 use std::collections::HashMap;
 
 pub const FITTINGS_RENDER_MAX: usize = 100;
@@ -1115,8 +1118,16 @@ fn queue_save_request(state: &mut AppState, character_id: i64, mapping: SaveMapp
 
 /// Item-section rendering shared by the saved fitting detail and the
 /// imported fitting detail (design section 6.2). The empty-fitting
-/// sentence stays at the callers.
-fn render_fitting_items(ui: &mut egui::Ui, item_rows: &[FittingItemRow]) {
+/// sentence stays at the callers. `type_icons` gates the icon path:
+/// the saved caller passes `Some((state, cache))` so each rendered
+/// row ensures one type icon inside the capped iterator; the
+/// imported caller passes `None` and gets byte-identical text rows
+/// with no icon widget and no ensure.
+fn render_fitting_items(
+    ui: &mut egui::Ui,
+    item_rows: &[FittingItemRow],
+    mut type_icons: Option<(&mut AppState, &mut PortraitImageCache)>,
+) {
     for section in SECTION_ORDER {
         let in_section: Vec<&FittingItemRow> =
             item_rows.iter().filter(|r| r.section == section).collect();
@@ -1137,10 +1148,26 @@ fn render_fitting_items(ui: &mut egui::Ui, item_rows: &[FittingItemRow]) {
                 | FittingSection::Subsystem
         );
         for row in in_section.iter().take(FITTINGS_RENDER_MAX) {
-            if is_slot && row.quantity == 1 {
-                ui.label(&row.type_name);
-            } else {
-                ui.label(format!("{} x{}", row.type_name, row.quantity));
+            match &mut type_icons {
+                Some((state, cache)) => {
+                    ensure_type_icon_requested(state, row.type_id);
+                    let label_text = if is_slot && row.quantity == 1 {
+                        row.type_name.clone()
+                    } else {
+                        format!("{} x{}", row.type_name, row.quantity)
+                    };
+                    ui.horizontal(|ui| {
+                        show_type_icon(ui, cache, state, row.type_id, TYPE_ICON_PX);
+                        ui.label(label_text);
+                    });
+                }
+                _ => {
+                    if is_slot && row.quantity == 1 {
+                        ui.label(&row.type_name);
+                    } else {
+                        ui.label(format!("{} x{}", row.type_name, row.quantity));
+                    }
+                }
             }
         }
     }
@@ -2181,7 +2208,7 @@ fn fittings_import_panel(
     if item_rows.is_empty() {
         ui.label("This fitting has no items to show.");
     } else {
-        render_fitting_items(ui, &item_rows);
+        render_fitting_items(ui, &item_rows, None);
     }
     let levels = state
         .skills
@@ -2359,8 +2386,10 @@ pub fn show(
     resolver: &NameResolver,
     fitting_types: Option<&FittingTypes>,
     sde: &Sde,
+    cache: &mut PortraitImageCache,
 ) {
     ui.heading("Fittings");
+    cache.prune(state);
     widgets::mode_notice(ui, state.demo, state.offline);
     if state.active_character().is_none() {
         widgets::no_character_panel(ui);
@@ -2463,7 +2492,17 @@ pub fn show(
                     ui.separator();
                     let display_name = fitting_display_name(&selected.name);
                     ui.heading(display_name.clone());
-                    ui.label(resolver.name(selected.ship_type_id));
+                    let ship_type_id = selected.ship_type_id;
+                    if ship_type_id > 0 {
+                        ensure_type_icon_requested(state, ship_type_id);
+                        let ship_name = resolver.name(ship_type_id).to_string();
+                        ui.horizontal(|ui| {
+                            show_type_icon(ui, cache, state, ship_type_id, TYPE_ICON_PX);
+                            ui.label(ship_name);
+                        });
+                    } else {
+                        ui.label(resolver.name(ship_type_id));
+                    }
                     if let Some(desc) = selected.description.as_deref() {
                         let sanitized = sanitize_single_line(desc);
                         if !sanitized.is_empty() {
@@ -2474,7 +2513,7 @@ pub fn show(
                     if item_rows.is_empty() {
                         ui.label("This fitting has no items to show.");
                     } else {
-                        render_fitting_items(ui, &item_rows);
+                        render_fitting_items(ui, &item_rows, Some((state, cache)));
                     }
                     let levels = state
                         .skills
@@ -2688,6 +2727,8 @@ mod tests {
     use super::*;
     use crate::esi::models::FittingItem;
     use crate::fitting::eft::{parse_eft, ImportFormat, ImportIssueKind, ImportReport};
+    use crate::portraits::ImageKind;
+    use crate::storage::repositories::CharacterRow;
 
     fn test_resolver() -> NameResolver {
         let mut r = NameResolver::new();
@@ -6022,6 +6063,145 @@ mod tests {
                     false
                 ),
             ]
+        );
+    }
+
+    fn type_fixture_row(id: i64) -> CharacterRow {
+        CharacterRow {
+            character_id: id,
+            name: "Test Pilot".to_string(),
+            corporation_id: 1000166,
+            alliance_id: None,
+            is_active: false,
+        }
+    }
+
+    fn type_fixture_item(type_id: i64) -> FittingItem {
+        FittingItem {
+            flag: "Cargo".to_string(),
+            quantity: 1,
+            type_id,
+        }
+    }
+
+    fn type_fixture_ship(ship_type_id: i64) -> CharacterFitting {
+        CharacterFitting {
+            fitting_id: ship_type_id,
+            name: "Fitting".to_string(),
+            description: None,
+            ship_type_id,
+            items: Vec::new(),
+        }
+    }
+
+    /// The design section 10 fixture: characters 1 and 2,
+    /// `fittings` Ready with fitting A (ship 587, items 2048
+    /// and 34) and fitting B (ship 597, item 178).
+    fn type_fixture_state() -> AppState {
+        let mut fitting_a = type_fixture_ship(587);
+        fitting_a.items = vec![type_fixture_item(2048), type_fixture_item(34)];
+        let mut fitting_b = type_fixture_ship(597);
+        fitting_b.items = vec![type_fixture_item(178)];
+        AppState {
+            characters: vec![type_fixture_row(1), type_fixture_row(2)],
+            fittings: LoadState::Ready(FittingsData {
+                fittings: Ok(vec![fitting_a, fitting_b]),
+            }),
+            ..AppState::default()
+        }
+    }
+
+    #[test]
+    fn render_fitting_items_ensures_only_rendered_rows() {
+        // Low 2048, Low 2048 again (a second fitted copy), and
+        // Cargo 34 render through `Some`; section order puts Low
+        // first and the duplicate dedupes to one request.
+        let resolver = test_resolver();
+        let fitting = fitting_with_items(vec![
+            item("LoSlot0", 1, 2048),
+            item("LoSlot1", 1, 2048),
+            item("Cargo", 1, 34),
+        ]);
+        let rows = fitting_item_rows(&fitting, &resolver);
+        let mut state = type_fixture_state();
+        let mut cache = PortraitImageCache::new();
+        let ctx = egui::Context::default();
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                render_fitting_items(ui, &rows, Some((&mut state, &mut cache)));
+            });
+        });
+        assert_eq!(
+            state.portrait_requests,
+            vec![(ImageKind::Type, 2048), (ImageKind::Type, 34)]
+        );
+
+        // A second run queues nothing further: every key has
+        // left `NotRequested`.
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                render_fitting_items(ui, &rows, Some((&mut state, &mut cache)));
+            });
+        });
+        assert_eq!(
+            state.portrait_requests,
+            vec![(ImageKind::Type, 2048), (ImageKind::Type, 34)]
+        );
+    }
+
+    #[test]
+    fn render_fitting_items_imported_path_never_ensures() {
+        // The same rows through `None` leave the request queue
+        // and the texture cache empty: the user-pasted detail
+        // never ensures.
+        let resolver = test_resolver();
+        let fitting = fitting_with_items(vec![
+            item("LoSlot0", 1, 2048),
+            item("LoSlot1", 1, 2048),
+            item("Cargo", 1, 34),
+        ]);
+        let rows = fitting_item_rows(&fitting, &resolver);
+        let state = type_fixture_state();
+        let cache = PortraitImageCache::new();
+        let ctx = egui::Context::default();
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                render_fitting_items(ui, &rows, None);
+            });
+        });
+        assert!(state.portrait_requests.is_empty());
+        assert!(cache.is_empty());
+    }
+
+    #[test]
+    fn render_fitting_items_cap_bounds_ensures_at_100() {
+        // One Cargo section with 101 distinct guard-known ids
+        // (1001 through 1101) renders through `Some` and queues
+        // exactly 100 requests: the truncated row never ensures.
+        let fitting = fitting_with_items((1001..=1101).map(|id| item("Cargo", 1, id)).collect());
+        let resolver = test_resolver();
+        let rows = fitting_item_rows(&fitting, &resolver);
+        assert_eq!(rows.len(), 101);
+        let mut guard_fitting = type_fixture_ship(587);
+        guard_fitting.items = (1001..=1101).map(type_fixture_item).collect();
+        let mut state = AppState {
+            characters: vec![type_fixture_row(1), type_fixture_row(2)],
+            fittings: LoadState::Ready(FittingsData {
+                fittings: Ok(vec![guard_fitting]),
+            }),
+            ..AppState::default()
+        };
+        let mut cache = PortraitImageCache::new();
+        let ctx = egui::Context::default();
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                render_fitting_items(ui, &rows, Some((&mut state, &mut cache)));
+            });
+        });
+        assert_eq!(state.portrait_requests.len(), 100);
+        assert!(
+            !state.portrait_requests.contains(&(ImageKind::Type, 1101)),
+            "the truncated row must never ensure"
         );
     }
 }

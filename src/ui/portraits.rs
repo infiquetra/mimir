@@ -33,6 +33,12 @@ pub const DETAIL_PORTRAIT_PX: f32 = 96.0;
 /// points: left of the resolved name, matching the Flutter
 /// overview tab's icon size.
 pub const DETAIL_LOGO_PX: f32 = 20.0;
+/// Render size of an item type icon in the fittings detail,
+/// in points: left of the resolved item name, matching the
+/// detail-logo weight so icon rows across views share one
+/// visual size. Its own constant so a later row-density
+/// decision does not move logos.
+pub const TYPE_ICON_PX: f32 = 20.0;
 
 /// One uploaded image: the decoded image it was built from
 /// (identity check via `Arc::ptr_eq`) plus its live texture.
@@ -123,6 +129,7 @@ impl PortraitImageCache {
             ImageKind::Corporation => format!("logo-corp-{id}"),
             ImageKind::Alliance => format!("logo-alliance-{id}"),
             ImageKind::Faction => format!("logo-faction-{id}"),
+            ImageKind::Type => format!("type-{id}"),
         };
         let handle = ctx.load_texture(texture_name, color, egui::TextureOptions::default());
         if replaced {
@@ -179,6 +186,16 @@ pub fn ensure_logo_requested(state: &mut AppState, kind: ImageKind, id: i64) {
     }
 }
 
+/// Queue a type-icon fetch for one item type id, with the same
+/// rule as `ensure_logo_requested`: only a `NotRequested` key
+/// queues, a `Failed` icon never re-queues from the render path,
+/// and an unknown id queues nothing through the saved-fittings
+/// guard. Thin delegation so the fittings view never spells
+/// `ImageKind` or a size.
+pub fn ensure_type_icon_requested(state: &mut AppState, type_id: i64) {
+    ensure_logo_requested(state, ImageKind::Type, type_id);
+}
+
 /// Status line for a placeholder portrait: what the user is
 /// looking at and why there is no image. `Ready` maps to `""`
 /// because an image, not a placeholder, renders.
@@ -223,7 +240,7 @@ pub fn show_portrait(
     }
 }
 
-/// Render one corporation, alliance, or faction logo,
+/// Render one corporation, alliance, faction, or item type icon,
 /// `size_px` points square: the image when `Ready` for that exact `(kind, id)`,
 /// otherwise a blank box of the theme's faint background color —
 /// never a fabricated or stock mark. There is deliberately no
@@ -252,13 +269,27 @@ pub fn show_logo(
     }
 }
 
+/// Render one item type icon, `size_px` points square: the image
+/// when `Ready` for `(Type, type_id)`, otherwise the blank box
+/// from `show_logo`. Thin delegation so the fittings view never
+/// spells `ImageKind`.
+pub fn show_type_icon(
+    ui: &mut egui::Ui,
+    cache: &mut PortraitImageCache,
+    state: &AppState,
+    type_id: i64,
+    size_px: f32,
+) -> egui::Response {
+    show_logo(ui, cache, state, ImageKind::Type, type_id, size_px)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::state::{CharacterDetailData, LoadState};
+    use crate::app::state::{CharacterDetailData, FittingsData, LoadState};
     use crate::esi::models::{
-        CharacterAttributes, CharacterClones, CharacterLocation, CharacterOnline, CharacterShip,
-        Standing,
+        CharacterAttributes, CharacterClones, CharacterFitting, CharacterLocation, CharacterOnline,
+        CharacterShip, FittingItem, Standing,
     };
     use crate::storage::repositories::CharacterRow;
 
@@ -282,6 +313,39 @@ mod tests {
 
     fn ready_image(width: u32, height: u32) -> Arc<image::DynamicImage> {
         Arc::new(image::DynamicImage::new_rgb8(width, height))
+    }
+
+    fn type_fixture_item(type_id: i64) -> FittingItem {
+        FittingItem {
+            flag: "Cargo".to_string(),
+            quantity: 1,
+            type_id,
+        }
+    }
+
+    fn type_fixture_ship(ship_type_id: i64) -> CharacterFitting {
+        CharacterFitting {
+            fitting_id: ship_type_id,
+            name: "Fitting".to_string(),
+            description: None,
+            ship_type_id,
+            items: Vec::new(),
+        }
+    }
+
+    /// The design section 10 fixture: characters 1 and 2,
+    /// `fittings` Ready with fitting A (ship 587, items 2048
+    /// and 34) and fitting B (ship 597, item 178).
+    fn type_fixture_state() -> AppState {
+        let mut state = state_with_ids(&[1, 2]);
+        let mut fitting_a = type_fixture_ship(587);
+        fitting_a.items = vec![type_fixture_item(2048), type_fixture_item(34)];
+        let mut fitting_b = type_fixture_ship(597);
+        fitting_b.items = vec![type_fixture_item(178)];
+        state.fittings = LoadState::Ready(FittingsData {
+            fittings: Ok(vec![fitting_a, fitting_b]),
+        });
+        state
     }
 
     #[test]
@@ -742,5 +806,128 @@ mod tests {
             });
         });
         assert_eq!(cache.len(), 1, "only the Ready logo uploaded");
+    }
+
+    #[test]
+    fn ensure_type_icon_mirrors_logo_ensure_table() {
+        let mut state = type_fixture_state();
+        ensure_type_icon_requested(&mut state, 2048);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 2048)]);
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 2048),
+            PortraitState::Loading
+        ));
+
+        // Loading, Ready, and Failed entries for other known ids
+        // are left alone: Failed never re-queues.
+        let mut state = type_fixture_state();
+        state
+            .portraits
+            .insert((ImageKind::Type, 587), PortraitState::Loading);
+        state.portraits.insert(
+            (ImageKind::Type, 34),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        state
+            .portraits
+            .insert((ImageKind::Type, 597), PortraitState::Failed);
+        ensure_type_icon_requested(&mut state, 587);
+        ensure_type_icon_requested(&mut state, 34);
+        ensure_type_icon_requested(&mut state, 597);
+        assert!(state.portrait_requests.is_empty());
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 597),
+            PortraitState::Failed
+        ));
+
+        // Unknown ids queue nothing and fabricate no entry.
+        let mut unknown = type_fixture_state();
+        ensure_type_icon_requested(&mut unknown, 99999999);
+        assert!(unknown.portrait_requests.is_empty());
+        assert!(!unknown.portraits.contains_key(&(ImageKind::Type, 99999999)));
+    }
+
+    #[test]
+    fn same_numeric_id_in_character_and_type_uploads_two_textures() {
+        let ctx = egui::Context::default();
+        // Character 587 doubles as the fitting A ship type 587.
+        let mut state = state_with_ids(&[587]);
+        let mut fitting = type_fixture_ship(587);
+        fitting.items = vec![type_fixture_item(2048)];
+        state.fittings = LoadState::Ready(FittingsData {
+            fittings: Ok(vec![fitting]),
+        });
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Character, 587),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        state.portraits.insert(
+            (ImageKind::Type, 587),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+
+        let portrait = cache
+            .texture(&ctx, &state, ImageKind::Character, 587)
+            .expect("portrait uploads");
+        let icon = cache
+            .texture(&ctx, &state, ImageKind::Type, 587)
+            .expect("type icon uploads");
+        assert_eq!(cache.len(), 2);
+        assert_ne!(portrait.id(), icon.id());
+    }
+
+    #[test]
+    fn prune_keeps_type_icon_across_selection_change() {
+        let ctx = egui::Context::default();
+        // Type 34 is named only by fitting A; selecting fitting B
+        // must not drop its texture (whole-bundle retention).
+        let mut state = type_fixture_state();
+        state.fittings_selected_fitting_id = Some(587);
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Type, 34),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        let uploaded = cache
+            .texture(&ctx, &state, ImageKind::Type, 34)
+            .expect("upload")
+            .id();
+        state.fittings_selected_fitting_id = Some(597);
+        cache.prune(&state);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 34)
+                .expect("kept")
+                .id(),
+            uploaded
+        );
+
+        // Pruning against a state with `fittings` Loading empties
+        // the cache.
+        let mut loading = type_fixture_state();
+        loading.fittings = LoadState::Loading;
+        cache.prune(&loading);
+        assert_eq!(cache.len(), 0);
+    }
+
+    #[test]
+    fn show_type_icon_runs_headless() {
+        let ctx = egui::Context::default();
+        let mut state = type_fixture_state();
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Type, 587),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        // Type 2048 has no entry: the placeholder box.
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show_type_icon(ui, &mut cache, &state, 587, TYPE_ICON_PX);
+                show_type_icon(ui, &mut cache, &state, 2048, TYPE_ICON_PX);
+            });
+        });
+        assert_eq!(cache.len(), 1, "only the Ready type icon uploaded");
     }
 }

@@ -31,7 +31,9 @@ use crate::names::resolver::{
     is_displayable_name, is_structure_id, structure_lookup_batch, NameResolver,
 };
 use crate::names::sde::Sde;
-use crate::portraits::{ImageKind, PortraitError, PortraitService, LOGO_SIZE, PORTRAIT_SIZE};
+use crate::portraits::{
+    ImageKind, PortraitError, PortraitService, LOGO_SIZE, PORTRAIT_SIZE, TYPE_ICON_SIZE,
+};
 use crate::skills::plans::{apply_demo_action, DemoApplyOutcome, SkillPlan, SkillPlanAction};
 use crate::storage::repositories::{self, CharacterRow, TokenMetaRow};
 use crate::ui;
@@ -2265,6 +2267,7 @@ impl MimirApp {
                             ImageKind::Corporation | ImageKind::Alliance | ImageKind::Faction => {
                                 LOGO_SIZE
                             }
+                            ImageKind::Type => TYPE_ICON_SIZE,
                         };
                         let image = service.image(kind, id, size).await;
                         let _ = tx.send(BackendMsg::PortraitFetched { kind, id, image });
@@ -3778,6 +3781,7 @@ impl eframe::App for MimirApp {
                     &self.resolver,
                     self.fitting_types.as_deref(),
                     &self.sde,
+                    &mut self.portrait_textures,
                 ),
                 View::Settings => ui::settings::show(ui, &mut self.state),
                 View::Exploration => ui::exploration::show(ui, &mut self.state),
@@ -4704,6 +4708,94 @@ mod tests {
             .contains_key(&(ImageKind::Corporation, 500001)));
         assert!(matches!(
             state.portrait_state(ImageKind::Corporation, 500001),
+            PortraitState::NotRequested
+        ));
+    }
+
+    fn type_item(type_id: i64) -> crate::esi::models::FittingItem {
+        crate::esi::models::FittingItem {
+            flag: "Cargo".to_string(),
+            quantity: 1,
+            type_id,
+        }
+    }
+
+    /// Two-character state with the design section 10 fittings
+    /// fixture: fitting A (ship 587, items 2048 and 34) and
+    /// fitting B (ship 597, item 178).
+    fn type_fixture_state() -> AppState {
+        let mut state = two_character_state();
+        let fitting_a = CharacterFitting {
+            fitting_id: 587,
+            name: "Fitting".to_string(),
+            description: None,
+            ship_type_id: 587,
+            items: vec![type_item(2048), type_item(34)],
+        };
+        let fitting_b = CharacterFitting {
+            fitting_id: 597,
+            name: "Fitting".to_string(),
+            description: None,
+            ship_type_id: 597,
+            items: vec![type_item(178)],
+        };
+        state.fittings = LoadState::Ready(FittingsData {
+            fittings: Ok(vec![fitting_a, fitting_b]),
+        });
+        state
+    }
+
+    #[test]
+    fn type_icon_landing_applies_then_drops_after_switch() {
+        let mut state = type_fixture_state();
+        assert!(apply_portrait_landing(
+            &mut state,
+            ImageKind::Type,
+            2048,
+            Ok(test_image(8, 8))
+        ));
+        match state.portrait_state(ImageKind::Type, 2048) {
+            PortraitState::Ready(image) => {
+                assert_eq!(image.width(), 8);
+                assert_eq!(image.height(), 8);
+            }
+            other => panic!("known type must land Ready, got {other:?}"),
+        }
+        // Mid-fetch switch: the fittings bundle resets, so a
+        // second landing for the same type drops whole and
+        // writes nothing new.
+        state.set_active_character(2);
+        assert!(!apply_portrait_landing(
+            &mut state,
+            ImageKind::Type,
+            2048,
+            Ok(test_image(4, 4))
+        ));
+        match state.portrait_state(ImageKind::Type, 2048) {
+            PortraitState::Ready(image) => {
+                assert_eq!(image.width(), 8, "dropped landing must write nothing");
+                assert_eq!(image.height(), 8);
+            }
+            other => panic!("dropped landing must leave the earlier image, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn type_id_landing_rejects_the_wrong_kind() {
+        // A fitting type id authorizes the type key only, not the
+        // corporation key at the same number.
+        let mut state = type_fixture_state();
+        assert!(!apply_portrait_landing(
+            &mut state,
+            ImageKind::Corporation,
+            2048,
+            Ok(test_image(8, 8))
+        ));
+        assert!(!state
+            .portraits
+            .contains_key(&(ImageKind::Corporation, 2048)));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Corporation, 2048),
             PortraitState::NotRequested
         ));
     }
