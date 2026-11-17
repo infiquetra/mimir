@@ -1152,6 +1152,21 @@ mod tests {
     }
 
     #[test]
+    fn trade_calculator_omits_missing_break_even_line() {
+        // Margin exists but break-even overflows: buy_total is
+        // 1.5e300 and the sell factor is about 1e-11, so the
+        // break-even quotient is non-finite and its line is
+        // omitted entirely (never a computed-looking zero).
+        let lines = trade_calculator_lines(&trade_state("1e300", "1e300", "50", "49.999999999"));
+        assert_eq!(lines[0], "LOSS");
+        assert_eq!(lines.len(), 13);
+        assert!(lines
+            .iter()
+            .all(|line| !line.starts_with("Break-Even Sell Price")));
+        assert_eq!(lines[12], TRADE_CALCULATOR_DISCLOSURE);
+    }
+
+    #[test]
     fn trade_calculator_loss_wording() {
         // Equal prices at the starting percents: profit -4.
         let loss = trade_calculator_lines(&trade_state("100", "100", "1.0", "2.0"));

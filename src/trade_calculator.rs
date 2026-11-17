@@ -72,8 +72,9 @@ pub fn parse_trade_price(text: &str) -> Option<f64> {
 }
 
 /// Parse a fee-percent draft: trim, remove one trailing `%` if
-/// present (Flutter's percent fields accept the typed suffix),
-/// strip commas, parse as `f64`, accept only a finite value with
+/// present (a typed-percent convenience for these text fields;
+/// Flutter used sliders, which needed no suffix rule), strip
+/// commas, parse as `f64`, accept only a finite value with
 /// `0.0 <= value <= 100.0`.
 pub fn parse_fee_percent(text: &str) -> Option<f64> {
     let trimmed = text.trim();
@@ -121,6 +122,11 @@ pub fn calculate_margin(
     }
     let broker_rate = broker_fee_percent / 100.0;
     let tax_rate = sales_tax_percent / 100.0;
+    // A percent pair can pass the sum gate yet leave a sell
+    // factor that rounds to 0.0; no sale survives, so no result.
+    if 1.0 - broker_rate - tax_rate <= 0.0 {
+        return None;
+    }
     let broker_fee_buy = buy_price * broker_rate;
     let broker_fee_sell = sell_price * broker_rate;
     let buy_total = buy_price * (1.0 + broker_rate);
@@ -141,7 +147,6 @@ pub fn calculate_margin(
     ]
     .iter()
     .all(|v| v.is_finite())
-        || !broker_fee.is_finite()
     {
         return None;
     }
@@ -184,6 +189,9 @@ pub fn break_even_sell_price(
         return None;
     }
     let denominator = 1.0 - broker_fee_percent / 100.0 - sales_tax_percent / 100.0;
+    if denominator <= 0.0 {
+        return None;
+    }
     let buy_total = buy_price * (1.0 + broker_fee_percent / 100.0);
     let result = buy_total / denominator;
     if result.is_finite() {
@@ -363,6 +371,14 @@ mod tests {
         // exceeds f64::MAX, so buy_total is non-finite.
         assert_eq!(calculate_margin(1.78e308, 1.78e308, 1.0, 2.0), None);
         assert_eq!(break_even_sell_price(1.78e308, 1.0, 2.0), None);
+        // Percent pair whose sum passes the >= 100 gate while
+        // the sell factor 1.0 - 0.0007 - 0.9992999999999999
+        // rounds to exactly 0.0: no sale survives, so None.
+        assert_eq!(
+            calculate_margin(100.0, 120.0, 0.07, 99.92999999999999),
+            None
+        );
+        assert_eq!(break_even_sell_price(100.0, 0.07, 99.92999999999999), None);
         // total_fees() is finite for every Some case above.
         for media in [
             calculate_margin(100.0, 120.0, 1.0, 2.0),

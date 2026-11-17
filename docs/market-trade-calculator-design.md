@@ -369,8 +369,9 @@ Decisions locked:
   break_even))` only when all four parse and
   `calculate_margin` succeeds. The inner break-even is
   still an `Option` so the renderer omits that one line if
-  it is ever `None` (with the section 4 rules it is `Some`
-  whenever the margin is; the renderer must not assume so).
+  it is ever `None` (it can be `None` while the margin is
+  `Some` when the break-even quotient overflows, so the
+  renderer must not assume it is always present).
 - The functions are total: no panics, no indexing, no
   unwrap on hostile text or hostile floats.
 
@@ -627,7 +628,9 @@ prices `0`, `-5`, `NaN`, `INFINITY`, `-INFINITY` give
 percent exactly `100` parses but any pair summing to 100 or
 more (60 + 40, 100 + 0, 60 + 50) gives `None` from both
 functions; a huge finite price whose outputs overflow
-(buy 1e308, sell 1e308, 1.0, 2.0) gives `None`, and
+(buy 1.78e308, sell 1.78e308, 1.0, 2.0, whose buy total
+1.78e308 * 1.01 exceeds the largest finite double) gives
+`None`, and
 `total_fees()` is finite for every `Some` case above.
 
 Parser cases: `"1,234.5"` parses to 1234.5, `" 5.75 "` to
