@@ -21,8 +21,11 @@
 //!
 //! Formulas are Flutter's (`dogma_engine.dart` at `ed698d3`),
 //! quoted in design sections 2.2 and 4, at base values only.
-//! No total is ever returned: the four families are reported
-//! independently and the caller never sums them.
+//! No damage-per-second total is ever returned: the four
+//! families are reported independently and the caller never
+//! sums them. Volley (docs/volley-ranges-design.md section 4)
+//! is a bounded subtotal of one firing cycle, never a DPS
+//! total.
 
 use crate::esi::models::{CharacterFitting, FittingItem};
 use crate::fitting::eft::{ImportFormat, ImportSection, ImportedFitting};
@@ -54,6 +57,19 @@ pub struct FittingDps {
     /// on this surface (design section 2.3), in quantity
     /// units.
     pub unloaded_weapons: usize,
+    /// Combined turret + launcher damage in one firing
+    /// cycle (drones and fighters excluded). `Some` exactly
+    /// on the EFT surface, mirroring `turrets` / `launchers`;
+    /// `None` on saved/DNA surfaces. A present 0.0 is a
+    /// real zero.
+    pub volley: Option<f64>,
+    /// Turret-volley-weighted average of attribute 54, in
+    /// metres. `Some` only under the completeness rule
+    /// (volley-ranges-design section 4).
+    pub optimal_range: Option<f64>,
+    /// Turret-volley-weighted average of attribute 158, in
+    /// metres. Completeness is per attribute.
+    pub falloff_range: Option<f64>,
 }
 
 /// Damage-per-second outcome for one fitting.
@@ -185,6 +201,17 @@ pub fn fitting_dps(
         dps: 0.0,
         excluded_items: 0,
     });
+    // Volley and turret-range accumulators
+    // (docs/volley-ranges-design.md section 4). Volley is
+    // turret + launcher damage in one firing cycle; ranges
+    // are turret-volley-weighted averages with strict
+    // per-attribute completeness.
+    let mut volley_total = 0.0;
+    let mut turret_volley = 0.0;
+    let mut optimal_weighted = 0.0;
+    let mut falloff_weighted = 0.0;
+    let mut optimal_complete = true;
+    let mut falloff_complete = true;
     let mut unloaded_weapons: usize = 0;
     for (type_id, quantity, charge_type_id) in slot_rows(fitting, imported) {
         let Some(row) = catalogue.lookup_by_id(type_id) else {
@@ -250,8 +277,52 @@ pub fn fitting_dps(
         if charge_sum <= 0.0 {
             continue;
         }
-        family.dps += charge_sum * multiplier / (cycle / 1000.0);
+        // Base volley = charge_sum * multiplier (Flutter's
+        // offense loop). The launcher branch carries
+        // multiplier 1.0, so the DPS add is numerically
+        // unchanged.
+        let volley = charge_sum * multiplier;
+        family.dps += volley / (cycle / 1000.0);
+        volley_total += volley;
+        // Turrets only: a volley above 0.0 is a counted
+        // turret for range purposes. Each range attribute is
+        // independently complete or incomplete: a lacking or
+        // unusable value marks only that range incomplete
+        // (never the excluded count — the weapon's damage
+        // data is usable and its DPS and volley are honest),
+        // while a present 0.0 counts with full weight.
+        if is_turret && volley > 0.0 {
+            turret_volley += volley;
+            match usable(row.max_range) {
+                Some(value) => optimal_weighted += value * volley,
+                None => optimal_complete = false,
+            }
+            match usable(row.falloff) {
+                Some(value) => falloff_weighted += value * volley,
+                None => falloff_complete = false,
+            }
+        }
     }
+
+    // Volley and range finals
+    // (docs/volley-ranges-design.md section 4). Volley is
+    // `Some` exactly on the EFT surface; a range is `Some`
+    // only when its attribute is complete over every counted
+    // turret, turret volley is positive, and the weighted
+    // average is positive.
+    let volley = is_eft.then_some(volley_total);
+    let optimal_range = if is_eft && optimal_complete && turret_volley > 0.0 {
+        let average = optimal_weighted / turret_volley;
+        (average > 0.0).then_some(average)
+    } else {
+        None
+    };
+    let falloff_range = if is_eft && falloff_complete && turret_volley > 0.0 {
+        let average = falloff_weighted / turret_volley;
+        (average > 0.0).then_some(average)
+    } else {
+        None
+    };
 
     // Drone pass, in `DroneBay` fit order.
     let drones = drone_dps(fitting, ship, catalogue);
@@ -274,6 +345,9 @@ pub fn fitting_dps(
         drones,
         fighters,
         unloaded_weapons,
+        volley,
+        optimal_range,
+        falloff_range,
     })
 }
 
@@ -1237,5 +1311,495 @@ mod tests {
         // SubSystemSlot0 copies of 2889 are candidates (5);
         // Invalid/ServiceSlot/"" copies are not.
         assert_eq!(dps.unloaded_weapons, 5);
+    }
+
+    // Volley-ranges test 1 (design section 8): Flutter
+    // base cross-check. Fixture turret (speed 4000.0,
+    // multiplier 2.0, maxRange 10000.0, falloff 5000.0)
+    // with charge kinetic 100.0: volley = 100 * 2.0 = 200.0;
+    // optimal = 200 * 10000 / 200 = 10000.0; falloff =
+    // 200 * 5000 / 200 = 5000.0; turret DPS still 50.0.
+    #[test]
+    fn volley_synthetic_cross_check() {
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":600,"typeName":"Fixture Ship","categoryId":6,"slotEffects":[],"volume":1.0,"droneBandwidth":0.0},
+                {"typeId":700,"typeName":"Fixture Turret","categoryId":7,"slotEffects":[12],"speed":4000.0,"damageMultiplier":2.0,"maxRange":10000.0,"falloff":5000.0},
+                {"typeId":702,"typeName":"Fixture Charge","categoryId":8,"slotEffects":[],"kineticDamage":100.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let imp = imported_eft(600, vec![imported_item(700, 1, Some(charge(702)))]);
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_close(dps.turrets.expect("turret family").dps, 50.0);
+        assert_close(dps.volley.expect("volley on EFT surface"), 200.0);
+        assert_close(dps.optimal_range.expect("optimal range"), 10000.0);
+        assert_close(dps.falloff_range.expect("falloff range"), 5000.0);
+    }
+
+    // Volley-ranges test 2 (design section 8): weighted
+    // average over two turrets, base-derived. Turret A:
+    // charge 100 * multiplier 2.0 = volley 200, maxRange
+    // 10000.0, falloff 5000.0. Turret B: charge 50 *
+    // multiplier 2.0 = volley 100, maxRange 4000.0, falloff
+    // 8000.0. Optimal = (200*10000 + 100*4000) / 300 =
+    // 2400000 / 300 = 8000.0. Falloff = (200*5000 +
+    // 100*8000) / 300 = 1800000 / 300 = 6000.0. Volley =
+    // 300.0.
+    #[test]
+    fn volley_weighted_average_two_turrets() {
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":600,"typeName":"Fixture Ship","categoryId":6,"slotEffects":[],"volume":1.0,"droneBandwidth":0.0},
+                {"typeId":700,"typeName":"Fixture Turret A","categoryId":7,"slotEffects":[12],"speed":4000.0,"damageMultiplier":2.0,"maxRange":10000.0,"falloff":5000.0},
+                {"typeId":704,"typeName":"Fixture Turret B","categoryId":7,"slotEffects":[12],"speed":2000.0,"damageMultiplier":2.0,"maxRange":4000.0,"falloff":8000.0},
+                {"typeId":702,"typeName":"Fixture Charge","categoryId":8,"slotEffects":[],"kineticDamage":100.0},
+                {"typeId":705,"typeName":"Fixture Weak Charge","categoryId":8,"slotEffects":[],"kineticDamage":50.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let imp = imported_eft(
+            600,
+            vec![
+                imported_item(700, 1, Some(charge(702))),
+                imported_item(704, 1, Some(charge(705))),
+            ],
+        );
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        // DPS unchanged: 200 / 4.0 + 100 / 2.0 = 50.0 + 50.0.
+        assert_close(dps.turrets.expect("turret family").dps, 100.0);
+        assert_close(dps.volley.expect("volley"), 300.0);
+        assert_close(dps.optimal_range.expect("optimal range"), 8000.0);
+        assert_close(dps.falloff_range.expect("falloff range"), 6000.0);
+    }
+
+    // Volley-ranges test 3 (design section 8): launcher
+    // volley counts, launcher ranges never do. Real: 2404
+    // with 210 through parse_eft: volley = 83.0 (83 *
+    // 1.0), both ranges None, launcher DPS still 6.484375.
+    // Mixed fixture: test 1's turret plus a launcher with
+    // charge 100 -> volley = 200 + 100 = 300.0, ranges
+    // exactly the turret's (denominator is turret volley
+    // 200, not 300).
+    #[test]
+    fn volley_launcher_and_mixed() {
+        let catalogue = bundled();
+        let text = "[Rifter, Launcher Test]\n\nLight Missile Launcher II, Scourge Light Missile\n";
+        let outcome = parse_eft(text, &catalogue);
+        let EftImportOutcome::Imported(imp) = outcome else {
+            panic!("EFT import succeeds");
+        };
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_close(dps.launchers.expect("launcher family").dps, 6.484375);
+        assert_close(dps.volley.expect("volley"), 83.0);
+        assert_eq!(dps.optimal_range, None);
+        assert_eq!(dps.falloff_range, None);
+
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":600,"typeName":"Fixture Ship","categoryId":6,"slotEffects":[],"volume":1.0,"droneBandwidth":0.0},
+                {"typeId":700,"typeName":"Fixture Turret","categoryId":7,"slotEffects":[12],"speed":4000.0,"damageMultiplier":2.0,"maxRange":10000.0,"falloff":5000.0},
+                {"typeId":701,"typeName":"Fixture Launcher","categoryId":7,"slotEffects":[12],"speed":2000.0},
+                {"typeId":702,"typeName":"Fixture Charge","categoryId":8,"slotEffects":[],"kineticDamage":100.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let imp = imported_eft(
+            600,
+            vec![
+                imported_item(700, 1, Some(charge(702))),
+                imported_item(701, 1, Some(charge(702))),
+            ],
+        );
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_close(dps.volley.expect("volley"), 300.0);
+        assert_close(dps.optimal_range.expect("optimal range"), 10000.0);
+        assert_close(dps.falloff_range.expect("falloff range"), 5000.0);
+    }
+
+    // Volley-ranges test 4 (design section 8): real turret.
+    // 484 with 180: sum 3.0 + 0.0 + 2.0 + 0.0 = 5.0; volley
+    // = 5.0 * 2.0625 = 10.3125; optimal 800.0; falloff
+    // 4300.0; DPS still 3.4375.
+    #[test]
+    fn volley_turret_real() {
+        let catalogue = bundled();
+        let text = "[Rifter, Turret Test]\n\n125mm Gatling AutoCannon I, Proton S\n";
+        let outcome = parse_eft(text, &catalogue);
+        let EftImportOutcome::Imported(imp) = outcome else {
+            panic!("EFT import succeeds");
+        };
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_close(dps.turrets.expect("turret family").dps, 3.4375);
+        assert_close(dps.volley.expect("volley"), 10.3125);
+        assert_close(dps.optimal_range.expect("optimal range"), 800.0);
+        assert_close(dps.falloff_range.expect("falloff range"), 4300.0);
+    }
+
+    // Volley-ranges test 5 (design section 8): strict
+    // completeness, per attribute. Real: 47272 paired as
+    // listed with 180 (compatibility is never checked):
+    // volley = 5.0 * 0.8 = 4.0; optimal Some(6000.0);
+    // falloff None. Fixture: test 2's turret A plus a
+    // counted turret carrying maxRange but no falloff ->
+    // falloff None, optimal still the two-turret weighted
+    // value 8000.0. Fixture mirror: a counted turret with
+    // a present-but-unusable falloff (negative) -> falloff
+    // None, excluded_items unchanged at 0, DPS and volley
+    // unchanged.
+    #[test]
+    fn volley_strict_completeness() {
+        let catalogue = bundled();
+        let text = "[Rifter, Disintegrator Test]\n\nLight Entropic Disintegrator I, Proton S\n";
+        let outcome = parse_eft(text, &catalogue);
+        let EftImportOutcome::Imported(imp) = outcome else {
+            panic!("EFT import succeeds");
+        };
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_close(dps.volley.expect("volley"), 4.0);
+        assert_close(dps.optimal_range.expect("optimal range"), 6000.0);
+        assert_eq!(dps.falloff_range, None);
+
+        // Two turrets, second has maxRange but no falloff:
+        // optimal = (200*10000 + 100*4000) / 300 = 8000.0,
+        // falloff None, volley 300.0.
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":600,"typeName":"Fixture Ship","categoryId":6,"slotEffects":[],"volume":1.0,"droneBandwidth":0.0},
+                {"typeId":700,"typeName":"Fixture Turret A","categoryId":7,"slotEffects":[12],"speed":4000.0,"damageMultiplier":2.0,"maxRange":10000.0,"falloff":5000.0},
+                {"typeId":706,"typeName":"Fixture Turret C","categoryId":7,"slotEffects":[12],"speed":2000.0,"damageMultiplier":2.0,"maxRange":4000.0},
+                {"typeId":702,"typeName":"Fixture Charge","categoryId":8,"slotEffects":[],"kineticDamage":100.0},
+                {"typeId":705,"typeName":"Fixture Weak Charge","categoryId":8,"slotEffects":[],"kineticDamage":50.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let imp = imported_eft(
+            600,
+            vec![
+                imported_item(700, 1, Some(charge(702))),
+                imported_item(706, 1, Some(charge(705))),
+            ],
+        );
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_close(dps.volley.expect("volley"), 300.0);
+        assert_close(dps.optimal_range.expect("optimal range"), 8000.0);
+        assert_eq!(dps.falloff_range, None);
+
+        // Mirror: present-but-unusable falloff (-5.0) marks
+        // incomplete without touching excluded_items. DPS =
+        // 200 / 4.0 + 100 / 4.0 = 50.0 + 25.0 = 75.0.
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":600,"typeName":"Fixture Ship","categoryId":6,"slotEffects":[],"volume":1.0,"droneBandwidth":0.0},
+                {"typeId":700,"typeName":"Fixture Turret A","categoryId":7,"slotEffects":[12],"speed":4000.0,"damageMultiplier":2.0,"maxRange":10000.0,"falloff":5000.0},
+                {"typeId":707,"typeName":"Fixture Turret D","categoryId":7,"slotEffects":[12],"speed":4000.0,"damageMultiplier":2.0,"maxRange":4000.0,"falloff":-5.0},
+                {"typeId":702,"typeName":"Fixture Charge","categoryId":8,"slotEffects":[],"kineticDamage":100.0},
+                {"typeId":705,"typeName":"Fixture Weak Charge","categoryId":8,"slotEffects":[],"kineticDamage":50.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let imp = imported_eft(
+            600,
+            vec![
+                imported_item(700, 1, Some(charge(702))),
+                imported_item(707, 1, Some(charge(705))),
+            ],
+        );
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_close(dps.turrets.expect("turret family").dps, 75.0);
+        assert_eq!(dps.turrets.expect("turret family").excluded_items, 0);
+        assert_close(dps.volley.expect("volley"), 300.0);
+        assert_close(dps.optimal_range.expect("optimal range"), 8000.0);
+        assert_eq!(dps.falloff_range, None);
+    }
+
+    // Volley-ranges test 6 (design section 8): present
+    // zero counts with weight. Two fixture turrets at
+    // volley 100 each (kinetic 100 * multiplier 1.0),
+    // falloffs 0.0 (present) and 6000.0: falloff =
+    // (100*0 + 100*6000) / 200 = 600000 / 200 = 3000.0,
+    // Some. A single counted turret with both ranges
+    // present at 0.0 -> both averages 0.0 -> both fields
+    // None.
+    #[test]
+    fn volley_present_zero_counts_with_weight() {
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":600,"typeName":"Fixture Ship","categoryId":6,"slotEffects":[],"volume":1.0,"droneBandwidth":0.0},
+                {"typeId":708,"typeName":"Fixture Turret E","categoryId":7,"slotEffects":[12],"speed":2000.0,"damageMultiplier":1.0,"maxRange":1000.0,"falloff":0.0},
+                {"typeId":709,"typeName":"Fixture Turret F","categoryId":7,"slotEffects":[12],"speed":2000.0,"damageMultiplier":1.0,"maxRange":2000.0,"falloff":6000.0},
+                {"typeId":702,"typeName":"Fixture Charge","categoryId":8,"slotEffects":[],"kineticDamage":100.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let imp = imported_eft(
+            600,
+            vec![
+                imported_item(708, 1, Some(charge(702))),
+                imported_item(709, 1, Some(charge(702))),
+            ],
+        );
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_close(dps.volley.expect("volley"), 200.0);
+        assert_close(dps.falloff_range.expect("falloff range"), 3000.0);
+
+        // Both ranges present at 0.0: full weight, zero
+        // average, both fields None (no turret volley is
+        // positive but the quotient is 0.0).
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":600,"typeName":"Fixture Ship","categoryId":6,"slotEffects":[],"volume":1.0,"droneBandwidth":0.0},
+                {"typeId":710,"typeName":"Fixture Turret G","categoryId":7,"slotEffects":[12],"speed":2000.0,"damageMultiplier":1.0,"maxRange":0.0,"falloff":0.0},
+                {"typeId":702,"typeName":"Fixture Charge","categoryId":8,"slotEffects":[],"kineticDamage":100.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let imp = imported_eft(600, vec![imported_item(710, 1, Some(charge(702)))]);
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_close(dps.volley.expect("volley"), 100.0);
+        assert_eq!(dps.optimal_range, None);
+        assert_eq!(dps.falloff_range, None);
+    }
+
+    // Volley-ranges test 7 (design section 8): weightless
+    // turrets cannot suppress. Test 1's turret plus (a) a
+    // turret whose paired charge sums to 0 and which
+    // carries no falloff -> falloff still Some(5000.0);
+    // (b) a turret with multiplier 0.0 (present, usable)
+    // and no falloff, paired with the damaging charge ->
+    // same; (c) an unloaded and an excluded-charge turret
+    // with no falloff -> same, with the shipped unloaded /
+    // excluded counts unchanged.
+    #[test]
+    fn volley_weightless_cannot_suppress() {
+        // (a) Zero-sum charge (all components absent = 0.0)
+        // never reaches the successful add.
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":600,"typeName":"Fixture Ship","categoryId":6,"slotEffects":[],"volume":1.0,"droneBandwidth":0.0},
+                {"typeId":700,"typeName":"Fixture Turret","categoryId":7,"slotEffects":[12],"speed":4000.0,"damageMultiplier":2.0,"maxRange":10000.0,"falloff":5000.0},
+                {"typeId":711,"typeName":"Fixture Blank Turret","categoryId":7,"slotEffects":[12],"speed":4000.0,"damageMultiplier":2.0,"maxRange":5000.0},
+                {"typeId":702,"typeName":"Fixture Charge","categoryId":8,"slotEffects":[],"kineticDamage":100.0},
+                {"typeId":703,"typeName":"Probe Charge","categoryId":8,"slotEffects":[]}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let imp = imported_eft(
+            600,
+            vec![
+                imported_item(700, 1, Some(charge(702))),
+                imported_item(711, 1, Some(charge(703))),
+            ],
+        );
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_close(dps.volley.expect("volley"), 200.0);
+        assert_close(dps.falloff_range.expect("falloff range"), 5000.0);
+        assert_eq!(dps.unloaded_weapons, 0);
+        assert_eq!(dps.turrets.expect("turret family").excluded_items, 0);
+
+        // (b) Multiplier 0.0: volley = 100 * 0.0 = 0.0, so
+        // the turret is weightless and cannot mark
+        // incompleteness.
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":600,"typeName":"Fixture Ship","categoryId":6,"slotEffects":[],"volume":1.0,"droneBandwidth":0.0},
+                {"typeId":700,"typeName":"Fixture Turret","categoryId":7,"slotEffects":[12],"speed":4000.0,"damageMultiplier":2.0,"maxRange":10000.0,"falloff":5000.0},
+                {"typeId":712,"typeName":"Fixture Dead Turret","categoryId":7,"slotEffects":[12],"speed":4000.0,"damageMultiplier":0.0,"maxRange":5000.0},
+                {"typeId":702,"typeName":"Fixture Charge","categoryId":8,"slotEffects":[],"kineticDamage":100.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let imp = imported_eft(
+            600,
+            vec![
+                imported_item(700, 1, Some(charge(702))),
+                imported_item(712, 1, Some(charge(702))),
+            ],
+        );
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_close(dps.volley.expect("volley"), 200.0);
+        assert_close(dps.falloff_range.expect("falloff range"), 5000.0);
+
+        // (c) Unloaded (no charge) and excluded-charge
+        // (charge absent from the catalogue) turrets.
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":600,"typeName":"Fixture Ship","categoryId":6,"slotEffects":[],"volume":1.0,"droneBandwidth":0.0},
+                {"typeId":700,"typeName":"Fixture Turret","categoryId":7,"slotEffects":[12],"speed":4000.0,"damageMultiplier":2.0,"maxRange":10000.0,"falloff":5000.0},
+                {"typeId":713,"typeName":"Fixture Falloffless Turret","categoryId":7,"slotEffects":[12],"speed":4000.0,"damageMultiplier":2.0,"maxRange":5000.0},
+                {"typeId":702,"typeName":"Fixture Charge","categoryId":8,"slotEffects":[],"kineticDamage":100.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let imp = imported_eft(
+            600,
+            vec![
+                imported_item(700, 1, Some(charge(702))),
+                imported_item(713, 1, None),
+                imported_item(713, 1, Some(charge(999))),
+            ],
+        );
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_close(dps.volley.expect("volley"), 200.0);
+        assert_close(dps.falloff_range.expect("falloff range"), 5000.0);
+        assert_eq!(dps.unloaded_weapons, 1);
+        assert_eq!(dps.turrets.expect("turret family").excluded_items, 1);
+    }
+
+    // Volley-ranges test 8 (design section 8): surfaces.
+    // The same weapon rows as saved and as DNA -> all
+    // three new fields None; EFT with no damaging pairing
+    // -> volley Some(0.0), ranges None. Drone damage never
+    // enters volley: Tristan with five Warrior II at drone
+    // DPS 39.0 on the saved surface -> volley None; the
+    // same rows through an EFT import -> volley Some(0.0),
+    // ranges None. Fighter-only damage (the shipped
+    // Thanatos case) likewise leaves volley at its surface
+    // value, never the fighter cycle damage.
+    #[test]
+    fn volley_surfaces() {
+        let catalogue = bundled();
+
+        // Saved: one real turret, no pairing.
+        let dps = available(fitting_dps(
+            &fitting(587, vec![item("HiSlot0", 1, 2889)]),
+            None,
+            &catalogue,
+        ));
+        assert_eq!(dps.volley, None);
+        assert_eq!(dps.optimal_range, None);
+        assert_eq!(dps.falloff_range, None);
+        assert_eq!(dps.unloaded_weapons, 1);
+
+        // DNA: same weapon row via parse_import.
+        let outcome = parse_import("587:2889", &catalogue);
+        let EftImportOutcome::Imported(imp) = outcome else {
+            panic!("DNA import succeeds");
+        };
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_eq!(dps.volley, None);
+        assert_eq!(dps.optimal_range, None);
+        assert_eq!(dps.falloff_range, None);
+        assert_eq!(dps.unloaded_weapons, 1);
+
+        // EFT with a turret but no charge listed.
+        let imp = imported_eft(587, vec![imported_item(2889, 1, None)]);
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_eq!(dps.volley, Some(0.0));
+        assert_eq!(dps.optimal_range, None);
+        assert_eq!(dps.falloff_range, None);
+        assert_eq!(dps.unloaded_weapons, 1);
+
+        // Drone-only damage, saved: volley None.
+        let dps = available(fitting_dps(
+            &fitting(593, vec![item("DroneBay", 5, 2488)]),
+            None,
+            &catalogue,
+        ));
+        assert_close(dps.drones.expect("drone family").dps, 39.0);
+        assert_eq!(dps.volley, None);
+
+        // Drone-only damage, EFT surface (Tristan with an
+        // EFT import carrying the drones): volley Some(0.0),
+        // never drone cycle damage.
+        let imp = ImportedFitting {
+            name: "Drone Test".to_string(),
+            ship_type_id: 593,
+            ship_name: "Tristan".to_string(),
+            format: ImportFormat::Eft,
+            report: ImportReport {
+                imported_lines: 1,
+                placeholder_lines: 0,
+                charges_noted: 0,
+                issues: Vec::new(),
+            },
+            items: vec![ImportedItem {
+                type_id: 2488,
+                name: "Warrior II".to_string(),
+                section: ImportSection::Drones,
+                quantity: 5,
+                charge: None,
+            }],
+        };
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_close(dps.drones.expect("drone family").dps, 39.0);
+        assert_eq!(dps.volley, Some(0.0));
+        assert_eq!(dps.optimal_range, None);
+        assert_eq!(dps.falloff_range, None);
+
+        // Fighter-only damage, saved and EFT: volley stays
+        // at its surface value (None on saved, Some(0.0) on
+        // EFT), never 75.0 * 1.0 * 9 per squadron.
+        let dps = available(fitting_dps(
+            &fitting(23911, vec![item("FighterBay", 18, 23059)]),
+            None,
+            &catalogue,
+        ));
+        assert_close(dps.fighters.expect("fighter family").dps, 270.0);
+        assert_eq!(dps.volley, None);
+
+        let imp = ImportedFitting {
+            name: "Fighter Test".to_string(),
+            ship_type_id: 23911,
+            ship_name: "Thanatos".to_string(),
+            format: ImportFormat::Eft,
+            report: ImportReport {
+                imported_lines: 1,
+                placeholder_lines: 0,
+                charges_noted: 0,
+                issues: Vec::new(),
+            },
+            items: vec![ImportedItem {
+                type_id: 23059,
+                name: "Firbolg I".to_string(),
+                section: ImportSection::Fighters,
+                quantity: 18,
+                charge: None,
+            }],
+        };
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_close(dps.fighters.expect("fighter family").dps, 270.0);
+        assert_eq!(dps.volley, Some(0.0));
+        assert_eq!(dps.optimal_range, None);
+        assert_eq!(dps.falloff_range, None);
+    }
+
+    // Volley-ranges test 9 (design section 8): per-row
+    // parity. A counted slot row with quantity 3 adds its
+    // volley and weight once, identical to the shipped DPS
+    // expectation for that row shape (200 / 4.0 = 50.0, not
+    // x3); the unloaded count for the same row unpaired
+    // still counts units (3).
+    #[test]
+    fn volley_per_row_parity() {
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":600,"typeName":"Fixture Ship","categoryId":6,"slotEffects":[],"volume":1.0,"droneBandwidth":0.0},
+                {"typeId":700,"typeName":"Fixture Turret","categoryId":7,"slotEffects":[12],"speed":4000.0,"damageMultiplier":2.0,"maxRange":10000.0,"falloff":5000.0},
+                {"typeId":702,"typeName":"Fixture Charge","categoryId":8,"slotEffects":[],"kineticDamage":100.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let imp = imported_eft(600, vec![imported_item(700, 3, Some(charge(702)))]);
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_close(dps.turrets.expect("turret family").dps, 50.0);
+        assert_close(dps.volley.expect("volley"), 200.0);
+        assert_close(dps.optimal_range.expect("optimal range"), 10000.0);
+        assert_close(dps.falloff_range.expect("falloff range"), 5000.0);
+
+        let imp = imported_eft(600, vec![imported_item(700, 3, None)]);
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_eq!(dps.volley, Some(0.0));
+        assert_eq!(dps.optimal_range, None);
+        assert_eq!(dps.falloff_range, None);
+        assert_eq!(dps.unloaded_weapons, 3);
     }
 }

@@ -258,6 +258,17 @@ pub struct FittingType {
     pub fighter_ability_attack: bool,
     #[serde(rename = "fighterAbilityMissiles", default)]
     pub fighter_ability_missiles: bool,
+    // Turret ranges (docs/volley-ranges-design.md section
+    // 3.3): dogma 54 `maxRange` and 158 `falloff` on
+    // category 7 rows only, sparse, raw metres. The 158
+    // default of 1.0 is never substituted: absence loads as
+    // `None` and means no falloff data for that type. Dogma
+    // 160 `trackingSpeed` is never emitted and never read
+    // here.
+    #[serde(rename = "maxRange", default)]
+    pub max_range: Option<f64>,
+    #[serde(rename = "falloff", default)]
+    pub falloff: Option<f64>,
 }
 
 /// Outcome of a reverse name lookup. `Found` carries the unique
@@ -916,7 +927,8 @@ mod tests {
                 );
             }
             // Damage-per-second values
-            // (docs/fitting-dps-design.md section 3.3):
+            // (docs/fitting-dps-design.md section 3.3 and
+            // docs/volley-ranges-design.md section 3.3):
             // every present DPS value is finite and
             // non-negative; `speed`/`damage_multiplier`
             // appear only on category 7 or 18 rows; the
@@ -924,7 +936,9 @@ mod tests {
             // 18 rows; the fighter per-type keys and both
             // ability markers only on category-87 rows;
             // the four tube/slot keys only on category-6
-            // rows. Absence stays distinct from 0.0.
+            // rows; the two turret range keys only on
+            // category-7 rows. Absence stays distinct from
+            // 0.0.
             for value in [
                 row.speed,
                 row.damage_multiplier,
@@ -952,6 +966,8 @@ mod tests {
                 row.fighter_light_slots,
                 row.fighter_support_slots,
                 row.fighter_heavy_slots,
+                row.max_range,
+                row.falloff,
             ]
             .into_iter()
             .flatten()
@@ -959,6 +975,13 @@ mod tests {
                 assert!(
                     value.is_finite() && value >= 0.0,
                     "negative or non-finite damage-per-second value on {:?}",
+                    row.name
+                );
+            }
+            if row.max_range.is_some() || row.falloff.is_some() {
+                assert_eq!(
+                    row.category_id, 7,
+                    "non-module carrying turret range key: {:?}",
                     row.name
                 );
             }
@@ -1394,6 +1417,46 @@ mod tests {
         let rifter = types.lookup_by_id(587).expect("Rifter row");
         assert_eq!(rifter.fighter_tubes, None);
         assert_eq!(rifter.speed, None);
+        // Turret range spot pins (docs/volley-ranges-design.md
+        // section 3), read from dgmTypeAttributes.csv.bz2
+        // during design: 484 800.0/4300.0; 47272 Light
+        // Entropic Disintegrator I 6000.0 with falloff absent;
+        // 2488 Warrior II neither (category-18 rows never
+        // emitted, though the cache carries 2100.0/2000.0);
+        // 447 Warp Scrambler I 7500.0 with falloff present as
+        // 0.0 (absence is never rewritten as zero).
+        let gatling = types
+            .lookup_by_id(484)
+            .expect("125mm Gatling AutoCannon I row");
+        assert_eq!(gatling.max_range, Some(800.0));
+        assert_eq!(gatling.falloff, Some(4300.0));
+        let disintegrator = types
+            .lookup_by_id(47272)
+            .expect("Light Entropic Disintegrator I row");
+        assert_eq!(disintegrator.max_range, Some(6000.0));
+        assert_eq!(disintegrator.falloff, None);
+        let warrior = types.lookup_by_id(2488).expect("Warrior II row");
+        assert_eq!(warrior.max_range, None);
+        assert_eq!(warrior.falloff, None);
+        let scrambler = types.lookup_by_id(447).expect("Warp Scrambler I row");
+        assert_eq!(scrambler.max_range, Some(7500.0));
+        assert_eq!(scrambler.falloff, Some(0.0));
+        // Range key counts over the bundled catalogue
+        // (volley-ranges-design section 3.1, scripted over
+        // the cache joined to the catalogue): every 158 row
+        // also carries 54.
+        let max_range_count = types
+            .types
+            .iter()
+            .filter(|row| row.max_range.is_some())
+            .count();
+        assert_eq!(max_range_count, 1157);
+        let falloff_count = types
+            .types
+            .iter()
+            .filter(|row| row.falloff.is_some())
+            .count();
+        assert_eq!(falloff_count, 681);
     }
 
     #[test]
@@ -1403,13 +1466,15 @@ mod tests {
         // catalogue tolerance, the twins' `default` pattern).
         let with_keys = FittingTypes::from_json(
             r#"{"types":[
-                {"typeId":484,"typeName":"125mm Gatling AutoCannon I","categoryId":7,"slotEffects":[12],"speed":3000.0,"damageMultiplier":2.0625},
+                {"typeId":484,"typeName":"125mm Gatling AutoCannon I","categoryId":7,"slotEffects":[12],"speed":3000.0,"damageMultiplier":2.0625,"maxRange":800.0,"falloff":4300.0},
                 {"typeId":23059,"typeName":"Firbolg I","categoryId":87,"slotEffects":[],"fighterSquadronMaxSize":9.0,"fighterAbilityAttackM":true}]}"#,
         )
         .expect("fixture parses");
         let gun = with_keys.lookup_by_id(484).expect("gun row");
         assert_eq!(gun.speed, Some(3000.0));
         assert_eq!(gun.damage_multiplier, Some(2.0625));
+        assert_eq!(gun.max_range, Some(800.0));
+        assert_eq!(gun.falloff, Some(4300.0));
         let firbolg = with_keys.lookup_by_id(23059).expect("fighter row");
         assert_eq!(firbolg.fighter_squadron_max_size, Some(9.0));
         assert!(firbolg.fighter_ability_attack);
@@ -1427,6 +1492,8 @@ mod tests {
         assert_eq!(ship.fighter_squadron_max_size, None);
         assert_eq!(ship.fighter_tubes, None);
         assert_eq!(ship.fighter_heavy_slots, None);
+        assert_eq!(ship.max_range, None);
+        assert_eq!(ship.falloff, None);
         assert!(!ship.fighter_ability_attack);
         assert!(!ship.fighter_ability_missiles);
     }

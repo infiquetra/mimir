@@ -6271,6 +6271,9 @@ mod tests {
             drones: Some(dps_family(0.0, 0)),
             fighters: Some(dps_family(270.0, 3)),
             unloaded_weapons: 1,
+            volley: None,
+            optimal_range: None,
+            falloff_range: None,
         };
         assert_eq!(
             dps_lines(&dps),
@@ -6296,6 +6299,9 @@ mod tests {
             drones: Some(dps_family(0.0, 0)),
             fighters: None,
             unloaded_weapons: 0,
+            volley: None,
+            optimal_range: None,
+            falloff_range: None,
         };
         assert_eq!(dps_lines(&dps), ["Drone DPS: 0.0 DPS".to_string()]);
     }
