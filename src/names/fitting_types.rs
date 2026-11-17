@@ -284,6 +284,33 @@ pub struct FittingType {
     pub duration: Option<f64>,
     #[serde(rename = "reloadTime", default)]
     pub reload_time: Option<f64>,
+    // Base active repair (docs/sustained-tank-design.md
+    // section 3): dogma 68 `shieldBonus`, 84
+    // `armorDamageAmount`, 83 `structureDamageAmount` on
+    // category 7 or 66 rows carrying a slot effect and a
+    // self-repair effect, sparse. The five boolean markers
+    // are the SDE effect names verbatim, sparse true-only;
+    // absence loads as `false` (the `turret_fitted` shape).
+    // `duration` is shared with the capacitor stability
+    // block and is not re-emitted; dogma 1886
+    // `chargedArmorDamageMultiplier` is never emitted and
+    // never read here.
+    #[serde(rename = "shieldBonus", default)]
+    pub shield_bonus: Option<f64>,
+    #[serde(rename = "armorDamageAmount", default)]
+    pub armor_damage_amount: Option<f64>,
+    #[serde(rename = "structureDamageAmount", default)]
+    pub structure_damage_amount: Option<f64>,
+    #[serde(rename = "shieldBoosting", default)]
+    pub shield_boosting: bool,
+    #[serde(rename = "fueledShieldBoosting", default)]
+    pub fueled_shield_boosting: bool,
+    #[serde(rename = "armorRepair", default)]
+    pub armor_repair: bool,
+    #[serde(rename = "fueledArmorRepair", default)]
+    pub fueled_armor_repair: bool,
+    #[serde(rename = "structureRepair", default)]
+    pub structure_repair: bool,
 }
 
 /// Outcome of a reverse name lookup. `Found` carries the unique
@@ -1080,6 +1107,73 @@ mod tests {
                     row.name
                 );
             }
+            // Base active repair values
+            // (docs/sustained-tank-design.md section 3): each
+            // present amount is finite and non-negative; any
+            // of the eight keys appears only on category 7 or
+            // 66 rows carrying a slot effect (absence is
+            // allowed, never required); an amount key never
+            // appears without its family's marker; at most one
+            // amount key per row. Absence stays distinct
+            // from 0.0.
+            for value in [
+                row.shield_bonus,
+                row.armor_damage_amount,
+                row.structure_damage_amount,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                assert!(
+                    value.is_finite() && value >= 0.0,
+                    "negative or non-finite active repair amount on {:?}",
+                    row.name
+                );
+            }
+            if row.shield_bonus.is_some()
+                || row.armor_damage_amount.is_some()
+                || row.structure_damage_amount.is_some()
+                || row.shield_boosting
+                || row.fueled_shield_boosting
+                || row.armor_repair
+                || row.fueled_armor_repair
+                || row.structure_repair
+            {
+                assert!(
+                    matches!(row.category_id, 7 | 66) && !row.slot_effects.is_empty(),
+                    "non-slot row carrying active repair key: {:?}",
+                    row.name
+                );
+            }
+            if row.shield_bonus.is_some() {
+                assert!(
+                    row.shield_boosting || row.fueled_shield_boosting,
+                    "shieldBonus without a shield repair marker: {:?}",
+                    row.name
+                );
+            }
+            if row.armor_damage_amount.is_some() {
+                assert!(
+                    row.armor_repair || row.fueled_armor_repair,
+                    "armorDamageAmount without an armor repair marker: {:?}",
+                    row.name
+                );
+            }
+            if row.structure_damage_amount.is_some() {
+                assert!(
+                    row.structure_repair,
+                    "structureDamageAmount without a structure repair marker: {:?}",
+                    row.name
+                );
+            }
+            let amount_count = row.shield_bonus.is_some() as u8
+                + row.armor_damage_amount.is_some() as u8
+                + row.structure_damage_amount.is_some() as u8;
+            assert!(
+                amount_count <= 1,
+                "row carrying more than one repair amount key: {:?}",
+                row.name
+            );
         }
         // Spot pins mirroring the generator oracles (design section
         // 5), read from dgmTypeAttributes.csv.bz2 during design.
@@ -1622,6 +1716,120 @@ mod tests {
             })
             .count();
         assert_eq!(no_cycle, 17);
+        // Base active repair spot pins
+        // (docs/sustained-tank-design.md section 8), read from
+        // dgmTypeAttributes.csv.bz2 / dgmTypeEffects.csv.bz2
+        // during design: 3540 armor amount 920.0; 10850 shield
+        // amount 104.0; 2355 hull amount 30.0; 33076 dry armor
+        // 52.0 with fueledArmorRepair true (cache 1886 3.0
+        // never emitted); 32774 shield 52.0 with
+        // fueledShieldBoosting true; 47781 marker-only
+        // shieldBoosting; 47769 marker-only armorRepair; 3588
+        // and 11355 remote repairers gain no key though their
+        // cache amounts (85.0/49.0) exist; 2048/2050/587 gain
+        // none at all.
+        let large_armor = types
+            .lookup_by_id(3540)
+            .expect("Large Armor Repairer II row");
+        assert_eq!(large_armor.armor_damage_amount, Some(920.0));
+        assert!(large_armor.armor_repair);
+        assert_eq!(large_armor.shield_bonus, None);
+        assert_eq!(large_armor.structure_damage_amount, None);
+        let medium_shield = types
+            .lookup_by_id(10850)
+            .expect("Medium Shield Booster II row");
+        assert_eq!(medium_shield.shield_bonus, Some(104.0));
+        assert!(medium_shield.shield_boosting);
+        assert_eq!(medium_shield.armor_damage_amount, None);
+        let small_hull = types
+            .lookup_by_id(2355)
+            .expect("Small Hull Repairer II row");
+        assert_eq!(small_hull.structure_damage_amount, Some(30.0));
+        assert!(small_hull.structure_repair);
+        assert_eq!(small_hull.shield_bonus, None);
+        assert_eq!(small_hull.armor_damage_amount, None);
+        let ancillary_armor = types
+            .lookup_by_id(33076)
+            .expect("Small Ancillary Armor Repairer row");
+        assert_eq!(ancillary_armor.armor_damage_amount, Some(52.0));
+        assert!(ancillary_armor.fueled_armor_repair);
+        assert_eq!(ancillary_armor.reload_time, Some(60000.0));
+        let ancillary_shield = types
+            .lookup_by_id(32774)
+            .expect("Small Ancillary Shield Booster row");
+        assert_eq!(ancillary_shield.shield_bonus, Some(52.0));
+        assert!(ancillary_shield.fueled_shield_boosting);
+        let abyssal_shield = types
+            .lookup_by_id(47781)
+            .expect("Small Abyssal Shield Booster row");
+        assert!(abyssal_shield.shield_boosting);
+        assert_eq!(abyssal_shield.shield_bonus, None);
+        assert_eq!(abyssal_shield.duration, None);
+        let abyssal_armor = types
+            .lookup_by_id(47769)
+            .expect("Small Abyssal Armor Repairer row");
+        assert!(abyssal_armor.armor_repair);
+        assert_eq!(abyssal_armor.armor_damage_amount, None);
+        assert_eq!(abyssal_armor.duration, None);
+        for row in [
+            types.lookup_by_id(3588).expect("remote shield row"),
+            types.lookup_by_id(11355).expect("remote armor row"),
+            types.lookup_by_id(2048).expect("DC II row"),
+            types.lookup_by_id(2050).expect("hardener row"),
+            types.lookup_by_id(587).expect("Rifter row"),
+        ] {
+            assert_eq!(row.shield_bonus, None);
+            assert_eq!(row.armor_damage_amount, None);
+            assert_eq!(row.structure_damage_amount, None);
+            assert!(!row.shield_boosting);
+            assert!(!row.fueled_shield_boosting);
+            assert!(!row.armor_repair);
+            assert!(!row.fueled_armor_repair);
+            assert!(!row.structure_repair);
+        }
+        // Base active repair key counts over the bundled
+        // catalogue (sustained-tank-design section 3, the
+        // generator's REPAIR_EXPECTED_COUNTS twins).
+        let shield_bonus_count = types
+            .types
+            .iter()
+            .filter(|row| row.shield_bonus.is_some())
+            .count();
+        assert_eq!(shield_bonus_count, 99);
+        let armor_amount_count = types
+            .types
+            .iter()
+            .filter(|row| row.armor_damage_amount.is_some())
+            .count();
+        assert_eq!(armor_amount_count, 109);
+        let hull_amount_count = types
+            .types
+            .iter()
+            .filter(|row| row.structure_damage_amount.is_some())
+            .count();
+        assert_eq!(hull_amount_count, 25);
+        let shield_marker_count = types.types.iter().filter(|row| row.shield_boosting).count();
+        assert_eq!(shield_marker_count, 94);
+        let fueled_shield_count = types
+            .types
+            .iter()
+            .filter(|row| row.fueled_shield_boosting)
+            .count();
+        assert_eq!(fueled_shield_count, 14);
+        let armor_marker_count = types.types.iter().filter(|row| row.armor_repair).count();
+        assert_eq!(armor_marker_count, 105);
+        let fueled_armor_count = types
+            .types
+            .iter()
+            .filter(|row| row.fueled_armor_repair)
+            .count();
+        assert_eq!(fueled_armor_count, 12);
+        let hull_marker_count = types
+            .types
+            .iter()
+            .filter(|row| row.structure_repair)
+            .count();
+        assert_eq!(hull_marker_count, 25);
     }
 
     #[test]
@@ -1732,5 +1940,46 @@ mod tests {
         assert_eq!(ship.capacitor_need, None);
         assert_eq!(ship.duration, None);
         assert_eq!(ship.reload_time, None);
+    }
+
+    #[test]
+    fn fixture_parse_active_repair_fields() {
+        // A row with the new keys loads into the new fields;
+        // a row without them loads with all None/false (old-
+        // catalogue tolerance, the `default` pattern).
+        let with_keys = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":3540,"typeName":"Large Armor Repairer II","categoryId":7,"slotEffects":[11],"duration":15000.0,"armorDamageAmount":920.0,"armorRepair":true},
+                {"typeId":32774,"typeName":"Small Ancillary Shield Booster","categoryId":7,"slotEffects":[13],"duration":2000.0,"shieldBonus":52.0,"fueledShieldBoosting":true,"reloadTime":60000.0}]}"#,
+        )
+        .expect("fixture parses");
+        let armor = with_keys.lookup_by_id(3540).expect("armor row");
+        assert_eq!(armor.armor_damage_amount, Some(920.0));
+        assert!(armor.armor_repair);
+        assert_eq!(armor.shield_bonus, None);
+        assert_eq!(armor.structure_damage_amount, None);
+        assert!(!armor.shield_boosting);
+        assert!(!armor.fueled_shield_boosting);
+        assert!(!armor.fueled_armor_repair);
+        assert!(!armor.structure_repair);
+        let shield = with_keys.lookup_by_id(32774).expect("shield row");
+        assert_eq!(shield.shield_bonus, Some(52.0));
+        assert!(shield.fueled_shield_boosting);
+        assert_eq!(shield.reload_time, Some(60000.0));
+
+        let without_keys = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[]}]}"#,
+        )
+        .expect("fixture parses");
+        let ship = without_keys.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(ship.shield_bonus, None);
+        assert_eq!(ship.armor_damage_amount, None);
+        assert_eq!(ship.structure_damage_amount, None);
+        assert!(!ship.shield_boosting);
+        assert!(!ship.fueled_shield_boosting);
+        assert!(!ship.armor_repair);
+        assert!(!ship.fueled_armor_repair);
+        assert!(!ship.structure_repair);
     }
 }

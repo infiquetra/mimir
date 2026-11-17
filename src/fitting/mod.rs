@@ -1,6 +1,7 @@
 //! Fitting import: pure parsing over the bundled fitting-types
 //! catalogue. No egui, no state, no network, no database.
 
+pub mod active_repair;
 pub mod bay_usage;
 pub mod calibration;
 pub mod dna;
@@ -16,6 +17,7 @@ pub mod ship_stats;
 pub mod slot_layout;
 pub mod write_map;
 
+pub use active_repair::{fitting_active_repair, FittingActiveRepair};
 pub use bay_usage::{bay_usage, BayBudget, BayUsage, BayUsageOutcome};
 pub use calibration::{rig_calibration, CalibrationBudget, CalibrationOutcome};
 pub use dna::{parse_dna, parse_import, MAX_DNA_EXPANDED_ITEMS, MAX_DNA_SEGMENTS};
