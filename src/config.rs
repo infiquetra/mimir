@@ -182,6 +182,19 @@ impl EveConfig {
             size
         )
     }
+
+    /// Faction logo URL. Factions are served by the corporations
+    /// endpoint in the image server (the `FactionLogo` precedent);
+    /// the helper name states the entity, the path states the
+    /// verified endpoint.
+    pub fn faction_logo_url(faction_id: i64, size: u32) -> String {
+        format!(
+            "{}/corporations/{}/logo?size={}",
+            Self::IMAGE_SERVER_URL,
+            faction_id,
+            size
+        )
+    }
 }
 
 /// Current Unix time in seconds (0 if the system clock is before 1970).
@@ -338,6 +351,14 @@ mod tests {
         assert_eq!(
             EveConfig::alliance_logo_url(99003581, 64),
             "https://images.evetech.net/alliances/99003581/logo?size=64"
+        );
+    }
+
+    #[test]
+    fn faction_logo_url_shape() {
+        assert_eq!(
+            EveConfig::faction_logo_url(500001, 64),
+            "https://images.evetech.net/corporations/500001/logo?size=64"
         );
     }
 
