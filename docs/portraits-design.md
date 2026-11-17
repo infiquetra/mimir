@@ -144,3 +144,54 @@ codebase's own seams this session.
   backends, allowed), `apply_portrait_landing` for present,
   switched-away, and removed characters (active character's entry
   provably untouched).
+
+## 9. Rendering (Builder B)
+
+- Surfaces (settled against
+  `docs/rust-rewrite-design.md` row 4 — Flutter's portrait panel
+  lived in the Characters window, list + detail): the Characters
+  switcher list (32px portrait cell per row, label unchanged), the
+  active-character detail (a `Portrait` grid row at 96px with a
+  status line), and the Dashboard all-characters grid (a leading
+  `Portrait` column at 32px). The shell rail stays name-only
+  (switch-only in Flutter too).
+- Texture cache: `PortraitImageCache` (`src/ui/portraits.rs`),
+  owned by `MimirApp` and passed into the two views. Upload
+  happens once per character image, keyed by character id with
+  an `Arc::ptr_eq` identity check, so a replaced image
+  (remove and re-add) uploads anew instead of showing the old
+  face. `prune` runs per frame against the live character list,
+  freeing a removed character's GPU texture.
+- Requests: views call `ensure_portrait_requested`, which queues
+  only for `NotRequested`. A `Failed` portrait is never
+  re-requested from the render path (that would retry-loop at
+  frame rate); it retries from the detail view's "Retry
+  portrait" button, which calls `request_portrait` directly.
+  In demo mode the queued requests are drained by the shell
+  without spawning, so demo makes zero network calls and shows
+  the initial placeholder plus "Portraits are not fetched in
+  demo mode."
+- Placeholders: a centered initial (or `?` when the name has no
+  alphabetic character) at the same square size as the image;
+  the detail view adds `placeholder_status` beside it. Only
+  `Ready` for that exact character id ever renders an image.
+- Logging: the per-frame render path is log-free (view-layer
+  convention — one row renders once per frame); upload,
+  replace, prune, and retry carry `[PORTRAIT]` logs with
+  `character_id={}` integers. Character names never appear in
+  logs.
+
+## 10. Tests (Builder B)
+
+- `src/ui/portraits.rs`: `placeholder_status` table over every
+  state and demo flag; `ensure_portrait_requested` requests only
+  `NotRequested` (Loading/Ready/Failed/unknown queue nothing);
+  prune on an empty cache; texture `None` until `Ready`;
+  upload-once-per-image with same-texture-id reuse and
+  replacement on a new `Arc`; prune frees removed characters
+  and re-uploads on return; a headless render smoke for a Ready
+  and a placeholder portrait.
+- Total: 645 lib + 30 integration = 675 tests (+7 over
+  Builder A's 668), gates green at every Builder B commit
+  (`cargo fmt --check`, `cargo clippy --all-targets -- -D
+  warnings`, `cargo test`, `cargo build`).
