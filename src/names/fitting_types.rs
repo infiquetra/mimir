@@ -95,6 +95,26 @@ pub struct FittingType {
     pub hull_kinetic_resonance: Option<f64>,
     #[serde(rename = "explosiveDamageResonance", default)]
     pub hull_explosive_resonance: Option<f64>,
+    // Bay usage (docs/bay-capacities-design.md section 3.1):
+    // `volume` is the invTypes `volume` column on every row,
+    // `cargoCapacity` is the invTypes `capacity` column on
+    // category 6 rows only, and the dogma keys are sparse:
+    // `droneCapacity` 283, `droneBandwidth` 1271, `fighterCapacity`
+    // 2055 on category 6 rows, `droneBandwidthUsed` 1272 wherever
+    // a row exists (all such rows are category 18). Dogma 38 and
+    // 161 are decoys and never read here.
+    #[serde(rename = "volume", default)]
+    pub volume: Option<f64>,
+    #[serde(rename = "cargoCapacity", default)]
+    pub cargo_capacity: Option<f64>,
+    #[serde(rename = "droneCapacity", default)]
+    pub drone_capacity: Option<f64>,
+    #[serde(rename = "droneBandwidth", default)]
+    pub drone_bandwidth: Option<f64>,
+    #[serde(rename = "fighterCapacity", default)]
+    pub fighter_capacity: Option<f64>,
+    #[serde(rename = "droneBandwidthUsed", default)]
+    pub drone_bandwidth_used: Option<f64>,
 }
 
 /// Outcome of a reverse name lookup. `Found` carries the unique
@@ -540,6 +560,62 @@ mod tests {
                     row.name
                 );
             }
+            // Bay values (docs/bay-capacities-design.md section
+            // 3.4): every present bay value is finite and
+            // non-negative; `volume` is present on every row;
+            // `cargoCapacity` is present on every category 6 row
+            // and on no other row; the three ship bay keys appear
+            // only on category 6 rows (absence is allowed, never
+            // required); `droneBandwidthUsed` appears only on
+            // category 18 rows. Absence stays distinct from 0.0.
+            for value in [
+                row.volume,
+                row.cargo_capacity,
+                row.drone_capacity,
+                row.drone_bandwidth,
+                row.fighter_capacity,
+                row.drone_bandwidth_used,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                assert!(
+                    value.is_finite() && value >= 0.0,
+                    "negative or non-finite bay value on {:?}",
+                    row.name
+                );
+            }
+            assert!(row.volume.is_some(), "row without volume: {:?}", row.name);
+            if row.category_id == 6 {
+                assert!(
+                    row.cargo_capacity.is_some(),
+                    "ship without cargoCapacity: {:?}",
+                    row.name
+                );
+            } else {
+                assert!(
+                    row.cargo_capacity.is_none(),
+                    "non-ship carrying cargoCapacity: {:?}",
+                    row.name
+                );
+            }
+            if row.drone_capacity.is_some()
+                || row.drone_bandwidth.is_some()
+                || row.fighter_capacity.is_some()
+            {
+                assert_eq!(
+                    row.category_id, 6,
+                    "non-ship carrying ship bay key: {:?}",
+                    row.name
+                );
+            }
+            if row.drone_bandwidth_used.is_some() {
+                assert_eq!(
+                    row.category_id, 18,
+                    "non-drone carrying droneBandwidthUsed: {:?}",
+                    row.name
+                );
+            }
         }
         // Spot pins mirroring the generator oracles (design section
         // 5), read from dgmTypeAttributes.csv.bz2 during design.
@@ -658,6 +734,59 @@ mod tests {
             assert_eq!(row.hull_thermal_resonance, None);
             assert_eq!(row.hull_kinetic_resonance, None);
             assert_eq!(row.hull_explosive_resonance, None);
+        }
+        // Bay spot pins (docs/bay-capacities-design.md section
+        // 3.3), read from invTypes.csv.bz2 / dgmTypeAttributes.csv.bz2
+        // during design: Rifter 587 cargo 140.0 (invTypes capacity),
+        // drone 0.0 / bandwidth 0.0 (dogma 283/1271), volume
+        // 27289.0; Tristan 593 140.0/40.0/25.0; Capsule 670 cargo
+        // 0.0 present (not absent); Primae 2863 cargo 100.0 with
+        // no drone keys (dogma rows absent); Thanatos 23911 fighter
+        // 70000.0, cargo 875.0, drone 0.0; Hobgoblin II 2456 volume
+        // 5.0 and bandwidth-used 5.0; Tritanium 34 volume 0.01;
+        // EMP S 185 volume 0.0025; Templar II 40556 volume 1000.0.
+        let rifter = types.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(rifter.cargo_capacity, Some(140.0));
+        assert_eq!(rifter.drone_capacity, Some(0.0));
+        assert_eq!(rifter.drone_bandwidth, Some(0.0));
+        assert_eq!(rifter.volume, Some(27289.0));
+        assert_eq!(rifter.fighter_capacity, None);
+        assert_eq!(rifter.drone_bandwidth_used, None);
+        let tristan = types.lookup_by_id(593).expect("Tristan row");
+        assert_eq!(tristan.cargo_capacity, Some(140.0));
+        assert_eq!(tristan.drone_capacity, Some(40.0));
+        assert_eq!(tristan.drone_bandwidth, Some(25.0));
+        assert_eq!(tristan.fighter_capacity, None);
+        let capsule = types.lookup_by_id(670).expect("Capsule row");
+        assert_eq!(capsule.cargo_capacity, Some(0.0));
+        let primae = types.lookup_by_id(2863).expect("Primae row");
+        assert_eq!(primae.cargo_capacity, Some(100.0));
+        assert_eq!(primae.drone_capacity, None);
+        assert_eq!(primae.drone_bandwidth, None);
+        assert_eq!(primae.fighter_capacity, None);
+        let thanatos = types.lookup_by_id(23911).expect("Thanatos row");
+        assert_eq!(thanatos.fighter_capacity, Some(70000.0));
+        assert_eq!(thanatos.cargo_capacity, Some(875.0));
+        assert_eq!(thanatos.drone_capacity, Some(0.0));
+        let hobgoblin = types.lookup_by_id(2456).expect("Hobgoblin II row");
+        assert_eq!(hobgoblin.volume, Some(5.0));
+        assert_eq!(hobgoblin.drone_bandwidth_used, Some(5.0));
+        let tritanium = types.lookup_by_id(34).expect("Tritanium row");
+        assert_eq!(tritanium.volume, Some(0.01));
+        assert_eq!(tritanium.cargo_capacity, None);
+        let emp = types.lookup_by_id(185).expect("EMP S row");
+        assert_eq!(emp.volume, Some(0.0025));
+        let templar = types.lookup_by_id(40556).expect("Templar II row");
+        assert_eq!(templar.volume, Some(1000.0));
+        // Category gate pins: module, rig, and subsystem rows
+        // carry volume (every row does) but no ship/drone bay keys.
+        for row in [damage_control, rig, subsystem] {
+            assert!(row.volume.is_some());
+            assert_eq!(row.cargo_capacity, None);
+            assert_eq!(row.drone_capacity, None);
+            assert_eq!(row.drone_bandwidth, None);
+            assert_eq!(row.fighter_capacity, None);
+            assert_eq!(row.drone_bandwidth_used, None);
         }
     }
 }
