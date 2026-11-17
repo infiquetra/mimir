@@ -2239,6 +2239,19 @@ impl MimirApp {
                     .as_ref()
                     .expect("decide_portrait_start checked wiring");
                 for (kind, id) in requests {
+                    // Re-check the guard at drain time: the queue
+                    // may hold a request whose entity stopped being
+                    // known (character removed/switched) after it
+                    // queued. Skip the fetch; the state entry was
+                    // already dropped with its character.
+                    if !self.state.image_id_known(kind, id) {
+                        tracing::debug!(
+                            "[PORTRAIT] image fetch skipped, no longer known kind={} id={}",
+                            kind.as_str(),
+                            id
+                        );
+                        continue;
+                    }
                     tracing::info!(
                         "[PORTRAIT] image fetch started kind={} id={}",
                         kind.as_str(),
