@@ -31,6 +31,17 @@
 
 ## 2026-11-17
 
+### A dogma attribute can carry negative modifier values on non-ship rows, so a global negative check in the catalogue generator is not safe for every attribute set
+
+**Author.** Muse Code (nav-targeting workflow, integrator)
+**Context.** The navigation and targeting slice adds dogma attributes 600, 70, 552, 76, 564, 208–211, and 192 to the bundled fitting-types catalogue. The design said the generator's fail-loud checks (a negative or non-integral value aborts regeneration) should follow the existing shape, which checked every row in the cache globally because no earlier slice had ever hit a negative.
+**Evidence.** `docs/nav-targeting-design.md` section 3, and the catalogue builder's report during the slice: attribute 76 `maxTargetRange` carries `-20000.0` on four category-32 subsystem rows (45610, 45613, 45616, 45619). Those rows are subsystem modifiers, never emitted as ship values, but a global negative check fails regeneration on them. A scan during the slice verified every earlier slice's wanted set contains zero negatives across the whole cache, which is why the global shape never failed before. Integrator re-run this session: the regenerator reports `nav_targeting_keys warpSpeedMultiplier=404 agility=404 signatureRadius=404 maxTargetRange=404 scanResolution=390 scanRadarStrength=404 scanLadarStrength=404 scanMagnetometricStrength=404 scanGravimetricStrength=404 maxLockedTargets=404 mass=404` and reproduces the committed catalogue byte-identically (SHA-256 `b0b952cc…`, 3,341,334 bytes).
+**Mechanism.** The same attribute id means a base value on a published ship row and a modifier on a subsystem row; the sign is legitimate on the modifier row. A validation that ignores which rows can actually be emitted therefore rejects good data, while a validation scoped to emittable rows still fails loud on anything that could render.
+**Fix (or queued).** In `scripts/sde/generate_fitting_types_sde.py` the negative and integral checks for the navigation set are gated on published category-6 membership; duplicate, unparseable, and non-finite checks stay global. Every row that can be emitted is validated exactly as before.
+**Validation.** Regeneration succeeds and is byte-identical to the committed catalogue; the loader invariants in `src/names/fitting_types.rs` (finite, `>= 0.0`, integral max locked targets, category-6-only) hold over the bundled catalogue in the Rust test suite.
+**Generalizable rule.** Scope a fail-loud data check to the rows that can reach the output: an attribute's values on rows outside the emission set can be legitimate modifiers with different sign and shape, and a global check that was safe for earlier attribute sets is an assumption to re-verify per set, not a precedent to copy.
+**Refs.** `docs/nav-targeting-design.md` sections 2–4; DECISIONS 2026-11-17 navigation-and-targeting entry below.
+
 ### Dogma attribute 47 `slots` looks like a hardpoint signal but disagrees with the fitted effects on both sides
 
 **Author.** Muse Code (slot-layout workflow, integrator)
