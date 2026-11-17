@@ -361,6 +361,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde) {
                     state.selected_queue_row = queue.len().saturating_sub(1);
                 }
                 egui::ScrollArea::vertical()
+                    .id_salt("skill_queue_scroll")
                     .max_height(240.0)
                     .show(ui, |ui| {
                         for (idx, item) in queue.iter().enumerate() {
@@ -423,6 +424,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde) {
                 widgets::empty_panel(ui, "Bundled skill catalogue is unavailable.");
             }
             egui::ScrollArea::vertical()
+                .id_salt("skill_catalogue_scroll")
                 .max_height(320.0)
                 .show(ui, |ui| {
                     let mut any_match = false;
@@ -686,6 +688,7 @@ fn show_plan_detail(
     }
 
     egui::ScrollArea::vertical()
+        .id_salt("skill_plan_entries_scroll")
         .max_height(320.0)
         .show(ui, |ui| {
             for (idx, entry) in plan.entries.iter().enumerate() {
@@ -924,6 +927,7 @@ fn show_skill_picker(
         return;
     }
     egui::ScrollArea::vertical()
+        .id_salt("skill_picker_scroll")
         .max_height(320.0)
         .show(ui, |ui| {
             for skill in &results {

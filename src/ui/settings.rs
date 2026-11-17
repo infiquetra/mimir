@@ -162,6 +162,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         state.log_lines.len()
     ));
     egui::ScrollArea::vertical()
+        .id_salt("settings_log_scroll")
         .max_height(300.0)
         .stick_to_bottom(true)
         .show(ui, |ui| {

@@ -1390,3 +1390,9 @@ surface the missing evidence and give the user a way to resolve it.
 **Refs.** [DECISIONS 2026-05-21](DECISIONS.md#combat-aar-v3-uses-evidence-ledger-and-fit-evidence-before-deeper-simulation);
 [QUEUED AAR simulation work](QUEUED.md#p1--aar-fit-simulation-and-defense-profile-derivation);
 [AAR plan checkpoint](../../.codex/plans/2026-05-21-combat-analyzer-aar.md).
+
+## 2026-11-17 — Nested egui ScrollAreas need explicit id_salt
+
+**Evidence:** Demo screenshots of the Skills view showed egui debug overlays ("First/Second use of ScrollArea ID 3D09", "Second use of widget ID C6B2") reproduced on the base commit and on the skill-plans slice (integrator note on #588; parent re-verified before/after this fix).
+**Mechanism:** The shell wraps every view in one outer `ScrollArea::vertical()`; inner scroll areas without an explicit salt derive colliding IDs, so egui shares their scroll state and (in debug builds) paints clash warnings over real content.
+**Generalizable rule:** Every `ScrollArea` nested inside another must carry a distinct `.id_salt(...)`; treat a screenshot-visible ID-clash overlay as a defect, not cosmetics, because shared scroll state is user-visible.

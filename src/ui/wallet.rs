@@ -221,6 +221,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
                 widgets::empty_panel(ui, "No journal entries match the current filters.");
             } else {
                 egui::ScrollArea::vertical()
+                    .id_salt("wallet_scroll")
                     .max_height(260.0)
                     .show(ui, |ui| {
                         egui::Grid::new("wallet_journal")
