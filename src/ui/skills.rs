@@ -6,9 +6,11 @@ use std::collections::BTreeMap;
 use chrono::Utc;
 
 use super::widgets;
-use crate::app::state::{AppState, LoadState};
-use crate::esi::models::SkillQueueItem;
+use crate::app::state::{AppState, LoadState, SkillPlanConfirm, SkillPlanEditor};
+use crate::esi::models::{CharacterAttributes, SkillQueueItem};
 use crate::names::sde::Sde;
+use crate::skills::plans::{normalize_plan_text, SkillPlan, SkillPlanAction, SkillPlanEntry};
+use crate::skills::training::{plan_progress, EntryEstimate, PlanProgress, TrainedSkill};
 
 /// Queue sorted into training order (input order is not trusted).
 pub fn sorted_queue(queue: &[SkillQueueItem]) -> Vec<&SkillQueueItem> {
@@ -28,6 +30,227 @@ pub fn trained_levels(state: &AppState) -> BTreeMap<i64, i32> {
             .collect(),
         None => BTreeMap::new(),
     }
+}
+
+// --- Skill plans (design section 8) ---
+//
+// Every user-visible string below is verbatim-locked; the
+// small pure fns/consts let section 12's T18 pin them
+// without a frame. Skill names always resolve through `Sde`
+// (`skill_name_quiet` for per-frame rows); a raw numeric
+// skill id never renders. Numbers render through
+// `widgets::format_sp`, durations through
+// `widgets::format_countdown(minutes * 60)`.
+
+const SKILL_PLANS_HEADING: &str = "Skill plans";
+const SKILL_PLANS_DEMO_LABEL: &str =
+    "Demo mode: skill plans are kept in memory for this session and are not saved.";
+const SKILL_PLANS_DISCLOSURE: &str = "Estimates use this character's current attributes as loaded. They ignore the training queue and any future attribute remap.";
+
+/// Locked delete heading (design section 8.4).
+fn delete_plan_heading(name: &str) -> String {
+    format!("Delete plan \"{name}\"?")
+}
+
+/// Locked delete summary: the entry count is a bare number
+/// with a plural noun even at 1, following the fittings copy
+/// precedent (design section 8.4).
+fn delete_plan_summary(name: &str, entry_count: usize) -> String {
+    format!("\"{name}\" and its {entry_count} entries will be deleted from this device. This cannot be undone.")
+}
+
+/// Locked remove heading (design section 8.4).
+fn remove_entry_heading(skill_name: &str, plan_name: &str) -> String {
+    format!("Remove \"{skill_name}\" from \"{plan_name}\"?")
+}
+
+/// Locked remove summary (design section 8.4).
+fn remove_entry_summary(skill_name: &str) -> String {
+    format!(
+        "\"{skill_name}\" will be removed from this plan. Trained levels in EVE are not changed."
+    )
+}
+
+/// One plan's list summary line (design section 8.2). A total
+/// part is shown only when present and positive; an unknown
+/// total simply omits its part — the list never shows a
+/// partial total and never explains at length.
+fn plan_list_summary(progress: &PlanProgress, trained_loaded: bool) -> String {
+    let total = progress.entries.len();
+    if total == 0 {
+        return "No skills in this plan yet.".to_string();
+    }
+    if !trained_loaded {
+        return if total == 1 {
+            "1 skill".to_string()
+        } else {
+            format!("{total} skills")
+        };
+    }
+    let mut line = format!("{} of {total} complete", progress.complete_count);
+    if let Some(sp) = progress.total_sp_remaining {
+        if sp > 0 {
+            line += &format!(" — {} remaining", widgets::format_sp(sp));
+        }
+    }
+    if let Some(minutes) = progress.total_minutes {
+        if minutes > 0 {
+            line += &format!(" — about {}", widgets::format_countdown(minutes * 60));
+        }
+    }
+    line
+}
+
+/// The totals block under a plan's entries (design section
+/// 8.4): exactly one of the six locked lines. Empty beats
+/// not-loaded (the section 8.6 table words the empty selected
+/// plan unconditionally); all-complete beats the total forms
+/// (a fully trained plan has no remaining SP to total).
+fn plan_totals_line(progress: &PlanProgress, trained_loaded: bool) -> String {
+    if progress.entries.is_empty() {
+        return "No skills in this plan yet. Add skills to get started.".to_string();
+    }
+    if !trained_loaded {
+        return "Estimates will appear when trained skills are loaded.".to_string();
+    }
+    if progress.complete_count == progress.entries.len() {
+        return "All target levels reached.".to_string();
+    }
+    let Some(sp) = progress.total_sp_remaining else {
+        return "Total remaining: unavailable (one or more skills could not be estimated)."
+            .to_string();
+    };
+    match progress.total_minutes {
+        None => format!(
+            "Total remaining: {} — training time unavailable.",
+            widgets::format_sp(sp)
+        ),
+        Some(minutes) => format!(
+            "Total remaining: {} — about {}",
+            widgets::format_sp(sp),
+            widgets::format_countdown(minutes * 60)
+        ),
+    }
+}
+
+/// One entry row's text (design section 8.4), 1-based
+/// position. Completion is the estimate's level fact, never
+/// derived here from SP.
+fn entry_row_text(
+    position: usize,
+    skill_name: &str,
+    target_level: i32,
+    estimate: &EntryEstimate,
+) -> String {
+    let base = format!("{position}. {skill_name} — target level {target_level}");
+    let Some(trained_level) = estimate.trained_level else {
+        return format!("{base} — trained level unavailable");
+    };
+    if estimate.complete {
+        return format!("{base} — trained level {trained_level}, complete");
+    }
+    match estimate.sp_remaining {
+        Some(sp) => match estimate.minutes {
+            Some(minutes) => format!(
+                "{base} — trained level {trained_level}, {} remaining, about {}",
+                widgets::format_sp(sp),
+                widgets::format_countdown(minutes * 60)
+            ),
+            None => format!(
+                "{base} — trained level {trained_level}, {} remaining, training time unavailable",
+                widgets::format_sp(sp)
+            ),
+        },
+        None => format!("{base} — trained level {trained_level}, estimate unavailable"),
+    }
+}
+
+/// One picker row's base text (design section 8.5), before
+/// the already-in-plan / already-trained-5 suffixes.
+fn picker_row_label(skill_name: &str, trained_level: Option<i32>) -> String {
+    match trained_level {
+        Some(level) => format!("{skill_name} — trained level {level}"),
+        None => format!("{skill_name} — trained level unavailable"),
+    }
+}
+
+/// Whether an armed plan confirmation is no longer renderable
+/// (design section 7): the stamped character is not active,
+/// the stamped plan is gone from the loaded list, or (for a
+/// removal) the stamped skill is gone from that plan. A
+/// confirmation never outlives the thing it confirms.
+fn skill_plan_confirm_is_stale(state: &AppState) -> bool {
+    let Some(confirm) = &state.skill_plan_confirm else {
+        return false;
+    };
+    let Some(plans) = state.skill_plans.as_ready() else {
+        return true;
+    };
+    match confirm {
+        SkillPlanConfirm::DeletePlan {
+            character_id,
+            plan_id,
+        } => {
+            Some(*character_id) != state.active_character_id
+                || !plans.iter().any(|p| p.plan_id == *plan_id)
+        }
+        SkillPlanConfirm::RemoveEntry {
+            character_id,
+            plan_id,
+            skill_id,
+        } => {
+            Some(*character_id) != state.active_character_id
+                || !plans.iter().any(|p| {
+                    p.plan_id == *plan_id && p.entries.iter().any(|e| e.skill_id == *skill_id)
+                })
+        }
+    }
+}
+
+/// Whether the open editor is no longer renderable (design
+/// section 8.3): its stamped character is not active, or
+/// (for rename) its plan left the loaded list.
+fn skill_plan_editor_is_stale(state: &AppState) -> bool {
+    let Some(editor) = &state.skill_plan_editor else {
+        return false;
+    };
+    match editor {
+        SkillPlanEditor::Create { character_id } => {
+            Some(*character_id) != state.active_character_id
+        }
+        SkillPlanEditor::Edit {
+            character_id,
+            plan_id,
+        } => {
+            Some(*character_id) != state.active_character_id
+                || !state
+                    .skill_plans
+                    .as_ready()
+                    .is_some_and(|plans| plans.iter().any(|p| p.plan_id == *plan_id))
+        }
+    }
+}
+
+/// Open the create editor with blank drafts. Opening the
+/// editor clears any armed confirmation: one pending intent
+/// at a time (design section 8.3).
+fn open_create_editor(state: &mut AppState, character_id: i64) {
+    state.skill_plan_editor = Some(SkillPlanEditor::Create { character_id });
+    state.skill_plan_name_draft.clear();
+    state.skill_plan_description_draft.clear();
+    state.skill_plan_confirm = None;
+}
+
+/// Open the rename editor, seeding the drafts once from the
+/// plan's current text (design section 8.3).
+fn open_edit_editor(state: &mut AppState, character_id: i64, plan: &SkillPlan) {
+    state.skill_plan_editor = Some(SkillPlanEditor::Edit {
+        character_id,
+        plan_id: plan.plan_id,
+    });
+    state.skill_plan_name_draft = plan.name.clone();
+    state.skill_plan_description_draft = plan.description.clone();
+    state.skill_plan_confirm = None;
 }
 
 pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde) {
@@ -181,6 +404,511 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde) {
             }
         }
     }
+    // Skill plans render after the skills match, so they are
+    // visible and editable in every skills load state; only
+    // their estimates degrade (design section 8.1).
+    show_plans_section(ui, state, sde);
+}
+
+/// The skill-plans section: list, selected detail, editor.
+///
+/// The view never mutates plans and never touches storage: it
+/// stamps at most one queued `SkillPlanAction` per frame (the
+/// one-slot channel, design section 7), and the shell drains
+/// it. A click that finds the slot occupied is ignored that
+/// frame: every stamping handle below checks
+/// `skill_plan_action.is_none()`, so a failed stamp leaves its
+/// intent (editor, confirmation) in place for the next frame.
+fn show_plans_section(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde) {
+    // Sweeps before anything renders under them: selection,
+    // confirmation, and editor never outlive their target.
+    if let Some(selected) = state.selected_skill_plan_id {
+        let still_listed = state
+            .skill_plans
+            .as_ready()
+            .is_some_and(|plans| plans.iter().any(|p| p.plan_id == selected));
+        if !still_listed {
+            state.selected_skill_plan_id = None;
+            state.skill_plan_picker_open = false;
+            state.skill_plan_picker_search.clear();
+        }
+    }
+    if skill_plan_confirm_is_stale(state) {
+        state.skill_plan_confirm = None;
+    }
+    if skill_plan_editor_is_stale(state) {
+        state.skill_plan_editor = None;
+    }
+
+    let Some(active_id) = state.active_character_id else {
+        return;
+    };
+
+    // Estimate inputs, derived once per frame (design
+    // section 8.1): the trained map only from a Ready skills
+    // bundle (`active_skill_level` never read), attributes
+    // only from a Ready details bundle with `attributes: Ok`.
+    let trained: Option<BTreeMap<i64, TrainedSkill>> = state.skills.as_ready().map(|data| {
+        data.skills
+            .skills
+            .iter()
+            .map(|s| {
+                (
+                    s.skill_id,
+                    TrainedSkill {
+                        trained_level: s.trained_skill_level,
+                        skillpoints_in_skill: s.skillpoints_in_skill,
+                    },
+                )
+            })
+            .collect()
+    });
+    // Cloned, not borrowed: the detail below takes `&mut
+    // state`, and these inputs are small per-frame copies.
+    let attributes: Option<CharacterAttributes> = state
+        .character_details
+        .as_ready()
+        .and_then(|bundle| bundle.attributes.as_ref().ok().cloned());
+
+    ui.separator();
+    ui.heading(SKILL_PLANS_HEADING);
+    if state.demo {
+        ui.label(SKILL_PLANS_DEMO_LABEL);
+    }
+
+    // Owner guard (design section 7): plans render only when
+    // loaded for the active character; otherwise the loading
+    // words, so a list can never display under the wrong
+    // character even for one frame during a switch.
+    if state.skill_plans_owner != Some(active_id) {
+        widgets::loading_panel(ui, "Loading skill plans...");
+        return;
+    }
+
+    let plans: Vec<SkillPlan> = match &state.skill_plans {
+        LoadState::Ready(plans) => plans.clone(),
+        LoadState::Empty => Vec::new(),
+        LoadState::Loading => {
+            widgets::loading_panel(ui, "Loading skill plans...");
+            return;
+        }
+        LoadState::Error(_) => {
+            // Fixed words, no Retry: nothing here is retryable
+            // into ESI, and the next character switch or
+            // restart reloads (design section 8.2). No create
+            // affordance renders in this state.
+            widgets::error_panel(ui, "Skill plans could not be loaded from local storage.");
+            return;
+        }
+    };
+
+    if plans.is_empty() {
+        widgets::empty_panel(ui, "No skill plans yet for this character.");
+    }
+    if ui.button("New skill plan").clicked() {
+        open_create_editor(state, active_id);
+    }
+    for plan in &plans {
+        let progress = plan_progress(plan, sde, trained.as_ref(), attributes.as_ref());
+        let selected = state.selected_skill_plan_id == Some(plan.plan_id);
+        if ui.selectable_label(selected, plan.name.clone()).clicked() {
+            if selected {
+                state.selected_skill_plan_id = None;
+            } else {
+                state.selected_skill_plan_id = Some(plan.plan_id);
+            }
+        }
+        ui.label(plan_list_summary(&progress, trained.is_some()));
+        // The bar only reads when trained is loaded and the
+        // plan is non-empty; a bar over an unknown or empty
+        // denominator would claim a measurement that does not
+        // exist (design section 8.2).
+        if trained.is_some() && !plan.entries.is_empty() {
+            let fraction = progress.complete_count as f32 / plan.entries.len() as f32;
+            ui.add(egui::ProgressBar::new(fraction).text(format!("{:.0}%", fraction * 100.0)));
+        }
+    }
+
+    if let Some(selected_id) = state.selected_skill_plan_id {
+        if let Some(plan) = plans.iter().find(|p| p.plan_id == selected_id) {
+            show_plan_detail(
+                ui,
+                state,
+                sde,
+                active_id,
+                trained.as_ref(),
+                attributes.as_ref(),
+                plan,
+            );
+        }
+    }
+    show_plan_editor(ui, state, active_id);
+}
+
+/// The selected plan's detail (design section 8.4): heading,
+/// description, action buttons (or the delete confirmation
+/// replacing them), the add-skill picker, entry rows with
+/// reorder/remove, the remove confirmation, totals, and the
+/// estimates disclosure.
+fn show_plan_detail(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    sde: &Sde,
+    active_id: i64,
+    trained: Option<&BTreeMap<i64, TrainedSkill>>,
+    attributes: Option<&CharacterAttributes>,
+    plan: &SkillPlan,
+) {
+    let progress = plan_progress(plan, sde, trained, attributes);
+    ui.separator();
+    ui.heading(format!("Plan: {}", plan.name));
+    if !plan.description.is_empty() {
+        ui.label(plan.description.clone());
+    }
+
+    let delete_armed = matches!(
+        state.skill_plan_confirm,
+        Some(SkillPlanConfirm::DeletePlan { character_id, plan_id })
+            if character_id == active_id && plan_id == plan.plan_id
+    );
+    if delete_armed {
+        // The armed confirmation replaces the buttons row
+        // (the fittings delete-confirm shape, local words).
+        ui.heading(delete_plan_heading(&plan.name));
+        ui.label(delete_plan_summary(&plan.name, plan.entries.len()));
+        ui.horizontal(|ui| {
+            if ui.button("Confirm delete").clicked() && state.skill_plan_action.is_none() {
+                tracing::info!(
+                    "[PLANS] delete confirmed character_id={} plan_id={} entries={}",
+                    active_id,
+                    plan.plan_id,
+                    plan.entries.len()
+                );
+                state.skill_plan_action = Some(SkillPlanAction::DeletePlan {
+                    character_id: active_id,
+                    plan_id: plan.plan_id,
+                });
+                state.skill_plan_confirm = None;
+                state.selected_skill_plan_id = None;
+            }
+            if ui.button("Cancel").clicked() {
+                state.skill_plan_confirm = None;
+            }
+        });
+    } else {
+        ui.horizontal(|ui| {
+            if ui.button("Rename plan...").clicked() {
+                open_edit_editor(state, active_id, plan);
+            }
+            let picker_label = if state.skill_plan_picker_open {
+                "Hide skill picker"
+            } else {
+                "Add skills..."
+            };
+            if ui.button(picker_label).clicked() {
+                state.skill_plan_picker_open = !state.skill_plan_picker_open;
+            }
+            if ui.button("Delete plan...").clicked() {
+                // Arming a confirmation closes the editor:
+                // one pending intent at a time.
+                state.skill_plan_confirm = Some(SkillPlanConfirm::DeletePlan {
+                    character_id: active_id,
+                    plan_id: plan.plan_id,
+                });
+                state.skill_plan_editor = None;
+            }
+        });
+    }
+
+    if state.skill_plan_picker_open {
+        show_skill_picker(ui, state, sde, active_id, plan, trained);
+    }
+
+    egui::ScrollArea::vertical()
+        .max_height(320.0)
+        .show(ui, |ui| {
+            for (idx, entry) in plan.entries.iter().enumerate() {
+                let name = sde.skill_name_quiet(entry.skill_id);
+                let estimate = &progress.entries[idx];
+                ui.label(entry_row_text(idx + 1, &name, entry.target_level, estimate));
+                ui.horizontal(|ui| {
+                    let up = ui.add_enabled(idx > 0, egui::Button::new("Move up"));
+                    let down = ui.add_enabled(
+                        idx + 1 < plan.entries.len(),
+                        egui::Button::new("Move down"),
+                    );
+                    let remove = ui.button("Remove...");
+                    if up.clicked() {
+                        let mut new_entries = plan.entries.clone();
+                        new_entries.swap(idx, idx - 1);
+                        if state.skill_plan_action.is_none() {
+                            tracing::info!(
+                                "[PLANS] entries replace requested character_id={} plan_id={} count={}",
+                                active_id,
+                                plan.plan_id,
+                                new_entries.len()
+                            );
+                            state.skill_plan_action = Some(SkillPlanAction::ReplaceEntries {
+                                character_id: active_id,
+                                plan_id: plan.plan_id,
+                                entries: new_entries,
+                            });
+                        }
+                    }
+                    if down.clicked() {
+                        let mut new_entries = plan.entries.clone();
+                        new_entries.swap(idx, idx + 1);
+                        if state.skill_plan_action.is_none() {
+                            tracing::info!(
+                                "[PLANS] entries replace requested character_id={} plan_id={} count={}",
+                                active_id,
+                                plan.plan_id,
+                                new_entries.len()
+                            );
+                            state.skill_plan_action = Some(SkillPlanAction::ReplaceEntries {
+                                character_id: active_id,
+                                plan_id: plan.plan_id,
+                                entries: new_entries,
+                            });
+                        }
+                    }
+                    if remove.clicked() {
+                        // Arming a confirmation closes the editor.
+                        state.skill_plan_confirm = Some(SkillPlanConfirm::RemoveEntry {
+                            character_id: active_id,
+                            plan_id: plan.plan_id,
+                            skill_id: entry.skill_id,
+                        });
+                        state.skill_plan_editor = None;
+                    }
+                });
+            }
+        });
+
+    // The remove confirmation renders as one block under the
+    // entry list so rows do not move while confirming.
+    if let Some(SkillPlanConfirm::RemoveEntry {
+        character_id,
+        plan_id,
+        skill_id,
+    }) = state.skill_plan_confirm
+    {
+        if character_id == active_id && plan_id == plan.plan_id {
+            let skill_name = sde.skill_name_quiet(skill_id);
+            ui.heading(remove_entry_heading(&skill_name, &plan.name));
+            ui.label(remove_entry_summary(&skill_name));
+            ui.horizontal(|ui| {
+                if ui.button("Confirm remove").clicked() && state.skill_plan_action.is_none() {
+                    let new_entries: Vec<SkillPlanEntry> = plan
+                        .entries
+                        .iter()
+                        .filter(|e| e.skill_id != skill_id)
+                        .cloned()
+                        .collect();
+                    tracing::info!(
+                        "[PLANS] entries replace requested character_id={} plan_id={} count={}",
+                        active_id,
+                        plan.plan_id,
+                        new_entries.len()
+                    );
+                    state.skill_plan_action = Some(SkillPlanAction::ReplaceEntries {
+                        character_id: active_id,
+                        plan_id: plan.plan_id,
+                        entries: new_entries,
+                    });
+                    state.skill_plan_confirm = None;
+                }
+                if ui.button("Cancel").clicked() {
+                    state.skill_plan_confirm = None;
+                }
+            });
+        }
+    }
+
+    ui.label(plan_totals_line(&progress, trained.is_some()));
+    // The disclosure rides under the totals for any non-empty
+    // plan with loaded skills; the not-loaded totals line
+    // already says estimates are absent.
+    if !plan.entries.is_empty() && trained.is_some() {
+        ui.label(SKILL_PLANS_DISCLOSURE);
+    }
+}
+
+/// The inline create/rename editor (design section 8.3):
+/// never a modal. Validation runs every frame through
+/// `normalize_plan_text` — the UI renders its exact strings
+/// from that one source, never copies.
+fn show_plan_editor(ui: &mut egui::Ui, state: &mut AppState, active_id: i64) {
+    let Some(editor) = state.skill_plan_editor else {
+        return;
+    };
+    let (heading, is_create, edit_plan_id) = match editor {
+        SkillPlanEditor::Create { character_id } if character_id == active_id => {
+            ("Create skill plan", true, None)
+        }
+        SkillPlanEditor::Edit {
+            character_id,
+            plan_id,
+        } if character_id == active_id => ("Rename skill plan", false, Some(plan_id)),
+        _ => return, // stale sweep already cleared these
+    };
+    ui.separator();
+    ui.heading(heading);
+    ui.label("Plan name");
+    let name_response = ui.text_edit_singleline(&mut state.skill_plan_name_draft);
+    ui.label("Description (optional)");
+    let desc_response = ui.text_edit_multiline(&mut state.skill_plan_description_draft);
+    state.text_input_focused |= name_response.has_focus() || desc_response.has_focus();
+
+    let validation = normalize_plan_text(
+        &state.skill_plan_name_draft,
+        &state.skill_plan_description_draft,
+    );
+    let normalized = validation.clone();
+    if let Err(message) = &validation {
+        ui.colored_label(egui::Color32::LIGHT_RED, *message);
+    }
+    ui.horizontal(|ui| {
+        let save_label = if is_create {
+            "Create plan"
+        } else {
+            "Save name"
+        };
+        if ui
+            .add_enabled(
+                state.skill_plan_action.is_none() && validation.is_ok(),
+                egui::Button::new(save_label),
+            )
+            .clicked()
+        {
+            // Validity at click time (validation ran this
+            // frame above); the applier re-normalizes on drain.
+            if let Ok((name, description)) = normalized {
+                match edit_plan_id {
+                    None => {
+                        tracing::info!("[PLANS] create requested character_id={}", active_id);
+                        state.skill_plan_action = Some(SkillPlanAction::Create {
+                            character_id: active_id,
+                            name,
+                            description,
+                        });
+                    }
+                    Some(plan_id) => {
+                        tracing::info!(
+                            "[PLANS] rename requested character_id={} plan_id={}",
+                            active_id,
+                            plan_id
+                        );
+                        state.skill_plan_action = Some(SkillPlanAction::UpdateText {
+                            character_id: active_id,
+                            plan_id,
+                            name,
+                            description,
+                        });
+                    }
+                }
+                state.skill_plan_editor = None;
+                state.skill_plan_name_draft.clear();
+                state.skill_plan_description_draft.clear();
+            }
+        }
+        if ui.button("Cancel").clicked() {
+            state.skill_plan_editor = None;
+            state.skill_plan_name_draft.clear();
+            state.skill_plan_description_draft.clear();
+        }
+    });
+}
+
+/// The add-skill picker (design section 8.5), for the
+/// selected plan: one search box plus `Sde::search_skills`
+/// results. A click stamps `ReplaceEntries` with the new
+/// entry appended and leaves the picker open for the next add.
+fn show_skill_picker(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    sde: &Sde,
+    active_id: i64,
+    plan: &SkillPlan,
+    trained: Option<&BTreeMap<i64, TrainedSkill>>,
+) {
+    // `grab_focus = false`: the `/` shortcut belongs to the
+    // catalogue box in this view; the picker never steals it.
+    let focus = widgets::search_box(
+        ui,
+        &mut state.skill_plan_picker_search,
+        "Search skills to add",
+        false,
+    );
+    state.text_input_focused |= focus;
+    if sde.groups.is_empty() {
+        widgets::empty_panel(ui, "Bundled skill catalogue is unavailable.");
+        return;
+    }
+    let query = state.skill_plan_picker_search.clone();
+    let results = sde.search_skills(&query);
+    if results.is_empty() {
+        widgets::empty_panel(ui, "No skills match the search.");
+        return;
+    }
+    egui::ScrollArea::vertical()
+        .max_height(320.0)
+        .show(ui, |ui| {
+            for skill in &results {
+                let trained_level: Option<i32> = trained.map(|map| {
+                    map.get(&skill.type_id)
+                        .map(|t| t.trained_level.clamp(0, 5))
+                        .unwrap_or(0)
+                });
+                let in_plan = plan.entries.iter().any(|e| e.skill_id == skill.type_id);
+                let mut text = picker_row_label(&skill.type_name, trained_level);
+                if in_plan {
+                    text += " — already in this plan";
+                    ui.label(text);
+                } else if trained_level == Some(5) {
+                    text += " — already trained to level 5";
+                    ui.label(text);
+                } else {
+                    ui.label(text);
+                    ui.horizontal(|ui| {
+                        for level in 1..=5 {
+                            // Levels at or below the trained
+                            // level are disabled; with skills
+                            // not loaded every target is enabled
+                            // (design section 8.5).
+                            let enabled = match trained_level {
+                                Some(current) => level > current,
+                                None => true,
+                            };
+                            if ui
+                                .add_enabled(enabled, egui::Button::new(level.to_string()))
+                                .clicked()
+                            {
+                                let mut new_entries = plan.entries.clone();
+                                new_entries.push(SkillPlanEntry {
+                                    skill_id: skill.type_id,
+                                    target_level: level,
+                                });
+                                if state.skill_plan_action.is_none() {
+                                    tracing::info!(
+                                        "[PLANS] entries replace requested character_id={} plan_id={} count={}",
+                                        active_id,
+                                        plan.plan_id,
+                                        new_entries.len()
+                                    );
+                                    state.skill_plan_action =
+                                        Some(SkillPlanAction::ReplaceEntries {
+                                            character_id: active_id,
+                                            plan_id: plan.plan_id,
+                                            entries: new_entries,
+                                        });
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        });
 }
 
 #[cfg(test)]
@@ -211,5 +939,204 @@ mod tests {
     fn trained_levels_empty_when_not_ready() {
         let state = AppState::new(false);
         assert!(trained_levels(&state).is_empty());
+    }
+
+    fn estimate(
+        trained_level: Option<i32>,
+        complete: bool,
+        sp_remaining: Option<i64>,
+        minutes: Option<i64>,
+    ) -> EntryEstimate {
+        EntryEstimate {
+            skill_id: 3300,
+            trained_level,
+            complete,
+            sp_remaining,
+            minutes,
+        }
+    }
+
+    fn progress_with(
+        entries: Vec<EntryEstimate>,
+        complete_count: usize,
+        total_sp_remaining: Option<i64>,
+        total_minutes: Option<i64>,
+    ) -> PlanProgress {
+        PlanProgress {
+            entries,
+            complete_count,
+            total_sp_remaining,
+            total_minutes,
+        }
+    }
+
+    // T18: plan_wording_matches_design_strings (design
+    // section 12): the wording fns/consts pinned verbatim —
+    // delete heading/summary, remove heading/summary, totals
+    // variants, disclosure, demo label — plus the row and
+    // list lines and the editor error strings (which the UI
+    // renders from `normalize_plan_text`, one source, never
+    // copies). All expectations are hand literals; SP
+    // formatting: 210745 -> "210,745 SP"; countdowns:
+    // 6022 min * 60 = 361320 s = 4d 4h 22m (4*86400=345600,
+    // remainder 15720 = 4h + 1320 s = 22m).
+    #[test]
+    fn plan_wording_matches_design_strings() {
+        // Delete heading/summary, full expected strings.
+        assert_eq!(delete_plan_heading("PvP"), "Delete plan \"PvP\"?");
+        assert_eq!(
+            delete_plan_summary("PvP", 3),
+            "\"PvP\" and its 3 entries will be deleted from this device. This cannot be undone."
+        );
+        // Bare count with plural noun even at 1 and 0.
+        assert_eq!(
+            delete_plan_summary("PvP", 1),
+            "\"PvP\" and its 1 entries will be deleted from this device. This cannot be undone."
+        );
+        assert_eq!(
+            delete_plan_summary("PvP", 0),
+            "\"PvP\" and its 0 entries will be deleted from this device. This cannot be undone."
+        );
+        // Remove heading/summary, full expected strings.
+        assert_eq!(
+            remove_entry_heading("Gunnery", "PvP"),
+            "Remove \"Gunnery\" from \"PvP\"?"
+        );
+        assert_eq!(
+            remove_entry_summary("Gunnery"),
+            "\"Gunnery\" will be removed from this plan. Trained levels in EVE are not changed."
+        );
+        // Totals variants, full expected strings.
+        let full = progress_with(
+            vec![estimate(Some(4), false, Some(210745), Some(6022))],
+            0,
+            Some(210745),
+            Some(6022),
+        );
+        assert_eq!(
+            plan_totals_line(&full, true),
+            "Total remaining: 210,745 SP — about 4d 4h 22m"
+        );
+        let sp_only = progress_with(
+            vec![estimate(Some(4), false, Some(210745), None)],
+            0,
+            Some(210745),
+            None,
+        );
+        assert_eq!(
+            plan_totals_line(&sp_only, true),
+            "Total remaining: 210,745 SP — training time unavailable."
+        );
+        let unknown = progress_with(vec![estimate(Some(4), false, None, None)], 0, None, None);
+        assert_eq!(
+            plan_totals_line(&unknown, true),
+            "Total remaining: unavailable (one or more skills could not be estimated)."
+        );
+        assert_eq!(
+            plan_totals_line(&full, false),
+            "Estimates will appear when trained skills are loaded."
+        );
+        let all_complete = progress_with(
+            vec![estimate(Some(5), true, Some(0), Some(0))],
+            1,
+            Some(0),
+            Some(0),
+        );
+        assert_eq!(
+            plan_totals_line(&all_complete, true),
+            "All target levels reached."
+        );
+        let empty = progress_with(vec![], 0, Some(0), Some(0));
+        assert_eq!(
+            plan_totals_line(&empty, true),
+            "No skills in this plan yet. Add skills to get started."
+        );
+        // Empty beats not-loaded (section 8.6 words the empty
+        // selected plan unconditionally).
+        assert_eq!(
+            plan_totals_line(&empty, false),
+            "No skills in this plan yet. Add skills to get started."
+        );
+        // Disclosure and demo label, verbatim.
+        assert_eq!(
+            SKILL_PLANS_DISCLOSURE,
+            "Estimates use this character's current attributes as loaded. They ignore the training queue and any future attribute remap."
+        );
+        assert_eq!(
+            SKILL_PLANS_DEMO_LABEL,
+            "Demo mode: skill plans are kept in memory for this session and are not saved."
+        );
+        // List summary lines (design section 8.2).
+        // `full` has 1 entry, 0 complete.
+        assert_eq!(
+            plan_list_summary(&full, true),
+            "0 of 1 complete — 210,745 SP remaining — about 4d 4h 22m"
+        );
+        assert_eq!(
+            plan_list_summary(&empty, true),
+            "No skills in this plan yet."
+        );
+        assert_eq!(plan_list_summary(&full, false), "1 skill");
+        let two_unknown = progress_with(
+            vec![
+                estimate(None, false, None, None),
+                estimate(None, false, None, None),
+            ],
+            0,
+            None,
+            None,
+        );
+        assert_eq!(plan_list_summary(&two_unknown, false), "2 skills");
+        // Unknown total omits its part entirely.
+        assert_eq!(plan_list_summary(&unknown, true), "0 of 1 complete");
+        // Entry rows (design section 8.4).
+        assert_eq!(
+            entry_row_text(
+                1,
+                "Gunnery",
+                5,
+                &estimate(Some(4), false, Some(210745), Some(6022))
+            ),
+            "1. Gunnery — target level 5 — trained level 4, 210,745 SP remaining, about 4d 4h 22m"
+        );
+        assert_eq!(
+            entry_row_text(2, "Gunnery", 4, &estimate(Some(3), false, Some(35255), None)),
+            "2. Gunnery — target level 4 — trained level 3, 35,255 SP remaining, training time unavailable"
+        );
+        assert_eq!(
+            entry_row_text(3, "Gunnery", 5, &estimate(Some(4), false, None, None)),
+            "3. Gunnery — target level 5 — trained level 4, estimate unavailable"
+        );
+        assert_eq!(
+            entry_row_text(1, "Gunnery", 5, &estimate(Some(5), true, Some(0), Some(0))),
+            "1. Gunnery — target level 5 — trained level 5, complete"
+        );
+        assert_eq!(
+            entry_row_text(1, "Gunnery", 5, &estimate(None, false, None, None)),
+            "1. Gunnery — target level 5 — trained level unavailable"
+        );
+        // Picker base labels (design section 8.5).
+        assert_eq!(
+            picker_row_label("Gunnery", Some(3)),
+            "Gunnery — trained level 3"
+        );
+        assert_eq!(
+            picker_row_label("Gunnery", None),
+            "Gunnery — trained level unavailable"
+        );
+        // Editor error strings: the UI renders these straight
+        // from normalize_plan_text (T10 pins the validator);
+        // T18 re-asserts the three literals here so the
+        // visible contract has one UI-side pin, and the editor
+        // carries no competing copies.
+        assert_eq!(normalize_plan_text("   ", ""), Err("Plan name is required"));
+        assert_eq!(
+            normalize_plan_text(&"a".repeat(101), ""),
+            Err("Plan name must be 100 characters or less")
+        );
+        assert_eq!(
+            normalize_plan_text("PvP", &"a".repeat(501)),
+            Err("Description must be 500 characters or less")
+        );
     }
 }

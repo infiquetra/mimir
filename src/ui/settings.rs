@@ -4,7 +4,7 @@
 use crate::app::state::{AppState, AuthState, View};
 
 /// Bracketed feature tags the log filter can select (design section 1).
-pub const LOG_TAGS: [&str; 14] = [
+pub const LOG_TAGS: [&str; 15] = [
     "[AUTH]",
     "[ESI]",
     "[ASSETS]",
@@ -19,6 +19,7 @@ pub const LOG_TAGS: [&str; 14] = [
     "[DEMO]",
     "[UI]",
     "[STARTUP]",
+    "[PLANS]",
 ];
 
 /// Pure log filter: substring (case-insensitive) plus optional tag.
@@ -205,5 +206,6 @@ mod tests {
         assert!(LOG_TAGS.contains(&"[PI]"));
         assert!(LOG_TAGS.contains(&"[FITTING]"));
         assert!(LOG_TAGS.contains(&"[EXPLORE]"));
+        assert!(LOG_TAGS.contains(&"[PLANS]"));
     }
 }

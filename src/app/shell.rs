@@ -32,6 +32,7 @@ use crate::names::resolver::{
 };
 use crate::names::sde::Sde;
 use crate::portraits::{PortraitError, PortraitService, PORTRAIT_SIZE};
+use crate::skills::plans::{apply_demo_action, DemoApplyOutcome, SkillPlan, SkillPlanAction};
 use crate::storage::repositories::{self, CharacterRow, TokenMetaRow};
 use crate::ui;
 use crate::EsiClient;
@@ -126,6 +127,12 @@ pub struct MimirApp {
     backends: Option<Backends>,
     demo_bundle: Option<DemoBundle>,
     last_active_id: Option<i64>,
+    /// Demo flag as of the last drain: demo entry/exit can happen
+    /// inside a view (`seed_demo_state`, the settings toggle), so
+    /// the shell detects the transition here and reloads skill
+    /// plans from the destination mode's source (design section
+    /// 11.1 call point 3) even when the active id did not change.
+    last_demo_mode: bool,
     tx: Sender<BackendMsg>,
     rx: Receiver<BackendMsg>,
     demo_names_loaded: bool,
@@ -374,6 +381,60 @@ fn decide_portrait_start(demo: bool, backends_wired: bool) -> Option<PortraitSta
         return Some(PortraitStartRefusal::BackendsMissing);
     }
     None
+}
+
+/// Where skill-plan loads and actions go (skill-plans design
+/// section 9). Demo is checked **first**, so the live-database arm
+/// is unreachable in demo even when a database is open: demo plan
+/// data can never reach the live database. Plans need only the
+/// local database, never the network, so `backends_wired` here is
+/// `backends.is_some()` — no runtime is involved at any point.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SkillPlanRoute {
+    DemoMemory,
+    LiveDatabase,
+    Unavailable,
+}
+
+fn decide_skill_plan_route(demo: bool, backends_wired: bool) -> SkillPlanRoute {
+    if demo {
+        return SkillPlanRoute::DemoMemory;
+    }
+    if backends_wired {
+        SkillPlanRoute::LiveDatabase
+    } else {
+        SkillPlanRoute::Unavailable
+    }
+}
+
+/// Outcome of applying one drained plan action, in the shared
+/// vocabulary of storage and the demo applier (design section
+/// 11.2 point 4): created id / applied / no longer there.
+enum SkillPlanApplyOutcome {
+    Created(i64),
+    Applied,
+    NotFound,
+}
+
+/// Repository `bool` in the shared outcome vocabulary: `false`
+/// means the plan row was no longer there for that character.
+fn bool_outcome(applied: bool) -> SkillPlanApplyOutcome {
+    if applied {
+        SkillPlanApplyOutcome::Applied
+    } else {
+        SkillPlanApplyOutcome::NotFound
+    }
+}
+
+/// Section 8.7 success wording per action kind. No plan name or
+/// description ever appears in a status string (section 10).
+fn skill_plan_success_status(action: &SkillPlanAction) -> &'static str {
+    match action {
+        SkillPlanAction::Create { .. } => "Skill plan created.",
+        SkillPlanAction::UpdateText { .. } => "Skill plan renamed.",
+        SkillPlanAction::DeletePlan { .. } => "Skill plan deleted.",
+        SkillPlanAction::ReplaceEntries { .. } => "Skill plan updated.",
+    }
 }
 
 /// Portrait landing (portrait design section 5): insert the result
@@ -879,6 +940,7 @@ impl MimirApp {
             backends,
             demo_bundle,
             last_active_id,
+            last_demo_mode: demo,
             tx,
             rx,
             demo_names_loaded: false,
@@ -886,6 +948,11 @@ impl MimirApp {
             portrait_textures: ui::portraits::PortraitImageCache::new(),
         };
         app.ensure_demo_names();
+        // Skill plans are local data: present before first render,
+        // offline included (design section 11.1 call point 1; the
+        // live path already ran `load_cached_state` above and the
+        // demo path already seeded its characters).
+        app.load_skill_plans_into_state();
         if !demo && app.state.active_character_id.is_some() {
             app.state.request_refresh("startup");
         }
@@ -1719,7 +1786,9 @@ impl MimirApp {
             }
         }
         // Demo character switching swaps per-view data from the cached bundle.
+        let mut active_id_changed = false;
         if self.state.active_character_id != self.last_active_id {
+            active_id_changed = true;
             self.last_active_id = self.state.active_character_id;
             if self.state.demo {
                 if let (Some(bundle), Some(id)) =
@@ -1727,12 +1796,18 @@ impl MimirApp {
                 {
                     crate::demo::data::apply_character(&mut self.state, &bundle, id);
                 }
+                // Plans load synchronously from demo memory; they
+                // never wait for anything (section 11.1 point 2).
+                self.load_skill_plans_into_state();
             } else {
                 // Structure denials were for the previous character's
                 // token; re-arm pinned structure ids under the new
                 // active character (design section 6.3 rule 2).
                 self.resolver.forget_unresolved_structures();
                 self.state.request_refresh("character-switch");
+                // Plans are local: load beside the refresh request,
+                // never waiting for it (section 11.1 point 2).
+                self.load_skill_plans_into_state();
                 // Design section 8.5: the switch reset the market
                 // bundle to Loading; refill it under the new character
                 // when a type is selected.
@@ -1740,6 +1815,17 @@ impl MimirApp {
                     tracing::debug!("[MARKET] market refetch queued after character switch");
                     self.state.market_fetch_requested = true;
                 }
+            }
+        }
+        // Demo entry/exit (section 11.1 point 3): seeding happens
+        // inside views as well as here, and the settings toggle
+        // flips the mode without changing the active id, so detect
+        // the transition itself. When the active id also changed,
+        // the block above already loaded from the new source.
+        if self.state.demo != self.last_demo_mode {
+            self.last_demo_mode = self.state.demo;
+            if !active_id_changed {
+                self.load_skill_plans_into_state();
             }
         }
         if self.state.refresh_requested || self.state.retry_requested {
@@ -1767,6 +1853,9 @@ impl MimirApp {
         }
         if let Some(request) = self.state.fittings_write_requested.take() {
             self.start_fitting_write(request);
+        }
+        if let Some(action) = self.state.skill_plan_action.take() {
+            self.drain_skill_plan_action(action);
         }
         if !self.state.portrait_requests.is_empty() {
             self.start_portrait_fetches();
@@ -1799,6 +1888,291 @@ impl MimirApp {
                 self.delete_character(id);
             }
         }
+    }
+
+    /// Load the active character's skill plans into state
+    /// (skill-plans design section 11.1). One helper, four call
+    /// points: startup, the `last_active_id` change block, demo
+    /// entry/exit, and after every drained plan action. Plans are
+    /// never part of the refresh persist block and no ESI landing
+    /// writes them: what this loads is storage-confirmed truth
+    /// (live) or the demo applier's vec (demo), nothing else.
+    fn load_skill_plans_into_state(&mut self) {
+        let Some(active_id) = self.state.active_character_id else {
+            self.state.skill_plans = LoadState::Empty;
+            self.state.skill_plans_owner = None;
+            return;
+        };
+        match decide_skill_plan_route(self.state.demo, self.backends.is_some()) {
+            SkillPlanRoute::DemoMemory => {
+                let plans = self
+                    .state
+                    .demo_skill_plans
+                    .get(&active_id)
+                    .cloned()
+                    .unwrap_or_default();
+                self.set_loaded_skill_plans(active_id, plans);
+            }
+            SkillPlanRoute::LiveDatabase => {
+                let result = match self.backends.as_ref().map(|b| b.db.lock()) {
+                    Some(Ok(conn)) => {
+                        repositories::list_skill_plans(&conn, active_id).map_err(|e| e.to_string())
+                    }
+                    _ => Err("database lock unavailable".to_string()),
+                };
+                match result {
+                    Ok(plans) => self.set_loaded_skill_plans(active_id, plans),
+                    Err(error) => {
+                        // The error is an AppError display string,
+                        // never user text (design section 10). The
+                        // view renders its own fixed words for this
+                        // key; it never sees the storage error.
+                        tracing::warn!(
+                            "[PLANS] plans load failed character_id={} error={}",
+                            active_id,
+                            error
+                        );
+                        self.state.skill_plans =
+                            LoadState::Error("skill_plans_unavailable".to_string());
+                        self.state.skill_plans_owner = Some(active_id);
+                    }
+                }
+            }
+            SkillPlanRoute::Unavailable => {
+                // Backend-less shell (tests): emptiness, not error,
+                // is that mode's honest state (section 11.1).
+                tracing::debug!(
+                    "[PLANS] plans load skipped character_id={} reason=unavailable",
+                    active_id
+                );
+                self.state.skill_plans = LoadState::Empty;
+                self.state.skill_plans_owner = Some(active_id);
+            }
+        }
+    }
+
+    /// Install a freshly loaded plan list: owner stamped, a
+    /// selection the list no longer contains dropped, counts
+    /// logged (ids and counts only, design section 10).
+    fn set_loaded_skill_plans(&mut self, active_id: i64, plans: Vec<SkillPlan>) {
+        let entries: usize = plans.iter().map(|p| p.entries.len()).sum();
+        tracing::info!(
+            "[PLANS] plans loaded character_id={} plans={} entries={}",
+            active_id,
+            plans.len(),
+            entries
+        );
+        if let Some(selected) = self.state.selected_skill_plan_id {
+            if !plans.iter().any(|p| p.plan_id == selected) {
+                self.state.selected_skill_plan_id = None;
+            }
+        }
+        self.state.skill_plans = LoadState::Ready(plans);
+        self.state.skill_plans_owner = Some(active_id);
+    }
+
+    /// Drain one stamped skill-plan action (design section 11.2):
+    /// identity guard, route, apply synchronously (one live
+    /// `db.lock()`, or the connection-free demo applier), then
+    /// reload so state always shows confirmed data. A failure
+    /// leaves `skill_plans` exactly as it was — no reload — so the
+    /// screen keeps showing the last confirmed truth, and the
+    /// failure reaches the user through the status line, never
+    /// only the log.
+    fn drain_skill_plan_action(&mut self, action: SkillPlanAction) {
+        let (character_id, stamped_plan_id) = match &action {
+            SkillPlanAction::Create { character_id, .. } => (*character_id, 0),
+            SkillPlanAction::UpdateText {
+                character_id,
+                plan_id,
+                ..
+            }
+            | SkillPlanAction::DeletePlan {
+                character_id,
+                plan_id,
+            }
+            | SkillPlanAction::ReplaceEntries {
+                character_id,
+                plan_id,
+                ..
+            } => (*character_id, *plan_id),
+        };
+        // 1. Identity guard: the user who clicked must still be
+        // looking at that character (the fittings landing rule at
+        // local scale). No status change on a drop.
+        let is_active = self.state.active_character_id == Some(character_id);
+        let is_known = self
+            .state
+            .characters
+            .iter()
+            .any(|c| c.character_id == character_id);
+        if !is_active || !is_known {
+            tracing::warn!(
+                "[PLANS] action dropped character_id={} reason=not_active",
+                character_id
+            );
+            return;
+        }
+        // 2+3. Route and apply. No async, no spawn.
+        let route = decide_skill_plan_route(self.state.demo, self.backends.is_some());
+        let now = chrono::Utc::now().to_rfc3339();
+        let (route_label, outcome) = match route {
+            SkillPlanRoute::Unavailable => {
+                tracing::warn!(
+                    "[PLANS] action dropped character_id={} reason=unavailable",
+                    character_id
+                );
+                self.state.status_message =
+                    "Skill plan could not be saved. Nothing was changed.".to_string();
+                return;
+            }
+            SkillPlanRoute::DemoMemory => {
+                let mut plans = self
+                    .state
+                    .demo_skill_plans
+                    .get(&character_id)
+                    .cloned()
+                    .unwrap_or_default();
+                let outcome =
+                    apply_demo_action(&mut plans, &mut self.state.demo_next_plan_id, &action, &now);
+                match outcome {
+                    DemoApplyOutcome::Created(plan_id) => {
+                        self.state.demo_skill_plans.insert(character_id, plans);
+                        ("demo", SkillPlanApplyOutcome::Created(plan_id))
+                    }
+                    DemoApplyOutcome::Applied => {
+                        self.state.demo_skill_plans.insert(character_id, plans);
+                        ("demo", SkillPlanApplyOutcome::Applied)
+                    }
+                    DemoApplyOutcome::NotFound => ("demo", SkillPlanApplyOutcome::NotFound),
+                    DemoApplyOutcome::Invalid(_) => {
+                        // The view validates before stamping, so this
+                        // is defense in depth; the carried editor
+                        // string is never logged (section 10).
+                        tracing::warn!(
+                            "[PLANS] action dropped character_id={} reason=invalid",
+                            character_id
+                        );
+                        self.state.status_message =
+                            "Skill plan could not be saved. Nothing was changed.".to_string();
+                        return;
+                    }
+                }
+            }
+            SkillPlanRoute::LiveDatabase => {
+                // The lock guard drops at the end of this block, so
+                // the reload below can lock again.
+                let result: Result<SkillPlanApplyOutcome, String> = {
+                    match self.backends.as_ref().map(|b| b.db.lock()) {
+                        Some(Ok(conn)) => match &action {
+                            SkillPlanAction::Create {
+                                name, description, ..
+                            } => repositories::create_skill_plan(
+                                &conn,
+                                character_id,
+                                name,
+                                description,
+                                &now,
+                            )
+                            .map(SkillPlanApplyOutcome::Created)
+                            .map_err(|e| e.to_string()),
+                            SkillPlanAction::UpdateText {
+                                plan_id,
+                                name,
+                                description,
+                                ..
+                            } => repositories::update_skill_plan_text(
+                                &conn,
+                                character_id,
+                                *plan_id,
+                                name,
+                                description,
+                                &now,
+                            )
+                            .map(bool_outcome)
+                            .map_err(|e| e.to_string()),
+                            SkillPlanAction::DeletePlan { plan_id, .. } => {
+                                repositories::delete_skill_plan(&conn, character_id, *plan_id)
+                                    .map(bool_outcome)
+                                    .map_err(|e| e.to_string())
+                            }
+                            SkillPlanAction::ReplaceEntries {
+                                plan_id, entries, ..
+                            } => repositories::replace_skill_plan_entries(
+                                &conn,
+                                character_id,
+                                *plan_id,
+                                entries,
+                                &now,
+                            )
+                            .map(bool_outcome)
+                            .map_err(|e| e.to_string()),
+                        },
+                        _ => Err("database lock unavailable".to_string()),
+                    }
+                };
+                match result {
+                    Ok(outcome) => ("live", outcome),
+                    Err(error) => {
+                        tracing::warn!(
+                            "[PLANS] action failed character_id={} error={}",
+                            character_id,
+                            error
+                        );
+                        self.state.status_message =
+                            "Skill plan could not be saved. Nothing was changed.".to_string();
+                        return;
+                    }
+                }
+            }
+        };
+        // 4. Reload and report.
+        match outcome {
+            SkillPlanApplyOutcome::Created(plan_id) => {
+                self.load_skill_plans_into_state();
+                // Only storage (or the demo counter) knows the new
+                // id, so selection is set here (section 8.3).
+                self.state.selected_skill_plan_id = Some(plan_id);
+                self.state.skill_plan_picker_open = false;
+                self.state.status_message = skill_plan_success_status(&action).to_string();
+                tracing::info!(
+                    "[PLANS] action applied route={} character_id={} plan_id={} plans={}",
+                    route_label,
+                    character_id,
+                    plan_id,
+                    self.loaded_skill_plan_count()
+                );
+            }
+            SkillPlanApplyOutcome::Applied => {
+                self.load_skill_plans_into_state();
+                self.state.status_message = skill_plan_success_status(&action).to_string();
+                tracing::info!(
+                    "[PLANS] action applied route={} character_id={} plan_id={} plans={}",
+                    route_label,
+                    character_id,
+                    stamped_plan_id,
+                    self.loaded_skill_plan_count()
+                );
+            }
+            SkillPlanApplyOutcome::NotFound => {
+                // State disagreed with storage; storage wins.
+                tracing::warn!(
+                    "[PLANS] action dropped character_id={} reason=not_found",
+                    character_id
+                );
+                self.state.status_message =
+                    "That skill plan is no longer there. Nothing was changed.".to_string();
+                self.load_skill_plans_into_state();
+            }
+        }
+    }
+
+    fn loaded_skill_plan_count(&self) -> usize {
+        self.state
+            .skill_plans
+            .as_ready()
+            .map(|plans| plans.len())
+            .unwrap_or(0)
     }
 
     /// Shared lookup outcome (design sections 6.1/8.3): one candidate
@@ -4080,6 +4454,30 @@ mod tests {
             PortraitState::NotRequested
         ));
         assert_eq!(state.active_character_id, Some(2));
+    }
+
+    // T20: skill_plan_route_prefers_demo_memory (skill-plans
+    // design section 12). The full 2x2, named so a future reorder
+    // of the checks fails loudly: demo wins in both demo cells, so
+    // the live-database arm is unreachable while demo is on.
+    #[test]
+    fn skill_plan_route_prefers_demo_memory() {
+        assert_eq!(
+            decide_skill_plan_route(true, true),
+            SkillPlanRoute::DemoMemory
+        );
+        assert_eq!(
+            decide_skill_plan_route(true, false),
+            SkillPlanRoute::DemoMemory
+        );
+        assert_eq!(
+            decide_skill_plan_route(false, true),
+            SkillPlanRoute::LiveDatabase
+        );
+        assert_eq!(
+            decide_skill_plan_route(false, false),
+            SkillPlanRoute::Unavailable
+        );
     }
 
     #[test]
