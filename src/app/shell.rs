@@ -27,6 +27,7 @@ use crate::esi::models::{
 };
 use crate::names::exploration_ref::ExplorationRef;
 use crate::names::fitting_types::FittingTypes;
+use crate::names::industry_ref::IndustryRef;
 use crate::names::resolver::{
     is_displayable_name, is_structure_id, structure_lookup_batch, NameResolver,
 };
@@ -124,6 +125,7 @@ pub struct MimirApp {
     pub state: AppState,
     pub sde: Sde,
     pub fitting_types: Option<Arc<FittingTypes>>,
+    pub industry_data: Option<Arc<IndustryRef>>,
     pub resolver: NameResolver,
     pub log_buffer: Arc<Mutex<Vec<String>>>,
     runtime: Option<tokio::runtime::Runtime>,
@@ -679,6 +681,28 @@ fn fitting_types_load(result: crate::error::AppResult<FittingTypes>) -> Option<A
     }
 }
 
+/// One-time startup load of the bundled industry reaction data
+/// (design section 3): success stores the validated catalogue and
+/// logs its count once; any failure logs a `[INDUSTRY]` warning
+/// and stores `None`, so the reaction block shows its fixed
+/// unavailable sentence instead of treating an empty catalogue as
+/// valid.
+fn industry_load(result: crate::error::AppResult<IndustryRef>) -> Option<Arc<IndustryRef>> {
+    match result {
+        Ok(catalogue) => {
+            tracing::info!(
+                "[INDUSTRY] bundled industry data loaded reactions={}",
+                catalogue.reaction_blueprint_count()
+            );
+            Some(Arc::new(catalogue))
+        }
+        Err(e) => {
+            tracing::warn!("[INDUSTRY] bundled industry data failed to load: {}", e);
+            None
+        }
+    }
+}
+
 /// One-time startup load of the bundled Exploration reference
 /// (design sections 5.2 and 9): success stores the validated
 /// catalogue and logs its counts once; any failure becomes the
@@ -847,6 +871,7 @@ impl MimirApp {
             Sde::default()
         });
         let fitting_types = fitting_types_load(FittingTypes::load_bundled());
+        let industry_data = industry_load(IndustryRef::load_bundled());
         let (tx, rx) = std::sync::mpsc::channel();
         let mut state = AppState::new(demo);
         // Bundled offline reference, loaded exactly once (design
@@ -942,6 +967,7 @@ impl MimirApp {
             state,
             sde,
             fitting_types,
+            industry_data,
             resolver,
             log_buffer,
             runtime,
@@ -3790,7 +3816,13 @@ impl eframe::App for MimirApp {
                     &self.resolver,
                     &mut self.portrait_textures,
                 ),
-                View::Industry => ui::industry::show(ui, &mut self.state, &self.resolver),
+                View::Industry => ui::industry::show(
+                    ui,
+                    &mut self.state,
+                    &self.resolver,
+                    self.industry_data.as_deref(),
+                    self.fitting_types.as_deref(),
+                ),
                 View::Planets => ui::planets::show(ui, &mut self.state, &self.resolver),
                 View::Fittings => ui::fittings::show(
                     ui,
@@ -4421,6 +4453,16 @@ mod tests {
         // A failed load stores None so the panel shows its fixed
         // catalogue-unavailable sentence; never an empty catalogue.
         assert!(fitting_types_load(FittingTypes::from_json("{not json")).is_none());
+    }
+
+    #[test]
+    fn industry_startup_load_is_catalogue_or_none() {
+        let loaded =
+            industry_load(IndustryRef::load_bundled()).expect("bundled industry data must load");
+        assert_eq!(loaded.reaction_blueprint_count(), 112);
+        // A failed load stores None so the reaction block shows its
+        // fixed unavailable sentence; never an empty catalogue.
+        assert!(industry_load(IndustryRef::from_json("{not json")).is_none());
     }
 
     #[test]

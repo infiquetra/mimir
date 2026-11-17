@@ -18,9 +18,10 @@
 //! no database. It logs nothing: it runs at render cadence, so
 //! per-frame logging would spam the log.
 //!
-//! There are no reaction or production-chain calculators in this
-//! module: both were deferred in the design (section 9) because the
-//! Rust tree loads none of the SDE industry tables they need.
+//! The reaction calculator lives in `crate::reaction_calculator` over the
+//! bundled industry data in `crate::names::industry_ref`;
+//! there is still no production-chain calculator (see
+//! `docs/industry-reaction-design.md` section 11).
 
 /// Flutter's starting base probability (panel state
 /// `_baseProbability = 0.30`): the `AppState` draft seed, labelled

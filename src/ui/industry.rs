@@ -18,7 +18,12 @@ use crate::invention_calculator::{
     invention_calculator_result, parse_base_probability, parse_decryptor_multiplier,
     parse_skill_level,
 };
+use crate::names::fitting_types::FittingTypes;
+use crate::names::industry_ref::IndustryRef;
 use crate::names::resolver::NameResolver;
+use crate::reaction_calculator::{
+    parse_facility_bonus_percent, parse_runs, reaction_calculator_result,
+};
 
 /// Invention Calculator block wording (industry calculators design
 /// section 7): heading, input labels, guidance lines, and
@@ -36,7 +41,26 @@ pub const INVENTION_CALCULATOR_INPUT_GUIDANCE: &str =
     "Enter a base probability above 0 and at most 1 (for example 0.30 for 30%), skill levels from 1 to 5, and a decryptor multiplier above 0, to see the result.";
 pub const INVENTION_CALCULATOR_NO_RESULT_GUIDANCE: &str =
     "No result: the entered values are too large to calculate with.";
-pub const INVENTION_CALCULATOR_DISCLOSURE: &str = "Estimate using only the base probability, skill levels, and decryptor multiplier you entered. The starting values (base probability 0.30, each skill level 4, decryptor multiplier 1.0) are starting values to replace with your own: Mimir does not read the base probability from any blueprint, the skill levels from your character, or the multiplier from any decryptor you own. The decryptor choices in the retired app were None x1.0, Symmetry x1.1, Process x1.2, Parity x1.8, and Optimized x0.6; type the multiplier for the decryptor you mean. The chance is capped at 100%. There are no reaction or production-chain calculators. Figures are rounded only for display, so these numbers can differ from EVE.";
+pub const INVENTION_CALCULATOR_DISCLOSURE: &str = "Estimate using only the base probability, skill levels, and decryptor multiplier you entered. The starting values (base probability 0.30, each skill level 4, decryptor multiplier 1.0) are starting values to replace with your own: Mimir does not read the base probability from any blueprint, the skill levels from your character, or the multiplier from any decryptor you own. The decryptor choices in the retired app were None x1.0, Symmetry x1.1, Process x1.2, Parity x1.8, and Optimized x0.6; type the multiplier for the decryptor you mean. The chance is capped at 100%. There is no production-chain calculator. Figures are rounded only for display, so these numbers can differ from EVE.";
+
+pub const REACTION_CALCULATOR_HEADING: &str = "Reaction Calculator";
+pub const REACTION_CALCULATOR_INPUT_LABELS: [&str; 3] = [
+    "Reaction (chosen by you)",
+    "Runs (entered by you)",
+    "Facility Material Bonus Percent (entered by you)",
+];
+pub const REACTION_CHOICE_RENDER_MAX: usize = 100;
+pub const REACTION_CALCULATOR_NO_INDUSTRY_DATA: &str =
+    "Reaction calculator unavailable: Mimir's bundled industry data failed to load.";
+pub const REACTION_CALCULATOR_NO_ITEM_DATA: &str =
+    "Reaction calculator unavailable: Mimir's bundled item data failed to load.";
+pub const REACTION_CALCULATOR_CHOOSE_GUIDANCE: &str =
+    "Choose a reaction above to see its materials.";
+pub const REACTION_CALCULATOR_NO_MATCH: &str = "No reactions match the search.";
+pub const REACTION_CALCULATOR_INPUT_GUIDANCE: &str = "Enter runs of at least 1 and a facility material bonus percent of at least 0 and below 100, to see the result.";
+pub const REACTION_CALCULATOR_NO_RESULT_GUIDANCE: &str =
+    "No result: the entered values are too large to calculate with.";
+pub const REACTION_CALCULATOR_DISCLOSURE: &str = "Estimate for the reaction you chose, using the per-run materials and products in Mimir's bundled industry data and only the runs and facility material bonus percent you entered. The starting values (1 run, 0.0% facility material bonus) are starting values to replace with your own: Mimir does not read the facility bonus from any structure you use, and it does not check that you own the reaction formula, have the materials, or can run the reaction. The facility choices in the retired app were No Bonus 0%, Athanor 2%, Athanor T1 Rig 2.4%, Athanor T2 Rig 2.8%, Tatara 4%, Tatara T1 Rig 4.8%, and Tatara T2 Rig 5.6%; type the percent for the facility you mean. The facility bonus applies to the total input amount for all runs, each input is rounded to a whole number with a minimum of 1, and outputs are the per-run amount times runs with no bonus. A reaction formula with no name in Mimir's bundled item data cannot be chosen. There is no production-chain calculator. These numbers can differ from EVE.";
 
 pub fn activity_label(activity_id: i64) -> &'static str {
     match activity_id {
@@ -543,10 +567,237 @@ fn show_invention_calculator(ui: &mut egui::Ui, state: &mut AppState) {
     }
 }
 
-pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
+/// One selectable row in the reaction choice list. The type number
+/// is an internal key only, never rendered or logged.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReactionChoiceRow {
+    pub type_id: i64,
+    pub name: String,
+}
+
+/// Build choice rows for the reaction calculator: every proven
+/// reaction blueprint (`industry_data.reaction_blueprint_type_ids`)
+/// whose bundled item row yields a chooser name, filtered by the
+/// search query and sorted by lowercased name then name then type
+/// number. Blueprints with no row, an empty name, or a purely
+/// numeric name never appear.
+fn reaction_choice_rows(
+    industry_data: &IndustryRef,
+    fitting_types: &FittingTypes,
+    query: &str,
+) -> Vec<ReactionChoiceRow> {
+    let mut rows: Vec<ReactionChoiceRow> = industry_data
+        .reaction_blueprint_type_ids()
+        .iter()
+        .filter_map(|&type_id| {
+            let row = fitting_types.lookup_by_id(type_id)?;
+            let trimmed = row.name.trim();
+            if trimmed.is_empty() || trimmed.parse::<i64>().is_ok() {
+                return None;
+            }
+            Some(ReactionChoiceRow {
+                type_id,
+                name: trimmed.to_string(),
+            })
+        })
+        .filter(|row| widgets::matches_search(&row.name, query))
+        .collect();
+    rows.sort_by(|a, b| {
+        a.name
+            .to_lowercase()
+            .cmp(&b.name.to_lowercase())
+            .then_with(|| a.name.cmp(&b.name))
+            .then_with(|| a.type_id.cmp(&b.type_id))
+    });
+    rows
+}
+
+/// Display name for a material or product row: the bundled item
+/// name when it passes the trim/empty/numeric guard, otherwise the
+/// resolver fallback (`Unknown Item`). Never renders a raw ID.
+fn reaction_item_name(
+    type_id: i64,
+    fitting_types: &FittingTypes,
+    resolver: &NameResolver,
+) -> String {
+    if let Some(row) = fitting_types.lookup_by_id(type_id) {
+        let trimmed = row.name.trim();
+        if !trimmed.is_empty() && trimmed.parse::<i64>().is_err() {
+            return trimmed.to_string();
+        }
+    }
+    resolver.name(type_id)
+}
+
+/// Every line the Reaction Calculator block renders after the input
+/// rows: the result block plus the disclosure, or one guidance line
+/// plus the disclosure. Pure over the drafts so tests assert the
+/// rendered strings without an egui frame. First match wins in the
+/// locked precedence.
+fn reaction_calculator_lines(
+    state: &AppState,
+    industry_data: Option<&IndustryRef>,
+    fitting_types: Option<&FittingTypes>,
+    resolver: &NameResolver,
+) -> Vec<String> {
+    let Some(industry_data) = industry_data else {
+        return vec![REACTION_CALCULATOR_NO_INDUSTRY_DATA.to_string()];
+    };
+    let Some(fitting_types) = fitting_types else {
+        return vec![REACTION_CALCULATOR_NO_ITEM_DATA.to_string()];
+    };
+    let Some(selected) = state.industry_reaction_selected_type_id else {
+        return vec![
+            REACTION_CALCULATOR_CHOOSE_GUIDANCE.to_string(),
+            REACTION_CALCULATOR_DISCLOSURE.to_string(),
+        ];
+    };
+    if !industry_data.is_reaction_blueprint(selected) {
+        return vec![
+            REACTION_CALCULATOR_CHOOSE_GUIDANCE.to_string(),
+            REACTION_CALCULATOR_DISCLOSURE.to_string(),
+        ];
+    }
+    let Some(chosen_row) = fitting_types.lookup_by_id(selected) else {
+        return vec![
+            REACTION_CALCULATOR_CHOOSE_GUIDANCE.to_string(),
+            REACTION_CALCULATOR_DISCLOSURE.to_string(),
+        ];
+    };
+    let chosen_trimmed = chosen_row.name.trim();
+    if chosen_trimmed.is_empty() || chosen_trimmed.parse::<i64>().is_ok() {
+        return vec![
+            REACTION_CALCULATOR_CHOOSE_GUIDANCE.to_string(),
+            REACTION_CALCULATOR_DISCLOSURE.to_string(),
+        ];
+    }
+    let chosen_name = chosen_trimmed.to_string();
+    if parse_runs(&state.industry_reaction_runs).is_none()
+        || parse_facility_bonus_percent(&state.industry_reaction_facility_bonus_percent).is_none()
+    {
+        return vec![
+            REACTION_CALCULATOR_INPUT_GUIDANCE.to_string(),
+            REACTION_CALCULATOR_DISCLOSURE.to_string(),
+        ];
+    }
+    let Some(material_rows) = industry_data.reaction_materials(selected) else {
+        return vec![
+            REACTION_CALCULATOR_CHOOSE_GUIDANCE.to_string(),
+            REACTION_CALCULATOR_DISCLOSURE.to_string(),
+        ];
+    };
+    let Some(product_rows) = industry_data.reaction_products(selected) else {
+        return vec![
+            REACTION_CALCULATOR_CHOOSE_GUIDANCE.to_string(),
+            REACTION_CALCULATOR_DISCLOSURE.to_string(),
+        ];
+    };
+    let base_inputs: Vec<(i64, i64)> = material_rows
+        .iter()
+        .map(|r| (r.material_type_id, r.quantity))
+        .collect();
+    let base_outputs: Vec<(i64, i64)> = product_rows
+        .iter()
+        .map(|r| (r.product_type_id, r.quantity))
+        .collect();
+    match reaction_calculator_result(
+        &base_inputs,
+        &base_outputs,
+        &state.industry_reaction_runs,
+        &state.industry_reaction_facility_bonus_percent,
+    ) {
+        Some(result) => {
+            let mut lines = Vec::new();
+            lines.push(format!("Reaction: {chosen_name}"));
+            lines.push("Input Materials".to_string());
+            for (type_id, qty) in &result.inputs {
+                let name = reaction_item_name(*type_id, fitting_types, resolver);
+                lines.push(format!("{name}: {qty}"));
+            }
+            lines.push("Output Products".to_string());
+            for (type_id, qty) in &result.outputs {
+                let name = reaction_item_name(*type_id, fitting_types, resolver);
+                lines.push(format!("{name}: {qty}"));
+            }
+            lines.push(REACTION_CALCULATOR_DISCLOSURE.to_string());
+            lines
+        }
+        None => vec![
+            REACTION_CALCULATOR_NO_RESULT_GUIDANCE.to_string(),
+            REACTION_CALCULATOR_DISCLOSURE.to_string(),
+        ],
+    }
+}
+
+fn show_reaction_calculator(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    resolver: &NameResolver,
+    industry_data: Option<&IndustryRef>,
+    fitting_types: Option<&FittingTypes>,
+) {
+    ui.heading(REACTION_CALCULATOR_HEADING);
+    let (industry_data, fitting_types) = match (industry_data, fitting_types) {
+        (None, _) => {
+            ui.label(REACTION_CALCULATOR_NO_INDUSTRY_DATA);
+            return;
+        }
+        (_, None) => {
+            ui.label(REACTION_CALCULATOR_NO_ITEM_DATA);
+            return;
+        }
+        (Some(a), Some(b)) => (a, b),
+    };
+    let mut changed = false;
+    ui.label(REACTION_CALCULATOR_INPUT_LABELS[0]);
+    let response = ui.text_edit_singleline(&mut state.industry_reaction_search);
+    state.text_input_focused |= response.has_focus();
+    changed |= response.changed();
+    let query = state.industry_reaction_search.clone();
+    let rows = reaction_choice_rows(industry_data, fitting_types, &query);
+    if rows.is_empty() {
+        ui.label(REACTION_CALCULATOR_NO_MATCH);
+    } else {
+        let shown = rows.len().min(REACTION_CHOICE_RENDER_MAX);
+        if rows.len() > REACTION_CHOICE_RENDER_MAX {
+            ui.label(format!("Showing {shown} of {} reactions.", rows.len()));
+        }
+        for row in rows.iter().take(REACTION_CHOICE_RENDER_MAX) {
+            let selected = state.industry_reaction_selected_type_id == Some(row.type_id);
+            if ui.selectable_label(selected, &row.name).clicked() {
+                tracing::debug!("[INDUSTRY] reaction calculator reaction chosen");
+                state.industry_reaction_selected_type_id = Some(row.type_id);
+            }
+        }
+    }
+    ui.label(REACTION_CALCULATOR_INPUT_LABELS[1]);
+    let response = ui.text_edit_singleline(&mut state.industry_reaction_runs);
+    state.text_input_focused |= response.has_focus();
+    changed |= response.changed();
+    ui.label(REACTION_CALCULATOR_INPUT_LABELS[2]);
+    let response = ui.text_edit_singleline(&mut state.industry_reaction_facility_bonus_percent);
+    state.text_input_focused |= response.has_focus();
+    changed |= response.changed();
+    if changed {
+        tracing::debug!("[INDUSTRY] reaction calculator input changed");
+    }
+    for line in reaction_calculator_lines(state, Some(industry_data), Some(fitting_types), resolver)
+    {
+        ui.label(line);
+    }
+}
+
+pub fn show(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    resolver: &NameResolver,
+    industry_data: Option<&IndustryRef>,
+    fitting_types: Option<&FittingTypes>,
+) {
     ui.heading("Industry");
     widgets::mode_notice(ui, state.demo, state.offline);
     show_invention_calculator(ui, state);
+    show_reaction_calculator(ui, state, resolver, industry_data, fitting_types);
     if state.active_character().is_none() {
         widgets::no_character_panel(ui);
         return;
@@ -961,7 +1212,7 @@ mod tests {
              Process x1.2, Parity x1.8, and Optimized x0.6; \
              type the multiplier for the decryptor you mean. \
              The chance is capped at 100%. \
-             There are no reaction or production-chain calculators. \
+             There is no production-chain calculator. \
              Figures are rounded only for display, so these numbers can differ from EVE."
         );
     }
@@ -1086,6 +1337,366 @@ mod tests {
                 "Invention Chance: 39.0%",
                 "With entered skills and decryptor",
                 INVENTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn reaction_calculator_wording_is_verbatim() {
+        assert_eq!(REACTION_CALCULATOR_HEADING, "Reaction Calculator");
+        assert_eq!(
+            REACTION_CALCULATOR_INPUT_LABELS,
+            [
+                "Reaction (chosen by you)",
+                "Runs (entered by you)",
+                "Facility Material Bonus Percent (entered by you)",
+            ]
+        );
+        assert_eq!(REACTION_CHOICE_RENDER_MAX, 100);
+        assert_eq!(
+            REACTION_CALCULATOR_NO_INDUSTRY_DATA,
+            "Reaction calculator unavailable: Mimir's bundled industry data failed to load."
+        );
+        assert_eq!(
+            REACTION_CALCULATOR_NO_ITEM_DATA,
+            "Reaction calculator unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            REACTION_CALCULATOR_CHOOSE_GUIDANCE,
+            "Choose a reaction above to see its materials."
+        );
+        assert_eq!(
+            REACTION_CALCULATOR_NO_MATCH,
+            "No reactions match the search."
+        );
+        assert_eq!(
+            REACTION_CALCULATOR_INPUT_GUIDANCE,
+            "Enter runs of at least 1 and a facility material bonus percent of at least 0 and below 100, to see the result."
+        );
+        assert_eq!(
+            REACTION_CALCULATOR_NO_RESULT_GUIDANCE,
+            "No result: the entered values are too large to calculate with."
+        );
+        assert_eq!(
+            REACTION_CALCULATOR_DISCLOSURE,
+            "Estimate for the reaction you chose, using the per-run materials and products in Mimir's bundled industry data and only the runs and facility material bonus percent you entered. The starting values (1 run, 0.0% facility material bonus) are starting values to replace with your own: Mimir does not read the facility bonus from any structure you use, and it does not check that you own the reaction formula, have the materials, or can run the reaction. The facility choices in the retired app were No Bonus 0%, Athanor 2%, Athanor T1 Rig 2.4%, Athanor T2 Rig 2.8%, Tatara 4%, Tatara T1 Rig 4.8%, and Tatara T2 Rig 5.6%; type the percent for the facility you mean. The facility bonus applies to the total input amount for all runs, each input is rounded to a whole number with a minimum of 1, and outputs are the per-run amount times runs with no bonus. A reaction formula with no name in Mimir's bundled item data cannot be chosen. There is no production-chain calculator. These numbers can differ from EVE."
+        );
+    }
+
+    #[test]
+    fn reaction_choice_rows_over_bundled_catalogues() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry data loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting types load");
+        let rows = reaction_choice_rows(&industry, &fitting, "");
+        assert_eq!(rows.len(), 111);
+        assert_eq!(
+            rows[0].name,
+            "Axosomatic Neurolink Enhancer Reaction Formula"
+        );
+        assert_eq!(rows[1].name, "C3-FTM Acid Reaction Formula");
+        assert_eq!(rows[2].name, "Caesarium Cadmide Reaction Formula");
+        assert_eq!(rows[3].name, "Carbon Fiber Reaction Formula");
+        for row in &rows {
+            assert_ne!(row.type_id, 45732);
+            assert!(row.name.ends_with("Reaction Formula"));
+        }
+        let carbon = reaction_choice_rows(&industry, &fitting, "carbon fiber");
+        assert_eq!(
+            carbon.iter().map(|r| r.name.as_str()).collect::<Vec<_>>(),
+            vec![
+                "Carbon Fiber Reaction Formula",
+                "Reinforced Carbon Fiber Reaction Formula"
+            ]
+        );
+        let fulleride = reaction_choice_rows(&industry, &fitting, "FULLERIDE");
+        assert_eq!(
+            fulleride
+                .iter()
+                .map(|r| r.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["Fulleride Reaction Formula"]
+        );
+        let nonsense = reaction_choice_rows(&industry, &fitting, "zzz-not-a-reaction-zzz");
+        assert!(nonsense.is_empty());
+    }
+
+    #[test]
+    fn reaction_choice_rows_dual_fixture_exclusion() {
+        let industry = IndustryRef::from_json(
+            r#"{"materials":[{"typeId":50001,"activityId":11,"materialTypeId":60001,"quantity":10},{"typeId":50002,"activityId":11,"materialTypeId":60001,"quantity":10},{"typeId":50003,"activityId":11,"materialTypeId":60001,"quantity":10}],"products":[{"typeId":50001,"activityId":11,"productTypeId":70001,"quantity":5},{"typeId":50002,"activityId":11,"productTypeId":70001,"quantity":5},{"typeId":50003,"activityId":11,"productTypeId":70001,"quantity":5}]}"#,
+        )
+        .expect("dual fixture industry loads");
+        let fitting = FittingTypes::from_json(
+            r#"{"types":[{"typeId":50001,"typeName":"12345","categoryId":9},{"typeId":50003,"typeName":"Named Reaction Formula","categoryId":9},{"typeId":60001,"typeName":"Fixture Material","categoryId":9},{"typeId":70001,"typeName":"Fixture Product","categoryId":9}]}"#,
+        )
+        .expect("dual fixture fitting loads");
+        let rows = reaction_choice_rows(&industry, &fitting, "");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].type_id, 50003);
+        assert_eq!(rows[0].name, "Named Reaction Formula");
+    }
+
+    fn reaction_state(selected: Option<i64>, runs: &str, bonus: &str) -> AppState {
+        let mut state = AppState::new(false);
+        state.industry_reaction_search = String::new();
+        state.industry_reaction_selected_type_id = selected;
+        state.industry_reaction_runs = runs.to_string();
+        state.industry_reaction_facility_bonus_percent = bonus.to_string();
+        state
+    }
+
+    #[test]
+    fn reaction_calculator_starting_text_result() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = reaction_state(Some(57490), "1", "0.0");
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Reaction: Carbon Fiber Reaction Formula",
+                "Input Materials",
+                "Hydrogen Fuel Block: 5",
+                "Hydrocarbons: 100",
+                "Evaporite Deposits: 100",
+                "Output Products",
+                "Carbon Fiber: 200",
+                REACTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn reaction_calculator_bonus_and_runs_results() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = reaction_state(Some(57490), "10", "4.8");
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Reaction: Carbon Fiber Reaction Formula",
+                "Input Materials",
+                "Hydrogen Fuel Block: 48",
+                "Hydrocarbons: 952",
+                "Evaporite Deposits: 952",
+                "Output Products",
+                "Carbon Fiber: 2000",
+                REACTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+        let state = reaction_state(Some(57490), "1", "4.8");
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Reaction: Carbon Fiber Reaction Formula",
+                "Input Materials",
+                "Hydrogen Fuel Block: 5",
+                "Hydrocarbons: 95",
+                "Evaporite Deposits: 95",
+                "Output Products",
+                "Carbon Fiber: 200",
+                REACTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn reaction_calculator_second_real_data_result() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = reaction_state(Some(46157), "5", "2.8");
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Reaction: Methanofullerene Reaction Formula",
+                "Input Materials",
+                "Hydrogen Fuel Block: 24",
+                "Fullerite-C70: 486",
+                "Fullerite-C72: 486",
+                "Isogen: 1458",
+                "Output Products",
+                "Methanofullerene: 800",
+                REACTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn reaction_calculator_unknown_fallback() {
+        let industry = IndustryRef::from_json(
+            r#"{"materials":[{"typeId":50001,"activityId":11,"materialTypeId":60001,"quantity":17}],"products":[{"typeId":50001,"activityId":11,"productTypeId":70001,"quantity":23}]}"#,
+        )
+        .expect("fallback fixture industry loads");
+        let fitting = FittingTypes::from_json(
+            r#"{"types":[{"typeId":50001,"typeName":"Test Reaction Formula","categoryId":9},{"typeId":60001,"typeName":"Test Material","categoryId":9}]}"#,
+        )
+        .expect("fallback fixture fitting loads");
+        let resolver = NameResolver::new();
+        let state = reaction_state(Some(50001), "1", "0.0");
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Reaction: Test Reaction Formula",
+                "Input Materials",
+                "Test Material: 17",
+                "Output Products",
+                "Unknown Item: 23",
+                REACTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+        let lines = reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver);
+        let joined = lines.join("\n");
+        for id in ["50001", "60001", "70001"] {
+            assert!(!joined.contains(id), "raw id {id} leaked in {joined}");
+        }
+    }
+
+    #[test]
+    fn reaction_calculator_guidance_precedence() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = reaction_state(None, "1", "0.0");
+        // industry_data None with and without fitting types
+        assert_eq!(
+            reaction_calculator_lines(&state, None, Some(&fitting), &resolver),
+            vec![REACTION_CALCULATOR_NO_INDUSTRY_DATA]
+        );
+        assert_eq!(
+            reaction_calculator_lines(&state, None, None, &resolver),
+            vec![REACTION_CALCULATOR_NO_INDUSTRY_DATA]
+        );
+        // fitting types None alone
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), None, &resolver),
+            vec![REACTION_CALCULATOR_NO_ITEM_DATA]
+        );
+        // no selection
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                REACTION_CALCULATOR_CHOOSE_GUIDANCE,
+                REACTION_CALCULATOR_DISCLOSURE
+            ]
+        );
+        // fabricated 45732 (unnamed blueprint is never shown as chosen)
+        let state = reaction_state(Some(45732), "1", "0.0");
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                REACTION_CALCULATOR_CHOOSE_GUIDANCE,
+                REACTION_CALCULATOR_DISCLOSURE
+            ]
+        );
+        // fabricated 681 (not a reaction blueprint)
+        let state = reaction_state(Some(681), "1", "0.0");
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                REACTION_CALCULATOR_CHOOSE_GUIDANCE,
+                REACTION_CALCULATOR_DISCLOSURE
+            ]
+        );
+        // input guidance: one case per field
+        for (runs, bonus) in [
+            ("", "0.0"),
+            ("0", "0.0"),
+            ("1.5", "0.0"),
+            ("1", ""),
+            ("1", "100"),
+            ("1", "-1"),
+        ] {
+            let state = reaction_state(Some(57490), runs, bonus);
+            assert_eq!(
+                reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+                vec![
+                    REACTION_CALCULATOR_INPUT_GUIDANCE,
+                    REACTION_CALCULATOR_DISCLOSURE
+                ],
+                "runs={runs} bonus={bonus}"
+            );
+        }
+        // no-result guidance: magnitude too large
+        let state = reaction_state(Some(57490), "9223372036854775807", "0.0");
+        assert_eq!(
+            reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                REACTION_CALCULATOR_NO_RESULT_GUIDANCE,
+                REACTION_CALCULATOR_DISCLOSURE
+            ]
+        );
+        // No quantity line appears in any guidance state (checked above
+        // by whole-vector equality; assert no "Reaction:" echo leaks).
+        for (runs, bonus) in [("", "0.0"), ("9223372036854775807", "0.0")] {
+            let state = reaction_state(Some(57490), runs, bonus);
+            let lines =
+                reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver);
+            assert!(lines.iter().all(|l| !l.starts_with("Reaction:")));
+            assert!(lines.iter().all(|l| l != "Input Materials"));
+        }
+    }
+
+    #[test]
+    fn reaction_calculator_no_raw_ids_in_success() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = reaction_state(Some(57490), "1", "0.0");
+        let lines = reaction_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver);
+        let joined = lines.join("\n");
+        for id in ["57490", "4246", "16633", "16635", "57453"] {
+            assert!(!joined.contains(id), "raw id {id} leaked in {joined}");
+        }
+    }
+
+    #[test]
+    fn reaction_calculator_demo_independence() {
+        use crate::demo::data::seed_demo_state;
+
+        let mut state = AppState::new(false);
+        state.industry_reaction_search = "carbon".to_string();
+        state.industry_reaction_selected_type_id = Some(57490);
+        state.industry_reaction_runs = "10".to_string();
+        state.industry_reaction_facility_bonus_percent = "4.8".to_string();
+        seed_demo_state(&mut state);
+        assert_eq!(state.industry_reaction_search, "carbon");
+        assert_eq!(state.industry_reaction_selected_type_id, Some(57490));
+        assert_eq!(state.industry_reaction_runs, "10");
+        assert_eq!(state.industry_reaction_facility_bonus_percent, "4.8");
+
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        // Seeded state with no selection renders the choose-guidance block.
+        let mut demo_state = AppState::new(false);
+        seed_demo_state(&mut demo_state);
+        // Reaction fields are untouched by seeding: search empty, no
+        // selection, starting drafts.
+        assert_eq!(demo_state.industry_reaction_search, "");
+        assert_eq!(demo_state.industry_reaction_selected_type_id, None);
+        assert_eq!(demo_state.industry_reaction_runs, "1");
+        assert_eq!(demo_state.industry_reaction_facility_bonus_percent, "0.0");
+        assert_eq!(
+            reaction_calculator_lines(&demo_state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                REACTION_CALCULATOR_CHOOSE_GUIDANCE,
+                REACTION_CALCULATOR_DISCLOSURE
+            ]
+        );
+        demo_state.industry_reaction_selected_type_id = Some(57490);
+        assert_eq!(
+            reaction_calculator_lines(&demo_state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Reaction: Carbon Fiber Reaction Formula",
+                "Input Materials",
+                "Hydrogen Fuel Block: 5",
+                "Hydrocarbons: 100",
+                "Evaporite Deposits: 100",
+                "Output Products",
+                "Carbon Fiber: 200",
+                REACTION_CALCULATOR_DISCLOSURE,
             ]
         );
     }
