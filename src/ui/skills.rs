@@ -23,6 +23,13 @@ use crate::skills::training::{plan_progress, EntryEstimate, PlanProgress, Traine
 /// group renders and ensures nothing.
 pub const SKILLS_CATALOGUE_RENDER_MAX: usize = 100;
 
+/// Rendered-row budget for the add-skill picker: at most this
+/// many picker rows render (and therefore ensure icons) per
+/// frame, filter before the cap, one disclosure when suppressed.
+/// Independent of the catalogue budget — catalogue spend must
+/// never suppress picker level buttons.
+pub const SKILL_PICKER_RENDER_MAX: usize = 100;
+
 /// One catalogue line: a skill row carries its bundled skill
 /// type id for the icon; a prerequisite line carries none.
 struct CatalogueRow {
@@ -533,7 +540,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde, cache: &mut Port
     // Skill plans render after the skills match, so they are
     // visible and editable in every skills load state; only
     // their estimates degrade (design section 8.1).
-    show_plans_section(ui, state, sde);
+    show_plans_section(ui, state, sde, cache);
 }
 
 /// The skill-plans section: list, selected detail, editor.
@@ -545,7 +552,12 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde, cache: &mut Port
 /// frame: every stamping handle below checks
 /// `skill_plan_action.is_none()`, so a failed stamp leaves its
 /// intent (editor, confirmation) in place for the next frame.
-fn show_plans_section(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde) {
+fn show_plans_section(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    sde: &Sde,
+    cache: &mut PortraitImageCache,
+) {
     // Sweeps before anything renders under them: selection,
     // confirmation, and editor never outlive their target.
     if let Some(selected) = state.selected_skill_plan_id {
@@ -661,6 +673,7 @@ fn show_plans_section(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde) {
                 ui,
                 state,
                 sde,
+                cache,
                 active_id,
                 trained.as_ref(),
                 attributes.as_ref(),
@@ -676,10 +689,12 @@ fn show_plans_section(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde) {
 /// replacing them), the add-skill picker, entry rows with
 /// reorder/remove, the remove confirmation, totals, and the
 /// estimates disclosure.
+#[allow(clippy::too_many_arguments)]
 fn show_plan_detail(
     ui: &mut egui::Ui,
     state: &mut AppState,
     sde: &Sde,
+    cache: &mut PortraitImageCache,
     active_id: i64,
     trained: Option<&BTreeMap<i64, TrainedSkill>>,
     attributes: Option<&CharacterAttributes>,
@@ -748,7 +763,7 @@ fn show_plan_detail(
     }
 
     if state.skill_plan_picker_open {
-        show_skill_picker(ui, state, sde, active_id, plan, trained);
+        show_skill_picker(ui, state, sde, cache, active_id, plan, trained);
     }
 
     egui::ScrollArea::vertical()
@@ -967,6 +982,7 @@ fn show_skill_picker(
     ui: &mut egui::Ui,
     state: &mut AppState,
     sde: &Sde,
+    cache: &mut PortraitImageCache,
     active_id: i64,
     plan: &SkillPlan,
     trained: Option<&BTreeMap<i64, TrainedSkill>>,
@@ -994,7 +1010,7 @@ fn show_skill_picker(
         .id_salt("skill_picker_scroll")
         .max_height(320.0)
         .show(ui, |ui| {
-            for skill in &results {
+            for skill in results.iter().take(SKILL_PICKER_RENDER_MAX) {
                 let trained_level: Option<i32> = trained.map(|map| {
                     map.get(&skill.type_id)
                         .map(|t| t.trained_level.clamp(0, 5))
@@ -1007,7 +1023,11 @@ fn show_skill_picker(
                 } else if trained_level == Some(5) {
                     text += " — already trained to level 5";
                 }
-                ui.label(text);
+                ensure_type_icon_requested(state, skill.type_id);
+                ui.horizontal(|ui| {
+                    show_type_icon(ui, cache, state, skill.type_id, TYPE_ICON_PX);
+                    ui.label(text);
+                });
                 if let Some(line) = prerequisite_line(sde, skill) {
                     ui.label(line);
                 }
@@ -1055,6 +1075,13 @@ fn show_skill_picker(
                         }
                     });
                 }
+            }
+            if results.len() > SKILL_PICKER_RENDER_MAX {
+                ui.label(format!(
+                    "Showing {} of {} skills.",
+                    SKILL_PICKER_RENDER_MAX,
+                    results.len()
+                ));
             }
         });
 }
@@ -1469,6 +1496,28 @@ mod tests {
         state
     }
 
+    /// Active character, `Ready` skills with an empty trained
+    /// list and an empty queue, one plan, picker open, catalogue
+    /// ids installed: the picker fixture. `skill_search` stays
+    /// `""` so the collapsed catalogue queues 0 and every queued
+    /// key is provably the picker's.
+    fn ready_picker_state(sde: &Sde) -> AppState {
+        let mut state = ready_catalogue_state(sde);
+        state.skill_plans = LoadState::Ready(vec![SkillPlan {
+            plan_id: 7,
+            character_id: 1,
+            name: "PvP".to_string(),
+            description: String::new(),
+            created_at: "2026-11-15T00:00:00Z".to_string(),
+            updated_at: "2026-11-15T00:00:00Z".to_string(),
+            entries: Vec::new(),
+        }]);
+        state.skill_plans_owner = Some(1);
+        state.selected_skill_plan_id = Some(7);
+        state.skill_plan_picker_open = true;
+        state
+    }
+
     #[test]
     fn skills_show_queues_icons_for_rendered_rows_only() {
         let sde = Sde::load_bundled().expect("bundled SDE loads");
@@ -1608,6 +1657,323 @@ mod tests {
         queued_ids.sort_unstable();
         queued_ids.dedup();
         assert_eq!(queued_ids.len(), 100, "queued keys must be distinct");
+        assert!(cache.is_empty(), "blank-box path uploads nothing in demo");
+        for (_, id) in &state.portrait_requests {
+            assert!(!matches!(
+                state.portrait_state(ImageKind::Type, *id),
+                PortraitState::Ready(_)
+            ));
+        }
+    }
+
+    #[test]
+    fn skill_picker_render_max_is_100() {
+        assert_eq!(SKILL_PICKER_RENDER_MAX, 100);
+    }
+
+    #[test]
+    fn skill_picker_queues_icons_for_rendered_rows_only() {
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+
+        // 1. Picker closed queues nothing.
+        {
+            let mut state = ready_picker_state(&sde);
+            state.skill_plan_picker_open = false;
+            state.skill_plan_picker_search = "e".to_string();
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert!(state.portrait_requests.is_empty());
+            assert!(cache.is_empty());
+        }
+
+        // 2. Exact small set; queue/entry/prerequisite rows ensure
+        // nothing. 3300 (Gunnery) absent proves all three.
+        {
+            let mut state = ready_picker_state(&sde);
+            state.skill_plan_picker_search = "turret".to_string();
+            if let LoadState::Ready(plans) = &mut state.skill_plans {
+                plans[0].entries = vec![
+                    SkillPlanEntry {
+                        skill_id: 3300,
+                        target_level: 5,
+                    },
+                    SkillPlanEntry {
+                        skill_id: 3301,
+                        target_level: 3,
+                    },
+                ];
+            }
+            if let LoadState::Ready(data) = &mut state.skills {
+                data.queue.push(item(0, 3300));
+            }
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests.len(), 12);
+            assert!(state
+                .portrait_requests
+                .iter()
+                .all(|(kind, _)| *kind == ImageKind::Type));
+            let mut queued_ids: Vec<i64> =
+                state.portrait_requests.iter().map(|(_, id)| *id).collect();
+            queued_ids.sort_unstable();
+            queued_ids.dedup();
+            assert_eq!(
+                queued_ids,
+                vec![3301, 3302, 3303, 3304, 3305, 3306, 3307, 3308, 3309, 20327, 21666, 21667]
+            );
+            assert!(!state.portrait_requests.contains(&(ImageKind::Type, 3300)));
+            assert!(cache.is_empty(), "no Ready image means no upload");
+            assert!(state.skill_plan_action.is_none());
+            assert!(state.skill_plan_picker_open);
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests.len(), 12);
+        }
+
+        // 3. Trained-to-5 row still ensures its icon.
+        {
+            let mut state = ready_picker_state(&sde);
+            state.skill_plan_picker_search = "gunnery".to_string();
+            if let LoadState::Ready(data) = &mut state.skills {
+                data.skills.skills.push(crate::esi::models::Skill {
+                    skill_id: 3300,
+                    trained_skill_level: 5,
+                    ..Default::default()
+                });
+            }
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+        }
+
+        // 4. Empty search caps at 100; boundaries literal;
+        // filter-before-cap reveals the beyond-cap row.
+        {
+            let mut state = ready_picker_state(&sde);
+            state.skill_plan_picker_search = String::new();
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests.len(), 100);
+            let mut queued_ids: Vec<i64> =
+                state.portrait_requests.iter().map(|(_, id)| *id).collect();
+            queued_ids.sort_unstable();
+            queued_ids.dedup();
+            assert_eq!(queued_ids.len(), 100, "queued keys must be distinct");
+            assert!(state.portrait_requests.contains(&(ImageKind::Type, 60381)));
+            assert!(state.portrait_requests.contains(&(ImageKind::Type, 21666)));
+            assert!(!state.portrait_requests.contains(&(ImageKind::Type, 28585)));
+            assert!(!state.portrait_requests.contains(&(ImageKind::Type, 23124)));
+            assert!(cache.is_empty());
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests.len(), 100);
+            state.skill_plan_picker_search = "Capital Industrial Reconfiguration".to_string();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests.len(), 101);
+            assert!(state.portrait_requests.contains(&(ImageKind::Type, 28585)));
+        }
+
+        // 5a. "ro" at exactly 100 results: nothing suppressed.
+        {
+            let mut state = ready_picker_state(&sde);
+            state.skill_plan_picker_search = "ro".to_string();
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests.len(), 100);
+            assert!(state.portrait_requests.contains(&(ImageKind::Type, 55033)));
+        }
+
+        // 5b. "pe" at 101 results: first 100 render, then the
+        // 101st reveals under its own name.
+        {
+            let mut state = ready_picker_state(&sde);
+            state.skill_plan_picker_search = "pe".to_string();
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests.len(), 100);
+            assert!(state.portrait_requests.contains(&(ImageKind::Type, 41409)));
+            assert!(!state.portrait_requests.contains(&(ImageKind::Type, 21668)));
+            state.skill_plan_picker_search = "XL Torpedoes".to_string();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests.len(), 101);
+            assert!(state.portrait_requests.contains(&(ImageKind::Type, 21668)));
+        }
+
+        // 6. Skills not loaded still queues. This is the locked
+        // design, not an oversight: the plans section (picker
+        // included) is visible and editable in every skills load
+        // state, so the picker queues while the Ready-only
+        // catalogue renders nothing here.
+        {
+            let mut state = ready_picker_state(&sde);
+            state.skills = LoadState::Empty;
+            state.skill_plan_picker_search = "gunnery".to_string();
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+        }
+
+        // 7. No active character queues nothing.
+        {
+            let mut state = AppState::new(false);
+            state.install_skill_catalogue_type_ids(&sde);
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert!(state.portrait_requests.is_empty());
+            assert!(cache.is_empty());
+        }
+
+        // 8. Nothing installed queues nothing: the picker has
+        // no authorization path of its own.
+        {
+            let mut state = AppState::new(false);
+            state.characters = vec![CharacterRow {
+                character_id: 1,
+                name: "Test Pilot".to_string(),
+                corporation_id: 1000166,
+                alliance_id: None,
+                is_active: false,
+            }];
+            state.set_active_character(1);
+            state.skills = LoadState::Ready(SkillsData::default());
+            state.skill_plans = LoadState::Ready(vec![SkillPlan {
+                plan_id: 7,
+                character_id: 1,
+                name: "PvP".to_string(),
+                description: String::new(),
+                created_at: "2026-11-15T00:00:00Z".to_string(),
+                updated_at: "2026-11-15T00:00:00Z".to_string(),
+                entries: Vec::new(),
+            }]);
+            state.skill_plans_owner = Some(1);
+            state.selected_skill_plan_id = Some(7);
+            state.skill_plan_picker_open = true;
+            state.skill_plan_picker_search = String::new();
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert!(state.portrait_requests.is_empty());
+            assert!(cache.is_empty());
+        }
+
+        // 9. A Failed picker icon never re-queues.
+        {
+            let mut state = ready_picker_state(&sde);
+            state.skill_plan_picker_search = String::new();
+            state
+                .portraits
+                .insert((ImageKind::Type, 60381), PortraitState::Failed);
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests.len(), 99);
+            assert!(!state.portrait_requests.contains(&(ImageKind::Type, 60381)));
+            assert!(matches!(
+                state.portrait_state(ImageKind::Type, 60381),
+                PortraitState::Failed
+            ));
+            assert!(cache.is_empty());
+        }
+    }
+
+    #[test]
+    fn skill_picker_demo_queues_types_but_never_ready() {
+        use crate::demo::data::seed_demo_state;
+
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        let mut state = AppState::new(true);
+        seed_demo_state(&mut state);
+        assert!(state.skills.is_ready(), "demo must install Ready skills");
+        state.install_skill_catalogue_type_ids(&sde);
+        let active_id = state.active_character_id.expect("demo active character");
+        state.skill_plans = LoadState::Ready(vec![SkillPlan {
+            plan_id: 7,
+            character_id: active_id,
+            name: "PvP".to_string(),
+            description: String::new(),
+            created_at: "2026-11-15T00:00:00Z".to_string(),
+            updated_at: "2026-11-15T00:00:00Z".to_string(),
+            entries: Vec::new(),
+        }]);
+        state.skill_plans_owner = Some(active_id);
+        state.selected_skill_plan_id = Some(7);
+        state.skill_plan_picker_open = true;
+        state.skill_plan_picker_search = String::new();
+        let mut cache = PortraitImageCache::new();
+        let ctx = egui::Context::default();
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show(ui, &mut state, &sde, &mut cache);
+            });
+        });
+        assert_eq!(state.portrait_requests.len(), 100);
+        let mut queued_ids: Vec<i64> = state.portrait_requests.iter().map(|(_, id)| *id).collect();
+        queued_ids.sort_unstable();
+        queued_ids.dedup();
+        assert_eq!(queued_ids.len(), 100, "queued keys must be distinct");
+        assert!(state.portrait_requests.contains(&(ImageKind::Type, 60381)));
         assert!(cache.is_empty(), "blank-box path uploads nothing in demo");
         for (_, id) in &state.portrait_requests {
             assert!(!matches!(
