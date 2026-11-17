@@ -24,6 +24,9 @@ use crate::fitting::resources::{
     ResourceSkillLevels, CPU_MANAGEMENT_SKILL_ID, POWER_GRID_MANAGEMENT_SKILL_ID,
 };
 use crate::fitting::ship_ehp::{ship_base_ehp, ShipBaseEhp, ShipBaseEhpOutcome};
+use crate::fitting::ship_nav_targeting::{
+    ship_nav_targeting, ShipNavTargeting, ShipNavTargetingOutcome,
+};
 use crate::fitting::ship_peak_recharge::ship_base_peak_recharge;
 use crate::fitting::ship_resistances::{
     ship_resistances, ResistLayer, ShipResistances, ShipResistancesOutcome,
@@ -1215,6 +1218,23 @@ const FITTING_SHIP_BASE_EHP_NO_CATALOGUE: &str =
     "Ship effective hit points unavailable: Mimir's bundled item data failed to load.";
 const FITTING_SHIP_BASE_EHP_NO_SHIP_DATA: &str = "Ship effective hit points unavailable: Mimir's bundled item data has no complete base hit point and resistance data for this fitting's ship.";
 
+/// Locked heading for the ship navigation and targeting block
+/// (navigation and targeting design section 6). The "(base
+/// values)" qualifier keeps every base hull number from
+/// reading as a fitted total.
+const FITTINGS_SHIP_NAV_TARGETING_HEADING: &str = "Ship navigation and targeting (base values)";
+
+/// Locked disclosure: the numbers are the bare hull's base
+/// navigation and targeting values, never modified by
+/// anything fitted or trained (design section 6). This
+/// block's own sentence; the ship base values and
+/// resistances disclosures above name different sets.
+const FITTING_SHIP_NAV_TARGETING_DISCLOSURE: &str = "These are the bare hull's base navigation and targeting values from Mimir's bundled item data. Fitted modules, rigs, subsystems, skills, implants, and ship bonuses are not applied, so these numbers can differ from EVE.";
+
+const FITTING_SHIP_NAV_TARGETING_NO_CATALOGUE: &str =
+    "Ship navigation and targeting unavailable: Mimir's bundled item data failed to load.";
+const FITTING_SHIP_NAV_TARGETING_NO_SHIP_DATA: &str = "Ship navigation and targeting unavailable: Mimir's bundled item data has no navigation or targeting data for this fitting's ship.";
+
 /// One CPU or power grid line (design section 7): `left` with the
 /// room remaining, or `over` with the positive overage. Exactly at
 /// budget is `0.0 left`, in the normal colour.
@@ -1562,6 +1582,103 @@ fn render_ship_base_ehp(
         ShipBaseEhpOutcome::Unavailable => {
             ui.heading(FITTINGS_SHIP_BASE_EHP_HEADING);
             ui.label(FITTING_SHIP_BASE_EHP_NO_SHIP_DATA);
+        }
+    }
+}
+
+/// One sensor segment (design section 6), pure like
+/// `ship_resistance_segment`: `None` (no data) contributes no
+/// segment — never a zero, a dash, or placeholder words. A
+/// present `0.0` renders like any other value.
+fn ship_sensor_segment(label: &str, value: Option<f64>) -> Option<String> {
+    value.map(|v| format!("{label} {}", widgets::format_fitting_amount(v, "points")))
+}
+
+/// The joined sensor-strength line (design section 6):
+/// segments in RADAR, Ladar, Magnetometric, Gravimetric
+/// (attribute-id) order joined by `, `. A hull with no
+/// sensor data at all contributes no line at all.
+fn ship_nav_targeting_sensor_line(targeting: &ShipNavTargeting) -> Option<String> {
+    let segments: Vec<String> = [
+        ship_sensor_segment("RADAR", targeting.sensor_radar),
+        ship_sensor_segment("Ladar", targeting.sensor_ladar),
+        ship_sensor_segment("Magnetometric", targeting.sensor_magnetometric),
+        ship_sensor_segment("Gravimetric", targeting.sensor_gravimetric),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    if segments.is_empty() {
+        None
+    } else {
+        Some(format!("Sensor strength: {}", segments.join(", ")))
+    }
+}
+
+/// One integer-count line (design section 6), pure like
+/// `ship_stat_line`: `None` (no data) renders no line at
+/// all — never a zero, a dash, or placeholder words. A
+/// present `0` renders like any other value. The count is
+/// rendered with `{}`, never `format_fitting_amount` — that
+/// formatter is for `f64` amounts with units (the `slot_line`
+/// comment precedent).
+fn ship_count_line(label: &str, value: Option<i64>) -> Option<String> {
+    value.map(|v| format!("{label}: {v}"))
+}
+
+/// The block's lines in locked order (navigation group, then
+/// targeting group — design section 6). Absent values are
+/// omitted, so a partial block still renders its available
+/// values plus the disclosure. Agility carries no line
+/// (design section 2.3).
+fn ship_nav_targeting_lines(targeting: &ShipNavTargeting) -> Vec<String> {
+    [
+        ship_stat_line("Warp speed", targeting.warp_speed, "AU/s"),
+        ship_stat_line("Align time", targeting.align_time_secs, "s"),
+        ship_stat_line("Mass", targeting.mass, "kg"),
+        ship_stat_line("Signature radius", targeting.signature_radius, "m"),
+        ship_stat_line("Targeting range", targeting.max_target_range_km, "km"),
+        ship_stat_line("Scan resolution", targeting.scan_resolution, "mm"),
+        ship_nav_targeting_sensor_line(targeting),
+        ship_count_line("Max locked targets", targeting.max_locked_targets),
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
+}
+
+/// Ship base navigation and targeting block shared by the
+/// saved and imported fitting details (navigation and
+/// targeting design section 6). Depends only on the
+/// fitting's ship and the catalogue: no skill levels, no SDE
+/// handle, so it renders identically for every viewing
+/// character. The heading always renders, so the view never
+/// silently omits the feature; `Unavailable` swaps all
+/// lines and the disclosure for the fixed unavailable
+/// sentence. Renders even when the fitting has no items.
+/// Logs nothing itself: the pure function logs nothing
+/// (render cadence).
+fn render_ship_nav_targeting(
+    ui: &mut egui::Ui,
+    fitting: &CharacterFitting,
+    fitting_types: Option<&FittingTypes>,
+) {
+    let Some(catalogue) = fitting_types else {
+        ui.heading(FITTINGS_SHIP_NAV_TARGETING_HEADING);
+        ui.label(FITTING_SHIP_NAV_TARGETING_NO_CATALOGUE);
+        return;
+    };
+    match ship_nav_targeting(fitting, catalogue) {
+        ShipNavTargetingOutcome::Available(targeting) => {
+            ui.heading(FITTINGS_SHIP_NAV_TARGETING_HEADING);
+            for line in ship_nav_targeting_lines(&targeting) {
+                ui.label(line);
+            }
+            ui.label(FITTING_SHIP_NAV_TARGETING_DISCLOSURE);
+        }
+        ShipNavTargetingOutcome::Unavailable => {
+            ui.heading(FITTINGS_SHIP_NAV_TARGETING_HEADING);
+            ui.label(FITTING_SHIP_NAV_TARGETING_NO_SHIP_DATA);
         }
     }
 }
@@ -2077,6 +2194,7 @@ fn fittings_import_panel(
     render_ship_base_stats(ui, &synth, fitting_types);
     render_ship_resistances(ui, &synth, fitting_types);
     render_ship_base_ehp(ui, &synth, fitting_types);
+    render_ship_nav_targeting(ui, &synth, fitting_types);
     // Loaded charges, in item order (design section 8.2).
     let charged_total = imported
         .items
@@ -2369,6 +2487,7 @@ pub fn show(
                     render_ship_base_stats(ui, selected, fitting_types);
                     render_ship_resistances(ui, selected, fitting_types);
                     render_ship_base_ehp(ui, selected, fitting_types);
+                    render_ship_nav_targeting(ui, selected, fitting_types);
                     if ui.button("Copy as EFT").clicked() {
                         tracing::info!(
                             "[FITTING] copy as EFT requested for fitting name={}",
@@ -4793,6 +4912,211 @@ mod tests {
 
         // The DNA sample lands on the same hull, so its block is
         // byte-identical too (EHP keys off the ship, not format).
+        let synth_dna = match parse_import(DEMO_SAMPLE_DNA, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => {
+                panic!("demo DNA sample must import, got {fatal:?}")
+            }
+        };
+        assert_eq!(lines_for(&synth_dna), rifter_block);
+    }
+
+    // Ship navigation and targeting (navigation and targeting
+    // design section 8): a full synthetic targeting struct
+    // renders the eight locked lines verbatim — one-decimal
+    // formatter, thousands-grouped mass, joined sensor line,
+    // bare integer count, and no agility line.
+    fn full_nav_targeting() -> ShipNavTargeting {
+        ShipNavTargeting {
+            warp_speed: Some(5.0),
+            align_time_secs: Some(4.7),
+            agility: Some(3.2),
+            mass: Some(1_067_000.0),
+            signature_radius: Some(35.0),
+            max_target_range_km: Some(22.5),
+            scan_resolution: Some(660.0),
+            sensor_radar: Some(0.0),
+            sensor_ladar: Some(8.0),
+            sensor_magnetometric: Some(0.0),
+            sensor_gravimetric: Some(0.0),
+            max_locked_targets: Some(4),
+        }
+    }
+
+    #[test]
+    fn ship_nav_targeting_lines_match_the_locked_templates() {
+        assert_eq!(
+            ship_nav_targeting_lines(&full_nav_targeting()),
+            [
+                "Warp speed: 5.0 AU/s",
+                "Align time: 4.7 s",
+                "Mass: 1,067,000.0 kg",
+                "Signature radius: 35.0 m",
+                "Targeting range: 22.5 km",
+                "Scan resolution: 660.0 mm",
+                "Sensor strength: RADAR 0.0 points, Ladar 8.0 points, Magnetometric 0.0 points, Gravimetric 0.0 points",
+                "Max locked targets: 4",
+            ]
+        );
+    }
+
+    // Omission: None scan/count/sensors each omit exactly
+    // their line; all-None sensors omit the joined line; a
+    // present 0.0 range renders `Targeting range: 0.0 km`;
+    // a present 0 renders `Max locked targets: 0`.
+    #[test]
+    fn ship_nav_targeting_omission_and_present_zeros() {
+        let mut partial = full_nav_targeting();
+        partial.scan_resolution = None;
+        partial.sensor_radar = None;
+        partial.sensor_ladar = None;
+        assert_eq!(
+            ship_nav_targeting_lines(&partial),
+            [
+                "Warp speed: 5.0 AU/s",
+                "Align time: 4.7 s",
+                "Mass: 1,067,000.0 kg",
+                "Signature radius: 35.0 m",
+                "Targeting range: 22.5 km",
+                "Sensor strength: Magnetometric 0.0 points, Gravimetric 0.0 points",
+                "Max locked targets: 4",
+            ]
+        );
+
+        let mut no_sensors = full_nav_targeting();
+        no_sensors.sensor_radar = None;
+        no_sensors.sensor_ladar = None;
+        no_sensors.sensor_magnetometric = None;
+        no_sensors.sensor_gravimetric = None;
+        no_sensors.max_target_range_km = Some(0.0);
+        no_sensors.max_locked_targets = Some(0);
+        assert_eq!(
+            ship_nav_targeting_lines(&no_sensors),
+            [
+                "Warp speed: 5.0 AU/s",
+                "Align time: 4.7 s",
+                "Mass: 1,067,000.0 kg",
+                "Signature radius: 35.0 m",
+                "Targeting range: 0.0 km",
+                "Scan resolution: 660.0 mm",
+                "Max locked targets: 0",
+            ]
+        );
+    }
+
+    // Sensor join order and labels pinned: four positive
+    // segments in RADAR, Ladar, Magnetometric, Gravimetric
+    // (attribute-id) order — the Apotheosis all-four-positive
+    // shape.
+    #[test]
+    fn ship_nav_targeting_sensor_join_order_and_labels() {
+        let mut apotheosis = full_nav_targeting();
+        apotheosis.sensor_radar = Some(10.0);
+        apotheosis.sensor_ladar = Some(10.0);
+        apotheosis.sensor_magnetometric = Some(10.0);
+        apotheosis.sensor_gravimetric = Some(10.0);
+        let lines = ship_nav_targeting_lines(&apotheosis);
+        assert_eq!(
+            lines[6],
+            "Sensor strength: RADAR 10.0 points, Ladar 10.0 points, Magnetometric 10.0 points, Gravimetric 10.0 points".to_string()
+        );
+    }
+
+    #[test]
+    fn ship_nav_targeting_unavailable_and_disclosure_wording() {
+        assert_eq!(
+            FITTINGS_SHIP_NAV_TARGETING_HEADING,
+            "Ship navigation and targeting (base values)"
+        );
+        assert_eq!(
+            FITTING_SHIP_NAV_TARGETING_NO_CATALOGUE,
+            "Ship navigation and targeting unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            FITTING_SHIP_NAV_TARGETING_NO_SHIP_DATA,
+            "Ship navigation and targeting unavailable: Mimir's bundled item data has no navigation or targeting data for this fitting's ship."
+        );
+        assert_eq!(
+            FITTING_SHIP_NAV_TARGETING_DISCLOSURE,
+            "These are the bare hull's base navigation and targeting values from Mimir's bundled item data. Fitted modules, rigs, subsystems, skills, implants, and ship bonuses are not applied, so these numbers can differ from EVE."
+        );
+    }
+
+    // Demo story (navigation and targeting design section 7):
+    // Demo Brawler and Mission Runner are both Rifter 587
+    // and render identical blocks despite their invented
+    // sample rows; Demo Runner is Punisher 597. The rendered
+    // decimals are the formatter's one-decimal rounding of
+    // the section 7 table values (Rifter align 4.733363…
+    // renders 4.7 s; Punisher align 4.784101… renders 4.8 s).
+    // Built from the real demo fixture over the real
+    // catalogue, so fixture or catalogue drift fails here.
+    #[test]
+    fn demo_fixture_ship_nav_targeting_match_the_locked_demo_story() {
+        use crate::demo::data::DEMO_FITTINGS_JSON;
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let lines_for = |fitting: &CharacterFitting| match ship_nav_targeting(fitting, &catalogue) {
+            ShipNavTargetingOutcome::Available(targeting) => ship_nav_targeting_lines(&targeting),
+            ShipNavTargetingOutcome::Unavailable => {
+                panic!("demo fitting must have navigation and targeting data")
+            }
+        };
+
+        let rifter_block = [
+            "Warp speed: 5.0 AU/s",
+            "Align time: 4.7 s",
+            "Mass: 1,067,000.0 kg",
+            "Signature radius: 35.0 m",
+            "Targeting range: 22.5 km",
+            "Scan resolution: 660.0 mm",
+            "Sensor strength: RADAR 0.0 points, Ladar 8.0 points, Magnetometric 0.0 points, Gravimetric 0.0 points",
+            "Max locked targets: 4",
+        ];
+        assert_eq!(lines_for(&find("Demo Brawler")), rifter_block);
+        assert_eq!(lines_for(&find("Mission Runner")), rifter_block);
+        assert_eq!(
+            lines_for(&find("Demo Runner")),
+            [
+                "Warp speed: 5.0 AU/s",
+                "Align time: 4.8 s",
+                "Mass: 1,190,000.0 kg",
+                "Signature radius: 37.0 m",
+                "Targeting range: 25.0 km",
+                "Scan resolution: 640.0 mm",
+                "Sensor strength: RADAR 10.0 points, Ladar 0.0 points, Magnetometric 0.0 points, Gravimetric 0.0 points",
+                "Max locked targets: 4",
+            ]
+        );
+
+        // Imported path: the demo sample fit through the shared
+        // synthesis seam yields the same Rifter block.
+        let synth = match parse_eft(DEMO_SAMPLE_EFT, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
+        };
+        assert_eq!(lines_for(&synth), rifter_block);
+
+        // The DNA sample lands on the same hull, so its block
+        // is byte-identical too (navigation keys off the ship,
+        // not format).
         let synth_dna = match parse_import(DEMO_SAMPLE_DNA, &catalogue) {
             EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
             EftImportOutcome::Failed(fatal) => {

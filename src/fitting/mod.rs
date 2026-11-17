@@ -7,6 +7,7 @@ pub mod dna;
 pub mod eft;
 pub mod resources;
 pub mod ship_ehp;
+pub mod ship_nav_targeting;
 pub mod ship_peak_recharge;
 pub mod ship_resistances;
 pub mod ship_stats;
@@ -26,6 +27,7 @@ pub use resources::{
     ResourceBudget, ResourceSkillLevels, CPU_MANAGEMENT_SKILL_ID, POWER_GRID_MANAGEMENT_SKILL_ID,
 };
 pub use ship_ehp::{ship_base_ehp, ShipBaseEhp, ShipBaseEhpOutcome};
+pub use ship_nav_targeting::{ship_nav_targeting, ShipNavTargeting, ShipNavTargetingOutcome};
 pub use ship_peak_recharge::{ship_base_peak_recharge, ShipBasePeakRecharge};
 pub use ship_resistances::{
     ship_resistances, ResistLayer, ShipResistances, ShipResistancesOutcome,
