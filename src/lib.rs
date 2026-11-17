@@ -17,6 +17,7 @@ pub mod demo;
 pub mod error;
 pub mod esi;
 pub mod fitting;
+pub mod invention_calculator;
 pub mod names;
 pub mod portraits;
 pub mod skills;

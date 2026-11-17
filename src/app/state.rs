@@ -13,6 +13,9 @@ use std::sync::Arc;
 use crate::esi::endpoints::WriteFailureClass;
 use crate::esi::models::*;
 use crate::fitting::eft::ImportedFitting;
+use crate::invention_calculator::{
+    DEFAULT_BASE_PROBABILITY, DEFAULT_DECRYPTOR_MULTIPLIER, DEFAULT_SKILL_LEVEL,
+};
 use crate::names::exploration_ref::{EffectFamily, ExplorationRef};
 use crate::names::sde::Sde;
 use crate::portraits::ImageKind;
@@ -771,6 +774,20 @@ pub struct AppState {
     // View-local industry UI state.
     pub industry_search: String,
     pub industry_blueprint_kind: BlueprintKindFilter,
+    // View-local invention calculator drafts (industry calculators
+    // design section 3): session-only String drafts for the
+    // Industry view's Invention Calculator block. All five seed
+    // from the pure module's starting-value constants in
+    // `AppState::new`; the derived Default would leave them empty,
+    // and an empty field must mean "reader cleared it", not the
+    // app's starting state. Blueprint filtering, industry
+    // refreshes, and character switches never touch them; nothing
+    // is stored.
+    pub industry_invention_base_probability: String,
+    pub industry_invention_encryption_skill: String,
+    pub industry_invention_datacore_skill1: String,
+    pub industry_invention_datacore_skill2: String,
+    pub industry_invention_decryptor_multiplier: String,
     // View-local planetary UI state. The selected planet lives
     // outside `LoadState<PlanetaryData>` so a failed detail fetch
     // cannot lose the selection.
@@ -865,6 +882,15 @@ impl AppState {
             // (design section 3). Price drafts start empty.
             market_trade_broker_fee_percent: format!("{:.1}", DEFAULT_BROKER_FEE_PERCENT),
             market_trade_sales_tax_percent: format!("{:.1}", DEFAULT_SALES_TAX_PERCENT),
+            // Invention calculator drafts seed from the pure
+            // module's starting values for the same reason (design
+            // section 3): an empty field must mean "reader cleared
+            // it", not the app's starting state.
+            industry_invention_base_probability: format!("{:.2}", DEFAULT_BASE_PROBABILITY),
+            industry_invention_encryption_skill: DEFAULT_SKILL_LEVEL.to_string(),
+            industry_invention_datacore_skill1: DEFAULT_SKILL_LEVEL.to_string(),
+            industry_invention_datacore_skill2: DEFAULT_SKILL_LEVEL.to_string(),
+            industry_invention_decryptor_multiplier: format!("{:.1}", DEFAULT_DECRYPTOR_MULTIPLIER),
             // Effect strength defaults to 1 (design section 7.1) and
             // is clamped to 1..=6 by the view on every use.
             exploration_selected_strength: 1,
@@ -2021,6 +2047,59 @@ mod tests {
             assert_eq!(state.market_trade_broker_fee_percent, "1.0");
             assert_eq!(state.market_trade_sales_tax_percent, "2.0");
         }
+    }
+
+    #[test]
+    fn invention_calculator_drafts_seed_from_pure_module_constants() {
+        for demo in [false, true] {
+            let state = AppState::new(demo);
+            assert_eq!(
+                state.industry_invention_base_probability,
+                format!("{:.2}", DEFAULT_BASE_PROBABILITY)
+            );
+            assert_eq!(
+                state.industry_invention_encryption_skill,
+                DEFAULT_SKILL_LEVEL.to_string()
+            );
+            assert_eq!(
+                state.industry_invention_datacore_skill1,
+                DEFAULT_SKILL_LEVEL.to_string()
+            );
+            assert_eq!(
+                state.industry_invention_datacore_skill2,
+                DEFAULT_SKILL_LEVEL.to_string()
+            );
+            assert_eq!(
+                state.industry_invention_decryptor_multiplier,
+                format!("{:.1}", DEFAULT_DECRYPTOR_MULTIPLIER)
+            );
+            assert_eq!(state.industry_invention_base_probability, "0.30");
+            assert_eq!(state.industry_invention_encryption_skill, "4");
+            assert_eq!(state.industry_invention_datacore_skill1, "4");
+            assert_eq!(state.industry_invention_datacore_skill2, "4");
+            assert_eq!(state.industry_invention_decryptor_multiplier, "1.0");
+        }
+    }
+
+    #[test]
+    fn invention_calculator_drafts_survive_character_switch() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.industry_invention_base_probability = "0.40".to_string();
+        state.industry_invention_encryption_skill = "5".to_string();
+        state.industry_invention_datacore_skill1 = "3".to_string();
+        state.industry_invention_datacore_skill2 = "2".to_string();
+        state.industry_invention_decryptor_multiplier = "0.6".to_string();
+        // Same-character reselect and a character switch both leave
+        // all five drafts unchanged.
+        state.set_active_character(1);
+        state.set_active_character(2);
+        assert_eq!(state.industry_invention_base_probability, "0.40");
+        assert_eq!(state.industry_invention_encryption_skill, "5");
+        assert_eq!(state.industry_invention_datacore_skill1, "3");
+        assert_eq!(state.industry_invention_datacore_skill2, "2");
+        assert_eq!(state.industry_invention_decryptor_multiplier, "0.6");
     }
 
     #[test]
