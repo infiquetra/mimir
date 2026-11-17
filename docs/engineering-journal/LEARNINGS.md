@@ -29,6 +29,19 @@
 
 ---
 
+## 2026-11-17
+
+### Dogma attribute 47 `slots` looks like a hardpoint signal but disagrees with the fitted effects on both sides
+
+**Author.** Muse Code (slot-layout workflow, integrator)
+**Context.** The slot-layout slice shows turret and launcher hardpoints used against the hull's base hardpoints. Deciding which fitted modules consume a hardpoint needed a grounded signal: dogma attribute 47 `slots` is the obvious-looking candidate, and effects 40 `launcherFitted` / 42 `turretFitted` ("Requires a … hardpoint") are the alternative.
+**Evidence.** `docs/slot-layout-design.md` section 2, from bodies read during design against the pinned SDE and committed CSV caches: attribute 47 has 853 published carriers but 51 false positives (Bomb Launcher I among them — a launcher by name that consumes no launcher hardpoint) and 3 false negatives against the effect sets; effects 40/42 have 147/658 published carriers, every one also carrying high-slot effect 12, with zero overlap between them. Integrator re-run this session: the regenerator reports `turretFitted=658 launcherFitted=147` and reproduces the committed catalogue byte-identically (SHA-256 `f54481d1…`, 3,234,754 bytes).
+**Mechanism.** Attribute 47 is a legacy generic slot count that CCP still stamps on types whose fitting behaviour moved to effects; it neither implies nor is implied by hardpoint consumption. Name-based guessing fails the same way (Bomb Launcher I). Only effect membership states the requirement the game enforces.
+**Fix (or queued).** The catalogue emits sparse true-only booleans `turretFitted` (effect 42) and `launcherFitted` (effect 40) with no category gate, so the 4 category-66 Standup launchers count; attribute 47 is never read (barred in `src/fitting/slot_layout.rs:28` and `src/names/fitting_types.rs:134`), and extending `slotEffects` to carry 40/42 was rejected because the loader invariant `slot_effects.len() <= 1` would break. A high-slot module missing from the catalogue is excluded from both hardpoint counts with a disclosed count, never treated as using no hardpoint.
+**Validation.** Generator oracles pin the marker sets (including the category-66 carriers); `src/fitting/slot_layout.rs` test `hardpoint_counting_follows_markers` and the DEMO/DNA pins (DNA `587:2889;2:499;1::` → high 3, turret 2, launcher 1) prove the marker path end to end; all 630 tests pass at the integrator commit.
+**Generalizable rule.** When an attribute and an effect both look like the signal for the same fact, measure the disagreement in both directions before choosing: false positives and false negatives against the enforced mechanism (the effect) disqualify the attribute, however suggestive its name.
+**Refs.** `docs/slot-layout-design.md` sections 2, 3, 10; DECISIONS 2026-11-17 slot-layout entry below.
+
 ## 2026-11-16
 
 ### Flutter read the rig-cost attribute 1153 as the ship calibration capacity, so a magic 400 fallback silently won on every hull
