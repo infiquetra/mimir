@@ -8,8 +8,9 @@ use chrono::Utc;
 use super::widgets;
 use crate::app::state::{AppState, LoadState, SkillPlanConfirm, SkillPlanEditor};
 use crate::esi::models::{CharacterAttributes, SkillQueueItem};
-use crate::names::sde::Sde;
+use crate::names::sde::{Sde, SdeSkillType};
 use crate::skills::plans::{normalize_plan_text, SkillPlan, SkillPlanAction, SkillPlanEntry};
+use crate::skills::prereqs::{plan_prerequisite_warnings, unmet_prerequisites, UnmetPrerequisite};
 use crate::skills::training::{plan_progress, EntryEstimate, PlanProgress, TrainedSkill};
 
 /// Queue sorted into training order (input order is not trusted).
@@ -172,6 +173,62 @@ fn picker_row_label(skill_name: &str, trained_level: Option<i32>) -> String {
         Some(level) => format!("{skill_name} — trained level {level}"),
         None => format!("{skill_name} — trained level unavailable"),
     }
+}
+
+/// Advisory trained-only disclosure (prerequisites design
+/// section 8.1), rendered only alongside a warning.
+const PREREQ_DISCLOSURE: &str =
+    "Prerequisite warnings use trained levels only. Skills already in this plan are not counted as trained.";
+
+/// The requirement fact for a skill (prerequisites design
+/// section 8.1): every direct edge in file order, with no
+/// trained-level information.
+fn prerequisite_line(sde: &Sde, skill: &SdeSkillType) -> Option<String> {
+    if skill.prerequisites.is_empty() {
+        return None;
+    }
+    let parts: Vec<String> = skill
+        .prerequisites
+        .iter()
+        .map(|p| format!("{} level {}", sde.skill_name_quiet(p.skill_id), p.level))
+        .collect();
+    Some(format!("Requires: {}", parts.join(", ")))
+}
+
+/// The unmet subset for one skill (prerequisites design
+/// section 8.1), in input (file) order.
+fn unmet_warning_line(sde: &Sde, unmet: &[UnmetPrerequisite]) -> Option<String> {
+    if unmet.is_empty() {
+        return None;
+    }
+    let segments: Vec<String> = unmet
+        .iter()
+        .map(|u| {
+            let name = sde.skill_name_quiet(u.skill_id);
+            if u.trained_level == 0 {
+                format!("{name} — need level {} (untrained)", u.required_level)
+            } else {
+                format!(
+                    "{name} — need level {} (have {})",
+                    u.required_level, u.trained_level
+                )
+            }
+        })
+        .collect();
+    Some(format!("Prerequisites not met: {}", segments.join("; ")))
+}
+
+/// The totals-block count line (prerequisites design
+/// section 8.1): counts entries with a non-empty warning.
+fn prerequisite_count_line(warnings: &[Vec<UnmetPrerequisite>]) -> Option<String> {
+    let warned = warnings.iter().filter(|w| !w.is_empty()).count();
+    if warned == 0 {
+        return None;
+    }
+    Some(format!(
+        "Prerequisite warnings: {warned} of {} entries have unmet prerequisites.",
+        warnings.len()
+    ))
 }
 
 /// Whether an armed plan confirmation is no longer renderable
@@ -378,6 +435,9 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde) {
                             any_match = true;
                             let level = levels.get(&skill.type_id).copied().unwrap_or(0);
                             rows.push(format!("{} — trained level {}", skill.type_name, level));
+                            if let Some(line) = prerequisite_line(sde, skill) {
+                                rows.push(line);
+                            }
                         }
                         if rows.is_empty() {
                             continue;
@@ -560,6 +620,7 @@ fn show_plan_detail(
     plan: &SkillPlan,
 ) {
     let progress = plan_progress(plan, sde, trained, attributes);
+    let warnings = plan_prerequisite_warnings(plan, sde, trained);
     ui.separator();
     ui.heading(format!("Plan: {}", plan.name));
     if !plan.description.is_empty() {
@@ -631,6 +692,11 @@ fn show_plan_detail(
                 let name = sde.skill_name_quiet(entry.skill_id);
                 let estimate = &progress.entries[idx];
                 ui.label(entry_row_text(idx + 1, &name, entry.target_level, estimate));
+                if trained.is_some() {
+                    if let Some(line) = unmet_warning_line(sde, &warnings[idx]) {
+                        ui.label(line);
+                    }
+                }
                 ui.horizontal(|ui| {
                     let up = ui.add_enabled(idx > 0, egui::Button::new("Move up"));
                     let down = ui.add_enabled(
@@ -726,6 +792,12 @@ fn show_plan_detail(
     }
 
     ui.label(plan_totals_line(&progress, trained.is_some()));
+    if trained.is_some() {
+        if let Some(line) = prerequisite_count_line(&warnings) {
+            ui.label(line);
+            ui.label(PREREQ_DISCLOSURE);
+        }
+    }
     // The disclosure rides under the totals for any non-empty
     // plan with loaded skills; the not-loaded totals line
     // already says estimates are absent.
@@ -864,12 +936,20 @@ fn show_skill_picker(
                 let mut text = picker_row_label(&skill.type_name, trained_level);
                 if in_plan {
                     text += " — already in this plan";
-                    ui.label(text);
                 } else if trained_level == Some(5) {
                     text += " — already trained to level 5";
-                    ui.label(text);
-                } else {
-                    ui.label(text);
+                }
+                ui.label(text);
+                if let Some(line) = prerequisite_line(sde, skill) {
+                    ui.label(line);
+                }
+                if let Some(map) = trained {
+                    let unmet = unmet_prerequisites(sde, skill.type_id, map);
+                    if let Some(line) = unmet_warning_line(sde, &unmet) {
+                        ui.label(line);
+                    }
+                }
+                if !in_plan && trained_level != Some(5) {
                     ui.horizontal(|ui| {
                         for level in 1..=5 {
                             // Levels at or below the trained
@@ -1137,6 +1217,161 @@ mod tests {
         assert_eq!(
             normalize_plan_text("PvP", &"a".repeat(501)),
             Err("Description must be 500 characters or less")
+        );
+    }
+
+    // U1: prerequisite_line_wording (prerequisites design section 12.3).
+    #[test]
+    fn prerequisite_line_wording() {
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        let line = |skill_id: i64| {
+            let skill = sde.skill(skill_id).expect("skill present");
+            prerequisite_line(&sde, skill)
+        };
+        assert_eq!(
+            line(3304),
+            Some("Requires: Gunnery level 3, Small Hybrid Turret level 3".to_string())
+        );
+        assert_eq!(line(3301), Some("Requires: Gunnery level 1".to_string()));
+        assert_eq!(
+            line(3344),
+            Some(
+                "Requires: Capital Ships level 5, Gallente Battleship level 3, Leadership level 5"
+                    .to_string()
+            )
+        );
+        assert_eq!(line(3300), None);
+    }
+
+    // U2: unmet_warning_line_have_and_untrained (section 12.3).
+    #[test]
+    fn unmet_warning_line_have_and_untrained() {
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        assert_eq!(
+            unmet_warning_line(
+                &sde,
+                &[
+                    UnmetPrerequisite {
+                        skill_id: 3300,
+                        required_level: 3,
+                        trained_level: 1
+                    },
+                    UnmetPrerequisite {
+                        skill_id: 3301,
+                        required_level: 3,
+                        trained_level: 0
+                    },
+                ]
+            ),
+            Some(
+                "Prerequisites not met: Gunnery — need level 3 (have 1); Small Hybrid Turret — need level 3 (untrained)"
+                    .to_string()
+            )
+        );
+        assert_eq!(
+            unmet_warning_line(
+                &sde,
+                &[UnmetPrerequisite {
+                    skill_id: 3301,
+                    required_level: 3,
+                    trained_level: 2
+                }]
+            ),
+            Some("Prerequisites not met: Small Hybrid Turret — need level 3 (have 2)".to_string())
+        );
+        assert_eq!(unmet_warning_line(&sde, &[]), None);
+    }
+
+    // U3: unmet_warning_line_unknown_never_raw_id (section 12.3).
+    #[test]
+    fn unmet_warning_line_unknown_never_raw_id() {
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        let line = unmet_warning_line(
+            &sde,
+            &[UnmetPrerequisite {
+                skill_id: 999999,
+                required_level: 2,
+                trained_level: 0,
+            }],
+        )
+        .expect("unknown id warns");
+        assert_eq!(
+            line,
+            "Prerequisites not met: Unknown Skill — need level 2 (untrained)"
+        );
+        assert!(!line.contains("999999"));
+    }
+
+    // U4: prerequisite_count_line_counts (section 12.3).
+    #[test]
+    fn prerequisite_count_line_counts() {
+        let one = UnmetPrerequisite {
+            skill_id: 3300,
+            required_level: 3,
+            trained_level: 1,
+        };
+        let two = UnmetPrerequisite {
+            skill_id: 3301,
+            required_level: 3,
+            trained_level: 0,
+        };
+        assert_eq!(
+            prerequisite_count_line(&[vec![one], Vec::new(), vec![one, two]]),
+            Some("Prerequisite warnings: 2 of 3 entries have unmet prerequisites.".to_string())
+        );
+        assert_eq!(
+            prerequisite_count_line(&[vec![one]]),
+            Some("Prerequisite warnings: 1 of 1 entries have unmet prerequisites.".to_string())
+        );
+        assert_eq!(prerequisite_count_line(&[Vec::new(), Vec::new()]), None);
+        let empty: Vec<Vec<UnmetPrerequisite>> = Vec::new();
+        assert_eq!(prerequisite_count_line(&empty), None);
+    }
+
+    // U5: prereq_disclosure_verbatim (section 12.3).
+    #[test]
+    fn prereq_disclosure_verbatim() {
+        assert_eq!(
+            PREREQ_DISCLOSURE,
+            "Prerequisite warnings use trained levels only. Skills already in this plan are not counted as trained."
+        );
+    }
+
+    // U6: plan_warning_text_end_to_end (section 12.3).
+    #[test]
+    fn plan_warning_text_end_to_end() {
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        let plan = SkillPlan {
+            plan_id: 1,
+            character_id: 90000001,
+            name: "Test".to_string(),
+            description: String::new(),
+            created_at: "2026-11-15T00:00:00Z".to_string(),
+            updated_at: "2026-11-15T00:00:00Z".to_string(),
+            entries: vec![SkillPlanEntry {
+                skill_id: 3304,
+                target_level: 5,
+            }],
+        };
+        let mut trained = BTreeMap::new();
+        trained.insert(
+            3300,
+            TrainedSkill {
+                trained_level: 1,
+                skillpoints_in_skill: 0,
+            },
+        );
+        let warnings = plan_prerequisite_warnings(&plan, &sde, Some(&trained));
+        assert_eq!(
+            unmet_warning_line(&sde, &warnings[0]),
+            Some(
+                "Prerequisites not met: Gunnery — need level 3 (have 1); Small Hybrid Turret — need level 3 (untrained)"
+                    .to_string()
+            )
+        );
+        assert_eq!(
+            prerequisite_count_line(&warnings),
+            Some("Prerequisite warnings: 1 of 1 entries have unmet prerequisites.".to_string())
         );
     }
 }
