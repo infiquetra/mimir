@@ -100,6 +100,21 @@ to the cycle). All three are sparse on category 7 or 66 rows
 carrying a slot effect only. Dogma 67 `capacitorBonus` (the
 booster charge gain) is never read: booster injectors ship
 nothing (design section 9).
+Base active repair (docs/sustained-tank-design.md section 3)
+appends eight further keys after `reloadTime` in the locked
+order: `shieldBonus` (dogma 68), `armorDamageAmount` (84),
+and `structureDamageAmount` (83), the three amount keys under
+their verbatim SDE names, then the five effect-name boolean
+markers `shieldBoosting` (effect 4), `fueledShieldBoosting`
+(4936), `armorRepair` (27), `fueledArmorRepair` (5275), and
+`structureRepair` (26). All eight are sparse on category 7
+or 66 rows carrying a slot effect **and** a self-repair
+effect; remote repairers (effects 6186/6652/6188/6651/7166/
+6185) carry the same amount attributes but never gain keys.
+`duration` (73) is shared with the capacitor slice and is not
+re-emitted. Dogma 1886 `chargedArmorDamageMultiplier` (the
+loaded-paste gain) is never read: ancillary modules ship dry
+amounts only (design section 2.3).
 """
 
 import bz2
@@ -340,6 +355,37 @@ CAP_ATTR_IDS = {6, 73, 1795}
 CAPACITOR_NEED_ATTR = 6
 DURATION_ATTR = 73
 RELOAD_TIME_ATTR = 1795
+
+# Base active repair (docs/sustained-tank-design.md section 3):
+# dogmaAttributes.jsonl _key 68 "shieldBonus", 84
+# "armorDamageAmount", 83 "structureDamageAmount" (all unit 113
+# damage); Flutter dogma_attributes.dart at ed698d3 gives the
+# same three numbers under its editorial names
+# shieldBoostAmount, armorRepairAmount, hullRepairAmount.
+# Catalogue keys
+# are the dogma names verbatim. Dogma 1886
+# "chargedArmorDamageMultiplier" (the loaded-paste gain) is
+# never read here: ancillary modules ship dry amounts only
+# (design section 2.3).
+REPAIR_ATTR_IDS = {68, 84, 83}
+SHIELD_BONUS_ATTR = 68
+ARMOR_DAMAGE_AMOUNT_ATTR = 84
+STRUCTURE_DAMAGE_AMOUNT_ATTR = 83
+
+# Self-repair effect routing (docs/sustained-tank-design.md
+# section 3): dogmaEffects.jsonl _key 4 "shieldBoosting" and
+# 4936 "fueledShieldBoosting" (shield), 27 "armorRepair" and
+# 5275 "fueledArmorRepair" (armor), 26 "structureRepair"
+# (hull); the catalogue keys are the SDE effect names
+# verbatim. The gate requires one of these effects, so a
+# remote repairer (6186/6652/6188/6651/7166/6185) never gains
+# a key even though the cache carries its amount row.
+SHIELD_BOOSTING_EFFECT = 4
+FUELED_SHIELD_BOOSTING_EFFECT = 4936
+ARMOR_REPAIR_EFFECT = 27
+FUELED_ARMOR_REPAIR_EFFECT = 5275
+STRUCTURE_REPAIR_EFFECT = 26
+REPAIR_SELF_EFFECT_IDS = {4, 4936, 27, 5275, 26}
 
 # Fighter ability markers (docs/fitting-dps-design.md section
 # 2.5): dogmaEffects.jsonl _key 6465 "fighterAbilityAttackM"
@@ -1031,6 +1077,98 @@ CAP_EXPECTED_COUNTS = {
     "reloadTime": 986,
 }
 
+# Base active repair oracles (docs/sustained-tank-design.md
+# section 8): each value read directly from
+# dgmTypeAttributes.csv.bz2 / dgmTypeEffects.csv.bz2 during
+# design. Tuple shape mirrors CAP_ORACLES: (typeId, key,
+# expected-or-None). A None expected means the key must be
+# absent from that row. Present-value pins (3540 armor 920.0,
+# 10850 shield 104.0, 2355 hull 30.0, 1183 armor 92.0, 33076
+# dry armor 52.0 with fueledArmorRepair true, 32774 shield
+# 52.0 with fueledShieldBoosting true), marker-only pins for
+# the abyssal no-data population (47781 shieldBoosting true
+# with shieldBonus absent; 47769 armorRepair true with
+# armorDamageAmount absent), absence oracles proving the
+# effect gate (3588 Small Remote Shield Booster II carries
+# cache amount 85.0 but must gain no key; 11355 Small Remote
+# Armor Repairer I likewise; 2048/2050/587 carry no new keys
+# at all), and the 1886-absence pin (33076 gains no
+# chargedArmorDamageMultiplier key).
+REPAIR_ORACLES = [
+    (3540, "armorDamageAmount", 920.0),
+    (10850, "shieldBonus", 104.0),
+    (2355, "structureDamageAmount", 30.0),
+    (1183, "armorDamageAmount", 92.0),
+    (33076, "armorDamageAmount", 52.0),
+    (33076, "fueledArmorRepair", True),
+    (32774, "shieldBonus", 52.0),
+    (32774, "fueledShieldBoosting", True),
+    (47781, "shieldBoosting", True),
+    (47781, "shieldBonus", None),
+    (47769, "armorRepair", True),
+    (47769, "armorDamageAmount", None),
+    (3588, "shieldBonus", None),
+    (3588, "armorDamageAmount", None),
+    (3588, "structureDamageAmount", None),
+    (3588, "shieldBoosting", None),
+    (3588, "fueledShieldBoosting", None),
+    (3588, "armorRepair", None),
+    (3588, "fueledArmorRepair", None),
+    (3588, "structureRepair", None),
+    (11355, "shieldBonus", None),
+    (11355, "armorDamageAmount", None),
+    (11355, "structureDamageAmount", None),
+    (11355, "shieldBoosting", None),
+    (11355, "fueledShieldBoosting", None),
+    (11355, "armorRepair", None),
+    (11355, "fueledArmorRepair", None),
+    (11355, "structureRepair", None),
+    (2048, "shieldBonus", None),
+    (2048, "armorDamageAmount", None),
+    (2048, "structureDamageAmount", None),
+    (2048, "shieldBoosting", None),
+    (2048, "fueledShieldBoosting", None),
+    (2048, "armorRepair", None),
+    (2048, "fueledArmorRepair", None),
+    (2048, "structureRepair", None),
+    (2050, "shieldBonus", None),
+    (2050, "armorDamageAmount", None),
+    (2050, "structureDamageAmount", None),
+    (2050, "shieldBoosting", None),
+    (2050, "fueledShieldBoosting", None),
+    (2050, "armorRepair", None),
+    (2050, "fueledArmorRepair", None),
+    (2050, "structureRepair", None),
+    (587, "shieldBonus", None),
+    (587, "armorDamageAmount", None),
+    (587, "structureDamageAmount", None),
+    (587, "shieldBoosting", None),
+    (587, "fueledShieldBoosting", None),
+    (587, "armorRepair", None),
+    (587, "fueledArmorRepair", None),
+    (587, "structureRepair", None),
+    (33076, "chargedArmorDamageMultiplier", None),
+]
+
+# Expected active repair key counts (sustained-tank-design
+# section 3, scripted over the cache joined to the catalogue
+# behind the emission gate: category 7 or 66 carrying a slot
+# effect and a self-repair effect, presence exactly
+# source-row existence). The 233 amount types (99/109/25)
+# split 233 present-amount / 17 marker-only out of the 250
+# gated self types; the ungated cache totals (145/161/33)
+# are never emitted — they are the remote repairers.
+REPAIR_EXPECTED_COUNTS = {
+    "shieldBonus": 99,
+    "armorDamageAmount": 109,
+    "structureDamageAmount": 25,
+    "shieldBoosting": 94,
+    "fueledShieldBoosting": 14,
+    "armorRepair": 105,
+    "fueledArmorRepair": 12,
+    "structureRepair": 25,
+}
+
 _STACKED_SUFFIX_RE = re.compile(r" x[0-9]+$")
 
 
@@ -1507,6 +1645,47 @@ def main():
         seen_cap_keys.add(key)
         cap_by_type.setdefault(type_id, {})[attribute_id] = value
 
+    # Base active repair attributes per type (design section 3):
+    # only the three locked amount attributes, each parsed from
+    # valueFloat. An unparseable, duplicated, non-finite, or
+    # negative wanted row fails loudly and writes nothing. The
+    # cache carries no negative or zero gated repair rows at
+    # all — verified at build time — so a future negative
+    # fails loud instead of being dropped.
+    repair_by_type = {}
+    seen_repair_keys = set()
+    for row in type_attributes:
+        attribute_id = int(row["attributeID"])
+        if attribute_id not in REPAIR_ATTR_IDS:
+            continue
+        type_id = int(row["typeID"])
+        key = (type_id, attribute_id)
+        if key in seen_repair_keys:
+            fail(
+                f"duplicate active repair row (type {type_id}, "
+                f"attribute {attribute_id}) in dgmTypeAttributes"
+            )
+        try:
+            value = float(row["valueFloat"])
+        except (TypeError, ValueError):
+            fail(
+                f"unparseable active repair value "
+                f"{row['valueFloat']!r} for (type {type_id}, "
+                f"attribute {attribute_id})"
+            )
+        if not math.isfinite(value):
+            fail(
+                f"non-finite active repair value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        if value < 0:
+            fail(
+                f"negative active repair value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        seen_repair_keys.add(key)
+        repair_by_type.setdefault(type_id, {})[attribute_id] = value
+
     types = []
     missing_group = 0
     resource_key_counts = Counter()
@@ -1518,6 +1697,7 @@ def main():
     nav_targeting_key_counts = Counter()
     dps_key_counts = Counter()
     cap_key_counts = Counter()
+    repair_key_counts = Counter()
     for row in inv_types:
         if row["published"] != "1":
             continue
@@ -1936,6 +2116,52 @@ def main():
             if RELOAD_TIME_ATTR in caps:
                 entry["reloadTime"] = caps[RELOAD_TIME_ATTR]
                 cap_key_counts["reloadTime"] += 1
+        # Additive base active repair emission (design
+        # section 3): eight keys append after the capacitor
+        # keys in the locked order — amounts in shield /
+        # armor / hull order, then markers grouped shield,
+        # armor, hull. The gate is the capacitor gate plus a
+        # self-repair effect: category 7 or 66 carrying a
+        # slot effect and one of {4, 4936, 27, 5275, 26}.
+        # Amount presence behind this gate *is* the
+        # self-repair classification — a remote repairer never
+        # gains an amount key even though the cache carries
+        # its amount row (the ungated 145/161/33 totals are
+        # rejected for exactly this reason). The markers
+        # make the 17 abyssal no-data repairers
+        # runtime-identifiable for excluded-with-count.
+        # `duration` (73) is shared with the capacitor slice
+        # and is not re-emitted; 1886 is never read.
+        if (
+            category_id in (7, 66)
+            and slot_effects
+            and (type_effects_set & REPAIR_SELF_EFFECT_IDS)
+        ):
+            repairs = repair_by_type.get(type_id, {})
+            if SHIELD_BONUS_ATTR in repairs:
+                entry["shieldBonus"] = repairs[SHIELD_BONUS_ATTR]
+                repair_key_counts["shieldBonus"] += 1
+            if ARMOR_DAMAGE_AMOUNT_ATTR in repairs:
+                entry["armorDamageAmount"] = repairs[ARMOR_DAMAGE_AMOUNT_ATTR]
+                repair_key_counts["armorDamageAmount"] += 1
+            if STRUCTURE_DAMAGE_AMOUNT_ATTR in repairs:
+                entry["structureDamageAmount"] = repairs[STRUCTURE_DAMAGE_AMOUNT_ATTR]
+                repair_key_counts["structureDamageAmount"] += 1
+            if SHIELD_BOOSTING_EFFECT in type_effects_set:
+                entry["shieldBoosting"] = True
+                repair_key_counts["shieldBoosting"] += 1
+            if FUELED_SHIELD_BOOSTING_EFFECT in type_effects_set:
+                entry["fueledShieldBoosting"] = True
+                repair_key_counts["fueledShieldBoosting"] += 1
+            if ARMOR_REPAIR_EFFECT in type_effects_set:
+                entry["armorRepair"] = True
+                repair_key_counts["armorRepair"] += 1
+            if FUELED_ARMOR_REPAIR_EFFECT in type_effects_set:
+                entry["fueledArmorRepair"] = True
+                repair_key_counts["fueledArmorRepair"] += 1
+            if STRUCTURE_REPAIR_EFFECT in type_effects_set:
+                entry["structureRepair"] = True
+                repair_key_counts["structureRepair"] += 1
         types.append(entry)
 
     types.sort(key=lambda entry: entry["typeId"])
@@ -2509,6 +2735,102 @@ def main():
                         f"non-slot category {entry['categoryId']} "
                         f"with slotEffects {entry['slotEffects']}"
                     )
+        # Base active repair invariants (sustained-tank-design
+        # section 3): every present amount is finite and
+        # >= 0.0 (not a bool); any of the eight keys implies
+        # category 7 or 66 carrying a slot effect and a
+        # self-repair effect; each amount key implies its
+        # family's marker; at most one amount key per row;
+        # markers are true-only. The loaded-paste key is on
+        # no row at all. Absence stays distinct from 0.0.
+        for key in (
+            "shieldBonus",
+            "armorDamageAmount",
+            "structureDamageAmount",
+        ):
+            if key in entry:
+                value = entry[key]
+                if (
+                    not isinstance(value, (int, float))
+                    or isinstance(value, bool)
+                    or not math.isfinite(float(value))
+                    or float(value) < 0
+                ):
+                    fail(
+                        f"type {entry['typeId']} {key}={value!r} "
+                        "is not finite and non-negative"
+                    )
+                if entry["categoryId"] not in (7, 66) or not entry["slotEffects"]:
+                    fail(
+                        f"type {entry['typeId']} {key} on "
+                        f"non-slot category {entry['categoryId']} "
+                        f"with slotEffects {entry['slotEffects']}"
+                    )
+        if (
+            "shieldBonus" in entry
+            and "shieldBoosting" not in entry
+            and "fueledShieldBoosting" not in entry
+        ):
+            fail(
+                f"type {entry['typeId']} shieldBonus without a "
+                "shield repair marker"
+            )
+        if (
+            "armorDamageAmount" in entry
+            and "armorRepair" not in entry
+            and "fueledArmorRepair" not in entry
+        ):
+            fail(
+                f"type {entry['typeId']} armorDamageAmount "
+                "without an armor repair marker"
+            )
+        if (
+            "structureDamageAmount" in entry
+            and "structureRepair" not in entry
+        ):
+            fail(
+                f"type {entry['typeId']} structureDamageAmount "
+                "without a structure repair marker"
+            )
+        amount_keys = [
+            key
+            for key in (
+                "shieldBonus",
+                "armorDamageAmount",
+                "structureDamageAmount",
+            )
+            if key in entry
+        ]
+        if len(amount_keys) > 1:
+            fail(
+                f"type {entry['typeId']} carries more than one "
+                f"repair amount key: {amount_keys}"
+            )
+        for key in (
+            "shieldBoosting",
+            "fueledShieldBoosting",
+            "armorRepair",
+            "fueledArmorRepair",
+            "structureRepair",
+        ):
+            if key in entry:
+                if entry[key] is not True:
+                    fail(
+                        f"type {entry['typeId']} {key}={entry[key]!r} "
+                        "is not true-only"
+                    )
+                if entry["categoryId"] not in (7, 66) or not entry["slotEffects"]:
+                    fail(
+                        f"type {entry['typeId']} {key} on "
+                        f"non-slot category {entry['categoryId']} "
+                        f"with slotEffects {entry['slotEffects']}"
+                    )
+        if "chargedArmorDamageMultiplier" in entry:
+            fail(
+                f"type {entry['typeId']} carries "
+                "chargedArmorDamageMultiplier, which is never "
+                "emitted (dry amounts only)"
+            )
 
     # Invariants the parser relies on (design sections 5.2, 6.3): no
     # shipment name may contain the header delimiters, and no published
@@ -2659,6 +2981,33 @@ def main():
                 f"expected {expected}"
             )
 
+    # Base active repair oracles (design section 8). A None
+    # expected value means the key must be absent from that
+    # row. Markers compare as booleans: the emitted value is
+    # JSON true.
+    for type_id, key, expected in REPAIR_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(f"active repair oracle type {type_id} missing")
+        if expected is None:
+            if key in entry:
+                fail(
+                    f"active repair oracle type {type_id} "
+                    f"carries {key}={entry[key]!r}, expected absent"
+                )
+        elif entry.get(key) != expected:
+            fail(
+                f"active repair oracle type {type_id} "
+                f"{key}={entry.get(key)!r}, expected {expected!r}"
+            )
+    for key, expected in REPAIR_EXPECTED_COUNTS.items():
+        actual = repair_key_counts[key]
+        if actual != expected:
+            fail(
+                f"active repair key {key} count {actual}, "
+                f"expected {expected}"
+            )
+
     duplicate_names = sum(
         1
         for count in Counter(
@@ -2777,6 +3126,16 @@ def main():
         f"cap_keys capacitorNeed={cap_key_counts['capacitorNeed']} "
         f"duration={cap_key_counts['duration']} "
         f"reloadTime={cap_key_counts['reloadTime']}"
+    )
+    print(
+        f"repair_keys shieldBonus={repair_key_counts['shieldBonus']} "
+        f"armorDamageAmount={repair_key_counts['armorDamageAmount']} "
+        f"structureDamageAmount={repair_key_counts['structureDamageAmount']} "
+        f"shieldBoosting={repair_key_counts['shieldBoosting']} "
+        f"fueledShieldBoosting={repair_key_counts['fueledShieldBoosting']} "
+        f"armorRepair={repair_key_counts['armorRepair']} "
+        f"fueledArmorRepair={repair_key_counts['fueledArmorRepair']} "
+        f"structureRepair={repair_key_counts['structureRepair']}"
     )
 
 
