@@ -196,7 +196,8 @@ pub fn ensure_logo_requested(state: &mut AppState, kind: ImageKind, id: i64) {
 /// rule as `ensure_logo_requested`: only a `NotRequested` key
 /// queues, a `Failed` icon never re-queues from the render path,
 /// and an unknown id queues nothing through the union guard
-/// (loaded saved fittings or the selected market type). Thin
+/// (loaded saved fittings, the loaded assets, or the selected
+/// market type). Thin
 /// delegation so calling views never spell `ImageKind` or a size.
 pub fn ensure_type_icon_requested(state: &mut AppState, type_id: i64) {
     ensure_logo_requested(state, ImageKind::Type, type_id);
@@ -292,10 +293,10 @@ pub fn show_type_icon(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::state::{CharacterDetailData, FittingsData, LoadState};
+    use crate::app::state::{AssetsData, CharacterDetailData, FittingsData, LoadState};
     use crate::esi::models::{
-        CharacterAttributes, CharacterClones, CharacterFitting, CharacterLocation, CharacterOnline,
-        CharacterShip, FittingItem, Standing,
+        AssetItem, CharacterAttributes, CharacterClones, CharacterFitting, CharacterLocation,
+        CharacterOnline, CharacterShip, FittingItem, Standing,
     };
     use crate::storage::repositories::CharacterRow;
 
@@ -965,6 +966,152 @@ mod tests {
         state.set_market_selection(12345, "Type Y".to_string());
         cache.prune(&state);
         assert_eq!(cache.len(), 0);
+    }
+
+    fn asset_fixture_state() -> AppState {
+        let mut state = state_with_ids(&[1, 2]);
+        // Active character 1 is set by set_active_character so the
+        // switch below resets assets the same way production does.
+        state.set_active_character(1);
+        let mut fitting_a = type_fixture_ship(587);
+        fitting_a.items = vec![type_fixture_item(2048), type_fixture_item(34)];
+        let mut fitting_b = type_fixture_ship(597);
+        fitting_b.items = vec![type_fixture_item(178)];
+        state.fittings = LoadState::Ready(FittingsData {
+            fittings: Ok(vec![fitting_a, fitting_b]),
+        });
+        state.assets = LoadState::Ready(AssetsData {
+            items: vec![
+                AssetItem {
+                    item_id: 1,
+                    type_id: 3300,
+                    quantity: 1,
+                    location_id: 60003760,
+                    ..Default::default()
+                },
+                AssetItem {
+                    item_id: 2,
+                    type_id: 587,
+                    quantity: 1,
+                    location_id: 60003760,
+                    ..Default::default()
+                },
+            ],
+            custom_names: std::collections::HashMap::new(),
+        });
+        state
+    }
+
+    #[test]
+    fn prune_keeps_held_asset_type_icon_within_one_load() {
+        let ctx = egui::Context::default();
+        // 3300 is held as an asset only; 587 is held as an asset and
+        // in a saved fitting (the overlap).
+        let mut state = asset_fixture_state();
+        let mut cache = PortraitImageCache::new();
+        state.portraits.insert(
+            (ImageKind::Type, 3300),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        state.portraits.insert(
+            (ImageKind::Type, 587),
+            PortraitState::Ready(ready_image(8, 8)),
+        );
+        let asset_only = cache
+            .texture(&ctx, &state, ImageKind::Type, 3300)
+            .expect("upload")
+            .id();
+        let overlap = cache
+            .texture(&ctx, &state, ImageKind::Type, 587)
+            .expect("upload")
+            .id();
+        assert_eq!(cache.len(), 2);
+
+        // Changing the assets search keeps both textures with the
+        // same handles (no re-upload).
+        state.assets_search = "3300".to_string();
+        cache.prune(&state);
+        assert_eq!(cache.len(), 2);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 3300)
+                .expect("kept")
+                .id(),
+            asset_only
+        );
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 587)
+                .expect("kept")
+                .id(),
+            overlap
+        );
+
+        // A fittings selection change also keeps both (whole-bundle
+        // retention).
+        state.fittings_selected_fitting_id = Some(597);
+        cache.prune(&state);
+        assert_eq!(cache.len(), 2);
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 3300)
+                .expect("kept")
+                .id(),
+            asset_only
+        );
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 587)
+                .expect("kept")
+                .id(),
+            overlap
+        );
+
+        // The character switch resets assets (and fittings) to
+        // Loading; reloading the fittings bundle for the new active
+        // character keeps the overlapping type known while the
+        // asset-only type drops on prune. The new bundle carries
+        // the same ship 587, so the overlap survives via the
+        // fittings arm, not the assets arm.
+        state.set_active_character(2);
+        let mut fitting_a = type_fixture_ship(587);
+        fitting_a.items = vec![type_fixture_item(2048), type_fixture_item(34)];
+        let mut fitting_b = type_fixture_ship(597);
+        fitting_b.items = vec![type_fixture_item(178)];
+        state.fittings = LoadState::Ready(FittingsData {
+            fittings: Ok(vec![fitting_a, fitting_b]),
+        });
+        assert!(!state.image_id_known(ImageKind::Type, 3300));
+        assert!(state.image_id_known(ImageKind::Type, 587));
+        cache.prune(&state);
+        assert_eq!(cache.len(), 1, "asset-only texture drops on switch");
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 587)
+                .expect("overlap kept")
+                .id(),
+            overlap,
+            "no re-upload for the overlapping type"
+        );
+        // Prune dropped only the texture, never the portrait state:
+        // the asset-only Ready image is still in state and would
+        // re-upload exactly once if its type became known again.
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 3300),
+            PortraitState::Ready(_)
+        ));
+        assert_eq!(cache.len(), 1);
+        // A second prune keeps the dropped texture dropped while
+        // unknown (no texture call for the unknown id here, just
+        // the retained overlap).
+        assert_eq!(
+            cache
+                .texture(&ctx, &state, ImageKind::Type, 587)
+                .expect("overlap still kept")
+                .id(),
+            overlap
+        );
+        assert_eq!(cache.len(), 1);
     }
 
     #[test]

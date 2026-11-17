@@ -3771,7 +3771,12 @@ impl eframe::App for MimirApp {
                 ),
                 View::Skills => ui::skills::show(ui, &mut self.state, &self.sde),
                 View::Wallet => ui::wallet::show(ui, &mut self.state, &self.resolver),
-                View::Assets => ui::assets::show(ui, &mut self.state, &self.resolver),
+                View::Assets => ui::assets::show(
+                    ui,
+                    &mut self.state,
+                    &self.resolver,
+                    &mut self.portrait_textures,
+                ),
                 View::Market => ui::market::show(
                     ui,
                     &mut self.state,
@@ -4725,6 +4730,22 @@ mod tests {
         }
     }
 
+    fn asset_fixture_state() -> AppState {
+        let mut state = two_character_state();
+        state.fittings = LoadState::Loading;
+        state.assets = LoadState::Ready(AssetsData {
+            items: vec![crate::esi::models::AssetItem {
+                item_id: 1,
+                type_id: 3300,
+                quantity: 1,
+                location_id: 60003760,
+                ..Default::default()
+            }],
+            custom_names: Default::default(),
+        });
+        state
+    }
+
     /// Two-character state with the design section 10 fittings
     /// fixture: fitting A (ship 587, items 2048 and 34) and
     /// fitting B (ship 597, item 178).
@@ -4807,6 +4828,43 @@ mod tests {
         // Selecting another item revokes X: a late landing for X
         // drops whole and writes nothing new.
         state.set_market_selection(12345, "Type Y".to_string());
+        assert!(!apply_portrait_landing(
+            &mut state,
+            ImageKind::Type,
+            3300,
+            Ok(test_image(4, 4))
+        ));
+        match state.portrait_state(ImageKind::Type, 3300) {
+            PortraitState::Ready(image) => {
+                assert_eq!(image.width(), 8, "dropped landing must write nothing");
+                assert_eq!(image.height(), 8);
+            }
+            other => panic!("dropped landing must leave the earlier image, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn asset_type_icon_landing_drops_after_switch() {
+        // A (3300) is held as an asset and in no saved fitting:
+        // only the loaded assets authorize its type icon.
+        let mut state = asset_fixture_state();
+        assert!(apply_portrait_landing(
+            &mut state,
+            ImageKind::Type,
+            3300,
+            Ok(test_image(8, 8))
+        ));
+        match state.portrait_state(ImageKind::Type, 3300) {
+            PortraitState::Ready(image) => {
+                assert_eq!(image.width(), 8);
+                assert_eq!(image.height(), 8);
+            }
+            other => panic!("held asset type must land Ready, got {other:?}"),
+        }
+        // Mid-fetch switch: the assets bundle resets to Loading,
+        // so a late landing for the same type drops whole and
+        // writes nothing new.
+        state.set_active_character(2);
         assert!(!apply_portrait_landing(
             &mut state,
             ImageKind::Type,
