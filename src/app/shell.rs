@@ -853,6 +853,11 @@ impl MimirApp {
         // section 9): identical in demo and live modes, never
         // refetched, and independent of characters and network.
         state.exploration = exploration_load_state(ExplorationRef::load_bundled());
+        // Bundled skill catalogue ids as a fetch-authorization
+        // source (skill-icons design section 4): installed once
+        // with the SDE; an SDE that failed to load installs an
+        // empty set and authorizes nothing.
+        state.install_skill_catalogue_type_ids(&sde);
         let mut resolver = if demo {
             crate::demo::data::demo_resolver().unwrap_or_else(|e| {
                 tracing::warn!("[DEMO] demo resolver failed: {}", e);
@@ -3769,7 +3774,9 @@ impl eframe::App for MimirApp {
                     &self.resolver,
                     &mut self.portrait_textures,
                 ),
-                View::Skills => ui::skills::show(ui, &mut self.state, &self.sde),
+                View::Skills => {
+                    ui::skills::show(ui, &mut self.state, &self.sde, &mut self.portrait_textures)
+                }
                 View::Wallet => ui::wallet::show(ui, &mut self.state, &self.resolver),
                 View::Assets => ui::assets::show(
                     ui,
@@ -4877,6 +4884,71 @@ mod tests {
                 assert_eq!(image.height(), 8);
             }
             other => panic!("dropped landing must leave the earlier image, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn skill_type_icon_landing_survives_character_switch() {
+        // 3300 (Gunnery) is a bundled catalogue skill type only:
+        // in no saved fitting, held asset, or market selection,
+        // so only the catalogue arm authorizes it — the opposite
+        // locked outcome to
+        // `asset_type_icon_landing_drops_after_switch`.
+        let sde = crate::names::sde::Sde::load_bundled().expect("bundled SDE loads");
+        let mut state = two_character_state();
+        state.install_skill_catalogue_type_ids(&sde);
+        // 999999 is in no catalogue: landing drops whole before
+        // and after the switch and writes nothing.
+        assert!(!apply_portrait_landing(
+            &mut state,
+            ImageKind::Type,
+            999999,
+            Ok(test_image(8, 8))
+        ));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 999999),
+            PortraitState::NotRequested
+        ));
+        assert!(!state.portraits.contains_key(&(ImageKind::Type, 999999)));
+        assert!(apply_portrait_landing(
+            &mut state,
+            ImageKind::Type,
+            3300,
+            Ok(test_image(8, 8))
+        ));
+        match state.portrait_state(ImageKind::Type, 3300) {
+            PortraitState::Ready(image) => {
+                assert_eq!(image.width(), 8);
+                assert_eq!(image.height(), 8);
+            }
+            other => panic!("catalogue type must land Ready, got {other:?}"),
+        }
+        // Mid-fetch switch never revokes the static arm, so a
+        // late landing still replaces the image.
+        state.set_active_character(2);
+        assert!(!apply_portrait_landing(
+            &mut state,
+            ImageKind::Type,
+            999999,
+            Ok(test_image(4, 4))
+        ));
+        assert!(!state.portraits.contains_key(&(ImageKind::Type, 999999)));
+        assert!(apply_portrait_landing(
+            &mut state,
+            ImageKind::Type,
+            3300,
+            Ok(test_image(4, 4))
+        ));
+        match state.portrait_state(ImageKind::Type, 3300) {
+            PortraitState::Ready(image) => {
+                assert_eq!(
+                    image.width(),
+                    4,
+                    "landing after switch must replace, not drop"
+                );
+                assert_eq!(image.height(), 4);
+            }
+            other => panic!("landing after switch must replace the image, got {other:?}"),
         }
     }
 

@@ -5,6 +5,9 @@ use std::collections::BTreeMap;
 
 use chrono::Utc;
 
+use super::portraits::{
+    ensure_type_icon_requested, show_type_icon, PortraitImageCache, TYPE_ICON_PX,
+};
 use super::widgets;
 use crate::app::state::{AppState, LoadState, SkillPlanConfirm, SkillPlanEditor};
 use crate::esi::models::{CharacterAttributes, SkillQueueItem};
@@ -12,6 +15,23 @@ use crate::names::sde::{Sde, SdeSkillType};
 use crate::skills::plans::{normalize_plan_text, SkillPlan, SkillPlanAction, SkillPlanEntry};
 use crate::skills::prereqs::{plan_prerequisite_warnings, unmet_prerequisites, UnmetPrerequisite};
 use crate::skills::training::{plan_progress, EntryEstimate, PlanProgress, TrainedSkill};
+
+/// Global rendered-row budget for the skill catalogue: at
+/// most this many skill rows render (and therefore ensure icons)
+/// per frame, matching the assets view's global cap. The
+/// budget is spent inside the collapsing bodies, so a collapsed
+/// group renders and ensures nothing.
+pub const SKILLS_CATALOGUE_RENDER_MAX: usize = 100;
+
+/// One catalogue line: a skill row carries its bundled skill
+/// type id for the icon; a prerequisite line carries none.
+struct CatalogueRow {
+    /// `Some` for a skill row (icon + name), `None` for its
+    /// prerequisite line (text only). State-only: never
+    /// formatted into a rendered string, never logged.
+    skill_type_id: Option<i64>,
+    text: String,
+}
 
 /// Queue sorted into training order (input order is not trusted).
 pub fn sorted_queue(queue: &[SkillQueueItem]) -> Vec<&SkillQueueItem> {
@@ -310,9 +330,10 @@ fn open_edit_editor(state: &mut AppState, character_id: i64, plan: &SkillPlan) {
     state.skill_plan_confirm = None;
 }
 
-pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde) {
+pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde, cache: &mut PortraitImageCache) {
     ui.heading("Skills");
     widgets::mode_notice(ui, state.demo, state.offline);
+    cache.prune(state);
     if state.active_character().is_none() {
         widgets::no_character_panel(ui);
         return;
@@ -428,17 +449,27 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde) {
                 .max_height(320.0)
                 .show(ui, |ui| {
                     let mut any_match = false;
+                    let mut total_filtered: usize = 0;
+                    let mut remaining = SKILLS_CATALOGUE_RENDER_MAX;
+                    let mut cap_suppressed = false;
                     for group in &sde.groups {
-                        let mut rows: Vec<String> = Vec::new();
+                        let mut rows: Vec<CatalogueRow> = Vec::new();
                         for skill in sde.types.iter().filter(|t| t.group_id == group.group_id) {
                             if !widgets::matches_search(&skill.type_name, &query) {
                                 continue;
                             }
                             any_match = true;
+                            total_filtered += 1;
                             let level = levels.get(&skill.type_id).copied().unwrap_or(0);
-                            rows.push(format!("{} — trained level {}", skill.type_name, level));
+                            rows.push(CatalogueRow {
+                                skill_type_id: Some(skill.type_id),
+                                text: format!("{} — trained level {}", skill.type_name, level),
+                            });
                             if let Some(line) = prerequisite_line(sde, skill) {
-                                rows.push(line);
+                                rows.push(CatalogueRow {
+                                    skill_type_id: None,
+                                    text: line,
+                                });
                             }
                         }
                         if rows.is_empty() {
@@ -447,10 +478,43 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, sde: &Sde) {
                         egui::CollapsingHeader::new(&group.group_name)
                             .default_open(!query.is_empty())
                             .show(ui, |ui| {
+                                let mut skill_rendered = false;
                                 for row in &rows {
-                                    ui.label(row);
+                                    match row.skill_type_id {
+                                        Some(type_id) if remaining > 0 => {
+                                            remaining -= 1;
+                                            skill_rendered = true;
+                                            ensure_type_icon_requested(state, type_id);
+                                            ui.horizontal(|ui| {
+                                                show_type_icon(
+                                                    ui,
+                                                    cache,
+                                                    state,
+                                                    type_id,
+                                                    TYPE_ICON_PX,
+                                                );
+                                                ui.label(&row.text);
+                                            });
+                                        }
+                                        Some(_) => {
+                                            cap_suppressed = true;
+                                            skill_rendered = false;
+                                        }
+                                        None => {
+                                            if skill_rendered {
+                                                ui.label(&row.text);
+                                            }
+                                        }
+                                    }
                                 }
                             });
+                    }
+                    if cap_suppressed {
+                        ui.label(format!(
+                            "Showing {} of {} skills.",
+                            total_filtered.min(SKILLS_CATALOGUE_RENDER_MAX),
+                            total_filtered
+                        ));
                     }
                     if !any_match && !sde.groups.is_empty() {
                         widgets::empty_panel(ui, "No skills match the search.");
@@ -998,6 +1062,9 @@ fn show_skill_picker(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::state::{PortraitState, SkillsData};
+    use crate::portraits::ImageKind;
+    use crate::storage::repositories::CharacterRow;
 
     fn item(position: i32, skill: i64) -> SkillQueueItem {
         SkillQueueItem {
@@ -1377,5 +1444,176 @@ mod tests {
             prerequisite_count_line(&warnings),
             Some("Prerequisite warnings: 1 of 1 entries have unmet prerequisites.".to_string())
         );
+    }
+
+    #[test]
+    fn skills_catalogue_render_max_is_100() {
+        assert_eq!(SKILLS_CATALOGUE_RENDER_MAX, 100);
+    }
+
+    /// Active character, `Ready` skills with an empty trained list
+    /// and an empty queue, catalogue ids installed: exactly the
+    /// test fixture the design section 7 mandates.
+    fn ready_catalogue_state(sde: &Sde) -> AppState {
+        let mut state = AppState::new(false);
+        state.characters = vec![CharacterRow {
+            character_id: 1,
+            name: "Test Pilot".to_string(),
+            corporation_id: 1000166,
+            alliance_id: None,
+            is_active: false,
+        }];
+        state.set_active_character(1);
+        state.skills = LoadState::Ready(SkillsData::default());
+        state.install_skill_catalogue_type_ids(sde);
+        state
+    }
+
+    #[test]
+    fn skills_show_queues_icons_for_rendered_rows_only() {
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+
+        // No active character: show returns at the no-character
+        // panel, before the catalogue.
+        {
+            let mut state = AppState::new(false);
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert!(state.portrait_requests.is_empty());
+            assert!(cache.is_empty());
+        }
+
+        // Empty search: every group is collapsed on first store,
+        // so nothing renders and nothing queues.
+        {
+            let mut state = ready_catalogue_state(&sde);
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert!(state.portrait_requests.is_empty());
+            assert!(cache.is_empty());
+        }
+
+        // "e" matches 447 bundled skills: exactly one full
+        // 100-row window across the open groups, proving the
+        // budget is global (a per-group budget would queue
+        // hundreds here) and that the 466 `Requires:` lines
+        // ensure nothing.
+        {
+            let mut state = ready_catalogue_state(&sde);
+            state.skill_search = "e".to_string();
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests.len(), 100);
+            let mut queued_ids: Vec<i64> =
+                state.portrait_requests.iter().map(|(_, id)| *id).collect();
+            queued_ids.sort_unstable();
+            queued_ids.dedup();
+            assert_eq!(queued_ids.len(), 100, "queued keys must be distinct");
+            // 3300 (Gunnery) is the first row in the walk, 3329
+            // (Minmatar Frigate) the 100th; 30650 (Amarr
+            // Strategic Cruiser, walk position 151) is beyond
+            // the cap and not among the first 'e' matches.
+            assert!(state.portrait_requests.contains(&(ImageKind::Type, 3300)));
+            assert!(state.portrait_requests.contains(&(ImageKind::Type, 3329)));
+            assert!(!state.portrait_requests.contains(&(ImageKind::Type, 30650)));
+            assert!(cache.is_empty(), "no Ready image means no upload");
+
+            // Every queued key has left NotRequested; a second
+            // frame queues nothing new.
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests.len(), 100);
+            assert!(cache.is_empty());
+
+            // Filter before the cap: searching for the
+            // beyond-cap row's own name reveals it and queues
+            // exactly one additional key.
+            state.skill_search = "Amarr Strategic Cruiser".to_string();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests.len(), 101);
+            assert!(state.portrait_requests.contains(&(ImageKind::Type, 30650)));
+        }
+
+        // A Failed catalogue icon never re-queues: seeding
+        // (Type, 3300) as Failed leaves the queue at the other
+        // 99 rendered rows.
+        {
+            let mut state = ready_catalogue_state(&sde);
+            state.skill_search = "e".to_string();
+            state
+                .portraits
+                .insert((ImageKind::Type, 3300), PortraitState::Failed);
+            let mut cache = PortraitImageCache::new();
+            let ctx = egui::Context::default();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(ui, &mut state, &sde, &mut cache);
+                });
+            });
+            assert_eq!(state.portrait_requests.len(), 99);
+            assert!(!state.portrait_requests.contains(&(ImageKind::Type, 3300)));
+            assert!(matches!(
+                state.portrait_state(ImageKind::Type, 3300),
+                PortraitState::Failed
+            ));
+            assert!(cache.is_empty());
+        }
+    }
+
+    #[test]
+    fn skills_demo_queues_catalogue_types_but_never_ready() {
+        use crate::demo::data::seed_demo_state;
+
+        // Demo installs Ready skills from bundled data and the
+        // same bundled catalogue; the shell drain refusal
+        // guarantees none spawn in demo, so the queued keys stay
+        // Loading and never become Ready.
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        let mut state = AppState::new(true);
+        seed_demo_state(&mut state);
+        assert!(state.skills.is_ready(), "demo must install Ready skills");
+        state.install_skill_catalogue_type_ids(&sde);
+        state.skill_search = "e".to_string();
+        let mut cache = PortraitImageCache::new();
+        let ctx = egui::Context::default();
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show(ui, &mut state, &sde, &mut cache);
+            });
+        });
+        assert_eq!(state.portrait_requests.len(), 100);
+        let mut queued_ids: Vec<i64> = state.portrait_requests.iter().map(|(_, id)| *id).collect();
+        queued_ids.sort_unstable();
+        queued_ids.dedup();
+        assert_eq!(queued_ids.len(), 100, "queued keys must be distinct");
+        assert!(cache.is_empty(), "blank-box path uploads nothing in demo");
+        for (_, id) in &state.portrait_requests {
+            assert!(!matches!(
+                state.portrait_state(ImageKind::Type, *id),
+                PortraitState::Ready(_)
+            ));
+        }
     }
 }
