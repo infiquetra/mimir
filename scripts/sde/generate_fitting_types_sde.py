@@ -82,8 +82,13 @@ per-type keys on category 87 (`fighterSquadronMaxSize` 2215,
 category 6, and the sparse boolean ability markers
 `fighterAbilityAttackM` (effect 6465) and
 `fighterAbilityMissiles` (effect 6431) on category 87.
-Catalogue keys are the dogma names verbatim (`speed`, never
-Flutter's `rateOfFire`). Dogma 212, 54, 158, and 160 are never
+Turret ranges (docs/volley-ranges-design.md section 3) append
+two further keys after the DPS keys in the locked order:
+`maxRange` (dogma 54) then `falloff` (dogma 158), sparse on
+category 7 rows only (drones deliberately excluded — nothing
+reads a drone's ranges). Catalogue keys are the dogma names
+verbatim (`speed`, never Flutter's `rateOfFire`; `maxRange`,
+never Flutter's `optimalRange`). Dogma 212 and 160 are never
 read here.
 """
 
@@ -272,12 +277,14 @@ BASE_WARP_SPEED_ATTR = 1281
 # "fighterHeavySlots". Catalogue keys are the dogma names
 # verbatim. Dogma 212 "missileDamageMultiplier" is a
 # character-level ballistics bonus input and is never read;
-# 54/158/160 feed only Flutter's volley-weighted display and
-# are never read here either.
+# 54 "maxRange" (unit 1 metre) and 158 "falloff" (unit 1
+# metre) are read here for the base volley/turret-range
+# slice (docs/volley-ranges-design.md section 3); 160
+# "trackingSpeed" is never read.
 DPS_ATTR_IDS = {
     51, 64, 114, 116, 117, 118, 2215, 2212, 2213, 2214, 2226, 2227,
     2228, 2229, 2230, 2233, 2130, 2131, 2132, 2133, 2134, 2182, 2216,
-    2217, 2218, 2219,
+    2217, 2218, 2219, 54, 158,
 }
 SPEED_ATTR = 51
 DAMAGE_MULTIPLIER_ATTR = 64
@@ -305,6 +312,8 @@ FIGHTER_TUBES_ATTR = 2216
 FIGHTER_LIGHT_SLOTS_ATTR = 2217
 FIGHTER_SUPPORT_SLOTS_ATTR = 2218
 FIGHTER_HEAVY_SLOTS_ATTR = 2219
+MAX_RANGE_ATTR = 54
+FALLOFF_ATTR = 158
 
 # Fighter ability markers (docs/fitting-dps-design.md section
 # 2.5): dogmaEffects.jsonl _key 6465 "fighterAbilityAttackM"
@@ -871,10 +880,33 @@ DPS_ORACLES = [
     (40568, "fighterAbilityMissiles", None),
     (587, "fighterTubes", None),
     (587, "speed", None),
+    # Turret ranges (docs/volley-ranges-design.md section 3.2):
+    # 484, 2889, 565 present values; 47272 Light Entropic
+    # Disintegrator I 54-only present/absent pair; 447 Warp
+    # Scrambler I present-zero falloff (an inert non-weapon
+    # row: no `speed`, never a weapon candidate); launcher
+    # 2404, drone 2488, and ship 587 absences.
+    (484, "maxRange", 800.0),
+    (484, "falloff", 4300.0),
+    (2889, "maxRange", 1200.0),
+    (2889, "falloff", 5160.0),
+    (565, "maxRange", 12000.0),
+    (565, "falloff", 6000.0),
+    (47272, "maxRange", 6000.0),
+    (447, "maxRange", 7500.0),
+    (447, "falloff", 0.0),
+    (47272, "falloff", None),
+    (2404, "maxRange", None),
+    (2404, "falloff", None),
+    (2488, "maxRange", None),
+    (2488, "falloff", None),
+    (587, "maxRange", None),
+    (587, "falloff", None),
 ]
 
-# Expected damage-per-second key counts (design section 3.1,
-# scripted over the cache joined to the catalogue). DEVIATION:
+# Expected damage-per-second key counts (fitting-dps-design
+# section 3.1 and volley-ranges-design section 3.1, scripted
+# over the cache joined to the catalogue). DEVIATION:
 # `thermalDamage` is 897, not the design's 898 — the design's
 # scripted count includes published category-8 type 53343 Yoiul
 # Festival Snowball, whose sole thermal row is -10.0, which
@@ -910,6 +942,8 @@ DPS_EXPECTED_COUNTS = {
     "fighterHeavySlots": 7,
     "fighterAbilityAttackM": 54,
     "fighterAbilityMissiles": 56,
+    "maxRange": 1157,
+    "falloff": 681,
 }
 
 _STACKED_SUFFIX_RE = re.compile(r" x[0-9]+$")
@@ -1741,6 +1775,19 @@ def main():
             if FIGHTER_HEAVY_SLOTS_ATTR in dps:
                 entry["fighterHeavySlots"] = dps[FIGHTER_HEAVY_SLOTS_ATTR]
                 dps_key_counts["fighterHeavySlots"] += 1
+        # Additive turret range emission (volley-ranges-design
+        # section 3.1): `maxRange` then `falloff`, sparse on
+        # category 7 rows only, appended after the DPS
+        # emission so they are the last keys in any row that
+        # carries them. Drones (category 18) are excluded
+        # deliberately: nothing reads a drone's 54 or 158.
+        if category_id == 7:
+            if MAX_RANGE_ATTR in dps:
+                entry["maxRange"] = dps[MAX_RANGE_ATTR]
+                dps_key_counts["maxRange"] += 1
+            if FALLOFF_ATTR in dps:
+                entry["falloff"] = dps[FALLOFF_ATTR]
+                dps_key_counts["falloff"] += 1
         types.append(entry)
 
     types.sort(key=lambda entry: entry["typeId"])
@@ -2173,13 +2220,14 @@ def main():
                     fail(
                         f"non-ship type {entry['typeId']} carries {key}"
                     )
-        # Damage-per-second invariants (design section 3.3):
+        # Damage-per-second invariants (design sections 3.3):
         # every present DPS value is finite and >= 0.0 (not a
         # bool); `speed`/`damageMultiplier` appear only on
         # category 7 or 18 rows; the four damage components
         # only on category 8 or 18 rows; the fighter per-type
         # keys and both boolean markers only on category-87
         # rows; the four tube/slot keys only on category-6
+        # rows; the two turret range keys only on category-7
         # rows. Absence stays distinct from 0.0.
         for key in (
             "speed",
@@ -2208,6 +2256,8 @@ def main():
             "fighterLightSlots",
             "fighterSupportSlots",
             "fighterHeavySlots",
+            "maxRange",
+            "falloff",
         ):
             if key in entry:
                 value = entry[key]
@@ -2277,6 +2327,15 @@ def main():
             if key in entry and entry["categoryId"] != 6:
                 fail(
                     f"non-ship type {entry['typeId']} carries {key}"
+                )
+        # Turret range invariants (volley-ranges-design
+        # section 3.3): `maxRange`/`falloff` appear only on
+        # category-7 rows (absence is allowed, never
+        # required). Absence stays distinct from 0.0.
+        for key in ("maxRange", "falloff"):
+            if key in entry and entry["categoryId"] != 7:
+                fail(
+                    f"non-module type {entry['typeId']} carries {key}"
                 )
 
     # Invariants the parser relies on (design sections 5.2, 6.3): no
@@ -2500,6 +2559,8 @@ def main():
         f"fighterHeavySlots={dps_key_counts['fighterHeavySlots']} "
         f"fighterAbilityAttackM={dps_key_counts['fighterAbilityAttackM']} "
         f"fighterAbilityMissiles={dps_key_counts['fighterAbilityMissiles']} "
+        f"maxRange={dps_key_counts['maxRange']} "
+        f"falloff={dps_key_counts['falloff']} "
         f"skipped_negative_rows={skipped_negative_dps_rows}"
     )
 
