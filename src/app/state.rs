@@ -1142,6 +1142,11 @@ impl AppState {
                 ids
             })
             .unwrap_or_default();
+        // Selected-market-type source (design market-icon section 3):
+        // the retain must see the pre-removal selection exactly as
+        // the detail lines do; the selection itself survives the
+        // active-removal reset below.
+        let market_type_id = self.market_selected_type_id;
         let characters = &self.characters;
         let logo_known = |kind: &ImageKind, id: i64| match kind {
             ImageKind::Character => id != character_id,
@@ -1158,7 +1163,7 @@ impl AppState {
             ImageKind::Faction => standing_pairs
                 .iter()
                 .any(|(from_type, from_id)| *from_id == id && from_type == "faction"),
-            ImageKind::Type => fitting_type_ids.contains(&id),
+            ImageKind::Type => fitting_type_ids.contains(&id) || market_type_id == Some(id),
         };
         self.portraits.retain(|(kind, id), _| logo_known(kind, *id));
         self.portrait_requests
@@ -1295,12 +1300,13 @@ impl AppState {
     /// entry for `Corporation`, a row `alliance_id` or the loaded
     /// public info for `Alliance`, the loaded standings only for
     /// `Faction`, and the active character's loaded saved fittings
-    /// (ship and fitted items) for `Type`. This is the single
-    /// definition of "this id may be fetched", shared by
-    /// `request_portrait`, the shell landing, and texture prune.
-    /// The dashboard is deliberately not consulted: every landing
-    /// writes the same info to it and to `character_detail`
-    /// together, so it can know nothing the other two lack.
+    /// (ship and fitted items) or the selected market type for
+    /// `Type`. This is the single definition of "this id may be
+    /// fetched", shared by `request_portrait`, the shell landing,
+    /// and texture prune. The dashboard is deliberately not
+    /// consulted: every landing writes the same info to it and to
+    /// `character_detail` together, so it can know nothing the
+    /// other two lack.
     pub fn image_id_known(&self, kind: ImageKind, id: i64) -> bool {
         match kind {
             ImageKind::Character => self.characters.iter().any(|c| c.character_id == id),
@@ -1320,7 +1326,9 @@ impl AppState {
                         .is_some_and(|info| info.alliance_id == Some(id))
             }
             ImageKind::Faction => self.standing_known(kind, id),
-            ImageKind::Type => self.fitting_type_known(id),
+            ImageKind::Type => {
+                self.fitting_type_known(id) || self.market_selected_type_id == Some(id)
+            }
         }
     }
 
@@ -3261,6 +3269,132 @@ mod tests {
         assert!(matches!(state.fittings, LoadState::Loading));
         assert!(!state.image_id_known(ImageKind::Type, 587));
         assert!(!state.image_id_known(ImageKind::Type, 2048));
+    }
+
+    #[test]
+    fn market_selection_authorizes_only_the_selected_type() {
+        // X (3300) is not in any saved fitting: only the selection
+        // arm can authorize it (design market-icon section 2).
+        let mut state = fitting_type_fixture_state();
+        state.fittings = LoadState::Loading;
+        state.set_market_selection(3300, "Type X".to_string());
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+        state.request_portrait(ImageKind::Type, 3300);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 3300),
+            PortraitState::Loading
+        ));
+        state.request_portrait(ImageKind::Type, 3300);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+        // An unselected type and a candidate-only type authorize
+        // nothing and queue nothing.
+        assert!(!state.image_id_known(ImageKind::Type, 99999999));
+        state.request_portrait(ImageKind::Type, 99999999);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+        assert!(!state.portraits.contains_key(&(ImageKind::Type, 99999999)));
+        state.market_candidates = vec![UniverseName {
+            id: 12345,
+            name: "Candidate".to_string(),
+            category: "inventory_type".to_string(),
+        }];
+        assert!(!state.image_id_known(ImageKind::Type, 12345));
+        state.request_portrait(ImageKind::Type, 12345);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+        assert!(!state.portraits.contains_key(&(ImageKind::Type, 12345)));
+        // Selecting Y flips X off and Y on.
+        state.set_market_selection(12345, "Type Y".to_string());
+        assert!(!state.image_id_known(ImageKind::Type, 3300));
+        assert!(state.image_id_known(ImageKind::Type, 12345));
+        // Non-positive ids queue nothing in any setup.
+        state.request_portrait(ImageKind::Type, 0);
+        state.request_portrait(ImageKind::Type, -1);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+    }
+
+    #[test]
+    fn market_selection_absence_authorizes_nothing() {
+        // No selection, and search text alone, authorize no Type
+        // fetch when the fittings bundle does not back the id.
+        let mut state = fitting_type_fixture_state();
+        state.fittings = LoadState::Loading;
+        assert_eq!(state.market_selected_type_id, None);
+        assert!(!state.image_id_known(ImageKind::Type, 3300));
+        state.request_portrait(ImageKind::Type, 3300);
+        assert!(state.portrait_requests.is_empty());
+        assert!(!state.portraits.contains_key(&(ImageKind::Type, 3300)));
+        // Search text is only a query: it never becomes a selected
+        // id, even when it looks numeric.
+        state.market_search = "3300".to_string();
+        assert_eq!(state.market_selected_type_id, None);
+        assert!(!state.image_id_known(ImageKind::Type, 3300));
+        state.request_portrait(ImageKind::Type, 3300);
+        assert!(state.portrait_requests.is_empty());
+        assert!(!state.portraits.contains_key(&(ImageKind::Type, 3300)));
+        // A fitting-known type stays authorized with no selection.
+        let state = fitting_type_fixture_state();
+        assert_eq!(state.market_selected_type_id, None);
+        assert!(state.image_id_known(ImageKind::Type, 587));
+    }
+
+    #[test]
+    fn market_selection_survives_switch_while_fitting_arm_revokes() {
+        let mut state = fitting_type_fixture_state();
+        state.set_market_selection(3300, "Type X".to_string());
+        assert!(state.image_id_known(ImageKind::Type, 587));
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+        state.set_active_character(2);
+        assert!(matches!(state.fittings, LoadState::Loading));
+        assert!(!state.image_id_known(ImageKind::Type, 587));
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+    }
+
+    #[test]
+    fn removing_character_retains_selected_market_icon() {
+        // Three characters so neither removal hits the
+        // last-removal branch (which clears all portraits).
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two"), row(3, "Three")];
+        state.set_active_character(1);
+        let mut fitting_a = fitting_ship(587);
+        fitting_a.items = vec![fitting_item(2048), fitting_item(34)];
+        state.fittings = LoadState::Ready(FittingsData {
+            fittings: Ok(vec![fitting_a]),
+        });
+        state.set_market_selection(3300, "Type X".to_string());
+        state.portraits.insert(
+            (ImageKind::Type, 3300),
+            portrait_state_with_dimensions(8, 8),
+        );
+        state.portrait_requests = vec![(ImageKind::Type, 3300)];
+        // Removing a non-active character keeps the icon.
+        state.remove_character(2);
+        assert_eq!(state.market_selected_type_id, Some(3300));
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 3300),
+            PortraitState::Ready(_)
+        ));
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+        // Removing the active character loses the fittings bundle
+        // but keeps the selection and the entry through the
+        // retain closure (design section 3).
+        state.portraits.insert(
+            (ImageKind::Type, 2048),
+            portrait_state_with_dimensions(8, 8),
+        );
+        state.portrait_requests.push((ImageKind::Type, 2048));
+        state.remove_character(1);
+        assert_eq!(state.active_character_id, Some(3));
+        assert_eq!(state.market_selected_type_id, Some(3300));
+        assert!(matches!(state.fittings, LoadState::Loading));
+        assert!(!state.image_id_known(ImageKind::Type, 2048));
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 3300),
+            PortraitState::Ready(_)
+        ));
+        assert!(state.portrait_requests.contains(&(ImageKind::Type, 3300)));
     }
 
     #[test]
