@@ -19,6 +19,7 @@ use crate::invention_calculator::{
 use crate::names::exploration_ref::{EffectFamily, ExplorationRef};
 use crate::names::sde::Sde;
 use crate::portraits::ImageKind;
+use crate::reaction_calculator::{DEFAULT_FACILITY_BONUS_PERCENT, DEFAULT_RUNS};
 use crate::skills::plans::{SkillPlan, SkillPlanAction};
 use crate::storage::repositories::CharacterRow;
 use crate::trade_calculator::{DEFAULT_BROKER_FEE_PERCENT, DEFAULT_SALES_TAX_PERCENT};
@@ -788,6 +789,21 @@ pub struct AppState {
     pub industry_invention_datacore_skill1: String,
     pub industry_invention_datacore_skill2: String,
     pub industry_invention_decryptor_multiplier: String,
+    // View-local reaction calculator drafts (industry reaction
+    // design section 5): session-only String drafts for the
+    // Industry view's Reaction Calculator block. The selection
+    // is an internal catalogue key that is never rendered or
+    // logged. Seeded from the pure module's starting-value
+    // constants in `AppState::new`; the derived Default would
+    // leave the numeric drafts empty, and an empty field must
+    // mean "reader cleared it", not the app's starting state.
+    // Character switches, blueprint filtering, industry
+    // refreshes, and demo seeding never touch them; nothing is
+    // stored.
+    pub industry_reaction_search: String,
+    pub industry_reaction_selected_type_id: Option<i64>,
+    pub industry_reaction_runs: String,
+    pub industry_reaction_facility_bonus_percent: String,
     // View-local planetary UI state. The selected planet lives
     // outside `LoadState<PlanetaryData>` so a failed detail fetch
     // cannot lose the selection.
@@ -891,6 +907,15 @@ impl AppState {
             industry_invention_datacore_skill1: DEFAULT_SKILL_LEVEL.to_string(),
             industry_invention_datacore_skill2: DEFAULT_SKILL_LEVEL.to_string(),
             industry_invention_decryptor_multiplier: format!("{:.1}", DEFAULT_DECRYPTOR_MULTIPLIER),
+            // Reaction calculator drafts seed from the pure module's
+            // starting values (design section 5): empty means "reader
+            // cleared it", not the starting state. Search starts
+            // empty and selection starts empty under Default.
+            industry_reaction_runs: DEFAULT_RUNS.to_string(),
+            industry_reaction_facility_bonus_percent: format!(
+                "{:.1}",
+                DEFAULT_FACILITY_BONUS_PERCENT
+            ),
             // Effect strength defaults to 1 (design section 7.1) and
             // is clamped to 1..=6 by the view on every use.
             exploration_selected_strength: 1,
@@ -2100,6 +2125,39 @@ mod tests {
         assert_eq!(state.industry_invention_datacore_skill1, "3");
         assert_eq!(state.industry_invention_datacore_skill2, "2");
         assert_eq!(state.industry_invention_decryptor_multiplier, "0.6");
+    }
+
+    #[test]
+    fn reaction_calculator_drafts_seed_from_pure_module_constants() {
+        for demo in [false, true] {
+            let state = AppState::new(demo);
+            assert_eq!(state.industry_reaction_search, "");
+            assert_eq!(state.industry_reaction_selected_type_id, None);
+            assert_eq!(state.industry_reaction_runs, DEFAULT_RUNS.to_string());
+            assert_eq!(state.industry_reaction_runs, "1");
+            assert_eq!(
+                state.industry_reaction_facility_bonus_percent,
+                format!("{:.1}", DEFAULT_FACILITY_BONUS_PERCENT)
+            );
+            assert_eq!(state.industry_reaction_facility_bonus_percent, "0.0");
+        }
+    }
+
+    #[test]
+    fn reaction_calculator_drafts_survive_character_switch() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.industry_reaction_search = "carbon".to_string();
+        state.industry_reaction_selected_type_id = Some(57490);
+        state.industry_reaction_runs = "10".to_string();
+        state.industry_reaction_facility_bonus_percent = "4.8".to_string();
+        state.set_active_character(1);
+        state.set_active_character(2);
+        assert_eq!(state.industry_reaction_search, "carbon");
+        assert_eq!(state.industry_reaction_selected_type_id, Some(57490));
+        assert_eq!(state.industry_reaction_runs, "10");
+        assert_eq!(state.industry_reaction_facility_bonus_percent, "4.8");
     }
 
     #[test]
