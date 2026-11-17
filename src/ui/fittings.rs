@@ -29,6 +29,7 @@ use crate::fitting::ship_resistances::{
     ship_resistances, ResistLayer, ShipResistances, ShipResistancesOutcome,
 };
 use crate::fitting::ship_stats::{ship_base_stats, ShipBaseStats, ShipBaseStatsOutcome};
+use crate::fitting::slot_layout::{slot_layout, SlotBudget, SlotLayout, SlotLayoutOutcome};
 use crate::fitting::write_map::{build_save_request, DropReason, DroppedFittingItem, SaveMapping};
 use crate::names::fitting_types::FittingTypes;
 use crate::names::resolver::NameResolver;
@@ -1786,6 +1787,165 @@ fn render_bay_usage(
     }
 }
 
+/// Locked heading for the slot layout block (slot layout design
+/// section 6). The "(base values)" qualifier keeps every base
+/// hull number from reading as a fitted total.
+const FITTINGS_SLOT_LAYOUT_HEADING: &str = "Slot layout (base values)";
+
+/// Locked disclosure: the numbers are base slot and hardpoint
+/// counts with subsystem-granted slots unapplied (slot layout
+/// design section 6.2). This block's own sentence; it names
+/// subsystem-granted slots plus skills, implants, and bonuses,
+/// which the bay and calibration disclosures above do not cover
+/// in the same words.
+const FITTING_SLOT_LAYOUT_DISCLOSURE: &str = "Base slot and hardpoint counts from Mimir's bundled item data. Slots and hardpoints granted by fitted subsystems are not applied, and no skill, implant, module, rig, or ship bonuses are applied, so these numbers can differ from EVE.";
+
+/// Locked tech-3 note (slot layout design section 6.2): the
+/// five subsystem-dependent dimensions are suppressed on a
+/// subsystem-defined hull, so the block names why those lines
+/// are missing instead of showing them against bare-hull zeros.
+const FITTING_SLOT_LAYOUT_TECH3_NOTE: &str = "This ship's high, medium, and low slots and its turret and launcher hardpoints are set by its fitted subsystems, which are not applied here, so those lines are not shown.";
+
+const FITTING_SLOT_LAYOUT_NO_CATALOGUE: &str =
+    "Slot layout unavailable: Mimir's bundled item data failed to load.";
+const FITTING_SLOT_LAYOUT_NO_SHIP_DATA: &str = "Slot layout unavailable: Mimir's bundled item data has no slot layout data for this fitting's ship.";
+
+#[cfg(test)]
+fn slot_budget(used: usize, capacity: usize) -> SlotBudget {
+    SlotBudget {
+        used,
+        capacity,
+        excluded_modules: 0,
+    }
+}
+
+/// One slot or hardpoint line (slot layout design section
+/// 6.2): `left` with the room remaining, or `over` with the
+/// positive overage. Exactly at capacity is `0 left`, in the
+/// normal colour. Counts are integers rendered with `{}`
+/// (`usize`/`i64` display), never `format_fitting_amount` —
+/// that formatter is for `f64` amounts with units. Pure like
+/// `bay_line`.
+fn slot_line(label: &str, budget: &SlotBudget) -> String {
+    if budget.is_over() {
+        let over = budget.used - budget.capacity;
+        format!(
+            "{label}: {} of {} used ({over} over)",
+            budget.used, budget.capacity
+        )
+    } else {
+        let remaining = budget.remaining();
+        format!(
+            "{label}: {} of {} used ({remaining} left)",
+            budget.used, budget.capacity
+        )
+    }
+}
+
+/// Per-hardpoint-dimension excluded-module disclosure, or
+/// `None` when every fitted module counted (slot layout
+/// design section 6.2): 0 (none), 1 (singular), 2+ (plural).
+/// `label` is one of the two hardpoint labels. "Missing from"
+/// is locked over the twins' "with no … data" wording because
+/// the only exclusion is a module with no catalogue row at
+/// all; a catalogued module without a marker is known to
+/// consume no hardpoint. Slot dimensions render no excluded
+/// line ever.
+fn hardpoint_excluded_line(label: &str, excluded: usize) -> Option<String> {
+    if excluded == 0 {
+        None
+    } else if excluded == 1 {
+        Some(format!(
+            "{label} does not count 1 fitted module missing from Mimir's bundled item data."
+        ))
+    } else {
+        Some(format!(
+            "{label} does not count {excluded} fitted modules missing from Mimir's bundled item data."
+        ))
+    }
+}
+
+/// The block's lines in locked order (Low, Medium, High, Rigs,
+/// Subsystems, Turret hardpoints, Launcher hardpoints — slot
+/// layout design section 6.2), each with whether it renders
+/// in the over-capacity red (every over line carries the over
+/// colour, all seven labels). A `None` dimension contributes
+/// no line. Excluded-module lines follow the dimension lines
+/// in the same dimension order, hardpoint dimensions only;
+/// they are never over-capacity lines. The tech-3 sentence is
+/// not part of this vec (it is keyed on `subsystem_layout`,
+/// not on a budget) and is rendered by `render_slot_layout`
+/// between the lines and the disclosure.
+fn slot_layout_lines(layout: &SlotLayout) -> Vec<(String, bool)> {
+    let dimensions: [(&str, Option<SlotBudget>); 7] = [
+        (section_label(FittingSection::Low), layout.low),
+        (section_label(FittingSection::Medium), layout.medium),
+        (section_label(FittingSection::High), layout.high),
+        (section_label(FittingSection::Rig), layout.rig),
+        (section_label(FittingSection::Subsystem), layout.subsystem),
+        ("Turret hardpoints", layout.turret),
+        ("Launcher hardpoints", layout.launcher),
+    ];
+    let mut lines: Vec<(String, bool)> = dimensions
+        .iter()
+        .filter_map(|(label, budget)| budget.map(|b| (slot_line(label, &b), b.is_over())))
+        .collect();
+    let excluded: [(&str, Option<SlotBudget>); 2] = [
+        ("Turret hardpoints", layout.turret),
+        ("Launcher hardpoints", layout.launcher),
+    ];
+    for (label, budget) in excluded {
+        if let Some(budget) = budget {
+            if let Some(line) = hardpoint_excluded_line(label, budget.excluded_modules) {
+                lines.push((line, false));
+            }
+        }
+    }
+    lines
+}
+
+/// Slot layout block shared by the saved and imported
+/// fitting details (slot layout design section 6). Depends
+/// only on the fitting and the catalogue: no skill levels,
+/// no SDE handle, so it renders identically for every
+/// viewing character. The heading always renders, so the
+/// view never silently omits the feature; `Unavailable`
+/// swaps all lines, the tech-3 note, and the disclosure
+/// for the fixed unavailable sentence. Renders even when
+/// the fitting has no items. Logs nothing itself: the pure
+/// function logs nothing (render cadence).
+fn render_slot_layout(
+    ui: &mut egui::Ui,
+    fitting: &CharacterFitting,
+    fitting_types: Option<&FittingTypes>,
+) {
+    let Some(catalogue) = fitting_types else {
+        ui.heading(FITTINGS_SLOT_LAYOUT_HEADING);
+        ui.label(FITTING_SLOT_LAYOUT_NO_CATALOGUE);
+        return;
+    };
+    match slot_layout(fitting, catalogue) {
+        SlotLayoutOutcome::Available(layout) => {
+            ui.heading(FITTINGS_SLOT_LAYOUT_HEADING);
+            for (line, is_over) in slot_layout_lines(&layout) {
+                if is_over {
+                    ui.colored_label(egui::Color32::LIGHT_RED, line);
+                } else {
+                    ui.label(line);
+                }
+            }
+            if layout.subsystem_layout {
+                ui.label(FITTING_SLOT_LAYOUT_TECH3_NOTE);
+            }
+            ui.label(FITTING_SLOT_LAYOUT_DISCLOSURE);
+        }
+        SlotLayoutOutcome::Unavailable => {
+            ui.heading(FITTINGS_SLOT_LAYOUT_HEADING);
+            ui.label(FITTING_SLOT_LAYOUT_NO_SHIP_DATA);
+        }
+    }
+}
+
 /// The EFT import panel: paste box, Import/Clear/sample actions, the
 /// fatal error, and the imported fitting with its honest parse report.
 /// Reachable without the fittings read scope (design section 8.2):
@@ -1913,6 +2073,7 @@ fn fittings_import_panel(
     render_fitting_resources(ui, &synth, fitting_types, levels, sde);
     render_rig_calibration(ui, &synth, fitting_types);
     render_bay_usage(ui, &synth, fitting_types);
+    render_slot_layout(ui, &synth, fitting_types);
     render_ship_base_stats(ui, &synth, fitting_types);
     render_ship_resistances(ui, &synth, fitting_types);
     render_ship_base_ehp(ui, &synth, fitting_types);
@@ -2204,6 +2365,7 @@ pub fn show(
                     render_fitting_resources(ui, selected, fitting_types, levels, sde);
                     render_rig_calibration(ui, selected, fitting_types);
                     render_bay_usage(ui, selected, fitting_types);
+                    render_slot_layout(ui, selected, fitting_types);
                     render_ship_base_stats(ui, selected, fitting_types);
                     render_ship_resistances(ui, selected, fitting_types);
                     render_ship_base_ehp(ui, selected, fitting_types);
@@ -5131,5 +5293,411 @@ mod tests {
             "Calibration: 200.0 points of 400.0 points used (200.0 points left)"
         );
         assert_eq!(calibration_excluded_line(sample_dna.excluded_rigs), None);
+    }
+
+    #[test]
+    fn slot_lines_match_the_locked_templates() {
+        // Under capacity: ordered lines, used of capacity, room
+        // left. Arithmetic: 4 - 1 = 3, 3 - 2 = 1, 3 - 1 = 2,
+        // 3 - 0 = 3, 2 - 0 = 2, 5 - 5 = 0.
+        assert_eq!(
+            slot_line("Low slots", &slot_budget(1, 4)),
+            "Low slots: 1 of 4 used (3 left)"
+        );
+        assert_eq!(
+            slot_line("Medium slots", &slot_budget(2, 3)),
+            "Medium slots: 2 of 3 used (1 left)"
+        );
+        assert_eq!(
+            slot_line("High slots", &slot_budget(2, 3)),
+            "High slots: 2 of 3 used (1 left)"
+        );
+        assert_eq!(
+            slot_line("Rigs", &slot_budget(1, 3)),
+            "Rigs: 1 of 3 used (2 left)"
+        );
+        assert_eq!(
+            slot_line("Subsystems", &slot_budget(1, 5)),
+            "Subsystems: 1 of 5 used (4 left)"
+        );
+        assert_eq!(
+            slot_line("Turret hardpoints", &slot_budget(0, 3)),
+            "Turret hardpoints: 0 of 3 used (3 left)"
+        );
+        assert_eq!(
+            slot_line("Launcher hardpoints", &slot_budget(0, 2)),
+            "Launcher hardpoints: 0 of 2 used (2 left)"
+        );
+        // At capacity is not over: 0 left, normal colour.
+        assert_eq!(
+            slot_line("High slots", &slot_budget(3, 3)),
+            "High slots: 3 of 3 used (0 left)"
+        );
+        assert_eq!(
+            slot_line("Subsystems", &slot_budget(5, 5)),
+            "Subsystems: 5 of 5 used (0 left)"
+        );
+        // Over capacity: positive overage, flagged for red
+        // rendering. Arithmetic: 4 - 3 = 1, 4 - 2 = 2.
+        assert_eq!(
+            slot_line("High slots", &slot_budget(4, 3)),
+            "High slots: 4 of 3 used (1 over)"
+        );
+        assert_eq!(
+            slot_line("Launcher hardpoints", &slot_budget(4, 2)),
+            "Launcher hardpoints: 4 of 2 used (2 over)"
+        );
+        // Present zero renders as data: 0 of 0 (0 - 0 = 0 left).
+        assert_eq!(
+            slot_line("High slots", &slot_budget(0, 0)),
+            "High slots: 0 of 0 used (0 left)"
+        );
+        // Under, at, and present-zero are not over.
+        assert!(!slot_budget(2, 3).is_over());
+        assert!(!slot_budget(3, 3).is_over());
+        assert!(!slot_budget(0, 0).is_over());
+        assert!(slot_budget(4, 3).is_over());
+    }
+
+    #[test]
+    fn hardpoint_excluded_lines_match_the_locked_templates() {
+        // Zero excluded renders no line on either hardpoint
+        // dimension.
+        assert_eq!(hardpoint_excluded_line("Turret hardpoints", 0), None);
+        assert_eq!(hardpoint_excluded_line("Launcher hardpoints", 0), None);
+        // Singular and plural for both labels.
+        assert_eq!(
+            hardpoint_excluded_line("Turret hardpoints", 1).as_deref(),
+            Some(
+                "Turret hardpoints does not count 1 fitted module missing from Mimir's bundled item data."
+            )
+        );
+        assert_eq!(
+            hardpoint_excluded_line("Turret hardpoints", 2).as_deref(),
+            Some(
+                "Turret hardpoints does not count 2 fitted modules missing from Mimir's bundled item data."
+            )
+        );
+        assert_eq!(
+            hardpoint_excluded_line("Launcher hardpoints", 1).as_deref(),
+            Some(
+                "Launcher hardpoints does not count 1 fitted module missing from Mimir's bundled item data."
+            )
+        );
+        assert_eq!(
+            hardpoint_excluded_line("Launcher hardpoints", 2).as_deref(),
+            Some(
+                "Launcher hardpoints does not count 2 fitted modules missing from Mimir's bundled item data."
+            )
+        );
+        assert_eq!(
+            hardpoint_excluded_line("Turret hardpoints", 3).as_deref(),
+            Some(
+                "Turret hardpoints does not count 3 fitted modules missing from Mimir's bundled item data."
+            )
+        );
+    }
+
+    #[test]
+    fn slot_layout_unavailable_and_disclosure_wording() {
+        assert_eq!(FITTINGS_SLOT_LAYOUT_HEADING, "Slot layout (base values)");
+        assert_eq!(
+            FITTING_SLOT_LAYOUT_NO_CATALOGUE,
+            "Slot layout unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            FITTING_SLOT_LAYOUT_NO_SHIP_DATA,
+            "Slot layout unavailable: Mimir's bundled item data has no slot layout data for this fitting's ship."
+        );
+        assert_eq!(
+            FITTING_SLOT_LAYOUT_TECH3_NOTE,
+            "This ship's high, medium, and low slots and its turret and launcher hardpoints are set by its fitted subsystems, which are not applied here, so those lines are not shown."
+        );
+        assert_eq!(
+            FITTING_SLOT_LAYOUT_DISCLOSURE,
+            "Base slot and hardpoint counts from Mimir's bundled item data. Slots and hardpoints granted by fitted subsystems are not applied, and no skill, implant, module, rig, or ship bonuses are applied, so these numbers can differ from EVE."
+        );
+    }
+
+    #[test]
+    fn slot_layout_lines_ordering_none_skipped_excluded_after_over_flagged() {
+        // Locked order with a None subsystem dimension
+        // skipped, excluded lines appended after in the same
+        // dimension order, and the over flag paired only with
+        // the over line. Arithmetic: 4 - 1 = 3, 3 - 0 = 3,
+        // 4 - 3 = 1 over, 3 - 1 = 2, 3 - 0 = 3, 2 - 0 = 2.
+        let layout = SlotLayout {
+            high: Some(SlotBudget {
+                used: 4,
+                capacity: 3,
+                excluded_modules: 0,
+            }),
+            medium: Some(slot_budget(0, 3)),
+            low: Some(slot_budget(1, 4)),
+            rig: Some(slot_budget(1, 3)),
+            subsystem: None,
+            turret: Some(SlotBudget {
+                used: 0,
+                capacity: 3,
+                excluded_modules: 2,
+            }),
+            launcher: Some(SlotBudget {
+                used: 0,
+                capacity: 2,
+                excluded_modules: 1,
+            }),
+            subsystem_layout: false,
+        };
+        assert_eq!(
+            slot_layout_lines(&layout),
+            vec![
+                (
+                    "Low slots: 1 of 4 used (3 left)".to_string(),
+                    false
+                ),
+                (
+                    "Medium slots: 0 of 3 used (3 left)".to_string(),
+                    false
+                ),
+                (
+                    "High slots: 4 of 3 used (1 over)".to_string(),
+                    true
+                ),
+                ("Rigs: 1 of 3 used (2 left)".to_string(), false),
+                (
+                    "Turret hardpoints: 0 of 3 used (3 left)".to_string(),
+                    false
+                ),
+                (
+                    "Launcher hardpoints: 0 of 2 used (2 left)".to_string(),
+                    false
+                ),
+                (
+                    "Turret hardpoints does not count 2 fitted modules missing from Mimir's bundled item data."
+                        .to_string(),
+                    false
+                ),
+                (
+                    "Launcher hardpoints does not count 1 fitted module missing from Mimir's bundled item data."
+                        .to_string(),
+                    false
+                ),
+            ]
+        );
+
+        // Capsule shape: only the two hardpoint dimensions are
+        // present, so exactly two dimension lines render.
+        // Arithmetic: 0 - 0 = 0 left on both.
+        let capsule = SlotLayout {
+            high: None,
+            medium: None,
+            low: None,
+            rig: None,
+            subsystem: None,
+            turret: Some(slot_budget(0, 0)),
+            launcher: Some(slot_budget(0, 0)),
+            subsystem_layout: false,
+        };
+        assert_eq!(
+            slot_layout_lines(&capsule),
+            vec![
+                ("Turret hardpoints: 0 of 0 used (0 left)".to_string(), false),
+                (
+                    "Launcher hardpoints: 0 of 0 used (0 left)".to_string(),
+                    false
+                ),
+            ]
+        );
+
+        // Tech-3 shape: rig and subsystem only are present,
+        // and the tech-3 sentence is not part of the vec.
+        // Arithmetic: 3 - 0 = 3, 5 - 0 = 5.
+        let tech3 = SlotLayout {
+            high: None,
+            medium: None,
+            low: None,
+            rig: Some(slot_budget(0, 3)),
+            subsystem: Some(slot_budget(0, 5)),
+            turret: None,
+            launcher: None,
+            subsystem_layout: true,
+        };
+        assert_eq!(
+            slot_layout_lines(&tech3),
+            vec![
+                ("Rigs: 0 of 3 used (3 left)".to_string(), false),
+                ("Subsystems: 0 of 5 used (5 left)".to_string(), false),
+            ]
+        );
+    }
+
+    // Demo story (slot layout design section 7): computed from
+    // the real demo fixture over the real bundled catalogue,
+    // so fixture or catalogue drift fails here.
+    #[test]
+    fn demo_fixture_slot_layout_match_the_locked_demo_story() {
+        use crate::demo::data::DEMO_FITTINGS_JSON;
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let layout_for = |fitting: &CharacterFitting| match slot_layout(fitting, &catalogue) {
+            SlotLayoutOutcome::Available(layout) => layout,
+            SlotLayoutOutcome::Unavailable => panic!("demo fitting must have slot layout"),
+        };
+
+        // Demo Brawler (Rifter 587: low 4, med 3, high 3, rig 3,
+        // turret 3, launcher 2). Flag-driven counting: LoSlot0
+        // 2048 -> low 1 of 4 (4 - 1 = 3 left); MedSlot0 2049
+        // and MedSlot1 1225 -> medium 2 of 3 (3 - 2 = 1 left);
+        // HiSlot0/HiSlot1 with 2050 (catalogued, no hardpoint
+        // marker) -> high 2 of 3 (3 - 2 = 1 left), turret 0 of
+        // 3 (3 - 0 = 3 left), launcher 0 of 2 (2 - 0 = 2 left),
+        // excluded 0; RigSlot0 1535 (absent from the
+        // catalogue) -> rig 1 of 3 (3 - 1 = 2 left); the
+        // SubSystemSlot0 row has no subsystem dimension on the
+        // Rifter, so no subsystem line and no exclusion.
+        let brawler = layout_for(&find("Demo Brawler"));
+        assert!(!brawler.subsystem_layout);
+        assert!(brawler.subsystem.is_none());
+        let turret = brawler.turret.expect("Rifter carries turret hardpoints");
+        assert_eq!(turret.used, 0);
+        assert_eq!(turret.capacity, 3);
+        assert_eq!(turret.excluded_modules, 0);
+        let launcher = brawler
+            .launcher
+            .expect("Rifter carries launcher hardpoints");
+        assert_eq!(launcher.used, 0);
+        assert_eq!(launcher.capacity, 2);
+        assert_eq!(launcher.excluded_modules, 0);
+        assert_eq!(
+            slot_layout_lines(&brawler),
+            vec![
+                ("Low slots: 1 of 4 used (3 left)".to_string(), false),
+                ("Medium slots: 2 of 3 used (1 left)".to_string(), false),
+                ("High slots: 2 of 3 used (1 left)".to_string(), false),
+                ("Rigs: 1 of 3 used (2 left)".to_string(), false),
+                ("Turret hardpoints: 0 of 3 used (3 left)".to_string(), false),
+                (
+                    "Launcher hardpoints: 0 of 2 used (2 left)".to_string(),
+                    false
+                ),
+            ]
+        );
+
+        // Mission Runner (Rifter 587): HiSlot0 2048 (a low
+        // module under a high flag, catalogued, no marker)
+        // -> high 1 of 3 (3 - 1 = 2 left); LoSlot0 2049 ->
+        // low 1 of 4 (4 - 1 = 3 left); medium, rigs, and both
+        // hardpoints present-zero-real against capacity
+        // (3 - 0 = 3 left, 3 - 0 = 3 left, 3 - 0 = 3 left,
+        // 2 - 0 = 2 left).
+        let mission = layout_for(&find("Mission Runner"));
+        assert_eq!(
+            slot_layout_lines(&mission),
+            vec![
+                ("Low slots: 1 of 4 used (3 left)".to_string(), false),
+                ("Medium slots: 0 of 3 used (3 left)".to_string(), false),
+                ("High slots: 1 of 3 used (2 left)".to_string(), false),
+                ("Rigs: 0 of 3 used (3 left)".to_string(), false),
+                ("Turret hardpoints: 0 of 3 used (3 left)".to_string(), false),
+                (
+                    "Launcher hardpoints: 0 of 2 used (2 left)".to_string(),
+                    false
+                ),
+            ]
+        );
+
+        // Demo Runner (Punisher 597: low 5, med 2, high 4,
+        // rig 3, turret 4, launcher 0 present): LoSlot0 2048
+        // -> low 1 of 5 (5 - 1 = 4 left); MedSlot0 1225 ->
+        // medium 1 of 2 (2 - 1 = 1 left); HiSlot0 2050 ->
+        // high 1 of 4 (4 - 1 = 3 left); rigs 0 of 3
+        // (3 - 0 = 3 left), turret 0 of 4 (4 - 0 = 4 left),
+        // launcher 0 of 0 present-zero (0 - 0 = 0 left) —
+        // the demo's present-zero exhibit.
+        let runner = layout_for(&find("Demo Runner"));
+        let launcher = runner.launcher.expect("Punisher launcher present 0");
+        assert_eq!(launcher.capacity, 0);
+        assert_eq!(launcher.used, 0);
+        assert_eq!(
+            slot_layout_lines(&runner),
+            vec![
+                ("Low slots: 1 of 5 used (4 left)".to_string(), false),
+                ("Medium slots: 1 of 2 used (1 left)".to_string(), false),
+                ("High slots: 1 of 4 used (3 left)".to_string(), false),
+                ("Rigs: 0 of 3 used (3 left)".to_string(), false),
+                ("Turret hardpoints: 0 of 4 used (4 left)".to_string(), false),
+                (
+                    "Launcher hardpoints: 0 of 0 used (0 left)".to_string(),
+                    false
+                ),
+            ]
+        );
+
+        // Imported path: the sample EFT through synthesis —
+        // 2 low (4 - 2 = 2 left), 2 medium (3 - 2 = 1 left),
+        // 3 high of 3 (3 - 3 = 0 left) with 3 x 200mm
+        // AutoCannon II 2889 (turret marker) -> turret 3 of 3
+        // (3 - 3 = 0 left), 1 rig (3 - 1 = 2 left), launcher
+        // 0 of 2 (2 - 0 = 2 left).
+        let synth = match parse_eft(DEMO_SAMPLE_EFT, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
+        };
+        assert_eq!(
+            slot_layout_lines(&layout_for(&synth)),
+            vec![
+                ("Low slots: 2 of 4 used (2 left)".to_string(), false),
+                ("Medium slots: 2 of 3 used (1 left)".to_string(), false),
+                ("High slots: 3 of 3 used (0 left)".to_string(), false),
+                ("Rigs: 1 of 3 used (2 left)".to_string(), false),
+                ("Turret hardpoints: 3 of 3 used (0 left)".to_string(), false),
+                (
+                    "Launcher hardpoints: 0 of 2 used (2 left)".to_string(),
+                    false
+                ),
+            ]
+        );
+
+        // The DNA sample lands on the same Rifter layout by
+        // synthesis (2048 low, 438/448 medium, 2889 x3 high
+        // turret, 31668 rig), so its block is byte-identical
+        // to the sample EFT above.
+        let synth_dna = match parse_import(DEMO_SAMPLE_DNA, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => {
+                panic!("demo DNA sample must import, got {fatal:?}")
+            }
+        };
+        assert_eq!(
+            slot_layout_lines(&layout_for(&synth_dna)),
+            vec![
+                ("Low slots: 2 of 4 used (2 left)".to_string(), false),
+                ("Medium slots: 2 of 3 used (1 left)".to_string(), false),
+                ("High slots: 3 of 3 used (0 left)".to_string(), false),
+                ("Rigs: 1 of 3 used (2 left)".to_string(), false),
+                ("Turret hardpoints: 3 of 3 used (0 left)".to_string(), false),
+                (
+                    "Launcher hardpoints: 0 of 2 used (2 left)".to_string(),
+                    false
+                ),
+            ]
+        );
     }
 }
