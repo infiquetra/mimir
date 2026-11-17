@@ -14,6 +14,7 @@ use crate::app::state::{
 use crate::config::EveConfig;
 use crate::esi::models::CharacterFitting;
 use crate::fitting::bay_usage::{bay_usage, BayBudget, BayUsage, BayUsageOutcome};
+use crate::fitting::calibration::{rig_calibration, CalibrationBudget, CalibrationOutcome};
 use crate::fitting::dna::parse_import;
 use crate::fitting::eft::{EftImportOutcome, ImportFormat, ImportIssue, ImportedFitting};
 #[cfg(test)]
@@ -1564,6 +1565,100 @@ fn render_ship_base_ehp(
     }
 }
 
+/// Locked heading for the rig calibration block (rig calibration
+/// design section 6). The "(base values)" qualifier keeps every
+/// base calibration number from reading as a skill- or
+/// bonus-modified total.
+const FITTINGS_CALIBRATION_HEADING: &str = "Rig calibration (base values)";
+
+/// Locked disclosure: the numbers are base rig calibration costs
+/// against the ship's base calibration (rig calibration design
+/// section 6). This block's own sentence; it names skills,
+/// implants, and module/rig/subsystem/ship bonuses, which the
+/// resources disclosure does not cover in the same words.
+const FITTING_CALIBRATION_DISCLOSURE: &str = "Base rig calibration costs against the ship's base calibration, from Mimir's bundled item data. Skills, implants, and bonuses from modules, rigs, subsystems, and the ship itself are not applied, so these numbers can differ from EVE.";
+
+const FITTING_CALIBRATION_NO_CATALOGUE: &str =
+    "Rig calibration unavailable: Mimir's bundled item data failed to load.";
+const FITTING_CALIBRATION_NO_SHIP_DATA: &str = "Rig calibration unavailable: Mimir's bundled item data has no calibration data for this fitting's ship.";
+
+/// One rig calibration line (rig calibration design section
+/// 6.2): `left` with the room remaining, or `over` with the
+/// positive overage. Exactly at capacity is `0.0 left`, in the
+/// normal colour. Pure like `resource_line`.
+fn calibration_line(budget: &CalibrationBudget) -> String {
+    let used = widgets::format_fitting_amount(budget.used, "points");
+    let capacity = widgets::format_fitting_amount(budget.capacity, "points");
+    if budget.is_over() {
+        let over = widgets::format_fitting_amount(budget.used - budget.capacity, "points");
+        format!("Calibration: {used} of {capacity} used ({over} over)")
+    } else {
+        let remaining = widgets::format_fitting_amount(budget.remaining(), "points");
+        format!("Calibration: {used} of {capacity} used ({remaining} left)")
+    }
+}
+
+/// Per-block excluded-rig disclosure, or `None` when every
+/// fitted rig counted (rig calibration design section 6.2): 0
+/// (none), 1 (singular), 2+ (plural). "Fitted rig" is used
+/// because counting is driven by the `RigSlot` flag prefix, the
+/// item list's `Rigs` section.
+fn calibration_excluded_line(excluded: usize) -> Option<String> {
+    if excluded == 0 {
+        None
+    } else if excluded == 1 {
+        Some(
+            "Calibration does not count 1 fitted rig with no calibration cost data in Mimir's bundled item data."
+                .to_string(),
+        )
+    } else {
+        Some(format!(
+            "Calibration does not count {excluded} fitted rigs with no calibration cost data in Mimir's bundled item data."
+        ))
+    }
+}
+
+/// Rig calibration block shared by the saved and imported
+/// fitting details (rig calibration design section 6). Depends
+/// only on the fitting and the catalogue: no skill levels, no
+/// SDE handle, so it renders identically for every viewing
+/// character. The heading always renders, so the view never
+/// silently omits the feature; `Unavailable` swaps the line,
+/// the excluded disclosure, and the base disclosure for the
+/// fixed unavailable sentence. Renders even when the fitting
+/// has no items. Logs nothing itself: the pure function logs
+/// nothing (render cadence).
+fn render_rig_calibration(
+    ui: &mut egui::Ui,
+    fitting: &CharacterFitting,
+    fitting_types: Option<&FittingTypes>,
+) {
+    let Some(catalogue) = fitting_types else {
+        ui.heading(FITTINGS_CALIBRATION_HEADING);
+        ui.label(FITTING_CALIBRATION_NO_CATALOGUE);
+        return;
+    };
+    match rig_calibration(fitting, catalogue) {
+        CalibrationOutcome::Available(budget) => {
+            ui.heading(FITTINGS_CALIBRATION_HEADING);
+            let line = calibration_line(&budget);
+            if budget.is_over() {
+                ui.colored_label(egui::Color32::LIGHT_RED, line);
+            } else {
+                ui.label(line);
+            }
+            if let Some(line) = calibration_excluded_line(budget.excluded_rigs) {
+                ui.label(line);
+            }
+            ui.label(FITTING_CALIBRATION_DISCLOSURE);
+        }
+        CalibrationOutcome::Unavailable => {
+            ui.heading(FITTINGS_CALIBRATION_HEADING);
+            ui.label(FITTING_CALIBRATION_NO_SHIP_DATA);
+        }
+    }
+}
+
 /// Locked heading for the bay usage block (bay capacities design
 /// section 6). The "(base values)" qualifier keeps every base
 /// capacity from reading as a skill- or module-modified total.
@@ -1816,6 +1911,7 @@ fn fittings_import_panel(
         .as_ready()
         .map(|data| resource_skill_levels(&data.skills));
     render_fitting_resources(ui, &synth, fitting_types, levels, sde);
+    render_rig_calibration(ui, &synth, fitting_types);
     render_bay_usage(ui, &synth, fitting_types);
     render_ship_base_stats(ui, &synth, fitting_types);
     render_ship_resistances(ui, &synth, fitting_types);
@@ -2106,6 +2202,7 @@ pub fn show(
                         .as_ready()
                         .map(|data| resource_skill_levels(&data.skills));
                     render_fitting_resources(ui, selected, fitting_types, levels, sde);
+                    render_rig_calibration(ui, selected, fitting_types);
                     render_bay_usage(ui, selected, fitting_types);
                     render_ship_base_stats(ui, selected, fitting_types);
                     render_ship_resistances(ui, selected, fitting_types);
@@ -4841,5 +4938,198 @@ mod tests {
                 "demo has no fighter bay line"
             );
         }
+    }
+
+    fn calibration_budget(used: f64, capacity: f64) -> CalibrationBudget {
+        CalibrationBudget {
+            used,
+            capacity,
+            excluded_rigs: 0,
+        }
+    }
+
+    #[test]
+    fn calibration_lines_match_the_locked_templates() {
+        // Under capacity: 200.0 of 400.0 (400.0 - 200.0 = 200.0 left).
+        assert_eq!(
+            calibration_line(&calibration_budget(200.0, 400.0)),
+            "Calibration: 200.0 points of 400.0 points used (200.0 points left)"
+        );
+        // At capacity: 400.0 of 400.0 (400.0 - 400.0 = 0.0 left), normal
+        // colour.
+        assert_eq!(
+            calibration_line(&calibration_budget(400.0, 400.0)),
+            "Calibration: 400.0 points of 400.0 points used (0.0 points left)"
+        );
+        // Over capacity: 300.0 + 150.0 = 450.0 of 400.0
+        // (450.0 - 400.0 = 50.0 over).
+        let over = calibration_budget(450.0, 400.0);
+        assert!(over.is_over());
+        assert_eq!(
+            calibration_line(&over),
+            "Calibration: 450.0 points of 400.0 points used (50.0 points over)"
+        );
+        // Under and at are not over.
+        assert!(!calibration_budget(200.0, 400.0).is_over());
+        assert!(!calibration_budget(400.0, 400.0).is_over());
+    }
+
+    #[test]
+    fn calibration_excluded_lines_match_the_locked_templates() {
+        assert_eq!(calibration_excluded_line(0), None);
+        assert_eq!(
+            calibration_excluded_line(1).as_deref(),
+            Some(
+                "Calibration does not count 1 fitted rig with no calibration cost data in Mimir's bundled item data."
+            )
+        );
+        assert_eq!(
+            calibration_excluded_line(2).as_deref(),
+            Some(
+                "Calibration does not count 2 fitted rigs with no calibration cost data in Mimir's bundled item data."
+            )
+        );
+    }
+
+    #[test]
+    fn calibration_unavailable_and_disclosure_wording() {
+        assert_eq!(
+            FITTINGS_CALIBRATION_HEADING,
+            "Rig calibration (base values)"
+        );
+        assert_eq!(
+            FITTING_CALIBRATION_NO_CATALOGUE,
+            "Rig calibration unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            FITTING_CALIBRATION_NO_SHIP_DATA,
+            "Rig calibration unavailable: Mimir's bundled item data has no calibration data for this fitting's ship."
+        );
+        assert_eq!(
+            FITTING_CALIBRATION_DISCLOSURE,
+            "Base rig calibration costs against the ship's base calibration, from Mimir's bundled item data. Skills, implants, and bonuses from modules, rigs, subsystems, and the ship itself are not applied, so these numbers can differ from EVE."
+        );
+    }
+
+    // Demo story (rig calibration design section 7): computed from
+    // the real demo fixture over the real bundled catalogue, so
+    // fixture or catalogue drift fails here. Demo Brawler's rig
+    // type 1535 is absent from the catalogue, so it contributes
+    // nothing to used and 1 to excluded — the built-in
+    // unknown-cost exhibit. The sample imports each fit rig 31668
+    // once: 1 * 200.0 = 200.0 of 400.0.
+    #[test]
+    fn demo_fixture_calibration_match_the_locked_demo_story() {
+        use crate::demo::data::DEMO_FITTINGS_JSON;
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let assert_close = |actual: f64, expected: f64| {
+            assert!(
+                (actual - expected).abs() < 1e-9,
+                "expected {expected}, got {actual}"
+            );
+        };
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let budget_for = |fitting: &CharacterFitting| match rig_calibration(fitting, &catalogue) {
+            CalibrationOutcome::Available(budget) => budget,
+            CalibrationOutcome::Unavailable => panic!("demo fitting must have calibration"),
+        };
+
+        // Demo Brawler (Rifter 587, capacity 400.0): the single
+        // RigSlot row has no catalogue cost, so used stays 0.0 and
+        // the excluded count is 1.
+        let brawler = budget_for(&find("Demo Brawler"));
+        assert_close(brawler.used, 0.0);
+        assert_close(brawler.capacity, 400.0);
+        // 400.0 - 0.0 = 400.0 left.
+        assert_close(brawler.remaining(), 400.0);
+        assert_eq!(brawler.excluded_rigs, 1);
+        assert!(!brawler.is_over());
+        assert_eq!(
+            calibration_line(&brawler),
+            "Calibration: 0.0 points of 400.0 points used (400.0 points left)"
+        );
+        assert_eq!(
+            calibration_excluded_line(brawler.excluded_rigs).as_deref(),
+            Some(
+                "Calibration does not count 1 fitted rig with no calibration cost data in Mimir's bundled item data."
+            )
+        );
+
+        // Mission Runner (Rifter 587): no RigSlot rows, so a real
+        // zero against the present capacity.
+        let mission = budget_for(&find("Mission Runner"));
+        assert_close(mission.used, 0.0);
+        assert_close(mission.capacity, 400.0);
+        assert_eq!(mission.excluded_rigs, 0);
+        assert_eq!(
+            calibration_line(&mission),
+            "Calibration: 0.0 points of 400.0 points used (400.0 points left)"
+        );
+        assert_eq!(calibration_excluded_line(mission.excluded_rigs), None);
+
+        // Demo Runner (Punisher 597, capacity 400.0): the same
+        // real-zero shape.
+        let runner = budget_for(&find("Demo Runner"));
+        assert_close(runner.used, 0.0);
+        assert_close(runner.capacity, 400.0);
+        assert_eq!(runner.excluded_rigs, 0);
+        assert_eq!(
+            calibration_line(&runner),
+            "Calibration: 0.0 points of 400.0 points used (400.0 points left)"
+        );
+        assert_eq!(calibration_excluded_line(runner.excluded_rigs), None);
+
+        // Sample EFT through synthesis: 1 * 200.0 = 200.0 of 400.0
+        // (400.0 - 200.0 = 200.0 left), excluded 0.
+        let synth = match parse_eft(DEMO_SAMPLE_EFT, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
+        };
+        let sample = budget_for(&synth);
+        assert_close(sample.used, 200.0);
+        assert_close(sample.capacity, 400.0);
+        assert_close(sample.remaining(), 200.0);
+        assert_eq!(sample.excluded_rigs, 0);
+        assert_eq!(
+            calibration_line(&sample),
+            "Calibration: 200.0 points of 400.0 points used (200.0 points left)"
+        );
+        assert_eq!(calibration_excluded_line(sample.excluded_rigs), None);
+
+        // Sample DNA through synthesis: the same rig, so the same
+        // 1 * 200.0 = 200.0 of 400.0, excluded 0.
+        let synth_dna = match parse_import(DEMO_SAMPLE_DNA, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => {
+                panic!("demo DNA sample must import, got {fatal:?}")
+            }
+        };
+        let sample_dna = budget_for(&synth_dna);
+        assert_close(sample_dna.used, 200.0);
+        assert_close(sample_dna.capacity, 400.0);
+        assert_close(sample_dna.remaining(), 200.0);
+        assert_eq!(sample_dna.excluded_rigs, 0);
+        assert_eq!(
+            calibration_line(&sample_dna),
+            "Calibration: 200.0 points of 400.0 points used (200.0 points left)"
+        );
+        assert_eq!(calibration_excluded_line(sample_dna.excluded_rigs), None);
     }
 }

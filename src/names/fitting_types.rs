@@ -115,6 +115,13 @@ pub struct FittingType {
     pub fighter_capacity: Option<f64>,
     #[serde(rename = "droneBandwidthUsed", default)]
     pub drone_bandwidth_used: Option<f64>,
+    // Rig calibration (docs/rig-calibration-design.md section 3.1):
+    // dogma 1132 `upgradeCapacity` on category 6 rows and dogma
+    // 1153 `upgradeCost` on slot-effect-2663 (rig) rows, sparse.
+    #[serde(rename = "upgradeCapacity", default)]
+    pub upgrade_capacity: Option<f64>,
+    #[serde(rename = "upgradeCost", default)]
+    pub upgrade_cost: Option<f64>,
 }
 
 /// Outcome of a reverse name lookup. `Found` carries the unique
@@ -616,6 +623,49 @@ mod tests {
                     row.name
                 );
             }
+            // Rig calibration values (docs/rig-calibration-design.md
+            // section 3.4): every present calibration value is
+            // finite and non-negative; `upgradeCapacity` only on
+            // category 6 rows (absence allowed); `upgradeCost`
+            // only on slotEffects == [2663] and on every such row;
+            // no row carries both keys.
+            for value in [row.upgrade_capacity, row.upgrade_cost]
+                .into_iter()
+                .flatten()
+            {
+                assert!(
+                    value.is_finite() && value >= 0.0,
+                    "negative or non-finite calibration value on {:?}",
+                    row.name
+                );
+            }
+            if row.upgrade_capacity.is_some() {
+                assert_eq!(
+                    row.category_id, 6,
+                    "non-ship carrying upgradeCapacity: {:?}",
+                    row.name
+                );
+            }
+            if row.upgrade_cost.is_some() {
+                assert_eq!(
+                    row.slot_effects.as_slice(),
+                    [2663],
+                    "non-rig carrying upgradeCost: {:?}",
+                    row.name
+                );
+            }
+            if row.slot_effects.as_slice() == [2663] {
+                assert!(
+                    row.upgrade_cost.is_some(),
+                    "rig without upgradeCost: {:?}",
+                    row.name
+                );
+            }
+            assert!(
+                !(row.upgrade_capacity.is_some() && row.upgrade_cost.is_some()),
+                "row carrying both calibration keys: {:?}",
+                row.name
+            );
         }
         // Spot pins mirroring the generator oracles (design section
         // 5), read from dgmTypeAttributes.csv.bz2 during design.
@@ -788,5 +838,26 @@ mod tests {
             assert_eq!(row.fighter_capacity, None);
             assert_eq!(row.drone_bandwidth_used, None);
         }
+        // Rig calibration spot pins (docs/rig-calibration-design.md
+        // section 3.4), read from dgmTypeAttributes.csv.bz2 during
+        // design: Rifter 587 upgradeCapacity 400.0, Reaper 588
+        // 0.0 present, Capsule 670 absent, rig 31668 upgradeCost
+        // 200.0, structure rig 37146 upgradeCost 100.0, Raitaru
+        // 35825 upgradeCapacity absent (category-65 gate).
+        let rifter = types.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(rifter.upgrade_capacity, Some(400.0));
+        assert_eq!(rifter.upgrade_cost, None);
+        let reaper = types.lookup_by_id(588).expect("Reaper row");
+        assert_eq!(reaper.upgrade_capacity, Some(0.0));
+        let capsule = types.lookup_by_id(670).expect("Capsule row");
+        assert_eq!(capsule.upgrade_capacity, None);
+        let rig = types.lookup_by_id(31668).expect("rig row");
+        assert_eq!(rig.upgrade_cost, Some(200.0));
+        assert_eq!(rig.upgrade_capacity, None);
+        let structure_rig = types.lookup_by_id(37146).expect("structure rig row");
+        assert_eq!(structure_rig.upgrade_cost, Some(100.0));
+        assert_eq!(structure_rig.upgrade_capacity, None);
+        let raitaru = types.lookup_by_id(35825).expect("Raitaru row");
+        assert_eq!(raitaru.upgrade_capacity, None);
     }
 }

@@ -41,7 +41,11 @@ locked order: `volume` on every row from the invTypes `volume`
 column, `cargoCapacity` on every category 6 row from the invTypes
 `capacity` column, and sparse `droneCapacity`/`droneBandwidth`/
 `fighterCapacity` (dogma 283/1271/2055) on category 6 rows and
-`droneBandwidthUsed` (dogma 1272) wherever a row exists.
+`droneBandwidthUsed` (dogma 1272) wherever a row exists. Rig
+calibration (docs/rig-calibration-design.md section 3.1) appends
+`upgradeCapacity` (dogma 1132) on category 6 rows and
+`upgradeCost` (dogma 1153) on slot-effect-2663 rows after the bay
+keys.
 """
 
 import bz2
@@ -139,6 +143,18 @@ DRONE_CAPACITY_ATTR = 283
 DRONE_BANDWIDTH_ATTR = 1271
 FIGHTER_CAPACITY_ATTR = 2055
 DRONE_BANDWIDTH_USED_ATTR = 1272
+
+# Rig calibration (docs/rig-calibration-design.md section 3.1):
+# dogmaAttributes.jsonl _key 1132 "upgradeCapacity" (unit 120
+# attributePoints, display "points"; attributeCategory 7,
+# "Attribute on ships used for ship upgrades") and 1153
+# "upgradeCost" (no unitID key; attributeCategory 1, "How much of
+# the upgrade capacity is used when this is fitted to a ship.").
+# Dogma 560 "cloakingTargetingDelay" (unit 101 Milliseconds) is
+# the recalibration decoy and is never read here.
+CALIBRATION_ATTR_IDS = {1132, 1153}
+SHIP_CALIBRATION_ATTR = 1132
+RIG_CALIBRATION_ATTR = 1153
 
 CACHES = {
     "invTypes": "invTypes.csv.bz2",
@@ -325,6 +341,33 @@ BAY_ORACLES = [
     (34, "cargoCapacity", None),
     (34, "droneBandwidthUsed", None),
     (587, "droneBandwidthUsed", None),
+]
+
+# Calibration oracles (docs/rig-calibration-design.md section 3.3):
+# each value read directly from dgmTypeAttributes.csv.bz2 during
+# design. Tuple shape mirrors BAY_ORACLES: (typeId, key,
+# expected-or-None). A None expected means the key must be absent.
+CALIBRATION_ORACLES = [
+    (587, "upgradeCapacity", 400.0),
+    (597, "upgradeCapacity", 400.0),
+    (3514, "upgradeCapacity", 350.0),
+    (635, "upgradeCapacity", 300.0),
+    (672, "upgradeCapacity", 1.0),
+    (588, "upgradeCapacity", 0.0),
+    (670, "upgradeCapacity", None),
+    (2863, "upgradeCapacity", None),
+    (33328, "upgradeCapacity", None),
+    (31668, "upgradeCost", 200.0),
+    (25736, "upgradeCost", 50.0),
+    (4395, "upgradeCost", 150.0),
+    (4399, "upgradeCost", 300.0),
+    (37146, "upgradeCost", 100.0),
+    (37147, "upgradeCost", 150.0),
+    (587, "upgradeCost", None),
+    (31668, "upgradeCapacity", None),
+    (37146, "upgradeCapacity", None),
+    (2048, "upgradeCost", None),
+    (35825, "upgradeCapacity", None),
 ]
 
 _STACKED_SUFFIX_RE = re.compile(r" x[0-9]+$")
@@ -523,12 +566,50 @@ def main():
         seen_bay_keys.add(key)
         bays_by_type.setdefault(type_id, {})[attribute_id] = value
 
+    # Rig calibration attributes per type (design section 3.1):
+    # only the two locked attributes, each parsed from
+    # valueFloat. An unparseable, duplicated, non-finite, or
+    # negative wanted row fails loudly and writes nothing.
+    calibrations_by_type = {}
+    seen_calibration_keys = set()
+    for row in type_attributes:
+        attribute_id = int(row["attributeID"])
+        if attribute_id not in CALIBRATION_ATTR_IDS:
+            continue
+        type_id = int(row["typeID"])
+        key = (type_id, attribute_id)
+        if key in seen_calibration_keys:
+            fail(
+                f"duplicate calibration row (type {type_id}, "
+                f"attribute {attribute_id}) in dgmTypeAttributes"
+            )
+        try:
+            value = float(row["valueFloat"])
+        except (TypeError, ValueError):
+            fail(
+                f"unparseable calibration value {row['valueFloat']!r} "
+                f"for (type {type_id}, attribute {attribute_id})"
+            )
+        if not math.isfinite(value):
+            fail(
+                f"non-finite calibration value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        if value < 0:
+            fail(
+                f"negative calibration value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        seen_calibration_keys.add(key)
+        calibrations_by_type.setdefault(type_id, {})[attribute_id] = value
+
     types = []
     missing_group = 0
     resource_key_counts = Counter()
     base_stat_key_counts = Counter()
     resonance_key_counts = Counter()
     bay_key_counts = Counter()
+    calibration_key_counts = Counter()
     for row in inv_types:
         if row["published"] != "1":
             continue
@@ -700,6 +781,16 @@ def main():
             # invariant asserts every such row is category 18.
             entry["droneBandwidthUsed"] = bays[DRONE_BANDWIDTH_USED_ATTR]
             bay_key_counts["droneBandwidthUsed"] += 1
+        # Additive calibration emission (design section 3.1):
+        # new keys append after the bay keys in the locked order
+        # upgradeCapacity, upgradeCost. Each row gains at most one.
+        calibrations = calibrations_by_type.get(type_id, {})
+        if category_id == 6 and SHIP_CALIBRATION_ATTR in calibrations:
+            entry["upgradeCapacity"] = calibrations[SHIP_CALIBRATION_ATTR]
+            calibration_key_counts["upgradeCapacity"] += 1
+        if slot_effects == [2663] and RIG_CALIBRATION_ATTR in calibrations:
+            entry["upgradeCost"] = calibrations[RIG_CALIBRATION_ATTR]
+            calibration_key_counts["upgradeCost"] += 1
         types.append(entry)
 
     types.sort(key=lambda entry: entry["typeId"])
@@ -844,6 +935,35 @@ def main():
     if zero_cargo_entry is None or "cargoCapacity" not in zero_cargo_entry:
         fail("bay oracle type 670 cargoCapacity key must be present as 0.0")
 
+    # Calibration oracles (design section 3.3). A None expected
+    # value means the key must be absent from that row.
+    for type_id, key, expected in CALIBRATION_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(f"calibration oracle type {type_id} missing from extract")
+        if expected is None:
+            if key in entry:
+                fail(
+                    f"calibration oracle type {type_id} carries {key}="
+                    f"{entry[key]!r}, expected absent"
+                )
+        elif entry.get(key) != expected:
+            fail(
+                f"calibration oracle type {type_id} {key}="
+                f"{entry.get(key)!r}, expected {expected!r}"
+            )
+    # Explicit-zero pin: type 588 must carry upgradeCapacity
+    # present as 0.0, never absent (the two are distinct).
+    zero_calibration_entry = by_id.get(588)
+    if (
+        zero_calibration_entry is None
+        or "upgradeCapacity" not in zero_calibration_entry
+    ):
+        fail(
+            "calibration oracle type 588 upgradeCapacity key must be "
+            "present as 0.0"
+        )
+
     # Catalogue-wide invariant (design sections 5 and 3): every
     # category-6 row carries both ship outputs and all seven base
     # ship stats, so a future cache refresh that drops a ship row
@@ -939,6 +1059,36 @@ def main():
                 f"non-drone type {entry['typeId']} carries "
                 "droneBandwidthUsed"
             )
+        # Calibration invariants (design section 3.4): every
+        # present calibration value is finite and >= 0.0;
+        # upgradeCapacity only on category 6 (absence allowed);
+        # upgradeCost only on slotEffects == [2663] and on every
+        # such row; no row carries both keys.
+        for key in ("upgradeCapacity", "upgradeCost"):
+            if key in entry:
+                value = entry[key]
+                if (
+                    not isinstance(value, (int, float))
+                    or isinstance(value, bool)
+                    or not math.isfinite(float(value))
+                    or float(value) < 0
+                ):
+                    fail(
+                        f"type {entry['typeId']} {key}={value!r} "
+                        "is not finite and non-negative"
+                    )
+        if "upgradeCapacity" in entry and entry["categoryId"] != 6:
+            fail(
+                f"non-ship type {entry['typeId']} carries upgradeCapacity"
+            )
+        if "upgradeCost" in entry and entry["slotEffects"] != [2663]:
+            fail(
+                f"non-rig type {entry['typeId']} carries upgradeCost"
+            )
+        if entry["slotEffects"] == [2663] and "upgradeCost" not in entry:
+            fail(f"rig type {entry['typeId']} missing upgradeCost")
+        if "upgradeCapacity" in entry and "upgradeCost" in entry:
+            fail(f"type {entry['typeId']} carries both calibration keys")
 
     # Invariants the parser relies on (design sections 5.2, 6.3): no
     # shipment name may contain the header delimiters, and no published
@@ -1007,6 +1157,10 @@ def main():
         f"droneBandwidth={bay_key_counts['droneBandwidth']} "
         f"fighterCapacity={bay_key_counts['fighterCapacity']} "
         f"droneBandwidthUsed={bay_key_counts['droneBandwidthUsed']}"
+    )
+    print(
+        f"calibration_keys upgradeCapacity={calibration_key_counts['upgradeCapacity']} "
+        f"upgradeCost={calibration_key_counts['upgradeCost']}"
     )
 
 
