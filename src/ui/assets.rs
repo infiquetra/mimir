@@ -14,6 +14,9 @@ use crate::names::resolver::NameResolver;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct AssetRow {
     pub item_id: i64,
+    // State-only image key for the row's type icon: never formatted
+    // into any rendered string and never logged.
+    pub type_id: i64,
     pub display_name: String,
     pub type_name: String,
     pub quantity: i64,
@@ -74,6 +77,7 @@ pub fn group_assets(data: &AssetsData, resolver: &NameResolver) -> Vec<AssetLoca
             .or_default()
             .push(AssetRow {
                 item_id: item.item_id,
+                type_id: item.type_id,
                 display_name: display,
                 type_name,
                 quantity: item.quantity,
@@ -403,6 +407,35 @@ mod tests {
             .flat_map(|g| &g.rows)
             .filter(|r| !r.has_custom_name)
             .all(|r| r.type_name == "Unknown Item"));
+    }
+
+    #[test]
+    fn group_assets_carries_type_id_onto_rows() {
+        let groups = group_assets(&data(), &resolver());
+        let by_item: HashMap<i64, i64> = groups
+            .iter()
+            .flat_map(|g| &g.rows)
+            .map(|r| (r.item_id, r.type_id))
+            .collect();
+        assert_eq!(by_item[&1], 34);
+        assert_eq!(by_item[&2], 587);
+        assert_eq!(by_item[&3], 681);
+        assert_eq!(by_item[&4], 34);
+        // Both filter branches keep the carried id intact.
+        let by_location = filter_groups(&groups, "jita");
+        assert_eq!(
+            by_location[0]
+                .rows
+                .iter()
+                .map(|r| (r.item_id, r.type_id))
+                .collect::<Vec<_>>(),
+            vec![(2, 587), (1, 34)]
+        );
+        let by_item_name = filter_groups(&groups, "tritanium");
+        assert!(by_item_name
+            .iter()
+            .flat_map(|g| &g.rows)
+            .all(|r| r.type_id == 34));
     }
 
     #[test]

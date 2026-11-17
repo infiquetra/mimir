@@ -1142,6 +1142,15 @@ impl AppState {
                 ids
             })
             .unwrap_or_default();
+        // Loaded-assets source, captured before the active-removal
+        // reset below (design asset-icons section 4): the retain
+        // must see the pre-removal holdings exactly as the detail
+        // lines do.
+        let asset_type_ids: Vec<i64> = self
+            .assets
+            .as_ready()
+            .map(|data| data.items.iter().map(|item| item.type_id).collect())
+            .unwrap_or_default();
         // Selected-market-type source (design market-icon section 3):
         // the retain must see the pre-removal selection exactly as
         // the detail lines do; the selection itself survives the
@@ -1163,7 +1172,11 @@ impl AppState {
             ImageKind::Faction => standing_pairs
                 .iter()
                 .any(|(from_type, from_id)| *from_id == id && from_type == "faction"),
-            ImageKind::Type => fitting_type_ids.contains(&id) || market_type_id == Some(id),
+            ImageKind::Type => {
+                fitting_type_ids.contains(&id)
+                    || asset_type_ids.contains(&id)
+                    || market_type_id == Some(id)
+            }
         };
         self.portraits.retain(|(kind, id), _| logo_known(kind, *id));
         self.portrait_requests
@@ -1300,8 +1313,9 @@ impl AppState {
     /// entry for `Corporation`, a row `alliance_id` or the loaded
     /// public info for `Alliance`, the loaded standings only for
     /// `Faction`, and the active character's loaded saved fittings
-    /// (ship and fitted items) or the selected market type for
-    /// `Type`. This is the single definition of "this id may be
+    /// (ship and fitted items), the active character's loaded
+    /// assets, or the selected market type for `Type`. This is the
+    /// single definition of "this id may be
     /// fetched", shared by `request_portrait`, the shell landing,
     /// and texture prune. The dashboard is deliberately not
     /// consulted: every landing writes the same info to it and to
@@ -1327,16 +1341,19 @@ impl AppState {
             }
             ImageKind::Faction => self.standing_known(kind, id),
             ImageKind::Type => {
-                self.fitting_type_known(id) || self.market_selected_type_id == Some(id)
+                self.fitting_type_known(id)
+                    || self.asset_type_known(id)
+                    || self.market_selected_type_id == Some(id)
             }
         }
     }
 
     /// Whether the active character's loaded saved fittings name
     /// this item type (a fitting's ship or any fitted item).
-    /// EVE-sourced state only: the imported fitting, the market
-    /// selection, and the bundled catalogue are deliberately not
-    /// consulted, so nothing user-typed ever authorizes a fetch.
+    /// EVE-sourced state only: the imported fitting, the loaded
+    /// assets, the market selection, and the bundled catalogue are
+    /// deliberately not consulted, so nothing user-typed ever
+    /// authorizes a fetch.
     fn fitting_type_known(&self, id: i64) -> bool {
         self.fittings
             .as_ready()
@@ -1347,6 +1364,16 @@ impl AppState {
                         || fitting.items.iter().any(|item| item.type_id == id)
                 })
             })
+    }
+
+    /// Whether the active character's loaded assets name this item
+    /// type (any held row's type). EVE-sourced state only: the
+    /// assets search text and the bundled catalogue are deliberately
+    /// not consulted, so nothing user-typed ever authorizes a fetch.
+    fn asset_type_known(&self, id: i64) -> bool {
+        self.assets
+            .as_ready()
+            .is_some_and(|data| data.items.iter().any(|item| item.type_id == id))
     }
 
     /// Whether the loaded standings name `(kind, id)`: a `faction`
@@ -3420,5 +3447,148 @@ mod tests {
         // and landing finish the cleanup).
         state.remove_character(1);
         assert!(!state.image_id_known(ImageKind::Type, 2048));
+    }
+
+    fn asset_item(item_id: i64, type_id: i64) -> AssetItem {
+        AssetItem {
+            item_id,
+            type_id,
+            quantity: 1,
+            location_id: 60003760,
+            ..Default::default()
+        }
+    }
+
+    fn asset_holding_state() -> AppState {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.fittings = LoadState::Loading;
+        state.assets = LoadState::Ready(AssetsData {
+            items: vec![asset_item(1, 3300), asset_item(2, 3300), asset_item(3, 587)],
+            custom_names: HashMap::new(),
+        });
+        state
+    }
+
+    #[test]
+    fn asset_holdings_authorize_only_held_types() {
+        // Held types authorize; unheld types do not, and queue
+        // nothing (mirrors the market-selection ordering test).
+        let mut state = asset_holding_state();
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+        assert!(state.image_id_known(ImageKind::Type, 587));
+        state.request_portrait(ImageKind::Type, 3300);
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 3300),
+            PortraitState::Loading
+        ));
+        state.request_portrait(ImageKind::Type, 587);
+        assert_eq!(
+            state.portrait_requests,
+            vec![(ImageKind::Type, 3300), (ImageKind::Type, 587)]
+        );
+        // Duplicate rows of one type queue once (the second row's
+        // request hits the Loading entry and no-ops).
+        state.request_portrait(ImageKind::Type, 3300);
+        assert_eq!(
+            state.portrait_requests,
+            vec![(ImageKind::Type, 3300), (ImageKind::Type, 587)]
+        );
+        assert!(!state.image_id_known(ImageKind::Type, 99999999));
+        state.request_portrait(ImageKind::Type, 99999999);
+        assert_eq!(
+            state.portrait_requests,
+            vec![(ImageKind::Type, 3300), (ImageKind::Type, 587)]
+        );
+        assert!(!state.portraits.contains_key(&(ImageKind::Type, 99999999)));
+        // Every non-Ready arm authorizes nothing.
+        let mut state = asset_holding_state();
+        state.assets = LoadState::Loading;
+        assert!(!state.image_id_known(ImageKind::Type, 3300));
+        state.request_portrait(ImageKind::Type, 3300);
+        assert!(state.portrait_requests.is_empty());
+        let mut state = asset_holding_state();
+        state.assets = LoadState::Empty;
+        assert!(!state.image_id_known(ImageKind::Type, 3300));
+        state.request_portrait(ImageKind::Type, 3300);
+        assert!(state.portrait_requests.is_empty());
+        let mut state = asset_holding_state();
+        state.assets = LoadState::Error("forbidden".to_string());
+        assert!(!state.image_id_known(ImageKind::Type, 3300));
+        state.request_portrait(ImageKind::Type, 3300);
+        assert!(state.portrait_requests.is_empty());
+        // Search text is only a query, never a selected id, even
+        // when it looks numeric.
+        let mut state = asset_holding_state();
+        state.assets = LoadState::Loading;
+        state.assets_search = "3300".to_string();
+        assert!(!state.image_id_known(ImageKind::Type, 3300));
+        state.request_portrait(ImageKind::Type, 3300);
+        assert!(state.portrait_requests.is_empty());
+        assert!(!state.portraits.contains_key(&(ImageKind::Type, 3300)));
+    }
+
+    #[test]
+    fn switching_character_revokes_asset_type_knowledge() {
+        // Holdings belong to the active character: A's types must
+        // never authorize a fetch under B.
+        let mut state = asset_holding_state();
+        state.request_portrait(ImageKind::Type, 3300);
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+        // Same-character reselect keeps the knowledge.
+        state.set_active_character(1);
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+        // Switch revokes until reload.
+        state.set_active_character(2);
+        assert!(matches!(state.assets, LoadState::Loading));
+        assert!(!state.image_id_known(ImageKind::Type, 3300));
+        assert!(!state.image_id_known(ImageKind::Type, 587));
+        // A type also market-selected survives via that arm
+        // (the market arm is deliberately not character-keyed).
+        let mut state = asset_holding_state();
+        state.set_market_selection(3300, "Type X".to_string());
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+        state.set_active_character(2);
+        assert!(matches!(state.assets, LoadState::Loading));
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+    }
+
+    #[test]
+    fn removing_character_retains_held_asset_icon() {
+        // Three characters so neither removal hits the
+        // last-removal branch (which clears all portraits).
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two"), row(3, "Three")];
+        state.set_active_character(1);
+        state.assets = LoadState::Ready(AssetsData {
+            items: vec![asset_item(1, 3300)],
+            custom_names: HashMap::new(),
+        });
+        state.portraits.insert(
+            (ImageKind::Type, 3300),
+            portrait_state_with_dimensions(8, 8),
+        );
+        state.portrait_requests = vec![(ImageKind::Type, 3300)];
+        // Removing a non-active character keeps the icon.
+        state.remove_character(2);
+        assert!(state.image_id_known(ImageKind::Type, 3300));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 3300),
+            PortraitState::Ready(_)
+        ));
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
+        // Removing the active character keeps the entry through
+        // the retain closure while the guard then reads false.
+        state.remove_character(1);
+        assert_eq!(state.active_character_id, Some(3));
+        assert!(matches!(state.assets, LoadState::Loading));
+        assert!(!state.image_id_known(ImageKind::Type, 3300));
+        assert!(matches!(
+            state.portrait_state(ImageKind::Type, 3300),
+            PortraitState::Ready(_)
+        ));
+        assert_eq!(state.portrait_requests, vec![(ImageKind::Type, 3300)]);
     }
 }
