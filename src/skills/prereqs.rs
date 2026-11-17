@@ -219,6 +219,39 @@ mod tests {
         );
     }
 
+    // E7b: earlier plan entries never count as trained (design
+    // section 3 trained-only decision; reviewer Finding 1). The
+    // prerequisite skill sits EARLIER in the plan at a target that
+    // would satisfy the edge, so any plan-order crediting would
+    // silence the warning and fail this test.
+    #[test]
+    fn earlier_plan_entries_never_count_as_trained() {
+        let sde = Sde::load_bundled().expect("bundled SDE loads");
+        // Gunnery 3300 to 5 first, then Medium Hybrid Turret 3304
+        // (requires Gunnery 3 and Small Hybrid Turret 3301 level 3).
+        let plan = plan_with(vec![entry(3300, 5), entry(3304, 3)]);
+        let trained = trained_map(vec![]);
+        let warnings = plan_prerequisite_warnings(&plan, &sde, Some(&trained));
+        assert_eq!(warnings.len(), 2);
+        assert_eq!(warnings[0], Vec::new(), "Gunnery is a root skill");
+        assert_eq!(
+            warnings[1],
+            vec![
+                UnmetPrerequisite {
+                    skill_id: 3300,
+                    required_level: 3,
+                    trained_level: 0
+                },
+                UnmetPrerequisite {
+                    skill_id: 3301,
+                    required_level: 3,
+                    trained_level: 0
+                },
+            ],
+            "the earlier Gunnery entry must not count as trained"
+        );
+    }
+
     // E7: plan_warnings_parallel_and_none_is_empty (design section 12.2).
     #[test]
     fn plan_warnings_parallel_and_none_is_empty() {
