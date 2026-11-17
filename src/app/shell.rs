@@ -3781,6 +3781,7 @@ impl eframe::App for MimirApp {
                     &self.resolver,
                     self.fitting_types.as_deref(),
                     &self.sde,
+                    &mut self.portrait_textures,
                 ),
                 View::Settings => ui::settings::show(ui, &mut self.state),
                 View::Exploration => ui::exploration::show(ui, &mut self.state),
