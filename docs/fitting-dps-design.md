@@ -958,7 +958,7 @@ Gates at every commit: `cargo fmt --check`,
 
 - Any total or combined DPS figure, and any volley, optimal-range, or
   falloff line (Flutter's volley-weighted range display reads
-  attributes 54 and 158, which are never emitted here).
+  attributes 54 and 158, which are never emitted here). Superseded for volley and turret optimal/falloff ranges by `docs/volley-ranges-design.md` (#598 follow-on, branch `feat/rust-volley-ranges`).
 - Damage application of every kind: range and falloff curves,
   tracking, target signature and velocity, missile explosion radius
   and velocity, resistances of any target. Every shot counts at full
