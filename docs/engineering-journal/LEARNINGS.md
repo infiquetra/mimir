@@ -31,6 +31,18 @@
 
 ## 2026-11-17
 
+### An unwired service's body is evidence for its core predicate only — its never-called variants carry no shipped semantics
+
+**Author.** Muse Code (skill-prereqs workflow, integrator)
+**Context.** The skill-prerequisites slice had to decide warning semantics: trained levels only, or trained plus earlier plan entries; direct edges only, or the full transitive closure; and what to do about cycles. The retired Flutter app (commit `ed698d3`) contained a `SkillPrerequisiteService` that looked like the obvious porting source for all three questions.
+**Evidence.** `docs/skill-prereqs-design.md` sections 2–3, from bodies read during design via `git show ed698d3:`: the service existed but was never wired into the Flutter UI, and its warning dialog was never instantiated. Inside it, `getUnmetPrerequisites` states the core predicate (trained level below required level, missing trained row = 0, and a `targetLevel` parameter it accepts and ignores); `filterPrerequisitesNotInPlan` (plan-order crediting) is level-blind and untested; `getAllPrerequisites` (transitive closure) has zero production call sites. The shipped Rust `plan_progress` independently uses the same trained-map rule (missing = 0).
+**Mechanism.** Code that never ran in production has never been corrected by production: its edge cases (levels, cycles, ordering) were never exercised by a user, a test, or a caller, so its variants record what someone once sketched, not what the product decided. Only the parts corroborated by a second, shipped witness — here the core predicate, matched by `plan_progress` — carry semantics safe to port.
+**Fix (or queued).** `src/skills/prereqs.rs` implements exactly the corroborated core: trained-only, direct-only, no `target_level` parameter, cycle safety by construction (no recursion, no visited set). Plan-order crediting and transitive closure are recorded as rejected in design sections 14–15, revisit-able only under a separately grounded design.
+**Validation.** Tests E1–E9 in `src/skills/prereqs.rs` pin the core and the exclusions (including the direct-only proof that a transitive ancestor is never reported, and target-level invariance); the integrator boundary diff against 27f79d2 confirms no `add_enabled`, `SkillPlanAction`, `validate_plan`, or `plan_progress` line changed; all 718 tests pass at the integrator commit.
+**What surprised.** The presence of a complete-looking service suggested a straight port. Its completeness was the trap: the most elaborate variants were precisely the ones with no production witness.
+**Generalizable rule.** When porting from dead or unwired code, grade each behaviour by its witnesses — production call sites, tests, a second shipped implementation — and port only the graded core; treat never-called variants as unmade decisions, not as precedent.
+**Refs.** `docs/skill-prereqs-design.md` sections 2, 3, 14, 15; `src/skills/prereqs.rs`; DECISIONS 2026-11-17 skill-prerequisite-warnings entry above.
+
 ### The retired Flutter app's skill-point formula understates rank-1 training by 33x; the SDE cumulative form is the one the committed fixtures prove
 
 **Author.** Muse Code (skill-plans workflow, integrator)
