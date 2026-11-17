@@ -66,6 +66,25 @@ by presence, and sparse boolean markers `turretFitted` (effect
 42) and `launcherFitted` (effect 40) wherever a marker row
 exists. Dogma 1154 `upgradeSlotsLeft`, attribute 47 `slots`, and
 the subsystem modifiers 1368/1369/1374-1376 are never read here.
+Damage per second (docs/fitting-dps-design.md section 3) appends
+twenty-eight further keys after `mass` in the locked order:
+`speed` (dogma 51) and `damageMultiplier` (64) on categories 7
+and 18, the four charge/drone damage components `emDamage`
+(114), `explosiveDamage` (116), `kineticDamage` (117),
+`thermalDamage` (118) on categories 8 and 18, the fighter
+per-type keys on category 87 (`fighterSquadronMaxSize` 2215,
+`fighterSquadronIsLight` 2212, `fighterSquadronIsSupport`
+2213, `fighterSquadronIsHeavy` 2214, the attack-ability family
+2226/2227/2228/2229/2230/2233, the missiles-ability family
+2130/2131/2132/2133/2134/2182), the ship tube/slot keys
+`fighterTubes` (2216), `fighterLightSlots` (2217),
+`fighterSupportSlots` (2218), `fighterHeavySlots` (2219) on
+category 6, and the sparse boolean ability markers
+`fighterAbilityAttackM` (effect 6465) and
+`fighterAbilityMissiles` (effect 6431) on category 87.
+Catalogue keys are the dogma names verbatim (`speed`, never
+Flutter's `rateOfFire`). Dogma 212, 54, 158, and 160 are never
+read here.
 """
 
 import bz2
@@ -232,6 +251,68 @@ SCAN_MAGNETOMETRIC_STRENGTH_ATTR = 210
 SCAN_GRAVIMETRIC_STRENGTH_ATTR = 211
 MAX_LOCKED_TARGETS_ATTR = 192
 BASE_WARP_SPEED_ATTR = 1281
+
+# Damage per second (docs/fitting-dps-design.md section 2/3):
+# dogmaAttributes.jsonl _key 51 "speed" (unit 101 Milliseconds),
+# 64 "damageMultiplier" (unit 104 "x"), 114 "emDamage",
+# 116 "explosiveDamage", 117 "kineticDamage", 118
+# "thermalDamage" (all unit 113 damage), 2215
+# "fighterSquadronMaxSize", 2212 "fighterSquadronIsLight",
+# 2213 "fighterSquadronIsSupport", 2214
+# "fighterSquadronIsHeavy", 2226
+# "fighterAbilityAttackMissileDamageMultiplier" (unit 104 "x"),
+# 2227-2230 "fighterAbilityAttackMissileDamageEM/Therm/Kin/Exp"
+# (unit 113), 2233 "fighterAbilityAttackMissileDuration"
+# (unit 101 Milliseconds), 2130
+# "fighterAbilityMissilesDamageMultiplier" (unit 104 "x"),
+# 2131-2134 "fighterAbilityMissilesDamageEM/Therm/Kin/Exp"
+# (unit 113), 2182 "fighterAbilityMissilesDuration"
+# (unit 101 Milliseconds), 2216 "fighterTubes", 2217
+# "fighterLightSlots", 2218 "fighterSupportSlots", 2219
+# "fighterHeavySlots". Catalogue keys are the dogma names
+# verbatim. Dogma 212 "missileDamageMultiplier" is a
+# character-level ballistics bonus input and is never read;
+# 54/158/160 feed only Flutter's volley-weighted display and
+# are never read here either.
+DPS_ATTR_IDS = {
+    51, 64, 114, 116, 117, 118, 2215, 2212, 2213, 2214, 2226, 2227,
+    2228, 2229, 2230, 2233, 2130, 2131, 2132, 2133, 2134, 2182, 2216,
+    2217, 2218, 2219,
+}
+SPEED_ATTR = 51
+DAMAGE_MULTIPLIER_ATTR = 64
+EM_DAMAGE_ATTR = 114
+EXPLOSIVE_DAMAGE_ATTR = 116
+KINETIC_DAMAGE_ATTR = 117
+THERMAL_DAMAGE_ATTR = 118
+FIGHTER_SQUADRON_MAX_SIZE_ATTR = 2215
+FIGHTER_SQUADRON_IS_LIGHT_ATTR = 2212
+FIGHTER_SQUADRON_IS_SUPPORT_ATTR = 2213
+FIGHTER_SQUADRON_IS_HEAVY_ATTR = 2214
+FIGHTER_ATTACK_DAMAGE_MULTIPLIER_ATTR = 2226
+FIGHTER_ATTACK_DAMAGE_EM_ATTR = 2227
+FIGHTER_ATTACK_DAMAGE_THERM_ATTR = 2228
+FIGHTER_ATTACK_DAMAGE_KIN_ATTR = 2229
+FIGHTER_ATTACK_DAMAGE_EXP_ATTR = 2230
+FIGHTER_ATTACK_DURATION_ATTR = 2233
+FIGHTER_MISSILES_DAMAGE_MULTIPLIER_ATTR = 2130
+FIGHTER_MISSILES_DAMAGE_EM_ATTR = 2131
+FIGHTER_MISSILES_DAMAGE_THERM_ATTR = 2132
+FIGHTER_MISSILES_DAMAGE_KIN_ATTR = 2133
+FIGHTER_MISSILES_DAMAGE_EXP_ATTR = 2134
+FIGHTER_MISSILES_DURATION_ATTR = 2182
+FIGHTER_TUBES_ATTR = 2216
+FIGHTER_LIGHT_SLOTS_ATTR = 2217
+FIGHTER_SUPPORT_SLOTS_ATTR = 2218
+FIGHTER_HEAVY_SLOTS_ATTR = 2219
+
+# Fighter ability markers (docs/fitting-dps-design.md section
+# 2.5): dogmaEffects.jsonl _key 6465 "fighterAbilityAttackM"
+# (truncated in the SDE itself) and 6431
+# "fighterAbilityMissiles", both pure markers. The catalogue
+# keys are the SDE effect names verbatim.
+FIGHTER_ABILITY_ATTACK_EFFECT = 6465
+FIGHTER_ABILITY_MISSILES_EFFECT = 6431
 
 CACHES = {
     "invTypes": "invTypes.csv.bz2",
@@ -718,6 +799,119 @@ NAV_TARGETING_EXPECTED_COUNTS = {
     "mass": 404,
 }
 
+# Damage-per-second oracles (docs/fitting-dps-design.md
+# section 3.2): each value read directly from
+# dgmTypeAttributes.csv.bz2 / dgmTypeEffects.csv.bz2 during
+# design. Tuple shape mirrors NAV_TARGETING_ORACLES:
+# (typeId, key, expected-or-None). A None expected means the
+# key must be absent from that row.
+DPS_ORACLES = [
+    # Turrets: 484 125mm Gatling AutoCannon I, 2889 200mm
+    # AutoCannon II.
+    (484, "speed", 3000.0),
+    (484, "damageMultiplier", 2.0625),
+    (2889, "speed", 3750.0),
+    (2889, "damageMultiplier", 3.465),
+    # Launcher: 2404 Light Missile Launcher II (no 64 row).
+    (2404, "speed", 12800.0),
+    (2404, "damageMultiplier", None),
+    # Charges: 180 Proton S (present explicit zeros pin
+    # absence-vs-zero), 21898 Republic Fleet EMP S.
+    (180, "emDamage", 3.0),
+    (180, "kineticDamage", 2.0),
+    (180, "explosiveDamage", 0.0),
+    (180, "thermalDamage", 0.0),
+    (21898, "emDamage", 10.35),
+    (21898, "explosiveDamage", 2.3),
+    (21898, "kineticDamage", 1.15),
+    (21898, "thermalDamage", 0.0),
+    (210, "kineticDamage", 83.0),
+    # Drones: 2488 Warrior II, 2456 Hobgoblin II.
+    (2488, "speed", 4000.0),
+    (2488, "damageMultiplier", 1.56),
+    (2488, "explosiveDamage", 20.0),
+    (2456, "damageMultiplier", 1.92),
+    (2456, "thermalDamage", 20.0),
+    # Fighters: 23059 Firbolg I (cache values, size 9.0 and
+    # thermal 75.0, not the zip's 6/112.5), 40358 Equite I.
+    (23059, "fighterSquadronMaxSize", 9.0),
+    (23059, "fighterSquadronIsLight", 1.0),
+    (23059, "fighterAbilityAttackMissileDamageMultiplier", 1.0),
+    (23059, "fighterAbilityAttackMissileDamageTherm", 75.0),
+    (23059, "fighterAbilityAttackMissileDuration", 5000.0),
+    (23059, "fighterAbilityMissilesDamageTherm", 138.0),
+    (23059, "fighterAbilityMissilesDuration", 14000.0),
+    (23059, "fighterAbilityAttackM", True),
+    (23059, "fighterAbilityMissiles", True),
+    (40358, "fighterSquadronMaxSize", 12.0),
+    (40358, "fighterAbilityMissilesDamageEM", 38.0),
+    (40358, "fighterAbilityMissilesDuration", 3500.0),
+    (40358, "fighterAbilityMissiles", True),
+    (40358, "fighterAbilityAttackM", None),
+    # Ships: 23911 Thanatos tubes/slots (heavy slots absent).
+    (23911, "fighterTubes", 3.0),
+    (23911, "fighterLightSlots", 3.0),
+    (23911, "fighterSupportSlots", 1.0),
+    (23911, "fighterHeavySlots", None),
+    # Category and decoy gates: module-carried damage never
+    # emitted; mining laser 482 turret marker never leaks;
+    # charges carry neither cycle nor multiplier; mutated
+    # drone 60478 carries no DPS attributes; no-ability
+    # fighter 40568 stays so; non-carrier 587 carries neither.
+    (484, "emDamage", None),
+    (1563, "emDamage", None),
+    (1563, "speed", None),
+    (482, "speed", None),
+    (482, "damageMultiplier", None),
+    (180, "speed", None),
+    (180, "damageMultiplier", None),
+    (60478, "speed", None),
+    (60478, "emDamage", None),
+    (40568, "fighterAbilityAttackM", None),
+    (40568, "fighterAbilityMissiles", None),
+    (587, "fighterTubes", None),
+    (587, "speed", None),
+]
+
+# Expected damage-per-second key counts (design section 3.1,
+# scripted over the cache joined to the catalogue). DEVIATION:
+# `thermalDamage` is 897, not the design's 898 — the design's
+# scripted count includes published category-8 type 53343 Yoiul
+# Festival Snowball, whose sole thermal row is -10.0, which
+# the locked "finite and >= 0.0" invariant cannot admit;
+# negative DPS source rows are skipped at load (see the load
+# block), so that one row is absent, not zero.
+DPS_EXPECTED_COUNTS = {
+    "speed": 873,
+    "damageMultiplier": 837,
+    "emDamage": 897,
+    "explosiveDamage": 897,
+    "kineticDamage": 897,
+    "thermalDamage": 897,
+    "fighterSquadronMaxSize": 94,
+    "fighterSquadronIsLight": 24,
+    "fighterSquadronIsSupport": 12,
+    "fighterSquadronIsHeavy": 17,
+    "fighterAbilityAttackMissileDamageMultiplier": 62,
+    "fighterAbilityAttackMissileDamageEM": 62,
+    "fighterAbilityAttackMissileDamageTherm": 62,
+    "fighterAbilityAttackMissileDamageKin": 62,
+    "fighterAbilityAttackMissileDamageExp": 62,
+    "fighterAbilityAttackMissileDuration": 62,
+    "fighterAbilityMissilesDamageMultiplier": 65,
+    "fighterAbilityMissilesDamageEM": 65,
+    "fighterAbilityMissilesDamageTherm": 65,
+    "fighterAbilityMissilesDamageKin": 65,
+    "fighterAbilityMissilesDamageExp": 65,
+    "fighterAbilityMissilesDuration": 65,
+    "fighterTubes": 12,
+    "fighterLightSlots": 12,
+    "fighterSupportSlots": 10,
+    "fighterHeavySlots": 7,
+    "fighterAbilityAttackM": 54,
+    "fighterAbilityMissiles": 56,
+}
+
 _STACKED_SUFFIX_RE = re.compile(r" x[0-9]+$")
 
 
@@ -1102,6 +1296,56 @@ def main():
         seen_nav_targeting_keys.add(key)
         nav_targeting_by_type.setdefault(type_id, {})[attribute_id] = value
 
+    # Damage-per-second attributes per type (design section
+    # 3.1): only the 26 locked attributes, each parsed from
+    # valueFloat. An unparseable, duplicated, or non-finite
+    # wanted row fails loudly and writes nothing.
+    # DEVIATION from the design's global fail-loud on
+    # negative values (the navigation deviation's shape, but
+    # one step different): the cache carries six negative DPS
+    # rows, five on never-emitted categories 8-unpublished/63,
+    # and one on published category-8 type 53343 Yoiul
+    # Festival Snowball (thermalDamage -10.0), which a
+    # global or emitted-gated fail would still trip. A
+    # global fail writes nothing and blocks the slice; the
+    # locked "finite and >= 0.0" invariant cannot admit the
+    # snowball row either. Negative rows are therefore
+    # skipped at load (counted for the summary) and never
+    # emitted or validated: absence is data, negative
+    # damage is not. All other validation is unchanged.
+    dps_by_type = {}
+    seen_dps_keys = set()
+    skipped_negative_dps_rows = 0
+    for row in type_attributes:
+        attribute_id = int(row["attributeID"])
+        if attribute_id not in DPS_ATTR_IDS:
+            continue
+        type_id = int(row["typeID"])
+        key = (type_id, attribute_id)
+        if key in seen_dps_keys:
+            fail(
+                f"duplicate damage-per-second row (type {type_id}, "
+                f"attribute {attribute_id}) in dgmTypeAttributes"
+            )
+        try:
+            value = float(row["valueFloat"])
+        except (TypeError, ValueError):
+            fail(
+                f"unparseable damage-per-second value "
+                f"{row['valueFloat']!r} for (type {type_id}, "
+                f"attribute {attribute_id})"
+            )
+        if not math.isfinite(value):
+            fail(
+                f"non-finite damage-per-second value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        seen_dps_keys.add(key)
+        if value < 0:
+            skipped_negative_dps_rows += 1
+            continue
+        dps_by_type.setdefault(type_id, {})[attribute_id] = value
+
     types = []
     missing_group = 0
     resource_key_counts = Counter()
@@ -1111,6 +1355,7 @@ def main():
     calibration_key_counts = Counter()
     slot_layout_key_counts = Counter()
     nav_targeting_key_counts = Counter()
+    dps_key_counts = Counter()
     for row in inv_types:
         if row["published"] != "1":
             continue
@@ -1395,6 +1640,107 @@ def main():
                 )
             entry["mass"] = mass_value
             nav_targeting_key_counts["mass"] += 1
+        # Additive damage-per-second emission (design section
+        # 3.1): 28 keys append after `mass` in the locked
+        # order. `speed`/`damageMultiplier` sparse on
+        # categories 7 and 18; the four damage components
+        # sparse on categories 8 and 18 (module-carried
+        # damage on category 7 never emitted); the fighter
+        # per-type keys sparse on category 87; the tube/slot
+        # keys sparse on category 6; the ability markers
+        # sparse true-only on category 87. Presence is
+        # exactly source-row existence (present 0.0 kept,
+        # absence never rewritten as zero); negative source
+        # rows were skipped at load (see its deviation).
+        dps = dps_by_type.get(type_id, {})
+        if category_id in (7, 18):
+            if SPEED_ATTR in dps:
+                entry["speed"] = dps[SPEED_ATTR]
+                dps_key_counts["speed"] += 1
+            if DAMAGE_MULTIPLIER_ATTR in dps:
+                entry["damageMultiplier"] = dps[DAMAGE_MULTIPLIER_ATTR]
+                dps_key_counts["damageMultiplier"] += 1
+        if category_id in (8, 18):
+            if EM_DAMAGE_ATTR in dps:
+                entry["emDamage"] = dps[EM_DAMAGE_ATTR]
+                dps_key_counts["emDamage"] += 1
+            if EXPLOSIVE_DAMAGE_ATTR in dps:
+                entry["explosiveDamage"] = dps[EXPLOSIVE_DAMAGE_ATTR]
+                dps_key_counts["explosiveDamage"] += 1
+            if KINETIC_DAMAGE_ATTR in dps:
+                entry["kineticDamage"] = dps[KINETIC_DAMAGE_ATTR]
+                dps_key_counts["kineticDamage"] += 1
+            if THERMAL_DAMAGE_ATTR in dps:
+                entry["thermalDamage"] = dps[THERMAL_DAMAGE_ATTR]
+                dps_key_counts["thermalDamage"] += 1
+        if category_id == 87:
+            if FIGHTER_SQUADRON_MAX_SIZE_ATTR in dps:
+                entry["fighterSquadronMaxSize"] = dps[FIGHTER_SQUADRON_MAX_SIZE_ATTR]
+                dps_key_counts["fighterSquadronMaxSize"] += 1
+            if FIGHTER_SQUADRON_IS_LIGHT_ATTR in dps:
+                entry["fighterSquadronIsLight"] = dps[FIGHTER_SQUADRON_IS_LIGHT_ATTR]
+                dps_key_counts["fighterSquadronIsLight"] += 1
+            if FIGHTER_SQUADRON_IS_SUPPORT_ATTR in dps:
+                entry["fighterSquadronIsSupport"] = dps[FIGHTER_SQUADRON_IS_SUPPORT_ATTR]
+                dps_key_counts["fighterSquadronIsSupport"] += 1
+            if FIGHTER_SQUADRON_IS_HEAVY_ATTR in dps:
+                entry["fighterSquadronIsHeavy"] = dps[FIGHTER_SQUADRON_IS_HEAVY_ATTR]
+                dps_key_counts["fighterSquadronIsHeavy"] += 1
+            if FIGHTER_ATTACK_DAMAGE_MULTIPLIER_ATTR in dps:
+                entry["fighterAbilityAttackMissileDamageMultiplier"] = dps[FIGHTER_ATTACK_DAMAGE_MULTIPLIER_ATTR]
+                dps_key_counts["fighterAbilityAttackMissileDamageMultiplier"] += 1
+            if FIGHTER_ATTACK_DAMAGE_EM_ATTR in dps:
+                entry["fighterAbilityAttackMissileDamageEM"] = dps[FIGHTER_ATTACK_DAMAGE_EM_ATTR]
+                dps_key_counts["fighterAbilityAttackMissileDamageEM"] += 1
+            if FIGHTER_ATTACK_DAMAGE_THERM_ATTR in dps:
+                entry["fighterAbilityAttackMissileDamageTherm"] = dps[FIGHTER_ATTACK_DAMAGE_THERM_ATTR]
+                dps_key_counts["fighterAbilityAttackMissileDamageTherm"] += 1
+            if FIGHTER_ATTACK_DAMAGE_KIN_ATTR in dps:
+                entry["fighterAbilityAttackMissileDamageKin"] = dps[FIGHTER_ATTACK_DAMAGE_KIN_ATTR]
+                dps_key_counts["fighterAbilityAttackMissileDamageKin"] += 1
+            if FIGHTER_ATTACK_DAMAGE_EXP_ATTR in dps:
+                entry["fighterAbilityAttackMissileDamageExp"] = dps[FIGHTER_ATTACK_DAMAGE_EXP_ATTR]
+                dps_key_counts["fighterAbilityAttackMissileDamageExp"] += 1
+            if FIGHTER_ATTACK_DURATION_ATTR in dps:
+                entry["fighterAbilityAttackMissileDuration"] = dps[FIGHTER_ATTACK_DURATION_ATTR]
+                dps_key_counts["fighterAbilityAttackMissileDuration"] += 1
+            if FIGHTER_MISSILES_DAMAGE_MULTIPLIER_ATTR in dps:
+                entry["fighterAbilityMissilesDamageMultiplier"] = dps[FIGHTER_MISSILES_DAMAGE_MULTIPLIER_ATTR]
+                dps_key_counts["fighterAbilityMissilesDamageMultiplier"] += 1
+            if FIGHTER_MISSILES_DAMAGE_EM_ATTR in dps:
+                entry["fighterAbilityMissilesDamageEM"] = dps[FIGHTER_MISSILES_DAMAGE_EM_ATTR]
+                dps_key_counts["fighterAbilityMissilesDamageEM"] += 1
+            if FIGHTER_MISSILES_DAMAGE_THERM_ATTR in dps:
+                entry["fighterAbilityMissilesDamageTherm"] = dps[FIGHTER_MISSILES_DAMAGE_THERM_ATTR]
+                dps_key_counts["fighterAbilityMissilesDamageTherm"] += 1
+            if FIGHTER_MISSILES_DAMAGE_KIN_ATTR in dps:
+                entry["fighterAbilityMissilesDamageKin"] = dps[FIGHTER_MISSILES_DAMAGE_KIN_ATTR]
+                dps_key_counts["fighterAbilityMissilesDamageKin"] += 1
+            if FIGHTER_MISSILES_DAMAGE_EXP_ATTR in dps:
+                entry["fighterAbilityMissilesDamageExp"] = dps[FIGHTER_MISSILES_DAMAGE_EXP_ATTR]
+                dps_key_counts["fighterAbilityMissilesDamageExp"] += 1
+            if FIGHTER_MISSILES_DURATION_ATTR in dps:
+                entry["fighterAbilityMissilesDuration"] = dps[FIGHTER_MISSILES_DURATION_ATTR]
+                dps_key_counts["fighterAbilityMissilesDuration"] += 1
+            if FIGHTER_ABILITY_ATTACK_EFFECT in type_effects_set:
+                entry["fighterAbilityAttackM"] = True
+                dps_key_counts["fighterAbilityAttackM"] += 1
+            if FIGHTER_ABILITY_MISSILES_EFFECT in type_effects_set:
+                entry["fighterAbilityMissiles"] = True
+                dps_key_counts["fighterAbilityMissiles"] += 1
+        if category_id == 6:
+            if FIGHTER_TUBES_ATTR in dps:
+                entry["fighterTubes"] = dps[FIGHTER_TUBES_ATTR]
+                dps_key_counts["fighterTubes"] += 1
+            if FIGHTER_LIGHT_SLOTS_ATTR in dps:
+                entry["fighterLightSlots"] = dps[FIGHTER_LIGHT_SLOTS_ATTR]
+                dps_key_counts["fighterLightSlots"] += 1
+            if FIGHTER_SUPPORT_SLOTS_ATTR in dps:
+                entry["fighterSupportSlots"] = dps[FIGHTER_SUPPORT_SLOTS_ATTR]
+                dps_key_counts["fighterSupportSlots"] += 1
+            if FIGHTER_HEAVY_SLOTS_ATTR in dps:
+                entry["fighterHeavySlots"] = dps[FIGHTER_HEAVY_SLOTS_ATTR]
+                dps_key_counts["fighterHeavySlots"] += 1
         types.append(entry)
 
     types.sort(key=lambda entry: entry["typeId"])
@@ -1827,6 +2173,111 @@ def main():
                     fail(
                         f"non-ship type {entry['typeId']} carries {key}"
                     )
+        # Damage-per-second invariants (design section 3.3):
+        # every present DPS value is finite and >= 0.0 (not a
+        # bool); `speed`/`damageMultiplier` appear only on
+        # category 7 or 18 rows; the four damage components
+        # only on category 8 or 18 rows; the fighter per-type
+        # keys and both boolean markers only on category-87
+        # rows; the four tube/slot keys only on category-6
+        # rows. Absence stays distinct from 0.0.
+        for key in (
+            "speed",
+            "damageMultiplier",
+            "emDamage",
+            "explosiveDamage",
+            "kineticDamage",
+            "thermalDamage",
+            "fighterSquadronMaxSize",
+            "fighterSquadronIsLight",
+            "fighterSquadronIsSupport",
+            "fighterSquadronIsHeavy",
+            "fighterAbilityAttackMissileDamageMultiplier",
+            "fighterAbilityAttackMissileDamageEM",
+            "fighterAbilityAttackMissileDamageTherm",
+            "fighterAbilityAttackMissileDamageKin",
+            "fighterAbilityAttackMissileDamageExp",
+            "fighterAbilityAttackMissileDuration",
+            "fighterAbilityMissilesDamageMultiplier",
+            "fighterAbilityMissilesDamageEM",
+            "fighterAbilityMissilesDamageTherm",
+            "fighterAbilityMissilesDamageKin",
+            "fighterAbilityMissilesDamageExp",
+            "fighterAbilityMissilesDuration",
+            "fighterTubes",
+            "fighterLightSlots",
+            "fighterSupportSlots",
+            "fighterHeavySlots",
+        ):
+            if key in entry:
+                value = entry[key]
+                if (
+                    not isinstance(value, (int, float))
+                    or isinstance(value, bool)
+                    or not math.isfinite(float(value))
+                    or float(value) < 0
+                ):
+                    fail(
+                        f"type {entry['typeId']} {key}={value!r} "
+                        "is not finite and non-negative"
+                    )
+        for key in ("fighterAbilityAttackM", "fighterAbilityMissiles"):
+            if key in entry and entry[key] is not True:
+                fail(
+                    f"type {entry['typeId']} {key}={entry[key]!r} "
+                    "is not true-only"
+                )
+        for key in ("speed", "damageMultiplier"):
+            if key in entry and entry["categoryId"] not in (7, 18):
+                fail(
+                    f"type {entry['typeId']} {key} on non-module/drone "
+                    f"category {entry['categoryId']}"
+                )
+        for key in (
+            "emDamage",
+            "explosiveDamage",
+            "kineticDamage",
+            "thermalDamage",
+        ):
+            if key in entry and entry["categoryId"] not in (8, 18):
+                fail(
+                    f"type {entry['typeId']} {key} on non-charge/drone "
+                    f"category {entry['categoryId']}"
+                )
+        for key in (
+            "fighterSquadronMaxSize",
+            "fighterSquadronIsLight",
+            "fighterSquadronIsSupport",
+            "fighterSquadronIsHeavy",
+            "fighterAbilityAttackMissileDamageMultiplier",
+            "fighterAbilityAttackMissileDamageEM",
+            "fighterAbilityAttackMissileDamageTherm",
+            "fighterAbilityAttackMissileDamageKin",
+            "fighterAbilityAttackMissileDamageExp",
+            "fighterAbilityAttackMissileDuration",
+            "fighterAbilityMissilesDamageMultiplier",
+            "fighterAbilityMissilesDamageEM",
+            "fighterAbilityMissilesDamageTherm",
+            "fighterAbilityMissilesDamageKin",
+            "fighterAbilityMissilesDamageExp",
+            "fighterAbilityMissilesDuration",
+            "fighterAbilityAttackM",
+            "fighterAbilityMissiles",
+        ):
+            if key in entry and entry["categoryId"] != 87:
+                fail(
+                    f"non-fighter type {entry['typeId']} carries {key}"
+                )
+        for key in (
+            "fighterTubes",
+            "fighterLightSlots",
+            "fighterSupportSlots",
+            "fighterHeavySlots",
+        ):
+            if key in entry and entry["categoryId"] != 6:
+                fail(
+                    f"non-ship type {entry['typeId']} carries {key}"
+                )
 
     # Invariants the parser relies on (design sections 5.2, 6.3): no
     # shipment name may contain the header delimiters, and no published
@@ -1897,6 +2348,45 @@ def main():
         if actual != expected:
             fail(
                 f"navigation and targeting key {key} count {actual}, "
+                f"expected {expected}"
+            )
+
+    # Damage-per-second oracles (design section 3.2). A None
+    # expected value means the key must be absent from that
+    # row.
+    for type_id, key, expected in DPS_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(f"damage-per-second oracle type {type_id} missing")
+        if expected is None:
+            if key in entry:
+                fail(
+                    f"damage-per-second oracle type {type_id} "
+                    f"carries {key}={entry[key]!r}, expected absent"
+                )
+        elif entry.get(key) != expected:
+            fail(
+                f"damage-per-second oracle type {type_id} "
+                f"{key}={entry.get(key)!r}, expected {expected!r}"
+            )
+    # Explicit-zero pin: type 180 must carry all four damage
+    # components present (two as 0.0), never absent (the two
+    # are distinct, the 588 pin style).
+    zero_dps_entry = by_id.get(180)
+    if (
+        zero_dps_entry is None
+        or "explosiveDamage" not in zero_dps_entry
+        or "thermalDamage" not in zero_dps_entry
+    ):
+        fail(
+            "damage-per-second oracle type 180 explosiveDamage/"
+            "thermalDamage keys must be present as 0.0"
+        )
+    for key, expected in DPS_EXPECTED_COUNTS.items():
+        actual = dps_key_counts[key]
+        if actual != expected:
+            fail(
+                f"damage-per-second key {key} count {actual}, "
                 f"expected {expected}"
             )
 
@@ -1980,6 +2470,37 @@ def main():
         f"scanGravimetricStrength={nav_targeting_key_counts['scanGravimetricStrength']} "
         f"maxLockedTargets={nav_targeting_key_counts['maxLockedTargets']} "
         f"mass={nav_targeting_key_counts['mass']}"
+    )
+    print(
+        f"dps_keys speed={dps_key_counts['speed']} "
+        f"damageMultiplier={dps_key_counts['damageMultiplier']} "
+        f"emDamage={dps_key_counts['emDamage']} "
+        f"explosiveDamage={dps_key_counts['explosiveDamage']} "
+        f"kineticDamage={dps_key_counts['kineticDamage']} "
+        f"thermalDamage={dps_key_counts['thermalDamage']} "
+        f"fighterSquadronMaxSize={dps_key_counts['fighterSquadronMaxSize']} "
+        f"fighterSquadronIsLight={dps_key_counts['fighterSquadronIsLight']} "
+        f"fighterSquadronIsSupport={dps_key_counts['fighterSquadronIsSupport']} "
+        f"fighterSquadronIsHeavy={dps_key_counts['fighterSquadronIsHeavy']} "
+        f"fighterAbilityAttackMissileDamageMultiplier={dps_key_counts['fighterAbilityAttackMissileDamageMultiplier']} "
+        f"fighterAbilityAttackMissileDamageEM={dps_key_counts['fighterAbilityAttackMissileDamageEM']} "
+        f"fighterAbilityAttackMissileDamageTherm={dps_key_counts['fighterAbilityAttackMissileDamageTherm']} "
+        f"fighterAbilityAttackMissileDamageKin={dps_key_counts['fighterAbilityAttackMissileDamageKin']} "
+        f"fighterAbilityAttackMissileDamageExp={dps_key_counts['fighterAbilityAttackMissileDamageExp']} "
+        f"fighterAbilityAttackMissileDuration={dps_key_counts['fighterAbilityAttackMissileDuration']} "
+        f"fighterAbilityMissilesDamageMultiplier={dps_key_counts['fighterAbilityMissilesDamageMultiplier']} "
+        f"fighterAbilityMissilesDamageEM={dps_key_counts['fighterAbilityMissilesDamageEM']} "
+        f"fighterAbilityMissilesDamageTherm={dps_key_counts['fighterAbilityMissilesDamageTherm']} "
+        f"fighterAbilityMissilesDamageKin={dps_key_counts['fighterAbilityMissilesDamageKin']} "
+        f"fighterAbilityMissilesDamageExp={dps_key_counts['fighterAbilityMissilesDamageExp']} "
+        f"fighterAbilityMissilesDuration={dps_key_counts['fighterAbilityMissilesDuration']} "
+        f"fighterTubes={dps_key_counts['fighterTubes']} "
+        f"fighterLightSlots={dps_key_counts['fighterLightSlots']} "
+        f"fighterSupportSlots={dps_key_counts['fighterSupportSlots']} "
+        f"fighterHeavySlots={dps_key_counts['fighterHeavySlots']} "
+        f"fighterAbilityAttackM={dps_key_counts['fighterAbilityAttackM']} "
+        f"fighterAbilityMissiles={dps_key_counts['fighterAbilityMissiles']} "
+        f"skipped_negative_rows={skipped_negative_dps_rows}"
     )
 
 
