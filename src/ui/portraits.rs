@@ -23,7 +23,6 @@ use std::sync::Arc;
 
 use crate::app::state::{AppState, PortraitState};
 use crate::portraits::{initial_for_name, ImageKind};
-use crate::storage::repositories::CharacterRow;
 
 /// Render size of a list or grid-row portrait, in points. The
 /// decoded image is 256px; views downscale it, never upscale.
