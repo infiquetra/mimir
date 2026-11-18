@@ -124,8 +124,12 @@ hold, evaluated over the rows the loader kept
    never lists: the chooser must not offer a click whose
    identity a later exact-name lookup would refuse as
    ambiguous.
-4. **Stat-presence proof:** `cpu_output.is_some() &&
-   power_output.is_some()`. These are dogma 48 and 11 on the
+4. **Stat-usability proof:** `cpu_output` and
+   `power_output` are each present, finite, and
+   non-negative — the same usability rule the resources
+   block applies (parent fix on review: presence alone
+   would list a negative-output hull whose resources
+   block then reports unavailable). These are dogma 48 and 11 on the
    catalogue row (`src/names/fitting_types.rs:31-34`), the
    pair the resources block requires to print bare-hull
    numbers instead of its no-ship-output sentence
@@ -133,7 +137,8 @@ hold, evaluated over the rows the loader kept
    `src/ui/fittings.rs:1471`). An empty draft's main content
    is its bare-hull statistics, so a choosable ship must
    prove the output pair. Zero is a real value and passes:
-   the check is presence, never `> 0.0` (section 3.3). No
+   the check is finite and non-negative, never `> 0.0`
+   (section 3.3). No
    other attribute is required. Every other statistic block
    already swaps in an honest unavailable sentence when its
    own inputs are absent (section 8), so requiring more
@@ -329,8 +334,8 @@ pub fn new_fitting(types: &FittingTypes, ship: &ShipRow)
 
 It re-validates its input rather than trusting the caller:
 `types.lookup_by_id(ship.type_id)` must return a row with
-`category_id == 6`, `cpu_output.is_some()`,
-`power_output.is_some()`, and a trimmed name equal to
+`category_id == 6`, both outputs usable (present,
+finite, non-negative), and a trimmed name equal to
 `ship.name`; otherwise `None`. (Uniqueness is a listing
 property proven by `ship_candidates`; the constructor proves
 identity, category, and stat presence for the one row it is
