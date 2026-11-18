@@ -12,7 +12,8 @@ use std::sync::Arc;
 
 use crate::esi::endpoints::WriteFailureClass;
 use crate::esi::models::*;
-use crate::fitting::eft::ImportedFitting;
+use crate::fitting::editor::BrowserRow;
+use crate::fitting::eft::{ImportSection, ImportedFitting};
 use crate::invention_calculator::{
     DEFAULT_BASE_PROBABILITY, DEFAULT_DECRYPTOR_MULTIPLIER, DEFAULT_SKILL_LEVEL,
 };
@@ -850,6 +851,16 @@ pub struct AppState {
     // imported fitting's name; the draft name changes only
     // when the Rename control applies this text.
     pub fittings_editor_name: Option<String>,
+    // Module-browser view state (module browser design
+    // section 8): the selected tab, the search text, and the
+    // cached candidate rows with the tab they were built for.
+    // Memory only, like the edit state: cleared wherever the
+    // draft dies. The cache is rebuilt only when the cached
+    // section differs from the selected tab (design section 7).
+    pub fittings_browser_section: ImportSection,
+    pub fittings_browser_search: String,
+    pub fittings_browser_rows: Vec<BrowserRow>,
+    pub fittings_browser_rows_section: Option<ImportSection>,
     // Fitting-write state (write design sections 3.2, 6, 7, 8).
     // Memory only: never persisted. `fittings_write_needs_reauthorize`
     // is a sibling `AppState` boolean rather than part of
@@ -1136,6 +1147,10 @@ impl AppState {
                 self.fittings_import_edited = false;
                 self.fittings_editor_quantity.clear();
                 self.fittings_editor_name = None;
+                self.fittings_browser_section = ImportSection::High;
+                self.fittings_browser_search.clear();
+                self.fittings_browser_rows.clear();
+                self.fittings_browser_rows_section = None;
                 // Write design section 3.2: the write state is per
                 // character too. An armed confirmation or a queued
                 // request must never outlive its character; the
@@ -1345,6 +1360,10 @@ impl AppState {
             self.fittings_import_edited = false;
             self.fittings_editor_quantity.clear();
             self.fittings_editor_name = None;
+            self.fittings_browser_section = ImportSection::High;
+            self.fittings_browser_search.clear();
+            self.fittings_browser_rows.clear();
+            self.fittings_browser_rows_section = None;
             // Write state reset (design section 3.2), same
             // ownership argument as the import state.
             self.fittings_write_needs_reauthorize = false;
@@ -1406,6 +1425,10 @@ impl AppState {
             self.fittings_import_edited = false;
             self.fittings_editor_quantity.clear();
             self.fittings_editor_name = None;
+            self.fittings_browser_section = ImportSection::High;
+            self.fittings_browser_search.clear();
+            self.fittings_browser_rows.clear();
+            self.fittings_browser_rows_section = None;
             self.fittings_write_needs_reauthorize = false;
             self.fittings_write_confirm = None;
             self.fittings_write_requested = None;
@@ -2758,6 +2781,15 @@ mod tests {
         state.fittings_import_edited = true;
         state.fittings_editor_quantity.insert(0, "7".to_string());
         state.fittings_editor_name = Some("Renamed".to_string());
+        state.fittings_browser_section = ImportSection::Low;
+        state.fittings_browser_search = "damage".to_string();
+        state.fittings_browser_rows = vec![BrowserRow {
+            type_id: 2048,
+            name: "Damage Control II".to_string(),
+            cpu: Some(30.0),
+            power: Some(1.0),
+        }];
+        state.fittings_browser_rows_section = Some(ImportSection::Low);
     }
 
     fn assert_import_cleared(state: &AppState) {
@@ -2771,6 +2803,10 @@ mod tests {
         assert!(!state.fittings_import_edited);
         assert!(state.fittings_editor_quantity.is_empty());
         assert_eq!(state.fittings_editor_name, None);
+        assert_eq!(state.fittings_browser_section, ImportSection::High);
+        assert_eq!(state.fittings_browser_search, "");
+        assert!(state.fittings_browser_rows.is_empty());
+        assert_eq!(state.fittings_browser_rows_section, None);
     }
 
     #[test]
@@ -2789,6 +2825,13 @@ mod tests {
         assert_eq!(state.fittings_import_owner, Some(1));
         assert_eq!(state.fittings_editor_add_name, "Damage Control II");
         assert!(state.fittings_import_edited);
+        assert_eq!(state.fittings_browser_section, ImportSection::Low);
+        assert_eq!(state.fittings_browser_search, "damage");
+        assert_eq!(state.fittings_browser_rows.len(), 1);
+        assert_eq!(
+            state.fittings_browser_rows_section,
+            Some(ImportSection::Low)
+        );
         // Switching to a different character clears all four fields.
         state.set_active_character(2);
         assert_import_cleared(&state);
@@ -2804,6 +2847,8 @@ mod tests {
         state.remove_character(3);
         assert!(state.fittings_imported.is_some());
         assert_eq!(state.fittings_import_owner, Some(1));
+        assert_eq!(state.fittings_browser_section, ImportSection::Low);
+        assert_eq!(state.fittings_browser_rows.len(), 1);
         // Removing the active character clears it.
         state.remove_character(1);
         assert_eq!(state.active_character_id, Some(2));

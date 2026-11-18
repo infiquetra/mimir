@@ -55,10 +55,11 @@ const EMPTY_SLOT_MARKERS: [&str; 5] = [
 
 /// The parser's own section enum, independent of the view's
 /// `FittingSection` so this pure module never depends on the UI.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ImportSection {
     Low,
     Medium,
+    #[default]
     High,
     Rig,
     Subsystem,
