@@ -1149,10 +1149,22 @@ enum SaveConfirmAction {
 /// design section 6.3): the shipped imported and saved-fitting
 /// copy wordings stay byte-identical; a copied draft gets its
 /// own.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SaveConfirmSummary {
     Imported,
     SavedCopy,
     Copied,
+}
+
+/// The draft-save summary kind for one draft format: a copied
+/// draft confirms with the copied wording, never the imported
+/// one (its provenance differs).
+fn save_confirm_summary_for(format: ImportFormat) -> SaveConfirmSummary {
+    if format == ImportFormat::Copied {
+        SaveConfirmSummary::Copied
+    } else {
+        SaveConfirmSummary::Imported
+    }
 }
 
 /// Render one save confirmation block (sections 6.1/6.2),
@@ -3614,11 +3626,7 @@ fn fittings_import_panel(
         let enabled = write_enabled(state);
         let ship_name = imported.ship_name.clone();
         let charges_noted = imported.report.charges_noted;
-        let summary = if imported.format == ImportFormat::Copied {
-            SaveConfirmSummary::Copied
-        } else {
-            SaveConfirmSummary::Imported
-        };
+        let summary = save_confirm_summary_for(imported.format);
         match render_save_confirm(
             ui,
             enabled,
@@ -9441,6 +9449,23 @@ mod tests {
             imported_summary_line_edited(&editor_test_fitting(ImportFormat::Dna), true),
             "Imported \"Sample Brawler\" (Rifter): 0 items from 7 segments. Edited since import."
         );
+    }
+
+    #[test]
+    fn save_confirm_summary_selection_by_format() {
+        // A copied draft confirms with the copied wording;
+        // every other draft format uses the imported wording.
+        assert_eq!(
+            save_confirm_summary_for(ImportFormat::Copied),
+            SaveConfirmSummary::Copied
+        );
+        for format in [ImportFormat::Eft, ImportFormat::Dna, ImportFormat::Created] {
+            assert_eq!(
+                save_confirm_summary_for(format),
+                SaveConfirmSummary::Imported,
+                "{format:?}"
+            );
+        }
     }
 
     #[test]

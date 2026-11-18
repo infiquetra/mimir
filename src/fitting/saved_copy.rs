@@ -541,6 +541,20 @@ mod tests {
         let (_, issues) = convert(&source, &resolver);
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].kind, ImportIssueKind::CopiedDuplicateSlot);
+
+        // Only a converted row claims its slot: when the first
+        // claimant is skipped (unresolved name), the later
+        // valid row on the same flag still converts.
+        let source = fitting(
+            "T",
+            SHIP,
+            vec![item("LoSlot0", 1, 9999), item("LoSlot0", 1, 2001)],
+        );
+        let (draft, issues) = convert(&source, &resolver);
+        assert_eq!(draft.items.len(), 1);
+        assert_eq!(draft.items[0].type_id, 2001);
+        assert_eq!(issues.len(), 1);
+        assert_eq!(issues[0].kind, ImportIssueKind::CopiedUnnamed);
     }
 
     #[test]
