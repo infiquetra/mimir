@@ -206,12 +206,12 @@ pub fn set_quantity(
     index: usize,
     quantity: &str,
 ) -> Result<(), EditRefusal> {
-    let refused_quantity = |items: usize| {
-        tracing::debug!("[FITTING] editor quantity refused items={items}");
+    let refused_quantity = || {
+        tracing::debug!("[FITTING] editor quantity refused");
         EditRefusal::InvalidQuantity
     };
     let Some(amount) = parse_stack_quantity(quantity.trim()) else {
-        return Err(refused_quantity(fitting.items.len()));
+        return Err(refused_quantity());
     };
     // Only stacked rows accept a quantity; slot rows render no
     // control, and an unknown row index is refused the same way.
@@ -221,7 +221,7 @@ pub fn set_quantity(
                 item.quantity = amount;
             }
         }
-        _ => return Err(refused_quantity(fitting.items.len())),
+        _ => return Err(refused_quantity()),
     }
     recount_charges(fitting);
     tracing::debug!(
@@ -436,7 +436,7 @@ mod tests {
         assert_eq!(stacked, Err(EditRefusal::StackedModule));
         assert!(fitting.items.is_empty());
 
-        for bad in ["0", "x5", "2147483648", "05"] {
+        for bad in ["0", "x5", "2147483648", "05", "-5", "+5", "-0"] {
             let result = add_item(&mut fitting, &types, "Hobgoblin II", Some(bad));
             assert_eq!(result, Err(EditRefusal::InvalidQuantity), "{bad}");
             assert!(fitting.items.is_empty(), "{bad}");

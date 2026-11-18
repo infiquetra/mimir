@@ -846,6 +846,10 @@ pub struct AppState {
     pub fittings_editor_error: Option<String>,
     pub fittings_import_edited: bool,
     pub fittings_editor_quantity: HashMap<usize, String>,
+    // Rename box draft: None until the panel seeds it from the
+    // imported fitting's name; the draft name changes only
+    // when the Rename control applies this text.
+    pub fittings_editor_name: Option<String>,
     // Fitting-write state (write design sections 3.2, 6, 7, 8).
     // Memory only: never persisted. `fittings_write_needs_reauthorize`
     // is a sibling `AppState` boolean rather than part of
@@ -1131,6 +1135,7 @@ impl AppState {
                 self.fittings_editor_error = None;
                 self.fittings_import_edited = false;
                 self.fittings_editor_quantity.clear();
+                self.fittings_editor_name = None;
                 // Write design section 3.2: the write state is per
                 // character too. An armed confirmation or a queued
                 // request must never outlive its character; the
@@ -1339,6 +1344,7 @@ impl AppState {
             self.fittings_editor_error = None;
             self.fittings_import_edited = false;
             self.fittings_editor_quantity.clear();
+            self.fittings_editor_name = None;
             // Write state reset (design section 3.2), same
             // ownership argument as the import state.
             self.fittings_write_needs_reauthorize = false;
@@ -1399,6 +1405,7 @@ impl AppState {
             self.fittings_editor_error = None;
             self.fittings_import_edited = false;
             self.fittings_editor_quantity.clear();
+            self.fittings_editor_name = None;
             self.fittings_write_needs_reauthorize = false;
             self.fittings_write_confirm = None;
             self.fittings_write_requested = None;
@@ -2750,6 +2757,7 @@ mod tests {
         state.fittings_editor_error = Some("Could not add: refused.".to_string());
         state.fittings_import_edited = true;
         state.fittings_editor_quantity.insert(0, "7".to_string());
+        state.fittings_editor_name = Some("Renamed".to_string());
     }
 
     fn assert_import_cleared(state: &AppState) {
@@ -2762,6 +2770,7 @@ mod tests {
         assert_eq!(state.fittings_editor_error, None);
         assert!(!state.fittings_import_edited);
         assert!(state.fittings_editor_quantity.is_empty());
+        assert_eq!(state.fittings_editor_name, None);
     }
 
     #[test]

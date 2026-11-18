@@ -445,6 +445,9 @@ fn split_stack(line: &str) -> Option<(&str, &str)> {
 /// AAR-strict quantity: first digit 1-9, at most 10 digits, at most
 /// `MAX_STACK_QUANTITY`. Anything else is `InvalidQuantity`.
 pub(crate) fn parse_stack_quantity(suffix: &str) -> Option<i64> {
+    if suffix.is_empty() || !suffix.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
     if suffix.len() > 10 || suffix.starts_with('0') {
         return None;
     }

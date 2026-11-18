@@ -1396,6 +1396,7 @@ fn clear_editor_state(state: &mut AppState) {
     state.fittings_editor_error = None;
     state.fittings_import_edited = false;
     state.fittings_editor_quantity.clear();
+    state.fittings_editor_name = None;
 }
 
 /// Locked heading for the base resource block (design section 7).
@@ -2948,13 +2949,25 @@ fn fittings_import_panel(
     ui.heading(FITTINGS_EDITOR_HEADING);
     ui.label(FITTINGS_EDITOR_NOTE);
     ui.horizontal(|ui| {
-        let response =
-            ui.add(egui::TextEdit::singleline(&mut imported.name).hint_text("Fitting name"));
-        state.text_input_focused |= response.has_focus();
-        if ui.button("Rename fitting").clicked() {
-            let draft_name = imported.name.clone();
-            editor_rename(&mut imported, &draft_name);
-            note_successful_edit(state);
+        // The rename box edits a separate draft, seeded from
+        // the fitting's name; the fitting itself changes only
+        // when Rename applies it (typing alone never edits,
+        // so an armed save confirmation cannot be bypassed).
+        if state.fittings_editor_name.is_none() {
+            state.fittings_editor_name = Some(imported.name.clone());
+        }
+        let mut apply_rename = false;
+        if let Some(name_draft) = state.fittings_editor_name.as_mut() {
+            let response = ui.add(egui::TextEdit::singleline(name_draft).hint_text("Fitting name"));
+            state.text_input_focused |= response.has_focus();
+            apply_rename = ui.button("Rename fitting").clicked();
+        }
+        if apply_rename {
+            if let Some(draft_name) = state.fittings_editor_name.clone() {
+                editor_rename(&mut imported, &draft_name);
+                state.fittings_editor_name = Some(imported.name.clone());
+                note_successful_edit(state);
+            }
         }
     });
     ui.horizontal(|ui| {
@@ -8401,12 +8414,14 @@ mod tests {
         state.fittings_editor_error = Some("Could not add: refused.".to_string());
         state.fittings_import_edited = true;
         state.fittings_editor_quantity.insert(2, "3".to_string());
+        state.fittings_editor_name = Some("Renamed".to_string());
         clear_editor_state(&mut state);
         assert_eq!(state.fittings_editor_add_name, "");
         assert_eq!(state.fittings_editor_add_quantity, "");
         assert_eq!(state.fittings_editor_error, None);
         assert!(!state.fittings_import_edited);
         assert!(state.fittings_editor_quantity.is_empty());
+        assert_eq!(state.fittings_editor_name, None);
     }
 
     #[test]
