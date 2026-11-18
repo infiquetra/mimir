@@ -115,6 +115,14 @@ effect; remote repairers (effects 6186/6652/6188/6651/7166/
 re-emitted. Dogma 1886 `chargedArmorDamageMultiplier` (the
 loaded-paste gain) is never read: ancillary modules ship dry
 amounts only (design section 2.3).
+Module need filters (docs/fitting-need-reductions-design.md
+section 4) append two further keys after `structureRepair` in the
+locked order: `groupId` (the invTypes `groupID` column) and
+`requiredSkillIds` (the six required-skill slots 182, 183, 184,
+1285, 1289, 1290 in attribute order, absent slots skipped, always
+present including as an empty list) on exactly the category-7
+slot rows carrying a need key. Rigs, ships, and every other row
+gain neither key.
 """
 
 import bz2
@@ -139,6 +147,16 @@ SHIP_CPU_OUTPUT_ATTR = 48
 SHIP_POWER_OUTPUT_ATTR = 11
 MODULE_CPU_NEED_ATTR = 50
 MODULE_POWER_NEED_ATTR = 30
+
+# Required-skill attribute ids (docs/fitting-need-reductions-design.md
+# section 4): the six required-skill slots 182, 183, 184, 1285,
+# 1289, 1290. Source: dogmaAttributes.jsonl (the requiredSlots
+# attributes) and Flutter's `requiredSkillAttributeIds` at ed698d3
+# (dogma_engine.dart:40-51); the tuple order is the locked emission
+# order. Every cached row carries `valueFloat` (`valueInt` is always
+# the literal `None`), so values parse from `valueFloat` like every
+# other attribute set.
+REQUIRED_SKILL_ATTR_IDS = (182, 183, 184, 1285, 1289, 1290)
 
 # Base ship attribute ids (docs/ship-base-stats-design.md section 2):
 # dogmaAttributes.jsonl _key 263 "shieldCapacity", 265 "armorHP",
@@ -1169,6 +1187,45 @@ REPAIR_EXPECTED_COUNTS = {
     "structureRepair": 25,
 }
 
+# Module need-filter oracles (docs/fitting-need-reductions-design.md
+# section 4): each value read directly from invTypes.csv.bz2 /
+# dgmTypeAttributes.csv.bz2 during design. Tuple shape mirrors
+# REPAIR_ORACLES: (typeId, key, expected-or-None). A None expected
+# means the key must be absent from that row (1236 carries no
+# needs at all; 587 is a ship). `requiredSkillIds` lists are
+# complete lists in the locked attribute order 182, 183, 184,
+# 1285, 1289, 1290 (absent slots skipped).
+NEED_FILTER_ORACLES = [
+    (2889, "groupId", 55),
+    (2889, "requiredSkillIds", [3302, 3300, 11084]),
+    (4256, "groupId", 862),
+    (4256, "requiredSkillIds", [28073]),
+    (2048, "groupId", 60),
+    (2048, "requiredSkillIds", [3394]),
+    (1355, "groupId", 769),
+    (1355, "requiredSkillIds", [3424]),
+    (37303, "groupId", 74),
+    (37303, "requiredSkillIds", [41406, 21666, 3300]),
+    (33981, "groupId", 1289),
+    (33981, "requiredSkillIds", [3455]),
+    (1236, "groupId", None),
+    (1236, "requiredSkillIds", None),
+    (587, "groupId", None),
+    (587, "requiredSkillIds", None),
+]
+
+# Expected module need-filter key counts (fitting-need-reductions-design
+# section 4, scripted over the cache joined to the shipped
+# catalogue: the 3,183 cat-7 slot rows carrying a need key —
+# 3,177 on CPU, 3,183 on power — gain both filter keys, always
+# present including as an empty list; 4,306 required-skill slot
+# values in total, 3,175 rows non-empty and 8 empty).
+NEED_FILTER_EXPECTED_COUNTS = {
+    "groupId": 3183,
+    "requiredSkillIds": 3183,
+    "requiredSkillValues": 4306,
+}
+
 _STACKED_SUFFIX_RE = re.compile(r" x[0-9]+$")
 
 
@@ -1686,6 +1743,56 @@ def main():
         seen_repair_keys.add(key)
         repair_by_type.setdefault(type_id, {})[attribute_id] = value
 
+    # Required skills per type (docs/fitting-need-reductions-design.md
+    # section 4): only the six locked attribute ids, each parsed
+    # from valueFloat. An unparseable, duplicated, non-finite,
+    # non-integral, or non-positive wanted row fails loudly and
+    # writes nothing, as does a skill repeated within one type's
+    # six slots (membership matching makes duplicates inert at
+    # runtime, so a repeated value means the cache changed
+    # underneath the design).
+    required_skills_by_type = {}
+    seen_required_keys = set()
+    for row in type_attributes:
+        attribute_id = int(row["attributeID"])
+        if attribute_id not in REQUIRED_SKILL_ATTR_IDS:
+            continue
+        type_id = int(row["typeID"])
+        key = (type_id, attribute_id)
+        if key in seen_required_keys:
+            fail(
+                f"duplicate required-skill row (type {type_id}, "
+                f"attribute {attribute_id}) in dgmTypeAttributes"
+            )
+        try:
+            value = float(row["valueFloat"])
+        except (TypeError, ValueError):
+            fail(
+                f"unparseable required-skill value {row['valueFloat']!r} "
+                f"for (type {type_id}, attribute {attribute_id})"
+            )
+        if not math.isfinite(value):
+            fail(
+                f"non-finite required-skill value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        if value.is_integer() is False or value <= 0:
+            fail(
+                f"non-integral or non-positive required-skill value "
+                f"{value!r} for (type {type_id}, "
+                f"attribute {attribute_id})"
+            )
+        skill_id = int(value)
+        existing = required_skills_by_type.setdefault(type_id, {})
+        if skill_id in existing.values():
+            fail(
+                f"required skill {skill_id} repeated within type "
+                f"{type_id} across attributes "
+                f"{sorted(existing)} (attribute {attribute_id})"
+            )
+        seen_required_keys.add(key)
+        existing[attribute_id] = skill_id
+
     types = []
     missing_group = 0
     resource_key_counts = Counter()
@@ -1698,6 +1805,7 @@ def main():
     dps_key_counts = Counter()
     cap_key_counts = Counter()
     repair_key_counts = Counter()
+    need_filter_key_counts = Counter()
     for row in inv_types:
         if row["published"] != "1":
             continue
@@ -2162,6 +2270,48 @@ def main():
             if STRUCTURE_REPAIR_EFFECT in type_effects_set:
                 entry["structureRepair"] = True
                 repair_key_counts["structureRepair"] += 1
+        # Additive module need-filter emission
+        # (docs/fitting-need-reductions-design.md section 4): two
+        # keys append after the repair keys in the locked order
+        # `groupId`, then `requiredSkillIds`, on exactly the
+        # population that gains a need key today — category 7,
+        # non-empty slotEffects, and at least one of attributes
+        # 50/30 present. `groupId` is the invTypes `groupID`
+        # column the category lookup already reads; the list
+        # carries the six slots in attribute order, absent slots
+        # skipped, always present including as an empty list —
+        # that always-present shape is what lets the loader tell
+        # "proven to require nothing relevant" from "filter data
+        # not in this catalogue". Rigs, ships, and every other
+        # row gain neither key.
+        if (
+            category_id == 7
+            and slot_effects
+            and (
+                MODULE_CPU_NEED_ATTR in resources
+                or MODULE_POWER_NEED_ATTR in resources
+            )
+        ):
+            try:
+                module_group_id = int(row["groupID"])
+            except (TypeError, ValueError):
+                fail(
+                    f"unparseable groupID {row['groupID']!r} "
+                    f"for type {type_id}"
+                )
+            entry["groupId"] = module_group_id
+            need_filter_key_counts["groupId"] += 1
+            skills = required_skills_by_type.get(type_id, {})
+            required_skill_ids = [
+                skills[attribute_id]
+                for attribute_id in REQUIRED_SKILL_ATTR_IDS
+                if attribute_id in skills
+            ]
+            entry["requiredSkillIds"] = required_skill_ids
+            need_filter_key_counts["requiredSkillIds"] += 1
+            need_filter_key_counts["requiredSkillValues"] += len(
+                required_skill_ids
+            )
         types.append(entry)
 
     types.sort(key=lambda entry: entry["typeId"])
@@ -2831,6 +2981,58 @@ def main():
                 "chargedArmorDamageMultiplier, which is never "
                 "emitted (dry amounts only)"
             )
+        # Module need-filter invariants (fitting-need-reductions-design
+        # section 5, restated as fail-loud checks): `groupId` and
+        # `requiredSkillIds` are present exactly when a need key
+        # is; every group is a positive int (not a bool); every
+        # list has at most six positive-int entries with no entry
+        # repeated within the row.
+        has_need_key = "cpu" in entry or "power" in entry
+        if ("groupId" in entry) != has_need_key:
+            fail(
+                f"type {entry['typeId']} groupId presence does "
+                f"not match its need keys"
+            )
+        if ("requiredSkillIds" in entry) != has_need_key:
+            fail(
+                f"type {entry['typeId']} requiredSkillIds "
+                f"presence does not match its need keys"
+            )
+        if "groupId" in entry:
+            group_value = entry["groupId"]
+            if (
+                not isinstance(group_value, int)
+                or isinstance(group_value, bool)
+                or group_value <= 0
+            ):
+                fail(
+                    f"type {entry['typeId']} groupId={group_value!r} "
+                    "is not a positive integral id"
+                )
+        if "requiredSkillIds" in entry:
+            skill_list = entry["requiredSkillIds"]
+            if len(skill_list) > 6:
+                fail(
+                    f"type {entry['typeId']} carries "
+                    f"{len(skill_list)} requiredSkillIds, "
+                    "expected at most six"
+                )
+            for skill_value in skill_list:
+                if (
+                    not isinstance(skill_value, int)
+                    or isinstance(skill_value, bool)
+                    or skill_value <= 0
+                ):
+                    fail(
+                        f"type {entry['typeId']} "
+                        f"requiredSkillIds entry {skill_value!r} "
+                        "is not a positive integral id"
+                    )
+            if len(set(skill_list)) != len(skill_list):
+                fail(
+                    f"type {entry['typeId']} carries a repeated "
+                    f"requiredSkillIds entry: {skill_list}"
+                )
 
     # Invariants the parser relies on (design sections 5.2, 6.3): no
     # shipment name may contain the header delimiters, and no published
@@ -3008,6 +3210,31 @@ def main():
                 f"expected {expected}"
             )
 
+    # Module need-filter oracles (design section 4). A None
+    # expected value means the key must be absent from that row.
+    for type_id, key, expected in NEED_FILTER_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(f"module need-filter oracle type {type_id} missing")
+        if expected is None:
+            if key in entry:
+                fail(
+                    f"module need-filter oracle type {type_id} "
+                    f"carries {key}={entry[key]!r}, expected absent"
+                )
+        elif entry.get(key) != expected:
+            fail(
+                f"module need-filter oracle type {type_id} "
+                f"{key}={entry.get(key)!r}, expected {expected!r}"
+            )
+    for key, expected in NEED_FILTER_EXPECTED_COUNTS.items():
+        actual = need_filter_key_counts[key]
+        if actual != expected:
+            fail(
+                f"module need-filter key {key} count {actual}, "
+                f"expected {expected}"
+            )
+
     duplicate_names = sum(
         1
         for count in Counter(
@@ -3136,6 +3363,11 @@ def main():
         f"armorRepair={repair_key_counts['armorRepair']} "
         f"fueledArmorRepair={repair_key_counts['fueledArmorRepair']} "
         f"structureRepair={repair_key_counts['structureRepair']}"
+    )
+    print(
+        f"need_filter_keys groupId={need_filter_key_counts['groupId']} "
+        f"requiredSkillIds={need_filter_key_counts['requiredSkillIds']} "
+        f"requiredSkillValues={need_filter_key_counts['requiredSkillValues']}"
     )
 
 
