@@ -150,14 +150,25 @@ impl IndustryRef {
             product_index.entry(row.type_id).or_default().push(idx);
         }
 
-        let buildable_blueprints: HashSet<i64> = manufacturing_blueprints
-            .iter()
-            .chain(reaction_blueprints.iter())
-            .copied()
-            .collect();
+        // A product row creates a candidate only when its
+        // blueprint is buildable at the row's own activity: a
+        // blueprint buildable at one activity never leaks its
+        // other activity's orphan product rows through the
+        // reverse index.
+        let buildable_at = |activity_id: i64, blueprint_type_id: i64| -> bool {
+            match activity_id {
+                MANUFACTURING_ACTIVITY_ID => manufacturing_blueprints
+                    .binary_search(&blueprint_type_id)
+                    .is_ok(),
+                REACTION_ACTIVITY_ID => reaction_blueprints
+                    .binary_search(&blueprint_type_id)
+                    .is_ok(),
+                _ => false,
+            }
+        };
         let mut reverse_with_activity: HashMap<i64, Vec<(i64, i64)>> = HashMap::new();
         for row in &products {
-            if buildable_blueprints.contains(&row.type_id) {
+            if buildable_at(row.activity_id, row.type_id) {
                 reverse_with_activity
                     .entry(row.product_type_id)
                     .or_default()
@@ -167,13 +178,16 @@ impl IndustryRef {
         let mut reverse_blueprint_index: HashMap<i64, Vec<i64>> = HashMap::new();
         for (product_type_id, mut candidates) in reverse_with_activity {
             candidates.sort_unstable();
-            reverse_blueprint_index.insert(
-                product_type_id,
-                candidates
-                    .iter()
-                    .map(|&(_, blueprint_type_id)| blueprint_type_id)
-                    .collect(),
-            );
+            // Sorted by activity then blueprint, so a blueprint
+            // making the product at both activities appears
+            // consecutively and dedups to one candidate;
+            // product_row_for then applies the same probe order.
+            let mut blueprint_ids: Vec<i64> = candidates
+                .iter()
+                .map(|&(_, blueprint_type_id)| blueprint_type_id)
+                .collect();
+            blueprint_ids.dedup();
+            reverse_blueprint_index.insert(product_type_id, blueprint_ids);
         }
         let mut buildable_product_type_ids: Vec<i64> =
             reverse_blueprint_index.keys().copied().collect();
@@ -260,16 +274,30 @@ impl IndustryRef {
         blueprint_type_id: i64,
         product_type_id: i64,
     ) -> Option<&IndustryProduct> {
-        if !(self.is_manufacturing_blueprint(blueprint_type_id)
-            || self.is_reaction_blueprint(blueprint_type_id))
-        {
-            return None;
-        }
         let indices = self.product_index.get(&blueprint_type_id)?;
-        indices
-            .iter()
-            .filter_map(|&i| self.products.get(i))
-            .find(|row| row.product_type_id == product_type_id)
+        // Only a row whose blueprint is buildable at the row's
+        // own activity counts, and Manufacturing wins over
+        // Reaction when the same blueprint makes the product
+        // at both (the probe order the traversal mirrors).
+        for activity_id in [MANUFACTURING_ACTIVITY_ID, REACTION_ACTIVITY_ID] {
+            let buildable = match activity_id {
+                MANUFACTURING_ACTIVITY_ID => self.is_manufacturing_blueprint(blueprint_type_id),
+                _ => self.is_reaction_blueprint(blueprint_type_id),
+            };
+            if !buildable {
+                continue;
+            }
+            if let Some(row) = indices
+                .iter()
+                .filter_map(|&i| self.products.get(i))
+                .find(|row| {
+                    row.product_type_id == product_type_id && row.activity_id == activity_id
+                })
+            {
+                return Some(row);
+            }
+        }
+        None
     }
 
     pub fn reaction_materials(&self, type_id: i64) -> Option<Vec<&IndustryMaterial>> {
@@ -836,6 +864,30 @@ mod tests {
         let reaction_products = data.reaction_products(100).expect("reaction prods");
         assert_eq!(reaction_products.len(), 1);
         assert!(reaction_products.iter().all(|row| row.activity_id == 11));
+    }
+
+    #[test]
+    fn cross_activity_orphan_never_leaks_through_reverse_index() {
+        // Blueprint 100 is buildable only at Manufacturing; its
+        // Reaction product row for 301 is an orphan at that
+        // activity and must not make 301 buildable.
+        let json = r#"{"materials":[{"typeId":100,"activityId":1,"materialTypeId":200,"quantity":10}],"products":[{"typeId":100,"activityId":1,"productTypeId":300,"quantity":5},{"typeId":100,"activityId":11,"productTypeId":301,"quantity":7}]}"#;
+        let data = IndustryRef::from_json(json).expect("loads");
+        assert_eq!(data.blueprints_producing(300), &[100]);
+        assert!(data.blueprints_producing(301).is_empty());
+        assert!(data.product_row_for(100, 301).is_none());
+        let row300 = data.product_row_for(100, 300).expect("300 row");
+        assert_eq!(row300.activity_id, 1);
+        assert_eq!(row300.quantity, 5);
+        // Same blueprint buildable at both activities and making
+        // the same product at both: one candidate, and the
+        // product row is the Manufacturing one (probe order).
+        let json = r#"{"materials":[{"typeId":100,"activityId":1,"materialTypeId":200,"quantity":10},{"typeId":100,"activityId":11,"materialTypeId":200,"quantity":20}],"products":[{"typeId":100,"activityId":11,"productTypeId":300,"quantity":7},{"typeId":100,"activityId":1,"productTypeId":300,"quantity":5}]}"#;
+        let data = IndustryRef::from_json(json).expect("dual activity loads");
+        assert_eq!(data.blueprints_producing(300), &[100]);
+        let row = data.product_row_for(100, 300).expect("300 row");
+        assert_eq!(row.activity_id, 1);
+        assert_eq!(row.quantity, 5);
     }
 
     #[test]

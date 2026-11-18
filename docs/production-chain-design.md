@@ -349,10 +349,16 @@ Decisions locked:
   activity-11 rows.
 - **The reverse index covers buildable blueprints
   only.** `blueprints_producing` is built from retained
-  product rows whose blueprint is in either
-  intersection — a products-only orphan proves no
-  buildable path, and a materials-only orphan makes
-  nothing — keyed by `product_type_id`, stored as a
+  product rows whose blueprint is in the intersection
+  for the row's own activity — a products-only orphan
+  proves no buildable path, a materials-only orphan
+  makes nothing, and a blueprint buildable at one
+  activity never leaks its other activity's orphan
+  product rows through the reverse (the same gating
+  applies in `product_row_for`, with Manufacturing
+  winning when one blueprint makes a product at both
+  activities, and such a blueprint is one candidate,
+  never two) — keyed by `product_type_id`, stored as a
   private `HashMap<i64, Vec<i64>>` plus the sorted key
   vector `buildable_product_type_ids` (4,891 keys on the
   shipped file, first 165, last 88721). Candidate lists

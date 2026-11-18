@@ -512,6 +512,9 @@ mod tests {
         assert_eq!(build_chain(&fx, 300, -1), None);
         // 2 * i64::MAX overflows: blueprint 108 needs 2 of raw 34 per run.
         assert_eq!(build_chain(&fx, 800, i64::MAX), None);
+        // 3 * i64::MAX wraps positive, so a wrapping multiply
+        // would wrongly succeed: blueprint 104 needs 3 of raw 34.
+        assert_eq!(build_chain(&fx, 500, i64::MAX), None);
         let chain = build_chain(&fx, 900, i64::MAX).expect("900 at max is exact");
         assert_eq!(
             preorder(&chain),
