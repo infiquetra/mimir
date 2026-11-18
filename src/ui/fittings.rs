@@ -23,7 +23,9 @@ use crate::fitting::eft::{EftImportOutcome, ImportFormat, ImportIssue, ImportedF
 use crate::fitting::resources::fitting_resources;
 use crate::fitting::resources::{
     fitting_resources_with_skills, resource_skill_levels, FittingResources, ResourceBudget,
-    ResourceSkillLevels, CPU_MANAGEMENT_SKILL_ID, POWER_GRID_MANAGEMENT_SKILL_ID,
+    ResourceSkillLevels, ADVANCED_WEAPON_UPGRADES_SKILL_ID, CPU_MANAGEMENT_SKILL_ID,
+    ELECTRONICS_UPGRADES_SKILL_ID, ENERGY_GRID_UPGRADES_SKILL_ID, POWER_GRID_MANAGEMENT_SKILL_ID,
+    SHIELD_UPGRADES_SKILL_ID, WEAPON_UPGRADES_SKILL_ID,
 };
 use crate::fitting::ship_cap_stability::{
     fitting_cap_stability, CapStabilityOutcome, FittingCapStability,
@@ -1191,10 +1193,10 @@ const FITTINGS_RESOURCES_APPLIED_HEADING: &str = "Fitting resources (with skill 
 /// in-game totals (design section 4).
 const FITTING_RESOURCES_DISCLOSURE: &str = "Base values from Mimir's bundled item data. Skills, implants, and bonuses from modules, rigs, subsystems, and the ship itself are not applied, so these numbers can differ from EVE.";
 
-/// Locked applied disclosure (fitting skill resources design
-/// section 6): the two skill bonuses are applied, the rest
-/// stays named as excluded.
-const FITTING_RESOURCES_APPLIED_DISCLOSURE: &str = "Ship outputs include only the two skill bonuses above, from Mimir's bundled item data and this character's trained skill levels. Module need reductions, implants, and bonuses from modules, rigs, subsystems, and the ship itself are not applied, so these numbers can differ from EVE.";
+/// Locked applied disclosure (fitting need reductions design
+/// section 8): the two skill bonuses and the five need
+/// reductions are applied, the rest stays named as excluded.
+const FITTING_RESOURCES_APPLIED_DISCLOSURE: &str = "Ship outputs and module needs include only the skill bonuses and reductions above, from Mimir's bundled item data and this character's trained skill levels. Implants, and bonuses and reductions from modules, rigs, subsystems, and the ship itself are not applied, so these numbers can differ from EVE.";
 
 const FITTING_RESOURCES_NO_CATALOGUE: &str =
     "Fitting resources unavailable: Mimir's bundled item data failed to load.";
@@ -1329,15 +1331,96 @@ fn skill_line(dimension: &str, skill_name: &str, level: i32) -> String {
     }
 }
 
+/// One before-reductions base-need line (fitting need reductions
+/// design section 8), pure like `resource_line`: `label` is "CPU"
+/// or "Power grid", `unit` the resource unit. Always rendered in
+/// the applied block so the reduced `used` in step 1 never
+/// replaces a base figure silently, even when the two are equal.
+fn base_need_line(label: &str, budget: &ResourceBudget, unit: &str) -> String {
+    format!(
+        "{label} need before skill reductions: {}.",
+        widgets::format_fitting_amount(budget.base_used, unit)
+    )
+}
+
+/// One need-reduction skill line (fitting need reductions design
+/// section 8), pure like `skill_line`: `dimension` is "CPU need
+/// of matching modules" or "Power grid need of matching modules"
+/// ("matching modules" is load-bearing — the percent applies per
+/// matched module, never to the whole dimension), `skill_name` is
+/// the resolved SDE name, `pct_per_level` is 5 for every
+/// reduction skill except Advanced Weapon Upgrades, where it is
+/// 2. Levels arrive clamped to `0..=5` from
+/// `resource_skill_levels`; the clamp here keeps the displayed
+/// level consistent with the defensive re-clamp inside
+/// `fitting_resources_with_skills`.
+fn need_reduction_line(
+    dimension: &str,
+    skill_name: &str,
+    level: i32,
+    pct_per_level: i32,
+) -> String {
+    let level = level.clamp(0, 5);
+    if level > 0 {
+        format!(
+            "{dimension} includes {skill_name} level {level} (-{}%).",
+            level * pct_per_level
+        )
+    } else {
+        format!("{dimension} includes no reduction: {skill_name} is level 0.")
+    }
+}
+
+/// Per-dimension unreduced-module disclosure for CPU, or `None`
+/// when every counted module's reduction was proven (design
+/// section 8). Counted modules kept at full need because the
+/// catalogue row carries no filter data to prove or disprove a
+/// reduction; never renders on the shipped catalogue, so a mixed
+/// reduced-plus-unprovable total can never present as fully
+/// reduced.
+fn cpu_unreduced_line(unreduced: usize) -> Option<String> {
+    if unreduced == 0 {
+        None
+    } else if unreduced == 1 {
+        Some(
+            "CPU counts 1 fitted module at full need: Mimir's bundled item data has no skill-reduction data for them."
+                .to_string(),
+        )
+    } else {
+        Some(format!(
+            "CPU counts {unreduced} fitted modules at full need: Mimir's bundled item data has no skill-reduction data for them."
+        ))
+    }
+}
+
+/// Per-dimension unreduced-module disclosure for power grid, or
+/// `None` when every counted module's reduction was proven
+/// (design section 8).
+fn power_grid_unreduced_line(unreduced: usize) -> Option<String> {
+    if unreduced == 0 {
+        None
+    } else if unreduced == 1 {
+        Some(
+            "Power grid counts 1 fitted module at full need: Mimir's bundled item data has no skill-reduction data for them."
+                .to_string(),
+        )
+    } else {
+        Some(format!(
+            "Power grid counts {unreduced} fitted modules at full need: Mimir's bundled item data has no skill-reduction data for them."
+        ))
+    }
+}
+
 /// CPU and power grid block shared by the saved and imported
 /// fitting details (design section 7, extended by the fitting
-/// skill resources design sections 5-6). `levels` is `Some` only
-/// when the owning character's skills are loaded (`Ready`); `None`
+/// skill resources design sections 5-6 and the fitting need
+/// reductions design section 8). `levels` is `Some` only when
+/// the owning character's skills are loaded (`Ready`); `None`
 /// renders the base block byte-identically to before. The heading
 /// is chosen after the outcome is known, so the applied heading
-/// never sits over an unavailable sentence. Renders even when the
-/// fitting has no items. Logs nothing itself: the pure function
-/// already logged counts.
+/// never sits over an unavailable sentence. Renders even when
+/// the fitting has no items. Logs nothing itself: the pure
+/// function already logged counts.
 fn render_fitting_resources(
     ui: &mut egui::Ui,
     fitting: &CharacterFitting,
@@ -1380,10 +1463,48 @@ fn render_fitting_resources(
                     &sde.skill_name_quiet(POWER_GRID_MANAGEMENT_SKILL_ID),
                     levels.power_grid_management,
                 ));
+                ui.label(base_need_line("CPU", &cpu, "tf"));
+                ui.label(base_need_line("Power grid", &power, "MW"));
+                ui.label(need_reduction_line(
+                    "CPU need of matching modules",
+                    &sde.skill_name_quiet(WEAPON_UPGRADES_SKILL_ID),
+                    levels.weapon_upgrades,
+                    5,
+                ));
+                ui.label(need_reduction_line(
+                    "CPU need of matching modules",
+                    &sde.skill_name_quiet(ENERGY_GRID_UPGRADES_SKILL_ID),
+                    levels.energy_grid_upgrades,
+                    5,
+                ));
+                ui.label(need_reduction_line(
+                    "CPU need of matching modules",
+                    &sde.skill_name_quiet(ELECTRONICS_UPGRADES_SKILL_ID),
+                    levels.electronics_upgrades,
+                    5,
+                ));
+                ui.label(need_reduction_line(
+                    "Power grid need of matching modules",
+                    &sde.skill_name_quiet(ADVANCED_WEAPON_UPGRADES_SKILL_ID),
+                    levels.advanced_weapon_upgrades,
+                    2,
+                ));
+                ui.label(need_reduction_line(
+                    "Power grid need of matching modules",
+                    &sde.skill_name_quiet(SHIELD_UPGRADES_SKILL_ID),
+                    levels.shield_upgrades,
+                    5,
+                ));
                 if let Some(line) = cpu_excluded_line(cpu.excluded_modules) {
                     ui.label(line);
                 }
                 if let Some(line) = power_grid_excluded_line(power.excluded_modules) {
+                    ui.label(line);
+                }
+                if let Some(line) = cpu_unreduced_line(cpu.unreduced_modules) {
+                    ui.label(line);
+                }
+                if let Some(line) = power_grid_unreduced_line(power.unreduced_modules) {
                     ui.label(line);
                 }
                 ui.label(FITTING_RESOURCES_APPLIED_DISCLOSURE);
@@ -4141,6 +4262,11 @@ mod tests {
             used,
             output,
             excluded_modules: 0,
+            // Mechanical extension for the need-reduction
+            // fields (design section 6): base equals used and
+            // nothing is unreduced in these template pins.
+            base_used: used,
+            unreduced_modules: 0,
         }
     }
 
@@ -4318,7 +4444,7 @@ mod tests {
         );
         assert_eq!(
             FITTING_RESOURCES_APPLIED_DISCLOSURE,
-            "Ship outputs include only the two skill bonuses above, from Mimir's bundled item data and this character's trained skill levels. Module need reductions, implants, and bonuses from modules, rigs, subsystems, and the ship itself are not applied, so these numbers can differ from EVE."
+            "Ship outputs and module needs include only the skill bonuses and reductions above, from Mimir's bundled item data and this character's trained skill levels. Implants, and bonuses and reductions from modules, rigs, subsystems, and the ship itself are not applied, so these numbers can differ from EVE."
         );
         // Names resolve through the real bundled SDE, never raw ids.
         let sde = Sde::load_bundled().expect("bundled SDE loads");
@@ -4326,6 +4452,18 @@ mod tests {
         let pg_name = sde.skill_name_quiet(POWER_GRID_MANAGEMENT_SKILL_ID);
         assert_eq!(cpu_name, "CPU Management");
         assert_eq!(pg_name, "Power Grid Management");
+        // Need-reduction names resolve through the real bundled
+        // SDE as well, never raw ids (design section 8).
+        let weapon_name = sde.skill_name_quiet(WEAPON_UPGRADES_SKILL_ID);
+        let advanced_name = sde.skill_name_quiet(ADVANCED_WEAPON_UPGRADES_SKILL_ID);
+        let grid_name = sde.skill_name_quiet(ENERGY_GRID_UPGRADES_SKILL_ID);
+        let electronics_name = sde.skill_name_quiet(ELECTRONICS_UPGRADES_SKILL_ID);
+        let shield_name = sde.skill_name_quiet(SHIELD_UPGRADES_SKILL_ID);
+        assert_eq!(weapon_name, "Weapon Upgrades");
+        assert_eq!(advanced_name, "Advanced Weapon Upgrades");
+        assert_eq!(grid_name, "Energy Grid Upgrades");
+        assert_eq!(electronics_name, "Electronics Upgrades");
+        assert_eq!(shield_name, "Shield Upgrades");
         // Level 5 is +25%; level 1 is +5%; level 0 states the absence.
         assert_eq!(
             skill_line("CPU output", &cpu_name, 5),
@@ -4350,6 +4488,223 @@ mod tests {
         assert_eq!(
             skill_line("Power grid output", &pg_name, 0),
             "Power grid output includes no bonus: Power Grid Management is level 0."
+        );
+        // Before-reductions lines render the base figure with
+        // the same one-decimal shape as every other amount.
+        let before = ResourceBudget {
+            used: 107.25,
+            output: 130.0,
+            excluded_modules: 0,
+            base_used: 114.0,
+            unreduced_modules: 0,
+        };
+        assert_eq!(
+            base_need_line("CPU", &before, "tf"),
+            "CPU need before skill reductions: 114.0 tf."
+        );
+        let before_power = ResourceBudget {
+            used: 29.8,
+            output: 41.0,
+            excluded_modules: 0,
+            base_used: 31.0,
+            unreduced_modules: 0,
+        };
+        assert_eq!(
+            base_need_line("Power grid", &before_power, "MW"),
+            "Power grid need before skill reductions: 31.0 MW."
+        );
+        // Reduction lines: level 5 is -25% (Advanced -10%),
+        // level 1 is -5% (Advanced -2%), level 0 states the
+        // absence. Advanced pins the x2 percent: a
+        // x5-for-everything mutant fails here.
+        assert_eq!(
+            need_reduction_line("CPU need of matching modules", &weapon_name, 5, 5),
+            "CPU need of matching modules includes Weapon Upgrades level 5 (-25%)."
+        );
+        assert_eq!(
+            need_reduction_line("CPU need of matching modules", &weapon_name, 1, 5),
+            "CPU need of matching modules includes Weapon Upgrades level 1 (-5%)."
+        );
+        assert_eq!(
+            need_reduction_line("CPU need of matching modules", &weapon_name, 0, 5),
+            "CPU need of matching modules includes no reduction: Weapon Upgrades is level 0."
+        );
+        assert_eq!(
+            need_reduction_line("CPU need of matching modules", &grid_name, 5, 5),
+            "CPU need of matching modules includes Energy Grid Upgrades level 5 (-25%)."
+        );
+        assert_eq!(
+            need_reduction_line("CPU need of matching modules", &electronics_name, 5, 5),
+            "CPU need of matching modules includes Electronics Upgrades level 5 (-25%)."
+        );
+        assert_eq!(
+            need_reduction_line("Power grid need of matching modules", &advanced_name, 5, 2),
+            "Power grid need of matching modules includes Advanced Weapon Upgrades level 5 (-10%)."
+        );
+        assert_eq!(
+            need_reduction_line("Power grid need of matching modules", &advanced_name, 1, 2),
+            "Power grid need of matching modules includes Advanced Weapon Upgrades level 1 (-2%)."
+        );
+        assert_eq!(
+            need_reduction_line(
+                "Power grid need of matching modules",
+                &advanced_name,
+                0,
+                2
+            ),
+            "Power grid need of matching modules includes no reduction: Advanced Weapon Upgrades is level 0."
+        );
+        assert_eq!(
+            need_reduction_line("Power grid need of matching modules", &shield_name, 5, 5),
+            "Power grid need of matching modules includes Shield Upgrades level 5 (-25%)."
+        );
+        assert_eq!(
+            need_reduction_line(
+                "Power grid need of matching modules",
+                &shield_name,
+                0,
+                5
+            ),
+            "Power grid need of matching modules includes no reduction: Shield Upgrades is level 0."
+        );
+        // Unreduced lines: none when proven, singular and plural
+        // forms otherwise.
+        assert_eq!(cpu_unreduced_line(0), None);
+        assert_eq!(
+            cpu_unreduced_line(1).as_deref(),
+            Some(
+                "CPU counts 1 fitted module at full need: Mimir's bundled item data has no skill-reduction data for them."
+            )
+        );
+        assert_eq!(
+            cpu_unreduced_line(2).as_deref(),
+            Some("CPU counts 2 fitted modules at full need: Mimir's bundled item data has no skill-reduction data for them.")
+        );
+        assert_eq!(power_grid_unreduced_line(0), None);
+        assert_eq!(
+            power_grid_unreduced_line(1).as_deref(),
+            Some("Power grid counts 1 fitted module at full need: Mimir's bundled item data has no skill-reduction data for them.")
+        );
+        assert_eq!(
+            power_grid_unreduced_line(2).as_deref(),
+            Some("Power grid counts 2 fitted modules at full need: Mimir's bundled item data has no skill-reduction data for them.")
+        );
+    }
+
+    // Before-reductions lines on the sample fit at both weapon
+    // skills level 5 (fitting need reductions design sections 8-9):
+    // real bundled catalogue through the pure function, so the
+    // reduced `used` beside the base figure is pinned, not
+    // hand-typed. 107.25 renders `107.3`, half away from zero.
+    #[test]
+    fn sample_fit_before_reduction_lines_match_the_locked_story() {
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let synth = match parse_eft(DEMO_SAMPLE_EFT, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
+        };
+        let levels = ResourceSkillLevels {
+            cpu_management: 0,
+            power_grid_management: 0,
+            weapon_upgrades: 5,
+            advanced_weapon_upgrades: 5,
+            energy_grid_upgrades: 0,
+            electronics_upgrades: 0,
+            shield_upgrades: 0,
+        };
+        let (cpu, power) = match fitting_resources_with_skills(&synth, &catalogue, Some(levels)) {
+            FittingResources::Available { cpu, power } => (cpu, power),
+            FittingResources::ShipNoOutput => panic!("sample must have ship output"),
+        };
+        assert_eq!(
+            resource_line("CPU", &cpu, "tf"),
+            "CPU: 107.3 tf of 130.0 tf used (22.8 tf left)"
+        );
+        assert_eq!(
+            resource_line("Power grid", &power, "MW"),
+            "Power grid: 29.8 MW of 41.0 MW used (11.2 MW left)"
+        );
+        assert_eq!(
+            base_need_line("CPU", &cpu, "tf"),
+            "CPU need before skill reductions: 114.0 tf."
+        );
+        assert_eq!(
+            base_need_line("Power grid", &power, "MW"),
+            "Power grid need before skill reductions: 31.0 MW."
+        );
+        assert_eq!(cpu.unreduced_modules, 0);
+        assert_eq!(power.unreduced_modules, 0);
+        assert_eq!(cpu_unreduced_line(cpu.unreduced_modules), None);
+        assert_eq!(power_grid_unreduced_line(power.unreduced_modules), None);
+    }
+
+    // Unreduced lines from a labelled synthetic catalogue: the
+    // shipped catalogue always carries complete filter data, so
+    // the count is unreachable on real data. One module without
+    // filter keys counts at full need with an unreduced line in
+    // each dimension; one module with no needs at all is
+    // excluded, never unreduced — both disclosed in one render.
+    #[test]
+    fn synthetic_unreduced_and_excluded_lines_coexist() {
+        use crate::esi::models::FittingItem;
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[],"cpuOutput":130.0,"powerOutput":41.0},
+                {"typeId":9001,"typeName":"Unproven Mod","categoryId":7,"slotEffects":[11],"cpu":10.0,"power":5.0},
+                {"typeId":9002,"typeName":"No Needs Mod","categoryId":7,"slotEffects":[11]}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let item = |flag: &str, type_id: i64| FittingItem {
+            flag: flag.to_string(),
+            quantity: 1,
+            type_id,
+        };
+        let fitting = CharacterFitting {
+            fitting_id: 1,
+            name: "synthetic".to_string(),
+            description: None,
+            ship_type_id: 587,
+            items: vec![item("LoSlot0", 9001), item("LoSlot1", 9002)],
+        };
+        let levels = ResourceSkillLevels {
+            cpu_management: 0,
+            power_grid_management: 0,
+            weapon_upgrades: 5,
+            advanced_weapon_upgrades: 5,
+            energy_grid_upgrades: 0,
+            electronics_upgrades: 0,
+            shield_upgrades: 0,
+        };
+        let (cpu, power) = match fitting_resources_with_skills(&fitting, &catalogue, Some(levels)) {
+            FittingResources::Available { cpu, power } => (cpu, power),
+            FittingResources::ShipNoOutput => panic!("synthetic fit must have ship output"),
+        };
+        // The unproven module counts at full need in both sums.
+        assert_eq!(cpu.used, 10.0);
+        assert_eq!(cpu.base_used, 10.0);
+        assert_eq!(power.used, 5.0);
+        assert_eq!(power.base_used, 5.0);
+        assert_eq!(cpu.excluded_modules, 1);
+        assert_eq!(power.excluded_modules, 1);
+        assert_eq!(cpu.unreduced_modules, 1);
+        assert_eq!(power.unreduced_modules, 1);
+        assert_eq!(
+            cpu_excluded_line(cpu.excluded_modules).as_deref(),
+            Some(
+                "CPU does not count 1 fitted module with no CPU data in Mimir's bundled item data."
+            )
+        );
+        assert_eq!(
+            cpu_unreduced_line(cpu.unreduced_modules).as_deref(),
+            Some(
+                "CPU counts 1 fitted module at full need: Mimir's bundled item data has no skill-reduction data for them."
+            )
+        );
+        assert_eq!(
+            power_grid_unreduced_line(power.unreduced_modules).as_deref(),
+            Some(
+                "Power grid counts 1 fitted module at full need: Mimir's bundled item data has no skill-reduction data for them."
+            )
         );
     }
 
@@ -4397,18 +4752,31 @@ mod tests {
         let marcus_levels = resource_skill_levels(&marcus.skills);
         // The split fixture is unchanged: Aria has 3413 L5 only,
         // Marcus has 3426 L5 only.
+        // Mechanical literal extension for the five
+        // need-reduction fields (design section 6): all zero
+        // here; assertions unchanged.
         assert_eq!(
             aria_levels,
             ResourceSkillLevels {
                 cpu_management: 0,
-                power_grid_management: 5
+                power_grid_management: 5,
+                weapon_upgrades: 0,
+                advanced_weapon_upgrades: 0,
+                energy_grid_upgrades: 0,
+                electronics_upgrades: 0,
+                shield_upgrades: 0
             }
         );
         assert_eq!(
             marcus_levels,
             ResourceSkillLevels {
                 cpu_management: 5,
-                power_grid_management: 0
+                power_grid_management: 0,
+                weapon_upgrades: 0,
+                advanced_weapon_upgrades: 0,
+                energy_grid_upgrades: 0,
+                electronics_upgrades: 0,
+                shield_upgrades: 0
             }
         );
 
@@ -4416,6 +4784,25 @@ mod tests {
         let sde = Sde::load_bundled().expect("bundled SDE loads");
         let cpu_name = sde.skill_name_quiet(CPU_MANAGEMENT_SKILL_ID);
         let pg_name = sde.skill_name_quiet(POWER_GRID_MANAGEMENT_SKILL_ID);
+        // Need-reduction names for the level-0 lines below (design
+        // section 8 demo story). Neither demo character has any of
+        // the five skills, so every reduction line is level 0 and
+        // every before-reductions figure equals its used figure.
+        let weapon_name = sde.skill_name_quiet(WEAPON_UPGRADES_SKILL_ID);
+        let advanced_name = sde.skill_name_quiet(ADVANCED_WEAPON_UPGRADES_SKILL_ID);
+        let grid_name = sde.skill_name_quiet(ENERGY_GRID_UPGRADES_SKILL_ID);
+        let electronics_name = sde.skill_name_quiet(ELECTRONICS_UPGRADES_SKILL_ID);
+        let shield_name = sde.skill_name_quiet(SHIELD_UPGRADES_SKILL_ID);
+        // Aria's Gunnery (3300) at trained 4 is a filter skill,
+        // not a source skill: it reduces nothing and is part of
+        // the locked demo story, not a bug.
+        let aria_gunnery = aria
+            .skills
+            .skills
+            .iter()
+            .find(|skill| skill.skill_id == 3300)
+            .unwrap_or_else(|| panic!("aria Gunnery present"));
+        assert_eq!(aria_gunnery.trained_skill_level, 4);
 
         // Demo Brawler (Aria, PG L5 only): CPU stays base, PG scales
         // to 51.25, rendered half away from zero as 51.3.
@@ -4449,6 +4836,66 @@ mod tests {
             ),
             "Power grid output includes Power Grid Management level 5 (+25%)."
         );
+        // Demo story (need reductions design section 8): before
+        // figures equal used, all five lines level 0, nothing
+        // unreduced — Aria's Gunnery 4 reduces nothing.
+        assert_eq!(brawler.0.base_used, brawler.0.used);
+        assert_eq!(brawler.1.base_used, brawler.1.used);
+        assert_eq!(brawler.0.unreduced_modules, 0);
+        assert_eq!(brawler.1.unreduced_modules, 0);
+        assert_eq!(
+            base_need_line("CPU", &brawler.0, "tf"),
+            "CPU need before skill reductions: 84.0 tf."
+        );
+        assert_eq!(
+            base_need_line("Power grid", &brawler.1, "MW"),
+            "Power grid need before skill reductions: 3.0 MW."
+        );
+        assert_eq!(
+            need_reduction_line(
+                "CPU need of matching modules",
+                &weapon_name,
+                aria_levels.weapon_upgrades,
+                5
+            ),
+            "CPU need of matching modules includes no reduction: Weapon Upgrades is level 0."
+        );
+        assert_eq!(
+            need_reduction_line(
+                "CPU need of matching modules",
+                &grid_name,
+                aria_levels.energy_grid_upgrades,
+                5
+            ),
+            "CPU need of matching modules includes no reduction: Energy Grid Upgrades is level 0."
+        );
+        assert_eq!(
+            need_reduction_line(
+                "CPU need of matching modules",
+                &electronics_name,
+                aria_levels.electronics_upgrades,
+                5
+            ),
+            "CPU need of matching modules includes no reduction: Electronics Upgrades is level 0."
+        );
+        assert_eq!(
+            need_reduction_line(
+                "Power grid need of matching modules",
+                &advanced_name,
+                aria_levels.advanced_weapon_upgrades,
+                2
+            ),
+            "Power grid need of matching modules includes no reduction: Advanced Weapon Upgrades is level 0."
+        );
+        assert_eq!(
+            need_reduction_line(
+                "Power grid need of matching modules",
+                &shield_name,
+                aria_levels.shield_upgrades,
+                5
+            ),
+            "Power grid need of matching modules includes no reduction: Shield Upgrades is level 0."
+        );
 
         // Mission Runner (Aria).
         let mission = match fitting_resources_with_skills(
@@ -4469,6 +4916,16 @@ mod tests {
         );
         assert_eq!(mission.0.excluded_modules, 1);
         assert_eq!(mission.1.excluded_modules, 1);
+        assert_eq!(mission.0.base_used, mission.0.used);
+        assert_eq!(mission.1.base_used, mission.1.used);
+        assert_eq!(
+            base_need_line("CPU", &mission.0, "tf"),
+            "CPU need before skill reductions: 30.0 tf."
+        );
+        assert_eq!(
+            base_need_line("Power grid", &mission.1, "MW"),
+            "Power grid need before skill reductions: 1.0 MW."
+        );
 
         // Demo Runner (Marcus, CPU L5 only): CPU scales to 175.0,
         // PG stays base.
@@ -4502,6 +4959,45 @@ mod tests {
             ),
             "Power grid output includes no bonus: Power Grid Management is level 0."
         );
+        assert_eq!(runner.0.base_used, runner.0.used);
+        assert_eq!(runner.1.base_used, runner.1.used);
+        assert_eq!(runner.0.unreduced_modules, 0);
+        assert_eq!(runner.1.unreduced_modules, 0);
+        assert_eq!(
+            base_need_line("CPU", &runner.0, "tf"),
+            "CPU need before skill reductions: 57.0 tf."
+        );
+        assert_eq!(
+            base_need_line("Power grid", &runner.1, "MW"),
+            "Power grid need before skill reductions: 2.0 MW."
+        );
+        assert_eq!(
+            need_reduction_line(
+                "CPU need of matching modules",
+                &weapon_name,
+                marcus_levels.weapon_upgrades,
+                5
+            ),
+            "CPU need of matching modules includes no reduction: Weapon Upgrades is level 0."
+        );
+        assert_eq!(
+            need_reduction_line(
+                "Power grid need of matching modules",
+                &advanced_name,
+                marcus_levels.advanced_weapon_upgrades,
+                2
+            ),
+            "Power grid need of matching modules includes no reduction: Advanced Weapon Upgrades is level 0."
+        );
+        assert_eq!(
+            need_reduction_line(
+                "Power grid need of matching modules",
+                &shield_name,
+                marcus_levels.shield_upgrades,
+                5
+            ),
+            "Power grid need of matching modules includes no reduction: Shield Upgrades is level 0."
+        );
 
         // Sample import under both importers.
         let synth = match parse_eft(DEMO_SAMPLE_EFT, &catalogue) {
@@ -4521,6 +5017,16 @@ mod tests {
             resource_line("Power grid", &aria_sample.1, "MW"),
             "Power grid: 31.0 MW of 51.3 MW used (20.3 MW left)"
         );
+        assert_eq!(aria_sample.0.base_used, aria_sample.0.used);
+        assert_eq!(aria_sample.1.base_used, aria_sample.1.used);
+        assert_eq!(
+            base_need_line("CPU", &aria_sample.0, "tf"),
+            "CPU need before skill reductions: 114.0 tf."
+        );
+        assert_eq!(
+            base_need_line("Power grid", &aria_sample.1, "MW"),
+            "Power grid need before skill reductions: 31.0 MW."
+        );
         let marcus_sample =
             match fitting_resources_with_skills(&synth, &catalogue, Some(marcus_levels)) {
                 FittingResources::Available { cpu, power } => (cpu, power),
@@ -4533,6 +5039,16 @@ mod tests {
         assert_eq!(
             resource_line("Power grid", &marcus_sample.1, "MW"),
             "Power grid: 31.0 MW of 41.0 MW used (10.0 MW left)"
+        );
+        assert_eq!(marcus_sample.0.base_used, marcus_sample.0.used);
+        assert_eq!(marcus_sample.1.base_used, marcus_sample.1.used);
+        assert_eq!(
+            base_need_line("CPU", &marcus_sample.0, "tf"),
+            "CPU need before skill reductions: 114.0 tf."
+        );
+        assert_eq!(
+            base_need_line("Power grid", &marcus_sample.1, "MW"),
+            "Power grid need before skill reductions: 31.0 MW."
         );
     }
 
