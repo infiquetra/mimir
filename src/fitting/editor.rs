@@ -11,7 +11,11 @@
 //! Pure: no egui, no state, no network, no database. After every
 //! successful edit the charges counter is recounted from the
 //! current rows (design section 4.5); the parse-history counters
-//! stay frozen. Logs carry counts and fixed tokens only —
+//! stay frozen. One edit deliberately does not recount: a ship
+//! change cannot move a charge between rows, so it leaves the
+//! charges counter and the whole parse report untouched instead
+//! (change-ship design section 3.2). Logs carry counts and fixed
+//! tokens only —
 //! canonical catalogue names of successfully added items may be
 //! logged (bundled data, not user input); refused names are
 //! never logged.
@@ -398,6 +402,65 @@ pub fn new_fitting(types: &FittingTypes, ship: &ShipRow) -> Option<ImportedFitti
             issues: Vec::new(),
         },
     })
+}
+
+/// How one ship-change attempt ended (change-ship design
+/// section 3.1): the hull moved, the draft was already on the
+/// target hull, or the input row failed validation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShipChangeOutcome {
+    Changed,
+    SameShip,
+    Refused,
+}
+
+/// Move a draft onto a different ship (change-ship design
+/// section 3). The input is re-validated exactly as
+/// [`new_fitting`] validates it — the type number must resolve
+/// to a category-6 row carrying both outputs whose trimmed name
+/// equals the row's name — because a row the listing proof
+/// would hand the panel is still untrusted input here. Any
+/// failure returns [`ShipChangeOutcome::Refused`], mutates
+/// nothing, and logs nothing; the caller logs the refusal
+/// without the row's name, number, or search text. When the
+/// validated row is the draft's own hull the outcome is
+/// [`ShipChangeOutcome::SameShip`]: nothing is assigned, not
+/// even `ship_name`, because a same-number click must not
+/// silently respell a copied draft's resolver display name.
+/// Otherwise exactly the ship pair is assigned from the
+/// catalogue row — name, format, items, and the whole report
+/// stay identical, with deliberately no charges recount: a hull
+/// change cannot move a charge between rows, so recounting
+/// would only rewrite a counter this operation has no business
+/// touching. Only [`ShipChangeOutcome::Changed`] logs, at the
+/// other edits' `debug` level, with the new catalogue name and
+/// the carried item count.
+pub fn change_ship(
+    fitting: &mut ImportedFitting,
+    types: &FittingTypes,
+    ship: &ShipRow,
+) -> ShipChangeOutcome {
+    let Some(row) = types.lookup_by_id(ship.type_id) else {
+        return ShipChangeOutcome::Refused;
+    };
+    if row.category_id != CATEGORY_SHIP
+        || !output_usable(row.cpu_output)
+        || !output_usable(row.power_output)
+        || row.name.trim() != ship.name
+    {
+        return ShipChangeOutcome::Refused;
+    }
+    if row.type_id == fitting.ship_type_id {
+        return ShipChangeOutcome::SameShip;
+    }
+    fitting.ship_type_id = row.type_id;
+    fitting.ship_name = row.name.clone();
+    tracing::debug!(
+        "[FITTING] editor ship changed ship={} items={}",
+        row.name,
+        fitting.items.len()
+    );
+    ShipChangeOutcome::Changed
 }
 
 /// Remove the whole row at `index`, charge included. Returns
@@ -1158,5 +1221,257 @@ mod tests {
             name: "Negative Hull".to_string(),
         };
         assert!(new_fitting(&catalogue, &negative).is_none());
+    }
+
+    fn ship_row<'a>(rows: &'a [ShipRow], name: &str) -> &'a ShipRow {
+        rows.iter()
+            .find(|row| row.name == name)
+            .expect("candidate lists")
+    }
+
+    fn assert_carried_over(before: &ImportedFitting, after: &ImportedFitting) {
+        assert_eq!(after.name, before.name);
+        assert_eq!(after.format, before.format);
+        assert_eq!(after.items, before.items);
+        assert_eq!(after.report.imported_lines, before.report.imported_lines);
+        assert_eq!(
+            after.report.placeholder_lines,
+            before.report.placeholder_lines
+        );
+        assert_eq!(after.report.charges_noted, before.report.charges_noted);
+        assert_eq!(after.report.issues, before.report.issues);
+    }
+
+    fn assert_fitting_unchanged(before: &ImportedFitting, after: &ImportedFitting) {
+        assert_eq!(after.ship_type_id, before.ship_type_id);
+        assert_eq!(after.ship_name, before.ship_name);
+        assert_carried_over(before, after);
+    }
+
+    #[test]
+    fn change_ship_moves_only_the_hull_pair() {
+        let types = bundled_types();
+        let mut fitting = draft(
+            "[Rifter, Charge Test]\n\
+            200mm AutoCannon II, Republic Fleet EMP S\n\
+            [Empty Rig slot]\n\
+            Not A Real Item Name\n",
+            &types,
+        );
+        assert_eq!(fitting.report.imported_lines, 1);
+        assert_eq!(fitting.report.placeholder_lines, 1);
+        assert_eq!(fitting.report.charges_noted, 1);
+        assert_eq!(fitting.report.issues.len(), 1);
+        let before = fitting.clone();
+
+        let punisher = ship_row(&ship_candidates(&types), "Punisher").clone();
+        let outcome = change_ship(&mut fitting, &types, &punisher);
+
+        assert_eq!(outcome, ShipChangeOutcome::Changed);
+        assert_eq!(fitting.ship_type_id, 597);
+        assert_eq!(fitting.ship_name, "Punisher");
+        assert_carried_over(&before, &fitting);
+    }
+
+    #[test]
+    fn ship_change_is_exhaustive_over_the_404() {
+        let types = bundled_types();
+        let rows = ship_candidates(&types);
+        assert_eq!(rows.len(), 404);
+        let base = draft(
+            "[Rifter, Sweep]\n\
+            Damage Control II\n\
+            200mm AutoCannon II, Republic Fleet EMP S\n\
+            Hobgoblin II x2\n",
+            &types,
+        );
+        for row in &rows {
+            let mut fitting = base.clone();
+            let outcome = change_ship(&mut fitting, &types, row);
+            if row.name == "Rifter" {
+                assert_eq!(outcome, ShipChangeOutcome::SameShip, "{}", row.name);
+                assert_fitting_unchanged(&base, &fitting);
+            } else {
+                assert_eq!(outcome, ShipChangeOutcome::Changed, "{}", row.name);
+                assert_eq!(fitting.ship_type_id, row.type_id, "{}", row.name);
+                assert_eq!(fitting.ship_name, row.name, "{}", row.name);
+                assert_carried_over(&base, &fitting);
+            }
+        }
+    }
+
+    #[test]
+    fn change_ship_same_ship_is_no_op_and_forged_rows_refuse() {
+        let types = bundled_types();
+        let rows = ship_candidates(&types);
+        let mut fitting = draft("[Rifter, Stay]\n200mm AutoCannon II\n", &types);
+        let before = fitting.clone();
+
+        let own = ship_row(&rows, "Rifter").clone();
+        assert_eq!(
+            change_ship(&mut fitting, &types, &own),
+            ShipChangeOutcome::SameShip
+        );
+        assert_fitting_unchanged(&before, &fitting);
+
+        // Validation precedes the same-ship check: a forged row
+        // carrying the current hull's type number under a wrong
+        // name refuses instead of being blessed as a no-op.
+        let forged = ShipRow {
+            type_id: own.type_id,
+            name: "Not The Rifter".to_string(),
+        };
+        assert_eq!(
+            change_ship(&mut fitting, &types, &forged),
+            ShipChangeOutcome::Refused
+        );
+        assert_fitting_unchanged(&before, &fitting);
+    }
+
+    #[test]
+    fn change_ship_fixture_refusals_leave_the_draft_unchanged() {
+        // The shipped guard catalogue: one listed row, plus a
+        // row per failure mode the listing proof excludes.
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":600,"typeName":"Ordinary Hull","categoryId":6,"cpuOutput":100.0,"powerOutput":50.0},
+                {"typeId":601,"typeName":"No Cpu Hull","categoryId":6,"powerOutput":50.0},
+                {"typeId":602,"typeName":"No Power Hull","categoryId":6,"cpuOutput":100.0},
+                {"typeId":603,"typeName":"Twin Hull","categoryId":6,"cpuOutput":100.0,"powerOutput":50.0},
+                {"typeId":604,"typeName":"Twin Hull","categoryId":6,"cpuOutput":100.0,"powerOutput":50.0},
+                {"typeId":605,"typeName":"12345","categoryId":6,"cpuOutput":100.0,"powerOutput":50.0},
+                {"typeId":607,"typeName":"Negative Hull","categoryId":6,"cpuOutput":-5.0,"powerOutput":50.0},
+                {"typeId":608,"typeName":"99999999999999999999999999","categoryId":6,"cpuOutput":100.0,"powerOutput":50.0},
+                {"typeId":606,"typeName":"Not A Ship","categoryId":7,"cpuOutput":100.0,"powerOutput":50.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let rows = ship_candidates(&catalogue);
+        let names: Vec<&str> = rows.iter().map(|row| row.name.as_str()).collect();
+        assert_eq!(names, vec!["Ordinary Hull"]);
+        let mut fitting = new_fitting(&catalogue, &rows[0]).expect("ordinary hull constructs");
+        let before = fitting.clone();
+
+        for forged in [
+            ShipRow {
+                type_id: 606,
+                name: "Not A Ship".to_string(),
+            },
+            ShipRow {
+                type_id: 999_999,
+                name: "Ordinary Hull".to_string(),
+            },
+            ShipRow {
+                type_id: 607,
+                name: "Negative Hull".to_string(),
+            },
+        ] {
+            assert_eq!(
+                change_ship(&mut fitting, &catalogue, &forged),
+                ShipChangeOutcome::Refused,
+                "{forged:?}"
+            );
+            assert_fitting_unchanged(&before, &fitting);
+        }
+        assert_eq!(
+            change_ship(&mut fitting, &catalogue, &rows[0]),
+            ShipChangeOutcome::SameShip
+        );
+        assert_fitting_unchanged(&before, &fitting);
+    }
+
+    #[test]
+    fn change_ship_never_renames_the_draft() {
+        let types = bundled_types();
+        let rows = ship_candidates(&types);
+        let punisher = ship_row(&rows, "Punisher").clone();
+
+        // A fresh created draft's synthesized title survives.
+        let mut created =
+            new_fitting(&types, ship_row(&rows, "Rifter")).expect("Rifter constructs");
+        assert_eq!(created.name, "New Rifter Fit");
+        assert_eq!(
+            change_ship(&mut created, &types, &punisher),
+            ShipChangeOutcome::Changed
+        );
+        assert_eq!(created.name, "New Rifter Fit");
+
+        // The section 4 collision: a hand rename to the same
+        // string is indistinguishable from the synthesized one,
+        // so it survives too.
+        let mut typed = draft("[Rifter, Typed Name]\n200mm AutoCannon II\n", &types);
+        rename(&mut typed, "New Rifter Fit");
+        assert_eq!(typed.name, "New Rifter Fit");
+        assert_eq!(
+            change_ship(&mut typed, &types, &punisher),
+            ShipChangeOutcome::Changed
+        );
+        assert_eq!(typed.name, "New Rifter Fit");
+
+        let mut ordinary = draft("[Rifter, My Brawler]\n200mm AutoCannon II\n", &types);
+        assert_eq!(
+            change_ship(&mut ordinary, &types, &punisher),
+            ShipChangeOutcome::Changed
+        );
+        assert_eq!(ordinary.name, "My Brawler");
+    }
+
+    #[test]
+    fn ship_change_round_trips_through_both_copy_exports() {
+        let types = bundled_types();
+        let rows = ship_candidates(&types);
+        let punisher = ship_row(&rows, "Punisher").clone();
+
+        // Slot rows only: DNA covers slot sections, so a stacked
+        // row would not re-import with the same item count.
+        let mut fitting = draft(
+            "[Rifter, Paper Trail]\n\
+            200mm AutoCannon II\n\
+            1MN Afterburner II\n",
+            &types,
+        );
+        assert_eq!(
+            change_ship(&mut fitting, &types, &punisher),
+            ShipChangeOutcome::Changed
+        );
+        assert_eq!(fitting.name, "Paper Trail");
+        let synth = fitting.to_character_fitting();
+        let eft = fitting_to_eft(&synth, &fitting.name_resolver()).expect("EFT export");
+        assert_eq!(eft.text.lines().next(), Some("[Punisher, Paper Trail]"));
+        let dna = fitting_to_dna(&synth).expect("DNA export");
+        for text in [&eft.text, &dna.text] {
+            match parse_import(text, &types) {
+                EftImportOutcome::Imported(reimported) => {
+                    assert_eq!(reimported.ship_type_id, 597);
+                    assert_eq!(reimported.ship_name, "Punisher");
+                    assert_eq!(reimported.items.len(), fitting.items.len());
+                }
+                EftImportOutcome::Failed(fatal) => {
+                    panic!("{text:?} must re-import: {fatal:?}")
+                }
+            }
+        }
+
+        let mut empty = new_fitting(&types, ship_row(&rows, "Rifter")).expect("Rifter constructs");
+        assert_eq!(
+            change_ship(&mut empty, &types, &punisher),
+            ShipChangeOutcome::Changed
+        );
+        let synth = empty.to_character_fitting();
+        let eft = fitting_to_eft(&synth, &empty.name_resolver()).expect("EFT export");
+        assert_eq!(eft.text, "[Punisher, New Rifter Fit]");
+        let dna = fitting_to_dna(&synth).expect("DNA export");
+        assert_eq!(dna.text, "597::");
+        for text in [&eft.text, &dna.text] {
+            match parse_import(text, &types) {
+                EftImportOutcome::Imported(reimported) => {
+                    assert_eq!(reimported.ship_type_id, 597);
+                    assert_eq!(reimported.ship_name, "Punisher");
+                    assert!(reimported.items.is_empty());
+                }
+                EftImportOutcome::Failed(fatal) => {
+                    panic!("{text:?} must re-import: {fatal:?}")
+                }
+            }
+        }
     }
 }
