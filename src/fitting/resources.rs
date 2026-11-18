@@ -480,17 +480,23 @@ pub fn fitting_resources_with_skills(
         match usable(row.cpu) {
             Some(value) => {
                 cpu_base_used += quantity_f * value;
-                let factor = match levels {
-                    Some(l) => dimension_factor(&l, row, true),
-                    None => 1.0,
-                };
-                cpu_used += quantity_f * value * factor;
                 // Unreduced (never excluded): counted at full
                 // need because the filter data that dimension's
                 // entries need is absent. Only when a relevant
                 // level is above 0 — at all 0 the factor is
-                // provably 1 whatever the filters say.
-                if cpu_relevant && (row.required_skill_ids.is_none() || row.group_id.is_none()) {
+                // provably 1 whatever the filters say. An
+                // unreduced row takes factor 1 even when the
+                // present half of its filter data matches an
+                // entry: counted unreduced means counted at
+                // full need, never partially reduced.
+                let cpu_unprovable =
+                    cpu_relevant && (row.required_skill_ids.is_none() || row.group_id.is_none());
+                let factor = match (levels, cpu_unprovable) {
+                    (Some(l), false) => dimension_factor(&l, row, true),
+                    _ => 1.0,
+                };
+                cpu_used += quantity_f * value * factor;
+                if cpu_unprovable {
                     cpu_unreduced = cpu_unreduced.saturating_add(quantity_units);
                 }
             }
@@ -499,12 +505,13 @@ pub fn fitting_resources_with_skills(
         match usable(row.power) {
             Some(value) => {
                 power_base_used += quantity_f * value;
-                let factor = match levels {
-                    Some(l) => dimension_factor(&l, row, false),
-                    None => 1.0,
+                let power_unprovable = power_relevant && row.required_skill_ids.is_none();
+                let factor = match (levels, power_unprovable) {
+                    (Some(l), false) => dimension_factor(&l, row, false),
+                    _ => 1.0,
                 };
                 power_used += quantity_f * value * factor;
-                if power_relevant && row.required_skill_ids.is_none() {
+                if power_unprovable {
                     power_unreduced = power_unreduced.saturating_add(quantity_units);
                 }
             }
@@ -1860,6 +1867,23 @@ mod tests {
         assert_close(power.used, 5.0);
         assert_eq!(cpu.unreduced_modules, 0);
         assert_eq!(power.unreduced_modules, 0);
+        // Mixed presence: requiredSkillIds matches Weapon
+        // Upgrades (3300 gate) but groupId is absent, so the
+        // group-filtered entry cannot be proven either way.
+        // Counted unreduced means counted at FULL need: the
+        // matched reduction must not also be applied.
+        let mixed = synthetic_need_catalogue(
+            r#"{"typeId":5004,"typeName":"Mixed Presence Module","categoryId":7,"slotEffects":[11],"cpu":10.0,"power":5.0,"requiredSkillIds":[3300]}"#,
+        );
+        let fit = fitting(587, vec![item("LoSlot0", 1, 5004)]);
+        let (cpu, _) = budgets(fitting_resources_with_skills(
+            &fit,
+            &mixed,
+            Some(need_levels(5, 0, 0, 0, 0)),
+        ));
+        assert_close(cpu.used, 10.0);
+        assert_close(cpu.base_used, 10.0);
+        assert_eq!(cpu.unreduced_modules, 1);
     }
 
     // Design section 9 product rule (synthetic, labelled;
