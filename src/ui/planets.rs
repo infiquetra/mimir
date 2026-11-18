@@ -420,6 +420,33 @@ fn show_detail_section(
         Err(error) => section_error_label(ui, "colony detail", error, panel_shown),
         Ok(detail) => {
             let pins = &detail.pins;
+            let now = Utc::now();
+            let reported_pins = match &bundle.colonies {
+                Ok(colonies) => colonies
+                    .iter()
+                    .find(|colony| colony.planet_id == selected_planet)
+                    .map(|colony| colony.num_pins),
+                Err(_) => None,
+            };
+            let summary = colony_summary(pins, reported_pins, now);
+            ui.heading("Colony summary");
+            match summary.state {
+                ColonySummaryState::NoPins => {
+                    ui.label("No pins were reported for this colony.");
+                }
+                _ => {
+                    ui.label(format!("Status: {}", summary.status_label));
+                    ui.label(format!("Active Pins: {}", summary.active_pins_label));
+                    ui.label(format!(
+                        "Next Completion: {}",
+                        summary.next_completion_label
+                    ));
+                    ui.label(format!("Extractors: {}", summary.extractor_count));
+                    if let Some(note) = summary.state_note {
+                        ui.label(note);
+                    }
+                }
+            }
             ui.heading("Pin types");
             let pin_rows = pin_type_counts(pins, resolver);
             if pin_rows.is_empty() {
