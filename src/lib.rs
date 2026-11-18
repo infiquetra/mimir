@@ -20,6 +20,7 @@ pub mod fitting;
 pub mod invention_calculator;
 pub mod names;
 pub mod portraits;
+pub mod production_chain;
 pub mod reaction_calculator;
 pub mod skills;
 pub mod storage;

@@ -15,9 +15,9 @@
 //!
 //! The module is pure computation — no egui, no state, no network,
 //! no database, no `include_str!`. It logs nothing: it runs at render
-//! cadence, so per-frame logging would spam the log. There is no
-//! production-chain calculator (see `docs/industry-reaction-design.md`
-//! section 11).
+//! cadence, so per-frame logging would spam the log. The production-chain
+//! calculator lives in `crate::production_chain` over the same bundled
+//! data (see `docs/production-chain-design.md`).
 
 use std::collections::HashSet;
 

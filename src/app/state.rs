@@ -19,6 +19,7 @@ use crate::invention_calculator::{
 use crate::names::exploration_ref::{EffectFamily, ExplorationRef};
 use crate::names::sde::Sde;
 use crate::portraits::ImageKind;
+use crate::production_chain::DEFAULT_QUANTITY;
 use crate::reaction_calculator::{DEFAULT_FACILITY_BONUS_PERCENT, DEFAULT_RUNS};
 use crate::skills::plans::{SkillPlan, SkillPlanAction};
 use crate::storage::repositories::CharacterRow;
@@ -804,6 +805,19 @@ pub struct AppState {
     pub industry_reaction_selected_type_id: Option<i64>,
     pub industry_reaction_runs: String,
     pub industry_reaction_facility_bonus_percent: String,
+    // View-local production chain drafts (production chain design
+    // section 5): session-only String drafts for the Industry view's
+    // Production Chain Calculator block. The selection holds a product
+    // type as an internal catalogue key that is never rendered or
+    // logged. Seeded from the pure module's starting-value constant in
+    // `AppState::new`; the derived Default would leave the quantity
+    // empty, and an empty field must mean "reader cleared it", not the
+    // app's starting state. Character switches, blueprint filtering,
+    // industry refreshes, and demo seeding never touch them; nothing is
+    // stored.
+    pub industry_chain_search: String,
+    pub industry_chain_selected_type_id: Option<i64>,
+    pub industry_chain_quantity: String,
     // View-local planetary UI state. The selected planet lives
     // outside `LoadState<PlanetaryData>` so a failed detail fetch
     // cannot lose the selection.
@@ -916,6 +930,11 @@ impl AppState {
                 "{:.1}",
                 DEFAULT_FACILITY_BONUS_PERCENT
             ),
+            // Production chain drafts seed from the pure module's
+            // starting value (design section 5): empty means "reader
+            // cleared it", not the starting state. Search starts empty
+            // and selection starts empty under Default.
+            industry_chain_quantity: DEFAULT_QUANTITY.to_string(),
             // Effect strength defaults to 1 (design section 7.1) and
             // is clamped to 1..=6 by the view on every use.
             exploration_selected_strength: 1,
@@ -2158,6 +2177,32 @@ mod tests {
         assert_eq!(state.industry_reaction_selected_type_id, Some(57490));
         assert_eq!(state.industry_reaction_runs, "10");
         assert_eq!(state.industry_reaction_facility_bonus_percent, "4.8");
+    }
+
+    #[test]
+    fn production_chain_drafts_seed_from_pure_module_constants() {
+        for demo in [false, true] {
+            let state = AppState::new(demo);
+            assert_eq!(state.industry_chain_search, "");
+            assert_eq!(state.industry_chain_selected_type_id, None);
+            assert_eq!(state.industry_chain_quantity, DEFAULT_QUANTITY.to_string());
+            assert_eq!(state.industry_chain_quantity, "1");
+        }
+    }
+
+    #[test]
+    fn production_chain_drafts_survive_character_switch() {
+        let mut state = AppState::new(false);
+        state.characters = vec![row(1, "One"), row(2, "Two")];
+        state.set_active_character(1);
+        state.industry_chain_search = "orca".to_string();
+        state.industry_chain_selected_type_id = Some(28606);
+        state.industry_chain_quantity = "3".to_string();
+        state.set_active_character(1);
+        state.set_active_character(2);
+        assert_eq!(state.industry_chain_search, "orca");
+        assert_eq!(state.industry_chain_selected_type_id, Some(28606));
+        assert_eq!(state.industry_chain_quantity, "3");
     }
 
     #[test]

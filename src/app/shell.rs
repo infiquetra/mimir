@@ -691,7 +691,8 @@ fn industry_load(result: crate::error::AppResult<IndustryRef>) -> Option<Arc<Ind
     match result {
         Ok(catalogue) => {
             tracing::info!(
-                "[INDUSTRY] bundled industry data loaded reactions={}",
+                "[INDUSTRY] bundled industry data loaded manufacturing={} reactions={}",
+                catalogue.manufacturing_blueprint_count(),
                 catalogue.reaction_blueprint_count()
             );
             Some(Arc::new(catalogue))
@@ -4459,6 +4460,7 @@ mod tests {
     fn industry_startup_load_is_catalogue_or_none() {
         let loaded =
             industry_load(IndustryRef::load_bundled()).expect("bundled industry data must load");
+        assert_eq!(loaded.manufacturing_blueprint_count(), 4788);
         assert_eq!(loaded.reaction_blueprint_count(), 112);
         // A failed load stores None so the reaction block shows its
         // fixed unavailable sentence; never an empty catalogue.
