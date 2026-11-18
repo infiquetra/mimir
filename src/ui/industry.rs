@@ -21,6 +21,7 @@ use crate::invention_calculator::{
 use crate::names::fitting_types::FittingTypes;
 use crate::names::industry_ref::IndustryRef;
 use crate::names::resolver::NameResolver;
+use crate::production_chain::{parse_quantity, production_chain_result, ChainNode, ChainNodeKind};
 use crate::reaction_calculator::{
     parse_facility_bonus_percent, parse_runs, reaction_calculator_result,
 };
@@ -41,7 +42,7 @@ pub const INVENTION_CALCULATOR_INPUT_GUIDANCE: &str =
     "Enter a base probability above 0 and at most 1 (for example 0.30 for 30%), skill levels from 1 to 5, and a decryptor multiplier above 0, to see the result.";
 pub const INVENTION_CALCULATOR_NO_RESULT_GUIDANCE: &str =
     "No result: the entered values are too large to calculate with.";
-pub const INVENTION_CALCULATOR_DISCLOSURE: &str = "Estimate using only the base probability, skill levels, and decryptor multiplier you entered. The starting values (base probability 0.30, each skill level 4, decryptor multiplier 1.0) are starting values to replace with your own: Mimir does not read the base probability from any blueprint, the skill levels from your character, or the multiplier from any decryptor you own. The decryptor choices in the retired app were None x1.0, Symmetry x1.1, Process x1.2, Parity x1.8, and Optimized x0.6; type the multiplier for the decryptor you mean. The chance is capped at 100%. There is no production-chain calculator. Figures are rounded only for display, so these numbers can differ from EVE.";
+pub const INVENTION_CALCULATOR_DISCLOSURE: &str = "Estimate using only the base probability, skill levels, and decryptor multiplier you entered. The starting values (base probability 0.30, each skill level 4, decryptor multiplier 1.0) are starting values to replace with your own: Mimir does not read the base probability from any blueprint, the skill levels from your character, or the multiplier from any decryptor you own. The decryptor choices in the retired app were None x1.0, Symmetry x1.1, Process x1.2, Parity x1.8, and Optimized x0.6; type the multiplier for the decryptor you mean. The chance is capped at 100%. Figures are rounded only for display, so these numbers can differ from EVE.";
 
 pub const REACTION_CALCULATOR_HEADING: &str = "Reaction Calculator";
 pub const REACTION_CALCULATOR_INPUT_LABELS: [&str; 3] = [
@@ -60,7 +61,24 @@ pub const REACTION_CALCULATOR_NO_MATCH: &str = "No reactions match the search.";
 pub const REACTION_CALCULATOR_INPUT_GUIDANCE: &str = "Enter runs of at least 1 and a facility material bonus percent of at least 0 and below 100, to see the result.";
 pub const REACTION_CALCULATOR_NO_RESULT_GUIDANCE: &str =
     "No result: the entered values are too large to calculate with.";
-pub const REACTION_CALCULATOR_DISCLOSURE: &str = "Estimate for the reaction you chose, using the per-run materials and products in Mimir's bundled industry data and only the runs and facility material bonus percent you entered. The starting values (1 run, 0.0% facility material bonus) are starting values to replace with your own: Mimir does not read the facility bonus from any structure you use, and it does not check that you own the reaction formula, have the materials, or can run the reaction. The facility choices in the retired app were No Bonus 0%, Athanor 2%, Athanor T1 Rig 2.4%, Athanor T2 Rig 2.8%, Tatara 4%, Tatara T1 Rig 4.8%, and Tatara T2 Rig 5.6%; type the percent for the facility you mean. The facility bonus applies to the total input amount for all runs, each input is rounded to a whole number with a minimum of 1, and outputs are the per-run amount times runs with no bonus. A reaction formula with no name in Mimir's bundled item data cannot be chosen. There is no production-chain calculator. These numbers can differ from EVE.";
+pub const REACTION_CALCULATOR_DISCLOSURE: &str = "Estimate for the reaction you chose, using the per-run materials and products in Mimir's bundled industry data and only the runs and facility material bonus percent you entered. The starting values (1 run, 0.0% facility material bonus) are starting values to replace with your own: Mimir does not read the facility bonus from any structure you use, and it does not check that you own the reaction formula, have the materials, or can run the reaction. The facility choices in the retired app were No Bonus 0%, Athanor 2%, Athanor T1 Rig 2.4%, Athanor T2 Rig 2.8%, Tatara 4%, Tatara T1 Rig 4.8%, and Tatara T2 Rig 5.6%; type the percent for the facility you mean. The facility bonus applies to the total input amount for all runs, each input is rounded to a whole number with a minimum of 1, and outputs are the per-run amount times runs with no bonus. A reaction formula with no name in Mimir's bundled item data cannot be chosen. These numbers can differ from EVE.";
+
+pub const PRODUCTION_CHAIN_HEADING: &str = "Production Chain Calculator";
+pub const PRODUCTION_CHAIN_INPUT_LABELS: [&str; 2] =
+    ["Item (chosen by you)", "Quantity (entered by you)"];
+pub const PRODUCTION_CHAIN_CHOICE_RENDER_MAX: usize = 100;
+pub const PRODUCTION_CHAIN_NO_INDUSTRY_DATA: &str =
+    "Production chain calculator unavailable: Mimir's bundled industry data failed to load.";
+pub const PRODUCTION_CHAIN_NO_ITEM_DATA: &str =
+    "Production chain calculator unavailable: Mimir's bundled item data failed to load.";
+pub const PRODUCTION_CHAIN_CHOOSE_GUIDANCE: &str =
+    "Choose an item above to see its production chain.";
+pub const PRODUCTION_CHAIN_NO_MATCH: &str = "No items match the search.";
+pub const PRODUCTION_CHAIN_INPUT_GUIDANCE: &str =
+    "Enter a quantity of at least 1, to see the result.";
+pub const PRODUCTION_CHAIN_NO_RESULT_GUIDANCE: &str =
+    "No result: the entered values are too large to calculate with.";
+pub const PRODUCTION_CHAIN_DISCLOSURE: &str = "Estimate for the item and quantity you chose, using the per-run materials and products in Mimir's bundled industry data. Each item the bundled data can make is expanded into the materials for the whole runs needed to make at least the quantity shown, so a run that makes more than the chain needs can leave items over, and leftovers are not subtracted from other lines. Quantities are the bundled per-run amounts with no efficiency adjustment: Mimir does not apply blueprint material efficiency, facility bonuses, or skills, and it does not check that you own the blueprints or materials or can run the jobs. The starting quantity (1) is a starting value to replace with your own. An item with no name in Mimir's bundled item data, or made by more than one bundled blueprint, cannot be chosen, and where such an item appears inside a chain it is shown without expansion. An item that appears inside its own chain is shown once without being expanded again. These numbers can differ from EVE.";
 
 pub fn activity_label(activity_id: i64) -> &'static str {
     match activity_id {
@@ -629,6 +647,154 @@ fn reaction_item_name(
     resolver.name(type_id)
 }
 
+/// One selectable row in the production chain choice list. The type
+/// number is an internal key only, never rendered or logged.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChainChoiceRow {
+    pub type_id: i64,
+    pub name: String,
+}
+
+/// Build choice rows for the production chain calculator: every
+/// buildable product made by exactly one blueprint whose bundled
+/// item row yields a chooser name, filtered by the search query and
+/// sorted by lowercased name then name then type number. Products
+/// with no blueprint, more than one blueprint, no row, an empty
+/// name, or a purely numeric name never appear.
+fn chain_choice_rows(
+    industry_data: &IndustryRef,
+    fitting_types: &FittingTypes,
+    query: &str,
+) -> Vec<ChainChoiceRow> {
+    let mut rows: Vec<ChainChoiceRow> = industry_data
+        .buildable_product_type_ids()
+        .iter()
+        .filter(|&product| industry_data.blueprints_producing(*product).len() == 1)
+        .filter_map(|&type_id| {
+            let row = fitting_types.lookup_by_id(type_id)?;
+            let trimmed = row.name.trim();
+            if trimmed.is_empty() || trimmed.parse::<i64>().is_ok() {
+                return None;
+            }
+            Some(ChainChoiceRow {
+                type_id,
+                name: trimmed.to_string(),
+            })
+        })
+        .filter(|row| widgets::matches_search(&row.name, query))
+        .collect();
+    rows.sort_by(|a, b| {
+        a.name
+            .to_lowercase()
+            .cmp(&b.name.to_lowercase())
+            .then_with(|| a.name.cmp(&b.name))
+            .then_with(|| a.type_id.cmp(&b.type_id))
+    });
+    rows
+}
+
+/// Parenthetical word for one chain node line: the producing
+/// activity for expanded nodes, or the honest leaf reason. A
+/// truncated node renders only the chain-limit word; its activity
+/// is not also rendered.
+fn production_chain_kind_word(node: &ChainNode) -> &'static str {
+    match node.kind {
+        ChainNodeKind::Produced => match node.production_activity_id {
+            Some(crate::names::industry_ref::MANUFACTURING_ACTIVITY_ID) => "Manufacturing",
+            Some(crate::names::industry_ref::REACTION_ACTIVITY_ID) => "Reaction",
+            _ => "Manufacturing",
+        },
+        ChainNodeKind::RawMaterial => "Raw Material",
+        ChainNodeKind::Cycle => "already in this chain; not expanded again",
+        ChainNodeKind::MultipleBlueprints => {
+            "more than one blueprint makes this item; not expanded"
+        }
+        ChainNodeKind::Truncated => "chain limit reached; not expanded",
+    }
+}
+
+fn production_chain_node_lines(
+    node: &ChainNode,
+    depth: usize,
+    fitting_types: &FittingTypes,
+    resolver: &NameResolver,
+    out: &mut Vec<String>,
+) {
+    let indent = "  ".repeat(depth);
+    let name = reaction_item_name(node.type_id, fitting_types, resolver);
+    out.push(format!(
+        "{indent}{name}: {} ({})",
+        node.quantity_required,
+        production_chain_kind_word(node)
+    ));
+    for child in &node.dependencies {
+        production_chain_node_lines(child, depth + 1, fitting_types, resolver, out);
+    }
+}
+
+/// Every line the Production Chain Calculator block renders after
+/// the input rows: the result block plus the disclosure, or one
+/// guidance line plus the disclosure. Pure over the drafts so tests
+/// assert the rendered strings without an egui frame. First match
+/// wins in the locked precedence; node lines are never capped.
+fn production_chain_calculator_lines(
+    state: &AppState,
+    industry_data: Option<&IndustryRef>,
+    fitting_types: Option<&FittingTypes>,
+    resolver: &NameResolver,
+) -> Vec<String> {
+    let Some(industry_data) = industry_data else {
+        return vec![PRODUCTION_CHAIN_NO_INDUSTRY_DATA.to_string()];
+    };
+    let Some(fitting_types) = fitting_types else {
+        return vec![PRODUCTION_CHAIN_NO_ITEM_DATA.to_string()];
+    };
+    let Some(selected) = state.industry_chain_selected_type_id else {
+        return vec![
+            PRODUCTION_CHAIN_CHOOSE_GUIDANCE.to_string(),
+            PRODUCTION_CHAIN_DISCLOSURE.to_string(),
+        ];
+    };
+    if industry_data.blueprints_producing(selected).len() != 1 {
+        return vec![
+            PRODUCTION_CHAIN_CHOOSE_GUIDANCE.to_string(),
+            PRODUCTION_CHAIN_DISCLOSURE.to_string(),
+        ];
+    }
+    let Some(chosen_row) = fitting_types.lookup_by_id(selected) else {
+        return vec![
+            PRODUCTION_CHAIN_CHOOSE_GUIDANCE.to_string(),
+            PRODUCTION_CHAIN_DISCLOSURE.to_string(),
+        ];
+    };
+    let chosen_trimmed = chosen_row.name.trim();
+    if chosen_trimmed.is_empty() || chosen_trimmed.parse::<i64>().is_ok() {
+        return vec![
+            PRODUCTION_CHAIN_CHOOSE_GUIDANCE.to_string(),
+            PRODUCTION_CHAIN_DISCLOSURE.to_string(),
+        ];
+    }
+    let chosen_name = chosen_trimmed.to_string();
+    if parse_quantity(&state.industry_chain_quantity).is_none() {
+        return vec![
+            PRODUCTION_CHAIN_INPUT_GUIDANCE.to_string(),
+            PRODUCTION_CHAIN_DISCLOSURE.to_string(),
+        ];
+    }
+    match production_chain_result(industry_data, selected, &state.industry_chain_quantity) {
+        Some(tree) => {
+            let mut lines = vec![format!("Production Chain: {chosen_name}")];
+            production_chain_node_lines(&tree, 0, fitting_types, resolver, &mut lines);
+            lines.push(PRODUCTION_CHAIN_DISCLOSURE.to_string());
+            lines
+        }
+        None => vec![
+            PRODUCTION_CHAIN_NO_RESULT_GUIDANCE.to_string(),
+            PRODUCTION_CHAIN_DISCLOSURE.to_string(),
+        ],
+    }
+}
+
 /// Every line the Reaction Calculator block renders after the input
 /// rows: the result block plus the disclosure, or one guidance line
 /// plus the disclosure. Pure over the drafts so tests assert the
@@ -787,6 +953,61 @@ fn show_reaction_calculator(
     }
 }
 
+fn show_production_chain_calculator(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    resolver: &NameResolver,
+    industry_data: Option<&IndustryRef>,
+    fitting_types: Option<&FittingTypes>,
+) {
+    ui.heading(PRODUCTION_CHAIN_HEADING);
+    let (industry_data, fitting_types) = match (industry_data, fitting_types) {
+        (None, _) => {
+            ui.label(PRODUCTION_CHAIN_NO_INDUSTRY_DATA);
+            return;
+        }
+        (_, None) => {
+            ui.label(PRODUCTION_CHAIN_NO_ITEM_DATA);
+            return;
+        }
+        (Some(a), Some(b)) => (a, b),
+    };
+    let mut changed = false;
+    ui.label(PRODUCTION_CHAIN_INPUT_LABELS[0]);
+    let response = ui.text_edit_singleline(&mut state.industry_chain_search);
+    state.text_input_focused |= response.has_focus();
+    changed |= response.changed();
+    let query = state.industry_chain_search.clone();
+    let rows = chain_choice_rows(industry_data, fitting_types, &query);
+    if rows.is_empty() {
+        ui.label(PRODUCTION_CHAIN_NO_MATCH);
+    } else {
+        let shown = rows.len().min(PRODUCTION_CHAIN_CHOICE_RENDER_MAX);
+        if rows.len() > PRODUCTION_CHAIN_CHOICE_RENDER_MAX {
+            ui.label(format!("Showing {shown} of {} items.", rows.len()));
+        }
+        for row in rows.iter().take(PRODUCTION_CHAIN_CHOICE_RENDER_MAX) {
+            let selected = state.industry_chain_selected_type_id == Some(row.type_id);
+            if ui.selectable_label(selected, &row.name).clicked() {
+                tracing::debug!("[INDUSTRY] production chain calculator item chosen");
+                state.industry_chain_selected_type_id = Some(row.type_id);
+            }
+        }
+    }
+    ui.label(PRODUCTION_CHAIN_INPUT_LABELS[1]);
+    let response = ui.text_edit_singleline(&mut state.industry_chain_quantity);
+    state.text_input_focused |= response.has_focus();
+    changed |= response.changed();
+    if changed {
+        tracing::debug!("[INDUSTRY] production chain calculator input changed");
+    }
+    for line in
+        production_chain_calculator_lines(state, Some(industry_data), Some(fitting_types), resolver)
+    {
+        ui.label(line);
+    }
+}
+
 pub fn show(
     ui: &mut egui::Ui,
     state: &mut AppState,
@@ -798,6 +1019,7 @@ pub fn show(
     widgets::mode_notice(ui, state.demo, state.offline);
     show_invention_calculator(ui, state);
     show_reaction_calculator(ui, state, resolver, industry_data, fitting_types);
+    show_production_chain_calculator(ui, state, resolver, industry_data, fitting_types);
     if state.active_character().is_none() {
         widgets::no_character_panel(ui);
         return;
@@ -1212,7 +1434,6 @@ mod tests {
              Process x1.2, Parity x1.8, and Optimized x0.6; \
              type the multiplier for the decryptor you mean. \
              The chance is capped at 100%. \
-             There is no production-chain calculator. \
              Figures are rounded only for display, so these numbers can differ from EVE."
         );
     }
@@ -1379,7 +1600,7 @@ mod tests {
         );
         assert_eq!(
             REACTION_CALCULATOR_DISCLOSURE,
-            "Estimate for the reaction you chose, using the per-run materials and products in Mimir's bundled industry data and only the runs and facility material bonus percent you entered. The starting values (1 run, 0.0% facility material bonus) are starting values to replace with your own: Mimir does not read the facility bonus from any structure you use, and it does not check that you own the reaction formula, have the materials, or can run the reaction. The facility choices in the retired app were No Bonus 0%, Athanor 2%, Athanor T1 Rig 2.4%, Athanor T2 Rig 2.8%, Tatara 4%, Tatara T1 Rig 4.8%, and Tatara T2 Rig 5.6%; type the percent for the facility you mean. The facility bonus applies to the total input amount for all runs, each input is rounded to a whole number with a minimum of 1, and outputs are the per-run amount times runs with no bonus. A reaction formula with no name in Mimir's bundled item data cannot be chosen. There is no production-chain calculator. These numbers can differ from EVE."
+            "Estimate for the reaction you chose, using the per-run materials and products in Mimir's bundled industry data and only the runs and facility material bonus percent you entered. The starting values (1 run, 0.0% facility material bonus) are starting values to replace with your own: Mimir does not read the facility bonus from any structure you use, and it does not check that you own the reaction formula, have the materials, or can run the reaction. The facility choices in the retired app were No Bonus 0%, Athanor 2%, Athanor T1 Rig 2.4%, Athanor T2 Rig 2.8%, Tatara 4%, Tatara T1 Rig 4.8%, and Tatara T2 Rig 5.6%; type the percent for the facility you mean. The facility bonus applies to the total input amount for all runs, each input is rounded to a whole number with a minimum of 1, and outputs are the per-run amount times runs with no bonus. A reaction formula with no name in Mimir's bundled item data cannot be chosen. These numbers can differ from EVE."
         );
     }
 
@@ -1697,6 +1918,377 @@ mod tests {
                 "Output Products",
                 "Carbon Fiber: 200",
                 REACTION_CALCULATOR_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn production_chain_calculator_wording_is_verbatim() {
+        assert_eq!(PRODUCTION_CHAIN_HEADING, "Production Chain Calculator");
+        assert_eq!(
+            PRODUCTION_CHAIN_INPUT_LABELS,
+            ["Item (chosen by you)", "Quantity (entered by you)",]
+        );
+        assert_eq!(PRODUCTION_CHAIN_CHOICE_RENDER_MAX, 100);
+        assert_eq!(
+            PRODUCTION_CHAIN_NO_INDUSTRY_DATA,
+            "Production chain calculator unavailable: Mimir's bundled industry data failed to load."
+        );
+        assert_eq!(
+            PRODUCTION_CHAIN_NO_ITEM_DATA,
+            "Production chain calculator unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            PRODUCTION_CHAIN_CHOOSE_GUIDANCE,
+            "Choose an item above to see its production chain."
+        );
+        assert_eq!(PRODUCTION_CHAIN_NO_MATCH, "No items match the search.");
+        assert_eq!(
+            PRODUCTION_CHAIN_INPUT_GUIDANCE,
+            "Enter a quantity of at least 1, to see the result."
+        );
+        assert_eq!(
+            PRODUCTION_CHAIN_NO_RESULT_GUIDANCE,
+            "No result: the entered values are too large to calculate with."
+        );
+        assert_eq!(
+            PRODUCTION_CHAIN_DISCLOSURE,
+            "Estimate for the item and quantity you chose, using the per-run materials and products in Mimir's bundled industry data. Each item the bundled data can make is expanded into the materials for the whole runs needed to make at least the quantity shown, so a run that makes more than the chain needs can leave items over, and leftovers are not subtracted from other lines. Quantities are the bundled per-run amounts with no efficiency adjustment: Mimir does not apply blueprint material efficiency, facility bonuses, or skills, and it does not check that you own the blueprints or materials or can run the jobs. The starting quantity (1) is a starting value to replace with your own. An item with no name in Mimir's bundled item data, or made by more than one bundled blueprint, cannot be chosen, and where such an item appears inside a chain it is shown without expansion. An item that appears inside its own chain is shown once without being expanded again. These numbers can differ from EVE."
+        );
+    }
+
+    #[test]
+    fn production_chain_choice_rows_over_bundled_catalogues() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry data loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting types load");
+        let rows = chain_choice_rows(&industry, &fitting, "");
+        assert_eq!(rows.len(), 4299);
+        assert_eq!(
+            rows[..4]
+                .iter()
+                .map(|r| r.name.as_str())
+                .collect::<Vec<_>>(),
+            vec![
+                "'Abatis' 100mm Steel Plates",
+                "'Arquebus' Heavy Beam Laser I",
+                "'Atgeir' Explosive Disruptive Lance",
+                "'Augmented' Acolyte",
+            ]
+        );
+        for row in &rows {
+            assert_ne!(row.type_id, 21527);
+            assert_ne!(row.type_id, 22925);
+            assert_ne!(row.type_id, 23416);
+            assert_ne!(row.type_id, 37161);
+            assert_ne!(row.type_id, 16672);
+            assert_ne!(row.type_id, 165);
+        }
+        let carbon = chain_choice_rows(&industry, &fitting, "carbon fiber");
+        assert_eq!(
+            carbon.iter().map(|r| r.name.as_str()).collect::<Vec<_>>(),
+            vec!["Carbon Fiber", "Reinforced Carbon Fiber"]
+        );
+        let orca = chain_choice_rows(&industry, &fitting, "ORCA");
+        assert_eq!(
+            orca.iter().map(|r| r.name.as_str()).collect::<Vec<_>>(),
+            vec!["Orca"]
+        );
+        let nonsense = chain_choice_rows(&industry, &fitting, "zzz-not-an-item-zzz");
+        assert!(nonsense.is_empty());
+    }
+
+    #[test]
+    fn production_chain_choice_rows_dual_fixture_exclusions() {
+        let industry = IndustryRef::from_json(
+            r#"{"materials":[{"typeId":50001,"activityId":1,"materialTypeId":60001,"quantity":10},{"typeId":50002,"activityId":1,"materialTypeId":60001,"quantity":10},{"typeId":50003,"activityId":1,"materialTypeId":60001,"quantity":10},{"typeId":50004,"activityId":1,"materialTypeId":60001,"quantity":10},{"typeId":50005,"activityId":1,"materialTypeId":60001,"quantity":10}],"products":[{"typeId":50001,"activityId":1,"productTypeId":70001,"quantity":5},{"typeId":50002,"activityId":1,"productTypeId":70002,"quantity":5},{"typeId":50003,"activityId":1,"productTypeId":70002,"quantity":5},{"typeId":50004,"activityId":1,"productTypeId":70003,"quantity":5},{"typeId":50005,"activityId":1,"productTypeId":70004,"quantity":5}]}"#,
+        )
+        .expect("dual fixture industry loads");
+        let fitting = FittingTypes::from_json(
+            r#"{"types":[{"typeId":70001,"typeName":"Named Item","categoryId":9},{"typeId":70002,"typeName":"Ambiguous Item","categoryId":9},{"typeId":70004,"typeName":"12345","categoryId":9},{"typeId":60001,"typeName":"Fixture Material","categoryId":9}]}"#,
+        )
+        .expect("dual fixture fitting loads");
+        let rows = chain_choice_rows(&industry, &fitting, "");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].type_id, 70001);
+        assert_eq!(rows[0].name, "Named Item");
+    }
+
+    fn chain_state(selected: Option<i64>, quantity: &str) -> AppState {
+        let mut state = AppState::new(false);
+        state.industry_chain_search = String::new();
+        state.industry_chain_selected_type_id = selected;
+        state.industry_chain_quantity = quantity.to_string();
+        state
+    }
+
+    #[test]
+    fn production_chain_calculator_starting_quantity_result() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = chain_state(Some(17404), "1");
+        assert_eq!(
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Production Chain: Small Blaster Battery",
+                "Small Blaster Battery: 1 (Manufacturing)",
+                "  Self-Harmonizing Power Core: 1 (Raw Material)",
+                "  Light Neutron Blaster I: 1 (Manufacturing)",
+                "    Tritanium: 1596 (Raw Material)",
+                "    Pyerite: 690 (Raw Material)",
+                "    Mexallon: 144 (Raw Material)",
+                PRODUCTION_CHAIN_DISCLOSURE,
+            ]
+        );
+        let state = chain_state(Some(17404), "3");
+        assert_eq!(
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Production Chain: Small Blaster Battery",
+                "Small Blaster Battery: 3 (Manufacturing)",
+                "  Self-Harmonizing Power Core: 3 (Raw Material)",
+                "  Light Neutron Blaster I: 3 (Manufacturing)",
+                "    Tritanium: 4788 (Raw Material)",
+                "    Pyerite: 2070 (Raw Material)",
+                "    Mexallon: 432 (Raw Material)",
+                PRODUCTION_CHAIN_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn production_chain_calculator_batch_results() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = chain_state(Some(57453), "1");
+        assert_eq!(
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Production Chain: Carbon Fiber",
+                "Carbon Fiber: 1 (Reaction)",
+                "  Hydrogen Fuel Block: 5 (Manufacturing)",
+                "    Robotics: 1 (Raw Material)",
+                "    Enriched Uranium: 4 (Raw Material)",
+                "    Mechanical Parts: 4 (Raw Material)",
+                "    Coolant: 9 (Raw Material)",
+                "    Strontium Clathrates: 20 (Raw Material)",
+                "    Oxygen: 22 (Raw Material)",
+                "    Heavy Water: 170 (Raw Material)",
+                "    Liquid Ozone: 350 (Raw Material)",
+                "    Hydrogen Isotopes: 450 (Raw Material)",
+                "  Hydrocarbons: 100 (Raw Material)",
+                "  Evaporite Deposits: 100 (Raw Material)",
+                PRODUCTION_CHAIN_DISCLOSURE,
+            ]
+        );
+        let state = chain_state(Some(57453), "201");
+        assert_eq!(
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Production Chain: Carbon Fiber",
+                "Carbon Fiber: 201 (Reaction)",
+                "  Hydrogen Fuel Block: 10 (Manufacturing)",
+                "    Robotics: 1 (Raw Material)",
+                "    Enriched Uranium: 4 (Raw Material)",
+                "    Mechanical Parts: 4 (Raw Material)",
+                "    Coolant: 9 (Raw Material)",
+                "    Strontium Clathrates: 20 (Raw Material)",
+                "    Oxygen: 22 (Raw Material)",
+                "    Heavy Water: 170 (Raw Material)",
+                "    Liquid Ozone: 350 (Raw Material)",
+                "    Hydrogen Isotopes: 450 (Raw Material)",
+                "  Hydrocarbons: 200 (Raw Material)",
+                "  Evaporite Deposits: 200 (Raw Material)",
+                PRODUCTION_CHAIN_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn production_chain_calculator_cycle_result() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = chain_state(Some(12238), "1");
+        assert_eq!(
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                "Production Chain: Reprocessing Array",
+                "Reprocessing Array: 1 (Manufacturing)",
+                "  Reprocessing Array: 1 (already in this chain; not expanded again)",
+                PRODUCTION_CHAIN_DISCLOSURE,
+            ]
+        );
+    }
+
+    #[test]
+    fn production_chain_calculator_ambiguous_and_unknown_in_chain() {
+        let industry = IndustryRef::from_json(
+            r#"{"materials":[{"typeId":105,"activityId":1,"materialTypeId":34,"quantity":1},{"typeId":106,"activityId":1,"materialTypeId":34,"quantity":9},{"typeId":107,"activityId":1,"materialTypeId":600,"quantity":2},{"typeId":107,"activityId":1,"materialTypeId":999,"quantity":3}],"products":[{"typeId":105,"activityId":1,"productTypeId":600,"quantity":1},{"typeId":106,"activityId":1,"productTypeId":600,"quantity":1},{"typeId":107,"activityId":1,"productTypeId":700,"quantity":1}]}"#,
+        )
+        .expect("ambiguous fixture industry loads");
+        let fitting = FittingTypes::from_json(
+            r#"{"types":[{"typeId":700,"typeName":"Thingamajig","categoryId":9},{"typeId":600,"typeName":"Doohickey","categoryId":9}]}"#,
+        )
+        .expect("ambiguous fixture fitting loads");
+        let resolver = NameResolver::new();
+        let state = chain_state(Some(700), "1");
+        let lines =
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver);
+        assert_eq!(
+            lines,
+            vec![
+                "Production Chain: Thingamajig",
+                "Thingamajig: 1 (Manufacturing)",
+                "  Doohickey: 2 (more than one blueprint makes this item; not expanded)",
+                "  Unknown Item: 3 (Raw Material)",
+                PRODUCTION_CHAIN_DISCLOSURE,
+            ]
+        );
+        let joined = lines.join("\n");
+        for id in ["105", "106", "107", "600", "700", "999", "34"] {
+            assert!(!joined.contains(id), "raw id {id} leaked in {joined}");
+        }
+    }
+
+    #[test]
+    fn production_chain_calculator_uncapped_rendering() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = chain_state(Some(28606), "1");
+        let lines =
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver);
+        assert_eq!(lines.len(), 512);
+        assert_eq!(lines[0], "Production Chain: Orca");
+        assert_eq!(lines[511], PRODUCTION_CHAIN_DISCLOSURE);
+    }
+
+    #[test]
+    fn production_chain_calculator_guidance_precedence() {
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let state = chain_state(None, "1");
+        assert_eq!(
+            production_chain_calculator_lines(&state, None, Some(&fitting), &resolver),
+            vec![PRODUCTION_CHAIN_NO_INDUSTRY_DATA]
+        );
+        assert_eq!(
+            production_chain_calculator_lines(&state, None, None, &resolver),
+            vec![PRODUCTION_CHAIN_NO_INDUSTRY_DATA]
+        );
+        assert_eq!(
+            production_chain_calculator_lines(&state, Some(&industry), None, &resolver),
+            vec![PRODUCTION_CHAIN_NO_ITEM_DATA]
+        );
+        assert_eq!(
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                PRODUCTION_CHAIN_CHOOSE_GUIDANCE,
+                PRODUCTION_CHAIN_DISCLOSURE
+            ]
+        );
+        for fabricated in [21527, 34, 165] {
+            let state = chain_state(Some(fabricated), "1");
+            assert_eq!(
+                production_chain_calculator_lines(
+                    &state,
+                    Some(&industry),
+                    Some(&fitting),
+                    &resolver
+                ),
+                vec![
+                    PRODUCTION_CHAIN_CHOOSE_GUIDANCE,
+                    PRODUCTION_CHAIN_DISCLOSURE
+                ],
+                "fabricated {fabricated}"
+            );
+        }
+        for quantity in ["", "0", "1.5"] {
+            let state = chain_state(Some(17404), quantity);
+            assert_eq!(
+                production_chain_calculator_lines(
+                    &state,
+                    Some(&industry),
+                    Some(&fitting),
+                    &resolver
+                ),
+                vec![PRODUCTION_CHAIN_INPUT_GUIDANCE, PRODUCTION_CHAIN_DISCLOSURE],
+                "quantity {quantity:?}"
+            );
+        }
+        let state = chain_state(Some(17404), "9223372036854775807");
+        assert_eq!(
+            production_chain_calculator_lines(&state, Some(&industry), Some(&fitting), &resolver),
+            vec![
+                PRODUCTION_CHAIN_NO_RESULT_GUIDANCE,
+                PRODUCTION_CHAIN_DISCLOSURE
+            ]
+        );
+        for quantity in ["", "0", "1.5", "9223372036854775807"] {
+            let state = chain_state(Some(17404), quantity);
+            let lines = production_chain_calculator_lines(
+                &state,
+                Some(&industry),
+                Some(&fitting),
+                &resolver,
+            );
+            assert!(lines.iter().all(|l| !l.starts_with("Production Chain:")));
+        }
+    }
+
+    #[test]
+    fn production_chain_calculator_demo_independence() {
+        use crate::demo::data::seed_demo_state;
+
+        let mut state = AppState::new(false);
+        state.industry_chain_search = "orca".to_string();
+        state.industry_chain_selected_type_id = Some(28606);
+        state.industry_chain_quantity = "3".to_string();
+        seed_demo_state(&mut state);
+        assert_eq!(state.industry_chain_search, "orca");
+        assert_eq!(state.industry_chain_selected_type_id, Some(28606));
+        assert_eq!(state.industry_chain_quantity, "3");
+
+        let industry = IndustryRef::load_bundled().expect("bundled industry loads");
+        let fitting = FittingTypes::load_bundled().expect("bundled fitting loads");
+        let resolver = NameResolver::new();
+        let mut demo_state = AppState::new(false);
+        seed_demo_state(&mut demo_state);
+        assert_eq!(demo_state.industry_chain_search, "");
+        assert_eq!(demo_state.industry_chain_selected_type_id, None);
+        assert_eq!(demo_state.industry_chain_quantity, "1");
+        assert_eq!(
+            production_chain_calculator_lines(
+                &demo_state,
+                Some(&industry),
+                Some(&fitting),
+                &resolver
+            ),
+            vec![
+                PRODUCTION_CHAIN_CHOOSE_GUIDANCE,
+                PRODUCTION_CHAIN_DISCLOSURE
+            ]
+        );
+        demo_state.industry_chain_selected_type_id = Some(17404);
+        assert_eq!(
+            production_chain_calculator_lines(
+                &demo_state,
+                Some(&industry),
+                Some(&fitting),
+                &resolver
+            ),
+            vec![
+                "Production Chain: Small Blaster Battery",
+                "Small Blaster Battery: 1 (Manufacturing)",
+                "  Self-Harmonizing Power Core: 1 (Raw Material)",
+                "  Light Neutron Blaster I: 1 (Manufacturing)",
+                "    Tritanium: 1596 (Raw Material)",
+                "    Pyerite: 690 (Raw Material)",
+                "    Mexallon: 144 (Raw Material)",
+                PRODUCTION_CHAIN_DISCLOSURE,
             ]
         );
     }
