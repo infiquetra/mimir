@@ -311,6 +311,20 @@ pub struct FittingType {
     pub fueled_armor_repair: bool,
     #[serde(rename = "structureRepair", default)]
     pub structure_repair: bool,
+    // Module need filters (docs/fitting-need-reductions-design.md
+    // section 5): `groupId` is the module's inventory group,
+    // `requiredSkillIds` its six required-skill slots in
+    // attribute order, always present on need-carrying rows
+    // including as an empty list. `None` means "this catalogue
+    // carries no filter data for the row" and `Some([])` means
+    // "filter data present; the module requires no skills" —
+    // the distinction the pure layer's unprovable-reduction
+    // count depends on. `default` so old assets and hand-built
+    // fixtures without the keys load.
+    #[serde(rename = "groupId", default)]
+    pub group_id: Option<i64>,
+    #[serde(rename = "requiredSkillIds", default)]
+    pub required_skill_ids: Option<Vec<i64>>,
 }
 
 /// Outcome of a reverse name lookup. `Found` carries the unique
@@ -1174,6 +1188,57 @@ mod tests {
                 "row carrying more than one repair amount key: {:?}",
                 row.name
             );
+            // Module need filters (docs/fitting-need-reductions-design.md
+            // section 5): `group_id` and `required_skill_ids`
+            // are `Some` exactly where `cpu` or `power` is `Some`
+            // (the section 4 population) and `None` on every
+            // other row. `None` means "no filter data in this
+            // catalogue" and `Some([])` means "proven to require
+            // nothing" — the pure layer's unprovable-reduction
+            // count depends on the distinction, so neither field
+            // may be papered over with a plain default.
+            assert_eq!(
+                row.group_id.is_some(),
+                has_need,
+                "group_id presence does not match need keys: {:?}",
+                row.name
+            );
+            assert_eq!(
+                row.required_skill_ids.is_some(),
+                has_need,
+                "required_skill_ids presence does not match need keys: {:?}",
+                row.name
+            );
+            if let Some(group_id) = row.group_id {
+                assert!(
+                    group_id > 0,
+                    "non-positive group_id {group_id} on {:?}",
+                    row.name
+                );
+            }
+            if let Some(skill_ids) = &row.required_skill_ids {
+                assert!(
+                    skill_ids.len() <= 6,
+                    "row carrying more than six required skills: {:?}",
+                    row.name
+                );
+                for skill_id in skill_ids {
+                    assert!(
+                        *skill_id > 0,
+                        "non-positive required skill {skill_id} on {:?}",
+                        row.name
+                    );
+                }
+                let mut deduped = skill_ids.clone();
+                deduped.sort_unstable();
+                deduped.dedup();
+                assert_eq!(
+                    deduped.len(),
+                    skill_ids.len(),
+                    "repeated required skill on {:?}",
+                    row.name
+                );
+            }
         }
         // Spot pins mirroring the generator oracles (design section
         // 5), read from dgmTypeAttributes.csv.bz2 during design.
@@ -1830,6 +1895,68 @@ mod tests {
             .filter(|row| row.structure_repair)
             .count();
         assert_eq!(hull_marker_count, 25);
+        // Module need-filter spot pins, identical to the generator
+        // oracles (docs/fitting-need-reductions-design.md
+        // section 5), read from invTypes.csv.bz2 /
+        // dgmTypeAttributes.csv.bz2 during design: 2889
+        // group 55 [3302, 3300, 11084]; 4256 group 862
+        // [28073]; 2048 group 60 [3394]; 1355 group 769
+        // [3424]; 37303 group 74 [41406, 21666, 3300]; 33981
+        // group 1289 [3455]; 1236 (no needs) and 587 (ship)
+        // both None.
+        let autocannon = types.lookup_by_id(2889).expect("200mm AutoCannon II row");
+        assert_eq!(autocannon.group_id, Some(55));
+        assert_eq!(autocannon.required_skill_ids, Some(vec![3302, 3300, 11084]));
+        let bomb_launcher = types.lookup_by_id(4256).expect("Bomb Launcher II row");
+        assert_eq!(bomb_launcher.group_id, Some(862));
+        assert_eq!(bomb_launcher.required_skill_ids, Some(vec![28073]));
+        let damage_control = types.lookup_by_id(2048).expect("DC II row");
+        assert_eq!(damage_control.group_id, Some(60));
+        assert_eq!(damage_control.required_skill_ids, Some(vec![3394]));
+        let reactor = types
+            .lookup_by_id(1355)
+            .expect("Reactor Control Unit II row");
+        assert_eq!(reactor.group_id, Some(769));
+        assert_eq!(reactor.required_skill_ids, Some(vec![3424]));
+        let railgun = types
+            .lookup_by_id(37303)
+            .expect("Dual 1000mm Railgun II row");
+        assert_eq!(railgun.group_id, Some(74));
+        assert_eq!(railgun.required_skill_ids, Some(vec![41406, 21666, 3300]));
+        let hyperspatial = types
+            .lookup_by_id(33981)
+            .expect("Limited Hyperspatial Accelerator row");
+        assert_eq!(hyperspatial.group_id, Some(1289));
+        assert_eq!(hyperspatial.required_skill_ids, Some(vec![3455]));
+        let overdrive = types
+            .lookup_by_id(1236)
+            .expect("Overdrive Injector System II row");
+        assert_eq!(overdrive.group_id, None);
+        assert_eq!(overdrive.required_skill_ids, None);
+        let rifter = types.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(rifter.group_id, None);
+        assert_eq!(rifter.required_skill_ids, None);
+        // Module need-filter key counts over the bundled catalogue
+        // (fitting-need-reductions-design section 5, the
+        // generator's NEED_FILTER_EXPECTED_COUNTS twins).
+        let group_count = types
+            .types
+            .iter()
+            .filter(|row| row.group_id.is_some())
+            .count();
+        assert_eq!(group_count, 3183);
+        let skill_rows_count = types
+            .types
+            .iter()
+            .filter(|row| row.required_skill_ids.is_some())
+            .count();
+        assert_eq!(skill_rows_count, 3183);
+        let skill_values_count: usize = types
+            .types
+            .iter()
+            .filter_map(|row| row.required_skill_ids.as_ref().map(|ids| ids.len()))
+            .sum();
+        assert_eq!(skill_values_count, 4306);
     }
 
     #[test]
