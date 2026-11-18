@@ -736,7 +736,9 @@ fn truncate_issue_text(text: &str) -> String {
 
 /// One issue row, exact template (design section 8.2, DNA
 /// wording section 6.4): EFT `Line {line}: "{text}" - {reason}.`,
-/// DNA `Segment {line}: "{text}" - {reason}.`
+/// DNA `Segment {line}: "{text}" - {reason}.`, Copied
+/// `"{text}" - {reason}.` or the nameless `One saved item - ...`
+/// form, with no line number (there was no line).
 fn format_import_issue(issue: &ImportIssue, import_format: ImportFormat) -> String {
     // `Created` shares the EFT arm: a created draft's issue list
     // is empty at construction and the editor never pushes issues.
@@ -759,6 +761,17 @@ fn format_import_issue(issue: &ImportIssue, import_format: ImportFormat) -> Stri
             truncate_issue_text(&issue.text),
             issue.kind.reason()
         ),
+        ImportFormat::Copied => {
+            if issue.text.is_empty() {
+                format!("One saved item - {}.", issue.kind.reason())
+            } else {
+                format!(
+                    "\"{}\" - {}.",
+                    truncate_issue_text(&issue.text),
+                    issue.kind.reason()
+                )
+            }
+        }
     }
 }
 
@@ -787,6 +800,13 @@ fn import_issues_heading(issue_count: usize, import_format: ImportFormat) -> Str
                 "1 segment could not be imported:".to_string()
             } else {
                 format!("{issue_count} segments could not be imported:")
+            }
+        }
+        ImportFormat::Copied => {
+            if issue_count == 1 {
+                "1 item could not be copied:".to_string()
+            } else {
+                format!("{issue_count} items could not be copied:")
             }
         }
     }
@@ -819,11 +839,19 @@ fn import_issues_overflow_label(remaining: usize, import_format: ImportFormat) -
                 format!("...and {remaining} more segments that could not be imported. Fix the segments above and import again to see the rest.")
             }
         }
+        ImportFormat::Copied => {
+            if remaining == 1 {
+                "...and 1 more item that could not be copied.".to_string()
+            } else {
+                format!("...and {remaining} more items that could not be copied.")
+            }
+        }
     }
 }
 
 /// Imported-fitting summary line (design section 8.2, DNA
-/// wording section 6.4): EFT says "lines", DNA says "segments".
+/// wording section 6.4): EFT says "lines", DNA says "segments",
+/// Copied names its saved-fitting source instead.
 fn imported_summary_line(fitting: &ImportedFitting) -> String {
     match fitting.format {
         ImportFormat::Created => format!(
@@ -846,15 +874,23 @@ fn imported_summary_line(fitting: &ImportedFitting) -> String {
             fitting.items.len(),
             fitting.report.imported_lines
         ),
+        ImportFormat::Copied => format!(
+            "Copied \"{}\" ({}) from your saved fittings: {} items.",
+            fitting_display_name(&fitting.name),
+            fitting.ship_name,
+            fitting.items.len()
+        ),
     }
 }
 
 /// Draft-block label by provenance (new fitting from scratch
 /// design section 7.2): `Eft`/`Dna` keep the shipped
-/// "imported" wording byte-for-byte, `Created` says so.
+/// "imported" wording byte-for-byte, `Created` and `Copied` say
+/// so.
 fn draft_label(format: ImportFormat) -> &'static str {
     match format {
         ImportFormat::Created => "Created fitting",
+        ImportFormat::Copied => "Copied fitting",
         ImportFormat::Eft | ImportFormat::Dna => "Imported fitting",
     }
 }
@@ -864,33 +900,39 @@ fn draft_label(format: ImportFormat) -> &'static str {
 /// loaded-charge sentence is inert for a created draft (it
 /// can never hold a charge) and is kept so the two notes
 /// differ by exactly the provenance claim and nothing else.
+/// The copied note additionally states that the saved fitting
+/// stays as it is and that saving adds a new fitting.
 fn editor_note(format: ImportFormat) -> &'static str {
     match format {
         ImportFormat::Created => "Edits change only this fitting in Mimir. Nothing is sent to EVE unless you save below. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit.",
+        ImportFormat::Copied => "Edits change only this copy in Mimir. The saved fitting in EVE stays as it is. Nothing is sent to EVE unless you save below, and saving adds a new fitting. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit.",
         ImportFormat::Eft | ImportFormat::Dna => FITTINGS_EDITOR_NOTE,
     }
 }
 
 /// Copy-as-EFT button by provenance (design section 7.2).
+/// `Created` and `Copied` share the already-neutral arm.
 fn copy_eft_button_label(format: ImportFormat) -> &'static str {
     match format {
-        ImportFormat::Created => "Copy fitting as EFT",
+        ImportFormat::Created | ImportFormat::Copied => "Copy fitting as EFT",
         ImportFormat::Eft | ImportFormat::Dna => "Copy imported fitting as EFT",
     }
 }
 
 /// Copy-as-DNA button by provenance (design section 7.2).
+/// `Created` and `Copied` share the already-neutral arm.
 fn copy_dna_button_label(format: ImportFormat) -> &'static str {
     match format {
-        ImportFormat::Created => "Copy fitting as DNA",
+        ImportFormat::Created | ImportFormat::Copied => "Copy fitting as DNA",
         ImportFormat::Eft | ImportFormat::Dna => "Copy imported fitting as DNA",
     }
 }
 
 /// Save arm button by provenance (design section 7.2).
+/// `Created` and `Copied` share the already-neutral arm.
 fn save_arm_button_label(format: ImportFormat) -> &'static str {
     match format {
-        ImportFormat::Created => "Save fitting to EVE...",
+        ImportFormat::Created | ImportFormat::Copied => "Save fitting to EVE...",
         ImportFormat::Eft | ImportFormat::Dna => "Save imported fitting to EVE...",
     }
 }
@@ -1487,7 +1529,7 @@ fn imported_summary_line_edited(fitting: &ImportedFitting, edited: bool) -> Stri
     let mut line = imported_summary_line(fitting);
     if edited {
         line.push_str(match fitting.format {
-            ImportFormat::Created => FITTINGS_CREATED_EDITED_SUFFIX,
+            ImportFormat::Created | ImportFormat::Copied => FITTINGS_CREATED_EDITED_SUFFIX,
             ImportFormat::Eft | ImportFormat::Dna => FITTINGS_EDITOR_EDITED_SUFFIX,
         });
     }
