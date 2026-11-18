@@ -230,11 +230,16 @@ impl ImportFatal {
 }
 
 /// Which input format produced an imported fitting. The panel uses
-/// this to say "segment" for DNA and "line" for EFT.
+/// this to say "segment" for DNA and "line" for EFT, and to
+/// distinguish a created (never parsed) draft from both input
+/// formats: `Created` drafts carry all-zero import counters, but
+/// header-only imports are all-zero too, so the counters alone
+/// cannot tell the two provenances apart.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ImportFormat {
     Eft,
     Dna,
+    Created,
 }
 
 #[derive(Debug, Clone, PartialEq)]

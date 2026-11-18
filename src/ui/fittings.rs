@@ -19,8 +19,9 @@ use crate::fitting::calibration::{rig_calibration, CalibrationBudget, Calibratio
 use crate::fitting::dna::parse_import;
 use crate::fitting::dps::{fitting_dps, FamilyDps, FittingDps, FittingDpsOutcome};
 use crate::fitting::editor::{
-    add_item as editor_add_item, browser_candidates, remove_item as editor_remove_item,
-    rename as editor_rename, set_quantity as editor_set_quantity, BrowserRow, EditRefusal,
+    add_item as editor_add_item, browser_candidates, new_fitting,
+    remove_item as editor_remove_item, rename as editor_rename,
+    set_quantity as editor_set_quantity, ship_candidates, BrowserRow, EditRefusal, ShipRow,
 };
 use crate::fitting::eft::{
     EftImportOutcome, ImportFormat, ImportIssue, ImportSection, ImportedFitting,
@@ -252,6 +253,14 @@ fn fitting_matches_search(row: &FittingRow, needle: &str) -> bool {
 /// section 4.1): the shipped case-insensitive substring match
 /// on the catalogue name, never on the formatted row label.
 fn browser_row_matches(row: &BrowserRow, needle: &str) -> bool {
+    widgets::matches_search(&row.name, needle)
+}
+
+/// Ship-chooser search predicate (new fitting from scratch
+/// design section 4.1): the same shipped case-insensitive
+/// substring match on the catalogue name, never on the type
+/// number.
+fn ship_row_matches(row: &ShipRow, needle: &str) -> bool {
     widgets::matches_search(&row.name, needle)
 }
 
@@ -729,7 +738,15 @@ fn truncate_issue_text(text: &str) -> String {
 /// wording section 6.4): EFT `Line {line}: "{text}" - {reason}.`,
 /// DNA `Segment {line}: "{text}" - {reason}.`
 fn format_import_issue(issue: &ImportIssue, import_format: ImportFormat) -> String {
+    // `Created` shares the EFT arm: a created draft's issue list
+    // is empty at construction and the editor never pushes issues.
     match import_format {
+        ImportFormat::Created => format!(
+            "Line {}: \"{}\" - {}.",
+            issue.line,
+            truncate_issue_text(&issue.text),
+            issue.kind.reason()
+        ),
         ImportFormat::Eft => format!(
             "Line {}: \"{}\" - {}.",
             issue.line,
@@ -748,7 +765,16 @@ fn format_import_issue(issue: &ImportIssue, import_format: ImportFormat) -> Stri
 /// Issues heading, singular/plural (design section 8.2, DNA
 /// wording section 6.4).
 fn import_issues_heading(issue_count: usize, import_format: ImportFormat) -> String {
+    // `Created` shares the EFT arm: a created draft's issue list
+    // is empty at construction and the editor never pushes issues.
     match import_format {
+        ImportFormat::Created => {
+            if issue_count == 1 {
+                "1 line could not be imported:".to_string()
+            } else {
+                format!("{issue_count} lines could not be imported:")
+            }
+        }
         ImportFormat::Eft => {
             if issue_count == 1 {
                 "1 line could not be imported:".to_string()
@@ -769,7 +795,16 @@ fn import_issues_heading(issue_count: usize, import_format: ImportFormat) -> Str
 /// Overflow disclosure when more issues exist than are shown
 /// (design section 8.2, DNA wording section 6.4).
 fn import_issues_overflow_label(remaining: usize, import_format: ImportFormat) -> String {
+    // `Created` shares the EFT arm: a created draft's issue list
+    // is empty at construction and the editor never pushes issues.
     match import_format {
+        ImportFormat::Created => {
+            if remaining == 1 {
+                "...and 1 more line that could not be imported. Fix the lines above and import again to see the rest.".to_string()
+            } else {
+                format!("...and {remaining} more lines that could not be imported. Fix the lines above and import again to see the rest.")
+            }
+        }
         ImportFormat::Eft => {
             if remaining == 1 {
                 "...and 1 more line that could not be imported. Fix the lines above and import again to see the rest.".to_string()
@@ -791,6 +826,12 @@ fn import_issues_overflow_label(remaining: usize, import_format: ImportFormat) -
 /// wording section 6.4): EFT says "lines", DNA says "segments".
 fn imported_summary_line(fitting: &ImportedFitting) -> String {
     match fitting.format {
+        ImportFormat::Created => format!(
+            "Created \"{}\" ({}): {} items.",
+            fitting_display_name(&fitting.name),
+            fitting.ship_name,
+            fitting.items.len()
+        ),
         ImportFormat::Eft => format!(
             "Imported \"{}\" ({}): {} items from {} lines.",
             fitting_display_name(&fitting.name),
@@ -805,6 +846,52 @@ fn imported_summary_line(fitting: &ImportedFitting) -> String {
             fitting.items.len(),
             fitting.report.imported_lines
         ),
+    }
+}
+
+/// Draft-block label by provenance (new fitting from scratch
+/// design section 7.2): `Eft`/`Dna` keep the shipped
+/// "imported" wording byte-for-byte, `Created` says so.
+fn draft_label(format: ImportFormat) -> &'static str {
+    match format {
+        ImportFormat::Created => "Created fitting",
+        ImportFormat::Eft | ImportFormat::Dna => "Imported fitting",
+    }
+}
+
+/// Standing editor note by provenance (design section 7.2):
+/// the created note differs by the provenance word only. The
+/// loaded-charge sentence is inert for a created draft (it
+/// can never hold a charge) and is kept so the two notes
+/// differ by exactly the provenance claim and nothing else.
+fn editor_note(format: ImportFormat) -> &'static str {
+    match format {
+        ImportFormat::Created => "Edits change only this fitting in Mimir. Nothing is sent to EVE unless you save below. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit.",
+        ImportFormat::Eft | ImportFormat::Dna => FITTINGS_EDITOR_NOTE,
+    }
+}
+
+/// Copy-as-EFT button by provenance (design section 7.2).
+fn copy_eft_button_label(format: ImportFormat) -> &'static str {
+    match format {
+        ImportFormat::Created => "Copy fitting as EFT",
+        ImportFormat::Eft | ImportFormat::Dna => "Copy imported fitting as EFT",
+    }
+}
+
+/// Copy-as-DNA button by provenance (design section 7.2).
+fn copy_dna_button_label(format: ImportFormat) -> &'static str {
+    match format {
+        ImportFormat::Created => "Copy fitting as DNA",
+        ImportFormat::Eft | ImportFormat::Dna => "Copy imported fitting as DNA",
+    }
+}
+
+/// Save arm button by provenance (design section 7.2).
+fn save_arm_button_label(format: ImportFormat) -> &'static str {
+    match format {
+        ImportFormat::Created => "Save fitting to EVE...",
+        ImportFormat::Eft | ImportFormat::Dna => "Save imported fitting to EVE...",
     }
 }
 
@@ -1229,6 +1316,11 @@ const FITTINGS_EDITOR_NOTE: &str = "Edits change only this imported fitting in M
 /// history once the draft diverges from the paste.
 const FITTINGS_EDITOR_EDITED_SUFFIX: &str = " Edited since import.";
 
+/// Edited summary suffix for a created draft (new fitting
+/// from scratch design section 7.2): a created draft was
+/// never imported, so it cannot have changed "since import".
+const FITTINGS_CREATED_EDITED_SUFFIX: &str = " Edited.";
+
 /// One imported-draft row for display, carrying the draft index so
 /// the remove and quantity controls target the exact row.
 #[derive(Debug, Clone, PartialEq)]
@@ -1394,7 +1486,10 @@ fn render_imported_item_rows(
 fn imported_summary_line_edited(fitting: &ImportedFitting, edited: bool) -> String {
     let mut line = imported_summary_line(fitting);
     if edited {
-        line.push_str(FITTINGS_EDITOR_EDITED_SUFFIX);
+        line.push_str(match fitting.format {
+            ImportFormat::Created => FITTINGS_CREATED_EDITED_SUFFIX,
+            ImportFormat::Eft | ImportFormat::Dna => FITTINGS_EDITOR_EDITED_SUFFIX,
+        });
     }
     line
 }
@@ -1419,6 +1514,15 @@ fn note_successful_edit(state: &mut AppState) {
     state.fittings_editor_quantity.clear();
     state.fittings_write_confirm = None;
 }
+
+/// Ship-chooser heading (new fitting from scratch design
+/// section 7.1).
+const FITTINGS_SHIP_HEADING: &str = "Start a new fitting";
+
+/// Standing chooser note (design section 7.1), always
+/// rendered under the heading: it discloses the replacement
+/// and the memory-only contract in advance.
+const FITTINGS_SHIP_NOTE: &str = "Pick a ship to start an empty fitting in Mimir. Starting a new fitting replaces the fitting below, if there is one. Nothing is sent to EVE unless you save below, and the fitting is gone when you switch characters or close Mimir.";
 
 /// Module-browser tabs in display order (module browser design
 /// section 2.2), keyed by the `ImportSection` each tab lists.
@@ -1446,6 +1550,41 @@ fn clear_editor_state(state: &mut AppState) {
     state.fittings_browser_search.clear();
     state.fittings_browser_rows.clear();
     state.fittings_browser_rows_section = None;
+    // Ship chooser (new fitting from scratch design section
+    // 9.2): every site that clears the editor clears the
+    // chooser too, so a filtered list from a previous draft
+    // or character never survives.
+    state.fittings_ship_search.clear();
+    state.fittings_ship_rows.clear();
+    state.fittings_ship_rows_built = false;
+}
+
+/// Install a created draft exactly as a successful import
+/// installs (new fitting from scratch design section 6):
+/// owner, error, and editor/browser reset as shipped, plus
+/// the creation locks — the paste text clears (a created
+/// draft has no source text, so leaving a pasted block in
+/// the box would present text the draft did not come from)
+/// and any armed save disarms (a replaced draft never
+/// inherits an armed confirmation). Factored out of the
+/// click handler so the install is testable without a frame.
+/// On a constructor refusal nothing changes: no draft, no
+/// error text, only the warning line.
+fn install_created_fitting(state: &mut AppState, catalogue: &FittingTypes, row: &ShipRow) {
+    let Some(draft) = new_fitting(catalogue, row) else {
+        tracing::warn!("[FITTING] new fitting refused unlisted ship row");
+        return;
+    };
+    tracing::info!(
+        "[FITTING] new fitting created ship={} items=0",
+        draft.ship_name
+    );
+    state.fittings_imported = Some(draft);
+    state.fittings_import_error = None;
+    state.fittings_import_owner = state.active_character_id;
+    state.fittings_import_text.clear();
+    state.fittings_write_confirm = None;
+    clear_editor_state(state);
 }
 
 /// Locked heading for the base resource block (design section 7).
@@ -2886,6 +3025,53 @@ fn fittings_import_panel(
         ui.label("Could not import: Mimir's bundled item data failed to load. Restart Mimir and try again.");
         return;
     };
+    // Ship chooser (new fitting from scratch design sections
+    // 2.1, 4, 6): heading, standing note, a name search, then
+    // rows. It lives outside the owner guard below on purpose:
+    // it must exist with no draft, because creating one is its
+    // purpose, and it stays visible with a draft, because
+    // choosing again is the replacement path.
+    ui.heading(FITTINGS_SHIP_HEADING);
+    ui.label(FITTINGS_SHIP_NOTE);
+    let ship_search_response = ui.add(
+        egui::TextEdit::singleline(&mut state.fittings_ship_search).hint_text("Search by name"),
+    );
+    state.text_input_focused |= ship_search_response.has_focus();
+    if !state.fittings_ship_rows_built {
+        state.fittings_ship_rows = ship_candidates(catalogue);
+        state.fittings_ship_rows_built = true;
+        tracing::debug!(
+            "[FITTING] ship candidates built rows={}",
+            state.fittings_ship_rows.len()
+        );
+    }
+    let ship_search = state.fittings_ship_search.clone();
+    let ship_filtered: Vec<&ShipRow> = state
+        .fittings_ship_rows
+        .iter()
+        .filter(|row| ship_row_matches(row, &ship_search))
+        .collect();
+    if ship_filtered.is_empty() {
+        if ship_search.is_empty() {
+            ui.label("No ships to show.");
+        } else {
+            ui.label("No matches.");
+        }
+    } else {
+        let shown = ship_filtered.len().min(FITTINGS_RENDER_MAX);
+        if ship_filtered.len() > FITTINGS_RENDER_MAX {
+            ui.label(format!("Showing {shown} of {} ships.", ship_filtered.len()));
+        }
+        let mut ship_clicked: Option<ShipRow> = None;
+        for row in ship_filtered.iter().take(FITTINGS_RENDER_MAX) {
+            if ui.selectable_label(false, &row.name).clicked() {
+                ship_clicked = Some((*row).clone());
+            }
+        }
+        if let Some(clicked) = ship_clicked {
+            install_created_fitting(state, catalogue, &clicked);
+        }
+    }
     let response = ui.add(
         egui::TextEdit::multiline(&mut state.fittings_import_text)
             .hint_text("Paste EFT text ([Ship, Fitting name] then one item per line) or a DNA fitting link (one line, ending ::)")
@@ -2985,7 +3171,7 @@ fn fittings_import_panel(
         &imported,
         state.fittings_import_edited,
     ));
-    ui.label("Imported fitting");
+    ui.label(draft_label(imported.format));
     if let Some(note) = placeholder_note(imported.report.placeholder_lines) {
         ui.label(note);
     }
@@ -2996,7 +3182,7 @@ fn fittings_import_panel(
     // rename row, then the add row; remove and quantity controls
     // sit on the item rows below.
     ui.heading(FITTINGS_EDITOR_HEADING);
-    ui.label(FITTINGS_EDITOR_NOTE);
+    ui.label(editor_note(imported.format));
     ui.horizontal(|ui| {
         // The rename box edits a separate draft, seeded from
         // the fitting's name; the fitting itself changes only
@@ -3212,7 +3398,7 @@ fn fittings_import_panel(
             ));
         }
     }
-    if ui.button("Copy imported fitting as EFT").clicked() {
+    if ui.button(copy_eft_button_label(imported.format)).clicked() {
         match fitting_to_eft(&synth, &local_resolver) {
             None => {
                 tracing::warn!("[FITTING] copy imported fitting blocked ship not resolved");
@@ -3234,7 +3420,7 @@ fn fittings_import_panel(
             }
         }
     }
-    if ui.button("Copy imported fitting as DNA").clicked() {
+    if ui.button(copy_dna_button_label(imported.format)).clicked() {
         match fitting_to_dna(&synth) {
             None => {
                 tracing::warn!("[FITTING] copy imported fitting as DNA blocked");
@@ -3316,7 +3502,7 @@ fn fittings_import_panel(
     } else if ui
         .add_enabled(
             write_enabled(state),
-            egui::Button::new("Save imported fitting to EVE..."),
+            egui::Button::new(save_arm_button_label(imported.format)),
         )
         .clicked()
     {
@@ -8553,6 +8739,12 @@ mod tests {
             power: Some(1.0),
         }];
         state.fittings_browser_rows_section = Some(ImportSection::Low);
+        state.fittings_ship_search = "rift".to_string();
+        state.fittings_ship_rows = vec![ShipRow {
+            type_id: 587,
+            name: "Rifter".to_string(),
+        }];
+        state.fittings_ship_rows_built = true;
         clear_editor_state(&mut state);
         assert_eq!(state.fittings_editor_add_name, "");
         assert_eq!(state.fittings_editor_add_quantity, "");
@@ -8564,6 +8756,186 @@ mod tests {
         assert_eq!(state.fittings_browser_search, "");
         assert!(state.fittings_browser_rows.is_empty());
         assert_eq!(state.fittings_browser_rows_section, None);
+        assert_eq!(state.fittings_ship_search, "");
+        assert!(state.fittings_ship_rows.is_empty());
+        assert!(!state.fittings_ship_rows_built);
+    }
+
+    #[test]
+    fn created_summary_line_and_edited_suffix() {
+        // New fitting design section 7.2: the created
+        // summary drops the "from {m} lines" clause entirely
+        // (it would still frame the draft as a parse output),
+        // and the edited suffix drops the "since import"
+        // history a created draft never had.
+        let created = ImportedFitting {
+            name: "New Rifter Fit".to_string(),
+            ship_type_id: 587,
+            ship_name: "Rifter".to_string(),
+            format: ImportFormat::Created,
+            items: Vec::new(),
+            report: ImportReport {
+                imported_lines: 0,
+                placeholder_lines: 0,
+                charges_noted: 0,
+                issues: Vec::new(),
+            },
+        };
+        assert_eq!(
+            imported_summary_line_edited(&created, false),
+            "Created \"New Rifter Fit\" (Rifter): 0 items."
+        );
+        assert_eq!(
+            imported_summary_line_edited(&created, true),
+            "Created \"New Rifter Fit\" (Rifter): 0 items. Edited."
+        );
+        assert_eq!(
+            imported_summary_line_edited(&created, false),
+            imported_summary_line(&created)
+        );
+    }
+
+    #[test]
+    fn created_wording_selection_by_format() {
+        // New fitting design section 7.2, created column as
+        // literals through the render's own helpers, beside
+        // the shipped EFT wording kept byte-identical.
+        assert_eq!(draft_label(ImportFormat::Created), "Created fitting");
+        assert_eq!(draft_label(ImportFormat::Eft), "Imported fitting");
+        assert_eq!(draft_label(ImportFormat::Dna), "Imported fitting");
+        assert_eq!(
+            editor_note(ImportFormat::Created),
+            "Edits change only this fitting in Mimir. Nothing is sent to EVE unless you save below. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit."
+        );
+        assert_eq!(
+            editor_note(ImportFormat::Eft),
+            "Edits change only this imported fitting in Mimir. Nothing is sent to EVE unless you save below. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit."
+        );
+        assert_eq!(
+            copy_eft_button_label(ImportFormat::Created),
+            "Copy fitting as EFT"
+        );
+        assert_eq!(
+            copy_eft_button_label(ImportFormat::Eft),
+            "Copy imported fitting as EFT"
+        );
+        assert_eq!(
+            copy_dna_button_label(ImportFormat::Created),
+            "Copy fitting as DNA"
+        );
+        assert_eq!(
+            copy_dna_button_label(ImportFormat::Eft),
+            "Copy imported fitting as DNA"
+        );
+        assert_eq!(
+            save_arm_button_label(ImportFormat::Created),
+            "Save fitting to EVE..."
+        );
+        assert_eq!(
+            save_arm_button_label(ImportFormat::Eft),
+            "Save imported fitting to EVE..."
+        );
+        // No created label leaks the Rifter's type number as
+        // text: identification is the catalogue name only.
+        for label in [
+            draft_label(ImportFormat::Created),
+            editor_note(ImportFormat::Created),
+            copy_eft_button_label(ImportFormat::Created),
+            copy_dna_button_label(ImportFormat::Created),
+            save_arm_button_label(ImportFormat::Created),
+        ] {
+            assert!(!label.contains("587"), "label leaks type number: {label}");
+        }
+    }
+
+    #[test]
+    fn ship_search_filters_names_only() {
+        // New fitting design section 4.1: case-insensitive
+        // name filtering over the real 404 candidates.
+        let types = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let rows = ship_candidates(&types);
+        assert_eq!(rows.len(), 404);
+        let names = |needle: &str| -> Vec<String> {
+            rows.iter()
+                .filter(|row| ship_row_matches(row, needle))
+                .map(|row| row.name.clone())
+                .collect()
+        };
+        assert_eq!(names("rift"), vec!["Rifter".to_string()]);
+        assert_eq!(names("RIFTER"), vec!["Rifter".to_string()]);
+        let shuttle = names("shuttle");
+        assert_eq!(shuttle.len(), 8);
+        assert_eq!(shuttle[0], "Amarr Shuttle");
+        assert_eq!(shuttle[1], "Caldari Shuttle");
+        assert_eq!(shuttle[2], "Council Diplomatic Shuttle");
+        assert_eq!(names("").len(), 404);
+        assert!(names("zzz-no-such-name-qqq").is_empty());
+        assert!(names("587").is_empty(), "a type number never matches");
+    }
+
+    #[test]
+    fn created_install_replaces_draft_and_disarms_save() {
+        // New fitting design section 6: seeding dirty state,
+        // the creation install lands the created draft with
+        // the active character as owner, clears the error and
+        // the paste text, runs the full editor reset
+        // including the ship fields, and disarms the save.
+        let types = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let candidates = ship_candidates(&types);
+        let rifter = candidates
+            .iter()
+            .find(|row| row.name == "Rifter")
+            .expect("Rifter lists as a candidate")
+            .clone();
+        let mut state = AppState::new(false);
+        state.active_character_id = Some(42);
+        state.fittings_imported = Some(editor_test_fitting(ImportFormat::Eft));
+        state.fittings_import_error = Some("Could not add: refused.".to_string());
+        state.fittings_import_owner = Some(42);
+        state.fittings_import_text = "[Rifter, Old Fit]".to_string();
+        state.fittings_editor_add_name = "Damage Control II".to_string();
+        state.fittings_editor_add_quantity = "5".to_string();
+        state.fittings_editor_error = Some("Could not add: refused.".to_string());
+        state.fittings_import_edited = true;
+        state.fittings_editor_quantity.insert(0, "7".to_string());
+        state.fittings_editor_name = Some("Renamed".to_string());
+        state.fittings_browser_section = ImportSection::Low;
+        state.fittings_browser_search = "damage".to_string();
+        state.fittings_browser_rows = vec![BrowserRow {
+            type_id: 2048,
+            name: "Damage Control II".to_string(),
+            cpu: Some(30.0),
+            power: Some(1.0),
+        }];
+        state.fittings_browser_rows_section = Some(ImportSection::Low);
+        state.fittings_ship_search = "rift".to_string();
+        state.fittings_ship_rows = candidates;
+        state.fittings_ship_rows_built = true;
+        state.fittings_write_confirm = Some(FittingWriteConfirm::SaveImported { character_id: 42 });
+        install_created_fitting(&mut state, &types, &rifter);
+        let draft = state.fittings_imported.expect("created draft installed");
+        assert_eq!(draft.format, ImportFormat::Created);
+        assert_eq!(draft.name, "New Rifter Fit");
+        assert_eq!(draft.ship_name, "Rifter");
+        assert_eq!(draft.ship_type_id, 587);
+        assert!(draft.items.is_empty());
+        assert_eq!(state.fittings_import_owner, Some(42));
+        assert_eq!(state.fittings_import_error, None);
+        assert_eq!(state.fittings_import_text, "");
+        assert_eq!(state.fittings_write_confirm, None);
+        assert_eq!(state.fittings_editor_add_name, "");
+        assert_eq!(state.fittings_editor_add_quantity, "");
+        assert_eq!(state.fittings_editor_error, None);
+        assert!(!state.fittings_import_edited);
+        assert!(state.fittings_editor_quantity.is_empty());
+        assert_eq!(state.fittings_editor_name, None);
+        assert_eq!(state.fittings_browser_section, ImportSection::High);
+        assert_eq!(state.fittings_browser_search, "");
+        assert!(state.fittings_browser_rows.is_empty());
+        assert_eq!(state.fittings_browser_rows_section, None);
+        assert_eq!(state.fittings_ship_search, "");
+        assert!(state.fittings_ship_rows.is_empty());
+        assert!(!state.fittings_ship_rows_built);
     }
 
     #[test]

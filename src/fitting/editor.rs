@@ -19,9 +19,9 @@
 use std::collections::HashMap;
 
 use crate::fitting::eft::{
-    absorb_stack, classify_module, parse_stack_quantity, slot_section, ImportIssueKind,
-    ImportSection, ImportedFitting, ImportedItem, ModuleOutcome, CATEGORY_DRONE, CATEGORY_FIGHTER,
-    CATEGORY_MODULE, CATEGORY_SUBSYSTEM,
+    absorb_stack, classify_module, parse_stack_quantity, slot_section, ImportFormat,
+    ImportIssueKind, ImportReport, ImportSection, ImportedFitting, ImportedItem, ModuleOutcome,
+    CATEGORY_DRONE, CATEGORY_FIGHTER, CATEGORY_MODULE, CATEGORY_SHIP, CATEGORY_SUBSYSTEM,
 };
 use crate::names::fitting_types::{normalize_type_name, FittingTypes, NameLookup};
 
@@ -181,6 +181,22 @@ pub fn add_item(
     }
 }
 
+/// A name made only of digits (with an optional leading
+/// sign) reads as a raw number, never as a display name.
+/// Digit-checking instead of parsing keeps digit strings
+/// beyond the `i64` range excluded too.
+fn is_numeric_name(trimmed: &str) -> bool {
+    let digits = trimmed.strip_prefix(['-', '+']).unwrap_or(trimmed);
+    !digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit())
+}
+
+/// An output figure the resources block can actually use:
+/// present, finite, and non-negative (zero passes) — the
+/// same usability rule the resources computation applies.
+fn output_usable(value: Option<f64>) -> bool {
+    value.is_some_and(|v| v.is_finite() && v >= 0.0)
+}
+
 /// One browsable catalogue row for the module browser
 /// (design section 3.1). `type_id` is an internal key and sort
 /// tiebreak only, never rendered and never logged; `name` is the
@@ -235,7 +251,7 @@ pub fn browser_candidates(types: &FittingTypes, section: ImportSection) -> Vec<B
             continue;
         }
         let trimmed = row.name.trim();
-        if trimmed.is_empty() || trimmed.parse::<i64>().is_ok() {
+        if trimmed.is_empty() || is_numeric_name(trimmed) {
             continue;
         }
         let key = normalize_type_name(trimmed);
@@ -274,6 +290,114 @@ pub fn browser_candidates(types: &FittingTypes, section: ImportSection) -> Vec<B
             .then_with(|| a.type_id.cmp(&b.type_id))
     });
     rows
+}
+
+/// One choosable catalogue row for the new-fitting ship chooser
+/// (design section 3.5). `type_id` is an internal key and sort
+/// tiebreak only, never rendered and never logged; `name` is the
+/// trimmed catalogue name a click uses to build the draft.
+/// Unlike [`BrowserRow`], no figures are carried: a ship's output
+/// pair is a membership proof, never row content, and the draft's
+/// own statistic blocks print the real outputs once the hull is
+/// chosen.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ShipRow {
+    pub type_id: i64,
+    pub name: String,
+}
+
+/// List every catalogue row a click can turn into a valid empty
+/// draft (design section 3.1): category 6 ([`CATEGORY_SHIP`], the
+/// parsers' own constant), the trimmed name non-empty and not
+/// purely numeric, the shipped unique-normalized-name guard (the
+/// name maps to exactly one distinct type number across the whole
+/// catalogue), and the stat-presence proof `cpu_output` and
+/// `power_output` both present, finite, and non-negative —
+/// dogma 48/11, the pair the resources block needs to print
+/// bare-hull numbers, under the same usability rule that
+/// block applies. Zero output passes. Sorted by lowercased name, then
+/// name, then type number (design section 3.4).
+pub fn ship_candidates(types: &FittingTypes) -> Vec<ShipRow> {
+    // Distinct type numbers per normalized name, de-duplicated
+    // by (name, type number) with first row in file order
+    // winning — the browser's counting, mirrored exactly.
+    let mut counts: HashMap<String, std::collections::HashSet<i64>> = HashMap::new();
+    let mut seen: std::collections::HashSet<(String, i64)> = std::collections::HashSet::new();
+    for row in &types.types {
+        let key = normalize_type_name(&row.name);
+        if seen.insert((key.clone(), row.type_id)) {
+            counts.entry(key).or_default().insert(row.type_id);
+        }
+    }
+    let mut rows = Vec::new();
+    // Emission de-duplicates on the same (normalized name,
+    // type number) pair, first row in file order winning: a
+    // later duplicate row the lookup index ignores must never
+    // be the row a click appears to choose.
+    let mut emitted: std::collections::HashSet<(String, i64)> = std::collections::HashSet::new();
+    for row in &types.types {
+        if !emitted.insert((normalize_type_name(&row.name), row.type_id)) {
+            continue;
+        }
+        let trimmed = row.name.trim();
+        if trimmed.is_empty() || is_numeric_name(trimmed) {
+            continue;
+        }
+        if row.category_id != CATEGORY_SHIP {
+            continue;
+        }
+        if !output_usable(row.cpu_output) || !output_usable(row.power_output) {
+            continue;
+        }
+        let key = normalize_type_name(trimmed);
+        if counts.get(&key).map(|ids| ids.len()) != Some(1) {
+            continue;
+        }
+        rows.push(ShipRow {
+            type_id: row.type_id,
+            name: trimmed.to_string(),
+        });
+    }
+    rows.sort_by(|a, b| {
+        a.name
+            .to_lowercase()
+            .cmp(&b.name.to_lowercase())
+            .then_with(|| a.name.cmp(&b.name))
+            .then_with(|| a.type_id.cmp(&b.type_id))
+    });
+    rows
+}
+
+/// Build the empty draft for a chosen ship row (design section
+/// 5.2). The input is re-validated, never trusted: the type
+/// number must resolve to a category-6 row carrying both outputs
+/// whose trimmed name equals the row's name, otherwise `None`
+/// and the caller stops. On success the draft carries
+/// `ImportFormat::Created`, the name `New {ship} Fit`, and
+/// all-zero import counters, because nothing was parsed. No
+/// import text is synthesized and no parser is called.
+pub fn new_fitting(types: &FittingTypes, ship: &ShipRow) -> Option<ImportedFitting> {
+    let row = types.lookup_by_id(ship.type_id)?;
+    if row.category_id != CATEGORY_SHIP
+        || !output_usable(row.cpu_output)
+        || !output_usable(row.power_output)
+        || row.name.trim() != ship.name
+    {
+        return None;
+    }
+    Some(ImportedFitting {
+        name: format!("New {} Fit", row.name.trim()),
+        ship_type_id: row.type_id,
+        ship_name: row.name.clone(),
+        format: ImportFormat::Created,
+        items: Vec::new(),
+        report: ImportReport {
+            imported_lines: 0,
+            placeholder_lines: 0,
+            charges_noted: 0,
+            issues: Vec::new(),
+        },
+    })
 }
 
 /// Remove the whole row at `index`, charge included. Returns
@@ -337,8 +461,9 @@ pub fn rename(fitting: &mut ImportedFitting, name: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fitting::dna::parse_import;
     use crate::fitting::eft::{parse_eft, EftImportOutcome, ImportedFitting, MAX_STACK_QUANTITY};
-    use crate::ui::fittings::fitting_to_eft;
+    use crate::ui::fittings::{fitting_to_dna, fitting_to_eft};
     use std::collections::BTreeSet;
 
     fn bundled_types() -> FittingTypes {
@@ -904,5 +1029,134 @@ mod tests {
                 assert_eq!(row.power, None, "{} {section:?}", row.name);
             }
         }
+    }
+
+    #[test]
+    fn ship_candidates_count_and_ends_match_bundled_catalogue() {
+        let types = bundled_types();
+        let rows = ship_candidates(&types);
+        assert_eq!(rows.len(), 404);
+        assert_eq!(rows[0].name, "Abaddon");
+        assert_eq!(rows[1].name, "Absolution");
+        assert_eq!(rows[2].name, "Adrestia");
+        assert_eq!(rows[401].name, "Zealot");
+        assert_eq!(rows[402].name, "Zephyr");
+        assert_eq!(rows[403].name, "Zirnitra");
+        for row in &rows {
+            assert!(!row.name.is_empty(), "{row:?}");
+            assert!(row.name.parse::<i64>().is_err(), "{row:?}");
+            assert_eq!(row.name, row.name.trim(), "{row:?}");
+        }
+    }
+
+    #[test]
+    fn ship_candidates_include_zero_output_hulls() {
+        // Presence, never `> 0.0`: the two bundled ships whose
+        // output pair is exactly zero still list.
+        let types = bundled_types();
+        let rows = ship_candidates(&types);
+        let names: BTreeSet<&str> = rows.iter().map(|row| row.name.as_str()).collect();
+        assert!(names.contains("Zephyr"));
+        assert!(names.contains("Echelon"));
+    }
+
+    #[test]
+    fn ship_construction_is_exhaustive_over_the_404() {
+        let types = bundled_types();
+        let rows = ship_candidates(&types);
+        for row in &rows {
+            let draft = new_fitting(&types, row).expect("every listed hull constructs");
+            assert_eq!(draft.format, ImportFormat::Created);
+            assert_eq!(draft.ship_type_id, row.type_id);
+            assert_eq!(draft.ship_name, row.name);
+            assert_eq!(draft.name, format!("New {} Fit", row.name));
+            assert!(draft.items.is_empty());
+            assert_eq!(draft.report.imported_lines, 0);
+            assert_eq!(draft.report.placeholder_lines, 0);
+            assert_eq!(draft.report.charges_noted, 0);
+            assert!(draft.report.issues.is_empty());
+        }
+        // Full literal plus the shared demo pins: Rifter and
+        // Drake both list, and the Rifter constructs by name.
+        let rifter = rows
+            .iter()
+            .find(|row| row.name == "Rifter")
+            .expect("Rifter lists");
+        let draft = new_fitting(&types, rifter).expect("Rifter constructs");
+        assert_eq!(draft.name, "New Rifter Fit");
+        assert!(rows.iter().any(|row| row.name == "Drake"));
+    }
+
+    #[test]
+    fn ship_new_draft_round_trips_through_both_copy_exports() {
+        let types = bundled_types();
+        let rows = ship_candidates(&types);
+        let rifter = rows
+            .iter()
+            .find(|row| row.name == "Rifter")
+            .expect("Rifter lists");
+        let draft = new_fitting(&types, rifter).expect("Rifter constructs");
+        let synth = draft.to_character_fitting();
+
+        let eft = fitting_to_eft(&synth, &draft.name_resolver()).expect("EFT export");
+        assert_eq!(eft.text, "[Rifter, New Rifter Fit]");
+        let dna = fitting_to_dna(&synth).expect("DNA export");
+        assert_eq!(dna.text, "587::");
+
+        for text in [&eft.text, &dna.text] {
+            match parse_import(text, &types) {
+                EftImportOutcome::Imported(reimported) => {
+                    assert_eq!(reimported.ship_type_id, 587);
+                    assert_eq!(reimported.ship_name, "Rifter");
+                    assert!(reimported.items.is_empty());
+                }
+                EftImportOutcome::Failed(fatal) => panic!("{text:?} must re-import: {fatal:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn ship_fixture_guard_excludes_each_failure_mode() {
+        // Shipped fixture style: one catalogue exercising
+        // every section 3.1 rule at once.
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":600,"typeName":"Ordinary Hull","categoryId":6,"cpuOutput":100.0,"powerOutput":50.0},
+                {"typeId":601,"typeName":"No Cpu Hull","categoryId":6,"powerOutput":50.0},
+                {"typeId":602,"typeName":"No Power Hull","categoryId":6,"cpuOutput":100.0},
+                {"typeId":603,"typeName":"Twin Hull","categoryId":6,"cpuOutput":100.0,"powerOutput":50.0},
+                {"typeId":604,"typeName":"Twin Hull","categoryId":6,"cpuOutput":100.0,"powerOutput":50.0},
+                {"typeId":605,"typeName":"12345","categoryId":6,"cpuOutput":100.0,"powerOutput":50.0},
+                {"typeId":607,"typeName":"Negative Hull","categoryId":6,"cpuOutput":-5.0,"powerOutput":50.0},
+                {"typeId":608,"typeName":"99999999999999999999999999","categoryId":6,"cpuOutput":100.0,"powerOutput":50.0},
+                {"typeId":606,"typeName":"Not A Ship","categoryId":7,"cpuOutput":100.0,"powerOutput":50.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let rows = ship_candidates(&catalogue);
+        let names: Vec<&str> = rows.iter().map(|row| row.name.as_str()).collect();
+        assert_eq!(names, vec!["Ordinary Hull"]);
+        let draft = new_fitting(&catalogue, &rows[0]).expect("ordinary hull constructs");
+        assert_eq!(draft.format, ImportFormat::Created);
+        assert_eq!(draft.name, "New Ordinary Hull Fit");
+
+        // The constructor re-validates: a row the listing proof
+        // would never hand it (or no row at all) refuses.
+        let non_ship = ShipRow {
+            type_id: 606,
+            name: "Not A Ship".to_string(),
+        };
+        assert!(new_fitting(&catalogue, &non_ship).is_none());
+        let absent = ShipRow {
+            type_id: 999_999,
+            name: "Ordinary Hull".to_string(),
+        };
+        assert!(new_fitting(&catalogue, &absent).is_none());
+        // A forged row for the negative-output hull refuses too:
+        // present but unusable outputs prove nothing.
+        let negative = ShipRow {
+            type_id: 607,
+            name: "Negative Hull".to_string(),
+        };
+        assert!(new_fitting(&catalogue, &negative).is_none());
     }
 }
