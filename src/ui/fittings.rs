@@ -18,7 +18,13 @@ use crate::fitting::bay_usage::{bay_usage, BayBudget, BayUsage, BayUsageOutcome}
 use crate::fitting::calibration::{rig_calibration, CalibrationBudget, CalibrationOutcome};
 use crate::fitting::dna::parse_import;
 use crate::fitting::dps::{fitting_dps, FamilyDps, FittingDps, FittingDpsOutcome};
-use crate::fitting::eft::{EftImportOutcome, ImportFormat, ImportIssue, ImportedFitting};
+use crate::fitting::editor::{
+    add_item as editor_add_item, remove_item as editor_remove_item, rename as editor_rename,
+    set_quantity as editor_set_quantity, EditRefusal,
+};
+use crate::fitting::eft::{
+    EftImportOutcome, ImportFormat, ImportIssue, ImportSection, ImportedFitting,
+};
 #[cfg(test)]
 use crate::fitting::resources::fitting_resources;
 use crate::fitting::resources::{
@@ -1178,6 +1184,218 @@ fn render_fitting_items(
             }
         }
     }
+}
+
+/// Fitting-editor heading (fitting-editor design section 6.2).
+const FITTINGS_EDITOR_HEADING: &str = "Edit this fitting";
+
+/// Standing editor note (design section 6.3), shown while a draft
+/// is shown.
+const FITTINGS_EDITOR_NOTE: &str = "Edits change only this imported fitting in Mimir. Nothing is sent to EVE unless you save below. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit.";
+
+/// Edited summary suffix (design section 6.3): honest parse
+/// history once the draft diverges from the paste.
+const FITTINGS_EDITOR_EDITED_SUFFIX: &str = " Edited since import.";
+
+/// One imported-draft row for display, carrying the draft index so
+/// the remove and quantity controls target the exact row.
+#[derive(Debug, Clone, PartialEq)]
+struct ImportedItemRow {
+    index: usize,
+    type_id: i64,
+    type_name: String,
+    section: FittingSection,
+    quantity: i64,
+    stacked: bool,
+}
+
+/// Mirror of [`ImportedFitting::to_character_fitting`] flag
+/// assignment (design section 3.3), used only so the imported
+/// rows sort byte-identically to `fitting_item_rows` output.
+fn imported_flag_for(section: ImportSection, counters: &mut [usize; 5]) -> String {
+    match section {
+        ImportSection::Low => {
+            let flag = format!("LoSlot{}", counters[0]);
+            counters[0] = counters[0].saturating_add(1);
+            flag
+        }
+        ImportSection::Medium => {
+            let flag = format!("MedSlot{}", counters[1]);
+            counters[1] = counters[1].saturating_add(1);
+            flag
+        }
+        ImportSection::High => {
+            let flag = format!("HiSlot{}", counters[2]);
+            counters[2] = counters[2].saturating_add(1);
+            flag
+        }
+        ImportSection::Rig => {
+            let flag = format!("RigSlot{}", counters[3]);
+            counters[3] = counters[3].saturating_add(1);
+            flag
+        }
+        ImportSection::Subsystem => {
+            let flag = format!("SubSystemSlot{}", counters[4]);
+            counters[4] = counters[4].saturating_add(1);
+            flag
+        }
+        ImportSection::Drones => "DroneBay".to_string(),
+        ImportSection::Fighters => "FighterBay".to_string(),
+        ImportSection::Cargo => "Cargo".to_string(),
+    }
+}
+
+/// Imported-draft display rows in the exact order
+/// `fitting_item_rows` renders them today (section order, then
+/// flag, then name, then type id), so an unedited draft renders
+/// byte-identically.
+fn imported_item_rows(imported: &ImportedFitting, resolver: &NameResolver) -> Vec<ImportedItemRow> {
+    let mut counters = [0usize; 5];
+    let mut rows: Vec<(ImportedItemRow, String)> = Vec::new();
+    for (index, item) in imported.items.iter().enumerate() {
+        if item.type_id <= 0 {
+            continue;
+        }
+        let flag = imported_flag_for(item.section, &mut counters);
+        let section = section_for_flag(&flag);
+        let stacked = matches!(
+            section,
+            FittingSection::Drones | FittingSection::Fighters | FittingSection::Cargo
+        );
+        rows.push((
+            ImportedItemRow {
+                index,
+                type_id: item.type_id,
+                type_name: resolver.name(item.type_id),
+                section,
+                quantity: item.quantity.max(0),
+                stacked,
+            },
+            flag,
+        ));
+    }
+    rows.sort_by(|(a, a_flag), (b, b_flag)| {
+        section_order(a.section)
+            .cmp(&section_order(b.section))
+            .then_with(|| a_flag.cmp(b_flag))
+            .then_with(|| a.type_name.to_lowercase().cmp(&b.type_name.to_lowercase()))
+            .then_with(|| a.type_name.cmp(&b.type_name))
+            .then(a.type_id.cmp(&b.type_id))
+    });
+    rows.into_iter().map(|(row, _)| row).collect()
+}
+
+/// One edit intent recorded while rendering the imported rows;
+/// applied to the working draft after rendering (design 8.2).
+enum ImportedEditIntent {
+    Remove(usize),
+    SetQuantity(usize, String),
+}
+
+/// Imported-draft item rendering: the same section headings,
+/// caps, and text as `render_fitting_items` through `None`, plus
+/// a remove control per row and, on stacked rows only, a quantity
+/// box with its set control (design sections 6.1 and 6.2). The
+/// first intent of the frame wins; simultaneous clicks collapse
+/// into one edit per frame.
+fn render_imported_item_rows(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    rows: &[ImportedItemRow],
+) -> Option<ImportedEditIntent> {
+    let mut intent: Option<ImportedEditIntent> = None;
+    for section in SECTION_ORDER {
+        let in_section: Vec<&ImportedItemRow> =
+            rows.iter().filter(|r| r.section == section).collect();
+        if in_section.is_empty() {
+            continue;
+        }
+        ui.heading(section_label(section));
+        let shown = in_section.len().min(FITTINGS_RENDER_MAX);
+        if in_section.len() > FITTINGS_RENDER_MAX {
+            ui.label(format!("Showing {shown} of {} items.", in_section.len()));
+        }
+        let is_slot = matches!(
+            section,
+            FittingSection::Low
+                | FittingSection::Medium
+                | FittingSection::High
+                | FittingSection::Rig
+                | FittingSection::Subsystem
+        );
+        for row in in_section.iter().take(FITTINGS_RENDER_MAX) {
+            let label_text = if is_slot && row.quantity == 1 {
+                row.type_name.clone()
+            } else {
+                format!("{} x{}", row.type_name, row.quantity)
+            };
+            ui.horizontal(|ui| {
+                ui.label(label_text);
+                if row.stacked {
+                    let draft = state
+                        .fittings_editor_quantity
+                        .entry(row.index)
+                        .or_insert_with(|| row.quantity.to_string());
+                    let response = ui.add(egui::TextEdit::singleline(draft).desired_width(90.0));
+                    state.text_input_focused |= response.has_focus();
+                    if ui.button("Set quantity").clicked() && intent.is_none() {
+                        let text = state
+                            .fittings_editor_quantity
+                            .get(&row.index)
+                            .cloned()
+                            .unwrap_or_default();
+                        intent = Some(ImportedEditIntent::SetQuantity(row.index, text));
+                    }
+                }
+                if ui.button("Remove").clicked() && intent.is_none() {
+                    intent = Some(ImportedEditIntent::Remove(row.index));
+                }
+            });
+        }
+    }
+    intent
+}
+
+/// Summary line with the edited suffix once the draft has been
+/// edited (design section 6.3); unedited drafts keep the
+/// byte-identical parse-history line.
+fn imported_summary_line_edited(fitting: &ImportedFitting, edited: bool) -> String {
+    let mut line = imported_summary_line(fitting);
+    if edited {
+        line.push_str(FITTINGS_EDITOR_EDITED_SUFFIX);
+    }
+    line
+}
+
+/// Add-refusal template (design section 6.4): the importer's
+/// fixed wording, verbatim.
+fn add_refusal_message(refusal: EditRefusal) -> String {
+    format!("Could not add: {}.", refusal.reason())
+}
+
+/// Quantity-refusal template (design section 6.4).
+fn quantity_refusal_message(refusal: EditRefusal) -> String {
+    format!("Could not set the quantity: {}.", refusal.reason())
+}
+
+/// Shared bookkeeping for every successful edit (design sections
+/// 4.1 and 5.3): mark the draft edited, clear the refusal, drop
+/// index-keyed quantity drafts, and disarm any armed save.
+fn note_successful_edit(state: &mut AppState) {
+    state.fittings_import_edited = true;
+    state.fittings_editor_error = None;
+    state.fittings_editor_quantity.clear();
+    state.fittings_write_confirm = None;
+}
+
+/// Clear every editor field; called wherever the draft dies or is
+/// replaced (design section 4.1).
+fn clear_editor_state(state: &mut AppState) {
+    state.fittings_editor_add_name.clear();
+    state.fittings_editor_add_quantity.clear();
+    state.fittings_editor_error = None;
+    state.fittings_import_edited = false;
+    state.fittings_editor_quantity.clear();
 }
 
 /// Locked heading for the base resource block (design section 7).
@@ -2652,12 +2870,14 @@ fn fittings_import_panel(
                     state.fittings_imported = Some(fitting);
                     state.fittings_import_error = None;
                     state.fittings_import_owner = state.active_character_id;
+                    clear_editor_state(state);
                 }
                 EftImportOutcome::Failed(fatal) => {
                     tracing::info!("[FITTING] import failed fatal={fatal:?}");
                     state.fittings_imported = None;
                     state.fittings_import_error = Some(fatal.message().to_string());
                     state.fittings_import_owner = state.active_character_id;
+                    clear_editor_state(state);
                 }
             }
         }
@@ -2670,6 +2890,7 @@ fn fittings_import_panel(
             state.fittings_imported = None;
             state.fittings_import_error = None;
             state.fittings_import_owner = None;
+            clear_editor_state(state);
         }
         if state.demo && ui.button("Use sample EFT").clicked() {
             tracing::debug!("[FITTING] demo sample EFT loaded");
@@ -2677,6 +2898,7 @@ fn fittings_import_panel(
             state.fittings_imported = None;
             state.fittings_import_error = None;
             state.fittings_import_owner = None;
+            clear_editor_state(state);
         }
         if state.demo && ui.button("Use sample DNA").clicked() {
             tracing::debug!("[FITTING] demo sample DNA loaded");
@@ -2684,6 +2906,7 @@ fn fittings_import_panel(
             state.fittings_imported = None;
             state.fittings_import_error = None;
             state.fittings_import_owner = None;
+            clear_editor_state(state);
         }
     });
     // The fatal-error label belongs to its owner like the detail
@@ -2702,10 +2925,16 @@ fn fittings_import_panel(
     if !owner_ok {
         return;
     }
-    let Some(imported) = state.fittings_imported.clone() else {
+    // Working clone (design section 8.2): edits mutate the clone;
+    // the state draft is written back after rendering, never
+    // held borrowed across egui calls.
+    let Some(mut imported) = state.fittings_imported.clone() else {
         return;
     };
-    ui.label(imported_summary_line(&imported));
+    ui.label(imported_summary_line_edited(
+        &imported,
+        state.fittings_import_edited,
+    ));
     ui.label("Imported fitting");
     if let Some(note) = placeholder_note(imported.report.placeholder_lines) {
         ui.label(note);
@@ -2713,14 +2942,81 @@ fn fittings_import_panel(
     if let Some(note) = charges_note(imported.report.charges_noted) {
         ui.label(note);
     }
-    let synth = imported.to_character_fitting();
+    // Edit block (design section 6.1): heading, standing note,
+    // rename row, then the add row; remove and quantity controls
+    // sit on the item rows below.
+    ui.heading(FITTINGS_EDITOR_HEADING);
+    ui.label(FITTINGS_EDITOR_NOTE);
+    ui.horizontal(|ui| {
+        let response =
+            ui.add(egui::TextEdit::singleline(&mut imported.name).hint_text("Fitting name"));
+        state.text_input_focused |= response.has_focus();
+        if ui.button("Rename fitting").clicked() {
+            let draft_name = imported.name.clone();
+            editor_rename(&mut imported, &draft_name);
+            note_successful_edit(state);
+        }
+    });
+    ui.horizontal(|ui| {
+        let name_response = ui.add(
+            egui::TextEdit::singleline(&mut state.fittings_editor_add_name)
+                .hint_text("Exact item name, like Damage Control II"),
+        );
+        state.text_input_focused |= name_response.has_focus();
+        let quantity_response = ui.add(
+            egui::TextEdit::singleline(&mut state.fittings_editor_add_quantity)
+                .hint_text("Quantity (drones, fighters, cargo only)"),
+        );
+        state.text_input_focused |= quantity_response.has_focus();
+        let add_enabled = !state.fittings_editor_add_name.trim().is_empty();
+        if ui
+            .add_enabled(add_enabled, egui::Button::new("Add item"))
+            .clicked()
+        {
+            let add_name = state.fittings_editor_add_name.clone();
+            let add_quantity = state.fittings_editor_add_quantity.clone();
+            let quantity_trimmed = add_quantity.trim().to_string();
+            let quantity = if quantity_trimmed.is_empty() {
+                None
+            } else {
+                Some(quantity_trimmed.as_str())
+            };
+            match editor_add_item(&mut imported, catalogue, &add_name, quantity) {
+                Ok(()) => note_successful_edit(state),
+                Err(refusal) => {
+                    state.fittings_editor_error = Some(add_refusal_message(refusal));
+                }
+            }
+        }
+    });
+    if let Some(error) = state.fittings_editor_error.clone() {
+        ui.label(error);
+    }
     let local_resolver = imported.name_resolver();
-    let item_rows = fitting_item_rows(&synth, &local_resolver);
+    let item_rows = imported_item_rows(&imported, &local_resolver);
     if item_rows.is_empty() {
         ui.label("This fitting has no items to show.");
-    } else {
-        render_fitting_items(ui, &item_rows, None);
+    } else if let Some(intent) = render_imported_item_rows(ui, state, &item_rows) {
+        match intent {
+            ImportedEditIntent::Remove(index) => {
+                if editor_remove_item(&mut imported, index) {
+                    note_successful_edit(state);
+                }
+            }
+            ImportedEditIntent::SetQuantity(index, text) => {
+                match editor_set_quantity(&mut imported, index, &text) {
+                    Ok(()) => note_successful_edit(state),
+                    Err(refusal) => {
+                        state.fittings_editor_error = Some(quantity_refusal_message(refusal));
+                    }
+                }
+            }
+        }
     }
+    // Write the working draft back, then derive every statistic,
+    // copy, and save decision from the edited draft.
+    state.fittings_imported = Some(imported.clone());
+    let synth = imported.to_character_fitting();
     let levels = state
         .skills
         .as_ready()
@@ -7991,5 +8287,228 @@ mod tests {
             !state.portrait_requests.contains(&(ImageKind::Type, 1101)),
             "the truncated row must never ensure"
         );
+    }
+
+    fn editor_test_fitting(format: ImportFormat) -> ImportedFitting {
+        ImportedFitting {
+            name: "Sample Brawler".to_string(),
+            ship_type_id: 587,
+            ship_name: "Rifter".to_string(),
+            format,
+            items: Vec::new(),
+            report: ImportReport {
+                imported_lines: 7,
+                placeholder_lines: 0,
+                charges_noted: 0,
+                issues: Vec::new(),
+            },
+        }
+    }
+
+    #[test]
+    fn editor_edited_suffix_only_after_successful_edit() {
+        // Locked test 14 (summary half): the suffix appears only
+        // when the edited flag is set, for both formats.
+        let eft = editor_test_fitting(ImportFormat::Eft);
+        assert_eq!(
+            imported_summary_line_edited(&eft, false),
+            "Imported \"Sample Brawler\" (Rifter): 0 items from 7 lines."
+        );
+        assert_eq!(
+            imported_summary_line_edited(&eft, true),
+            "Imported \"Sample Brawler\" (Rifter): 0 items from 7 lines. Edited since import."
+        );
+        assert_eq!(
+            imported_summary_line_edited(&eft, false),
+            imported_summary_line(&eft)
+        );
+        let dna = editor_test_fitting(ImportFormat::Dna);
+        assert_eq!(
+            imported_summary_line_edited(&dna, false),
+            "Imported \"Sample Brawler\" (Rifter): 0 items from 7 segments."
+        );
+        assert_eq!(
+            imported_summary_line_edited(&dna, true),
+            "Imported \"Sample Brawler\" (Rifter): 0 items from 7 segments. Edited since import."
+        );
+    }
+
+    #[test]
+    fn editor_refusal_templates_match_import_wording_verbatim() {
+        // Locked test 14 (refusal half): string equality against
+        // the importer's reason strings, one case per editor
+        // refusal kind.
+        let cases = [
+            (EditRefusal::UnknownName, ImportIssueKind::UnknownName),
+            (EditRefusal::AmbiguousName, ImportIssueKind::AmbiguousName),
+            (EditRefusal::NotAModule, ImportIssueKind::NotAModule),
+            (
+                EditRefusal::NoSlotForModule,
+                ImportIssueKind::NoSlotForModule,
+            ),
+            (EditRefusal::StackedModule, ImportIssueKind::StackedModule),
+            (
+                EditRefusal::InvalidQuantity,
+                ImportIssueKind::InvalidQuantity,
+            ),
+            (
+                EditRefusal::QuantityTooLarge,
+                ImportIssueKind::QuantityTooLarge,
+            ),
+        ];
+        for (refusal, kind) in cases {
+            assert_eq!(
+                add_refusal_message(refusal),
+                format!("Could not add: {}.", kind.reason())
+            );
+            assert_eq!(
+                quantity_refusal_message(refusal),
+                format!("Could not set the quantity: {}.", kind.reason())
+            );
+        }
+        assert_eq!(
+            add_refusal_message(EditRefusal::UnknownName),
+            "Could not add: no item in Mimir's bundled data has this exact name."
+        );
+        assert_eq!(
+            quantity_refusal_message(EditRefusal::InvalidQuantity),
+            "Could not set the quantity: the quantity must be a whole number from 1 to 2,147,483,647, written like x5."
+        );
+    }
+
+    #[test]
+    fn editor_successful_edit_disarms_save_confirmation() {
+        // Locked test 15: arming then editing disarms; the
+        // bookkeeping also clears the refusal and the quantity
+        // drafts and marks the draft edited.
+        let mut state = AppState::new(false);
+        state.active_character_id = Some(42);
+        state.fittings_write_confirm = Some(FittingWriteConfirm::SaveImported { character_id: 42 });
+        state.fittings_editor_error = Some("Could not add: refused.".to_string());
+        state.fittings_editor_quantity.insert(0, "9".to_string());
+        note_successful_edit(&mut state);
+        assert_eq!(state.fittings_write_confirm, None);
+        assert!(state.fittings_import_edited);
+        assert_eq!(state.fittings_editor_error, None);
+        assert!(state.fittings_editor_quantity.is_empty());
+    }
+
+    #[test]
+    fn editor_clear_drops_all_editor_fields() {
+        let mut state = AppState::new(false);
+        state.fittings_editor_add_name = "Damage Control II".to_string();
+        state.fittings_editor_add_quantity = "5".to_string();
+        state.fittings_editor_error = Some("Could not add: refused.".to_string());
+        state.fittings_import_edited = true;
+        state.fittings_editor_quantity.insert(2, "3".to_string());
+        clear_editor_state(&mut state);
+        assert_eq!(state.fittings_editor_add_name, "");
+        assert_eq!(state.fittings_editor_add_quantity, "");
+        assert_eq!(state.fittings_editor_error, None);
+        assert!(!state.fittings_import_edited);
+        assert!(state.fittings_editor_quantity.is_empty());
+    }
+
+    #[test]
+    fn imported_item_rows_preserve_draft_order_and_stacked_flags() {
+        // The imported rows carry draft indices in the same
+        // section order the saved renderer uses.
+        use crate::fitting::eft::{ImportedCharge, ImportedItem};
+        let resolver = test_resolver();
+        let imported = ImportedFitting {
+            name: "T".to_string(),
+            ship_type_id: 587,
+            ship_name: "Rifter".to_string(),
+            format: ImportFormat::Eft,
+            items: vec![
+                ImportedItem {
+                    type_id: 34,
+                    name: "Nanite Repair Paste".to_string(),
+                    section: ImportSection::Cargo,
+                    quantity: 8,
+                    charge: None,
+                },
+                ImportedItem {
+                    type_id: 2048,
+                    name: "Demo Small Railgun".to_string(),
+                    section: ImportSection::High,
+                    quantity: 1,
+                    charge: Some(ImportedCharge {
+                        type_id: 1,
+                        name: "Charge".to_string(),
+                    }),
+                },
+                ImportedItem {
+                    type_id: 2456,
+                    name: "Hobgoblin II".to_string(),
+                    section: ImportSection::Drones,
+                    quantity: 5,
+                    charge: None,
+                },
+            ],
+            report: ImportReport {
+                imported_lines: 3,
+                placeholder_lines: 0,
+                charges_noted: 1,
+                issues: Vec::new(),
+            },
+        };
+        let rows = imported_item_rows(&imported, &resolver);
+        assert_eq!(rows.len(), 3);
+        // High before Drones before Cargo, like SECTION_ORDER.
+        assert_eq!(rows[0].index, 1);
+        assert_eq!(rows[0].section, FittingSection::High);
+        assert!(!rows[0].stacked);
+        assert_eq!(rows[1].index, 2);
+        assert_eq!(rows[1].section, FittingSection::Drones);
+        assert!(rows[1].stacked);
+        assert_eq!(rows[2].index, 0);
+        assert_eq!(rows[2].section, FittingSection::Cargo);
+        assert!(rows[2].stacked);
+        // The rendered text matches the saved renderer's shape.
+        assert_eq!(rows[0].type_name, "Demo Small Railgun");
+        assert_eq!(rows[1].quantity, 5);
+        assert_eq!(rows[2].quantity, 8);
+    }
+
+    #[test]
+    fn imported_item_rows_match_saved_row_order() {
+        // Order parity with `fitting_item_rows` over a fitting
+        // with more than ten same-section items (the flag sort is
+        // lexicographic, so a naive regroup would drift).
+        use crate::fitting::eft::ImportedItem;
+        let resolver = test_resolver();
+        let items: Vec<ImportedItem> = (0..12)
+            .map(|_| ImportedItem {
+                type_id: 2048,
+                name: "Demo Small Railgun".to_string(),
+                section: ImportSection::High,
+                quantity: 1,
+                charge: None,
+            })
+            .collect();
+        let imported = ImportedFitting {
+            name: "T".to_string(),
+            ship_type_id: 587,
+            ship_name: "Rifter".to_string(),
+            format: ImportFormat::Eft,
+            items,
+            report: ImportReport {
+                imported_lines: 12,
+                placeholder_lines: 0,
+                charges_noted: 0,
+                issues: Vec::new(),
+            },
+        };
+        let synth = imported.to_character_fitting();
+        let saved = fitting_item_rows(&synth, &resolver);
+        let rows = imported_item_rows(&imported, &resolver);
+        assert_eq!(rows.len(), saved.len());
+        for (mine, theirs) in rows.iter().zip(saved.iter()) {
+            assert_eq!(mine.type_id, theirs.type_id);
+            assert_eq!(mine.type_name, theirs.type_name);
+            assert_eq!(mine.section, theirs.section);
+            assert_eq!(mine.quantity, theirs.quantity);
+        }
     }
 }
