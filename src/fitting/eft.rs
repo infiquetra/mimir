@@ -31,9 +31,9 @@ pub const MAX_STACK_QUANTITY: i64 = 2_147_483_647;
 pub(crate) const CATEGORY_SHIP: i64 = 6;
 pub(crate) const CATEGORY_MODULE: i64 = 7;
 const CATEGORY_CHARGE: i64 = 8;
-const CATEGORY_DRONE: i64 = 18;
+pub(crate) const CATEGORY_DRONE: i64 = 18;
 pub(crate) const CATEGORY_SUBSYSTEM: i64 = 32;
-const CATEGORY_FIGHTER: i64 = 87;
+pub(crate) const CATEGORY_FIGHTER: i64 = 87;
 
 // Dogma slot-effect IDs in Flutter `_slotTypeFor` check order:
 // 12 high, 13 medium, 11 low, 2663 rig, 3772 subsystem.
@@ -374,7 +374,7 @@ pub(crate) fn slot_section(effects: &[i64]) -> Option<ImportSection> {
     }
 }
 
-enum ModuleOutcome {
+pub(crate) enum ModuleOutcome {
     Slot {
         type_id: i64,
         name: String,
@@ -385,7 +385,7 @@ enum ModuleOutcome {
 
 /// Resolve and classify a plain module name (section 5.3 step 5),
 /// shared by plain lines and charge-line module parts.
-fn classify_module(types: &FittingTypes, name: &str) -> ModuleOutcome {
+pub(crate) fn classify_module(types: &FittingTypes, name: &str) -> ModuleOutcome {
     match types.lookup(name) {
         NameLookup::Unknown => ModuleOutcome::Issue(ImportIssueKind::UnknownName),
         NameLookup::Ambiguous => ModuleOutcome::Issue(ImportIssueKind::AmbiguousName),
@@ -444,7 +444,10 @@ fn split_stack(line: &str) -> Option<(&str, &str)> {
 
 /// AAR-strict quantity: first digit 1-9, at most 10 digits, at most
 /// `MAX_STACK_QUANTITY`. Anything else is `InvalidQuantity`.
-fn parse_stack_quantity(suffix: &str) -> Option<i64> {
+pub(crate) fn parse_stack_quantity(suffix: &str) -> Option<i64> {
+    if suffix.is_empty() || !suffix.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
     if suffix.len() > 10 || suffix.starts_with('0') {
         return None;
     }
@@ -459,7 +462,7 @@ fn parse_stack_quantity(suffix: &str) -> Option<i64> {
 /// Merge a stacked line into items by type, keeping first-appearance
 /// order. Returns false when the merge would exceed the cap (the
 /// crossing line is an issue; earlier lines stand).
-fn absorb_stack(
+pub(crate) fn absorb_stack(
     items: &mut Vec<ImportedItem>,
     index: &mut HashMap<i64, usize>,
     type_id: i64,
