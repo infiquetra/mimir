@@ -305,6 +305,27 @@ pub fn colony_summary(
     }
 }
 
+/// True when any extractor pin has a parseable expiry strictly
+/// after `now` — the same active test [`colony_summary`] uses,
+/// without its counting or logging. The shell uses it to keep
+/// the colony countdown repainting while extraction runs.
+pub fn has_active_extractor(pins: &[PlanetPin], now: DateTime<Utc>) -> bool {
+    pins.iter().any(|pin| {
+        let is_extractor = pin
+            .extractor_details
+            .as_ref()
+            .and_then(|details| details.product_type_id)
+            .filter(|id| *id > 0)
+            .is_some();
+        is_extractor
+            && pin
+                .expiry_time
+                .as_deref()
+                .and_then(widgets::parse_esi_date)
+                .is_some_and(|expiry| expiry > now)
+    })
+}
+
 pub const PIN_TYPE_RENDER_MAX: usize = 100;
 pub const EXTRACTOR_RENDER_MAX: usize = 100;
 pub const STORAGE_RENDER_MAX: usize = 100;
@@ -602,6 +623,19 @@ mod tests {
             }),
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn has_active_extractor_matches_summary_active_test() {
+        let future = extractor_pin(700000011, Some(34), Some("2026-11-20T12:00:00Z"));
+        assert!(has_active_extractor(&[future], now()));
+        let past = extractor_pin(700000011, Some(34), Some("2026-11-15T12:00:00Z"));
+        assert!(!has_active_extractor(&[past], now()));
+        let no_product = extractor_pin(700000011, None, Some("2026-11-20T12:00:00Z"));
+        assert!(!has_active_extractor(&[no_product], now()));
+        let unparseable = extractor_pin(700000011, Some(34), Some("not a date"));
+        assert!(!has_active_extractor(&[unparseable], now()));
+        assert!(!has_active_extractor(&[], now()));
     }
 
     #[test]
