@@ -19,8 +19,8 @@ use crate::fitting::calibration::{rig_calibration, CalibrationBudget, Calibratio
 use crate::fitting::dna::parse_import;
 use crate::fitting::dps::{fitting_dps, FamilyDps, FittingDps, FittingDpsOutcome};
 use crate::fitting::editor::{
-    add_item as editor_add_item, remove_item as editor_remove_item, rename as editor_rename,
-    set_quantity as editor_set_quantity, EditRefusal,
+    add_item as editor_add_item, browser_candidates, remove_item as editor_remove_item,
+    rename as editor_rename, set_quantity as editor_set_quantity, BrowserRow, EditRefusal,
 };
 use crate::fitting::eft::{
     EftImportOutcome, ImportFormat, ImportIssue, ImportSection, ImportedFitting,
@@ -246,6 +246,38 @@ pub fn fitting_item_rows(
 fn fitting_matches_search(row: &FittingRow, needle: &str) -> bool {
     widgets::matches_search(&row.display_name, needle)
         || widgets::matches_search(&row.ship_name, needle)
+}
+
+/// Module-browser search predicate (module browser design
+/// section 4.1): the shipped case-insensitive substring match
+/// on the catalogue name, never on the formatted row label.
+fn browser_row_matches(row: &BrowserRow, needle: &str) -> bool {
+    widgets::matches_search(&row.name, needle)
+}
+
+/// Module-browser row label (design section 5): the name, plus
+/// the CPU and power-grid figures only when the catalogue
+/// carries them. Never renders the row's type number.
+fn browser_row_label(row: &BrowserRow) -> String {
+    match (row.cpu, row.power) {
+        (Some(cpu), Some(power)) => format!(
+            "{} (CPU {}, power grid {})",
+            row.name,
+            widgets::format_fitting_amount(cpu, "tf"),
+            widgets::format_fitting_amount(power, "MW"),
+        ),
+        (Some(cpu), None) => format!(
+            "{} (CPU {})",
+            row.name,
+            widgets::format_fitting_amount(cpu, "tf"),
+        ),
+        (None, Some(power)) => format!(
+            "{} (power grid {})",
+            row.name,
+            widgets::format_fitting_amount(power, "MW"),
+        ),
+        (None, None) => row.name.clone(),
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1388,6 +1420,19 @@ fn note_successful_edit(state: &mut AppState) {
     state.fittings_write_confirm = None;
 }
 
+/// Module-browser tabs in display order (module browser design
+/// section 2.2), keyed by the `ImportSection` each tab lists.
+/// No Cargo tab: it has no positive membership to browse.
+const BROWSER_TABS: [(ImportSection, &str); 7] = [
+    (ImportSection::High, "High"),
+    (ImportSection::Medium, "Med"),
+    (ImportSection::Low, "Low"),
+    (ImportSection::Rig, "Rig"),
+    (ImportSection::Subsystem, "Subsystems"),
+    (ImportSection::Drones, "Drones"),
+    (ImportSection::Fighters, "Fighters"),
+];
+
 /// Clear every editor field; called wherever the draft dies or is
 /// replaced (design section 4.1).
 fn clear_editor_state(state: &mut AppState) {
@@ -1397,6 +1442,10 @@ fn clear_editor_state(state: &mut AppState) {
     state.fittings_import_edited = false;
     state.fittings_editor_quantity.clear();
     state.fittings_editor_name = None;
+    state.fittings_browser_section = ImportSection::High;
+    state.fittings_browser_search.clear();
+    state.fittings_browser_rows.clear();
+    state.fittings_browser_rows_section = None;
 }
 
 /// Locked heading for the base resource block (design section 7).
@@ -3004,6 +3053,86 @@ fn fittings_import_panel(
     });
     if let Some(error) = state.fittings_editor_error.clone() {
         ui.label(error);
+    }
+    // Module browser (module browser design sections 2, 4-7):
+    // tabs, a name search, and single-click rows that add through
+    // the same add path as the typed add row above. Candidates
+    // are cached per tab, so the catalogue is scanned at most
+    // once per tab selection.
+    ui.horizontal(|ui| {
+        for (section, label) in BROWSER_TABS {
+            let selected = state.fittings_browser_section == section;
+            if ui.selectable_label(selected, label).clicked() {
+                state.fittings_browser_section = section;
+            }
+        }
+    });
+    let browser_search_response = ui.add(
+        egui::TextEdit::singleline(&mut state.fittings_browser_search).hint_text("Search by name"),
+    );
+    state.text_input_focused |= browser_search_response.has_focus();
+    if state.fittings_browser_rows_section != Some(state.fittings_browser_section) {
+        let section = state.fittings_browser_section;
+        state.fittings_browser_rows = browser_candidates(catalogue, section);
+        state.fittings_browser_rows_section = Some(section);
+        tracing::debug!(
+            "[FITTING] module browser candidates built section={section:?} rows={}",
+            state.fittings_browser_rows.len()
+        );
+    }
+    let browser_search = state.fittings_browser_search.clone();
+    let browser_filtered: Vec<&BrowserRow> = state
+        .fittings_browser_rows
+        .iter()
+        .filter(|row| browser_row_matches(row, &browser_search))
+        .collect();
+    if browser_filtered.is_empty() {
+        if browser_search.is_empty() {
+            ui.label("No items in this section.");
+        } else {
+            ui.label("No matches.");
+        }
+    } else {
+        let shown = browser_filtered.len().min(FITTINGS_RENDER_MAX);
+        if browser_filtered.len() > FITTINGS_RENDER_MAX {
+            ui.label(format!(
+                "Showing {shown} of {} items.",
+                browser_filtered.len()
+            ));
+        }
+        let mut browser_clicked: Option<String> = None;
+        for row in browser_filtered.iter().take(FITTINGS_RENDER_MAX) {
+            if ui.selectable_label(false, browser_row_label(row)).clicked() {
+                browser_clicked = Some(row.name.clone());
+            }
+        }
+        if let Some(clicked_name) = browser_clicked {
+            let stacked = matches!(
+                state.fittings_browser_section,
+                ImportSection::Drones | ImportSection::Fighters
+            );
+            let browser_quantity_trimmed = state.fittings_editor_add_quantity.trim().to_string();
+            let browser_quantity: Option<String> = if stacked {
+                Some(if browser_quantity_trimmed.is_empty() {
+                    "1".to_string()
+                } else {
+                    browser_quantity_trimmed
+                })
+            } else {
+                None
+            };
+            match editor_add_item(
+                &mut imported,
+                catalogue,
+                &clicked_name,
+                browser_quantity.as_deref(),
+            ) {
+                Ok(()) => note_successful_edit(state),
+                Err(refusal) => {
+                    state.fittings_editor_error = Some(add_refusal_message(refusal));
+                }
+            }
+        }
     }
     let local_resolver = imported.name_resolver();
     let item_rows = imported_item_rows(&imported, &local_resolver);
@@ -8415,6 +8544,15 @@ mod tests {
         state.fittings_import_edited = true;
         state.fittings_editor_quantity.insert(2, "3".to_string());
         state.fittings_editor_name = Some("Renamed".to_string());
+        state.fittings_browser_section = ImportSection::Low;
+        state.fittings_browser_search = "damage".to_string();
+        state.fittings_browser_rows = vec![BrowserRow {
+            type_id: 2048,
+            name: "Damage Control II".to_string(),
+            cpu: Some(30.0),
+            power: Some(1.0),
+        }];
+        state.fittings_browser_rows_section = Some(ImportSection::Low);
         clear_editor_state(&mut state);
         assert_eq!(state.fittings_editor_add_name, "");
         assert_eq!(state.fittings_editor_add_quantity, "");
@@ -8422,6 +8560,130 @@ mod tests {
         assert!(!state.fittings_import_edited);
         assert!(state.fittings_editor_quantity.is_empty());
         assert_eq!(state.fittings_editor_name, None);
+        assert_eq!(state.fittings_browser_section, ImportSection::High);
+        assert_eq!(state.fittings_browser_search, "");
+        assert!(state.fittings_browser_rows.is_empty());
+        assert_eq!(state.fittings_browser_rows_section, None);
+    }
+
+    #[test]
+    fn browser_row_labels_print_only_carried_figures() {
+        // Locked test 8 (module browser design section 10,
+        // section 5): both figures, each single figure, and
+        // figureless rows, with no type number ever printed.
+        let both = BrowserRow {
+            type_id: 2048,
+            name: "Damage Control II".to_string(),
+            cpu: Some(30.0),
+            power: Some(1.0),
+        };
+        assert_eq!(
+            browser_row_label(&both),
+            "Damage Control II (CPU 30.0 tf, power grid 1.0 MW)"
+        );
+        let power_only = BrowserRow {
+            type_id: 33981,
+            name: "Limited Hyperspatial Accelerator".to_string(),
+            cpu: None,
+            power: Some(1.0),
+        };
+        assert_eq!(
+            browser_row_label(&power_only),
+            "Limited Hyperspatial Accelerator (power grid 1.0 MW)"
+        );
+        let cpu_only = BrowserRow {
+            type_id: 1,
+            name: "CPU Only Module".to_string(),
+            cpu: Some(15.0),
+            power: None,
+        };
+        assert_eq!(
+            browser_row_label(&cpu_only),
+            "CPU Only Module (CPU 15.0 tf)"
+        );
+        let figureless = BrowserRow {
+            type_id: 2456,
+            name: "Hobgoblin II".to_string(),
+            cpu: None,
+            power: None,
+        };
+        assert_eq!(browser_row_label(&figureless), "Hobgoblin II");
+        // The demo pins of design test 2: no label leaks its
+        // type number as text.
+        let types = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let pins = [
+            (ImportSection::Low, "Damage Control II"),
+            (ImportSection::Medium, "1MN Afterburner II"),
+            (ImportSection::High, "200mm AutoCannon II"),
+            (ImportSection::Rig, "Small Projectile Burst Aerator I"),
+            (ImportSection::Drones, "Hobgoblin II"),
+        ];
+        for (section, name) in pins {
+            let candidates = browser_candidates(&types, section);
+            let row = candidates
+                .iter()
+                .find(|row| row.name == name)
+                .unwrap_or_else(|| panic!("{name} lists in its tab"));
+            let label = browser_row_label(row);
+            assert!(
+                !label.contains(&row.type_id.to_string()),
+                "label for {name} leaks its type number: {label}"
+            );
+        }
+    }
+
+    #[test]
+    fn browser_search_filters_names_only() {
+        // Locked test 9 (module browser design section 10,
+        // section 4.1): case-insensitive name filtering over
+        // the Low tab, with the scripted counts. Under the
+        // locked byte sort (design section 3.4) both apostrophe
+        // names lead; the design's "then Damage Control I"
+        // does not name the second row, so pin the true
+        // second row plus Damage Control I's presence.
+        let types = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let low = browser_candidates(&types, ImportSection::Low);
+        let matched: Vec<&BrowserRow> = low
+            .iter()
+            .filter(|row| browser_row_matches(row, "damage control"))
+            .collect();
+        assert_eq!(matched.len(), 25);
+        assert_eq!(matched[0].name, "'Basic' Damage Control");
+        assert_eq!(matched[1].name, "'Radical' Damage Control");
+        assert!(
+            matched.iter().any(|row| row.name == "Damage Control I"),
+            "Damage Control I lists among the matches"
+        );
+        let upper: Vec<&BrowserRow> = low
+            .iter()
+            .filter(|row| browser_row_matches(row, "DAMAGE CONTROL"))
+            .collect();
+        assert_eq!(
+            upper.iter().map(|row| &row.name).collect::<Vec<_>>(),
+            matched.iter().map(|row| &row.name).collect::<Vec<_>>(),
+            "upper-cased needle matches identically"
+        );
+        assert_eq!(
+            low.iter()
+                .filter(|row| browser_row_matches(row, ""))
+                .count(),
+            low.len(),
+            "empty needle matches everything"
+        );
+        assert!(
+            low.iter()
+                .filter(|row| browser_row_matches(row, "zzz-no-such-name-qqq"))
+                .count()
+                == 0,
+            "nonsense needle matches nothing"
+        );
+        assert!(
+            low.iter()
+                .filter(|row| browser_row_matches(row, "30.0"))
+                .count()
+                == 0,
+            "a figure never matches: matching is names-only"
+        );
     }
 
     #[test]
