@@ -19,11 +19,11 @@
 use std::collections::HashMap;
 
 use crate::fitting::eft::{
-    absorb_stack, classify_module, parse_stack_quantity, ImportIssueKind, ImportSection,
-    ImportedFitting, ImportedItem, ModuleOutcome, CATEGORY_DRONE, CATEGORY_FIGHTER,
+    absorb_stack, classify_module, parse_stack_quantity, slot_section, ImportIssueKind,
+    ImportSection, ImportedFitting, ImportedItem, ModuleOutcome, CATEGORY_DRONE, CATEGORY_FIGHTER,
     CATEGORY_MODULE, CATEGORY_SUBSYSTEM,
 };
-use crate::names::fitting_types::{FittingTypes, NameLookup};
+use crate::names::fitting_types::{normalize_type_name, FittingTypes, NameLookup};
 
 /// One refusal kind per import condition. The user-facing
 /// wording delegates to the matching
@@ -179,6 +179,92 @@ pub fn add_item(
         None => add_slot(fitting, types, name),
         Some(quantity) => add_stacked(fitting, types, name, quantity),
     }
+}
+
+/// One browsable catalogue row for the module browser
+/// (design section 3.1). `type_id` is an internal key and sort
+/// tiebreak only, never rendered and never logged; `name` is the
+/// trimmed catalogue name a click passes to the add path;
+/// `cpu` and `power` copy the row's optional need figures
+/// untouched, so absence stays visible.
+#[derive(Debug, Clone, PartialEq)]
+pub struct BrowserRow {
+    pub type_id: i64,
+    pub name: String,
+    pub cpu: Option<f64>,
+    pub power: Option<f64>,
+}
+
+/// List every catalogue row that clicks straight into
+/// `section` (design section 3.2): the name resolves to
+/// exactly one type number, the trimmed name is non-empty and
+/// not purely numeric, and the editor classifier's own
+/// predicates prove the section — category 7 or 32 with
+/// `slot_section` for slot tabs, `CATEGORY_DRONE` or
+/// `CATEGORY_FIGHTER` for the stacked tabs. `Cargo` yields an
+/// empty list: it has no positive membership, only catch-all
+/// routing, so no tab ever browses it. Sorted by lowercased
+/// name, then name, then type number (design section 3.4).
+pub fn browser_candidates(types: &FittingTypes, section: ImportSection) -> Vec<BrowserRow> {
+    // Named deferral, recorded in code: Cargo has no positive
+    // membership to browse.
+    if section == ImportSection::Cargo {
+        return Vec::new();
+    }
+    // Distinct type numbers per normalized name, de-duplicated
+    // by (name, type number) with first row in file order
+    // winning — the load index's own semantics, computed here
+    // without a per-row lookup log line.
+    let mut counts: HashMap<String, std::collections::HashSet<i64>> = HashMap::new();
+    let mut seen: std::collections::HashSet<(String, i64)> = std::collections::HashSet::new();
+    for row in &types.types {
+        let key = normalize_type_name(&row.name);
+        if seen.insert((key.clone(), row.type_id)) {
+            counts.entry(key).or_default().insert(row.type_id);
+        }
+    }
+    let mut rows = Vec::new();
+    for row in &types.types {
+        let trimmed = row.name.trim();
+        if trimmed.is_empty() || trimmed.parse::<i64>().is_ok() {
+            continue;
+        }
+        let key = normalize_type_name(trimmed);
+        if counts.get(&key).map(|ids| ids.len()) != Some(1) {
+            continue;
+        }
+        let listed = match section {
+            ImportSection::High
+            | ImportSection::Medium
+            | ImportSection::Low
+            | ImportSection::Rig
+            | ImportSection::Subsystem => {
+                (row.category_id == CATEGORY_MODULE || row.category_id == CATEGORY_SUBSYSTEM)
+                    && slot_section(&row.slot_effects) == Some(section)
+            }
+            ImportSection::Drones => row.category_id == CATEGORY_DRONE,
+            ImportSection::Fighters => row.category_id == CATEGORY_FIGHTER,
+            // Unreachable: Cargo returns above.
+            ImportSection::Cargo => false,
+        };
+        if !listed {
+            continue;
+        }
+        rows.push(BrowserRow {
+            type_id: row.type_id,
+            name: trimmed.to_string(),
+            cpu: row.cpu,
+            power: row.power,
+        });
+    }
+    rows.sort_by(|a, b| {
+        a.name
+            .to_lowercase()
+            .cmp(&b.name.to_lowercase())
+            .then_with(|| a.name.cmp(&b.name))
+            .then_with(|| a.type_id.cmp(&b.type_id))
+    });
+    rows
 }
 
 /// Remove the whole row at `index`, charge included. Returns
@@ -572,5 +658,240 @@ mod tests {
         );
         assert_eq!(reimported.name, "Edited Brawler");
         assert_eq!(item_triples(&reimported), before);
+    }
+
+    fn browser_row<'a>(rows: &'a [BrowserRow], name: &str) -> &'a BrowserRow {
+        rows.iter()
+            .find(|row| row.name == name)
+            .expect("demo row lists")
+    }
+
+    #[test]
+    fn browser_counts_and_first_rows_match_bundled_catalogue() {
+        let types = bundled_types();
+        let table = [
+            (
+                ImportSection::High,
+                1_371,
+                [
+                    "'Arbalest' Cruise Launcher I",
+                    "'Arbalest' Heavy Missile Launcher",
+                    "'Arbalest' Rapid Heavy Missile Launcher I",
+                ],
+            ),
+            (
+                ImportSection::Medium,
+                903,
+                [
+                    "'Basic' Capacitor Recharger",
+                    "'Basic' EM Shield Amplifier",
+                    "'Basic' Explosive Shield Amplifier",
+                ],
+            ),
+            (
+                ImportSection::Low,
+                1_005,
+                [
+                    "'Abatis' 100mm Steel Plates",
+                    "'Accord' Core Compensation",
+                    "'Anguis' Ice Harvester Upgrade",
+                ],
+            ),
+            (
+                ImportSection::Rig,
+                642,
+                [
+                    "Capital Algid Energy Administrations Unit I",
+                    "Capital Algid Energy Administrations Unit II",
+                    "Capital Algid Hybrid Administrations Unit I",
+                ],
+            ),
+            (
+                ImportSection::Subsystem,
+                48,
+                [
+                    "Legion Core - Augmented Antimatter Reactor",
+                    "Legion Core - Dissolution Sequencer",
+                    "Legion Core - Energy Parasitic Complex",
+                ],
+            ),
+            (
+                ImportSection::Drones,
+                129,
+                [
+                    "'Augmented' Acolyte",
+                    "'Augmented' Berserker",
+                    "'Augmented' Hammerhead",
+                ],
+            ),
+            (
+                ImportSection::Fighters,
+                94,
+                ["Ametat I", "Ametat II", "Antaeus I"],
+            ),
+        ];
+        for (section, count, first_three) in table {
+            let rows = browser_candidates(&types, section);
+            assert_eq!(rows.len(), count, "{section:?}");
+            assert_eq!(rows[0].name, first_three[0], "{section:?}");
+            assert_eq!(rows[1].name, first_three[1], "{section:?}");
+            assert_eq!(rows[2].name, first_three[2], "{section:?}");
+            for row in &rows {
+                assert!(!row.name.is_empty(), "{section:?}");
+                assert!(row.name.parse::<i64>().is_err(), "{section:?}");
+                assert_eq!(row.name, row.name.trim(), "{section:?}");
+            }
+        }
+        assert!(browser_candidates(&types, ImportSection::Cargo).is_empty());
+    }
+
+    #[test]
+    fn browser_demo_pins_list_with_their_figures() {
+        let types = bundled_types();
+
+        let low = browser_candidates(&types, ImportSection::Low);
+        assert_eq!(browser_row(&low, "Damage Control II").cpu, Some(30.0));
+        assert_eq!(browser_row(&low, "Damage Control II").power, Some(1.0));
+
+        let medium = browser_candidates(&types, ImportSection::Medium);
+        assert_eq!(browser_row(&medium, "1MN Afterburner II").cpu, Some(15.0));
+        assert_eq!(browser_row(&medium, "1MN Afterburner II").power, Some(11.0));
+
+        let high = browser_candidates(&types, ImportSection::High);
+        assert_eq!(browser_row(&high, "200mm AutoCannon II").cpu, Some(9.0));
+        assert_eq!(browser_row(&high, "200mm AutoCannon II").power, Some(4.0));
+
+        let rig = browser_candidates(&types, ImportSection::Rig);
+        assert_eq!(
+            browser_row(&rig, "Small Projectile Burst Aerator I").cpu,
+            None
+        );
+        assert_eq!(
+            browser_row(&rig, "Small Projectile Burst Aerator I").power,
+            None
+        );
+
+        let drones = browser_candidates(&types, ImportSection::Drones);
+        assert!(browser_row(&drones, "Hobgoblin II").name == "Hobgoblin II");
+    }
+
+    #[test]
+    fn browser_slot_rows_all_add_into_their_tab() {
+        let types = bundled_types();
+        for section in [
+            ImportSection::High,
+            ImportSection::Medium,
+            ImportSection::Low,
+            ImportSection::Rig,
+            ImportSection::Subsystem,
+        ] {
+            for row in browser_candidates(&types, section) {
+                let mut fitting = empty_draft(&types);
+                add_item(&mut fitting, &types, &row.name, None)
+                    .unwrap_or_else(|refusal| panic!("{}: {refusal:?}", row.name));
+                assert_eq!(fitting.items.len(), 1, "{}", row.name);
+                assert_eq!(fitting.items[0].section, section, "{}", row.name);
+                assert_eq!(fitting.items[0].name, row.name);
+            }
+        }
+    }
+
+    #[test]
+    fn browser_stacked_rows_all_add_into_their_tab() {
+        let types = bundled_types();
+        for section in [ImportSection::Drones, ImportSection::Fighters] {
+            for row in browser_candidates(&types, section) {
+                let mut fitting = empty_draft(&types);
+                add_item(&mut fitting, &types, &row.name, Some("1"))
+                    .unwrap_or_else(|refusal| panic!("{}: {refusal:?}", row.name));
+                assert_eq!(fitting.items.len(), 1, "{}", row.name);
+                assert_eq!(fitting.items[0].section, section, "{}", row.name);
+                assert_eq!(fitting.items[0].quantity, 1, "{}", row.name);
+            }
+        }
+    }
+
+    #[test]
+    fn browser_exclusions_list_nowhere() {
+        let types = bundled_types();
+        let sections = [
+            ImportSection::High,
+            ImportSection::Medium,
+            ImportSection::Low,
+            ImportSection::Rig,
+            ImportSection::Subsystem,
+            ImportSection::Drones,
+            ImportSection::Fighters,
+            ImportSection::Cargo,
+        ];
+        let listed: BTreeSet<String> = sections
+            .iter()
+            .flat_map(|section| browser_candidates(&types, *section))
+            .map(|row| row.name)
+            .collect();
+        for name in [
+            "Lux Kontos",
+            "Standup Anticapital Missile Launcher I",
+            "Spiked Quafe",
+            "Rifter",
+            "EMP S",
+        ] {
+            assert!(!listed.contains(name), "{name} must not list");
+        }
+        // "EMP S" and "Nanite Repair Paste" still add by typed name;
+        // the deferral is the listing, not the add path.
+        let mut fitting = empty_draft(&types);
+        add_item(&mut fitting, &types, "Nanite Repair Paste", Some("8")).expect("paste still adds");
+        assert_eq!(fitting.items.len(), 1);
+    }
+
+    #[test]
+    fn browser_fixture_guard_excludes_each_failure_mode() {
+        // Shipped dual-fixture style: one catalogue exercising
+        // every section 3.2 guard at once.
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":100,"typeName":"Ordinary Module","categoryId":7,"slotEffects":[12]},
+                {"typeId":101,"typeName":"12345","categoryId":7,"slotEffects":[12]},
+                {"typeId":102,"typeName":"Twin Module","categoryId":7,"slotEffects":[12]},
+                {"typeId":103,"typeName":"Twin Module","categoryId":7,"slotEffects":[12]},
+                {"typeId":104,"typeName":"Structure Module","categoryId":66,"slotEffects":[12]},
+                {"typeId":105,"typeName":"Slotless Module","categoryId":7,"slotEffects":[]}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let rows = browser_candidates(&catalogue, ImportSection::High);
+        let names: Vec<&str> = rows.iter().map(|row| row.name.as_str()).collect();
+        assert_eq!(names, vec!["Ordinary Module"]);
+    }
+
+    #[test]
+    fn browser_figure_presence_matches_catalogue() {
+        let types = bundled_types();
+
+        let low = browser_candidates(&types, ImportSection::Low);
+        let lean = browser_row(&low, "Limited Hyperspatial Accelerator");
+        assert_eq!(lean.cpu, None);
+        assert_eq!(lean.power, Some(1.0));
+
+        let both = |section| {
+            browser_candidates(&types, section)
+                .iter()
+                .filter(|row| row.cpu.is_some() && row.power.is_some())
+                .count()
+        };
+        assert_eq!(both(ImportSection::High), 1_350);
+        assert_eq!(both(ImportSection::Medium), 875);
+        assert_eq!(both(ImportSection::Low), 952);
+        for section in [
+            ImportSection::Rig,
+            ImportSection::Subsystem,
+            ImportSection::Drones,
+            ImportSection::Fighters,
+        ] {
+            for row in browser_candidates(&types, section) {
+                assert_eq!(row.cpu, None, "{} {section:?}", row.name);
+                assert_eq!(row.power, None, "{} {section:?}", row.name);
+            }
+        }
     }
 }
