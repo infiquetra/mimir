@@ -3671,10 +3671,20 @@ impl MimirApp {
         }
         if let LoadState::Ready(bundle) = &self.state.industry {
             if let Ok(jobs_data) = &bundle.jobs {
-                return jobs_data
+                if jobs_data
                     .jobs
                     .iter()
-                    .any(|job| ui::industry::is_in_progress_status(&job.status));
+                    .any(|job| ui::industry::is_in_progress_status(&job.status))
+                {
+                    return true;
+                }
+            }
+        }
+        if let LoadState::Ready(bundle) = &self.state.planetary {
+            if let Some(detail) = &bundle.detail {
+                if let Ok(colony) = &detail.result {
+                    return ui::planets::has_active_extractor(&colony.pins, chrono::Utc::now());
+                }
             }
         }
         false

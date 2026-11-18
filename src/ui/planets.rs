@@ -10,6 +10,7 @@ use crate::app::state::{AppState, LoadState, PlanetaryData, SectionError, StepUp
 use crate::config::EveConfig;
 use crate::esi::models::{PlanetColony, PlanetPin};
 use crate::names::resolver::NameResolver;
+use chrono::{DateTime, Utc};
 
 pub fn planet_type_label(planet_type: &str) -> &'static str {
     match planet_type {
@@ -182,6 +183,149 @@ pub fn storage_content_rows(pins: &[PlanetPin], resolver: &NameResolver) -> Vec<
     rows
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ColonySummaryState {
+    NoPins,
+    NoExtractors,
+    NoExpiryData,
+    AllExpired,
+    Extracting,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ColonySummary {
+    pub state: ColonySummaryState,
+    pub status_label: &'static str,
+    pub extractor_count: usize,
+    pub active_extractor_count: usize,
+    pub next_completion: Option<DateTime<Utc>>,
+    pub next_completion_label: String,
+    pub active_pins_label: String,
+    pub state_note: Option<&'static str>,
+}
+
+/// One-pass colony summary over the loaded pins of one colony.
+/// `reported_pins` is the colony's stored `num_pins` (rendered as
+/// `Active Pins`, clamped at zero; `None` renders `N/A`), never
+/// derived from `pins.len()`. `now` is an input, never sampled
+/// here. An extractor pin is one whose extractor product ID is
+/// present and positive; its expiry counts only when it parses
+/// and lies strictly after `now`. Unparseable expiry strings are
+/// ignored, never guessed or rendered.
+pub fn colony_summary(
+    pins: &[PlanetPin],
+    reported_pins: Option<i64>,
+    now: DateTime<Utc>,
+) -> ColonySummary {
+    let mut extractor_count: usize = 0;
+    let mut active_extractor_count: usize = 0;
+    let mut parsed_expiry: bool = false;
+    let mut next_completion: Option<DateTime<Utc>> = None;
+    let mut unparseable_expiry: usize = 0;
+    for pin in pins {
+        let is_extractor = pin
+            .extractor_details
+            .as_ref()
+            .and_then(|details| details.product_type_id)
+            .filter(|id| *id > 0)
+            .is_some();
+        if !is_extractor {
+            continue;
+        }
+        extractor_count = extractor_count.saturating_add(1);
+        let Some(expiry) = pin.expiry_time.as_deref().and_then(widgets::parse_esi_date) else {
+            if pin.expiry_time.is_some() {
+                unparseable_expiry = unparseable_expiry.saturating_add(1);
+            }
+            continue;
+        };
+        parsed_expiry = true;
+        if expiry > now {
+            active_extractor_count = active_extractor_count.saturating_add(1);
+            next_completion = Some(match next_completion {
+                Some(current) if current <= expiry => current,
+                _ => expiry,
+            });
+        }
+    }
+    let state = if pins.is_empty() {
+        ColonySummaryState::NoPins
+    } else if extractor_count == 0 {
+        ColonySummaryState::NoExtractors
+    } else if active_extractor_count > 0 {
+        ColonySummaryState::Extracting
+    } else if !parsed_expiry {
+        ColonySummaryState::NoExpiryData
+    } else {
+        ColonySummaryState::AllExpired
+    };
+    let status_label = if state == ColonySummaryState::Extracting {
+        "Extracting"
+    } else {
+        "Idle"
+    };
+    let next_completion_label = match next_completion {
+        Some(expiry) => format!(
+            "in {}",
+            widgets::format_countdown((expiry - now).num_seconds())
+        ),
+        None => "N/A".to_string(),
+    };
+    let active_pins_label = match reported_pins {
+        Some(n) => n.max(0).to_string(),
+        None => "N/A".to_string(),
+    };
+    let state_note = match state {
+        ColonySummaryState::NoPins | ColonySummaryState::Extracting => None,
+        ColonySummaryState::NoExtractors => {
+            Some("No extractor pins were reported, so nothing is extracting.")
+        }
+        ColonySummaryState::NoExpiryData => {
+            Some("No extractor reported an expiry time, so no completion can be shown.")
+        }
+        ColonySummaryState::AllExpired => Some("All extractor expiry times are in the past."),
+    };
+    tracing::debug!(
+        "[PI] colony summary pins={} extractors={} active={} state={:?} unparseable_expiry={}",
+        pins.len(),
+        extractor_count,
+        active_extractor_count,
+        state,
+        unparseable_expiry
+    );
+    ColonySummary {
+        state,
+        status_label,
+        extractor_count,
+        active_extractor_count,
+        next_completion,
+        next_completion_label,
+        active_pins_label,
+        state_note,
+    }
+}
+
+/// True when any extractor pin has a parseable expiry strictly
+/// after `now` — the same active test [`colony_summary`] uses,
+/// without its counting or logging. The shell uses it to keep
+/// the colony countdown repainting while extraction runs.
+pub fn has_active_extractor(pins: &[PlanetPin], now: DateTime<Utc>) -> bool {
+    pins.iter().any(|pin| {
+        let is_extractor = pin
+            .extractor_details
+            .as_ref()
+            .and_then(|details| details.product_type_id)
+            .filter(|id| *id > 0)
+            .is_some();
+        is_extractor
+            && pin
+                .expiry_time
+                .as_deref()
+                .and_then(widgets::parse_esi_date)
+                .is_some_and(|expiry| expiry > now)
+    })
+}
+
 pub const PIN_TYPE_RENDER_MAX: usize = 100;
 pub const EXTRACTOR_RENDER_MAX: usize = 100;
 pub const STORAGE_RENDER_MAX: usize = 100;
@@ -297,6 +441,33 @@ fn show_detail_section(
         Err(error) => section_error_label(ui, "colony detail", error, panel_shown),
         Ok(detail) => {
             let pins = &detail.pins;
+            let now = Utc::now();
+            let reported_pins = match &bundle.colonies {
+                Ok(colonies) => colonies
+                    .iter()
+                    .find(|colony| colony.planet_id == selected_planet)
+                    .map(|colony| colony.num_pins),
+                Err(_) => None,
+            };
+            let summary = colony_summary(pins, reported_pins, now);
+            ui.heading("Colony summary");
+            match summary.state {
+                ColonySummaryState::NoPins => {
+                    ui.label("No pins were reported for this colony.");
+                }
+                _ => {
+                    ui.label(format!("Status: {}", summary.status_label));
+                    ui.label(format!("Active Pins: {}", summary.active_pins_label));
+                    ui.label(format!(
+                        "Next Completion: {}",
+                        summary.next_completion_label
+                    ));
+                    ui.label(format!("Extractors: {}", summary.extractor_count));
+                    if let Some(note) = summary.state_note {
+                        ui.label(note);
+                    }
+                }
+            }
             ui.heading("Pin types");
             let pin_rows = pin_type_counts(pins, resolver);
             if pin_rows.is_empty() {
@@ -434,6 +605,250 @@ mod tests {
             type_id,
             ..Default::default()
         }
+    }
+
+    fn now() -> DateTime<Utc> {
+        widgets::parse_esi_date("2026-11-15T12:00:00Z").expect("fixed test date parses")
+    }
+
+    fn extractor_pin(pin_id: i64, product_id: Option<i64>, expiry: Option<&str>) -> PlanetPin {
+        PlanetPin {
+            pin_id,
+            type_id: 20001,
+            expiry_time: expiry.map(str::to_string),
+            extractor_details: Some(ExtractorDetails {
+                product_type_id: product_id,
+                qty_per_cycle: None,
+                cycle_time: None,
+            }),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn has_active_extractor_matches_summary_active_test() {
+        let future = extractor_pin(700000011, Some(34), Some("2026-11-20T12:00:00Z"));
+        assert!(has_active_extractor(&[future], now()));
+        let past = extractor_pin(700000011, Some(34), Some("2026-11-15T12:00:00Z"));
+        assert!(!has_active_extractor(&[past], now()));
+        let no_product = extractor_pin(700000011, None, Some("2026-11-20T12:00:00Z"));
+        assert!(!has_active_extractor(&[no_product], now()));
+        let unparseable = extractor_pin(700000011, Some(34), Some("not a date"));
+        assert!(!has_active_extractor(&[unparseable], now()));
+        assert!(!has_active_extractor(&[], now()));
+    }
+
+    #[test]
+    fn colony_summary_empty_pins() {
+        let summary = colony_summary(&[], Some(4), now());
+        assert_eq!(summary.state, ColonySummaryState::NoPins);
+        assert_eq!(summary.status_label, "Idle");
+        assert_eq!(summary.extractor_count, 0);
+        assert_eq!(summary.active_extractor_count, 0);
+        assert_eq!(summary.next_completion, None);
+        assert_eq!(summary.next_completion_label, "N/A");
+        assert_eq!(summary.active_pins_label, "4");
+        assert_eq!(summary.state_note, None);
+    }
+
+    #[test]
+    fn colony_summary_non_extractors_cannot_activate() {
+        let mut plain = pin(700000011, 20002);
+        plain.expiry_time = Some("2026-11-20T12:00:00Z".to_string());
+        let no_product = extractor_pin(700000012, None, Some("2026-11-20T12:00:00Z"));
+        let summary = colony_summary(&[plain, no_product], Some(2), now());
+        assert_eq!(summary.state, ColonySummaryState::NoExtractors);
+        assert_eq!(summary.status_label, "Idle");
+        assert_eq!(summary.extractor_count, 0);
+        assert_eq!(summary.active_extractor_count, 0);
+        assert_eq!(summary.next_completion, None);
+        assert_eq!(summary.next_completion_label, "N/A");
+        assert_eq!(
+            summary.state_note,
+            Some("No extractor pins were reported, so nothing is extracting.")
+        );
+    }
+
+    #[test]
+    fn colony_summary_non_positive_products_do_not_count() {
+        let zero = extractor_pin(700000011, Some(0), Some("2026-11-20T12:00:00Z"));
+        let negative = extractor_pin(700000012, Some(-3), Some("2026-11-20T12:00:00Z"));
+        let summary = colony_summary(&[zero, negative], Some(2), now());
+        assert_eq!(summary.state, ColonySummaryState::NoExtractors);
+        assert_eq!(summary.extractor_count, 0);
+        assert_eq!(summary.active_extractor_count, 0);
+        // Mixed set: those two plus one expired valid extractor; the
+        // summary count equals the extractors section row count.
+        let pins = vec![
+            extractor_pin(700000011, Some(0), Some("2026-11-20T12:00:00Z")),
+            extractor_pin(700000012, Some(-3), Some("2026-11-20T12:00:00Z")),
+            extractor_pin(700000013, Some(34), Some("2026-11-14T12:00:00Z")),
+        ];
+        let summary = colony_summary(&pins, Some(3), now());
+        assert_eq!(summary.extractor_count, 1);
+        assert_eq!(
+            summary.extractor_count,
+            extractor_product_rows(&pins, &resolver()).len()
+        );
+        assert_eq!(summary.state, ColonySummaryState::AllExpired);
+    }
+
+    #[test]
+    fn colony_summary_no_expiry_data() {
+        let pins = vec![
+            extractor_pin(700000011, Some(34), None),
+            extractor_pin(700000012, Some(34), Some("")),
+            extractor_pin(700000013, Some(34), Some("not-a-date")),
+        ];
+        let summary = colony_summary(&pins, Some(3), now());
+        assert_eq!(summary.state, ColonySummaryState::NoExpiryData);
+        assert_eq!(summary.status_label, "Idle");
+        assert_eq!(summary.extractor_count, 3);
+        assert_eq!(summary.active_extractor_count, 0);
+        assert_eq!(summary.next_completion, None);
+        assert_eq!(summary.next_completion_label, "N/A");
+        assert_eq!(
+            summary.state_note,
+            Some("No extractor reported an expiry time, so no completion can be shown.")
+        );
+    }
+
+    #[test]
+    fn colony_summary_all_expired_strict_boundary() {
+        let pins = vec![
+            // Exactly `now`: inactive by strictness.
+            extractor_pin(700000011, Some(34), Some("2026-11-15T12:00:00Z")),
+            extractor_pin(700000012, Some(34), Some("2026-11-14T12:00:00Z")),
+            // An unparseable sibling changes nothing.
+            extractor_pin(700000013, Some(34), Some("700000001")),
+        ];
+        let summary = colony_summary(&pins, Some(3), now());
+        assert_eq!(summary.state, ColonySummaryState::AllExpired);
+        assert_eq!(summary.status_label, "Idle");
+        assert_eq!(summary.extractor_count, 3);
+        assert_eq!(summary.active_extractor_count, 0);
+        assert_eq!(summary.next_completion, None);
+        assert_eq!(summary.next_completion_label, "N/A");
+        assert_eq!(
+            summary.state_note,
+            Some("All extractor expiry times are in the past.")
+        );
+    }
+
+    #[test]
+    fn colony_summary_earliest_future_wins() {
+        let pins = vec![
+            extractor_pin(700000011, Some(34), Some("2026-11-21T08:00:00Z")),
+            extractor_pin(700000012, Some(36), Some("2026-11-17T12:00:00Z")),
+            extractor_pin(700000013, Some(34), Some("2026-11-10T12:00:00Z")),
+            extractor_pin(700000014, Some(34), Some("700000001")),
+        ];
+        let summary = colony_summary(&pins, Some(4), now());
+        assert_eq!(summary.state, ColonySummaryState::Extracting);
+        assert_eq!(summary.status_label, "Extracting");
+        assert_eq!(summary.extractor_count, 4);
+        assert_eq!(summary.active_extractor_count, 2);
+        assert_eq!(
+            summary.next_completion,
+            widgets::parse_esi_date("2026-11-17T12:00:00Z")
+        );
+        assert_eq!(summary.next_completion_label, "in 2d 0h 0m");
+        assert_eq!(summary.state_note, None);
+        // Reversed input order yields an equal summary.
+        let mut reversed = pins.clone();
+        reversed.reverse();
+        assert_eq!(colony_summary(&reversed, Some(4), now()), summary);
+    }
+
+    #[test]
+    fn colony_summary_duration_edges() {
+        // 30 seconds out.
+        let pins = vec![extractor_pin(
+            700000011,
+            Some(34),
+            Some("2026-11-15T12:00:30Z"),
+        )];
+        assert_eq!(
+            colony_summary(&pins, Some(1), now()).next_completion_label,
+            "in 30s"
+        );
+        // 60 seconds out.
+        let pins = vec![extractor_pin(
+            700000011,
+            Some(34),
+            Some("2026-11-15T12:01:00Z"),
+        )];
+        assert_eq!(
+            colony_summary(&pins, Some(1), now()).next_completion_label,
+            "in 1m"
+        );
+        // Half a second of future: `num_seconds()` truncates to 0,
+        // still Extracting with `in 0m`, never a negative string.
+        let half_now =
+            widgets::parse_esi_date("2026-11-15T12:00:00.500Z").expect("fixed test date parses");
+        let pins = vec![extractor_pin(
+            700000011,
+            Some(34),
+            Some("2026-11-15T12:00:01Z"),
+        )];
+        let summary = colony_summary(&pins, Some(1), half_now);
+        assert_eq!(summary.state, ColonySummaryState::Extracting);
+        assert_eq!(summary.next_completion_label, "in 0m");
+    }
+
+    #[test]
+    fn colony_summary_demo_colony() {
+        // The design section 9 fixture, rebuilt as literals:
+        // two extractors expiring 2026-11-21T08:00:00Z, one bare
+        // pin, one pin with an explicit null expiry.
+        let pins = vec![
+            extractor_pin(700000011, Some(34), Some("2026-11-21T08:00:00Z")),
+            extractor_pin(700000012, Some(36), Some("2026-11-21T08:00:00Z")),
+            pin(700000013, 20002),
+            pin(700000014, 20003),
+        ];
+        let summary = colony_summary(&pins, Some(4), now());
+        assert_eq!(summary.state, ColonySummaryState::Extracting);
+        assert_eq!(summary.status_label, "Extracting");
+        assert_eq!(summary.extractor_count, 2);
+        assert_eq!(summary.active_extractor_count, 2);
+        assert_eq!(
+            summary.next_completion,
+            widgets::parse_esi_date("2026-11-21T08:00:00Z")
+        );
+        // 6 days minus 4 hours = 504,000 seconds.
+        assert_eq!(summary.next_completion_label, "in 5d 20h 0m");
+        assert_eq!(summary.active_pins_label, "4");
+        assert_eq!(summary.state_note, None);
+    }
+
+    #[test]
+    fn colony_summary_reported_count_arms() {
+        let pins = vec![
+            extractor_pin(700000011, Some(34), Some("2026-11-21T08:00:00Z")),
+            extractor_pin(700000012, Some(36), Some("2026-11-17T12:00:00Z")),
+            extractor_pin(700000013, Some(34), Some("2026-11-10T12:00:00Z")),
+            extractor_pin(700000014, Some(34), Some("700000001")),
+        ];
+        let clamped = colony_summary(&pins, Some(-2), now());
+        let missing = colony_summary(&pins, None, now());
+        let reported = colony_summary(&pins, Some(40), now());
+        assert_eq!(clamped.active_pins_label, "0", "negative clamps to 0");
+        assert_eq!(missing.active_pins_label, "N/A");
+        assert_eq!(
+            reported.active_pins_label, "40",
+            "reported count wins, never pins.len()"
+        );
+        fn pins_fields(summary: &ColonySummary) -> (ColonySummaryState, usize, usize, String) {
+            (
+                summary.state,
+                summary.extractor_count,
+                summary.active_extractor_count,
+                summary.next_completion_label.clone(),
+            )
+        }
+        assert_eq!(pins_fields(&clamped), pins_fields(&missing));
+        assert_eq!(pins_fields(&missing), pins_fields(&reported));
     }
 
     #[test]
