@@ -729,7 +729,15 @@ fn truncate_issue_text(text: &str) -> String {
 /// wording section 6.4): EFT `Line {line}: "{text}" - {reason}.`,
 /// DNA `Segment {line}: "{text}" - {reason}.`
 fn format_import_issue(issue: &ImportIssue, import_format: ImportFormat) -> String {
+    // `Created` shares the EFT arm: a created draft's issue list
+    // is empty at construction and the editor never pushes issues.
     match import_format {
+        ImportFormat::Created => format!(
+            "Line {}: \"{}\" - {}.",
+            issue.line,
+            truncate_issue_text(&issue.text),
+            issue.kind.reason()
+        ),
         ImportFormat::Eft => format!(
             "Line {}: \"{}\" - {}.",
             issue.line,
@@ -748,7 +756,16 @@ fn format_import_issue(issue: &ImportIssue, import_format: ImportFormat) -> Stri
 /// Issues heading, singular/plural (design section 8.2, DNA
 /// wording section 6.4).
 fn import_issues_heading(issue_count: usize, import_format: ImportFormat) -> String {
+    // `Created` shares the EFT arm: a created draft's issue list
+    // is empty at construction and the editor never pushes issues.
     match import_format {
+        ImportFormat::Created => {
+            if issue_count == 1 {
+                "1 line could not be imported:".to_string()
+            } else {
+                format!("{issue_count} lines could not be imported:")
+            }
+        }
         ImportFormat::Eft => {
             if issue_count == 1 {
                 "1 line could not be imported:".to_string()
@@ -769,7 +786,16 @@ fn import_issues_heading(issue_count: usize, import_format: ImportFormat) -> Str
 /// Overflow disclosure when more issues exist than are shown
 /// (design section 8.2, DNA wording section 6.4).
 fn import_issues_overflow_label(remaining: usize, import_format: ImportFormat) -> String {
+    // `Created` shares the EFT arm: a created draft's issue list
+    // is empty at construction and the editor never pushes issues.
     match import_format {
+        ImportFormat::Created => {
+            if remaining == 1 {
+                "...and 1 more line that could not be imported. Fix the lines above and import again to see the rest.".to_string()
+            } else {
+                format!("...and {remaining} more lines that could not be imported. Fix the lines above and import again to see the rest.")
+            }
+        }
         ImportFormat::Eft => {
             if remaining == 1 {
                 "...and 1 more line that could not be imported. Fix the lines above and import again to see the rest.".to_string()
@@ -791,6 +817,12 @@ fn import_issues_overflow_label(remaining: usize, import_format: ImportFormat) -
 /// wording section 6.4): EFT says "lines", DNA says "segments".
 fn imported_summary_line(fitting: &ImportedFitting) -> String {
     match fitting.format {
+        ImportFormat::Created => format!(
+            "Created \"{}\" ({}): {} items.",
+            fitting_display_name(&fitting.name),
+            fitting.ship_name,
+            fitting.items.len()
+        ),
         ImportFormat::Eft => format!(
             "Imported \"{}\" ({}): {} items from {} lines.",
             fitting_display_name(&fitting.name),
