@@ -224,7 +224,16 @@ pub fn browser_candidates(types: &FittingTypes, section: ImportSection) -> Vec<B
         }
     }
     let mut rows = Vec::new();
+    // Emission de-duplicates on the same (normalized name,
+    // type number) pair, first row in file order winning:
+    // a later duplicate row the lookup index ignores must
+    // never be listed (it could carry a different slot proof
+    // than the row a click would actually add).
+    let mut emitted: std::collections::HashSet<(String, i64)> = std::collections::HashSet::new();
     for row in &types.types {
+        if !emitted.insert((normalize_type_name(&row.name), row.type_id)) {
+            continue;
+        }
         let trimmed = row.name.trim();
         if trimmed.is_empty() || trimmed.parse::<i64>().is_ok() {
             continue;
@@ -856,6 +865,8 @@ mod tests {
                 {"typeId":102,"typeName":"Twin Module","categoryId":7,"slotEffects":[12]},
                 {"typeId":103,"typeName":"Twin Module","categoryId":7,"slotEffects":[12]},
                 {"typeId":104,"typeName":"Structure Module","categoryId":66,"slotEffects":[12]},
+                {"typeId":106,"typeName":"Dedup Module","categoryId":7,"slotEffects":[]},
+                {"typeId":106,"typeName":"Dedup Module","categoryId":7,"slotEffects":[12]},
                 {"typeId":105,"typeName":"Slotless Module","categoryId":7,"slotEffects":[]}]}"#,
         )
         .expect("fixture catalogue parses");
