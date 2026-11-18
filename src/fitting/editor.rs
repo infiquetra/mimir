@@ -181,6 +181,22 @@ pub fn add_item(
     }
 }
 
+/// A name made only of digits (with an optional leading
+/// sign) reads as a raw number, never as a display name.
+/// Digit-checking instead of parsing keeps digit strings
+/// beyond the `i64` range excluded too.
+fn is_numeric_name(trimmed: &str) -> bool {
+    let digits = trimmed.strip_prefix(['-', '+']).unwrap_or(trimmed);
+    !digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit())
+}
+
+/// An output figure the resources block can actually use:
+/// present, finite, and non-negative (zero passes) — the
+/// same usability rule the resources computation applies.
+fn output_usable(value: Option<f64>) -> bool {
+    value.is_some_and(|v| v.is_finite() && v >= 0.0)
+}
+
 /// One browsable catalogue row for the module browser
 /// (design section 3.1). `type_id` is an internal key and sort
 /// tiebreak only, never rendered and never logged; `name` is the
@@ -235,7 +251,7 @@ pub fn browser_candidates(types: &FittingTypes, section: ImportSection) -> Vec<B
             continue;
         }
         let trimmed = row.name.trim();
-        if trimmed.is_empty() || trimmed.parse::<i64>().is_ok() {
+        if trimmed.is_empty() || is_numeric_name(trimmed) {
             continue;
         }
         let key = normalize_type_name(trimmed);
@@ -296,9 +312,10 @@ pub struct ShipRow {
 /// purely numeric, the shipped unique-normalized-name guard (the
 /// name maps to exactly one distinct type number across the whole
 /// catalogue), and the stat-presence proof `cpu_output` and
-/// `power_output` both present — dogma 48/11, the pair the
-/// resources block needs to print bare-hull numbers. Presence
-/// only: zero output passes. Sorted by lowercased name, then
+/// `power_output` both present, finite, and non-negative —
+/// dogma 48/11, the pair the resources block needs to print
+/// bare-hull numbers, under the same usability rule that
+/// block applies. Zero output passes. Sorted by lowercased name, then
 /// name, then type number (design section 3.4).
 pub fn ship_candidates(types: &FittingTypes) -> Vec<ShipRow> {
     // Distinct type numbers per normalized name, de-duplicated
@@ -323,13 +340,13 @@ pub fn ship_candidates(types: &FittingTypes) -> Vec<ShipRow> {
             continue;
         }
         let trimmed = row.name.trim();
-        if trimmed.is_empty() || trimmed.parse::<i64>().is_ok() {
+        if trimmed.is_empty() || is_numeric_name(trimmed) {
             continue;
         }
         if row.category_id != CATEGORY_SHIP {
             continue;
         }
-        if row.cpu_output.is_none() || row.power_output.is_none() {
+        if !output_usable(row.cpu_output) || !output_usable(row.power_output) {
             continue;
         }
         let key = normalize_type_name(trimmed);
@@ -362,8 +379,8 @@ pub fn ship_candidates(types: &FittingTypes) -> Vec<ShipRow> {
 pub fn new_fitting(types: &FittingTypes, ship: &ShipRow) -> Option<ImportedFitting> {
     let row = types.lookup_by_id(ship.type_id)?;
     if row.category_id != CATEGORY_SHIP
-        || row.cpu_output.is_none()
-        || row.power_output.is_none()
+        || !output_usable(row.cpu_output)
+        || !output_usable(row.power_output)
         || row.name.trim() != ship.name
     {
         return None;
@@ -1110,6 +1127,8 @@ mod tests {
                 {"typeId":603,"typeName":"Twin Hull","categoryId":6,"cpuOutput":100.0,"powerOutput":50.0},
                 {"typeId":604,"typeName":"Twin Hull","categoryId":6,"cpuOutput":100.0,"powerOutput":50.0},
                 {"typeId":605,"typeName":"12345","categoryId":6,"cpuOutput":100.0,"powerOutput":50.0},
+                {"typeId":607,"typeName":"Negative Hull","categoryId":6,"cpuOutput":-5.0,"powerOutput":50.0},
+                {"typeId":608,"typeName":"99999999999999999999999999","categoryId":6,"cpuOutput":100.0,"powerOutput":50.0},
                 {"typeId":606,"typeName":"Not A Ship","categoryId":7,"cpuOutput":100.0,"powerOutput":50.0}]}"#,
         )
         .expect("fixture catalogue parses");
@@ -1132,5 +1151,12 @@ mod tests {
             name: "Ordinary Hull".to_string(),
         };
         assert!(new_fitting(&catalogue, &absent).is_none());
+        // A forged row for the negative-output hull refuses too:
+        // present but unusable outputs prove nothing.
+        let negative = ShipRow {
+            type_id: 607,
+            name: "Negative Hull".to_string(),
+        };
+        assert!(new_fitting(&catalogue, &negative).is_none());
     }
 }
