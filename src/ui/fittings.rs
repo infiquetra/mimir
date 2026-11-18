@@ -34,6 +34,7 @@ use crate::fitting::resources::{
     ELECTRONICS_UPGRADES_SKILL_ID, ENERGY_GRID_UPGRADES_SKILL_ID, POWER_GRID_MANAGEMENT_SKILL_ID,
     SHIELD_UPGRADES_SKILL_ID, WEAPON_UPGRADES_SKILL_ID,
 };
+use crate::fitting::saved_copy::{convert_saved_fitting, SavedCopyOutcome, SavedCopyRefusal};
 use crate::fitting::ship_cap_stability::{
     fitting_cap_stability, CapStabilityOutcome, FittingCapStability,
 };
@@ -736,7 +737,9 @@ fn truncate_issue_text(text: &str) -> String {
 
 /// One issue row, exact template (design section 8.2, DNA
 /// wording section 6.4): EFT `Line {line}: "{text}" - {reason}.`,
-/// DNA `Segment {line}: "{text}" - {reason}.`
+/// DNA `Segment {line}: "{text}" - {reason}.`, Copied
+/// `"{text}" - {reason}.` or the nameless `One saved item - ...`
+/// form, with no line number (there was no line).
 fn format_import_issue(issue: &ImportIssue, import_format: ImportFormat) -> String {
     // `Created` shares the EFT arm: a created draft's issue list
     // is empty at construction and the editor never pushes issues.
@@ -759,6 +762,17 @@ fn format_import_issue(issue: &ImportIssue, import_format: ImportFormat) -> Stri
             truncate_issue_text(&issue.text),
             issue.kind.reason()
         ),
+        ImportFormat::Copied => {
+            if issue.text.is_empty() {
+                format!("One saved item - {}.", issue.kind.reason())
+            } else {
+                format!(
+                    "\"{}\" - {}.",
+                    truncate_issue_text(&issue.text),
+                    issue.kind.reason()
+                )
+            }
+        }
     }
 }
 
@@ -787,6 +801,13 @@ fn import_issues_heading(issue_count: usize, import_format: ImportFormat) -> Str
                 "1 segment could not be imported:".to_string()
             } else {
                 format!("{issue_count} segments could not be imported:")
+            }
+        }
+        ImportFormat::Copied => {
+            if issue_count == 1 {
+                "1 item could not be copied:".to_string()
+            } else {
+                format!("{issue_count} items could not be copied:")
             }
         }
     }
@@ -819,11 +840,19 @@ fn import_issues_overflow_label(remaining: usize, import_format: ImportFormat) -
                 format!("...and {remaining} more segments that could not be imported. Fix the segments above and import again to see the rest.")
             }
         }
+        ImportFormat::Copied => {
+            if remaining == 1 {
+                "...and 1 more item that could not be copied.".to_string()
+            } else {
+                format!("...and {remaining} more items that could not be copied.")
+            }
+        }
     }
 }
 
 /// Imported-fitting summary line (design section 8.2, DNA
-/// wording section 6.4): EFT says "lines", DNA says "segments".
+/// wording section 6.4): EFT says "lines", DNA says "segments",
+/// Copied names its saved-fitting source instead.
 fn imported_summary_line(fitting: &ImportedFitting) -> String {
     match fitting.format {
         ImportFormat::Created => format!(
@@ -846,15 +875,23 @@ fn imported_summary_line(fitting: &ImportedFitting) -> String {
             fitting.items.len(),
             fitting.report.imported_lines
         ),
+        ImportFormat::Copied => format!(
+            "Copied \"{}\" ({}) from your saved fittings: {} items.",
+            fitting_display_name(&fitting.name),
+            fitting.ship_name,
+            fitting.items.len()
+        ),
     }
 }
 
 /// Draft-block label by provenance (new fitting from scratch
 /// design section 7.2): `Eft`/`Dna` keep the shipped
-/// "imported" wording byte-for-byte, `Created` says so.
+/// "imported" wording byte-for-byte, `Created` and `Copied` say
+/// so.
 fn draft_label(format: ImportFormat) -> &'static str {
     match format {
         ImportFormat::Created => "Created fitting",
+        ImportFormat::Copied => "Copied fitting",
         ImportFormat::Eft | ImportFormat::Dna => "Imported fitting",
     }
 }
@@ -864,33 +901,39 @@ fn draft_label(format: ImportFormat) -> &'static str {
 /// loaded-charge sentence is inert for a created draft (it
 /// can never hold a charge) and is kept so the two notes
 /// differ by exactly the provenance claim and nothing else.
+/// The copied note additionally states that the saved fitting
+/// stays as it is and that saving adds a new fitting.
 fn editor_note(format: ImportFormat) -> &'static str {
     match format {
         ImportFormat::Created => "Edits change only this fitting in Mimir. Nothing is sent to EVE unless you save below. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit.",
+        ImportFormat::Copied => "Edits change only this copy in Mimir. The saved fitting in EVE stays as it is. Nothing is sent to EVE unless you save below, and saving adds a new fitting. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit.",
         ImportFormat::Eft | ImportFormat::Dna => FITTINGS_EDITOR_NOTE,
     }
 }
 
 /// Copy-as-EFT button by provenance (design section 7.2).
+/// `Created` and `Copied` share the already-neutral arm.
 fn copy_eft_button_label(format: ImportFormat) -> &'static str {
     match format {
-        ImportFormat::Created => "Copy fitting as EFT",
+        ImportFormat::Created | ImportFormat::Copied => "Copy fitting as EFT",
         ImportFormat::Eft | ImportFormat::Dna => "Copy imported fitting as EFT",
     }
 }
 
 /// Copy-as-DNA button by provenance (design section 7.2).
+/// `Created` and `Copied` share the already-neutral arm.
 fn copy_dna_button_label(format: ImportFormat) -> &'static str {
     match format {
-        ImportFormat::Created => "Copy fitting as DNA",
+        ImportFormat::Created | ImportFormat::Copied => "Copy fitting as DNA",
         ImportFormat::Eft | ImportFormat::Dna => "Copy imported fitting as DNA",
     }
 }
 
 /// Save arm button by provenance (design section 7.2).
+/// `Created` and `Copied` share the already-neutral arm.
 fn save_arm_button_label(format: ImportFormat) -> &'static str {
     match format {
-        ImportFormat::Created => "Save fitting to EVE...",
+        ImportFormat::Created | ImportFormat::Copied => "Save fitting to EVE...",
         ImportFormat::Eft | ImportFormat::Dna => "Save imported fitting to EVE...",
     }
 }
@@ -1003,6 +1046,14 @@ fn save_confirmation_copy(name: &str, ship: &str, kept: usize) -> String {
     format!("A copy of \"{name}\" ({ship}, {kept} items) will be added to this character's in-game fitting list. The original stays as it is.")
 }
 
+/// Save-confirmation summary for an edited copy of a saved
+/// fitting (edit-saved-copy design section 6.3): the summary
+/// says "added", but the load-bearing fact is that the
+/// original the copy came from stays as it is.
+fn save_confirmation_copied(name: &str, ship: &str, kept: usize) -> String {
+    format!("\"{name}\" ({ship}, {kept} items) will be added as a new fitting to this character's in-game fitting list. The saved fitting it was copied from stays as it is.")
+}
+
 /// Fallback-name disclosure (section 6.1 line 3).
 fn fallback_name_line() -> &'static str {
     "The fitting name was empty, so it will be saved as \"Unnamed fit\"."
@@ -1094,6 +1145,28 @@ enum SaveConfirmAction {
     Cancelled,
 }
 
+/// Which save-confirmation summary to render (edit-saved-copy
+/// design section 6.3): the shipped imported and saved-fitting
+/// copy wordings stay byte-identical; a copied draft gets its
+/// own.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SaveConfirmSummary {
+    Imported,
+    SavedCopy,
+    Copied,
+}
+
+/// The draft-save summary kind for one draft format: a copied
+/// draft confirms with the copied wording, never the imported
+/// one (its provenance differs).
+fn save_confirm_summary_for(format: ImportFormat) -> SaveConfirmSummary {
+    if format == ImportFormat::Copied {
+        SaveConfirmSummary::Copied
+    } else {
+        SaveConfirmSummary::Imported
+    }
+}
+
 /// Render one save confirmation block (sections 6.1/6.2),
 /// recomputed every frame from the current mapping. Returns
 /// the action only when the block was clicked; the caller
@@ -1103,24 +1176,34 @@ fn render_save_confirm(
     enabled: bool,
     mapping: &SaveMapping,
     ship_name: &str,
-    copy: bool,
+    summary: SaveConfirmSummary,
     charges_noted: Option<usize>,
     resolver: &NameResolver,
 ) -> Option<SaveConfirmAction> {
     let name = &mapping.request.name;
     ui.heading(save_confirmation_title(name));
-    if copy {
-        ui.label(save_confirmation_copy(
-            name,
-            ship_name,
-            mapping.request.items.len(),
-        ));
-    } else {
-        ui.label(save_confirmation_imported(
-            name,
-            ship_name,
-            mapping.request.items.len(),
-        ));
+    match summary {
+        SaveConfirmSummary::SavedCopy => {
+            ui.label(save_confirmation_copy(
+                name,
+                ship_name,
+                mapping.request.items.len(),
+            ));
+        }
+        SaveConfirmSummary::Copied => {
+            ui.label(save_confirmation_copied(
+                name,
+                ship_name,
+                mapping.request.items.len(),
+            ));
+        }
+        SaveConfirmSummary::Imported => {
+            ui.label(save_confirmation_imported(
+                name,
+                ship_name,
+                mapping.request.items.len(),
+            ));
+        }
     }
     if mapping.name_was_fallback {
         ui.label(fallback_name_line());
@@ -1487,7 +1570,7 @@ fn imported_summary_line_edited(fitting: &ImportedFitting, edited: bool) -> Stri
     let mut line = imported_summary_line(fitting);
     if edited {
         line.push_str(match fitting.format {
-            ImportFormat::Created => FITTINGS_CREATED_EDITED_SUFFIX,
+            ImportFormat::Created | ImportFormat::Copied => FITTINGS_CREATED_EDITED_SUFFIX,
             ImportFormat::Eft | ImportFormat::Dna => FITTINGS_EDITOR_EDITED_SUFFIX,
         });
     }
@@ -1579,6 +1662,71 @@ fn install_created_fitting(state: &mut AppState, catalogue: &FittingTypes, row: 
         "[FITTING] new fitting created ship={} items=0",
         draft.ship_name
     );
+    state.fittings_imported = Some(draft);
+    state.fittings_import_error = None;
+    state.fittings_import_owner = state.active_character_id;
+    state.fittings_import_text.clear();
+    state.fittings_write_confirm = None;
+    clear_editor_state(state);
+}
+
+/// Converted-copy status by skip count (edit-saved-copy design
+/// section 6.1): the draft renders above the click, so the
+/// status line is the feedback at the point of action.
+fn copied_installed_status(draft: &ImportedFitting) -> String {
+    let name = fitting_display_name(&draft.name);
+    let base =
+        format!("Editing a copy of \"{name}\" above. The saved fitting in EVE is unchanged.");
+    match draft.report.issues.len() {
+        0 => base,
+        1 => format!("{base} 1 item could not be copied and is listed with the copy."),
+        skipped => {
+            format!("{base} {skipped} items could not be copied and are listed with the copy.")
+        }
+    }
+}
+
+/// Refusal status by variant (edit-saved-copy design section
+/// 6.1). A refusal costs the user nothing: the current draft,
+/// paste text, editor state, and armed confirmation all stay
+/// exactly as they were.
+fn copied_refusal_status(refusal: SavedCopyRefusal) -> &'static str {
+    match refusal {
+        SavedCopyRefusal::NoShip => {
+            "That fitting cannot be copied for editing: it has no ship. Refresh and try again."
+        }
+        SavedCopyRefusal::ShipUnnamed => {
+            "That fitting cannot be copied for editing yet: its ship name has not loaded. Refresh and try again."
+        }
+    }
+}
+
+/// Refusal branch of the click path (edit-saved-copy design
+/// section 5): nothing installs, nothing is cleared, no
+/// confirmation is disarmed — only the status message is set.
+/// The refusal itself is logged in the converter (design
+/// section 9), so this logs nothing.
+fn apply_copied_refusal(state: &mut AppState, refusal: SavedCopyRefusal) {
+    state.status_message = copied_refusal_status(refusal).to_string();
+}
+
+/// Install a copied draft exactly as a created draft installs
+/// (edit-saved-copy design section 5): owner, error, paste
+/// text, whole-field disarm, and the full editor reset as
+/// shipped, plus the section 6.1 status message — the one
+/// locked difference from the created install. The whole-field
+/// disarm is load-bearing here: the original's own save-copy
+/// and delete confirmations are stamped with this very
+/// fitting, and the staleness sweep cannot catch them because
+/// the fitting stays selected and listed. Factored out of the
+/// click handler so the install is testable without a frame.
+fn install_copied_fitting(state: &mut AppState, draft: ImportedFitting) {
+    tracing::info!(
+        "[FITTING] saved copy installed items={} skipped={} charges=0",
+        draft.items.len(),
+        draft.report.issues.len()
+    );
+    state.status_message = copied_installed_status(&draft);
     state.fittings_imported = Some(draft);
     state.fittings_import_error = None;
     state.fittings_import_owner = state.active_character_id;
@@ -3478,12 +3626,13 @@ fn fittings_import_panel(
         let enabled = write_enabled(state);
         let ship_name = imported.ship_name.clone();
         let charges_noted = imported.report.charges_noted;
+        let summary = save_confirm_summary_for(imported.format);
         match render_save_confirm(
             ui,
             enabled,
             &mapping,
             &ship_name,
-            false,
+            summary,
             Some(charges_noted),
             &local_resolver,
         ) {
@@ -3739,6 +3888,26 @@ pub fn show(
                             }
                         }
                     }
+                    // Edit-a-copy (edit-saved-copy design section
+                    // 2.1): visible exactly when a detail is
+                    // visible, gated on the catalogue and an
+                    // active character only — not a write
+                    // affordance, so no write_enabled gate, no
+                    // demo hide, and no in-flight replacement.
+                    if fitting_types.is_some() && state.active_character_id.is_some() {
+                        if ui.button("Edit a copy in Mimir").clicked() {
+                            let outcome = convert_saved_fitting(selected, resolver);
+                            match outcome {
+                                SavedCopyOutcome::Converted(draft) => {
+                                    install_copied_fitting(state, draft)
+                                }
+                                SavedCopyOutcome::Refused(reason) => {
+                                    apply_copied_refusal(state, reason)
+                                }
+                            }
+                        }
+                        ui.label("Editing a copy changes only the copy in Mimir and replaces the fitting above, if there is one. The saved fitting in EVE stays as it is, and saving the copy adds a new fitting.");
+                    }
                     // Write affordances (write design sections
                     // 6.2/6.3): save-a-copy and delete. The arm
                     // buttons and a single armed block never
@@ -3777,7 +3946,13 @@ pub fn show(
                                 let enabled = write_enabled(state);
                                 let ship_name = resolver.name(selected.ship_type_id);
                                 match render_save_confirm(
-                                    ui, enabled, &mapping, &ship_name, true, None, resolver,
+                                    ui,
+                                    enabled,
+                                    &mapping,
+                                    &ship_name,
+                                    SaveConfirmSummary::SavedCopy,
+                                    None,
+                                    resolver,
                                 ) {
                                     Some(SaveConfirmAction::Confirmed) => {
                                         queue_save_request(state, active_id, mapping);
@@ -3867,7 +4042,9 @@ pub fn show(
 mod tests {
     use super::*;
     use crate::esi::models::FittingItem;
-    use crate::fitting::eft::{parse_eft, ImportFormat, ImportIssueKind, ImportReport};
+    use crate::fitting::eft::{
+        parse_eft, ImportFormat, ImportIssueKind, ImportReport, ImportedItem,
+    };
     use crate::portraits::ImageKind;
     use crate::storage::repositories::CharacterRow;
 
@@ -9159,5 +9336,498 @@ mod tests {
             assert_eq!(mine.section, theirs.section);
             assert_eq!(mine.quantity, theirs.quantity);
         }
+    }
+
+    /// A copied draft shell for the install and refusal tests:
+    /// `skips` named skips, no items (a valid installable
+    /// result), zeroed parse counters.
+    fn copied_draft_with_skips(skips: usize) -> ImportedFitting {
+        let issues: Vec<ImportIssue> = (1..=skips)
+            .map(|line| ImportIssue {
+                line,
+                text: "Pyerite".to_string(),
+                kind: ImportIssueKind::CopiedNoSection,
+            })
+            .collect();
+        ImportedFitting {
+            name: "Demo Brawler".to_string(),
+            ship_type_id: 587,
+            ship_name: "Rifter".to_string(),
+            format: ImportFormat::Copied,
+            items: Vec::new(),
+            report: ImportReport {
+                imported_lines: 0,
+                placeholder_lines: 0,
+                charges_noted: 0,
+                issues,
+            },
+        }
+    }
+
+    /// Dirty state for the install and refusal tests: an
+    /// existing imported draft, an import error, paste text,
+    /// dirty editor, browser, and ship fields, a saved
+    /// selection, and one armed write confirmation.
+    fn dirty_copy_state(confirm: FittingWriteConfirm) -> AppState {
+        let mut state = AppState::new(false);
+        state.active_character_id = Some(42);
+        state.fittings_imported = Some(editor_test_fitting(ImportFormat::Eft));
+        state.fittings_import_error = Some("Could not import: failed.".to_string());
+        state.fittings_import_owner = Some(42);
+        state.fittings_import_text = "[Rifter, Old Fit]".to_string();
+        state.fittings_editor_add_name = "Damage Control II".to_string();
+        state.fittings_editor_add_quantity = "5".to_string();
+        state.fittings_editor_error = Some("Could not add: refused.".to_string());
+        state.fittings_import_edited = true;
+        state.fittings_editor_quantity.insert(0, "7".to_string());
+        state.fittings_editor_name = Some("Renamed".to_string());
+        state.fittings_browser_section = ImportSection::Low;
+        state.fittings_browser_search = "damage".to_string();
+        state.fittings_browser_rows = vec![BrowserRow {
+            type_id: 2048,
+            name: "Damage Control II".to_string(),
+            cpu: Some(30.0),
+            power: Some(1.0),
+        }];
+        state.fittings_browser_rows_section = Some(ImportSection::Low);
+        state.fittings_ship_search = "rift".to_string();
+        state.fittings_ship_rows = vec![ShipRow {
+            type_id: 587,
+            name: "Rifter".to_string(),
+        }];
+        state.fittings_ship_rows_built = true;
+        state.fittings_selected_fitting_id = Some(900000001);
+        state.fittings_write_confirm = Some(confirm);
+        state
+    }
+
+    #[test]
+    fn copied_summary_line_and_edited_suffix() {
+        // Edit-saved-copy design test 9 (summary half): the
+        // section 4 Demo Brawler summary, byte-for-byte, with
+        // the created edited suffix once edited.
+        let items: Vec<ImportedItem> = (0..11)
+            .map(|_| ImportedItem {
+                type_id: 2048,
+                name: "Demo Small Railgun".to_string(),
+                section: ImportSection::Low,
+                quantity: 1,
+                charge: None,
+            })
+            .collect();
+        let copied = ImportedFitting {
+            name: "Demo Brawler".to_string(),
+            ship_type_id: 587,
+            ship_name: "Rifter".to_string(),
+            format: ImportFormat::Copied,
+            items,
+            report: ImportReport {
+                imported_lines: 0,
+                placeholder_lines: 0,
+                charges_noted: 0,
+                issues: Vec::new(),
+            },
+        };
+        assert_eq!(
+            imported_summary_line_edited(&copied, false),
+            "Copied \"Demo Brawler\" (Rifter) from your saved fittings: 11 items."
+        );
+        assert_eq!(
+            imported_summary_line_edited(&copied, true),
+            "Copied \"Demo Brawler\" (Rifter) from your saved fittings: 11 items. Edited."
+        );
+        assert_eq!(
+            imported_summary_line_edited(&copied, false),
+            imported_summary_line(&copied)
+        );
+        // The shipped lines keep passing beside them.
+        assert_eq!(
+            imported_summary_line_edited(&editor_test_fitting(ImportFormat::Eft), true),
+            "Imported \"Sample Brawler\" (Rifter): 0 items from 7 lines. Edited since import."
+        );
+        assert_eq!(
+            imported_summary_line_edited(&editor_test_fitting(ImportFormat::Dna), true),
+            "Imported \"Sample Brawler\" (Rifter): 0 items from 7 segments. Edited since import."
+        );
+    }
+
+    #[test]
+    fn save_confirm_summary_selection_by_format() {
+        // A copied draft confirms with the copied wording;
+        // every other draft format uses the imported wording.
+        assert_eq!(
+            save_confirm_summary_for(ImportFormat::Copied),
+            SaveConfirmSummary::Copied
+        );
+        for format in [ImportFormat::Eft, ImportFormat::Dna, ImportFormat::Created] {
+            assert_eq!(
+                save_confirm_summary_for(format),
+                SaveConfirmSummary::Imported,
+                "{format:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn copied_wording_selection_by_format() {
+        // Edit-saved-copy design tests 9 (label, note, and
+        // buttons) and section 6.2: the copied column as
+        // literals through the render's own helpers.
+        assert_eq!(draft_label(ImportFormat::Copied), "Copied fitting");
+        assert_eq!(
+            editor_note(ImportFormat::Copied),
+            "Edits change only this copy in Mimir. The saved fitting in EVE stays as it is. Nothing is sent to EVE unless you save below, and saving adds a new fitting. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit."
+        );
+        assert_eq!(
+            copy_eft_button_label(ImportFormat::Copied),
+            "Copy fitting as EFT"
+        );
+        assert_eq!(
+            copy_dna_button_label(ImportFormat::Copied),
+            "Copy fitting as DNA"
+        );
+        assert_eq!(
+            save_arm_button_label(ImportFormat::Copied),
+            "Save fitting to EVE..."
+        );
+        // The three buttons and the edited suffix are shared
+        // with Created; the label and note differ.
+        assert_eq!(
+            copy_eft_button_label(ImportFormat::Copied),
+            copy_eft_button_label(ImportFormat::Created)
+        );
+        assert_eq!(
+            copy_dna_button_label(ImportFormat::Copied),
+            copy_dna_button_label(ImportFormat::Created)
+        );
+        assert_eq!(
+            save_arm_button_label(ImportFormat::Copied),
+            save_arm_button_label(ImportFormat::Created)
+        );
+        // The shipped labels keep passing beside them.
+        assert_eq!(draft_label(ImportFormat::Created), "Created fitting");
+        assert_eq!(draft_label(ImportFormat::Eft), "Imported fitting");
+        assert_eq!(draft_label(ImportFormat::Dna), "Imported fitting");
+    }
+
+    #[test]
+    fn copied_skip_wording_templates_are_locked() {
+        // Edit-saved-copy design test 10: heading, named and
+        // unnamed rows, and overflow, through the same pure
+        // helpers the block renders with.
+        assert_eq!(
+            import_issues_heading(1, ImportFormat::Copied),
+            "1 item could not be copied:"
+        );
+        assert_eq!(
+            import_issues_heading(2, ImportFormat::Copied),
+            "2 items could not be copied:"
+        );
+        let pyerite = ImportIssue {
+            line: 12,
+            text: "Pyerite".to_string(),
+            kind: ImportIssueKind::CopiedNoSection,
+        };
+        let named = format_import_issue(&pyerite, ImportFormat::Copied);
+        assert_eq!(
+            named,
+            "\"Pyerite\" - its place in the saved fitting is not a slot or bay an edited copy can hold, so it was left out."
+        );
+        let unnamed = ImportIssue {
+            line: 3,
+            text: String::new(),
+            kind: ImportIssueKind::CopiedUnnamed,
+        };
+        let nameless = format_import_issue(&unnamed, ImportFormat::Copied);
+        assert_eq!(
+            nameless,
+            "One saved item - its name has not loaded yet, so it was left out."
+        );
+        assert_eq!(
+            import_issues_overflow_label(1, ImportFormat::Copied),
+            "...and 1 more item that could not be copied."
+        );
+        assert_eq!(
+            import_issues_overflow_label(3, ImportFormat::Copied),
+            "...and 3 more items that could not be copied."
+        );
+        // No copied row contains `Line` or a type number.
+        for row in [&named, &nameless] {
+            assert!(!row.contains("Line"), "copied row claims a line: {row}");
+            assert!(!row.contains("35"), "copied row leaks a type number: {row}");
+            assert!(
+                !row.contains("587"),
+                "copied row leaks a type number: {row}"
+            );
+        }
+    }
+
+    #[test]
+    fn copied_save_confirmation_summary_is_locked() {
+        // Edit-saved-copy design test 11: the section 6.3
+        // summary for a renamed, edited copied draft — the
+        // mapping's current name and kept count — and both
+        // shipped summaries unchanged.
+        let mut draft = copied_draft_with_skips(0);
+        draft.name = "Renamed Brawler".to_string();
+        draft.items = vec![
+            ImportedItem {
+                type_id: 2048,
+                name: "Demo Small Railgun".to_string(),
+                section: ImportSection::Low,
+                quantity: 1,
+                charge: None,
+            },
+            ImportedItem {
+                type_id: 2049,
+                name: "Demo Small Afterburner".to_string(),
+                section: ImportSection::Medium,
+                quantity: 1,
+                charge: None,
+            },
+        ];
+        let synth = draft.to_character_fitting();
+        let mapping = build_save_request(&synth);
+        assert_eq!(
+            save_confirmation_copied(
+                &mapping.request.name,
+                &draft.ship_name,
+                mapping.request.items.len()
+            ),
+            "\"Renamed Brawler\" (Rifter, 2 items) will be added as a new fitting to this character's in-game fitting list. The saved fitting it was copied from stays as it is."
+        );
+        assert_eq!(
+            save_confirmation_copied("My Rifter", "Rifter", 3),
+            "\"My Rifter\" (Rifter, 3 items) will be added as a new fitting to this character's in-game fitting list. The saved fitting it was copied from stays as it is."
+        );
+        assert_eq!(
+            save_confirmation_imported("My Rifter", "Rifter", 3),
+            "\"My Rifter\" (Rifter, 3 items) will be added to this character's in-game fitting list."
+        );
+        assert_eq!(
+            save_confirmation_copy("My Rifter", "Rifter", 3),
+            "A copy of \"My Rifter\" (Rifter, 3 items) will be added to this character's in-game fitting list. The original stays as it is."
+        );
+    }
+
+    #[test]
+    fn copied_install_replaces_draft_and_disarms_all_confirms() {
+        // Edit-saved-copy design test 12: in three runs the
+        // armed confirmation is SaveImported, then the
+        // original's own SaveCopy, then its Delete — and none
+        // survives the install. Skip counts 0, 1, and 2 pin
+        // the three converted statuses in the same runs.
+        let confirms = [
+            (
+                FittingWriteConfirm::SaveImported { character_id: 42 },
+                0usize,
+                "Editing a copy of \"Demo Brawler\" above. The saved fitting in EVE is unchanged.",
+            ),
+            (
+                FittingWriteConfirm::SaveCopy {
+                    character_id: 42,
+                    fitting_id: 900000001,
+                },
+                1,
+                "Editing a copy of \"Demo Brawler\" above. The saved fitting in EVE is unchanged. 1 item could not be copied and is listed with the copy.",
+            ),
+            (
+                FittingWriteConfirm::Delete {
+                    character_id: 42,
+                    fitting_id: 900000001,
+                },
+                2,
+                "Editing a copy of \"Demo Brawler\" above. The saved fitting in EVE is unchanged. 2 items could not be copied and are listed with the copy.",
+            ),
+        ];
+        for (confirm, skips, expected_status) in confirms {
+            let mut state = dirty_copy_state(confirm);
+            install_copied_fitting(&mut state, copied_draft_with_skips(skips));
+            let draft = state.fittings_imported.expect("copied draft installed");
+            assert_eq!(draft.format, ImportFormat::Copied);
+            assert_eq!(draft.name, "Demo Brawler");
+            assert_eq!(draft.ship_name, "Rifter");
+            assert_eq!(draft.report.issues.len(), skips);
+            assert_eq!(state.fittings_import_owner, Some(42));
+            assert_eq!(state.fittings_import_error, None);
+            assert_eq!(state.fittings_import_text, "");
+            assert_eq!(state.fittings_write_confirm, None);
+            assert_eq!(state.fittings_editor_add_name, "");
+            assert_eq!(state.fittings_editor_add_quantity, "");
+            assert_eq!(state.fittings_editor_error, None);
+            assert!(!state.fittings_import_edited);
+            assert!(state.fittings_editor_quantity.is_empty());
+            assert_eq!(state.fittings_editor_name, None);
+            assert_eq!(state.fittings_browser_section, ImportSection::High);
+            assert_eq!(state.fittings_browser_search, "");
+            assert!(state.fittings_browser_rows.is_empty());
+            assert_eq!(state.fittings_browser_rows_section, None);
+            assert_eq!(state.fittings_ship_search, "");
+            assert!(state.fittings_ship_rows.is_empty());
+            assert!(!state.fittings_ship_rows_built);
+            assert_eq!(state.fittings_selected_fitting_id, Some(900000001));
+            assert_eq!(state.status_message, expected_status);
+        }
+    }
+
+    #[test]
+    fn copied_refusal_leaves_everything_untouched() {
+        // Edit-saved-copy design test 13: the refusal branch
+        // over the same seeded state leaves the prior draft,
+        // paste text, editor state, selection, and armed
+        // confirmation untouched; only the status changes.
+        let cases = [
+            (
+                SavedCopyRefusal::NoShip,
+                "That fitting cannot be copied for editing: it has no ship. Refresh and try again.",
+            ),
+            (
+                SavedCopyRefusal::ShipUnnamed,
+                "That fitting cannot be copied for editing yet: its ship name has not loaded. Refresh and try again.",
+            ),
+        ];
+        for (refusal, expected_status) in cases {
+            let mut state =
+                dirty_copy_state(FittingWriteConfirm::SaveImported { character_id: 42 });
+            state.status_message = "old status".to_string();
+            apply_copied_refusal(&mut state, refusal);
+            let draft = state.fittings_imported.expect("prior draft stays");
+            assert_eq!(draft.name, "Sample Brawler");
+            assert_eq!(draft.format, ImportFormat::Eft);
+            assert_eq!(state.fittings_import_text, "[Rifter, Old Fit]");
+            assert_eq!(state.fittings_editor_add_name, "Damage Control II");
+            assert_eq!(state.fittings_editor_add_quantity, "5");
+            assert_eq!(
+                state.fittings_editor_error,
+                Some("Could not add: refused.".to_string())
+            );
+            assert!(state.fittings_import_edited);
+            assert_eq!(
+                state.fittings_editor_quantity.get(&0).cloned(),
+                Some("7".to_string())
+            );
+            assert_eq!(state.fittings_editor_name, Some("Renamed".to_string()));
+            assert_eq!(state.fittings_browser_section, ImportSection::Low);
+            assert_eq!(state.fittings_browser_search, "damage");
+            assert_eq!(state.fittings_selected_fitting_id, Some(900000001));
+            assert_eq!(
+                state.fittings_write_confirm,
+                Some(FittingWriteConfirm::SaveImported { character_id: 42 })
+            );
+            assert_eq!(
+                state.fittings_import_error,
+                Some("Could not import: failed.".to_string())
+            );
+            assert_eq!(state.fittings_import_owner, Some(42));
+            assert_eq!(state.status_message, expected_status);
+        }
+    }
+
+    #[test]
+    fn demo_fittings_convert_to_the_design_pins() {
+        // Edit-saved-copy design test 14: the shipped demo
+        // fixtures under the shipped demo names, against the
+        // section 4 pins.
+        use crate::demo::data::{demo_resolver, DEMO_FITTINGS_JSON};
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let resolver = demo_resolver().expect("demo resolver builds");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let convert = |source: &CharacterFitting| match convert_saved_fitting(source, &resolver) {
+            SavedCopyOutcome::Converted(draft) => draft,
+            SavedCopyOutcome::Refused(reason) => {
+                panic!("demo fitting {} must convert, got {reason:?}", source.name)
+            }
+        };
+        fn shape(draft: &ImportedFitting) -> Vec<(i64, &str, ImportSection, i64)> {
+            draft
+                .items
+                .iter()
+                .map(|item| {
+                    (
+                        item.type_id,
+                        item.name.as_str(),
+                        item.section,
+                        item.quantity,
+                    )
+                })
+                .collect()
+        }
+        // Demo Brawler: 11 items and the one Pyerite skip.
+        let brawler = convert(&find("Demo Brawler"));
+        assert_eq!(brawler.format, ImportFormat::Copied);
+        assert_eq!(brawler.name, "Demo Brawler");
+        assert_eq!(brawler.ship_name, "Rifter");
+        assert_eq!(
+            shape(&brawler),
+            vec![
+                (2048, "Demo Small Railgun", ImportSection::Low, 1),
+                (2049, "Demo Small Afterburner", ImportSection::Medium, 1),
+                (1225, "Demo Small Shield Booster", ImportSection::Medium, 1),
+                (2050, "Demo Light Missile Launcher", ImportSection::High, 1),
+                (2050, "Demo Light Missile Launcher", ImportSection::High, 1),
+                (1535, "Demo Small Auxiliary Thruster", ImportSection::Rig, 1),
+                (
+                    28270,
+                    "Demo Interdiction Subsystem",
+                    ImportSection::Subsystem,
+                    1
+                ),
+                (2456, "Demo Light Drone", ImportSection::Drones, 5),
+                (2457, "Demo Light Fighter", ImportSection::Fighters, 2),
+                (34, "Tritanium", ImportSection::Cargo, 500),
+                (636, "Demo Light Missile", ImportSection::Cargo, 200),
+            ]
+        );
+        assert_eq!(brawler.report.issues.len(), 1);
+        assert_eq!(
+            brawler.report.issues[0].kind,
+            ImportIssueKind::CopiedNoSection
+        );
+        assert_eq!(brawler.report.issues[0].text, "Pyerite");
+        assert_eq!(
+            imported_summary_line(&brawler),
+            "Copied \"Demo Brawler\" (Rifter) from your saved fittings: 11 items."
+        );
+        // Mission Runner: 4 items, 0 skips.
+        let runner = convert(&find("Mission Runner"));
+        assert_eq!(runner.report.issues.len(), 0);
+        assert_eq!(
+            shape(&runner),
+            vec![
+                (2048, "Demo Small Railgun", ImportSection::High, 1),
+                (2049, "Demo Small Afterburner", ImportSection::Low, 1),
+                (2456, "Demo Light Drone", ImportSection::Drones, 3),
+                (37, "Isogen", ImportSection::Cargo, 10),
+            ]
+        );
+        // Demo Runner: 5 items, 0 skips.
+        let demo_runner = convert(&find("Demo Runner"));
+        assert_eq!(demo_runner.report.issues.len(), 0);
+        assert_eq!(
+            shape(&demo_runner),
+            vec![
+                (2048, "Demo Small Railgun", ImportSection::Low, 1),
+                (2050, "Demo Light Missile Launcher", ImportSection::High, 1),
+                (1225, "Demo Small Shield Booster", ImportSection::Medium, 1),
+                (2456, "Demo Light Drone", ImportSection::Drones, 3),
+                (36, "Mexallon", ImportSection::Cargo, 20),
+            ]
+        );
     }
 }

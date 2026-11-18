@@ -97,6 +97,11 @@ pub enum ImportIssueKind {
     UnknownTypeId,
     InvalidSegmentQuantity,
     UnsupportedDnaItem,
+    CopiedNoSection,
+    CopiedDuplicateSlot,
+    CopiedBadQuantity,
+    CopiedNotSaveable,
+    CopiedUnnamed,
 }
 
 impl ImportIssueKind {
@@ -154,6 +159,21 @@ impl ImportIssueKind {
             }
             ImportIssueKind::UnsupportedDnaItem => {
                 "DNA links list fitted modules and subsystems only, and this item is not one"
+            }
+            ImportIssueKind::CopiedNoSection => {
+                "its place in the saved fitting is not a slot or bay an edited copy can hold, so it was left out"
+            }
+            ImportIssueKind::CopiedDuplicateSlot => {
+                "another item in the saved fitting already uses its slot, so it was left out"
+            }
+            ImportIssueKind::CopiedBadQuantity => {
+                "its quantity in the saved fitting cannot be held in an edited copy, so it was left out"
+            }
+            ImportIssueKind::CopiedNotSaveable => {
+                "it cannot be saved as part of a fitting, so it was left out"
+            }
+            ImportIssueKind::CopiedUnnamed => {
+                "its name has not loaded yet, so it was left out"
             }
         }
     }
@@ -234,12 +254,16 @@ impl ImportFatal {
 /// distinguish a created (never parsed) draft from both input
 /// formats: `Created` drafts carry all-zero import counters, but
 /// header-only imports are all-zero too, so the counters alone
-/// cannot tell the two provenances apart.
+/// cannot tell the two provenances apart. A copied draft was
+/// neither parsed nor created from scratch: its rows came from
+/// a saved fitting, and `Copied` is what keeps every summary,
+/// label, and confirmation from claiming either.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ImportFormat {
     Eft,
     Dna,
     Created,
+    Copied,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -264,7 +288,9 @@ pub struct ImportedFitting {
     pub name: String,
     /// Resolved ship type ID (> 0, category 6).
     pub ship_type_id: i64,
-    /// Canonical catalogue ship name.
+    /// The ship name the draft was made with: catalogue-canonical
+    /// for parsed and created drafts, resolver-resolved for
+    /// copied drafts.
     pub ship_name: String,
     pub format: ImportFormat,
     pub items: Vec<ImportedItem>,
@@ -1615,5 +1641,29 @@ mod tests {
         assert_eq!(fitting.ship_name, "Rifter");
         assert_eq!(fitting.items[0].name, "Damage Control II");
         assert_eq!(fitting.items[1].name, "Hobgoblin II");
+    }
+
+    #[test]
+    fn copied_issue_reasons_are_locked_verbatim() {
+        assert_eq!(
+            ImportIssueKind::CopiedNoSection.reason(),
+            "its place in the saved fitting is not a slot or bay an edited copy can hold, so it was left out"
+        );
+        assert_eq!(
+            ImportIssueKind::CopiedDuplicateSlot.reason(),
+            "another item in the saved fitting already uses its slot, so it was left out"
+        );
+        assert_eq!(
+            ImportIssueKind::CopiedBadQuantity.reason(),
+            "its quantity in the saved fitting cannot be held in an edited copy, so it was left out"
+        );
+        assert_eq!(
+            ImportIssueKind::CopiedNotSaveable.reason(),
+            "it cannot be saved as part of a fitting, so it was left out"
+        );
+        assert_eq!(
+            ImportIssueKind::CopiedUnnamed.reason(),
+            "its name has not loaded yet, so it was left out"
+        );
     }
 }

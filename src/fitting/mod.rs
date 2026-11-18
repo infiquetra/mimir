@@ -9,6 +9,7 @@ pub mod dps;
 pub mod editor;
 pub mod eft;
 pub mod resources;
+pub mod saved_copy;
 pub mod ship_cap_stability;
 pub mod ship_ehp;
 pub mod ship_nav_targeting;
@@ -35,6 +36,7 @@ pub use resources::{
     CPU_MANAGEMENT_SKILL_ID, ELECTRONICS_UPGRADES_SKILL_ID, ENERGY_GRID_UPGRADES_SKILL_ID,
     POWER_GRID_MANAGEMENT_SKILL_ID, SHIELD_UPGRADES_SKILL_ID, WEAPON_UPGRADES_SKILL_ID,
 };
+pub use saved_copy::{convert_saved_fitting, SavedCopyOutcome, SavedCopyRefusal};
 pub use ship_cap_stability::{fitting_cap_stability, CapStabilityOutcome, FittingCapStability};
 pub use ship_ehp::{ship_base_ehp, ShipBaseEhp, ShipBaseEhpOutcome};
 pub use ship_nav_targeting::{ship_nav_targeting, ShipNavTargeting, ShipNavTargetingOutcome};
