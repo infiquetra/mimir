@@ -29,7 +29,9 @@ pub use eft::{
 };
 pub use resources::{
     fitting_resources, fitting_resources_with_skills, resource_skill_levels, FittingResources,
-    ResourceBudget, ResourceSkillLevels, CPU_MANAGEMENT_SKILL_ID, POWER_GRID_MANAGEMENT_SKILL_ID,
+    ResourceBudget, ResourceSkillLevels, ADVANCED_WEAPON_UPGRADES_SKILL_ID,
+    CPU_MANAGEMENT_SKILL_ID, ELECTRONICS_UPGRADES_SKILL_ID, ENERGY_GRID_UPGRADES_SKILL_ID,
+    POWER_GRID_MANAGEMENT_SKILL_ID, SHIELD_UPGRADES_SKILL_ID, WEAPON_UPGRADES_SKILL_ID,
 };
 pub use ship_cap_stability::{fitting_cap_stability, CapStabilityOutcome, FittingCapStability};
 pub use ship_ehp::{ship_base_ehp, ShipBaseEhp, ShipBaseEhpOutcome};

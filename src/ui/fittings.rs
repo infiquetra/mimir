@@ -4141,6 +4141,11 @@ mod tests {
             used,
             output,
             excluded_modules: 0,
+            // Mechanical extension for the need-reduction
+            // fields (design section 6): base equals used and
+            // nothing is unreduced in these template pins.
+            base_used: used,
+            unreduced_modules: 0,
         }
     }
 
@@ -4397,18 +4402,31 @@ mod tests {
         let marcus_levels = resource_skill_levels(&marcus.skills);
         // The split fixture is unchanged: Aria has 3413 L5 only,
         // Marcus has 3426 L5 only.
+        // Mechanical literal extension for the five
+        // need-reduction fields (design section 6): all zero
+        // here; assertions unchanged.
         assert_eq!(
             aria_levels,
             ResourceSkillLevels {
                 cpu_management: 0,
-                power_grid_management: 5
+                power_grid_management: 5,
+                weapon_upgrades: 0,
+                advanced_weapon_upgrades: 0,
+                energy_grid_upgrades: 0,
+                electronics_upgrades: 0,
+                shield_upgrades: 0
             }
         );
         assert_eq!(
             marcus_levels,
             ResourceSkillLevels {
                 cpu_management: 5,
-                power_grid_management: 0
+                power_grid_management: 0,
+                weapon_upgrades: 0,
+                advanced_weapon_upgrades: 0,
+                energy_grid_upgrades: 0,
+                electronics_upgrades: 0,
+                shield_upgrades: 0
             }
         );
 
