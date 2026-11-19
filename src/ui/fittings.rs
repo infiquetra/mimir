@@ -39,7 +39,10 @@ use crate::fitting::saved_copy::{convert_saved_fitting, SavedCopyOutcome, SavedC
 use crate::fitting::ship_cap_stability::{
     fitting_cap_stability, CapStabilityOutcome, FittingCapStability,
 };
-use crate::fitting::ship_ehp::{ship_base_ehp, ShipBaseEhp, ShipBaseEhpOutcome};
+use crate::fitting::ship_ehp::{
+    ship_base_ehp, ship_ehp_with_module_bonuses, BonusedShipEhpOutcome, ShipBaseEhp,
+    ShipBaseEhpOutcome,
+};
 use crate::fitting::ship_nav_targeting::{
     ship_nav_targeting, ShipNavTargeting, ShipNavTargetingOutcome,
 };
@@ -1906,8 +1909,9 @@ const FITTINGS_SHIP_RESISTANCES_WITH_BONUSES_HEADING: &str =
 /// Locked disclosure: the numbers add the fitted modules' and
 /// rigs' resistance bonuses to the base values above, every
 /// fitted module counted as active, and the effective hit points
-/// below still using only the base values (design section 6).
-const FITTING_SHIP_RESISTANCES_WITH_BONUSES_DISCLOSURE: &str = "These resistances add the fitted modules' and rigs' resistance bonuses from Mimir's bundled item data to the base values above, with stacking penalties where modules of the same kind pile up. Every fitted module is counted as active, because the fitting data does not say which modules are on. Ship bonuses, subsystems, skills, implants, and resistance changes from anything outside this ship are not applied, and the effective hit points below still use only the base values, so these numbers can differ from EVE.";
+/// below shown both from the base values and with these
+/// resistance bonuses (bonused EHP design section 7).
+const FITTING_SHIP_RESISTANCES_WITH_BONUSES_DISCLOSURE: &str = "These resistances add the fitted modules' and rigs' resistance bonuses from Mimir's bundled item data to the base values above, with stacking penalties where modules of the same kind pile up. Every fitted module is counted as active, because the fitting data does not say which modules are on. Ship bonuses, subsystems, skills, implants, and resistance changes from anything outside this ship are not applied, and the effective hit points below are shown both from the base values and with these resistance bonuses, so these numbers can differ from EVE.";
 
 const FITTING_SHIP_RESISTANCES_WITH_BONUSES_NO_CATALOGUE: &str =
     "Ship resistances with fitted module bonuses unavailable: Mimir's bundled item data failed to load.";
@@ -1932,6 +1936,28 @@ const FITTING_SHIP_BASE_EHP_DISCLOSURE: &str = "These are the bare hull's base e
 const FITTING_SHIP_BASE_EHP_NO_CATALOGUE: &str =
     "Ship effective hit points unavailable: Mimir's bundled item data failed to load.";
 const FITTING_SHIP_BASE_EHP_NO_SHIP_DATA: &str = "Ship effective hit points unavailable: Mimir's bundled item data has no complete base hit point and resistance data for this fitting's ship.";
+
+/// Locked heading for the ship effective hit points with
+/// fitted module resistance bonuses block (bonused EHP design
+/// section 7). "With fitted module resistance bonuses" names
+/// what is applied (resistances only) and keeps the block from
+/// reading as base or as a complete fitted total; the named
+/// omni profile with its shares keeps every number from reading
+/// as profile-free.
+const FITTINGS_SHIP_EHP_WITH_BONUSES_HEADING: &str =
+    "Ship effective hit points (with fitted module resistance bonuses, omni 25/25/25/25)";
+
+/// Locked disclosure: the numbers are the bare hull's base hit
+/// points with the fitted modules' and rigs' resistance bonuses
+/// applied to the denominator only, counted as active, against
+/// omni damage (bonused EHP design section 7). This block's own
+/// sentence; the ship base EHP disclosure above names a
+/// different set.
+const FITTING_SHIP_EHP_WITH_BONUSES_DISCLOSURE: &str = "These effective hit points (EHP) use the bare hull's base hit points with the fitted modules' and rigs' resistance bonuses above, against omni damage: equal quarters (25% each) of EM, thermal, kinetic, and explosive damage. Every fitted module is counted as active, because the fitting data does not say which modules are on. Modules that add hit points, ship bonuses, subsystems, skills, implants, and resistance changes from anything outside this ship are not applied, and a different damage mix would give different numbers, so these numbers can differ from EVE.";
+
+const FITTING_SHIP_EHP_WITH_BONUSES_NO_CATALOGUE: &str =
+    "Ship effective hit points with fitted module resistance bonuses unavailable: Mimir's bundled item data failed to load.";
+const FITTING_SHIP_EHP_WITH_BONUSES_NO_SHIP_DATA: &str = "Ship effective hit points with fitted module resistance bonuses unavailable: Mimir's bundled item data has no complete base hit point and resistance data for this fitting's ship.";
 
 /// Locked heading for the ship navigation and targeting block
 /// (navigation and targeting design section 6). The "(base
@@ -2485,6 +2511,50 @@ fn render_ship_base_ehp(
         ShipBaseEhpOutcome::Unavailable => {
             ui.heading(FITTINGS_SHIP_BASE_EHP_HEADING);
             ui.label(FITTING_SHIP_BASE_EHP_NO_SHIP_DATA);
+        }
+    }
+}
+
+/// Ship effective hit points with fitted module resistance
+/// bonuses block shared by the saved and imported fitting
+/// details (bonused EHP design section 6). Depends only on
+/// the fitting and the catalogue: no skill levels, no SDE
+/// handle, so it renders identically for every viewing
+/// character. The heading always renders, so the view never
+/// silently omits the feature; `Unavailable` swaps all lines
+/// and the disclosure for the fixed unavailable sentence and
+/// neither count line. The EHP lines and the excluded /
+/// unapplied count lines reuse the base EHP and bonused
+/// resistances helpers verbatim. Renders even when the
+/// bonused numbers equal the base numbers. Logs nothing
+/// itself: the pure function logs nothing (render cadence).
+fn render_ship_ehp_with_module_bonuses(
+    ui: &mut egui::Ui,
+    fitting: &CharacterFitting,
+    fitting_types: Option<&FittingTypes>,
+) {
+    let Some(catalogue) = fitting_types else {
+        ui.heading(FITTINGS_SHIP_EHP_WITH_BONUSES_HEADING);
+        ui.label(FITTING_SHIP_EHP_WITH_BONUSES_NO_CATALOGUE);
+        return;
+    };
+    match ship_ehp_with_module_bonuses(fitting, catalogue) {
+        BonusedShipEhpOutcome::Available(bonused) => {
+            ui.heading(FITTINGS_SHIP_EHP_WITH_BONUSES_HEADING);
+            for line in ship_base_ehp_lines(&bonused.ehp) {
+                ui.label(line);
+            }
+            if let Some(line) = bonused_resistances_excluded_line(bonused.excluded_modules) {
+                ui.label(line);
+            }
+            if let Some(line) = bonused_resistances_unapplied_line(bonused.unapplied_modules) {
+                ui.label(line);
+            }
+            ui.label(FITTING_SHIP_EHP_WITH_BONUSES_DISCLOSURE);
+        }
+        BonusedShipEhpOutcome::Unavailable => {
+            ui.heading(FITTINGS_SHIP_EHP_WITH_BONUSES_HEADING);
+            ui.label(FITTING_SHIP_EHP_WITH_BONUSES_NO_SHIP_DATA);
         }
     }
 }
@@ -3757,6 +3827,7 @@ fn fittings_import_panel(
     render_ship_resistances(ui, &synth, fitting_types);
     render_ship_resistances_with_module_bonuses(ui, &synth, fitting_types);
     render_ship_base_ehp(ui, &synth, fitting_types);
+    render_ship_ehp_with_module_bonuses(ui, &synth, fitting_types);
     render_ship_nav_targeting(ui, &synth, fitting_types);
     // Loaded charges, in item order (design section 8.2).
     let charged_total = imported
@@ -4067,6 +4138,7 @@ pub fn show(
                     render_ship_resistances(ui, selected, fitting_types);
                     render_ship_resistances_with_module_bonuses(ui, selected, fitting_types);
                     render_ship_base_ehp(ui, selected, fitting_types);
+                    render_ship_ehp_with_module_bonuses(ui, selected, fitting_types);
                     render_ship_nav_targeting(ui, selected, fitting_types);
                     if ui.button("Copy as EFT").clicked() {
                         tracing::info!(
@@ -7069,7 +7141,7 @@ mod tests {
         );
         assert_eq!(
             FITTING_SHIP_RESISTANCES_WITH_BONUSES_DISCLOSURE,
-            "These resistances add the fitted modules' and rigs' resistance bonuses from Mimir's bundled item data to the base values above, with stacking penalties where modules of the same kind pile up. Every fitted module is counted as active, because the fitting data does not say which modules are on. Ship bonuses, subsystems, skills, implants, and resistance changes from anything outside this ship are not applied, and the effective hit points below still use only the base values, so these numbers can differ from EVE."
+            "These resistances add the fitted modules' and rigs' resistance bonuses from Mimir's bundled item data to the base values above, with stacking penalties where modules of the same kind pile up. Every fitted module is counted as active, because the fitting data does not say which modules are on. Ship bonuses, subsystems, skills, implants, and resistance changes from anything outside this ship are not applied, and the effective hit points below are shown both from the base values and with these resistance bonuses, so these numbers can differ from EVE."
         );
         assert_eq!(bonused_resistances_excluded_line(0), None);
         assert_eq!(
@@ -7528,6 +7600,241 @@ mod tests {
             }
         };
         assert_eq!(lines_for(&synth_dna), rifter_block);
+    }
+
+    #[test]
+    fn ship_ehp_with_module_bonuses_unavailable_and_disclosure_wording() {
+        assert_eq!(
+            FITTINGS_SHIP_EHP_WITH_BONUSES_HEADING,
+            "Ship effective hit points (with fitted module resistance bonuses, omni 25/25/25/25)"
+        );
+        assert_eq!(
+            FITTING_SHIP_EHP_WITH_BONUSES_NO_CATALOGUE,
+            "Ship effective hit points with fitted module resistance bonuses unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            FITTING_SHIP_EHP_WITH_BONUSES_NO_SHIP_DATA,
+            "Ship effective hit points with fitted module resistance bonuses unavailable: Mimir's bundled item data has no complete base hit point and resistance data for this fitting's ship."
+        );
+        assert_eq!(
+            FITTING_SHIP_EHP_WITH_BONUSES_DISCLOSURE,
+            "These effective hit points (EHP) use the bare hull's base hit points with the fitted modules' and rigs' resistance bonuses above, against omni damage: equal quarters (25% each) of EM, thermal, kinetic, and explosive damage. Every fitted module is counted as active, because the fitting data does not say which modules are on. Modules that add hit points, ship bonuses, subsystems, skills, implants, and resistance changes from anything outside this ship are not applied, and a different damage mix would give different numbers, so these numbers can differ from EVE."
+        );
+    }
+
+    // Lines by construction (design section 8): a
+    // `BonusedShipEhp` fixture rendered through
+    // `ship_base_ehp_lines(&bonused.ehp)` matches the locked
+    // templates. The full values are the Oracle 1a bonused
+    // numbers for Rifter + Damage Control II (shield 450 /
+    // 0.634375, armor 450 / 0.57375, hull 350 / 0.402, total
+    // summed from unrounded values); each renders at one
+    // decimal (709.4 / 784.3 / 870.6 / 2,364.3).
+    #[test]
+    fn ship_ehp_with_module_bonuses_lines_match_the_locked_templates() {
+        use crate::fitting::ship_ehp::BonusedShipEhp;
+
+        let full = BonusedShipEhp {
+            ehp: ShipBaseEhp {
+                shield: Some(709.3596059),
+                armor: Some(784.3137255),
+                hull: Some(870.6467662),
+                total: Some(2364.3200976),
+            },
+            excluded_modules: 0,
+            unapplied_modules: 0,
+        };
+        assert_eq!(
+            ship_base_ehp_lines(&full.ehp),
+            [
+                "Shield EHP: 709.4 HP",
+                "Armor EHP: 784.3 HP",
+                "Hull EHP: 870.6 HP",
+                "Total EHP: 2,364.3 HP",
+            ]
+        );
+
+        // Present zero renders like any other value; an absent
+        // layer produces no line and no total.
+        let zero_shield = BonusedShipEhp {
+            ehp: ShipBaseEhp {
+                shield: Some(0.0),
+                armor: None,
+                hull: None,
+                total: None,
+            },
+            excluded_modules: 0,
+            unapplied_modules: 0,
+        };
+        assert_eq!(
+            ship_base_ehp_lines(&zero_shield.ehp),
+            ["Shield EHP: 0.0 HP"]
+        );
+
+        // A partial block omits the missing layer and the total
+        // entirely — absence never renders.
+        let partial = BonusedShipEhp {
+            ehp: ShipBaseEhp {
+                shield: Some(450.0),
+                armor: Some(450.0),
+                hull: None,
+                total: None,
+            },
+            excluded_modules: 0,
+            unapplied_modules: 0,
+        };
+        let lines = ship_base_ehp_lines(&partial.ehp);
+        assert_eq!(lines, ["Shield EHP: 450.0 HP", "Armor EHP: 450.0 HP"]);
+        assert!(
+            lines.iter().all(|line| !line.starts_with("Total")),
+            "partial block must show no total line: {lines:?}"
+        );
+    }
+
+    // Count-line reuse (design sections 6 and 8): the bonused
+    // EHP block renders the bonused resistances helpers
+    // verbatim; zero counts render no line.
+    #[test]
+    fn ship_ehp_with_module_bonuses_count_helpers_reuse() {
+        assert_eq!(bonused_resistances_excluded_line(0), None);
+        assert_eq!(
+            bonused_resistances_excluded_line(1).as_deref(),
+            Some("1 fitted module is not in Mimir's bundled item data, so any resistance bonus from it is not counted.")
+        );
+        assert_eq!(
+            bonused_resistances_excluded_line(2).as_deref(),
+            Some("2 fitted modules are not in Mimir's bundled item data, so any resistance bonuses from them are not counted.")
+        );
+        assert_eq!(bonused_resistances_unapplied_line(0), None);
+        assert_eq!(
+            bonused_resistances_unapplied_line(1).as_deref(),
+            Some("1 fitted module has a resistance bonus Mimir's bundled item data cannot describe, so that bonus is not applied.")
+        );
+        assert_eq!(
+            bonused_resistances_unapplied_line(2).as_deref(),
+            Some("2 fitted modules have resistance bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied.")
+        );
+    }
+
+    // Demo story (bonused EHP design section 8): the demo
+    // fittings carry resistance-carrier modules, so each
+    // bonused EHP layer is >= its base layer with at least one
+    // strictly greater, the total is the unrounded sum, and the
+    // counts match the bonused resistances demo pins — including
+    // through the imported EFT/DNA synthesis seam both detail
+    // surfaces share.
+    #[test]
+    fn demo_fixture_ship_ehp_with_module_bonuses_match_the_locked_demo_story() {
+        use crate::demo::data::DEMO_FITTINGS_JSON;
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+
+        // Each layer >= base with at least one strictly
+        // greater; total is the unrounded shield + armor + hull
+        // sum in that order; counts are disclosed verbatim.
+        let check = |fitting: &CharacterFitting, label: &str| {
+            let base = match ship_base_ehp(fitting, &catalogue) {
+                ShipBaseEhpOutcome::Available(ehp) => ehp,
+                ShipBaseEhpOutcome::Unavailable => {
+                    panic!("{label} must have base effective hit points")
+                }
+            };
+            let bonused = match ship_ehp_with_module_bonuses(fitting, &catalogue) {
+                BonusedShipEhpOutcome::Available(bonused) => bonused,
+                BonusedShipEhpOutcome::Unavailable => {
+                    panic!("{label} must have bonused effective hit points")
+                }
+            };
+            let greater = [
+                bonused.ehp.shield > base.shield,
+                bonused.ehp.armor > base.armor,
+                bonused.ehp.hull > base.hull,
+            ]
+            .iter()
+            .filter(|g| **g)
+            .count();
+            assert!(
+                bonused.ehp.shield >= base.shield,
+                "{label} shield must not drop below base"
+            );
+            assert!(
+                bonused.ehp.armor >= base.armor,
+                "{label} armor must not drop below base"
+            );
+            assert!(
+                bonused.ehp.hull >= base.hull,
+                "{label} hull must not drop below base"
+            );
+            assert!(
+                greater >= 1,
+                "{label} must gain at least one strictly-greater layer"
+            );
+            let (shield, armor, hull) = (
+                bonused.ehp.shield.unwrap(),
+                bonused.ehp.armor.unwrap(),
+                bonused.ehp.hull.unwrap(),
+            );
+            assert_eq!(bonused.ehp.total, Some((shield + armor) + hull));
+            let resistances = match ship_resistances_with_module_bonuses(fitting, &catalogue) {
+                BonusedShipResistancesOutcome::Available(bonused) => bonused,
+                BonusedShipResistancesOutcome::Unavailable => {
+                    panic!("{label} must have bonused resistances")
+                }
+            };
+            assert_eq!(bonused.excluded_modules, resistances.excluded_modules);
+            assert_eq!(bonused.unapplied_modules, resistances.unapplied_modules);
+            bonused
+        };
+
+        // Demo Brawler (Rifter; DC II + two Gistum hardeners):
+        // excluded 1, unapplied 0, matching the bonused
+        // resistances demo pins.
+        let brawler = check(&find("Demo Brawler"), "Demo Brawler");
+        assert_eq!(brawler.excluded_modules, 1);
+        assert_eq!(brawler.unapplied_modules, 0);
+
+        let mission = check(&find("Mission Runner"), "Mission Runner");
+        assert_eq!(mission.excluded_modules, 0);
+        assert_eq!(mission.unapplied_modules, 0);
+
+        let runner = check(&find("Demo Runner"), "Demo Runner");
+        assert_eq!(runner.excluded_modules, 0);
+        assert_eq!(runner.unapplied_modules, 0);
+
+        // Imported path: the demo sample fit through the shared
+        // synthesis seam satisfies the same story.
+        let synth = match parse_eft(DEMO_SAMPLE_EFT, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
+        };
+        check(&synth, "demo EFT sample");
+
+        // The DNA sample lands on the same hull, so its story
+        // holds too.
+        let synth_dna = match parse_import(DEMO_SAMPLE_DNA, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting.to_character_fitting(),
+            EftImportOutcome::Failed(fatal) => {
+                panic!("demo DNA sample must import, got {fatal:?}")
+            }
+        };
+        check(&synth_dna, "demo DNA sample");
     }
 
     // Ship navigation and targeting (navigation and targeting
