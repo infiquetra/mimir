@@ -19,9 +19,10 @@ use crate::fitting::calibration::{rig_calibration, CalibrationBudget, Calibratio
 use crate::fitting::dna::parse_import;
 use crate::fitting::dps::{fitting_dps, FamilyDps, FittingDps, FittingDpsOutcome};
 use crate::fitting::editor::{
-    add_item as editor_add_item, browser_candidates, new_fitting,
-    remove_item as editor_remove_item, rename as editor_rename,
-    set_quantity as editor_set_quantity, ship_candidates, BrowserRow, EditRefusal, ShipRow,
+    add_item as editor_add_item, browser_candidates, change_ship as editor_change_ship,
+    new_fitting, remove_item as editor_remove_item, rename as editor_rename,
+    set_quantity as editor_set_quantity, ship_candidates, BrowserRow, EditRefusal,
+    ShipChangeOutcome, ShipRow,
 };
 use crate::fitting::eft::{
     EftImportOutcome, ImportFormat, ImportIssue, ImportSection, ImportedFitting,
@@ -1598,6 +1599,26 @@ fn note_successful_edit(state: &mut AppState) {
     state.fittings_write_confirm = None;
 }
 
+/// Apply one change-ship click to the working draft
+/// (change-ship design section 5.1): the pure change on the
+/// clone, then the shipped successful-edit bookkeeping when the
+/// hull moved. A same-ship click is a no-op and a refused row
+/// logs only the warning; neither marks the draft edited.
+fn apply_ship_change(
+    state: &mut AppState,
+    imported: &mut ImportedFitting,
+    catalogue: &FittingTypes,
+    row: &ShipRow,
+) {
+    match editor_change_ship(imported, catalogue, row) {
+        ShipChangeOutcome::Changed => note_successful_edit(state),
+        ShipChangeOutcome::SameShip => {}
+        ShipChangeOutcome::Refused => {
+            tracing::warn!("[FITTING] ship change refused unlisted ship row");
+        }
+    }
+}
+
 /// Ship-chooser heading (new fitting from scratch design
 /// section 7.1).
 const FITTINGS_SHIP_HEADING: &str = "Start a new fitting";
@@ -1606,6 +1627,14 @@ const FITTINGS_SHIP_HEADING: &str = "Start a new fitting";
 /// rendered under the heading: it discloses the replacement
 /// and the memory-only contract in advance.
 const FITTINGS_SHIP_NOTE: &str = "Pick a ship to start an empty fitting in Mimir. Starting a new fitting replaces the fitting below, if there is one. Nothing is sent to EVE unless you save below, and the fitting is gone when you switch characters or close Mimir.";
+
+/// Change-ship heading (change-ship design section 7.1),
+/// rendered inside the editor above the item controls.
+const FITTINGS_SHIP_CHANGE_HEADING: &str = "Change ship";
+
+/// Standing change-ship note (design section 7.1), always
+/// rendered under the heading for every provenance.
+const FITTINGS_SHIP_CHANGE_NOTE: &str = "Pick a ship to move this fitting onto that ship. The fitting name, every item, and every loaded charge stay exactly as they are, and the figures below are worked out again for the new ship. Items that do not fit the new ship are kept, not removed or blocked, so remove them below if you do not want them. Picking the ship this fitting is already on changes nothing.";
 
 /// Module-browser tabs in display order (module browser design
 /// section 2.2), keyed by the `ImportSection` each tab lists.
@@ -1634,10 +1663,12 @@ fn clear_editor_state(state: &mut AppState) {
     state.fittings_browser_rows.clear();
     state.fittings_browser_rows_section = None;
     // Ship chooser (new fitting from scratch design section
-    // 9.2): every site that clears the editor clears the
-    // chooser too, so a filtered list from a previous draft
-    // or character never survives.
+    // 9.2, change-ship design section 9.2): every site that
+    // clears the editor clears both choosers too, so a
+    // filtered list from a previous draft or character never
+    // survives.
     state.fittings_ship_search.clear();
+    state.fittings_ship_change_search.clear();
     state.fittings_ship_rows.clear();
     state.fittings_ship_rows_built = false;
 }
@@ -3353,6 +3384,46 @@ fn fittings_import_panel(
             }
         }
     });
+    // Change-ship block (change-ship design sections 2.1, 6):
+    // a second chooser inside the editor, sharing the cached
+    // rows with the top block and keeping its own search text.
+    ui.heading(FITTINGS_SHIP_CHANGE_HEADING);
+    ui.label(FITTINGS_SHIP_CHANGE_NOTE);
+    let ship_change_search_response = ui.add(
+        egui::TextEdit::singleline(&mut state.fittings_ship_change_search)
+            .hint_text("Search by name"),
+    );
+    state.text_input_focused |= ship_change_search_response.has_focus();
+    let ship_change_search = state.fittings_ship_change_search.clone();
+    let ship_change_filtered: Vec<&ShipRow> = state
+        .fittings_ship_rows
+        .iter()
+        .filter(|row| ship_row_matches(row, &ship_change_search))
+        .collect();
+    if ship_change_filtered.is_empty() {
+        if ship_change_search.is_empty() {
+            ui.label("No ships to show.");
+        } else {
+            ui.label("No matches.");
+        }
+    } else {
+        let shown = ship_change_filtered.len().min(FITTINGS_RENDER_MAX);
+        if ship_change_filtered.len() > FITTINGS_RENDER_MAX {
+            ui.label(format!(
+                "Showing {shown} of {} ships.",
+                ship_change_filtered.len()
+            ));
+        }
+        let mut blocked_clicked: Option<ShipRow> = None;
+        for row in ship_change_filtered.iter().take(FITTINGS_RENDER_MAX) {
+            if ui.selectable_label(false, &row.name).clicked() {
+                blocked_clicked = Some((*row).clone());
+            }
+        }
+        if let Some(clicked) = blocked_clicked {
+            apply_ship_change(state, &mut imported, catalogue, &clicked);
+        }
+    }
     ui.horizontal(|ui| {
         let name_response = ui.add(
             egui::TextEdit::singleline(&mut state.fittings_editor_add_name)
@@ -8917,6 +8988,7 @@ mod tests {
         }];
         state.fittings_browser_rows_section = Some(ImportSection::Low);
         state.fittings_ship_search = "rift".to_string();
+        state.fittings_ship_change_search = "puni".to_string();
         state.fittings_ship_rows = vec![ShipRow {
             type_id: 587,
             name: "Rifter".to_string(),
@@ -8934,6 +9006,7 @@ mod tests {
         assert!(state.fittings_browser_rows.is_empty());
         assert_eq!(state.fittings_browser_rows_section, None);
         assert_eq!(state.fittings_ship_search, "");
+        assert_eq!(state.fittings_ship_change_search, "");
         assert!(state.fittings_ship_rows.is_empty());
         assert!(!state.fittings_ship_rows_built);
     }
@@ -9086,6 +9159,7 @@ mod tests {
         }];
         state.fittings_browser_rows_section = Some(ImportSection::Low);
         state.fittings_ship_search = "rift".to_string();
+        state.fittings_ship_change_search = "puni".to_string();
         state.fittings_ship_rows = candidates;
         state.fittings_ship_rows_built = true;
         state.fittings_write_confirm = Some(FittingWriteConfirm::SaveImported { character_id: 42 });
@@ -9111,6 +9185,7 @@ mod tests {
         assert!(state.fittings_browser_rows.is_empty());
         assert_eq!(state.fittings_browser_rows_section, None);
         assert_eq!(state.fittings_ship_search, "");
+        assert_eq!(state.fittings_ship_change_search, "");
         assert!(state.fittings_ship_rows.is_empty());
         assert!(!state.fittings_ship_rows_built);
     }
@@ -9391,6 +9466,7 @@ mod tests {
         }];
         state.fittings_browser_rows_section = Some(ImportSection::Low);
         state.fittings_ship_search = "rift".to_string();
+        state.fittings_ship_change_search = "puni".to_string();
         state.fittings_ship_rows = vec![ShipRow {
             type_id: 587,
             name: "Rifter".to_string(),
@@ -9663,6 +9739,7 @@ mod tests {
             assert!(state.fittings_browser_rows.is_empty());
             assert_eq!(state.fittings_browser_rows_section, None);
             assert_eq!(state.fittings_ship_search, "");
+            assert_eq!(state.fittings_ship_change_search, "");
             assert!(state.fittings_ship_rows.is_empty());
             assert!(!state.fittings_ship_rows_built);
             assert_eq!(state.fittings_selected_fitting_id, Some(900000001));
@@ -9829,5 +9906,348 @@ mod tests {
                 (36, "Mexallon", ImportSection::Cargo, 20),
             ]
         );
+    }
+
+    #[test]
+    fn ship_change_wording_matches_the_locked_literals() {
+        // Change-ship design test 8: the heading and standing
+        // note byte-for-byte through the constants the render
+        // uses, with no type number in either.
+        assert_eq!(FITTINGS_SHIP_CHANGE_HEADING, "Change ship");
+        assert_eq!(
+            FITTINGS_SHIP_CHANGE_NOTE,
+            "Pick a ship to move this fitting onto that ship. The fitting name, every item, and every loaded charge stay exactly as they are, and the figures below are worked out again for the new ship. Items that do not fit the new ship are kept, not removed or blocked, so remove them below if you do not want them. Picking the ship this fitting is already on changes nothing."
+        );
+        assert!(!FITTINGS_SHIP_CHANGE_HEADING.contains("587"));
+        assert!(!FITTINGS_SHIP_CHANGE_HEADING.contains("597"));
+        assert!(!FITTINGS_SHIP_CHANGE_NOTE.contains("587"));
+        assert!(!FITTINGS_SHIP_CHANGE_NOTE.contains("597"));
+
+        let types = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let rows = ship_candidates(&types);
+        let candidate = |name: &str| {
+            rows.iter()
+                .find(|row| row.name == name)
+                .expect("candidate lists")
+                .clone()
+        };
+        let punisher = candidate("Punisher");
+
+        let mut eft = editor_test_fitting(ImportFormat::Eft);
+        assert_eq!(
+            editor_change_ship(&mut eft, &types, &punisher),
+            ShipChangeOutcome::Changed
+        );
+        assert_eq!(
+            imported_summary_line_edited(&eft, true),
+            "Imported \"Sample Brawler\" (Punisher): 0 items from 7 lines. Edited since import."
+        );
+        assert_eq!(
+            imported_summary_line_edited(&editor_test_fitting(ImportFormat::Eft), true),
+            "Imported \"Sample Brawler\" (Rifter): 0 items from 7 lines. Edited since import."
+        );
+
+        let mut created = new_fitting(&types, &candidate("Rifter")).expect("Rifter constructs");
+        assert_eq!(created.name, "New Rifter Fit");
+        assert_eq!(
+            editor_change_ship(&mut created, &types, &punisher),
+            ShipChangeOutcome::Changed
+        );
+        assert_eq!(
+            imported_summary_line_edited(&created, true),
+            "Created \"New Rifter Fit\" (Punisher): 0 items. Edited."
+        );
+    }
+
+    #[test]
+    fn apply_ship_change_books_edited_and_disarm_by_outcome() {
+        // Change-ship design test 9: the panel bookkeeping by
+        // outcome over one seeded shape.
+        let types = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let rows = ship_candidates(&types);
+        let candidate = |name: &str| {
+            rows.iter()
+                .find(|row| row.name == name)
+                .expect("candidate lists")
+                .clone()
+        };
+        let rifter = candidate("Rifter");
+        let punisher = candidate("Punisher");
+        let seed_state = || {
+            let mut state = AppState::new(false);
+            state.active_character_id = Some(42);
+            state.fittings_import_owner = Some(42);
+            state.fittings_import_text = "[Rifter, Old Fit]".to_string();
+            state.fittings_editor_error = Some("Could not add: refused.".to_string());
+            state.fittings_editor_quantity.insert(0, "7".to_string());
+            state.fittings_ship_search = "rift".to_string();
+            state.fittings_ship_change_search = "puni".to_string();
+            state.fittings_import_edited = false;
+            state.fittings_write_confirm =
+                Some(FittingWriteConfirm::SaveImported { character_id: 42 });
+            state
+        };
+        let make_draft = || {
+            let mut draft = editor_test_fitting(ImportFormat::Eft);
+            draft.items.push(ImportedItem {
+                type_id: 2048,
+                name: "Damage Control II".to_string(),
+                section: ImportSection::Low,
+                quantity: 1,
+                charge: None,
+            });
+            draft
+        };
+
+        // Changed: the pair moves, the draft is marked
+        // edited, and the save disarms; the paste text, the
+        // owner, and both searches are untouched.
+        {
+            let mut state = seed_state();
+            let mut draft = make_draft();
+            let before_items = draft.items.clone();
+            apply_ship_change(&mut state, &mut draft, &types, &punisher);
+            assert_eq!(draft.ship_type_id, punisher.type_id);
+            assert_eq!(draft.ship_name, "Punisher");
+            assert_eq!(draft.items, before_items);
+            assert!(state.fittings_import_edited);
+            assert_eq!(state.fittings_editor_error, None);
+            assert!(state.fittings_editor_quantity.is_empty());
+            assert_eq!(state.fittings_write_confirm, None);
+            assert_eq!(state.fittings_import_text, "[Rifter, Old Fit]");
+            assert_eq!(state.fittings_import_owner, Some(42));
+            assert_eq!(state.fittings_ship_search, "rift");
+            assert_eq!(state.fittings_ship_change_search, "puni");
+        }
+        // SameShip: nothing moves, nothing is marked, the
+        // armed confirmation stays armed.
+        {
+            let mut state = seed_state();
+            let mut draft = make_draft();
+            let before = draft.clone();
+            apply_ship_change(&mut state, &mut draft, &types, &rifter);
+            assert_eq!(draft.ship_type_id, before.ship_type_id);
+            assert_eq!(draft.ship_name, before.ship_name);
+            assert_eq!(draft.items, before.items);
+            assert!(!state.fittings_import_edited);
+            assert_eq!(
+                state.fittings_editor_error,
+                Some("Could not add: refused.".to_string())
+            );
+            assert_eq!(
+                state.fittings_editor_quantity.get(&0).cloned(),
+                Some("7".to_string())
+            );
+            assert_eq!(
+                state.fittings_write_confirm,
+                Some(FittingWriteConfirm::SaveImported { character_id: 42 })
+            );
+            assert_eq!(state.fittings_import_text, "[Rifter, Old Fit]");
+            assert_eq!(state.fittings_import_owner, Some(42));
+            assert_eq!(state.fittings_ship_search, "rift");
+            assert_eq!(state.fittings_ship_change_search, "puni");
+        }
+        // Refused: a forged row leaves the draft and every
+        // piece of state untouched.
+        {
+            let mut state = seed_state();
+            let mut draft = make_draft();
+            let before = draft.clone();
+            let forged = ShipRow {
+                type_id: 999_999,
+                name: "Punisher".to_string(),
+            };
+            apply_ship_change(&mut state, &mut draft, &types, &forged);
+            assert_eq!(draft.ship_type_id, before.ship_type_id);
+            assert_eq!(draft.ship_name, before.ship_name);
+            assert_eq!(draft.items, before.items);
+            assert_eq!(draft.name, before.name);
+            assert_eq!(draft.format, before.format);
+            assert!(!state.fittings_import_edited);
+            assert_eq!(
+                state.fittings_editor_error,
+                Some("Could not add: refused.".to_string())
+            );
+            assert_eq!(
+                state.fittings_editor_quantity.get(&0).cloned(),
+                Some("7".to_string())
+            );
+            assert_eq!(
+                state.fittings_write_confirm,
+                Some(FittingWriteConfirm::SaveImported { character_id: 42 })
+            );
+            assert_eq!(state.fittings_import_text, "[Rifter, Old Fit]");
+            assert_eq!(state.fittings_import_owner, Some(42));
+            assert_eq!(state.fittings_ship_search, "rift");
+            assert_eq!(state.fittings_ship_change_search, "puni");
+        }
+    }
+
+    #[test]
+    fn ship_change_slot_layout_disclosure_pins() {
+        // Change-ship design test 10: the demo sample after a
+        // change, through the shipped sample-layout harness.
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let rows = ship_candidates(&catalogue);
+        let candidate = |name: &str| {
+            rows.iter()
+                .find(|row| row.name == name)
+                .expect("candidate lists")
+                .clone()
+        };
+        let layout_for = |fitting: &CharacterFitting| match slot_layout(fitting, &catalogue) {
+            SlotLayoutOutcome::Available(layout) => layout,
+            SlotLayoutOutcome::Unavailable => panic!("demo fitting must have slot layout"),
+        };
+        let base = match parse_eft(DEMO_SAMPLE_EFT, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting,
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import, got {fatal:?}"),
+        };
+
+        let mut changed = base.clone();
+        assert_eq!(
+            editor_change_ship(&mut changed, &catalogue, &candidate("Punisher")),
+            ShipChangeOutcome::Changed
+        );
+        assert_eq!(
+            slot_layout_lines(&layout_for(&changed.to_character_fitting())),
+            vec![
+                ("Low slots: 2 of 5 used (3 left)".to_string(), false),
+                ("Medium slots: 2 of 2 used (0 left)".to_string(), false),
+                ("High slots: 3 of 4 used (1 left)".to_string(), false),
+                ("Rigs: 1 of 3 used (2 left)".to_string(), false),
+                ("Turret hardpoints: 3 of 4 used (1 left)".to_string(), false),
+                (
+                    "Launcher hardpoints: 0 of 0 used (0 left)".to_string(),
+                    false
+                ),
+            ]
+        );
+
+        let mut changed = base.clone();
+        assert_eq!(
+            editor_change_ship(&mut changed, &catalogue, &candidate("Echelon")),
+            ShipChangeOutcome::Changed
+        );
+        assert_eq!(
+            slot_layout_lines(&layout_for(&changed.to_character_fitting())),
+            vec![
+                ("Low slots: 2 of 0 used (2 over)".to_string(), true),
+                ("Medium slots: 2 of 1 used (1 over)".to_string(), true),
+                ("High slots: 3 of 0 used (3 over)".to_string(), true),
+                ("Rigs: 1 of 0 used (1 over)".to_string(), true),
+                ("Turret hardpoints: 3 of 0 used (3 over)".to_string(), true),
+                (
+                    "Launcher hardpoints: 0 of 0 used (0 left)".to_string(),
+                    false
+                ),
+            ]
+        );
+
+        let mut changed = base.clone();
+        assert_eq!(
+            editor_change_ship(&mut changed, &catalogue, &candidate("Tengu")),
+            ShipChangeOutcome::Changed
+        );
+        let tengu = layout_for(&changed.to_character_fitting());
+        assert!(tengu.subsystem_layout);
+        assert_eq!(
+            slot_layout_lines(&tengu),
+            vec![
+                ("Rigs: 1 of 3 used (2 left)".to_string(), false),
+                ("Subsystems: 0 of 5 used (5 left)".to_string(), false),
+            ]
+        );
+    }
+
+    #[test]
+    fn ship_change_demo_candidates_and_copied_keep_rows() {
+        // Change-ship design test 11: the four named hulls list
+        // as candidates, and a copied Demo Brawler keeps every
+        // item across both revealing hulls.
+        use crate::demo::data::{demo_resolver, DEMO_FITTINGS_JSON};
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let rows = ship_candidates(&catalogue);
+        assert_eq!(rows.len(), 404);
+        for name in ["Rifter", "Punisher", "Echelon", "Tengu"] {
+            assert!(
+                rows.iter().any(|row| row.name == name),
+                "{name} lists as a candidate"
+            );
+        }
+        let candidate = |name: &str| {
+            rows.iter()
+                .find(|row| row.name == name)
+                .expect("candidate lists")
+                .clone()
+        };
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let resolver = demo_resolver().expect("demo resolver builds");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let brawler = match convert_saved_fitting(&find("Demo Brawler"), &resolver) {
+            SavedCopyOutcome::Converted(draft) => draft,
+            SavedCopyOutcome::Refused(reason) => {
+                panic!("demo fitting Demo Brawler must convert, got {reason:?}")
+            }
+        };
+        assert_eq!(brawler.items.len(), 11);
+        assert!(brawler
+            .items
+            .iter()
+            .any(|item| item.section == ImportSection::Subsystem));
+
+        let mut changed = brawler.clone();
+        assert_eq!(
+            editor_change_ship(&mut changed, &catalogue, &candidate("Tengu")),
+            ShipChangeOutcome::Changed
+        );
+        assert_eq!(changed.items, brawler.items);
+        assert_eq!(changed.name, brawler.name);
+        assert_eq!(changed.format, brawler.format);
+        let tengu_layout = match slot_layout(&changed.to_character_fitting(), &catalogue) {
+            SlotLayoutOutcome::Available(layout) => layout,
+            SlotLayoutOutcome::Unavailable => panic!("Demo Brawler must have slot layout"),
+        };
+        let subsystem_line = slot_layout_lines(&tengu_layout)
+            .iter()
+            .find(|(line, _)| line.starts_with("Subsystems:"))
+            .map(|(line, _)| line.clone());
+        assert_eq!(
+            subsystem_line,
+            Some("Subsystems: 1 of 5 used (4 left)".to_string())
+        );
+
+        let mut changed = brawler.clone();
+        assert_eq!(
+            editor_change_ship(&mut changed, &catalogue, &candidate("Echelon")),
+            ShipChangeOutcome::Changed
+        );
+        assert_eq!(changed.items, brawler.items);
+        assert!(changed
+            .items
+            .iter()
+            .any(|item| item.section == ImportSection::Subsystem));
+        let echelon_layout = match slot_layout(&changed.to_character_fitting(), &catalogue) {
+            SlotLayoutOutcome::Available(layout) => layout,
+            SlotLayoutOutcome::Unavailable => panic!("Demo Brawler must have slot layout"),
+        };
+        assert!(echelon_layout.subsystem.is_none());
     }
 }

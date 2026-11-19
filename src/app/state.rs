@@ -862,16 +862,19 @@ pub struct AppState {
     pub fittings_browser_rows: Vec<BrowserRow>,
     pub fittings_browser_rows_section: Option<ImportSection>,
     // Ship-chooser view state (new fitting from scratch design
-    // section 9): the search text and the cached ship
-    // candidates with whether they were built, beside the
-    // browser cache they mirror. Memory only, like the edit
-    // state: cleared wherever the draft dies. A boolean, not
-    // an `Option`: the browser's `Option<ImportSection>`
+    // section 9, change-ship design section 9.1): the search
+    // text and the cached ship candidates with whether they
+    // were built, beside the browser cache they mirror. The
+    // change-ship block shares the cached rows and built flag
+    // but keeps its own search text. Memory only, like the
+    // edit state: cleared wherever the draft dies. A boolean,
+    // not an `Option`: the browser's `Option<ImportSection>`
     // records which tab its cache is for, and the chooser has
     // one list, so one bit is the honest state. An empty `Vec`
     // alone cannot serve, because a built empty list (fixture
     // catalogues) must not rebuild every frame.
     pub fittings_ship_search: String,
+    pub fittings_ship_change_search: String,
     pub fittings_ship_rows: Vec<ShipRow>,
     pub fittings_ship_rows_built: bool,
     // Fitting-write state (write design sections 3.2, 6, 7, 8).
@@ -1165,6 +1168,7 @@ impl AppState {
                 self.fittings_browser_rows.clear();
                 self.fittings_browser_rows_section = None;
                 self.fittings_ship_search.clear();
+                self.fittings_ship_change_search.clear();
                 self.fittings_ship_rows.clear();
                 self.fittings_ship_rows_built = false;
                 // Write design section 3.2: the write state is per
@@ -1381,6 +1385,7 @@ impl AppState {
             self.fittings_browser_rows.clear();
             self.fittings_browser_rows_section = None;
             self.fittings_ship_search.clear();
+            self.fittings_ship_change_search.clear();
             self.fittings_ship_rows.clear();
             self.fittings_ship_rows_built = false;
             // Write state reset (design section 3.2), same
@@ -1449,6 +1454,7 @@ impl AppState {
             self.fittings_browser_rows.clear();
             self.fittings_browser_rows_section = None;
             self.fittings_ship_search.clear();
+            self.fittings_ship_change_search.clear();
             self.fittings_ship_rows.clear();
             self.fittings_ship_rows_built = false;
             self.fittings_write_needs_reauthorize = false;
@@ -2813,6 +2819,7 @@ mod tests {
         }];
         state.fittings_browser_rows_section = Some(ImportSection::Low);
         state.fittings_ship_search = "rift".to_string();
+        state.fittings_ship_change_search = "puni".to_string();
         state.fittings_ship_rows = vec![ShipRow {
             type_id: 587,
             name: "Rifter".to_string(),
@@ -2836,6 +2843,7 @@ mod tests {
         assert!(state.fittings_browser_rows.is_empty());
         assert_eq!(state.fittings_browser_rows_section, None);
         assert_eq!(state.fittings_ship_search, "");
+        assert_eq!(state.fittings_ship_change_search, "");
         assert!(state.fittings_ship_rows.is_empty());
         assert!(!state.fittings_ship_rows_built);
     }
@@ -2864,6 +2872,7 @@ mod tests {
             Some(ImportSection::Low)
         );
         assert_eq!(state.fittings_ship_search, "rift");
+        assert_eq!(state.fittings_ship_change_search, "puni");
         assert_eq!(state.fittings_ship_rows.len(), 1);
         assert!(state.fittings_ship_rows_built);
         // Switching to a different character clears all four fields.
@@ -2884,6 +2893,7 @@ mod tests {
         assert_eq!(state.fittings_browser_section, ImportSection::Low);
         assert_eq!(state.fittings_browser_rows.len(), 1);
         assert_eq!(state.fittings_ship_search, "rift");
+        assert_eq!(state.fittings_ship_change_search, "puni");
         assert!(state.fittings_ship_rows_built);
         // Removing the active character clears it.
         state.remove_character(1);
