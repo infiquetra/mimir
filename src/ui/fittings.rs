@@ -45,7 +45,8 @@ use crate::fitting::ship_nav_targeting::{
 };
 use crate::fitting::ship_peak_recharge::ship_base_peak_recharge;
 use crate::fitting::ship_resistances::{
-    ship_resistances, ResistLayer, ShipResistances, ShipResistancesOutcome,
+    ship_resistances, ship_resistances_with_module_bonuses, BonusedShipResistancesOutcome,
+    ResistLayer, ShipResistances, ShipResistancesOutcome,
 };
 use crate::fitting::ship_stats::{ship_base_stats, ShipBaseStats, ShipBaseStatsOutcome};
 use crate::fitting::slot_layout::{slot_layout, SlotBudget, SlotLayout, SlotLayoutOutcome};
@@ -1895,6 +1896,23 @@ const FITTING_SHIP_RESISTANCES_NO_CATALOGUE: &str =
     "Ship resistances unavailable: Mimir's bundled item data failed to load.";
 const FITTING_SHIP_RESISTANCES_NO_SHIP_DATA: &str = "Ship resistances unavailable: Mimir's bundled item data has no resistance data for this fitting's ship.";
 
+/// Locked heading for the ship resistances with fitted module
+/// bonuses block (resistance bonuses design section 6). Its own
+/// name keeps the bonused numbers from reading as the base block
+/// above or as a complete fitted tank.
+const FITTINGS_SHIP_RESISTANCES_WITH_BONUSES_HEADING: &str =
+    "Ship resistances (with fitted module bonuses)";
+
+/// Locked disclosure: the numbers add the fitted modules' and
+/// rigs' resistance bonuses to the base values above, every
+/// fitted module counted as active, and the effective hit points
+/// below still using only the base values (design section 6).
+const FITTING_SHIP_RESISTANCES_WITH_BONUSES_DISCLOSURE: &str = "These resistances add the fitted modules' and rigs' resistance bonuses from Mimir's bundled item data to the base values above, with stacking penalties where modules of the same kind pile up. Every fitted module is counted as active, because the fitting data does not say which modules are on. Ship bonuses, subsystems, skills, implants, and resistance changes from anything outside this ship are not applied, and the effective hit points below still use only the base values, so these numbers can differ from EVE.";
+
+const FITTING_SHIP_RESISTANCES_WITH_BONUSES_NO_CATALOGUE: &str =
+    "Ship resistances with fitted module bonuses unavailable: Mimir's bundled item data failed to load.";
+const FITTING_SHIP_RESISTANCES_WITH_BONUSES_NO_SHIP_DATA: &str = "Ship resistances with fitted module bonuses unavailable: Mimir's bundled item data has no resistance data for this fitting's ship.";
+
 /// Locked heading for the ship base effective hit points block
 /// (ship base EHP design section 6). Both qualifiers are
 /// load-bearing: "(base values)" keeps every base hull number
@@ -1959,6 +1977,32 @@ fn cpu_excluded_line(excluded: usize) -> Option<String> {
         )
     } else {
         Some(format!("CPU does not count {excluded} fitted modules with no CPU data in Mimir's bundled item data."))
+    }
+}
+
+/// Excluded-module disclosure for the bonused resistances block,
+/// or `None` when every counted fitting row had a catalogue row
+/// (resistance bonuses design section 6).
+fn bonused_resistances_excluded_line(excluded: usize) -> Option<String> {
+    if excluded == 0 {
+        None
+    } else if excluded == 1 {
+        Some("1 fitted module is not in Mimir's bundled item data, so any resistance bonus from it is not counted.".to_string())
+    } else {
+        Some(format!("{excluded} fitted modules are not in Mimir's bundled item data, so any resistance bonuses from them are not counted."))
+    }
+}
+
+/// Unapplied-carrier disclosure for the bonused resistances
+/// block, or `None` when every counted carrier's bonus could be
+/// applied (resistance bonuses design section 6).
+fn bonused_resistances_unapplied_line(unapplied: usize) -> Option<String> {
+    if unapplied == 0 {
+        None
+    } else if unapplied == 1 {
+        Some("1 fitted module has a resistance bonus Mimir's bundled item data cannot describe, so that bonus is not applied.".to_string())
+    } else {
+        Some(format!("{unapplied} fitted modules have resistance bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied."))
     }
 }
 
@@ -2340,6 +2384,49 @@ fn render_ship_resistances(
         ShipResistancesOutcome::Unavailable => {
             ui.heading(FITTINGS_SHIP_RESISTANCES_HEADING);
             ui.label(FITTING_SHIP_RESISTANCES_NO_SHIP_DATA);
+        }
+    }
+}
+
+/// Ship resistances with fitted module bonuses block shared by
+/// the saved and imported fitting details (resistance bonuses
+/// design sections 5-6). Depends only on the fitting and the
+/// catalogue: no skill levels, no SDE handle, so it renders
+/// identically for every viewing character. The heading always
+/// renders, so the view never silently omits the feature;
+/// `Unavailable` swaps all lines and the disclosure for the
+/// fixed unavailable sentence. The base block above is
+/// untouched, so the bonused numbers never silently replace a
+/// base figure. Renders even when the bonused numbers equal the
+/// base numbers. Logs nothing itself: the pure function logs
+/// nothing (render cadence).
+fn render_ship_resistances_with_module_bonuses(
+    ui: &mut egui::Ui,
+    fitting: &CharacterFitting,
+    fitting_types: Option<&FittingTypes>,
+) {
+    let Some(catalogue) = fitting_types else {
+        ui.heading(FITTINGS_SHIP_RESISTANCES_WITH_BONUSES_HEADING);
+        ui.label(FITTING_SHIP_RESISTANCES_WITH_BONUSES_NO_CATALOGUE);
+        return;
+    };
+    match ship_resistances_with_module_bonuses(fitting, catalogue) {
+        BonusedShipResistancesOutcome::Available(bonused) => {
+            ui.heading(FITTINGS_SHIP_RESISTANCES_WITH_BONUSES_HEADING);
+            for line in ship_resistance_lines(&bonused.resistances) {
+                ui.label(line);
+            }
+            if let Some(line) = bonused_resistances_excluded_line(bonused.excluded_modules) {
+                ui.label(line);
+            }
+            if let Some(line) = bonused_resistances_unapplied_line(bonused.unapplied_modules) {
+                ui.label(line);
+            }
+            ui.label(FITTING_SHIP_RESISTANCES_WITH_BONUSES_DISCLOSURE);
+        }
+        BonusedShipResistancesOutcome::Unavailable => {
+            ui.heading(FITTINGS_SHIP_RESISTANCES_WITH_BONUSES_HEADING);
+            ui.label(FITTING_SHIP_RESISTANCES_WITH_BONUSES_NO_SHIP_DATA);
         }
     }
 }
@@ -3668,6 +3755,7 @@ fn fittings_import_panel(
     render_slot_layout(ui, &synth, fitting_types);
     render_ship_base_stats(ui, &synth, fitting_types);
     render_ship_resistances(ui, &synth, fitting_types);
+    render_ship_resistances_with_module_bonuses(ui, &synth, fitting_types);
     render_ship_base_ehp(ui, &synth, fitting_types);
     render_ship_nav_targeting(ui, &synth, fitting_types);
     // Loaded charges, in item order (design section 8.2).
@@ -3977,6 +4065,7 @@ pub fn show(
                     render_slot_layout(ui, selected, fitting_types);
                     render_ship_base_stats(ui, selected, fitting_types);
                     render_ship_resistances(ui, selected, fitting_types);
+                    render_ship_resistances_with_module_bonuses(ui, selected, fitting_types);
                     render_ship_base_ehp(ui, selected, fitting_types);
                     render_ship_nav_targeting(ui, selected, fitting_types);
                     if ui.button("Copy as EFT").clicked() {
@@ -6961,6 +7050,141 @@ mod tests {
         assert_eq!(
             FITTING_SHIP_RESISTANCES_DISCLOSURE,
             "These are the bare hull's base resistances from Mimir's bundled item data. Fitted modules, rigs, subsystems, skills, implants, and ship bonuses are not applied, so these numbers can differ from EVE."
+        );
+    }
+
+    #[test]
+    fn bonused_resistances_wording_and_count_helpers() {
+        assert_eq!(
+            FITTINGS_SHIP_RESISTANCES_WITH_BONUSES_HEADING,
+            "Ship resistances (with fitted module bonuses)"
+        );
+        assert_eq!(
+            FITTING_SHIP_RESISTANCES_WITH_BONUSES_NO_CATALOGUE,
+            "Ship resistances with fitted module bonuses unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            FITTING_SHIP_RESISTANCES_WITH_BONUSES_NO_SHIP_DATA,
+            "Ship resistances with fitted module bonuses unavailable: Mimir's bundled item data has no resistance data for this fitting's ship."
+        );
+        assert_eq!(
+            FITTING_SHIP_RESISTANCES_WITH_BONUSES_DISCLOSURE,
+            "These resistances add the fitted modules' and rigs' resistance bonuses from Mimir's bundled item data to the base values above, with stacking penalties where modules of the same kind pile up. Every fitted module is counted as active, because the fitting data does not say which modules are on. Ship bonuses, subsystems, skills, implants, and resistance changes from anything outside this ship are not applied, and the effective hit points below still use only the base values, so these numbers can differ from EVE."
+        );
+        assert_eq!(bonused_resistances_excluded_line(0), None);
+        assert_eq!(
+            bonused_resistances_excluded_line(1).as_deref(),
+            Some("1 fitted module is not in Mimir's bundled item data, so any resistance bonus from it is not counted.")
+        );
+        assert_eq!(
+            bonused_resistances_excluded_line(2).as_deref(),
+            Some("2 fitted modules are not in Mimir's bundled item data, so any resistance bonuses from them are not counted.")
+        );
+        assert_eq!(bonused_resistances_unapplied_line(0), None);
+        assert_eq!(
+            bonused_resistances_unapplied_line(1).as_deref(),
+            Some("1 fitted module has a resistance bonus Mimir's bundled item data cannot describe, so that bonus is not applied.")
+        );
+        assert_eq!(
+            bonused_resistances_unapplied_line(2).as_deref(),
+            Some("2 fitted modules have resistance bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied.")
+        );
+    }
+
+    // Demo story (resistance bonuses design section 8): the
+    // rendered bonused lines are the oracle, computed from the
+    // real demo fixture over the real catalogue through the new
+    // pure function (never hand-typed tuples).
+    #[test]
+    fn demo_fixture_bonused_resistances_match_the_locked_demo_story() {
+        use crate::demo::data::DEMO_FITTINGS_JSON;
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let bonused_for = |fitting: &CharacterFitting| match ship_resistances_with_module_bonuses(
+            fitting, &catalogue,
+        ) {
+            BonusedShipResistancesOutcome::Available(bonused) => bonused,
+            BonusedShipResistancesOutcome::Unavailable => {
+                panic!("demo fitting must have bonused resistances")
+            }
+        };
+
+        // Demo Brawler (Rifter; DC II + two Gistum C-Type
+        // hardeners; rig type 1535 has no catalogue row).
+        let brawler = bonused_for(&find("Demo Brawler"));
+        assert_eq!(
+            ship_resistance_lines(&brawler.resistances),
+            [
+                "Shield resistances: EM 63.1%, Thermal 70.5%, Kinetic 77.9%, Explosive 81.6%",
+                "Armor resistances: EM 66.0%, Thermal 44.8%, Kinetic 36.3%, Explosive 23.5%",
+                "Hull resistances: EM 59.8%, Thermal 59.8%, Kinetic 59.8%, Explosive 59.8%",
+            ]
+        );
+        assert_eq!(brawler.excluded_modules, 1);
+        assert_eq!(brawler.unapplied_modules, 0);
+        assert_eq!(
+            bonused_resistances_excluded_line(brawler.excluded_modules).as_deref(),
+            Some("1 fitted module is not in Mimir's bundled item data, so any resistance bonus from it is not counted.")
+        );
+        assert_eq!(
+            bonused_resistances_unapplied_line(brawler.unapplied_modules),
+            None
+        );
+
+        // Mission Runner (Rifter; DC II recorded in HiSlot0 —
+        // the flag rule counts it; slot validity is not judged).
+        // The locked 56.25 half-away render is 56.3%.
+        let mission = bonused_for(&find("Mission Runner"));
+        assert_eq!(
+            ship_resistance_lines(&mission.resistances),
+            [
+                "Shield resistances: EM 12.5%, Thermal 30.0%, Kinetic 47.5%, Explosive 56.3%",
+                "Armor resistances: EM 66.0%, Thermal 44.8%, Kinetic 36.3%, Explosive 23.5%",
+                "Hull resistances: EM 59.8%, Thermal 59.8%, Kinetic 59.8%, Explosive 59.8%",
+            ]
+        );
+        assert_eq!(mission.excluded_modules, 0);
+        assert_eq!(mission.unapplied_modules, 0);
+
+        // Demo Runner (Punisher 597; DC II + one Gistum).
+        let runner = bonused_for(&find("Demo Runner"));
+        assert_eq!(
+            ship_resistance_lines(&runner.resistances),
+            [
+                "Shield resistances: EM 45.3%, Thermal 56.3%, Kinetic 67.2%, Explosive 72.7%",
+                "Armor resistances: EM 57.5%, Thermal 44.8%, Kinetic 36.3%, Explosive 32.0%",
+                "Hull resistances: EM 59.8%, Thermal 59.8%, Kinetic 59.8%, Explosive 59.8%",
+            ]
+        );
+        assert_eq!(runner.excluded_modules, 0);
+        assert_eq!(runner.unapplied_modules, 0);
+
+        // The base block over the same fits is unchanged: the
+        // bonused numbers never silently replace a base figure.
+        assert_eq!(
+            ship_resistances_lines_for(&catalogue, 587),
+            [
+                "Shield resistances: EM 0.0%, Thermal 20.0%, Kinetic 40.0%, Explosive 50.0%",
+                "Armor resistances: EM 60.0%, Thermal 35.0%, Kinetic 25.0%, Explosive 10.0%",
+                "Hull resistances: EM 33.0%, Thermal 33.0%, Kinetic 33.0%, Explosive 33.0%",
+            ]
         );
     }
 

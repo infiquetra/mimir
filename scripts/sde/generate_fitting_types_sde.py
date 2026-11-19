@@ -131,6 +131,21 @@ category-7-or-32 rows carrying a slot effect and at least one
 group, sparse, and `chargeGroupId` (the invTypes `groupID`
 column) on every category-8 row. Any other row gains neither
 key, and no row gains both.
+
+Fitted-module resistance modifiers
+(docs/resistance-bonuses-design.md section 3) append two
+further keys after `chargeGroupId` in the locked order:
+`resistanceModifiers`, a sparse array of
+[modifiedAttributeId, operator, operand] triples on
+category-7 rows only, and `resistanceModifiersUnapplied`,
+a sparse `true` beside that array when the carrier's bonus
+cannot be grounded from the bundled data. The effect-to-
+modifier leg comes from `dogmaEffects.jsonl` inside the
+committed `eve-online-static-data-3503375-jsonl.zip` (the
+sibling-generator pattern); the operand leg is the type's
+own `dgmTypeAttributes` value for the modifier's modifying
+attribute. The generator still never downloads: a missing
+or unreadable zip fails loudly before anything is written.
 """
 
 import bz2
@@ -140,6 +155,7 @@ import math
 import os
 import re
 import sys
+import zipfile
 from collections import Counter
 from collections import defaultdict
 from io import StringIO
@@ -221,6 +237,20 @@ CAPACITOR_RECHARGE_ATTR = 55
 # base would show invented resistances.
 RESIST_ATTR_IDS = {271, 274, 273, 272, 267, 270, 269, 268,
                    113, 110, 109, 111}
+# Fitted-module resistance modifiers
+# (docs/resistance-bonuses-design.md section 3): the locked
+# display order (shield, armor, hull; EM, thermal, kinetic,
+# explosive within a layer) and the two applicable operator
+# codes (0 postMul, 6 postPercent per Flutter dogma_engine.dart
+# at ed698d3). A modifier is classified only when it is
+# ItemModifier/shipID on one of the twelve resonances (the
+# Flutter routeOwnerModifiers absent/zero skip); every other
+# func/domain/operator contributes nothing by data, not taste.
+RESIST_MODIFIER_ORDER = [271, 274, 273, 272, 267, 270, 269, 268,
+                         113, 110, 109, 111]
+RESIST_MODIFIER_OPERATORS = {0, 6}
+SDE_ZIP_NAME = "eve-online-static-data-3503375-jsonl.zip"
+SDE_ZIP_MEMBER = "dogmaEffects.jsonl"
 SHIELD_EM_RESONANCE_ATTR = 271
 SHIELD_THERMAL_RESONANCE_ATTR = 274
 SHIELD_KINETIC_RESONANCE_ATTR = 273
@@ -570,6 +600,50 @@ RESIST_ORACLES = [
     (31668, None, None),
     (45623, None, None),
 ]
+
+# Fitted-module resistance modifier oracles
+# (docs/resistance-bonuses-design.md section 3): each value
+# read from dogmaEffects.jsonl (committed zip) joined through
+# dgmTypeEffects / dgmTypeAttributes during design. Tuple
+# shape: (typeId, expected-entries-or-None,
+# expected-unapplied). A None entries means neither
+# resistanceModifiers nor resistanceModifiersUnapplied may
+# be present on that row at all. An empty list means the
+# (possibly empty) array must be present and the unapplied
+# marker must be true.
+RESIST_MODIFIER_ORACLES = [
+    (2048, [[271, 0, 0.875], [274, 0, 0.875], [273, 0, 0.875],
+            [272, 0, 0.875], [267, 0, 0.85], [270, 0, 0.85],
+            [269, 0, 0.85], [268, 0, 0.85], [113, 0, 0.6],
+            [110, 0, 0.6], [109, 0, 0.6], [111, 0, 0.6]], False),
+    (2281, [[271, 6, -32.5], [274, 6, -32.5],
+            [273, 6, -32.5], [272, 6, -32.5]], False),
+    (578, [[271, 6, -25.0], [274, 6, -25.0],
+           [273, 6, -25.0], [272, 6, -25.0]], False),
+    (1306, [[267, 6, -15.36], [270, 6, -15.36],
+            [269, 6, -15.36], [268, 6, -15.36]], False),
+    (1197, [[267, 6, -24.32]], False),
+    (11642, [[267, 6, -55.0]], False),
+    (25736, [[267, 6, -30.0]], False),
+    (2050, [[271, 6, -37.5], [274, 6, -37.5],
+            [273, 6, -37.5], [272, 6, -37.5]], False),
+    (34272, [], True),
+    (52227, [], True),
+    (52230, [], True),
+    (1272, None, False),
+    (587, None, False),
+    (2456, None, False),
+]
+
+# Catalogue-wide counts for the resistance modifier emission
+# (docs/resistance-bonuses-design.md section 3, design-scripted
+# over today's data): rows carrying the key (777 with
+# entries plus 14 marked-empty), rows marked unapplied,
+# total emitted entries.
+RESIST_MODIFIER_ROWS = 791
+RESIST_MODIFIER_NONEMPTY_ROWS = 777
+RESIST_MODIFIER_MARKED_ROWS = 14
+RESIST_MODIFIER_ENTRIES = 1332
 
 # Bay oracles (docs/bay-capacities-design.md section 3.3): each
 # value read directly from invTypes.csv.bz2 / dgmTypeAttributes.csv.bz2
@@ -1348,6 +1422,196 @@ def main():
     for row in type_effects:
         effects_by_type[int(row["typeID"])].add(int(row["effectID"]))
 
+    # Fitted-module resistance modifiers (design section 3):
+    # the effect-to-modifier leg from dogmaEffects.jsonl
+    # inside the committed zip (a missing or unreadable zip
+    # fails loudly before anything is written, as a missing
+    # cache already does), joined through dgmTypeEffects and
+    # the type's own dgmTypeAttributes operand values.
+    # Classification is category-7 only; every ItemModifier/
+    # shipID resonance modifier is deduplicated by (modified,
+    # modifying, operator) and classed exactly one of
+    # applicable / unsupported / zero / absent, and a type is
+    # marked unapplied iff any modifier is unsupported, or it
+    # has no applicable entry, no zero classification, and at
+    # least one absent classification. An unparseable or
+    # non-finite operand on a classified modifier, a
+    # duplicated triple on one type, or two applicable
+    # entries sharing a modified attribute fail loudly. Only
+    # operands for category-7 candidate types are parsed, so
+    # an unrelated broken attribute row cannot stop
+    # generation.
+    zip_path = os.path.join(cache_dir, SDE_ZIP_NAME)
+    if not os.path.exists(zip_path):
+        print(
+            f"missing committed SDE zip {zip_path}; this "
+            "generator never downloads — fetch the cache and "
+            "re-run",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    try:
+        archive = zipfile.ZipFile(zip_path)
+    except (OSError, zipfile.BadZipFile):
+        fail(f"unreadable SDE zip {zip_path}")
+    with archive:
+        if SDE_ZIP_MEMBER not in archive.namelist():
+            fail(
+                f"member {SDE_ZIP_MEMBER} missing from SDE zip "
+                f"{zip_path}"
+            )
+        effect_modifiers = {}
+        try:
+            with archive.open(SDE_ZIP_MEMBER) as handle:
+                for line in handle:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                    except json.JSONDecodeError:
+                        fail(
+                            "unparseable row in SDE zip member "
+                            f"{SDE_ZIP_MEMBER}"
+                        )
+                    modifier_info = obj.get("modifierInfo") or []
+                    if modifier_info:
+                        effect_modifiers[obj["_key"]] = modifier_info
+        except zipfile.BadZipFile:
+            fail(f"unreadable SDE zip member {SDE_ZIP_MEMBER}")
+    # Modifying attributes worth reading operands for:
+    # every modifying id appearing in an ItemModifier/shipID
+    # resonance modifier anywhere in the zip.
+    wanted_modifying_ids = set()
+    for modifier_info in effect_modifiers.values():
+        for modifier in modifier_info:
+            if (
+                modifier.get("func") == "ItemModifier"
+                and modifier.get("domain") == "shipID"
+                and modifier.get("modifiedAttributeID")
+                in RESIST_ATTR_IDS
+            ):
+                wanted_modifying_ids.add(
+                    modifier["modifyingAttributeID"]
+                )
+    category_by_type = {}
+    for row in inv_types:
+        if row["published"] != "1":
+            continue
+        type_id = int(row["typeID"])
+        if type_id > 0 and row["typeName"].strip():
+            category_by_type[type_id] = group_to_category.get(
+                int(row["groupID"]), 0
+            )
+    operands_by_type = {}
+    seen_operand_keys = set()
+    for row in type_attributes:
+        attribute_id = int(row["attributeID"])
+        if attribute_id not in wanted_modifying_ids:
+            continue
+        type_id = int(row["typeID"])
+        if category_by_type.get(type_id) != 7:
+            continue
+        key = (type_id, attribute_id)
+        if key in seen_operand_keys:
+            fail(
+                f"duplicate resistance modifier operand row "
+                f"(type {type_id}, attribute {attribute_id}) "
+                "in dgmTypeAttributes"
+            )
+        try:
+            value = float(row["valueFloat"])
+        except (TypeError, ValueError):
+            fail(
+                f"unparseable resistance modifier operand "
+                f"{row['valueFloat']!r} for (type {type_id}, "
+                f"attribute {attribute_id})"
+            )
+        if not math.isfinite(value):
+            fail(
+                f"non-finite resistance modifier operand "
+                f"{value!r} for (type {type_id}, attribute "
+                f"{attribute_id})"
+            )
+        seen_operand_keys.add(key)
+        operands_by_type.setdefault(type_id, {})[attribute_id] = value
+    resist_modifiers_by_type = {}
+    for type_id, type_category in category_by_type.items():
+        if type_category != 7:
+            continue
+        triple_list = []
+        for effect_id in effects_by_type.get(type_id, set()):
+            for modifier in effect_modifiers.get(effect_id, []):
+                if (
+                    modifier.get("func") == "ItemModifier"
+                    and modifier.get("domain") == "shipID"
+                    and modifier.get("modifiedAttributeID")
+                    in RESIST_ATTR_IDS
+                ):
+                    triple_list.append(
+                        (
+                            modifier["modifiedAttributeID"],
+                            modifier["modifyingAttributeID"],
+                            modifier["operation"],
+                        )
+                    )
+        # A triple carried by two effects of one type would
+        # double-apply in Flutter's per-effect routing, so it
+        # must stop generation for review, never dedupe away.
+        for triple, count in Counter(triple_list).items():
+            if count > 1:
+                fail(
+                    f"duplicated resistance modifier triple "
+                    f"{triple} on type {type_id}"
+                )
+        triples = set(triple_list)
+        if not triples:
+            continue
+        operands = operands_by_type.get(type_id, {})
+        applicable = []
+        has_unsupported = False
+        has_zero = False
+        has_absent = False
+        seen_modified = set()
+        seen_triples = set()
+        for modified_id, modifying_id, operator in sorted(triples):
+            triple = (modified_id, modifying_id, operator)
+            if triple in seen_triples:
+                fail(
+                    f"duplicated resistance modifier triple "
+                    f"{triple} on type {type_id}"
+                )
+            seen_triples.add(triple)
+            if modifying_id not in operands:
+                has_absent = True
+                continue
+            operand = operands[modifying_id]
+            if operand == 0.0:
+                has_zero = True
+                continue
+            if operator not in RESIST_MODIFIER_OPERATORS:
+                has_unsupported = True
+                continue
+            if modified_id in seen_modified:
+                fail(
+                    f"two applicable resistance modifier entries "
+                    f"on modified attribute {modified_id} for "
+                    f"type {type_id}"
+                )
+            seen_modified.add(modified_id)
+            applicable.append([modified_id, operator, operand])
+        applicable.sort(
+            key=lambda entry: RESIST_MODIFIER_ORDER.index(entry[0])
+        )
+        unapplied = has_unsupported or (
+            not applicable and not has_zero and has_absent
+        )
+        if applicable or unapplied:
+            resist_modifiers_by_type[type_id] = (
+                applicable,
+                unapplied,
+            )
+
     # Base resource attributes per type (design section 5): only the
     # four locked attributes, each parsed from valueFloat. An
     # unparseable, duplicated, non-finite, or negative wanted row
@@ -1915,6 +2179,7 @@ def main():
     repair_key_counts = Counter()
     need_filter_key_counts = Counter()
     charge_group_key_counts = Counter()
+    resist_modifier_counts = Counter()
     for row in inv_types:
         if row["published"] != "1":
             continue
@@ -2454,6 +2719,24 @@ def main():
                 )
             entry["chargeGroupId"] = charge_group_id
             charge_group_key_counts["chargeGroupId"] += 1
+        # Additive, sparse fitted-module resistance modifier
+        # emission (design section 3): category 7 rows gain
+        # the two keys after the last existing per-type key
+        # block, in this locked order. A carrier with at
+        # least one applicable entry or an unapplied mark
+        # emits the array (possibly empty); an all-zero
+        # carrier emits neither key. Every other row is
+        # byte-identical.
+        if category_id == 7 and type_id in resist_modifiers_by_type:
+            mod_entries, mod_unapplied = resist_modifiers_by_type[type_id]
+            entry["resistanceModifiers"] = mod_entries
+            resist_modifier_counts["resistanceModifiers"] += 1
+            if mod_entries:
+                resist_modifier_counts["nonEmptyRows"] += 1
+            resist_modifier_counts["totalEntries"] += len(mod_entries)
+            if mod_unapplied:
+                entry["resistanceModifiersUnapplied"] = True
+                resist_modifier_counts["unappliedRows"] += 1
         types.append(entry)
 
     types.sort(key=lambda entry: entry["typeId"])
@@ -2574,6 +2857,70 @@ def main():
                 f"ship resistance oracle type {type_id} {key}="
                 f"{entry.get(key)!r}, expected {expected!r}"
             )
+
+    # Fitted-module resistance modifier oracles (design
+    # section 3). A None entries means neither
+    # resistanceModifiers nor resistanceModifiersUnapplied
+    # may be present at all.
+    for type_id, expected, expected_unapplied in RESIST_MODIFIER_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(
+                f"resistance modifier oracle type {type_id} "
+                "missing from extract"
+            )
+        if expected is None:
+            if (
+                "resistanceModifiers" in entry
+                or "resistanceModifiersUnapplied" in entry
+            ):
+                fail(
+                    f"resistance modifier oracle type {type_id} "
+                    "carries resistance modifier keys, expected "
+                    "neither"
+                )
+        else:
+            if entry.get("resistanceModifiers") != expected:
+                fail(
+                    f"resistance modifier oracle type {type_id} "
+                    f"resistanceModifiers="
+                    f"{entry.get('resistanceModifiers')!r}, "
+                    f"expected {expected!r}"
+                )
+            if (
+                entry.get("resistanceModifiersUnapplied", False)
+                != expected_unapplied
+            ):
+                fail(
+                    f"resistance modifier oracle type {type_id} "
+                    "unapplied marker "
+                    f"{entry.get('resistanceModifiersUnapplied')!r}, "
+                    f"expected {expected_unapplied!r}"
+                )
+    if resist_modifier_counts["resistanceModifiers"] != RESIST_MODIFIER_ROWS:
+        fail(
+            f"resistance modifier rows "
+            f"{resist_modifier_counts['resistanceModifiers']}, "
+            f"expected {RESIST_MODIFIER_ROWS}"
+        )
+    if resist_modifier_counts["nonEmptyRows"] != RESIST_MODIFIER_NONEMPTY_ROWS:
+        fail(
+            f"resistance modifier non-empty rows "
+            f"{resist_modifier_counts['nonEmptyRows']}, expected "
+            f"{RESIST_MODIFIER_NONEMPTY_ROWS}"
+        )
+    if resist_modifier_counts["unappliedRows"] != RESIST_MODIFIER_MARKED_ROWS:
+        fail(
+            f"resistance modifier marked rows "
+            f"{resist_modifier_counts['unappliedRows']}, expected "
+            f"{RESIST_MODIFIER_MARKED_ROWS}"
+        )
+    if resist_modifier_counts["totalEntries"] != RESIST_MODIFIER_ENTRIES:
+        fail(
+            f"resistance modifier total entries "
+            f"{resist_modifier_counts['totalEntries']}, expected "
+            f"{RESIST_MODIFIER_ENTRIES}"
+        )
 
     # Bay oracles (design section 3.3). A None expected value
     # means the key must be absent from that row.
@@ -2717,6 +3064,74 @@ def main():
             fail(
                 f"ship type {entry['typeId']} missing ship resistances"
             )
+        # Fitted-module resistance modifier invariants (design
+        # section 3): every present resistanceModifiers value
+        # is on a category 7 row; entries are in
+        # RESIST_MODIFIER_ORDER with no duplicate modified id,
+        # operators in {0, 6}, operands finite and != 0.0;
+        # resistanceModifiersUnapplied appears only beside
+        # resistanceModifiers and only as true.
+        if "resistanceModifiers" in entry:
+            if entry["categoryId"] != 7:
+                fail(
+                    f"non-module type {entry['typeId']} carries "
+                    "resistanceModifiers"
+                )
+            modified_ids = []
+            for triple in entry["resistanceModifiers"]:
+                if (
+                    not isinstance(triple, list)
+                    or len(triple) != 3
+                    or not all(
+                        isinstance(part, (int, float))
+                        and not isinstance(part, bool)
+                        for part in triple
+                    )
+                ):
+                    fail(
+                        f"type {entry['typeId']} malformed "
+                        f"resistance modifier {triple!r}"
+                    )
+                modified_id, operator, operand = triple
+                if modified_id not in RESIST_MODIFIER_ORDER:
+                    fail(
+                        f"type {entry['typeId']} modified id "
+                        f"{modified_id} not a ship resonance"
+                    )
+                if operator not in RESIST_MODIFIER_OPERATORS:
+                    fail(
+                        f"type {entry['typeId']} operator "
+                        f"{operator} not in (0, 6)"
+                    )
+                if (
+                    not math.isfinite(float(operand))
+                    or float(operand) == 0.0
+                ):
+                    fail(
+                        f"type {entry['typeId']} operand "
+                        f"{operand!r} not finite or zero"
+                    )
+                modified_ids.append(modified_id)
+            order = [
+                RESIST_MODIFIER_ORDER.index(modified_id)
+                for modified_id in modified_ids
+            ]
+            if order != sorted(order) or len(set(order)) != len(order):
+                fail(
+                    f"type {entry['typeId']} resistance modifiers "
+                    "not in locked order without duplicates"
+                )
+        if "resistanceModifiersUnapplied" in entry:
+            if "resistanceModifiers" not in entry:
+                fail(
+                    f"type {entry['typeId']} unapplied marker "
+                    "without resistanceModifiers"
+                )
+            if entry["resistanceModifiersUnapplied"] is not True:
+                fail(
+                    f"type {entry['typeId']} unapplied marker "
+                    "not true"
+                )
         # Bay invariants (design section 3.4): every present bay
         # value is finite and >= 0.0; `volume` is present on every
         # row; `cargoCapacity` is present on every category 6 row
@@ -3506,6 +3921,12 @@ def main():
         f"thermalDamageResonance={resonance_key_counts['thermalDamageResonance']} "
         f"kineticDamageResonance={resonance_key_counts['kineticDamageResonance']} "
         f"explosiveDamageResonance={resonance_key_counts['explosiveDamageResonance']}"
+    )
+    print(
+        f"resistance_modifier_keys resistanceModifiers={resist_modifier_counts['resistanceModifiers']} "
+        f"nonEmptyRows={resist_modifier_counts['nonEmptyRows']} "
+        f"unappliedRows={resist_modifier_counts['unappliedRows']} "
+        f"totalEntries={resist_modifier_counts['totalEntries']}"
     )
     print(
         f"bay_keys volume={bay_key_counts['volume']} "

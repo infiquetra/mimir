@@ -24,6 +24,17 @@
 
 ---
 
+## 2026-11-19
+
+### Effective hit points stay base until fitted hit-point modifiers ship (feat/rust-resistance-bonuses)
+
+**Author.** Muse Code (module resistance bonuses workflow, integrator)
+**Decision.** The resistance-bonuses slice ships a second resistances block ("Ship resistances (with fitted module bonuses)", `src/ui/fittings.rs:2403`, computed by `ship_resistances_with_module_bonuses` in `src/fitting/ship_resistances.rs:271`) immediately after the unchanged base block, and the base effective-hit-points block below it does not change in any byte: same base resistances, same bare-hull hit points, same heading and disclosure. The bonused block's disclosure states verbatim that "the effective hit points below still use only the base values", so the two number sets are never cross-read. No figure in this slice is computed from bonused resistances.
+**Rejected alternatives.** Recomputing EHP from the bonused resistances (the retired Flutter engine does exactly this, `dogma_engine.dart:881-904` at `ed698d3`, and its E0b oracle is recorded in design section 8 for the future slice): EHP divides hit points by weighted resonances, and this slice bonuses only the denominator — the numerator would remain bare-hull HP, producing a partial total that reads as a fitted tank no matter how it is labelled. Folding the bonused resistances into the existing base block or EHP block: the slice's value ranking puts "never silently replace a base figure" first, so the adjusted readout lives under its own heading with its own disclosure, following the skill-applied resources precedent (#577/#607). Suppressing the bonused block when its numbers equal the base numbers: rejected for the same reason — a computed-and-checked state is a fact the view can state, and dropping the block would leave the base disclosure's "fitted modules are not applied" as the last word on a fit whose modules were in fact checked.
+**Rationale.** The active-module assumption (every fitted module counted as active, because fitting rows carry no module state) is stated beside twelve percentages a reader can sanity-check against the base block above; folded into one EHP number it becomes unrecoverable. One honest block at a time is the house shape (#578: each attribute block is its own heading plus disclosure, available independently). Parity of the EHP *formula* with Flutter is not in dispute — only the slice boundary.
+**Revisit when.** A slice grounds and ships fitted hit-point modifiers (shield extenders, armor plates, HP rigs, subsystem HP) through the same pipeline: only then can an EHP figure divide bonused hit points by bonused resistances, and it gets its own design, its own block, and its own wording — nothing here pre-commits any of that.
+**Refs.** `docs/resistance-bonuses-design.md` sections 1, 6, 7, 10; `src/fitting/ship_resistances.rs:271`; `src/ui/fittings.rs:2403`; Flutter bonused-EHP literals (hull 870.65, armor 784.31, shield 709.36 on Rifter + Damage Control II) quoted at design section 8 as provenance only; LEARNINGS 2026-11-19 resistance-bonuses entries. Commits `a09304a` (design), `12a910b` + `ef8f4f2` (Builder A), `17379b1` (Builder B).
+
 ## 2026-11-17
 
 ### Skill need reductions evaluate a locked twelve-entry table, not a general modifier pipeline (feat/rust-fitting-need-reductions)

@@ -42,7 +42,9 @@ pub use ship_ehp::{ship_base_ehp, ShipBaseEhp, ShipBaseEhpOutcome};
 pub use ship_nav_targeting::{ship_nav_targeting, ShipNavTargeting, ShipNavTargetingOutcome};
 pub use ship_peak_recharge::{ship_base_peak_recharge, ShipBasePeakRecharge};
 pub use ship_resistances::{
-    ship_resistances, ResistLayer, ShipResistances, ShipResistancesOutcome,
+    resistance_stacking_penalty, ship_resistances, ship_resistances_with_module_bonuses,
+    BonusedShipResistances, BonusedShipResistancesOutcome, ResistLayer, ShipResistances,
+    ShipResistancesOutcome,
 };
 pub use ship_stats::{ship_base_stats, ShipBaseStats, ShipBaseStatsOutcome};
 pub use slot_layout::{slot_layout, SlotBudget, SlotLayout, SlotLayoutOutcome};

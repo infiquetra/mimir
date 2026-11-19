@@ -95,6 +95,19 @@ pub struct FittingType {
     pub hull_kinetic_resonance: Option<f64>,
     #[serde(rename = "explosiveDamageResonance", default)]
     pub hull_explosive_resonance: Option<f64>,
+    // Fitted-module resistance modifiers
+    // (docs/resistance-bonuses-design.md section 3): entries
+    // are generation-time-proven ItemModifier/shipID resonance
+    // bonuses with the operand baked in. `Some(empty)` with
+    // the unapplied flag is a carrier whose bonus the
+    // bundled data cannot ground and must be counted, never
+    // read as "no bonus"; `None` is a non-carrier or an
+    // all-zero carrier. `default` so old assets and
+    // from_json fixtures without the keys load.
+    #[serde(rename = "resistanceModifiers", default)]
+    pub resistance_modifiers: Option<Vec<ResistanceModifier>>,
+    #[serde(rename = "resistanceModifiersUnapplied", default)]
+    pub resistance_modifiers_unapplied: bool,
     // Bay usage (docs/bay-capacities-design.md section 3.1):
     // `volume` is the invTypes `volume` column on every row,
     // `cargoCapacity` is the invTypes `capacity` column on
@@ -338,6 +351,38 @@ pub struct FittingType {
     pub charge_group_ids: Option<Vec<i64>>,
     #[serde(rename = "chargeGroupId", default)]
     pub charge_group_id: Option<i64>,
+}
+
+/// One fitted-module resistance modifier entry
+/// (`docs/resistance-bonuses-design.md` section 3):
+/// `[modifiedAttributeId, operator, operand]`, with the
+/// operand baked in at generation time (deserialized from
+/// the 3-element array; a named struct cannot read a JSON
+/// array, so the manual impl below maps the tuple). Operand
+/// is the item type's own value for the modifier's
+/// modifying attribute. Operator 0 is postMul and 6 is
+/// postPercent (Flutter `dogma_engine` at `ed698d3`); the
+/// pure layer guards every field.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ResistanceModifier {
+    pub modified_attribute_id: i64,
+    pub operator: i64,
+    pub operand: f64,
+}
+
+impl<'de> Deserialize<'de> for ResistanceModifier {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let (modified_attribute_id, operator, operand) =
+            <(i64, i64, f64)>::deserialize(deserializer)?;
+        Ok(Self {
+            modified_attribute_id,
+            operator,
+            operand,
+        })
+    }
 }
 
 /// Outcome of a reverse name lookup. `Found` carries the unique
@@ -1300,6 +1345,57 @@ mod tests {
                     row.name
                 );
             }
+            // Fitted-module resistance modifiers
+            // (docs/resistance-bonuses-design.md section 3):
+            // `Some` only on category 7 rows; entries in the
+            // locked order with no duplicate modified id,
+            // operator 0 or 6, operand finite and != 0.0; the
+            // unapplied marker appears only beside `Some`.
+            const ORDER: [i64; 12] = [271, 274, 273, 272, 267, 270, 269, 268, 113, 110, 109, 111];
+            if let Some(modifiers) = &row.resistance_modifiers {
+                assert_eq!(
+                    row.category_id, 7,
+                    "resistanceModifiers on non-module row: {:?}",
+                    row.name
+                );
+                let mut last_rank: Option<usize> = None;
+                for modifier in modifiers {
+                    let rank = ORDER
+                        .iter()
+                        .position(|id| *id == modifier.modified_attribute_id)
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "non-resonance modified id {} on {:?}",
+                                modifier.modified_attribute_id, row.name
+                            )
+                        });
+                    assert!(
+                        last_rank.is_none_or(|last| rank > last),
+                        "resistance modifiers out of locked order or duplicated on {:?}",
+                        row.name
+                    );
+                    last_rank = Some(rank);
+                    assert!(
+                        matches!(modifier.operator, 0 | 6),
+                        "resistance modifier operator {} on {:?}",
+                        modifier.operator,
+                        row.name
+                    );
+                    assert!(
+                        modifier.operand.is_finite() && modifier.operand != 0.0,
+                        "resistance modifier operand {} on {:?}",
+                        modifier.operand,
+                        row.name
+                    );
+                }
+            }
+            if row.resistance_modifiers_unapplied {
+                assert!(
+                    row.resistance_modifiers.is_some(),
+                    "resistanceModifiersUnapplied without resistanceModifiers: {:?}",
+                    row.name
+                );
+            }
         }
         // Spot pins mirroring the generator oracles (design section
         // 5), read from dgmTypeAttributes.csv.bz2 during design.
@@ -2120,6 +2216,136 @@ mod tests {
                 }
             }
         }
+        // Fitted-module resistance modifier counts and spot
+        // pins (docs/resistance-bonuses-design.md section 3,
+        // the generator's RESIST_MODIFIER_ORACLES twins):
+        // 791 keyed rows (777 non-empty), 14 marked unapplied,
+        // 1,332 entries.
+        let resistance_rows_count = types
+            .types
+            .iter()
+            .filter(|row| row.resistance_modifiers.is_some())
+            .count();
+        assert_eq!(resistance_rows_count, 791);
+        let resistance_nonempty_count = types
+            .types
+            .iter()
+            .filter(|row| {
+                row.resistance_modifiers
+                    .as_ref()
+                    .is_some_and(|modifiers| !modifiers.is_empty())
+            })
+            .count();
+        assert_eq!(resistance_nonempty_count, 777);
+        let resistance_marked_count = types
+            .types
+            .iter()
+            .filter(|row| row.resistance_modifiers_unapplied)
+            .count();
+        assert_eq!(resistance_marked_count, 14);
+        let resistance_entries_count: usize = types
+            .types
+            .iter()
+            .filter_map(|row| row.resistance_modifiers.as_ref().map(Vec::len))
+            .sum();
+        assert_eq!(resistance_entries_count, 1332);
+        let damage_control = types.lookup_by_id(2048).expect("DC II row");
+        let dc_modifiers = damage_control
+            .resistance_modifiers
+            .as_ref()
+            .expect("DC II resistanceModifiers");
+        assert_eq!(dc_modifiers.len(), 12);
+        assert_eq!(
+            dc_modifiers[0],
+            ResistanceModifier {
+                modified_attribute_id: 271,
+                operator: 0,
+                operand: 0.875,
+            }
+        );
+        assert_eq!(
+            dc_modifiers[4],
+            ResistanceModifier {
+                modified_attribute_id: 267,
+                operator: 0,
+                operand: 0.85,
+            }
+        );
+        assert_eq!(
+            dc_modifiers[11],
+            ResistanceModifier {
+                modified_attribute_id: 111,
+                operator: 0,
+                operand: 0.6,
+            }
+        );
+        assert!(!damage_control.resistance_modifiers_unapplied);
+        let hardener = types
+            .lookup_by_id(2281)
+            .expect("Multispectrum Shield Hardener II row");
+        let hardener_modifiers = hardener
+            .resistance_modifiers
+            .as_ref()
+            .expect("hardener resistanceModifiers");
+        assert_eq!(hardener_modifiers.len(), 4);
+        for modifier in hardener_modifiers {
+            assert_eq!(modifier.operator, 6);
+            assert_eq!(modifier.operand, -32.5);
+        }
+        let coating = types.lookup_by_id(1197).expect("EM Coating I row");
+        assert_eq!(
+            coating
+                .resistance_modifiers
+                .as_ref()
+                .expect("EM Coating I resistanceModifiers"),
+            &[ResistanceModifier {
+                modified_attribute_id: 267,
+                operator: 6,
+                operand: -24.32,
+            }]
+        );
+        let rig = types
+            .lookup_by_id(25736)
+            .expect("Large EM Armor Reinforcer I row");
+        assert_eq!(
+            rig.resistance_modifiers
+                .as_ref()
+                .expect("reinforcer resistanceModifiers"),
+            &[ResistanceModifier {
+                modified_attribute_id: 267,
+                operator: 6,
+                operand: -30.0,
+            }]
+        );
+        assert!(!rig.resistance_modifiers_unapplied);
+        let gistum = types
+            .lookup_by_id(2050)
+            .expect("Gistum C-Type Multispectrum Shield Hardener row");
+        assert_eq!(
+            gistum
+                .resistance_modifiers
+                .as_ref()
+                .expect("gistum resistanceModifiers")
+                .len(),
+            4
+        );
+        for modifier in gistum
+            .resistance_modifiers
+            .as_ref()
+            .expect("gistum resistanceModifiers")
+        {
+            assert_eq!(modifier.operand, -37.5);
+        }
+        for type_id in [34272, 52227, 52230] {
+            let row = types.lookup_by_id(type_id).expect("unapplied carrier row");
+            assert_eq!(row.resistance_modifiers.as_ref().expect("empty array"), &[]);
+            assert!(row.resistance_modifiers_unapplied);
+        }
+        let layered = types.lookup_by_id(1272).expect("Basic Layered Coating row");
+        assert_eq!(layered.resistance_modifiers, None);
+        assert!(!layered.resistance_modifiers_unapplied);
+        let rifter = types.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(rifter.resistance_modifiers, None);
     }
 
     #[test]

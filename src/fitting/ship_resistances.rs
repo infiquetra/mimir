@@ -1,4 +1,4 @@
-//! Pure ship base resistances calculation over the bundled catalogue.
+//! Pure ship resistances calculation over the bundled catalogue.
 //!
 //! [`ship_resistances`] reads the hull's base damage resistance
 //! percentages for shield, armor, and hull against EM, thermal,
@@ -11,6 +11,15 @@
 //! bonuses contribute nothing, so the values describe the bare
 //! hull and can differ from EVE. See
 //! `docs/ship-resistances-design.md`.
+//!
+//! [`ship_resistances_with_module_bonuses`] applies the
+//! grounded fitted-item resistance modifiers of
+//! `docs/resistance-bonuses-design.md` section 2 on top of the
+//! same base resonances: operator-0 (postMul) operands
+//! multiply unpenalized, operator-6 (postPercent) operands
+//! chain with the Flutter stacking penalty, mul first. Ship
+//! bonuses, subsystems, skills, implants, and everything
+//! else the design defers contribute nothing.
 //!
 //! The module is pure computation over the bundled catalogue — no
 //! egui, no state, no network, no database. It depends on
@@ -129,6 +138,258 @@ pub fn ship_resistances(
         return ShipResistancesOutcome::Unavailable;
     }
     ShipResistancesOutcome::Available(resistances)
+}
+
+/// Bonused resistances plus the fitted-module counts the
+/// caller must disclose beside them.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BonusedShipResistances {
+    pub resistances: ShipResistances,
+    /// Counted fitted rows with no catalogue row at all, so
+    /// no resistance bonus can be proven or disproven for
+    /// them. Counted in quantity units, never silently zero.
+    pub excluded_modules: usize,
+    /// Counted fitted rows the catalogue marks as resistance
+    /// carriers whose bonus cannot be applied from the
+    /// bundled data (unsupported operator with a present
+    /// operand, or every operand absent), in quantity units.
+    /// Their applicable entries, if any, are still applied.
+    pub unapplied_modules: usize,
+}
+
+/// Bonused resistances outcome for one fitting.
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum BonusedShipResistancesOutcome {
+    Available(BonusedShipResistances),
+    /// The catalogue has no usable resistance data for this
+    /// fitting's ship, so no honest numbers exist.
+    Unavailable,
+}
+
+/// Stacking penalty for the n-th (1-indexed) percent modifier
+/// on one resonance: 1.0 for n <= 1, else
+/// exp(-(((n - 1) / 2.67)²)). Provenance: Flutter
+/// `getStackingPenalty` at `ed698d3`.
+pub fn resistance_stacking_penalty(n: usize) -> f64 {
+    if n <= 1 {
+        1.0
+    } else {
+        let scaled = (n - 1) as f64 / 2.67;
+        (-(scaled * scaled)).exp()
+    }
+}
+
+/// Catalogue resonance attribute ids in the locked display
+/// order (shield, armor, hull; EM, thermal, kinetic,
+/// explosive within a layer). Position is the accumulator
+/// index used below.
+const RESONANCE_ORDER: [i64; 12] = [271, 274, 273, 272, 267, 270, 269, 268, 113, 110, 109, 111];
+
+/// The twelve base resonances of a ship row in
+/// `RESONANCE_ORDER` position.
+fn base_resonances(ship: &crate::names::fitting_types::FittingType) -> [Option<f64>; 12] {
+    [
+        ship.shield_em_resonance,
+        ship.shield_thermal_resonance,
+        ship.shield_kinetic_resonance,
+        ship.shield_explosive_resonance,
+        ship.armor_em_resonance,
+        ship.armor_thermal_resonance,
+        ship.armor_kinetic_resonance,
+        ship.armor_explosive_resonance,
+        ship.hull_em_resonance,
+        ship.hull_thermal_resonance,
+        ship.hull_kinetic_resonance,
+        ship.hull_explosive_resonance,
+    ]
+}
+
+/// Fitted sections whose items commit to the ship's bonuses:
+/// low/medium/high slots, rigs, subsystems. Charges, drones,
+/// fighters, cargo, and every other flag never count (design
+/// section 4).
+fn counted_flag(flag: &str) -> bool {
+    flag.starts_with("LoSlot")
+        || flag.starts_with("MedSlot")
+        || flag.starts_with("HiSlot")
+        || flag.starts_with("RigSlot")
+        || flag.starts_with("SubSystemSlot")
+}
+
+/// Product of one run of `count` multiplications by
+/// `operand`, stopping once the running product is decided
+/// (`0.0`, non-finite, or stalled). An operand of exactly 1.0
+/// is the identity and contributes nothing. The stop is the
+/// locked bounded-hostile-quantity arithmetic, not an
+/// approximation: later factors cannot change the result.
+fn mul_product(operand: f64, count: u64) -> f64 {
+    if operand == 1.0 {
+        return 1.0;
+    }
+    let mut product = 1.0;
+    for _ in 0..count {
+        let next = product * operand;
+        if next == product {
+            // Stall guard (covers 0.0 once reached): the next
+            // multiplication cannot move the product.
+            return product;
+        }
+        product = next;
+        if product == 0.0 || !product.is_finite() {
+            return product;
+        }
+    }
+    product
+}
+
+/// Percent chain over sorted (value, count) runs: stable
+/// sort by absolute value descending, penalty 1-indexed per
+/// instance, stopping a run once the penalty underflows to
+/// exactly `0.0` (every later factor is then exactly `1.0`).
+fn percent_chain(runs: &mut [(f64, u64)]) -> f64 {
+    runs.sort_by(|a, b| b.0.abs().total_cmp(&a.0.abs()));
+    let mut factor = 1.0;
+    let mut n: usize = 0;
+    for (value, count) in runs.iter() {
+        for _ in 0..*count {
+            n += 1;
+            let penalty = resistance_stacking_penalty(n);
+            if penalty == 0.0 {
+                return factor;
+            }
+            factor *= 1.0 + (value / 100.0) * penalty;
+        }
+    }
+    factor
+}
+
+/// Bonused resistances for one fitting
+/// (`docs/resistance-bonuses-design.md` section 4). Never
+/// panics; a catalogue row that violates the section 3
+/// invariants at load is guarded here, never trusted.
+pub fn ship_resistances_with_module_bonuses(
+    fitting: &CharacterFitting,
+    catalogue: &FittingTypes,
+) -> BonusedShipResistancesOutcome {
+    let ship_row = if fitting.ship_type_id > 0 {
+        catalogue.lookup_by_id(fitting.ship_type_id)
+    } else {
+        None
+    };
+    let Some(ship) = ship_row else {
+        return BonusedShipResistancesOutcome::Unavailable;
+    };
+    if ship.category_id != 6 {
+        return BonusedShipResistancesOutcome::Unavailable;
+    }
+    let mut excluded_modules: usize = 0;
+    let mut unapplied_modules: usize = 0;
+    let mut mul_runs: [Vec<(f64, u64)>; 12] = Default::default();
+    let mut percent_runs: [Vec<(f64, u64)>; 12] = Default::default();
+    for item in &fitting.items {
+        if item.type_id <= 0 {
+            continue;
+        }
+        if item.quantity.max(0) <= 0 {
+            continue;
+        }
+        if !counted_flag(&item.flag) {
+            continue;
+        }
+        let units = usize::try_from(item.quantity).unwrap_or(0);
+        let units_u64 = units as u64;
+        let Some(row) = catalogue.lookup_by_id(item.type_id) else {
+            excluded_modules = excluded_modules.saturating_add(units);
+            continue;
+        };
+        let mut counted_unapplied = false;
+        if row.resistance_modifiers_unapplied {
+            unapplied_modules = unapplied_modules.saturating_add(units);
+            counted_unapplied = true;
+        }
+        let Some(modifiers) = &row.resistance_modifiers else {
+            continue;
+        };
+        for modifier in modifiers {
+            let Some(index) = RESONANCE_ORDER
+                .iter()
+                .position(|id| *id == modifier.modified_attribute_id)
+            else {
+                if !counted_unapplied {
+                    unapplied_modules = unapplied_modules.saturating_add(units);
+                    counted_unapplied = true;
+                }
+                continue;
+            };
+            if !modifier.operand.is_finite()
+                || modifier.operand == 0.0
+                || !matches!(modifier.operator, 0 | 6)
+            {
+                if !counted_unapplied {
+                    unapplied_modules = unapplied_modules.saturating_add(units);
+                    counted_unapplied = true;
+                }
+                continue;
+            }
+            let runs = if modifier.operator == 0 {
+                &mut mul_runs[index]
+            } else {
+                &mut percent_runs[index]
+            };
+            if let Some((_, count)) = runs
+                .iter_mut()
+                .find(|(existing, _)| existing == &modifier.operand)
+            {
+                *count = count.saturating_add(units_u64);
+            } else {
+                runs.push((modifier.operand, units_u64));
+            }
+        }
+    }
+    let bases = base_resonances(ship);
+    let mut percents: [Option<f64>; 12] = [None; 12];
+    for index in 0..12 {
+        let Some(base) = bases[index].filter(|v| v.is_finite() && *v >= 0.0) else {
+            continue;
+        };
+        let mut mul_total = 1.0;
+        for (operand, count) in &mul_runs[index] {
+            mul_total *= mul_product(*operand, *count);
+        }
+        let mut percent_runs_clone = percent_runs[index].clone();
+        let chain = percent_chain(&mut percent_runs_clone);
+        let bonused_resonance = base * mul_total * chain;
+        percents[index] = resonance_to_percent(Some(bonused_resonance));
+    }
+    if percents.iter().all(Option::is_none) {
+        return BonusedShipResistancesOutcome::Unavailable;
+    }
+    let resistances = ShipResistances {
+        shield: ResistLayer {
+            em: percents[0],
+            thermal: percents[1],
+            kinetic: percents[2],
+            explosive: percents[3],
+        },
+        armor: ResistLayer {
+            em: percents[4],
+            thermal: percents[5],
+            kinetic: percents[6],
+            explosive: percents[7],
+        },
+        hull: ResistLayer {
+            em: percents[8],
+            thermal: percents[9],
+            kinetic: percents[10],
+            explosive: percents[11],
+        },
+    };
+    BonusedShipResistancesOutcome::Available(BonusedShipResistances {
+        resistances,
+        excluded_modules,
+        unapplied_modules,
+    })
 }
 
 #[cfg(test)]
@@ -521,5 +782,415 @@ mod tests {
             fitting_resources(&fit, &outputs_only),
             crate::fitting::resources::FittingResources::Available { .. }
         ));
+    }
+
+    fn bonused_available(
+        fit: &CharacterFitting,
+        catalogue: &FittingTypes,
+    ) -> BonusedShipResistances {
+        match ship_resistances_with_module_bonuses(fit, catalogue) {
+            BonusedShipResistancesOutcome::Available(bonused) => bonused,
+            BonusedShipResistancesOutcome::Unavailable => {
+                panic!("expected Available, got Unavailable")
+            }
+        }
+    }
+
+    // Penalty oracle (design section 8): n = 1..6, plus
+    // n = 2 exact and the n = 0 guard pin.
+    #[test]
+    fn stacking_penalty_oracle() {
+        let expected = [1.0, 0.869, 0.571, 0.283, 0.106, 0.030];
+        for (index, expected_value) in expected.iter().enumerate() {
+            let actual = resistance_stacking_penalty(index + 1);
+            assert!(
+                (actual - expected_value).abs() < 1e-3,
+                "n = {}: expected {expected_value}, got {actual}",
+                index + 1
+            );
+        }
+        assert!(
+            (resistance_stacking_penalty(2) - (-((1.0f64 / 2.67) * (1.0 / 2.67))).exp()).abs()
+                < 1e-9
+        );
+        assert_eq!(resistance_stacking_penalty(0), 1.0);
+        assert_eq!(resistance_stacking_penalty(1), 1.0);
+    }
+
+    // Synthetic Flutter oracles via from_json fixtures
+    // carrying resistanceModifiers triples directly
+    // (design section 8). Ship type 42: shield EM 1.0,
+    // shield thermal 0.5, armor EM 0.4, hull all 0.67.
+    fn synthetic_catalogue(modules_json: &str) -> FittingTypes {
+        let json = format!(
+            r#"{{"types":[
+                {{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],
+                 "shieldEmDamageResonance":1.0,"shieldThermalDamageResonance":0.5,
+                 "shieldKineticDamageResonance":0.6,"shieldExplosiveDamageResonance":0.5,
+                 "armorEmDamageResonance":0.4,"armorThermalDamageResonance":0.65,
+                 "armorKineticDamageResonance":0.75,"armorExplosiveDamageResonance":0.9,
+                 "emDamageResonance":0.67,"thermalDamageResonance":0.67,
+                 "kineticDamageResonance":0.67,"explosiveDamageResonance":0.67}},
+                {modules_json}]}}"#
+        );
+        FittingTypes::from_json(&json).expect("fixture catalogue parses")
+    }
+
+    #[test]
+    fn synthetic_single_hardener() {
+        let catalogue = synthetic_catalogue(
+            r#"{"typeId":101,"typeName":"Hardener","categoryId":7,"slotEffects":[13],"resistanceModifiers":[[271,6,-55.0]]}"#,
+        );
+        let bonused = bonused_available(&fitting(42, vec![item("MedSlot0", 1, 101)]), &catalogue);
+        assert_percent(
+            bonused.resistances.shield.em,
+            Some(55.0),
+            "single hardener shield EM",
+        );
+        assert_percent(
+            bonused.resistances.shield.thermal,
+            Some(50.0),
+            "single hardener shield Thermal",
+        );
+        assert_eq!(bonused.excluded_modules, 0);
+        assert_eq!(bonused.unapplied_modules, 0);
+    }
+
+    #[test]
+    fn synthetic_single_damage_control() {
+        let catalogue = synthetic_catalogue(
+            r#"{"typeId":102,"typeName":"Damage Control","categoryId":7,"slotEffects":[11],"resistanceModifiers":[[267,0,0.85]]}"#,
+        );
+        let bonused = bonused_available(&fitting(42, vec![item("LoSlot0", 1, 102)]), &catalogue);
+        assert_percent(
+            bonused.resistances.armor.em,
+            Some(66.0),
+            "single DC armor EM",
+        );
+    }
+
+    #[test]
+    fn synthetic_stacked_hardener_chain() {
+        let catalogue = synthetic_catalogue(
+            r#"{"typeId":101,"typeName":"Hardener A","categoryId":7,"slotEffects":[13],"resistanceModifiers":[[271,6,-55.0]]},
+                {"typeId":103,"typeName":"Hardener B","categoryId":7,"slotEffects":[13],"resistanceModifiers":[[271,6,-50.0]]}"#,
+        );
+        let bonused = bonused_available(
+            &fitting(42, vec![item("MedSlot0", 1, 101), item("MedSlot1", 1, 103)]),
+            &catalogue,
+        );
+        // (1 - 0.55) * (1 - 0.50 * exp(-(1/2.67)^2)) = 0.25444800...
+        assert_percent(
+            bonused.resistances.shield.em,
+            Some(74.555199568),
+            "stacked chain shield EM",
+        );
+    }
+
+    #[test]
+    fn synthetic_chain_sorts_by_absolute_value() {
+        // Fitted in reverse item order (-25 first, -55 second)
+        // must compute as if -55 came first.
+        let catalogue = synthetic_catalogue(
+            r#"{"typeId":104,"typeName":"Weak","categoryId":7,"slotEffects":[13],"resistanceModifiers":[[271,6,-25.0]]},
+                {"typeId":105,"typeName":"Strong","categoryId":7,"slotEffects":[13],"resistanceModifiers":[[271,6,-55.0]]}"#,
+        );
+        let bonused = bonused_available(
+            &fitting(42, vec![item("MedSlot0", 1, 104), item("MedSlot1", 1, 105)]),
+            &catalogue,
+        );
+        // (1 - 0.55) * (1 - 0.25 * exp(-(1/2.67)^2)) = 0.35222400...
+        assert_percent(
+            bonused.resistances.shield.em,
+            Some(64.777599784),
+            "sorted chain shield EM",
+        );
+        let forward = bonused_available(
+            &fitting(42, vec![item("MedSlot0", 1, 105), item("MedSlot1", 1, 104)]),
+            &catalogue,
+        );
+        assert_eq!(forward.resistances.shield.em, bonused.resistances.shield.em);
+    }
+
+    #[test]
+    fn synthetic_mul_is_unpenalized() {
+        let catalogue = synthetic_catalogue(
+            r#"{"typeId":102,"typeName":"Damage Control","categoryId":7,"slotEffects":[11],"resistanceModifiers":[[267,0,0.85]]}"#,
+        );
+        let bonused = bonused_available(
+            &fitting(42, vec![item("LoSlot0", 1, 102), item("LoSlot1", 1, 102)]),
+            &catalogue,
+        );
+        assert_percent(
+            bonused.resistances.armor.em,
+            Some(71.1),
+            "two muls armor EM",
+        );
+    }
+
+    // Real-row pins (design section 8): Rifter 587.
+    #[test]
+    fn real_rifter_damage_control() {
+        let catalogue = bundled();
+        let bonused = bonused_available(&fitting(587, vec![item("LoSlot0", 1, 2048)]), &catalogue);
+        assert_layer(
+            &bonused.resistances.shield,
+            (12.5, 30.0, 47.5, 56.25),
+            "DC shield",
+        );
+        assert_layer(
+            &bonused.resistances.armor,
+            (66.0, 44.75, 36.25, 23.5),
+            "DC armor",
+        );
+        assert_layer(
+            &bonused.resistances.hull,
+            (59.8, 59.8, 59.8, 59.8),
+            "DC hull",
+        );
+        assert_eq!(bonused.excluded_modules, 0);
+        assert_eq!(bonused.unapplied_modules, 0);
+    }
+
+    #[test]
+    fn real_rifter_hardener() {
+        let catalogue = bundled();
+        let bonused = bonused_available(&fitting(587, vec![item("MedSlot0", 1, 2281)]), &catalogue);
+        assert_layer(
+            &bonused.resistances.shield,
+            (32.5, 46.0, 59.5, 66.25),
+            "hardener shield",
+        );
+        assert_layer(
+            &bonused.resistances.armor,
+            (60.0, 35.0, 25.0, 10.0),
+            "hardener armor base",
+        );
+        assert_layer(
+            &bonused.resistances.hull,
+            (33.0, 33.0, 33.0, 33.0),
+            "hardener hull base",
+        );
+    }
+
+    #[test]
+    fn real_rifter_stacked_hardener_quantity_expansion() {
+        let catalogue = bundled();
+        let two_rows = bonused_available(
+            &fitting(
+                587,
+                vec![item("MedSlot0", 1, 11642), item("MedSlot1", 1, 11642)],
+            ),
+            &catalogue,
+        );
+        // 0.4 * 0.45 * (1 - 0.55 * exp(-(1/2.67)^2)) = 0.093957...
+        assert_percent(
+            two_rows.resistances.armor.em,
+            Some(90.60428781),
+            "two armor hardeners",
+        );
+        let one_stacked_row =
+            bonused_available(&fitting(587, vec![item("MedSlot0", 2, 11642)]), &catalogue);
+        assert_eq!(
+            one_stacked_row.resistances.armor.em,
+            two_rows.resistances.armor.em
+        );
+        assert_eq!(two_rows.excluded_modules, one_stacked_row.excluded_modules);
+        assert_eq!(
+            two_rows.unapplied_modules,
+            one_stacked_row.unapplied_modules
+        );
+        assert_percent(
+            two_rows.resistances.armor.thermal,
+            Some(35.0),
+            "armor thermal base",
+        );
+    }
+
+    #[test]
+    fn real_rig_partial_carrier() {
+        let catalogue = bundled();
+        let bonused =
+            bonused_available(&fitting(587, vec![item("RigSlot0", 1, 25736)]), &catalogue);
+        assert_percent(bonused.resistances.armor.em, Some(72.0), "rig armor EM");
+        assert_eq!(bonused.excluded_modules, 0);
+        assert_eq!(bonused.unapplied_modules, 0);
+    }
+
+    #[test]
+    fn real_counts() {
+        let catalogue = bundled();
+        let abyssal = bonused_available(&fitting(587, vec![item("LoSlot0", 1, 52227)]), &catalogue);
+        assert_eq!(abyssal.excluded_modules, 0);
+        assert_eq!(abyssal.unapplied_modules, 1);
+        let base = ship_resistances(&fitting(587, vec![]), &catalogue);
+        assert_eq!(
+            abyssal.resistances,
+            match base {
+                ShipResistancesOutcome::Available(r) => r,
+                ShipResistancesOutcome::Unavailable => panic!("base unavailable"),
+            }
+        );
+        let polarized =
+            bonused_available(&fitting(587, vec![item("HiSlot0", 1, 34272)]), &catalogue);
+        assert_eq!(polarized.unapplied_modules, 1);
+        let layered = bonused_available(&fitting(587, vec![item("LoSlot0", 1, 1272)]), &catalogue);
+        assert_eq!(layered.excluded_modules, 0);
+        assert_eq!(layered.unapplied_modules, 0);
+        let unknown =
+            bonused_available(&fitting(587, vec![item("LoSlot0", 1, 999999)]), &catalogue);
+        assert_eq!(unknown.excluded_modules, 1);
+        let unknown_cargo =
+            bonused_available(&fitting(587, vec![item("Cargo", 1, 999999)]), &catalogue);
+        assert_eq!(unknown_cargo.excluded_modules, 0);
+        assert_eq!(unknown_cargo.unapplied_modules, 0);
+        let triple = bonused_available(&fitting(587, vec![item("LoSlot0", 3, 52227)]), &catalogue);
+        assert_eq!(triple.unapplied_modules, 3);
+        let zero = bonused_available(&fitting(587, vec![item("LoSlot0", 0, 2048)]), &catalogue);
+        assert_eq!(zero.excluded_modules, 0);
+        assert_eq!(zero.unapplied_modules, 0);
+        let negative =
+            bonused_available(&fitting(587, vec![item("LoSlot0", -5, 2048)]), &catalogue);
+        assert_eq!(negative.excluded_modules, 0);
+        assert_eq!(negative.unapplied_modules, 0);
+        for type_id in [0, -1] {
+            let skipped =
+                bonused_available(&fitting(587, vec![item("LoSlot0", 1, type_id)]), &catalogue);
+            assert_eq!(skipped.excluded_modules, 0);
+            assert_eq!(skipped.unapplied_modules, 0);
+        }
+    }
+
+    #[test]
+    fn flag_gates() {
+        let catalogue = bundled();
+        for flag in [
+            "LoSlot0",
+            "MedSlot0",
+            "HiSlot0",
+            "RigSlot0",
+            "SubSystemSlot0",
+        ] {
+            let bonused = bonused_available(&fitting(587, vec![item(flag, 1, 2048)]), &catalogue);
+            assert_percent(
+                bonused.resistances.armor.em,
+                Some(66.0),
+                &format!("{flag} contributes"),
+            );
+        }
+        for flag in ["DroneBay", "Cargo", "FighterBay", "Invalid"] {
+            let bonused = bonused_available(&fitting(587, vec![item(flag, 1, 2048)]), &catalogue);
+            assert_percent(
+                bonused.resistances.armor.em,
+                Some(60.0),
+                &format!("{flag} does not contribute"),
+            );
+            assert_eq!(bonused.excluded_modules, 0);
+            assert_eq!(bonused.unapplied_modules, 0);
+        }
+        // A known non-carrier row (blueprint 2049 in a
+        // counted flag) contributes nothing and counts nowhere.
+        let blueprint =
+            bonused_available(&fitting(587, vec![item("MedSlot0", 1, 2049)]), &catalogue);
+        assert_eq!(blueprint.excluded_modules, 0);
+        assert_eq!(blueprint.unapplied_modules, 0);
+    }
+
+    #[test]
+    fn unavailable_coincides_with_base() {
+        let catalogue = bundled();
+        for ship_type_id in [999999, 2048, 0, -1] {
+            assert_eq!(
+                ship_resistances_with_module_bonuses(&fitting(ship_type_id, vec![]), &catalogue),
+                BonusedShipResistancesOutcome::Unavailable,
+                "ship {ship_type_id}"
+            );
+        }
+    }
+
+    #[test]
+    fn no_counted_items_equals_base() {
+        let catalogue = bundled();
+        let bonused = bonused_available(&fitting(587, vec![]), &catalogue);
+        let base = ship_resistances(&fitting(587, vec![]), &catalogue);
+        assert_eq!(
+            bonused.resistances,
+            match base {
+                ShipResistancesOutcome::Available(r) => r,
+                ShipResistancesOutcome::Unavailable => panic!("base unavailable"),
+            }
+        );
+        assert_eq!(bonused.excluded_modules, 0);
+        assert_eq!(bonused.unapplied_modules, 0);
+    }
+
+    #[test]
+    fn guards_rejected_default_negative_and_bounded() {
+        // Absent base resonance stays None even when modified.
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Gapped Hull","categoryId":6,"slotEffects":[],
+                 "shieldThermalDamageResonance":0.8,"shieldKineticDamageResonance":0.6,"shieldExplosiveDamageResonance":0.5,
+                 "armorEmDamageResonance":0.4,"armorThermalDamageResonance":0.65,
+                 "armorKineticDamageResonance":0.75,"armorExplosiveDamageResonance":0.9,
+                 "emDamageResonance":0.67,"thermalDamageResonance":0.67,"kineticDamageResonance":0.67,"explosiveDamageResonance":0.67},
+                {"typeId":101,"typeName":"Hardener","categoryId":7,"slotEffects":[13],"resistanceModifiers":[[271,6,-55.0]]}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let bonused = bonused_available(&fitting(42, vec![item("MedSlot0", 1, 101)]), &catalogue);
+        assert_percent(
+            bonused.resistances.shield.em,
+            None,
+            "absent base stays None",
+        );
+        assert_percent(
+            bonused.resistances.shield.thermal,
+            Some(20.0),
+            "others bonus normally",
+        );
+
+        // Bad entries mark the item unapplied once per unit
+        // while good entries still apply.
+        let catalogue = synthetic_catalogue(
+            r#"{"typeId":106,"typeName":"Mixed","categoryId":7,"slotEffects":[13],"resistanceModifiers":[[271,7,-55.0],[274,6,-50.0],[272,6,0.0],[999,6,-10.0]]}"#,
+        );
+        let bonused = bonused_available(&fitting(42, vec![item("MedSlot0", 1, 106)]), &catalogue);
+        assert_eq!(bonused.unapplied_modules, 1);
+        assert_percent(
+            bonused.resistances.shield.em,
+            Some(0.0),
+            "bad operator skipped",
+        );
+        assert_percent(
+            bonused.resistances.shield.thermal,
+            Some(75.0),
+            "good entry applies",
+        );
+
+        // Forced-negative bonused resonance is no data.
+        let catalogue = synthetic_catalogue(
+            r#"{"typeId":107,"typeName":"Over","categoryId":7,"slotEffects":[13],"resistanceModifiers":[[271,6,-150.0]]}"#,
+        );
+        let bonused = bonused_available(&fitting(42, vec![item("MedSlot0", 1, 107)]), &catalogue);
+        assert_percent(
+            bonused.resistances.shield.em,
+            None,
+            "negative bonused resonance",
+        );
+
+        // Bounded hostile quantity: i64::MAX hardeners
+        // return and match the quantity-100 result (the
+        // stacking penalty underflows to exactly 0.0 at
+        // n = 74, freezing every later factor at 1.0).
+        let catalogue = bundled();
+        let huge = bonused_available(
+            &fitting(587, vec![item("MedSlot0", i64::MAX, 2281)]),
+            &catalogue,
+        );
+        let hundred =
+            bonused_available(&fitting(587, vec![item("MedSlot0", 100, 2281)]), &catalogue);
+        assert_eq!(huge.resistances, hundred.resistances);
+        assert_eq!(huge.excluded_modules, 0);
+        assert_eq!(huge.unapplied_modules, 0);
     }
 }
