@@ -1973,17 +1973,14 @@ mod tests {
         let json4 = r#"{"types":[{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":250.0,"rechargeRate":125000.0},{"typeId":101,"typeName":"Host","categoryId":7,"slotEffects":[13],"capacitorRechargeModifiers":[[55,6,-15.0]]}]}"#;
         let catalogue = FittingTypes::from_json(json4).expect("fixture parses");
         let helper = bonused_capacitor(&fit_max, &catalogue).expect("helper Some");
-        // Percent factor at MAX underflows to subnormal; helper is
-        // tiny (or 0.0 if underflow hits zero exactly).
-        assert!(
-            helper.values[1].is_some_and(|v| (0.0..1e-300).contains(&v)),
-            "tiny recharge {:?}",
-            helper.values[1]
+        // Percent factor at MAX underflows to a subnormal
+        // stall residue, rejected as no data (design
+        // section 8 hostile pin, reviewer claim 6).
+        assert_eq!(helper.values[1], None);
+        assert_eq!(
+            fitting_cap_stability_with_module_bonuses(&fit_max, &catalogue).outcome,
+            CapStabilityOutcome::Unavailable
         );
-        // Bonused does not hang; tiny recharge underflow path is
-        // prompt (Stable with overflowed peak, or Unavailable
-        // if the ms/1000 conversion hits zero).
-        let _ = fitting_cap_stability_with_module_bonuses(&fit_max, &catalogue);
         let json5 = r#"{"types":[{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":250.0,"rechargeRate":125000.0},{"typeId":101,"typeName":"Host","categoryId":7,"slotEffects":[13],"capacitorCapacityModifiers":[[482,6,20.0]]}]}"#;
         let catalogue = FittingTypes::from_json(json5).expect("fixture parses");
         let fit_max = fitting(42, vec![item("RigSlot0", i64::MAX, 101)]);
@@ -1993,12 +1990,11 @@ mod tests {
         let catalogue = FittingTypes::from_json(json6).expect("fixture parses");
         let fit_max = fitting(42, vec![item("MedSlot0", i64::MAX, 101)]);
         let helper = bonused_capacitor(&fit_max, &catalogue).expect("helper Some");
-        assert!(
-            helper.values[1].is_some_and(|v| (0.0..1e-300).contains(&v)),
-            "tiny mul recharge {:?}",
-            helper.values[1]
+        assert_eq!(helper.values[1], None);
+        assert_eq!(
+            fitting_cap_stability_with_module_bonuses(&fit_max, &catalogue).outcome,
+            CapStabilityOutcome::Unavailable
         );
-        let _ = fitting_cap_stability_with_module_bonuses(&fit_max, &catalogue);
         let json7 = r#"{"types":[{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":250.0,"rechargeRate":125000.0},{"typeId":101,"typeName":"Host","categoryId":7,"slotEffects":[13],"capacitorCapacityModifiers":[[482,2,150.0]]}]}"#;
         let catalogue = FittingTypes::from_json(json7).expect("fixture parses");
         let fit_max = fitting(42, vec![item("MedSlot0", i64::MAX, 101)]);

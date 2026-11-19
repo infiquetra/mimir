@@ -782,7 +782,13 @@ pub(crate) fn bonused_capacitor(
             percent_total *= mul_product(1.0 + value / 100.0, *count);
         }
         let bonused = (base + add_total) * mul_total * percent_total;
-        values[index] = Some(bonused).filter(|v| v.is_finite() && *v >= 0.0);
+        // A positive subnormal is stall residue from a
+        // hostile-quantity run underflowing toward zero,
+        // not an honest capacity or duration: reject it
+        // as no data so downstream never simulates or
+        // renders it. An exact 0.0 stays a real zero.
+        values[index] =
+            Some(bonused).filter(|v| v.is_finite() && *v >= 0.0 && (*v == 0.0 || v.is_normal()));
     }
     Some(BonusedCapacitor {
         values,
