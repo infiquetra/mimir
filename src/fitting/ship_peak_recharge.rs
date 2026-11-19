@@ -7,10 +7,12 @@
 //! arithmetic on those base values only. See
 //! `docs/peak-recharge-rates-design.md`.
 //!
-//! No modifier of any kind is applied: fitted modules, rigs,
-//! subsystems, skills, implants, and ship bonuses contribute
-//! nothing, so the values describe the bare hull and can differ
-//! from EVE.
+//! No modifier of any kind is applied by `ship_base_peak_recharge`:
+//! fitted modules, rigs, subsystems, skills, implants, and
+//! ship bonuses contribute nothing, so the values describe the
+//! bare hull and can differ from EVE. `capacitor_peak_recharge`
+//! is the shared guarded capacitor formula at bonused inputs
+//! under `docs/cap-bonuses-design.md`.
 //!
 //! The module is pure computation over already-loaded base stats —
 //! no egui, no state, no network, no database. It logs nothing:
@@ -72,6 +74,18 @@ fn peak_rate(capacity: Option<f64>, recharge_secs: Option<f64>, factor: f64) -> 
     }
 }
 
+/// Capacitor peak recharge in GJ/s for one (capacity,
+/// recharge duration in seconds) pair under the shipped
+/// guards (`peak_rate` with `CAPACITOR_PEAK_FACTOR`):
+/// `None` unless capacity is finite `>= 0`, recharge is
+/// finite `> 0`, and the rate is finite.
+pub(crate) fn capacitor_peak_recharge(
+    capacity: Option<f64>,
+    recharge_secs: Option<f64>,
+) -> Option<f64> {
+    peak_rate(capacity, recharge_secs, CAPACITOR_PEAK_FACTOR)
+}
+
 /// Base peak recharge rates for one hull's base stats. The
 /// catalogue is never read and no modifier is applied; availability
 /// is per-system and independent of every other fitting block.
@@ -82,10 +96,9 @@ pub fn ship_base_peak_recharge(stats: &ShipBaseStats) -> ShipBasePeakRecharge {
             stats.shield_recharge_secs,
             SHIELD_PEAK_FACTOR,
         ),
-        capacitor_gj_per_sec: peak_rate(
+        capacitor_gj_per_sec: capacitor_peak_recharge(
             stats.capacitor_capacity,
             stats.capacitor_recharge_secs,
-            CAPACITOR_PEAK_FACTOR,
         ),
     }
 }

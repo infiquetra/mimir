@@ -16,10 +16,13 @@
 //! stable percent, event-quantized seconds to empty, and a
 //! 3600 s horizon. See `docs/cap-stability-design.md`.
 //!
-//! No modifier of any kind is applied: fitted modules, rigs,
-//! subsystems, skills, implants, and ship bonuses contribute
-//! nothing beyond each module's base need and cycle, so the
-//! values describe the bare hull and can differ from EVE.
+//! No modifier of any kind is applied by `fitting_cap_stability`:
+//! fitted modules, rigs, subsystems, skills, implants, and ship
+//! bonuses contribute nothing beyond each module's base need and
+//! cycle, so the values describe the bare hull and can differ
+//! from EVE. [`fitting_cap_stability_with_module_bonuses`] adds
+//! fitted-module capacitor capacity and recharge bonuses to the
+//! same pair under `docs/cap-bonuses-design.md`.
 //! Capacitor boosters ship nothing: saved items carry no
 //! charge linkage and no fitting shape holds a charge count,
 //! so a booster model cannot be grounded (design section 9).
@@ -37,7 +40,8 @@
 use std::collections::BTreeMap;
 
 use crate::esi::models::CharacterFitting;
-use crate::fitting::ship_peak_recharge::ship_base_peak_recharge;
+use crate::fitting::ship_peak_recharge::{capacitor_peak_recharge, ship_base_peak_recharge};
+use crate::fitting::ship_resistances::bonused_capacitor;
 use crate::fitting::ship_stats::{ship_base_stats, ShipBaseStatsOutcome};
 use crate::names::fitting_types::FittingTypes;
 
@@ -60,6 +64,9 @@ pub enum CapStabilityOutcome {
     /// The ship row is missing, not category 6, or its base
     /// capacitor capacity / recharge rate is absent,
     /// non-finite, or zero, so no honest numbers exist.
+    /// For `fitting_cap_stability_with_module_bonuses` this
+    /// also carries its bonused capacity / recharge is
+    /// absent, non-finite, zero, or negative.
     Unavailable,
 }
 
@@ -87,6 +94,37 @@ pub struct FittingCapStability {
     /// units precedent: a stacked slot row of five uncounted
     /// modules reports five), never silently zero.
     pub excluded_modules: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BonusedFittingCapStability {
+    pub outcome: CapStabilityOutcome,
+    pub total_use_per_sec: Option<f64>,
+    pub peak_recharge_per_sec: Option<f64>,
+    /// Same definition, units, and source as
+    /// `FittingCapStability::counted_modules`.
+    pub counted_modules: u64,
+    /// Drain-dimension count: same definition, units,
+    /// and source as
+    /// `FittingCapStability::excluded_modules` (pinned
+    /// equal, design section 8).
+    pub excluded_modules: u64,
+    /// Bonus-dimension excluded count: counted fitted
+    /// rows with no catalogue row, from
+    /// `bonused_capacitor`. A subset of the rows behind
+    /// `excluded_modules` on any real fitting, disclosed
+    /// separately with its own wording — never summed
+    /// with it.
+    pub bonus_excluded_modules: usize,
+    /// Capacity-dimension unapplied count, from
+    /// `bonused_capacitor`. Never summed with
+    /// `capacitor_recharge_unapplied_modules` or any
+    /// resistance/hit-point count.
+    pub capacitor_capacity_unapplied_modules: usize,
+    /// Recharge-dimension unapplied count, from
+    /// `bonused_capacitor`. Never summed with
+    /// `capacitor_capacity_unapplied_modules`.
+    pub capacitor_recharge_unapplied_modules: usize,
 }
 
 /// One repeating drain: a cycle and a need shared by `count`
@@ -324,17 +362,14 @@ fn run_simulator(capacity: f64, recharge_ms: f64, drains: &[CapDrain]) -> CapSim
     }
 }
 
-/// Base capacitor stability for one fitting. The entry point
-/// runs over the synthesized [`CharacterFitting`] (saved rows
-/// by ESI flag prefix, imported rows by slot section via
-/// `to_character_fitting()` — one code path, since need and
-/// cycle live on the module). The function is total:
-/// saturating counts, no panic on hostile saved data, and
-/// LCM overflow handled by the simulator core.
-pub fn fitting_cap_stability(
+/// Shared drain collection for both stability entry points.
+/// Extracted so module needs and cycles are base in both
+/// blocks by construction (the same code), not by parallel
+/// discipline.
+fn collect_drains(
     fitting: &CharacterFitting,
     catalogue: &FittingTypes,
-) -> FittingCapStability {
+) -> (Vec<CapDrain>, u64, u64, f64) {
     // Module pass first: availability never depends on the
     // module side, so the counts below are populated on every
     // path, and the module pass never reads ship state.
@@ -427,6 +462,21 @@ pub fn fitting_cap_stability(
         group.count = group.count.saturating_add(quantity_units);
     }
     let drains: Vec<CapDrain> = groups.into_values().collect();
+    (drains, counted_modules, excluded_modules, total_use)
+}
+
+/// Base capacitor stability for one fitting. The entry point
+/// runs over the synthesized [`CharacterFitting`] (saved rows
+/// by ESI flag prefix, imported rows by slot section via
+/// `to_character_fitting()` — one code path, since need and
+/// cycle live on the module). The function is total:
+/// saturating counts, no panic on hostile saved data, and
+/// LCM overflow handled by the simulator core.
+pub fn fitting_cap_stability(
+    fitting: &CharacterFitting,
+    catalogue: &FittingTypes,
+) -> FittingCapStability {
+    let (drains, counted_modules, excluded_modules, total_use) = collect_drains(fitting, catalogue);
 
     // Ship availability: through `ship_base_stats` (base
     // capacity and recharge already in seconds), with the
@@ -495,11 +545,93 @@ pub fn fitting_cap_stability(
     }
 }
 
+pub fn fitting_cap_stability_with_module_bonuses(
+    fitting: &CharacterFitting,
+    catalogue: &FittingTypes,
+) -> BonusedFittingCapStability {
+    let (drains, counted_modules, excluded_modules, total_use) = collect_drains(fitting, catalogue);
+    let Some(bonused) = bonused_capacitor(fitting, catalogue) else {
+        return BonusedFittingCapStability {
+            outcome: CapStabilityOutcome::Unavailable,
+            total_use_per_sec: None,
+            peak_recharge_per_sec: None,
+            counted_modules,
+            excluded_modules,
+            bonus_excluded_modules: 0,
+            capacitor_capacity_unapplied_modules: 0,
+            capacitor_recharge_unapplied_modules: 0,
+        };
+    };
+    let capacitor_capacity = bonused.values[0].filter(|value| value.is_finite() && *value > 0.0);
+    let recharge_ms = bonused.values[1].filter(|value| value.is_finite() && *value > 0.0);
+    let (Some(capacity), Some(recharge_ms)) = (capacitor_capacity, recharge_ms) else {
+        return BonusedFittingCapStability {
+            outcome: CapStabilityOutcome::Unavailable,
+            total_use_per_sec: None,
+            peak_recharge_per_sec: None,
+            counted_modules,
+            excluded_modules,
+            bonus_excluded_modules: bonused.excluded_modules,
+            capacitor_capacity_unapplied_modules: bonused.capacitor_capacity_unapplied_modules,
+            capacitor_recharge_unapplied_modules: bonused.capacitor_recharge_unapplied_modules,
+        };
+    };
+    let recharge_secs = recharge_ms / 1000.0;
+    if !recharge_secs.is_finite() || recharge_secs <= 0.0 {
+        return BonusedFittingCapStability {
+            outcome: CapStabilityOutcome::Unavailable,
+            total_use_per_sec: None,
+            peak_recharge_per_sec: None,
+            counted_modules,
+            excluded_modules,
+            bonus_excluded_modules: bonused.excluded_modules,
+            capacitor_capacity_unapplied_modules: bonused.capacitor_capacity_unapplied_modules,
+            capacitor_recharge_unapplied_modules: bonused.capacitor_recharge_unapplied_modules,
+        };
+    }
+    let total_use_per_sec = total_use.is_finite().then_some(total_use);
+    let peak_recharge_per_sec = capacitor_peak_recharge(Some(capacity), Some(recharge_secs));
+    if drains.is_empty() {
+        return BonusedFittingCapStability {
+            outcome: CapStabilityOutcome::Stable { percent: 100.0 },
+            total_use_per_sec: Some(0.0),
+            peak_recharge_per_sec,
+            counted_modules,
+            excluded_modules,
+            bonus_excluded_modules: bonused.excluded_modules,
+            capacitor_capacity_unapplied_modules: bonused.capacitor_capacity_unapplied_modules,
+            capacitor_recharge_unapplied_modules: bonused.capacitor_recharge_unapplied_modules,
+        };
+    }
+    let result = run_simulator(capacity, recharge_secs * 1000.0, &drains);
+    let outcome = if result.is_stable {
+        CapStabilityOutcome::Stable {
+            percent: result.stable_percent,
+        }
+    } else {
+        CapStabilityOutcome::Depletes {
+            seconds: result.seconds_to_empty,
+        }
+    };
+    BonusedFittingCapStability {
+        outcome,
+        total_use_per_sec,
+        peak_recharge_per_sec,
+        counted_modules,
+        excluded_modules,
+        bonus_excluded_modules: bonused.excluded_modules,
+        capacitor_capacity_unapplied_modules: bonused.capacitor_capacity_unapplied_modules,
+        capacitor_recharge_unapplied_modules: bonused.capacitor_recharge_unapplied_modules,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::esi::models::FittingItem;
     use crate::fitting::eft::{parse_eft, EftImportOutcome};
+    use crate::fitting::ship_resistances::bonused_capacitor;
+    use crate::fitting::ship_resistances::ship_resistances_with_module_bonuses;
 
     fn fitting(ship_type_id: i64, items: Vec<FittingItem>) -> CharacterFitting {
         CharacterFitting {
@@ -562,6 +694,34 @@ mod tests {
     }
 
     fn peak_of(result: &FittingCapStability, label: &str) -> f64 {
+        match result.peak_recharge_per_sec {
+            Some(value) => value,
+            None => panic!("{label}: expected Some peak, got None"),
+        }
+    }
+
+    fn stable_percent_of_bonused(result: &BonusedFittingCapStability) -> f64 {
+        match result.outcome {
+            CapStabilityOutcome::Stable { percent } => percent,
+            other => panic!("expected Stable, got {other:?}"),
+        }
+    }
+
+    fn depletes_seconds_of_bonused(result: &BonusedFittingCapStability) -> f64 {
+        match result.outcome {
+            CapStabilityOutcome::Depletes { seconds } => seconds,
+            other => panic!("expected Depletes, got {other:?}"),
+        }
+    }
+
+    fn use_of_bonused(result: &BonusedFittingCapStability, label: &str) -> f64 {
+        match result.total_use_per_sec {
+            Some(value) => value,
+            None => panic!("{label}: expected Some use, got None"),
+        }
+    }
+
+    fn peak_of_bonused(result: &BonusedFittingCapStability, label: &str) -> f64 {
         match result.peak_recharge_per_sec {
             Some(value) => value,
             None => panic!("{label}: expected Some peak, got None"),
@@ -1326,5 +1486,598 @@ mod tests {
         );
         assert_close(peak_of(&result, "eft peak"), 5.0, "eft peak");
         assert_eq!(depletes_seconds_of(&result), 36.0);
+    }
+
+    fn fixture_bonused_catalogue() -> FittingTypes {
+        // Extends the shipped fixture (hull 42: 250.0 GJ /
+        // 125000.0 ms; drain 112: 100.0 GJ / 11000.0 ms) with
+        // two fixture carriers in the shipped triple shape
+        // for Oracle 7. Existing rows 101-112 are not edited.
+        FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":250.0,"rechargeRate":125000.0},
+                {"typeId":101,"typeName":"73-Cycle Drain","categoryId":7,"slotEffects":[13],"capacitorNeed":32.0,"duration":12000.0},
+                {"typeId":112,"typeName":"LX Energy Neutralizer","categoryId":7,"slotEffects":[13],"capacitorNeed":100.0,"duration":11000.0},
+                {"typeId":201,"typeName":"Fixture Battery","categoryId":7,"slotEffects":[13],"capacitorCapacityModifiers":[[482,2,150.0]]},
+                {"typeId":202,"typeName":"Fixture Recharger","categoryId":7,"slotEffects":[13],"capacitorRechargeModifiers":[[55,4,0.8]]}]}"#,
+        )
+        .expect("fixture catalogue parses")
+    }
+
+    // --- Bonused capacitor oracles (docs/cap-bonuses-design.md section 8)
+
+    #[test]
+    fn oracle1_capacity_flat_add() {
+        let catalogue = bundled();
+        let fit = fitting(
+            587,
+            vec![item("HiSlot0", 1, 2050), item("MedSlot0", 1, 3488)],
+        );
+        let base = fitting_cap_stability(&fit, &catalogue);
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        // Helper pins: capacity 250+150=400, recharge 125000 ms.
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.values[0], Some(400.0));
+        assert_eq!(helper.values[1], Some(125000.0));
+        assert_eq!(helper.excluded_modules, 0);
+        assert_eq!(helper.capacitor_capacity_unapplied_modules, 0);
+        assert_eq!(helper.capacitor_recharge_unapplied_modules, 0);
+        // Peak 2.5*400/125 = 8.0, Stable 82.185... (base 70.338...)
+        assert_close(peak_of_bonused(&bonused, "o1 peak"), 8.0, "o1 peak");
+        assert_close(
+            stable_percent_of_bonused(&bonused),
+            82.18512646407277,
+            "o1 percent",
+        );
+        assert_close(
+            stable_percent_of(&base),
+            70.3386537337493,
+            "o1 base percent",
+        );
+        assert_close(use_of_bonused(&bonused, "o1 use"), 32.0 / 12.0, "o1 use");
+        assert_eq!(bonused.counted_modules, 1);
+        assert_eq!(bonused.excluded_modules, 1);
+        assert_eq!(bonused.bonus_excluded_modules, 0);
+        assert_eq!(bonused.capacitor_capacity_unapplied_modules, 0);
+        assert_eq!(bonused.capacitor_recharge_unapplied_modules, 0);
+        assert_eq!(base.counted_modules, 1);
+        assert_eq!(base.excluded_modules, 1);
+    }
+
+    #[test]
+    fn oracle2_recharge_multiplier_duration_semantics() {
+        let catalogue = bundled();
+        let fit = fitting(
+            587,
+            vec![item("HiSlot0", 1, 2050), item("MedSlot0", 1, 2032)],
+        );
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.values[0], Some(250.0));
+        assert_eq!(helper.values[1], Some(100000.0));
+        assert_close(peak_of_bonused(&bonused, "o2 peak"), 6.25, "o2 peak");
+        assert_close(
+            stable_percent_of_bonused(&bonused),
+            76.58610664009886,
+            "o2 percent",
+        );
+        assert_eq!(bonused.counted_modules, 1);
+        assert_eq!(bonused.excluded_modules, 1);
+    }
+
+    #[test]
+    fn oracle3_both_dimensions_together() {
+        let catalogue = bundled();
+        let fit = fitting(
+            587,
+            vec![
+                item("HiSlot0", 1, 2050),
+                item("MedSlot0", 1, 3488),
+                item("MedSlot1", 1, 2032),
+            ],
+        );
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_close(peak_of_bonused(&bonused, "o3 peak"), 10.0, "o3 peak");
+        assert_close(
+            stable_percent_of_bonused(&bonused),
+            85.7658359519556,
+            "o3 percent",
+        );
+        assert_eq!(bonused.excluded_modules, 2);
+    }
+
+    #[test]
+    fn oracle4_percents_sign_included() {
+        let catalogue = bundled();
+        // (a) Small Capacitor Control Circuit I -15%
+        let fit = fitting(587, vec![item("RigSlot0", 1, 31370)]);
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.values[1], Some(106250.0));
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_close(
+            peak_of_bonused(&bonused, "o4a peak"),
+            5.882352941176471,
+            "o4a peak",
+        );
+        assert_close(stable_percent_of_bonused(&bonused), 100.0, "o4a percent");
+        // (b) Large Semiconductor Memory Cell I +15%
+        let fit = fitting(587, vec![item("RigSlot0", 1, 25954)]);
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.values[0], Some(287.5));
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_close(peak_of_bonused(&bonused, "o4b peak"), 5.75, "o4b peak");
+        // (c) Punisher + Large Cap Battery I
+        let fit = fitting(597, vec![item("MedSlot0", 1, 2020)]);
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.values[0], Some(1700.0));
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_close(peak_of_bonused(&bonused, "o4c peak"), 26.5625, "o4c peak");
+    }
+
+    #[test]
+    fn oracle5_adds_before_percent_no_stacking_penalty() {
+        let catalogue = bundled();
+        let fit = fitting(
+            587,
+            vec![item("MedSlot0", 1, 3488), item("RigSlot0", 1, 25954)],
+        );
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_close(helper.values[0].expect("Some"), 460.0, "o5a capacity");
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_close(peak_of_bonused(&bonused, "o5a peak"), 9.2, "o5a peak");
+        let fit = fitting(
+            587,
+            vec![item("RigSlot0", 1, 31370), item("RigSlot1", 1, 31370)],
+        );
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_close(helper.values[1].expect("Some"), 90312.5, "o5b recharge");
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_close(
+            peak_of_bonused(&bonused, "o5b peak"),
+            2.5 * 250.0 / 90.3125,
+            "o5b peak",
+        );
+        let fit = fitting(
+            587,
+            vec![item("RigSlot0", 1, 25954), item("RigSlot1", 1, 25954)],
+        );
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_close(helper.values[0].expect("Some"), 330.625, "o5c capacity");
+        let stacked = fitting(587, vec![item("RigSlot0", 2, 31370)]);
+        let one = bonused_capacitor(&stacked, &catalogue).expect("stacked");
+        assert_close(one.values[1].expect("Some"), 90312.5, "stacked recharge");
+    }
+
+    #[test]
+    fn oracle6_shrink_slow_and_relay_per_dimension() {
+        let catalogue = bundled();
+        let fit = fitting(587, vec![item("LoSlot0", 1, 1246)]);
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.values[0], Some(200.0));
+        assert_eq!(helper.values[1], Some(80000.0));
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_close(peak_of_bonused(&bonused, "o6a peak"), 6.25, "o6a peak");
+        let fit = fitting(587, vec![item("LoSlot0", 1, 1541)]);
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.values[0], Some(262.5));
+        assert_eq!(helper.values[1], Some(114375.0));
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_close(
+            peak_of_bonused(&bonused, "o6b peak"),
+            5.737704918032787,
+            "o6b peak",
+        );
+        // Relay pin: capacity stays 250.0, recharge 100.0s,
+        // capacity unapplied 1, recharge 0
+        let fit = fitting(587, vec![item("LoSlot0", 1, 1445)]);
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.values[0], Some(250.0));
+        assert_eq!(helper.values[1], Some(100000.0));
+        assert_eq!(helper.capacitor_capacity_unapplied_modules, 1);
+        assert_eq!(helper.capacitor_recharge_unapplied_modules, 0);
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_close(peak_of_bonused(&bonused, "o6c peak"), 6.25, "o6c peak");
+        assert_eq!(bonused.capacitor_capacity_unapplied_modules, 1);
+        assert_eq!(bonused.capacitor_recharge_unapplied_modules, 0);
+        let fit = fitting(587, vec![item("LoSlot0", 2, 1445)]);
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.capacitor_capacity_unapplied_modules, 2);
+        assert_eq!(helper.capacitor_recharge_unapplied_modules, 0);
+        assert_eq!(helper.values[0], Some(250.0));
+    }
+
+    #[test]
+    fn oracle7_fixture_depletes_to_stable() {
+        let catalogue = fixture_bonused_catalogue();
+        let fit = fitting(42, vec![item("HiSlot0", 1, 112)]);
+        let base = fitting_cap_stability(&fit, &catalogue);
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_eq!(depletes_seconds_of(&base), 33.0);
+        assert_eq!(depletes_seconds_of_bonused(&bonused), 33.0);
+        let fit = fitting(42, vec![item("HiSlot0", 1, 112), item("MedSlot0", 1, 202)]);
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_eq!(depletes_seconds_of_bonused(&bonused), 44.0);
+        let fit = fitting(
+            42,
+            vec![
+                item("HiSlot0", 1, 112),
+                item("MedSlot0", 1, 201),
+                item("MedSlot1", 1, 202),
+            ],
+        );
+        let base = fitting_cap_stability(&fit, &catalogue);
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_eq!(depletes_seconds_of(&base), 33.0);
+        assert_close(
+            stable_percent_of_bonused(&bonused),
+            40.73402144558326,
+            "o7 stable",
+        );
+    }
+
+    #[test]
+    fn empty_equals_base_exactly() {
+        let catalogue = bundled();
+        // hull-only Rifter and Punisher
+        for ship in [587, 597] {
+            let fit = fitting(ship, vec![]);
+            let base = fitting_cap_stability(&fit, &catalogue);
+            let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+            assert_eq!(bonused.outcome, base.outcome);
+            assert_eq!(bonused.total_use_per_sec, base.total_use_per_sec);
+            assert_eq!(bonused.peak_recharge_per_sec, base.peak_recharge_per_sec);
+            assert_eq!(bonused.counted_modules, base.counted_modules);
+            assert_eq!(bonused.excluded_modules, base.excluded_modules);
+            assert_eq!(bonused.bonus_excluded_modules, 0);
+            assert_eq!(bonused.capacitor_capacity_unapplied_modules, 0);
+            assert_eq!(bonused.capacitor_recharge_unapplied_modules, 0);
+        }
+        // only non-counted items
+        let fit = fitting(
+            587,
+            vec![
+                item("Cargo", 1, 2048),
+                item("DroneBay", 1, 2048),
+                item("HiSlot0", 0, 2048),
+                item("HiSlot0", 1, 0),
+                item("HiSlot0", 1, -1),
+            ],
+        );
+        let base = fitting_cap_stability(&fit, &catalogue);
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_eq!(bonused.outcome, base.outcome);
+        assert_eq!(bonused.total_use_per_sec, base.total_use_per_sec);
+        assert_eq!(bonused.peak_recharge_per_sec, base.peak_recharge_per_sec);
+        // counted non-carrier
+        let fit = fitting(587, vec![item("LoSlot0", 1, 2048)]);
+        let base = fitting_cap_stability(&fit, &catalogue);
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_eq!(bonused.outcome, base.outcome);
+        assert_eq!(bonused.peak_recharge_per_sec, base.peak_recharge_per_sec);
+        // identity carrier 1353
+        let fit = fitting(587, vec![item("LoSlot0", 1, 1353)]);
+        let base = fitting_cap_stability(&fit, &catalogue);
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_eq!(bonused.outcome, base.outcome);
+        assert_eq!(bonused.total_use_per_sec, base.total_use_per_sec);
+        assert_eq!(bonused.peak_recharge_per_sec, base.peak_recharge_per_sec);
+        assert_eq!(bonused.capacitor_capacity_unapplied_modules, 0);
+        assert_eq!(bonused.capacitor_recharge_unapplied_modules, 0);
+    }
+
+    #[test]
+    fn demo_fittings_empty_equals_base() {
+        let catalogue = bundled();
+        // Demo Brawler: 2048/2049/1225/2050/2050/1535/28270
+        let brawler = fitting(
+            587,
+            vec![
+                item("LoSlot0", 1, 2048),
+                item("LoSlot1", 1, 2049),
+                item("HiSlot0", 1, 1225),
+                item("HiSlot1", 1, 2050),
+                item("HiSlot2", 1, 2050),
+                item("MedSlot0", 1, 1535),
+                item("RigSlot0", 1, 28270),
+            ],
+        );
+        let base = fitting_cap_stability(&brawler, &catalogue);
+        let bonused = fitting_cap_stability_with_module_bonuses(&brawler, &catalogue);
+        assert_eq!(depletes_seconds_of(&base), 234.0);
+        assert_eq!(depletes_seconds_of_bonused(&bonused), 234.0);
+        assert_eq!(bonused.bonus_excluded_modules, 1);
+        assert_eq!(base.excluded_modules, 5);
+        assert_eq!(bonused.excluded_modules, 5);
+        assert_eq!(bonused.capacitor_capacity_unapplied_modules, 0);
+        assert_eq!(bonused.capacitor_recharge_unapplied_modules, 0);
+        // Demo Runner: 76.95496917307892%
+        let runner = fitting(
+            597,
+            vec![
+                item("LoSlot0", 1, 2048),
+                item("HiSlot0", 1, 2050),
+                item("MedSlot0", 1, 1225),
+            ],
+        );
+        let base = fitting_cap_stability(&runner, &catalogue);
+        let bonused = fitting_cap_stability_with_module_bonuses(&runner, &catalogue);
+        assert_close(stable_percent_of(&base), 76.95496917307892, "runner base");
+        assert_close(
+            stable_percent_of_bonused(&bonused),
+            76.95496917307892,
+            "runner bonused",
+        );
+        assert_eq!(bonused.bonus_excluded_modules, 0);
+        // EFT sample via synthesis: 36.0 s
+        let sample = concat!(
+            "[Rifter, Sample Brawler]\n",
+            "Damage Control II\n",
+            "Small Armor Repairer II\n",
+            "\n",
+            "1MN Afterburner II\n",
+            "Warp Scrambler II\n",
+            "\n",
+            "200mm AutoCannon II, Republic Fleet EMP S\n",
+            "200mm AutoCannon II\n",
+            "200mm AutoCannon II\n",
+            "\n",
+            "Small Projectile Burst Aerator I\n",
+            "[Empty Rig slot]\n",
+            "\n",
+            "Hobgoblin II x2\n",
+            "\n",
+            "EMP S x200\n",
+            "Nanite Repair Paste x8"
+        );
+        let synth = match parse_eft(sample, &catalogue) {
+            EftImportOutcome::Imported(f) => f.to_character_fitting(),
+            EftImportOutcome::Failed(f) => panic!("{f:?}"),
+        };
+        let base = fitting_cap_stability(&synth, &catalogue);
+        let bonused = fitting_cap_stability_with_module_bonuses(&synth, &catalogue);
+        assert_eq!(depletes_seconds_of(&base), 36.0);
+        assert_eq!(depletes_seconds_of_bonused(&bonused), 36.0);
+        assert_eq!(bonused.bonus_excluded_modules, 0);
+    }
+
+    #[test]
+    fn shared_count_equalities() {
+        let catalogue = bundled();
+        let fit = fitting(
+            587,
+            vec![item("HiSlot0", 1, 2050), item("MedSlot0", 1, 3488)],
+        );
+        let base = fitting_cap_stability(&fit, &catalogue);
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_eq!(bonused.counted_modules, base.counted_modules);
+        assert_eq!(bonused.excluded_modules, base.excluded_modules);
+        // bonus_excluded equals resistances excluded where Available
+        let fit = fitting(587, vec![item("LoSlot0", 1, 999999)]);
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        let resistances = ship_resistances_with_module_bonuses(&fit, &catalogue);
+        if let crate::fitting::ship_resistances::BonusedShipResistancesOutcome::Available(r) =
+            resistances
+        {
+            assert_eq!(bonused.bonus_excluded_modules, r.excluded_modules);
+        }
+        // Hit-point unapplied does not bleed into capacitor counts
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":250.0,"rechargeRate":125000.0},
+                {"typeId":101,"typeName":"HP Only Unapplied","categoryId":7,"slotEffects":[13],"hitPointModifiers":[],"hitPointModifiersUnapplied":true}]}"#,
+        )
+        .expect("fixture parses");
+        let fit = fitting(42, vec![item("HiSlot0", 1, 101)]);
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_eq!(bonused.capacitor_capacity_unapplied_modules, 0);
+        assert_eq!(bonused.capacitor_recharge_unapplied_modules, 0);
+    }
+
+    #[test]
+    fn partial_and_coupled_unavailable() {
+        // capacity absent, recharge present
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"No Cap Hull","categoryId":6,"slotEffects":[],"rechargeRate":125000.0},
+                {"typeId":101,"typeName":"Battery","categoryId":7,"slotEffects":[13],"capacitorCapacityModifiers":[[482,2,150.0]]},
+                {"typeId":102,"typeName":"Recharger","categoryId":7,"slotEffects":[13],"capacitorRechargeModifiers":[[55,4,0.8]]}]}"#,
+        )
+        .expect("fixture parses");
+        let fit = fitting(42, vec![item("MedSlot0", 1, 101), item("MedSlot1", 1, 102)]);
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.values, [None, Some(100000.0)]);
+        assert_eq!(
+            fitting_cap_stability_with_module_bonuses(&fit, &catalogue).outcome,
+            CapStabilityOutcome::Unavailable
+        );
+        assert_eq!(
+            fitting_cap_stability(&fit, &catalogue).outcome,
+            CapStabilityOutcome::Unavailable
+        );
+        // mirror: recharge absent
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"No Recharge Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":250.0},
+                {"typeId":101,"typeName":"Battery","categoryId":7,"slotEffects":[13],"capacitorCapacityModifiers":[[482,2,150.0]]},
+                {"typeId":102,"typeName":"Recharger","categoryId":7,"slotEffects":[13],"capacitorRechargeModifiers":[[55,4,0.8]]}]}"#,
+        )
+        .expect("fixture parses");
+        let fit = fitting(42, vec![item("MedSlot0", 1, 101), item("MedSlot1", 1, 102)]);
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.values, [Some(400.0), None]);
+        assert_eq!(
+            fitting_cap_stability_with_module_bonuses(&fit, &catalogue).outcome,
+            CapStabilityOutcome::Unavailable
+        );
+        // present 0.0 capacity with battery -> 150.0, bonused computes
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Zero Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":0.0,"rechargeRate":125000.0},
+                {"typeId":101,"typeName":"Battery","categoryId":7,"slotEffects":[13],"capacitorCapacityModifiers":[[482,2,150.0]]}]}"#,
+        )
+        .expect("fixture parses");
+        let fit = fitting(42, vec![item("MedSlot0", 1, 101)]);
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.values[0], Some(150.0));
+        // present 0.0 recharge -> helper Some(0.0), bonused Unavailable, base Unavailable
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Zero Recharge Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":250.0,"rechargeRate":0.0},
+                {"typeId":102,"typeName":"Recharger","categoryId":7,"slotEffects":[13],"capacitorRechargeModifiers":[[55,4,0.8]]}]}"#,
+        )
+        .expect("fixture parses");
+        let fit = fitting(42, vec![item("MedSlot0", 1, 102)]);
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.values[1], Some(0.0));
+        assert_eq!(
+            fitting_cap_stability_with_module_bonuses(&fit, &catalogue).outcome,
+            CapStabilityOutcome::Unavailable
+        );
+        assert_eq!(
+            fitting_cap_stability(&fit, &catalogue).outcome,
+            CapStabilityOutcome::Unavailable
+        );
+    }
+
+    #[test]
+    fn hostile_bounded() {
+        let json = r#"{"types":[{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":250.0,"rechargeRate":125000.0},{"typeId":101,"typeName":"Host","categoryId":7,"slotEffects":[13],"capacitorRechargeModifiers":[[55,6,-100.0]]}]}"#;
+        // recharge percent -100 -> helper Some(0.0), bonused Unavailable, base still computes
+        let catalogue = FittingTypes::from_json(json).expect("fixture parses");
+        let fit = fitting(42, vec![item("MedSlot0", 1, 101)]);
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.values[1], Some(0.0));
+        assert_eq!(
+            fitting_cap_stability_with_module_bonuses(&fit, &catalogue).outcome,
+            CapStabilityOutcome::Unavailable
+        );
+        // base still computes (hull 42 has usable base)
+        let base_result = fitting_cap_stability(&fit, &catalogue);
+        assert_ne!(
+            base_result.outcome,
+            CapStabilityOutcome::Unavailable,
+            "base should still compute"
+        );
+        // -150 -> helper None
+        let json2 = r#"{"types":[{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":250.0,"rechargeRate":125000.0},{"typeId":101,"typeName":"Host","categoryId":7,"slotEffects":[13],"capacitorRechargeModifiers":[[55,6,-150.0]]}]}"#;
+        let catalogue = FittingTypes::from_json(json2).expect("fixture parses");
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.values[1], None);
+        // mul -0.8 -> None
+        let json3 = r#"{"types":[{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":250.0,"rechargeRate":125000.0},{"typeId":101,"typeName":"Host","categoryId":7,"slotEffects":[13],"capacitorRechargeModifiers":[[55,4,-0.8]]}]}"#;
+        let catalogue = FittingTypes::from_json(json3).expect("fixture parses");
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.values[1], None);
+        // i64::MAX quantities
+        let fit_max = fitting(42, vec![item("MedSlot0", i64::MAX, 101)]);
+        let json4 = r#"{"types":[{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":250.0,"rechargeRate":125000.0},{"typeId":101,"typeName":"Host","categoryId":7,"slotEffects":[13],"capacitorRechargeModifiers":[[55,6,-15.0]]}]}"#;
+        let catalogue = FittingTypes::from_json(json4).expect("fixture parses");
+        let helper = bonused_capacitor(&fit_max, &catalogue).expect("helper Some");
+        // Percent factor at MAX underflows to subnormal; helper is
+        // tiny (or 0.0 if underflow hits zero exactly).
+        assert!(
+            helper.values[1].is_some_and(|v| (0.0..1e-300).contains(&v)),
+            "tiny recharge {:?}",
+            helper.values[1]
+        );
+        // Bonused does not hang; tiny recharge underflow path is
+        // prompt (Stable with overflowed peak, or Unavailable
+        // if the ms/1000 conversion hits zero).
+        let _ = fitting_cap_stability_with_module_bonuses(&fit_max, &catalogue);
+        let json5 = r#"{"types":[{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":250.0,"rechargeRate":125000.0},{"typeId":101,"typeName":"Host","categoryId":7,"slotEffects":[13],"capacitorCapacityModifiers":[[482,6,20.0]]}]}"#;
+        let catalogue = FittingTypes::from_json(json5).expect("fixture parses");
+        let fit_max = fitting(42, vec![item("RigSlot0", i64::MAX, 101)]);
+        let helper = bonused_capacitor(&fit_max, &catalogue).expect("helper Some");
+        assert_eq!(helper.values[0], None);
+        let json6 = r#"{"types":[{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":250.0,"rechargeRate":125000.0},{"typeId":101,"typeName":"Host","categoryId":7,"slotEffects":[13],"capacitorRechargeModifiers":[[55,4,0.8]]}]}"#;
+        let catalogue = FittingTypes::from_json(json6).expect("fixture parses");
+        let fit_max = fitting(42, vec![item("MedSlot0", i64::MAX, 101)]);
+        let helper = bonused_capacitor(&fit_max, &catalogue).expect("helper Some");
+        assert!(
+            helper.values[1].is_some_and(|v| (0.0..1e-300).contains(&v)),
+            "tiny mul recharge {:?}",
+            helper.values[1]
+        );
+        let _ = fitting_cap_stability_with_module_bonuses(&fit_max, &catalogue);
+        let json7 = r#"{"types":[{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":250.0,"rechargeRate":125000.0},{"typeId":101,"typeName":"Host","categoryId":7,"slotEffects":[13],"capacitorCapacityModifiers":[[482,2,150.0]]}]}"#;
+        let catalogue = FittingTypes::from_json(json7).expect("fixture parses");
+        let fit_max = fitting(42, vec![item("MedSlot0", i64::MAX, 101)]);
+        let helper = bonused_capacitor(&fit_max, &catalogue).expect("helper Some");
+        // capacity is finite 250 + 150*(MAX as f64)
+        assert!(helper.values[0].unwrap().is_finite());
+        // percent -100 on 482 -> Some(0.0), Unavailable
+        let json8 = r#"{"types":[{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":250.0,"rechargeRate":125000.0},{"typeId":101,"typeName":"Host","categoryId":7,"slotEffects":[13],"capacitorCapacityModifiers":[[482,6,-100.0]]}]}"#;
+        let catalogue = FittingTypes::from_json(json8).expect("fixture parses");
+        let fit = fitting(42, vec![item("RigSlot0", 1, 101)]);
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.values[0], Some(0.0));
+        assert_eq!(
+            fitting_cap_stability_with_module_bonuses(&fit, &catalogue).outcome,
+            CapStabilityOutcome::Unavailable
+        );
+    }
+
+    #[test]
+    fn runtime_guard_counts_and_base_independence() {
+        // marked-unapplied with applicable entry same family
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":250.0,"rechargeRate":125000.0},
+                {"typeId":101,"typeName":"Bad","categoryId":7,"slotEffects":[13],"capacitorCapacityModifiers":[[482,7,150.0],[55,4,0.8]],"capacitorCapacityModifiersUnapplied":true,"capacitorRechargeModifiers":[[999,4,0.8],[55,4,0.8]]}]}"#,
+        )
+        .expect("fixture parses");
+        let fit = fitting(42, vec![item("MedSlot0", 1, 101)]);
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        // capacity bad entry counts capacity unapplied, recharge wrong id counts recharge unapplied
+        assert_eq!(helper.capacitor_capacity_unapplied_modules, 1);
+        assert_eq!(helper.capacitor_recharge_unapplied_modules, 1);
+        // recharge applicable still applied
+        assert_eq!(helper.values[1], Some(100000.0));
+        // once per item per family, not twice
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"capacitorCapacity":250.0,"rechargeRate":125000.0},
+                {"typeId":101,"typeName":"Bad2","categoryId":7,"slotEffects":[13],"capacitorCapacityModifiers":[[482,0,150.0],[482,3,150.0]]}]}"#,
+        )
+        .expect("fixture parses");
+        let fit = fitting(42, vec![item("MedSlot0", 1, 101)]);
+        let helper = bonused_capacitor(&fit, &catalogue).expect("helper Some");
+        assert_eq!(helper.capacitor_capacity_unapplied_modules, 1);
+        // base independence: cap carriers don't change base
+        let catalogue = bundled();
+        let fit = fitting(
+            587,
+            vec![item("MedSlot0", 1, 3488), item("LoSlot0", 1, 2032)],
+        );
+        let base = fitting_cap_stability(&fit, &catalogue);
+        let bonused = fitting_cap_stability_with_module_bonuses(&fit, &catalogue);
+        assert_ne!(bonused.peak_recharge_per_sec, base.peak_recharge_per_sec);
+        // shield peak stays base with capacitor fit
+        use crate::fitting::ship_peak_recharge::ship_base_peak_recharge;
+        use crate::fitting::ship_stats::{ship_base_stats, ShipBaseStatsOutcome};
+        let stats = match ship_base_stats(&fit, &catalogue) {
+            ShipBaseStatsOutcome::Available(s) => s,
+            ShipBaseStatsOutcome::Unavailable => panic!("stats available"),
+        };
+        let peaks = ship_base_peak_recharge(&stats);
+        assert_close(peaks.shield_hp_per_sec.unwrap(), 1.8, "shield stays base");
+    }
+
+    #[test]
+    fn unavailable_shapes() {
+        let catalogue = fixture_catalogue();
+        for ship in [999999, 101, 0, -1] {
+            let result = fitting_cap_stability_with_module_bonuses(
+                &fitting(ship, vec![item("HiSlot0", 1, 101)]),
+                &catalogue,
+            );
+            assert_eq!(result.outcome, CapStabilityOutcome::Unavailable);
+            assert_eq!(result.total_use_per_sec, None);
+            assert_eq!(result.peak_recharge_per_sec, None);
+            assert_eq!(result.capacitor_capacity_unapplied_modules, 0);
+            assert_eq!(result.capacitor_recharge_unapplied_modules, 0);
+            // helper None exactly on ship gate
+            assert!(bonused_capacitor(&fitting(ship, vec![]), &catalogue).is_none());
+        }
     }
 }
