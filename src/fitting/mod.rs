@@ -38,7 +38,10 @@ pub use resources::{
 };
 pub use saved_copy::{convert_saved_fitting, SavedCopyOutcome, SavedCopyRefusal};
 pub use ship_cap_stability::{fitting_cap_stability, CapStabilityOutcome, FittingCapStability};
-pub use ship_ehp::{ship_base_ehp, ShipBaseEhp, ShipBaseEhpOutcome};
+pub use ship_ehp::{
+    ship_base_ehp, ship_ehp_with_module_bonuses, BonusedShipEhp, BonusedShipEhpOutcome,
+    ShipBaseEhp, ShipBaseEhpOutcome,
+};
 pub use ship_nav_targeting::{ship_nav_targeting, ShipNavTargeting, ShipNavTargetingOutcome};
 pub use ship_peak_recharge::{ship_base_peak_recharge, ShipBasePeakRecharge};
 pub use ship_resistances::{

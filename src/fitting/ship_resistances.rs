@@ -264,24 +264,32 @@ fn percent_chain(runs: &mut [(f64, u64)]) -> f64 {
     factor
 }
 
-/// Bonused resistances for one fitting
-/// (`docs/resistance-bonuses-design.md` section 4). Never
-/// panics; a catalogue row that violates the section 3
-/// invariants at load is guarded here, never trusted.
-pub fn ship_resistances_with_module_bonuses(
+/// Bonused resonances in `RESONANCE_ORDER` position plus the
+/// fitted-module counts the caller must disclose beside any
+/// number derived from them.
+pub(crate) struct BonusedResonances {
+    pub resonances: [Option<f64>; 12],
+    pub excluded_modules: usize,
+    pub unapplied_modules: usize,
+}
+
+/// `None` only when the ship gate fails (`ship_type_id <= 0`,
+/// no catalogue row, or the row is not category 6). Otherwise
+/// `Some`, with each resonance `None` exactly where the base
+/// resonance is absent, negative, or non-finite, or the
+/// bonused product is negative or non-finite.
+pub(crate) fn bonused_resonances(
     fitting: &CharacterFitting,
     catalogue: &FittingTypes,
-) -> BonusedShipResistancesOutcome {
+) -> Option<BonusedResonances> {
     let ship_row = if fitting.ship_type_id > 0 {
         catalogue.lookup_by_id(fitting.ship_type_id)
     } else {
         None
     };
-    let Some(ship) = ship_row else {
-        return BonusedShipResistancesOutcome::Unavailable;
-    };
+    let ship = ship_row?;
     if ship.category_id != 6 {
-        return BonusedShipResistancesOutcome::Unavailable;
+        return None;
     }
     let mut excluded_modules: usize = 0;
     let mut unapplied_modules: usize = 0;
@@ -348,7 +356,7 @@ pub fn ship_resistances_with_module_bonuses(
         }
     }
     let bases = base_resonances(ship);
-    let mut percents: [Option<f64>; 12] = [None; 12];
+    let mut resonances: [Option<f64>; 12] = [None; 12];
     for index in 0..12 {
         let Some(base) = bases[index].filter(|v| v.is_finite() && *v >= 0.0) else {
             continue;
@@ -360,7 +368,29 @@ pub fn ship_resistances_with_module_bonuses(
         let mut percent_runs_clone = percent_runs[index].clone();
         let chain = percent_chain(&mut percent_runs_clone);
         let bonused_resonance = base * mul_total * chain;
-        percents[index] = resonance_to_percent(Some(bonused_resonance));
+        resonances[index] = Some(bonused_resonance).filter(|v| v.is_finite() && *v >= 0.0);
+    }
+    Some(BonusedResonances {
+        resonances,
+        excluded_modules,
+        unapplied_modules,
+    })
+}
+
+/// Bonused resistances for one fitting
+/// (`docs/resistance-bonuses-design.md` section 4). Never
+/// panics; a catalogue row that violates the section 3
+/// invariants at load is guarded here, never trusted.
+pub fn ship_resistances_with_module_bonuses(
+    fitting: &CharacterFitting,
+    catalogue: &FittingTypes,
+) -> BonusedShipResistancesOutcome {
+    let Some(bonused) = bonused_resonances(fitting, catalogue) else {
+        return BonusedShipResistancesOutcome::Unavailable;
+    };
+    let mut percents: [Option<f64>; 12] = [None; 12];
+    for (slot, resonance) in percents.iter_mut().zip(bonused.resonances.iter().copied()) {
+        *slot = resonance_to_percent(resonance);
     }
     if percents.iter().all(Option::is_none) {
         return BonusedShipResistancesOutcome::Unavailable;
@@ -387,8 +417,8 @@ pub fn ship_resistances_with_module_bonuses(
     };
     BonusedShipResistancesOutcome::Available(BonusedShipResistances {
         resistances,
-        excluded_modules,
-        unapplied_modules,
+        excluded_modules: bonused.excluded_modules,
+        unapplied_modules: bonused.unapplied_modules,
     })
 }
 

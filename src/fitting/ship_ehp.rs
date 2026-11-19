@@ -16,6 +16,12 @@
 //! nothing, so the values describe the bare hull against omni
 //! damage only and can differ from EVE.
 //!
+//! [`ship_ehp_with_module_bonuses`] applies the grounded
+//! fitted-module resistance bonuses of
+//! `docs/bonused-ehp-design.md` to the denominator only: the
+//! numerator stays the hull's base hit points, so only the
+//! resistances carry fitted-module bonuses.
+//!
 //! The module is pure computation over the bundled catalogue — no
 //! egui, no state, no network, no database. It depends on
 //! [`CharacterFitting`] and [`FittingTypes`], the same
@@ -25,6 +31,7 @@
 //! already logs counts once.
 
 use crate::esi::models::CharacterFitting;
+use crate::fitting::ship_resistances::bonused_resonances;
 use crate::names::fitting_types::FittingTypes;
 
 /// Omni damage profile share for EM damage (equal quarters).
@@ -59,6 +66,31 @@ pub enum ShipBaseEhpOutcome {
     /// The catalogue has no complete base hit point and
     /// resonance data for any layer of this fitting's ship, so
     /// no honest numbers exist.
+    Unavailable,
+}
+
+/// Bonused omni effective hit points plus the fitted-module
+/// counts the caller must disclose beside them. The hit
+/// points are the hull's base hit points; only the
+/// resistances carry fitted-module bonuses.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BonusedShipEhp {
+    pub ehp: ShipBaseEhp,
+    /// Same definition, units, and source as
+    /// `BonusedShipResistances::excluded_modules`.
+    pub excluded_modules: usize,
+    /// Same definition, units, and source as
+    /// `BonusedShipResistances::unapplied_modules`.
+    pub unapplied_modules: usize,
+}
+
+/// Bonused omni effective hit points outcome for one fitting.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum BonusedShipEhpOutcome {
+    Available(BonusedShipEhp),
+    /// No complete base hit point and bonused-resonance data
+    /// for any layer of this fitting's ship, so no honest
+    /// numbers exist.
     Unavailable,
 }
 
@@ -173,12 +205,89 @@ pub fn ship_base_ehp(fitting: &CharacterFitting, catalogue: &FittingTypes) -> Sh
     })
 }
 
+/// Bonused omni effective hit points for one fitting
+/// (`docs/bonused-ehp-design.md` section 4). The numerator
+/// is the hull's base hit points and only the resistances
+/// carry the fitted-module bonuses, in the same omni profile
+/// as [`ship_base_ehp`]: each layer is its base hit points
+/// divided by the share-weighted bonused resonance, summed
+/// shield, then armor, then hull for the total, with
+/// per-layer completeness identical to the base function.
+/// Never panics; there is no error channel.
+pub fn ship_ehp_with_module_bonuses(
+    fitting: &CharacterFitting,
+    catalogue: &FittingTypes,
+) -> BonusedShipEhpOutcome {
+    let Some(bonused) = bonused_resonances(fitting, catalogue) else {
+        return BonusedShipEhpOutcome::Unavailable;
+    };
+    let ship_row = if fitting.ship_type_id > 0 {
+        catalogue.lookup_by_id(fitting.ship_type_id)
+    } else {
+        None
+    };
+    let Some(ship) = ship_row else {
+        return BonusedShipEhpOutcome::Unavailable;
+    };
+    if ship.category_id != 6 {
+        return BonusedShipEhpOutcome::Unavailable;
+    }
+    let shield = layer_ehp(
+        ship.shield_capacity,
+        bonused.resonances[0],
+        bonused.resonances[1],
+        bonused.resonances[2],
+        bonused.resonances[3],
+    );
+    let armor = layer_ehp(
+        ship.armor_hp,
+        bonused.resonances[4],
+        bonused.resonances[5],
+        bonused.resonances[6],
+        bonused.resonances[7],
+    );
+    let hull = layer_ehp(
+        ship.hull_hp,
+        bonused.resonances[8],
+        bonused.resonances[9],
+        bonused.resonances[10],
+        bonused.resonances[11],
+    );
+    let total = match (shield, armor, hull) {
+        (Some(shield), Some(armor), Some(hull)) => {
+            let sum = shield + armor + hull;
+            if sum.is_finite() {
+                Some(sum)
+            } else {
+                None
+            }
+        }
+        _ => None,
+    };
+    if shield.is_none() && armor.is_none() && hull.is_none() {
+        return BonusedShipEhpOutcome::Unavailable;
+    }
+    BonusedShipEhpOutcome::Available(BonusedShipEhp {
+        ehp: ShipBaseEhp {
+            shield,
+            armor,
+            hull,
+            total,
+        },
+        excluded_modules: bonused.excluded_modules,
+        unapplied_modules: bonused.unapplied_modules,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::esi::models::FittingItem;
     use crate::fitting::resources::fitting_resources;
-    use crate::fitting::ship_resistances::ship_resistances;
+    use crate::fitting::ship_resistances::{
+        ship_resistances, ship_resistances_with_module_bonuses, BonusedShipResistances,
+        BonusedShipResistancesOutcome,
+    };
     use crate::fitting::ship_stats::ship_base_stats;
 
     fn fitting(ship_type_id: i64, items: Vec<FittingItem>) -> CharacterFitting {
@@ -208,6 +317,42 @@ mod tests {
             ShipBaseEhpOutcome::Available(ehp) => ehp,
             ShipBaseEhpOutcome::Unavailable => panic!("expected Available, got Unavailable"),
         }
+    }
+
+    fn bonused_available(result: BonusedShipEhpOutcome) -> BonusedShipEhp {
+        match result {
+            BonusedShipEhpOutcome::Available(bonused) => bonused,
+            BonusedShipEhpOutcome::Unavailable => panic!("expected Available, got Unavailable"),
+        }
+    }
+
+    fn bonused_resistances_available(
+        result: BonusedShipResistancesOutcome,
+    ) -> BonusedShipResistances {
+        match result {
+            BonusedShipResistancesOutcome::Available(bonused) => bonused,
+            BonusedShipResistancesOutcome::Unavailable => {
+                panic!("expected Available, got Unavailable")
+            }
+        }
+    }
+
+    fn assert_counts_match_resistances(
+        bonused: &BonusedShipEhp,
+        fit: &CharacterFitting,
+        catalogue: &FittingTypes,
+        label: &str,
+    ) {
+        let resistances =
+            bonused_resistances_available(ship_resistances_with_module_bonuses(fit, catalogue));
+        assert_eq!(
+            bonused.excluded_modules, resistances.excluded_modules,
+            "{label} excluded"
+        );
+        assert_eq!(
+            bonused.unapplied_modules, resistances.unapplied_modules,
+            "{label} unapplied"
+        );
     }
 
     /// Hand-derived catalogue oracle: absolute tolerance 1e-6
@@ -867,5 +1012,440 @@ mod tests {
             ship_resistances(&fit, &armor_missing_one),
             crate::fitting::ship_resistances::ShipResistancesOutcome::Available(_)
         ));
+    }
+
+    // Oracle 1a (design section 8): Rifter with Damage Control
+    // II. Base HP 450/450/350; bonused resonances shield
+    // 0.875/0.70/0.525/0.4375 (denominator 0.634375),
+    // armor 0.34/0.5525/0.6375/0.765 (0.57375), hull 0.402 x4.
+    // Each denominator is 0.25 x the resonance sum.
+    //   Shield: 450 / 0.634375 = 709.3596059
+    //   Armor: 450 / 0.57375 = 784.3137255
+    //   Hull: 350 / 0.402 = 870.6467662
+    //   Total: 709.3596059 + 784.3137255 + 870.6467662
+    //          = 2364.3200976
+    #[test]
+    fn rifter_damage_control_oracle() {
+        let catalogue = bundled();
+        let fit = fitting(587, vec![item("LoSlot0", 1, 2048)]);
+        let bonused = bonused_available(ship_ehp_with_module_bonuses(&fit, &catalogue));
+        assert_ehp_close(bonused.ehp.shield, 709.3596059, "DC shield");
+        assert_ehp_close(bonused.ehp.armor, 784.3137255, "DC armor");
+        assert_ehp_close(bonused.ehp.hull, 870.6467662, "DC hull");
+        assert_ehp_close(bonused.ehp.total, 2364.3200976, "DC total");
+        assert_eq!(bonused.excluded_modules, 0);
+        assert_eq!(bonused.unapplied_modules, 0);
+        assert_counts_match_resistances(&bonused, &fit, &catalogue, "DC");
+    }
+
+    // Oracle 1b: Rifter with Multispectrum Shield Hardener II.
+    // Every shield resonance scales by 0.675, so the shield
+    // denominator is 0.725 x 0.675 = 0.489375.
+    //   Shield: 450 / 0.489375 = 919.5402299
+    //   Armor and hull stay at base (666.6666667 +
+    //   522.3880597); total 919.5402299 + 666.6666667 +
+    //   522.3880597 = 2108.5949563.
+    #[test]
+    fn rifter_hardener_oracle() {
+        let catalogue = bundled();
+        let fit = fitting(587, vec![item("MedSlot0", 1, 2281)]);
+        let bonused = bonused_available(ship_ehp_with_module_bonuses(&fit, &catalogue));
+        assert_ehp_close(bonused.ehp.shield, 919.5402299, "Hardener shield");
+        assert_ehp_close(bonused.ehp.armor, 666.6666667, "Hardener armor");
+        assert_ehp_close(bonused.ehp.hull, 522.3880597, "Hardener hull");
+        assert_ehp_close(bonused.ehp.total, 2108.5949563, "Hardener total");
+        assert_eq!(bonused.excluded_modules, 0);
+        assert_eq!(bonused.unapplied_modules, 0);
+        assert_counts_match_resistances(&bonused, &fit, &catalogue, "Hardener");
+    }
+
+    // Oracle 1c: Rifter with 2x EM Armor Hardener II. Armor EM
+    // resonance 0.0939571219, armor denominator
+    // 0.25 x (0.0939571219 + 0.65 + 0.75 + 0.9) = 0.5984892805.
+    //   Armor: 450 / 0.5984892805 = 751.8931661
+    // Shield and hull stay at base; total 620.6896552 +
+    // 751.8931661 + 522.3880597 = 1894.9708810.
+    #[test]
+    fn rifter_stacked_hardener_oracle() {
+        let catalogue = bundled();
+        let fit = fitting(
+            587,
+            vec![item("MedSlot0", 1, 11642), item("MedSlot1", 1, 11642)],
+        );
+        let bonused = bonused_available(ship_ehp_with_module_bonuses(&fit, &catalogue));
+        assert_ehp_close(bonused.ehp.armor, 751.8931661, "Stacked armor");
+        assert_ehp_close(bonused.ehp.shield, 620.6896552, "Stacked shield base");
+        assert_ehp_close(bonused.ehp.hull, 522.3880597, "Stacked hull base");
+        assert_ehp_close(bonused.ehp.total, 1894.9708810, "Stacked total");
+        assert_eq!(bonused.excluded_modules, 0);
+        assert_eq!(bonused.unapplied_modules, 0);
+        assert_counts_match_resistances(&bonused, &fit, &catalogue, "Stacked");
+    }
+
+    // Pin 2: empty fitting equals base EHP exactly (assert_eq
+    // on the whole ShipBaseEhp), for the Rifter and one other
+    // bundled hull, with only non-counted items fitted, and
+    // with a counted non-carrier module fitted. Counts are
+    // zero throughout.
+    #[test]
+    fn empty_fitting_equals_base_ehp_exactly() {
+        let catalogue = bundled();
+        for ship_type_id in [587, 597] {
+            let fit = fitting(ship_type_id, vec![]);
+            let base = available(ship_base_ehp(&fit, &catalogue));
+            let bonused = bonused_available(ship_ehp_with_module_bonuses(&fit, &catalogue));
+            assert_eq!(bonused.ehp, base, "hull-only ship {ship_type_id}");
+            assert_eq!(bonused.excluded_modules, 0);
+            assert_eq!(bonused.unapplied_modules, 0);
+            assert_counts_match_resistances(&bonused, &fit, &catalogue, "hull-only");
+        }
+
+        let fit = fitting(
+            587,
+            vec![
+                item("Cargo", 1, 2048),
+                item("DroneBay", 1, 2281),
+                item("LoSlot0", 0, 2048),
+                item("LoSlot1", 1, 0),
+                item("LoSlot2", 1, -1),
+                item("LoSlot3", -5, 2048),
+            ],
+        );
+        let base = available(ship_base_ehp(&fit, &catalogue));
+        let bonused = bonused_available(ship_ehp_with_module_bonuses(&fit, &catalogue));
+        assert_eq!(bonused.ehp, base);
+        assert_eq!(bonused.excluded_modules, 0);
+        assert_eq!(bonused.unapplied_modules, 0);
+        assert_counts_match_resistances(&bonused, &fit, &catalogue, "non-counted");
+
+        let fit = fitting(587, vec![item("MedSlot0", 1, 2049)]);
+        let base = available(ship_base_ehp(&fit, &catalogue));
+        let bonused = bonused_available(ship_ehp_with_module_bonuses(&fit, &catalogue));
+        assert_eq!(bonused.ehp, base);
+        assert_eq!(bonused.excluded_modules, 0);
+        assert_eq!(bonused.unapplied_modules, 0);
+        assert_counts_match_resistances(&bonused, &fit, &catalogue, "non-carrier");
+    }
+
+    // Pin 3: partial layers. Armor thermal absent: armor None,
+    // total None, shield bonused and hull at base. Shield EM
+    // 1.0 with -55% becomes 0.45, so the shield denominator is
+    // 0.25 x (0.45 + 0.8 + 0.6 + 0.5) = 0.5875.
+    //   Shield: 450 / 0.5875 = 765.9574468
+    // The second entry targets the absent armor thermal and
+    // does not resurrect the armor layer.
+    #[test]
+    fn partial_layer_absent_resonance_omits_one_layer_and_total() {
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],
+                 "shieldCapacity":450.0,"armorHP":450.0,"hp":350.0,
+                 "shieldEmDamageResonance":1.0,"shieldThermalDamageResonance":0.8,"shieldKineticDamageResonance":0.6,"shieldExplosiveDamageResonance":0.5,
+                 "armorEmDamageResonance":0.4,"armorKineticDamageResonance":0.75,"armorExplosiveDamageResonance":0.9,
+                 "emDamageResonance":0.67,"thermalDamageResonance":0.67,"kineticDamageResonance":0.67,"explosiveDamageResonance":0.67},
+                {"typeId":101,"typeName":"Carriers","categoryId":7,"slotEffects":[13],
+                 "resistanceModifiers":[[271,6,-55.0],[270,6,-50.0]]}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let fit = fitting(42, vec![item("MedSlot0", 1, 101)]);
+        let bonused = bonused_available(ship_ehp_with_module_bonuses(&fit, &catalogue));
+        assert_ehp_close(bonused.ehp.shield, 765.9574468, "Partial shield bonused");
+        assert_eq!(bonused.ehp.armor, None);
+        assert_ehp_close(bonused.ehp.hull, 522.3880597, "Partial hull");
+        assert_eq!(bonused.ehp.total, None);
+        assert_eq!(bonused.excluded_modules, 0);
+        assert_eq!(bonused.unapplied_modules, 0);
+        assert_counts_match_resistances(&bonused, &fit, &catalogue, "absent resonance");
+    }
+
+    // Pin 3 continued: one hit point field absent gives the
+    // same shape. The shield carrier still bonuses the shield.
+    #[test]
+    fn partial_layer_absent_hit_points_omits_one_layer_and_total() {
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],
+                 "shieldCapacity":450.0,"hp":350.0,
+                 "shieldEmDamageResonance":1.0,"shieldThermalDamageResonance":0.8,"shieldKineticDamageResonance":0.6,"shieldExplosiveDamageResonance":0.5,
+                 "armorEmDamageResonance":0.4,"armorThermalDamageResonance":0.65,"armorKineticDamageResonance":0.75,"armorExplosiveDamageResonance":0.9,
+                 "emDamageResonance":0.67,"thermalDamageResonance":0.67,"kineticDamageResonance":0.67,"explosiveDamageResonance":0.67},
+                {"typeId":101,"typeName":"Hardener","categoryId":7,"slotEffects":[13],
+                 "resistanceModifiers":[[271,6,-55.0]]}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let fit = fitting(42, vec![item("MedSlot0", 1, 101)]);
+        let bonused = bonused_available(ship_ehp_with_module_bonuses(&fit, &catalogue));
+        assert_ehp_close(bonused.ehp.shield, 765.9574468, "No armor HP shield");
+        assert_eq!(bonused.ehp.armor, None);
+        assert_ehp_close(bonused.ehp.hull, 522.3880597, "No armor HP hull");
+        assert_eq!(bonused.ehp.total, None);
+        assert_eq!(bonused.excluded_modules, 0);
+        assert_eq!(bonused.unapplied_modules, 0);
+        assert_counts_match_resistances(&bonused, &fit, &catalogue, "absent hit points");
+    }
+
+    // Pin 4: unavailable ship gates and independence. Unknown,
+    // non-ship, 0, and negative ship ids are Unavailable.
+    // Resonances without hit points are bonused EHP
+    // Unavailable while bonused resistances render; hit
+    // points without resonances are bonused EHP Unavailable.
+    #[test]
+    fn unavailable_cases_and_independence_from_resistances() {
+        let catalogue = bundled();
+        for ship_type_id in [999999, 2048, 0, -1] {
+            let result = ship_ehp_with_module_bonuses(&fitting(ship_type_id, vec![]), &catalogue);
+            assert_eq!(
+                result,
+                BonusedShipEhpOutcome::Unavailable,
+                "ship {ship_type_id}"
+            );
+        }
+
+        let resonances_only = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Resonances Only","categoryId":6,"slotEffects":[],
+                 "shieldEmDamageResonance":1.0,"shieldThermalDamageResonance":0.8,"shieldKineticDamageResonance":0.6,"shieldExplosiveDamageResonance":0.5,
+                 "armorEmDamageResonance":0.4,"armorThermalDamageResonance":0.65,"armorKineticDamageResonance":0.75,"armorExplosiveDamageResonance":0.9,
+                 "emDamageResonance":0.67,"thermalDamageResonance":0.67,"kineticDamageResonance":0.67,"explosiveDamageResonance":0.67}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let fit = fitting(42, vec![]);
+        assert_eq!(
+            ship_ehp_with_module_bonuses(&fit, &resonances_only),
+            BonusedShipEhpOutcome::Unavailable
+        );
+        assert!(matches!(
+            ship_resistances_with_module_bonuses(&fit, &resonances_only),
+            BonusedShipResistancesOutcome::Available(_)
+        ));
+
+        let hit_points_only = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Hit Points Only","categoryId":6,"slotEffects":[],
+                 "shieldCapacity":450.0,"armorHP":450.0,"hp":350.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let fit = fitting(42, vec![]);
+        assert_eq!(
+            ship_ehp_with_module_bonuses(&fit, &hit_points_only),
+            BonusedShipEhpOutcome::Unavailable
+        );
+        assert_eq!(
+            ship_resistances_with_module_bonuses(&fit, &hit_points_only),
+            BonusedShipResistancesOutcome::Unavailable
+        );
+    }
+
+    // Pin 5: forced-negative bonused product. Shield EM 1.0
+    // with -150% becomes -0.5, so that resonance and its layer
+    // are None; armor and hull stay at base.
+    #[test]
+    fn negative_bonused_product_omits_that_layer_and_total() {
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],
+                 "shieldCapacity":450.0,"armorHP":450.0,"hp":350.0,
+                 "shieldEmDamageResonance":1.0,"shieldThermalDamageResonance":0.5,
+                 "shieldKineticDamageResonance":0.6,"shieldExplosiveDamageResonance":0.5,
+                 "armorEmDamageResonance":0.4,"armorThermalDamageResonance":0.65,"armorKineticDamageResonance":0.75,"armorExplosiveDamageResonance":0.9,
+                 "emDamageResonance":0.67,"thermalDamageResonance":0.67,"kineticDamageResonance":0.67,"explosiveDamageResonance":0.67},
+                {"typeId":107,"typeName":"Over","categoryId":7,"slotEffects":[13],
+                 "resistanceModifiers":[[271,6,-150.0]]}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let fit = fitting(42, vec![item("MedSlot0", 1, 107)]);
+        let bonused = bonused_available(ship_ehp_with_module_bonuses(&fit, &catalogue));
+        assert_eq!(bonused.ehp.shield, None);
+        assert_ehp_close(bonused.ehp.armor, 666.6666667, "Negative armor");
+        assert_ehp_close(bonused.ehp.hull, 522.3880597, "Negative hull");
+        assert_eq!(bonused.ehp.total, None);
+        assert_eq!(bonused.excluded_modules, 0);
+        assert_eq!(bonused.unapplied_modules, 0);
+        assert_counts_match_resistances(&bonused, &fit, &catalogue, "negative");
+    }
+
+    // Pin 5: overflowing quotient and overflowing total mirror
+    // base EHP. Shield HP 1e308 over tiny resonances 1e-300
+    // overflows to no data for that layer; three 1e308 layers
+    // stay Some with the total None.
+    #[test]
+    fn overflowing_quotient_and_total_are_no_data() {
+        let quotient = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Overflow Quotient","categoryId":6,"slotEffects":[],
+                 "shieldCapacity":1e308,"armorHP":800.0,"hp":600.0,
+                 "shieldEmDamageResonance":1e-300,"shieldThermalDamageResonance":1e-300,"shieldKineticDamageResonance":1e-300,"shieldExplosiveDamageResonance":1e-300,
+                 "armorEmDamageResonance":1.0,"armorThermalDamageResonance":1.0,"armorKineticDamageResonance":1.0,"armorExplosiveDamageResonance":1.0,
+                 "emDamageResonance":1.0,"thermalDamageResonance":1.0,"kineticDamageResonance":1.0,"explosiveDamageResonance":1.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let fit = fitting(42, vec![]);
+        let bonused = bonused_available(ship_ehp_with_module_bonuses(&fit, &quotient));
+        assert_eq!(bonused.ehp.shield, None);
+        assert_eq!(bonused.ehp.armor, Some(800.0));
+        assert_eq!(bonused.ehp.hull, Some(600.0));
+        assert_eq!(bonused.ehp.total, None);
+        assert_counts_match_resistances(&bonused, &fit, &quotient, "overflow quotient");
+
+        let total = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Huge Hull","categoryId":6,"slotEffects":[],
+                 "shieldCapacity":1e308,"armorHP":1e308,"hp":1e308,
+                 "shieldEmDamageResonance":1.0,"shieldThermalDamageResonance":1.0,"shieldKineticDamageResonance":1.0,"shieldExplosiveDamageResonance":1.0,
+                 "armorEmDamageResonance":1.0,"armorThermalDamageResonance":1.0,"armorKineticDamageResonance":1.0,"armorExplosiveDamageResonance":1.0,
+                 "emDamageResonance":1.0,"thermalDamageResonance":1.0,"kineticDamageResonance":1.0,"explosiveDamageResonance":1.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let fit = fitting(42, vec![]);
+        let bonused = bonused_available(ship_ehp_with_module_bonuses(&fit, &total));
+        assert_eq!(bonused.ehp.shield, Some(1.0e308));
+        assert_eq!(bonused.ehp.armor, Some(1.0e308));
+        assert_eq!(bonused.ehp.hull, Some(1.0e308));
+        assert_eq!(bonused.ehp.total, None);
+        assert_counts_match_resistances(&bonused, &fit, &total, "overflow total");
+    }
+
+    // Pin 5: denominator guard with four bonused 0.0
+    // resonances gives the raw base hit points, never
+    // infinity.
+    #[test]
+    fn denominator_guard_with_bonused_zero_resonances() {
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Guard Hull","categoryId":6,"slotEffects":[],
+                 "shieldCapacity":1000.0,"armorHP":1000.0,"hp":1000.0,
+                 "shieldEmDamageResonance":0.0,"shieldThermalDamageResonance":0.0,"shieldKineticDamageResonance":0.0,"shieldExplosiveDamageResonance":0.0,
+                 "armorEmDamageResonance":0.0,"armorThermalDamageResonance":0.0,"armorKineticDamageResonance":0.0,"armorExplosiveDamageResonance":0.0,
+                 "emDamageResonance":0.0,"thermalDamageResonance":0.0,"kineticDamageResonance":0.0,"explosiveDamageResonance":0.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let fit = fitting(42, vec![]);
+        let bonused = bonused_available(ship_ehp_with_module_bonuses(&fit, &catalogue));
+        assert_eq!(bonused.ehp.shield, Some(1000.0));
+        assert_eq!(bonused.ehp.armor, Some(1000.0));
+        assert_eq!(bonused.ehp.hull, Some(1000.0));
+        assert_eq!(bonused.ehp.total, Some(3000.0));
+        assert_counts_match_resistances(&bonused, &fit, &catalogue, "guard");
+    }
+
+    // Pin 5: hostile quantity. i64::MAX hardeners equal the
+    // quantity-100 result (bounded arithmetic inherited from
+    // the helper).
+    #[test]
+    fn hostile_quantity_is_bounded() {
+        let catalogue = bundled();
+        let huge = bonused_available(ship_ehp_with_module_bonuses(
+            &fitting(587, vec![item("MedSlot0", i64::MAX, 2281)]),
+            &catalogue,
+        ));
+        let hundred = bonused_available(ship_ehp_with_module_bonuses(
+            &fitting(587, vec![item("MedSlot0", 100, 2281)]),
+            &catalogue,
+        ));
+        assert_eq!(huge, hundred);
+        let fit = fitting(587, vec![item("MedSlot0", i64::MAX, 2281)]);
+        assert_counts_match_resistances(&huge, &fit, &catalogue, "hostile quantity");
+    }
+
+    // Pin 5: a resonance above 1.0 bonused further stays
+    // unclamped. Base 2.0 x4 with a 1.5 mul on shield EM
+    // gives 3.0/2.0/2.0/2.0, denominator 2.25.
+    //   Shield: 450 / 2.25 = 200.0 exact, below the raw hit
+    //   points.
+    #[test]
+    fn above_one_bonused_further_stays_unclamped() {
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Above One","categoryId":6,"slotEffects":[],
+                 "shieldCapacity":450.0,
+                 "shieldEmDamageResonance":2.0,"shieldThermalDamageResonance":2.0,"shieldKineticDamageResonance":2.0,"shieldExplosiveDamageResonance":2.0},
+                {"typeId":108,"typeName":"Amplifier","categoryId":7,"slotEffects":[13],
+                 "resistanceModifiers":[[271,0,1.5]]}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let fit = fitting(42, vec![item("MedSlot0", 1, 108)]);
+        let bonused = bonused_available(ship_ehp_with_module_bonuses(&fit, &catalogue));
+        assert_eq!(bonused.ehp.shield, Some(200.0));
+        assert_eq!(bonused.ehp.armor, None);
+        assert_eq!(bonused.ehp.hull, None);
+        assert_eq!(bonused.ehp.total, None);
+        assert_eq!(bonused.excluded_modules, 0);
+        assert_eq!(bonused.unapplied_modules, 0);
+        assert_counts_match_resistances(&bonused, &fit, &catalogue, "above one");
+    }
+
+    // Pin 6: counts pinned at the EHP level and equal to the
+    // bonused resistances counts on every fixture. Unknown
+    // counted rows count in quantity units; the unapplied
+    // carrier and the mixed carrier count once per unit while
+    // applicable entries still apply.
+    #[test]
+    fn counts_match_resistances_and_applicable_entries_still_apply() {
+        let catalogue = bundled();
+        let fit = fitting(587, vec![item("LoSlot0", 2, 999999)]);
+        let bonused = bonused_available(ship_ehp_with_module_bonuses(&fit, &catalogue));
+        let base = available(ship_base_ehp(&fit, &catalogue));
+        assert_eq!(bonused.excluded_modules, 2);
+        assert_eq!(bonused.unapplied_modules, 0);
+        assert_eq!(bonused.ehp, base);
+        assert_counts_match_resistances(&bonused, &fit, &catalogue, "excluded quantity 2");
+
+        let fit = fitting(587, vec![item("LoSlot0", 1, 52227)]);
+        let bonused = bonused_available(ship_ehp_with_module_bonuses(&fit, &catalogue));
+        assert_eq!(bonused.excluded_modules, 0);
+        assert_eq!(bonused.unapplied_modules, 1);
+        let base = available(ship_base_ehp(&fit, &catalogue));
+        assert_eq!(bonused.ehp, base);
+        assert_counts_match_resistances(&bonused, &fit, &catalogue, "unapplied carrier");
+
+        // Mixed carrier: bad operator, zero operand, and
+        // unknown attribute mark the row unapplied once
+        // while the good thermal entry still applies. Base
+        // shield thermal 0.5 with -50% becomes 0.25, so the
+        // shield denominator is 0.25 x (1.0 + 0.25 + 0.6 +
+        // 0.5) = 0.5875.
+        //   Shield: 450 / 0.5875 = 765.9574468
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],
+                 "shieldCapacity":450.0,"armorHP":450.0,"hp":350.0,
+                 "shieldEmDamageResonance":1.0,"shieldThermalDamageResonance":0.5,
+                 "shieldKineticDamageResonance":0.6,"shieldExplosiveDamageResonance":0.5,
+                 "armorEmDamageResonance":0.4,"armorThermalDamageResonance":0.65,
+                 "armorKineticDamageResonance":0.75,"armorExplosiveDamageResonance":0.9,
+                 "emDamageResonance":0.67,"thermalDamageResonance":0.67,
+                 "kineticDamageResonance":0.67,"explosiveDamageResonance":0.67},
+                {"typeId":106,"typeName":"Mixed","categoryId":7,"slotEffects":[13],
+                 "resistanceModifiers":[[271,7,-55.0],[274,6,-50.0],[272,6,0.0],[999,6,-10.0]]}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let fit = fitting(42, vec![item("MedSlot0", 1, 106)]);
+        let bonused = bonused_available(ship_ehp_with_module_bonuses(&fit, &catalogue));
+        assert_ehp_close(bonused.ehp.shield, 765.9574468, "Mixed shield");
+        assert_ehp_close(bonused.ehp.armor, 666.6666667, "Mixed armor");
+        assert_ehp_close(bonused.ehp.hull, 522.3880597, "Mixed hull");
+        assert_eq!(bonused.excluded_modules, 0);
+        assert_eq!(bonused.unapplied_modules, 1);
+        assert_counts_match_resistances(&bonused, &fit, &catalogue, "mixed");
+    }
+
+    // Pin 7: base independence regression. The Damage
+    // Control II changes the bonused result while the base
+    // result on the same fitting stays at the base oracles.
+    #[test]
+    fn base_ehp_ignores_fitted_bonuses() {
+        let catalogue = bundled();
+        let fit = fitting(587, vec![item("LoSlot0", 1, 2048)]);
+        let base = available(ship_base_ehp(&fit, &catalogue));
+        assert_ehp_close(base.shield, 620.6896552, "Base shield");
+        assert_ehp_close(base.armor, 666.6666667, "Base armor");
+        assert_ehp_close(base.hull, 522.3880597, "Base hull");
+        assert_ehp_close(base.total, 1809.7443815, "Base total");
+        let bonused = bonused_available(ship_ehp_with_module_bonuses(&fit, &catalogue));
+        assert_ehp_close(bonused.ehp.shield, 709.3596059, "Bonused shield");
+        assert_ehp_close(bonused.ehp.armor, 784.3137255, "Bonused armor");
+        assert_ehp_close(bonused.ehp.hull, 870.6467662, "Bonused hull");
+        assert_ehp_close(bonused.ehp.total, 2364.3200976, "Bonused total");
+        assert_ne!(bonused.ehp, base);
     }
 }
