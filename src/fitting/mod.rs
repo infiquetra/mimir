@@ -37,7 +37,10 @@ pub use resources::{
     POWER_GRID_MANAGEMENT_SKILL_ID, SHIELD_UPGRADES_SKILL_ID, WEAPON_UPGRADES_SKILL_ID,
 };
 pub use saved_copy::{convert_saved_fitting, SavedCopyOutcome, SavedCopyRefusal};
-pub use ship_cap_stability::{fitting_cap_stability, CapStabilityOutcome, FittingCapStability};
+pub use ship_cap_stability::{
+    fitting_cap_stability, fitting_cap_stability_with_module_bonuses, BonusedFittingCapStability,
+    CapStabilityOutcome, FittingCapStability,
+};
 pub use ship_ehp::{
     ship_base_ehp, ship_ehp_with_module_bonuses, BonusedShipEhp, BonusedShipEhpOutcome,
     ShipBaseEhp, ShipBaseEhpOutcome,

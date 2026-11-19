@@ -122,6 +122,28 @@ pub struct FittingType {
     pub hit_point_modifiers: Option<Vec<HitPointModifier>>,
     #[serde(rename = "hitPointModifiersUnapplied", default)]
     pub hit_point_modifiers_unapplied: bool,
+    // Fitted-module capacitor modifiers
+    // (docs/cap-bonuses-design.md section 3): entries are
+    // generation-time-proven ItemModifier/shipID capacitor
+    // bonuses on attribute 482 (capacity family) or 55
+    // (recharge family) with the operand baked in (operator
+    // 2 is modAdd, 4 is postMulAlt, 6 is postPercent).
+    // Attribute 55 is a millisecond duration, lower is
+    // faster (design section 2). `Some(empty)` with the
+    // unapplied flag is a carrier whose bonus in that family
+    // the bundled data cannot ground and must be counted,
+    // never read as "no bonus"; `None` is a non-carrier or
+    // an all-zero carrier in that family — the other family
+    // is judged independently. `default` so old assets and
+    // from_json fixtures without the keys load.
+    #[serde(rename = "capacitorCapacityModifiers", default)]
+    pub capacitor_capacity_modifiers: Option<Vec<CapacitorModifier>>,
+    #[serde(rename = "capacitorCapacityModifiersUnapplied", default)]
+    pub capacitor_capacity_modifiers_unapplied: bool,
+    #[serde(rename = "capacitorRechargeModifiers", default)]
+    pub capacitor_recharge_modifiers: Option<Vec<CapacitorModifier>>,
+    #[serde(rename = "capacitorRechargeModifiersUnapplied", default)]
+    pub capacitor_recharge_modifiers_unapplied: bool,
     // Bay usage (docs/bay-capacities-design.md section 3.1):
     // `volume` is the invTypes `volume` column on every row,
     // `cargoCapacity` is the invTypes `capacity` column on
@@ -415,6 +437,46 @@ pub struct HitPointModifier {
 }
 
 impl<'de> Deserialize<'de> for HitPointModifier {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let (modified_attribute_id, operator, operand) =
+            <(i64, i64, f64)>::deserialize(deserializer)?;
+        Ok(Self {
+            modified_attribute_id,
+            operator,
+            operand,
+        })
+    }
+}
+
+/// One fitted-module capacitor modifier entry
+/// (`docs/cap-bonuses-design.md` section 3):
+/// `[modifiedAttributeId, operator, operand]`, with the
+/// operand baked in at generation time (deserialized from
+/// the 3-element array by the same manual tuple impl as
+/// `HitPointModifier`). Entries are generation-time-proven
+/// `ItemModifier`/`shipID` capacitor bonuses on attribute
+/// 482 (capacity family) or 55 (recharge family) with the
+/// operand baked in (operator 2 is modAdd, 4 is postMulAlt,
+/// 6 is postPercent). Attribute 55 is a millisecond duration,
+/// lower is faster (design section 2); `Some(empty)` with the
+/// unapplied flag is a carrier whose bonus in that family
+/// bundled data cannot ground and must be counted, never
+/// read as "no bonus"; `None` is a non-carrier or an
+/// all-zero carrier in that family. One shared struct for
+/// both families, deliberately: the two families are one
+/// slice, one operator set, one triple shape, with the
+/// modified id (482 or 55) carried in every entry.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CapacitorModifier {
+    pub modified_attribute_id: i64,
+    pub operator: i64,
+    pub operand: f64,
+}
+
+impl<'de> Deserialize<'de> for CapacitorModifier {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -1488,6 +1550,91 @@ mod tests {
                 assert!(
                     row.hit_point_modifiers.is_some(),
                     "hitPointModifiersUnapplied without hitPointModifiers: {:?}",
+                    row.name
+                );
+            }
+            // Fitted-module capacitor modifiers
+            // (docs/cap-bonuses-design.md section 3): per family,
+            // `Some` only on category 7 rows; entries' modified
+            // id is the family's attribute with no duplicate,
+            // operator 2, 4, or 6, operand finite and != 0.0;
+            // each unapplied marker appears only beside its
+            // family's `Some` and only as `true`.
+            if let Some(modifiers) = &row.capacitor_capacity_modifiers {
+                assert_eq!(
+                    row.category_id, 7,
+                    "capacitorCapacityModifiers on non-module row: {:?}",
+                    row.name
+                );
+                let mut seen = std::collections::HashSet::new();
+                for modifier in modifiers {
+                    assert_eq!(
+                        modifier.modified_attribute_id, 482,
+                        "capacitor capacity modified id {} on {:?}",
+                        modifier.modified_attribute_id, row.name
+                    );
+                    assert!(
+                        seen.insert(modifier.modified_attribute_id),
+                        "capacitor capacity modifiers duplicated on {:?}",
+                        row.name
+                    );
+                    assert!(
+                        matches!(modifier.operator, 2 | 4 | 6),
+                        "capacitor capacity modifier operator {} on {:?}",
+                        modifier.operator,
+                        row.name
+                    );
+                    assert!(
+                        modifier.operand.is_finite() && modifier.operand != 0.0,
+                        "capacitor capacity modifier operand {} on {:?}",
+                        modifier.operand,
+                        row.name
+                    );
+                }
+            }
+            if row.capacitor_capacity_modifiers_unapplied {
+                assert!(
+                    row.capacitor_capacity_modifiers.is_some(),
+                    "capacitorCapacityModifiersUnapplied without capacitorCapacityModifiers: {:?}",
+                    row.name
+                );
+            }
+            if let Some(modifiers) = &row.capacitor_recharge_modifiers {
+                assert_eq!(
+                    row.category_id, 7,
+                    "capacitorRechargeModifiers on non-module row: {:?}",
+                    row.name
+                );
+                let mut seen = std::collections::HashSet::new();
+                for modifier in modifiers {
+                    assert_eq!(
+                        modifier.modified_attribute_id, 55,
+                        "capacitor recharge modified id {} on {:?}",
+                        modifier.modified_attribute_id, row.name
+                    );
+                    assert!(
+                        seen.insert(modifier.modified_attribute_id),
+                        "capacitor recharge modifiers duplicated on {:?}",
+                        row.name
+                    );
+                    assert!(
+                        matches!(modifier.operator, 2 | 4 | 6),
+                        "capacitor recharge modifier operator {} on {:?}",
+                        modifier.operator,
+                        row.name
+                    );
+                    assert!(
+                        modifier.operand.is_finite() && modifier.operand != 0.0,
+                        "capacitor recharge modifier operand {} on {:?}",
+                        modifier.operand,
+                        row.name
+                    );
+                }
+            }
+            if row.capacitor_recharge_modifiers_unapplied {
+                assert!(
+                    row.capacitor_recharge_modifiers.is_some(),
+                    "capacitorRechargeModifiersUnapplied without capacitorRechargeModifiers: {:?}",
                     row.name
                 );
             }
@@ -2581,6 +2728,303 @@ mod tests {
         let subsystem = types.lookup_by_id(45590).expect("Tengu subsystem row");
         assert_eq!(subsystem.hit_point_modifiers, None);
         assert!(!subsystem.hit_point_modifiers_unapplied);
+        // Fitted-module capacitor modifier counts and spot
+        // pins (docs/cap-bonuses-design.md section 3, the
+        // generator's CAPACITOR_*_MODIFIER_ORACLES twins):
+        // capacity 182 keyed rows (155 non-empty), 27 marked
+        // unapplied, 155 entries; recharge 103 keyed rows,
+        // 0 marked, 103 entries.
+        let cap_rows_count = types
+            .types
+            .iter()
+            .filter(|row| row.capacitor_capacity_modifiers.is_some())
+            .count();
+        assert_eq!(cap_rows_count, 182);
+        let cap_nonempty_count = types
+            .types
+            .iter()
+            .filter(|row| {
+                row.capacitor_capacity_modifiers
+                    .as_ref()
+                    .is_some_and(|modifiers| !modifiers.is_empty())
+            })
+            .count();
+        assert_eq!(cap_nonempty_count, 155);
+        let cap_marked_count = types
+            .types
+            .iter()
+            .filter(|row| row.capacitor_capacity_modifiers_unapplied)
+            .count();
+        assert_eq!(cap_marked_count, 27);
+        let cap_entries_count: usize = types
+            .types
+            .iter()
+            .filter_map(|row| row.capacitor_capacity_modifiers.as_ref().map(Vec::len))
+            .sum();
+        assert_eq!(cap_entries_count, 155);
+        let recharge_rows_count = types
+            .types
+            .iter()
+            .filter(|row| row.capacitor_recharge_modifiers.is_some())
+            .count();
+        assert_eq!(recharge_rows_count, 103);
+        let recharge_nonempty_count = types
+            .types
+            .iter()
+            .filter(|row| {
+                row.capacitor_recharge_modifiers
+                    .as_ref()
+                    .is_some_and(|modifiers| !modifiers.is_empty())
+            })
+            .count();
+        assert_eq!(recharge_nonempty_count, 103);
+        let recharge_marked_count = types
+            .types
+            .iter()
+            .filter(|row| row.capacitor_recharge_modifiers_unapplied)
+            .count();
+        assert_eq!(recharge_marked_count, 0);
+        let recharge_entries_count: usize = types
+            .types
+            .iter()
+            .filter_map(|row| row.capacitor_recharge_modifiers.as_ref().map(Vec::len))
+            .sum();
+        assert_eq!(recharge_entries_count, 103);
+        let micro = types.lookup_by_id(522).expect("'Micro' Cap Battery row");
+        assert_eq!(
+            micro
+                .capacitor_capacity_modifiers
+                .as_ref()
+                .expect("micro capacitorCapacityModifiers"),
+            &[CapacitorModifier {
+                modified_attribute_id: 482,
+                operator: 2,
+                operand: 60.0,
+            }]
+        );
+        assert!(!micro.capacitor_capacity_modifiers_unapplied);
+        assert_eq!(micro.capacitor_recharge_modifiers, None);
+        let large_battery = types.lookup_by_id(3504).expect("Large Cap Battery II row");
+        assert_eq!(
+            large_battery
+                .capacitor_capacity_modifiers
+                .as_ref()
+                .expect("large battery capacitorCapacityModifiers"),
+            &[CapacitorModifier {
+                modified_attribute_id: 482,
+                operator: 2,
+                operand: 1625.0,
+            }]
+        );
+        let flux = types
+            .lookup_by_id(509)
+            .expect("'Basic' Capacitor Flux Coil row");
+        assert_eq!(
+            flux.capacitor_capacity_modifiers
+                .as_ref()
+                .expect("flux capacitorCapacityModifiers"),
+            &[CapacitorModifier {
+                modified_attribute_id: 482,
+                operator: 4,
+                operand: 0.8,
+            }]
+        );
+        assert_eq!(
+            flux.capacitor_recharge_modifiers
+                .as_ref()
+                .expect("flux capacitorRechargeModifiers"),
+            &[CapacitorModifier {
+                modified_attribute_id: 55,
+                operator: 4,
+                operand: 0.66,
+            }]
+        );
+        let pds = types
+            .lookup_by_id(1541)
+            .expect("Power Diagnostic System II row");
+        assert_eq!(
+            pds.capacitor_capacity_modifiers
+                .as_ref()
+                .expect("pds capacitorCapacityModifiers"),
+            &[CapacitorModifier {
+                modified_attribute_id: 482,
+                operator: 4,
+                operand: 1.05,
+            }]
+        );
+        assert_eq!(
+            pds.capacitor_recharge_modifiers
+                .as_ref()
+                .expect("pds capacitorRechargeModifiers"),
+            &[CapacitorModifier {
+                modified_attribute_id: 55,
+                operator: 4,
+                operand: 0.915,
+            }]
+        );
+        let rcu = types
+            .lookup_by_id(1353)
+            .expect("Reactor Control Unit I row");
+        assert_eq!(
+            rcu.capacitor_capacity_modifiers
+                .as_ref()
+                .expect("rcu capacitorCapacityModifiers"),
+            &[CapacitorModifier {
+                modified_attribute_id: 482,
+                operator: 4,
+                operand: 1.0,
+            }]
+        );
+        assert_eq!(
+            rcu.capacitor_recharge_modifiers
+                .as_ref()
+                .expect("rcu capacitorRechargeModifiers"),
+            &[CapacitorModifier {
+                modified_attribute_id: 55,
+                operator: 4,
+                operand: 1.0,
+            }]
+        );
+        let memory = types
+            .lookup_by_id(25954)
+            .expect("Large Semiconductor Memory Cell I row");
+        assert_eq!(
+            memory
+                .capacitor_capacity_modifiers
+                .as_ref()
+                .expect("memory capacitorCapacityModifiers"),
+            &[CapacitorModifier {
+                modified_attribute_id: 482,
+                operator: 6,
+                operand: 15.0,
+            }]
+        );
+        let recharger = types.lookup_by_id(2032).expect("Cap Recharger II row");
+        assert_eq!(
+            recharger
+                .capacitor_recharge_modifiers
+                .as_ref()
+                .expect("recharger capacitorRechargeModifiers"),
+            &[CapacitorModifier {
+                modified_attribute_id: 55,
+                operator: 4,
+                operand: 0.8,
+            }]
+        );
+        let circuit = types
+            .lookup_by_id(31370)
+            .expect("Small Capacitor Control Circuit I row");
+        assert_eq!(
+            circuit
+                .capacitor_recharge_modifiers
+                .as_ref()
+                .expect("circuit capacitorRechargeModifiers"),
+            &[CapacitorModifier {
+                modified_attribute_id: 55,
+                operator: 6,
+                operand: -15.0,
+            }]
+        );
+        let relay = types
+            .lookup_by_id(1445)
+            .expect("Capacitor Power Relay I row");
+        assert_eq!(
+            relay
+                .capacitor_capacity_modifiers
+                .as_ref()
+                .expect("relay capacitorCapacityModifiers"),
+            &[]
+        );
+        assert!(relay.capacitor_capacity_modifiers_unapplied);
+        assert_eq!(
+            relay
+                .capacitor_recharge_modifiers
+                .as_ref()
+                .expect("relay capacitorRechargeModifiers"),
+            &[CapacitorModifier {
+                modified_attribute_id: 55,
+                operator: 4,
+                operand: 0.8,
+            }]
+        );
+        assert!(!relay.capacitor_recharge_modifiers_unapplied);
+        let abyssal = types
+            .lookup_by_id(48431)
+            .expect("Small Abyssal Cap Battery row");
+        assert_eq!(
+            abyssal
+                .capacitor_capacity_modifiers
+                .as_ref()
+                .expect("abyssal capacitorCapacityModifiers"),
+            &[]
+        );
+        assert!(abyssal.capacitor_capacity_modifiers_unapplied);
+        let recharger_basic = types
+            .lookup_by_id(421)
+            .expect("'Basic' Capacitor Recharger row");
+        assert_eq!(recharger_basic.capacitor_capacity_modifiers, None);
+        assert_eq!(
+            recharger_basic
+                .capacitor_recharge_modifiers
+                .as_ref()
+                .expect("recharger basic capacitorRechargeModifiers"),
+            &[CapacitorModifier {
+                modified_attribute_id: 55,
+                operator: 4,
+                operand: 0.88,
+            }]
+        );
+        let damage_control = types.lookup_by_id(2048).expect("DC II row");
+        assert_eq!(damage_control.capacitor_capacity_modifiers, None);
+        assert!(!damage_control.capacitor_capacity_modifiers_unapplied);
+        assert_eq!(damage_control.capacitor_recharge_modifiers, None);
+        assert!(!damage_control.capacitor_recharge_modifiers_unapplied);
+        let rifter = types.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(rifter.capacitor_capacity_modifiers, None);
+        assert!(!rifter.capacitor_capacity_modifiers_unapplied);
+        assert_eq!(rifter.capacitor_recharge_modifiers, None);
+        assert!(!rifter.capacitor_recharge_modifiers_unapplied);
+        let subsystem = types.lookup_by_id(45623).expect("Legion Core row");
+        assert_eq!(subsystem.capacitor_capacity_modifiers, None);
+        assert!(!subsystem.capacitor_capacity_modifiers_unapplied);
+        assert_eq!(subsystem.capacitor_recharge_modifiers, None);
+        assert!(!subsystem.capacitor_recharge_modifiers_unapplied);
+        let pds_basic = types
+            .lookup_by_id(1537)
+            .expect("'Basic' Power Diagnostic System row");
+        assert_eq!(
+            pds_basic
+                .hit_point_modifiers
+                .as_ref()
+                .expect("pds basic hitPointModifiers"),
+            &[HitPointModifier {
+                modified_attribute_id: 263,
+                operator: 4,
+                operand: 1.02,
+            }]
+        );
+        assert_eq!(
+            pds_basic
+                .capacitor_capacity_modifiers
+                .as_ref()
+                .expect("pds basic capacitorCapacityModifiers"),
+            &[CapacitorModifier {
+                modified_attribute_id: 482,
+                operator: 4,
+                operand: 1.02,
+            }]
+        );
+        assert_eq!(
+            pds_basic
+                .capacitor_recharge_modifiers
+                .as_ref()
+                .expect("pds basic capacitorRechargeModifiers"),
+            &[CapacitorModifier {
+                modified_attribute_id: 55,
+                operator: 4,
+                operand: 0.95,
+            }]
+        );
     }
 
     #[test]
