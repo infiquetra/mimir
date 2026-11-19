@@ -320,7 +320,7 @@ the zip, the caches, `effect_modifiers.json`, or `dogma.json`.
   type marked unapplied additionally emits
   `resistanceModifiersUnapplied: true` beside the (possibly
   empty) array. A carrier whose modifiers are all classed
-  zero — today the ten Layered Coating / Layered Energized
+  zero — today the eight Layered Coating / Layered Energized
   Membrane types (1272/1274/1276, 11235/11237/11239, 16345,
   16423, and kin), whose resonance operands are explicitly
   `0.0` — emits **neither key**: its bonus is provably zero

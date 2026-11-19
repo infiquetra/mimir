@@ -1539,7 +1539,7 @@ def main():
     for type_id, type_category in category_by_type.items():
         if type_category != 7:
             continue
-        triples = set()
+        triple_list = []
         for effect_id in effects_by_type.get(type_id, set()):
             for modifier in effect_modifiers.get(effect_id, []):
                 if (
@@ -1548,13 +1548,23 @@ def main():
                     and modifier.get("modifiedAttributeID")
                     in RESIST_ATTR_IDS
                 ):
-                    triples.add(
+                    triple_list.append(
                         (
                             modifier["modifiedAttributeID"],
                             modifier["modifyingAttributeID"],
                             modifier["operation"],
                         )
                     )
+        # A triple carried by two effects of one type would
+        # double-apply in Flutter's per-effect routing, so it
+        # must stop generation for review, never dedupe away.
+        for triple, count in Counter(triple_list).items():
+            if count > 1:
+                fail(
+                    f"duplicated resistance modifier triple "
+                    f"{triple} on type {type_id}"
+                )
+        triples = set(triple_list)
         if not triples:
             continue
         operands = operands_by_type.get(type_id, {})
