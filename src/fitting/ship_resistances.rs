@@ -227,6 +227,13 @@ fn mul_product(operand: f64, count: u64) -> f64 {
     if operand == 1.0 {
         return 1.0;
     }
+    if operand == -1.0 {
+        // Sign flips forever without stalling, reaching
+        // 0.0, or going non-finite, so the loop below would
+        // run `count` times; the product is decided by
+        // parity alone.
+        return if count.is_multiple_of(2) { 1.0 } else { -1.0 };
+    }
     let mut product = 1.0;
     for _ in 0..count {
         let next = product * operand;
@@ -1222,5 +1229,16 @@ mod tests {
         assert_eq!(huge.resistances, hundred.resistances);
         assert_eq!(huge.excluded_modules, 0);
         assert_eq!(huge.unapplied_modules, 0);
+    }
+
+    #[test]
+    fn mul_product_minus_one_is_decided_by_parity() {
+        // A -1.0 operand never stalls, reaches 0.0, or goes
+        // non-finite, so a hostile count must still return
+        // immediately with the parity product.
+        assert_eq!(mul_product(-1.0, u64::MAX), -1.0);
+        assert_eq!(mul_product(-1.0, u64::MAX - 1), 1.0);
+        assert_eq!(mul_product(-1.0, 0), 1.0);
+        assert_eq!(mul_product(0.5, 3), 0.125);
     }
 }
