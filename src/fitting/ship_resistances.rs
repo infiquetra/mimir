@@ -23,10 +23,13 @@
 //!
 //! The crate-internal `bonused_hit_points` helper is the
 //! hit-point sibling serving the EHP numerator under
-//! `docs/hp-bonuses-design.md` section 4: the same
-//! counted-item scan and bounded run arithmetic produce
-//! bonused shield/armor/hull hit points for
-//! `ship_ehp_with_module_bonuses` only.
+//! `docs/hp-bonuses-design.md` section 4 and, after
+//! `docs/shield-recharge-bonuses-design.md`, the shield
+//! layer for the bonused shield peak under that document:
+//! the same counted-item scan and bounded run arithmetic
+//! produce bonused shield/armor/hull hit points for
+//! `ship_ehp_with_module_bonuses` and
+//! `ship_shield_peak_recharge_with_module_bonuses`.
 //!
 //! The crate-internal `bonused_capacitor` helper is the
 //! capacitor sibling serving the bonused capacitor block
@@ -35,6 +38,15 @@
 //! bonused capacity (GJ) and recharge duration (raw
 //! milliseconds) for `fitting_cap_stability_with_module_bonuses`
 //! only.
+//!
+//! The crate-internal `bonused_shield_recharge_duration`
+//! helper is the shield recharge sibling serving the
+//! bonused shield peak under
+//! `docs/shield-recharge-bonuses-design.md` section 4: the
+//! same counted-item scan and bounded run arithmetic
+//! produce the bonused shield recharge duration in raw
+//! milliseconds for
+//! `ship_shield_peak_recharge_with_module_bonuses` only.
 //!
 //! The module is pure computation over the bundled catalogue — no
 //! egui, no state, no network, no database. It depends on
@@ -210,6 +222,13 @@ const HIT_POINT_ORDER: [i64; 3] = [263, 265, 9];
 /// (capacitorCapacity 482, rechargeRate 55). Position is
 /// the accumulator index used below.
 const CAPACITOR_ORDER: [i64; 2] = [482, 55];
+
+/// The single shield recharge modified attribute
+/// (dogma 479 `shieldRechargeRate`, a millisecond
+/// duration, lower is faster). With one attribute there
+/// is no accumulator index, so the run lists below are
+/// scalar `Vec<(f64, u64)>` triples, not arrays.
+const SHIELD_RECHARGE_MODIFIED_ATTRIBUTE_ID: i64 = 479;
 
 /// The twelve base resonances of a ship row in
 /// `RESONANCE_ORDER` position.
@@ -795,6 +814,146 @@ pub(crate) fn bonused_capacitor(
         excluded_modules,
         capacitor_capacity_unapplied_modules,
         capacitor_recharge_unapplied_modules,
+    })
+}
+
+/// Bonused shield recharge duration in milliseconds (the
+/// catalogue unit; lower is faster) plus the fitted-module
+/// counts the caller must disclose beside any number
+/// derived from it.
+pub(crate) struct BonusedShieldRechargeDuration {
+    /// Bonused shield recharge duration in raw
+    /// milliseconds; `None` exactly where the base value
+    /// is absent, negative, or non-finite, or the bonused
+    /// result is negative, non-finite, or a positive
+    /// subnormal.
+    pub recharge_ms: Option<f64>,
+    /// Counted fitted rows with no catalogue row at all,
+    /// so no shield recharge bonus can be proven or
+    /// disproven for them, in quantity units. Same
+    /// definition and source predicate as
+    /// `BonusedCapacitor::excluded_modules`.
+    pub excluded_modules: usize,
+    /// Shield-recharge-dimension count: counted fitted
+    /// rows the catalogue marks as shield recharge
+    /// carriers whose bonus cannot be applied, in quantity
+    /// units. Never summed with any other dimension's
+    /// count.
+    pub shield_recharge_unapplied_modules: usize,
+}
+
+/// `None` only when the ship gate fails (`ship_type_id
+/// <= 0`, no catalogue row, or the row is not category
+/// 6). Otherwise `Some`, with `recharge_ms` as documented
+/// on the field.
+pub(crate) fn bonused_shield_recharge_duration(
+    fitting: &CharacterFitting,
+    catalogue: &FittingTypes,
+) -> Option<BonusedShieldRechargeDuration> {
+    let ship_row = if fitting.ship_type_id > 0 {
+        catalogue.lookup_by_id(fitting.ship_type_id)
+    } else {
+        None
+    };
+    let ship = ship_row?;
+    if ship.category_id != 6 {
+        return None;
+    }
+    let mut excluded_modules: usize = 0;
+    let mut shield_recharge_unapplied_modules: usize = 0;
+    let mut add_runs: Vec<(f64, u64)> = Vec::new();
+    let mut mul_runs: Vec<(f64, u64)> = Vec::new();
+    let mut percent_runs: Vec<(f64, u64)> = Vec::new();
+    for item in &fitting.items {
+        if item.type_id <= 0 {
+            continue;
+        }
+        if item.quantity.max(0) <= 0 {
+            continue;
+        }
+        if !counted_flag(&item.flag) {
+            continue;
+        }
+        let units = usize::try_from(item.quantity).unwrap_or(0);
+        let units_u64 = units as u64;
+        let Some(row) = catalogue.lookup_by_id(item.type_id) else {
+            excluded_modules = excluded_modules.saturating_add(units);
+            continue;
+        };
+        let mut counted_unapplied = false;
+        if row.shield_recharge_modifiers_unapplied {
+            shield_recharge_unapplied_modules =
+                shield_recharge_unapplied_modules.saturating_add(units);
+            counted_unapplied = true;
+        }
+        let Some(modifiers) = &row.shield_recharge_modifiers else {
+            continue;
+        };
+        for modifier in modifiers {
+            if modifier.modified_attribute_id != SHIELD_RECHARGE_MODIFIED_ATTRIBUTE_ID {
+                if !counted_unapplied {
+                    shield_recharge_unapplied_modules =
+                        shield_recharge_unapplied_modules.saturating_add(units);
+                    counted_unapplied = true;
+                }
+                continue;
+            }
+            if !modifier.operand.is_finite()
+                || modifier.operand == 0.0
+                || !matches!(modifier.operator, 2 | 4 | 6)
+            {
+                if !counted_unapplied {
+                    shield_recharge_unapplied_modules =
+                        shield_recharge_unapplied_modules.saturating_add(units);
+                    counted_unapplied = true;
+                }
+                continue;
+            }
+            let runs = match modifier.operator {
+                2 => &mut add_runs,
+                4 => &mut mul_runs,
+                _ => &mut percent_runs,
+            };
+            if let Some((_, count)) = runs
+                .iter_mut()
+                .find(|(existing, _)| existing == &modifier.operand)
+            {
+                *count = count.saturating_add(units_u64);
+            } else {
+                runs.push((modifier.operand, units_u64));
+            }
+        }
+    }
+    let base = ship
+        .shield_recharge_rate
+        .filter(|v| v.is_finite() && *v >= 0.0);
+    let recharge_ms = base.and_then(|base| {
+        let mut add_total = 0.0;
+        for (operand, count) in &add_runs {
+            add_total += operand * (*count as f64);
+        }
+        let mut mul_total = 1.0;
+        for (operand, count) in &mul_runs {
+            mul_total *= mul_product(*operand, *count);
+        }
+        let mut sorted_percent = percent_runs.clone();
+        sorted_percent.sort_by(|a, b| b.0.abs().total_cmp(&a.0.abs()));
+        let mut percent_total = 1.0;
+        for (value, count) in &sorted_percent {
+            percent_total *= mul_product(1.0 + value / 100.0, *count);
+        }
+        let bonused = (base + add_total) * mul_total * percent_total;
+        // A positive subnormal is stall residue from a
+        // hostile-quantity run underflowing toward zero,
+        // not an honest duration: reject it as no data so
+        // downstream never renders it. An exact 0.0 stays
+        // a real zero.
+        Some(bonused).filter(|v| v.is_finite() && *v >= 0.0 && (*v == 0.0 || v.is_normal()))
+    });
+    Some(BonusedShieldRechargeDuration {
+        recharge_ms,
+        excluded_modules,
+        shield_recharge_unapplied_modules,
     })
 }
 
@@ -1609,5 +1768,118 @@ mod tests {
         assert_eq!(mul_product(-1.0, u64::MAX - 1), 1.0);
         assert_eq!(mul_product(-1.0, 0), 1.0);
         assert_eq!(mul_product(0.5, 3), 0.125);
+    }
+
+    // --- Bonused shield recharge duration helper pins
+    // (docs/shield-recharge-bonuses-design.md sections 4, 8;
+    // denominator side of the coupled pair) ---
+
+    #[test]
+    fn shield_recharge_duration_bundled_oracles() {
+        let catalogue = bundled();
+        // Oracle 1 denominator
+        let fit = fitting(587, vec![item("MedSlot0", 1, 394)]);
+        let duration = bonused_shield_recharge_duration(&fit, &catalogue).expect("Some");
+        assert_eq!(duration.recharge_ms, Some(531250.0));
+        assert_eq!(duration.excluded_modules, 0);
+        assert_eq!(duration.shield_recharge_unapplied_modules, 0);
+        // Oracle 3 denominator
+        let fit = fitting(587, vec![item("LoSlot0", 1, 1256)]);
+        let duration = bonused_shield_recharge_duration(&fit, &catalogue).expect("Some");
+        assert_eq!(duration.recharge_ms, Some(437500.0));
+        // Oracle 5 denominator (slower than base)
+        let fit = fitting(587, vec![item("RigSlot0", 1, 4399)]);
+        let duration = bonused_shield_recharge_duration(&fit, &catalogue).expect("Some");
+        assert_eq!(duration.recharge_ms, Some(687500.0));
+        // Oracle 6 denominator
+        let fit = fitting(587, vec![item("LoSlot0", 1, 1541)]);
+        let duration = bonused_shield_recharge_duration(&fit, &catalogue).expect("Some");
+        assert_eq!(duration.recharge_ms, Some(571875.0));
+        // Oracle 7 denominator stays base with unapplied count
+        let fit = fitting(587, vec![item("LoSlot0", 1, 1445)]);
+        let duration = bonused_shield_recharge_duration(&fit, &catalogue).expect("Some");
+        assert_eq!(duration.recharge_ms, Some(625000.0));
+        assert_eq!(duration.shield_recharge_unapplied_modules, 1);
+        assert_eq!(duration.excluded_modules, 0);
+    }
+
+    #[test]
+    fn shield_recharge_duration_identity_and_gates() {
+        let catalogue = bundled();
+        // Empty == base exactly
+        let fit = fitting(587, vec![]);
+        let duration = bonused_shield_recharge_duration(&fit, &catalogue).expect("Some");
+        assert_eq!(duration.recharge_ms, Some(625000.0));
+        // Identity 1.0 multiplier
+        let fit = fitting(587, vec![item("LoSlot0", 1, 1353)]);
+        let duration = bonused_shield_recharge_duration(&fit, &catalogue).expect("Some");
+        assert_eq!(duration.recharge_ms, Some(625000.0));
+        // Ship gate: helper None exactly on gate
+        for ship in [999999, 2048, 0, -1] {
+            assert!(
+                bonused_shield_recharge_duration(&fitting(ship, vec![]), &catalogue).is_none(),
+                "ship {ship}"
+            );
+        }
+        // Base unusable -> recharge_ms None but helper Some
+        let bare = FittingTypes::from_json(
+            r#"{"types":[{"typeId":42,"typeName":"Bare Hull","categoryId":6,"slotEffects":[]}]}"#,
+        )
+        .expect("fixture parses");
+        let duration = bonused_shield_recharge_duration(&fitting(42, vec![]), &bare).expect("Some");
+        assert_eq!(duration.recharge_ms, None);
+    }
+
+    #[test]
+    fn shield_recharge_duration_hostile_and_guards() {
+        let hull = r#"{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"shieldCapacity":450.0,"shieldRechargeRate":625000.0}"#;
+        // percent -100 -> Some(0.0)
+        let catalogue = FittingTypes::from_json(
+            &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"Host","categoryId":7,"slotEffects":[13],"shieldRechargeModifiers":[[479,6,-100.0]]}}]}}"#),
+        )
+        .expect("fixture parses");
+        let duration = bonused_shield_recharge_duration(
+            &fitting(42, vec![item("MedSlot0", 1, 101)]),
+            &catalogue,
+        )
+        .expect("Some");
+        assert_eq!(duration.recharge_ms, Some(0.0));
+        // i64::MAX percent stalls to subnormal -> None
+        let catalogue = FittingTypes::from_json(
+            &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"Host","categoryId":7,"slotEffects":[13],"shieldRechargeModifiers":[[479,6,-20.0]]}}]}}"#),
+        )
+        .expect("fixture parses");
+        let duration = bonused_shield_recharge_duration(
+            &fitting(42, vec![item("RigSlot0", i64::MAX, 101)]),
+            &catalogue,
+        )
+        .expect("Some");
+        assert_eq!(duration.recharge_ms, None);
+        // additive hostile stays finite
+        let catalogue = FittingTypes::from_json(
+            &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"Host","categoryId":7,"slotEffects":[13],"shieldRechargeModifiers":[[479,2,1000.0]]}}]}}"#),
+        )
+        .expect("fixture parses");
+        let duration = bonused_shield_recharge_duration(
+            &fitting(42, vec![item("MedSlot0", i64::MAX, 101)]),
+            &catalogue,
+        )
+        .expect("Some");
+        assert_eq!(
+            duration.recharge_ms,
+            Some(625000.0 + 1000.0 * (i64::MAX as f64))
+        );
+        // Runtime guards: bad entries count once, good still apply
+        let catalogue = FittingTypes::from_json(
+            &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"Bad","categoryId":7,"slotEffects":[13],"shieldRechargeModifiers":[[479,0,0.9],[479,4,0.85],[263,4,0.8]]}}]}}"#),
+        )
+        .expect("fixture parses");
+        let duration = bonused_shield_recharge_duration(
+            &fitting(42, vec![item("MedSlot0", 1, 101)]),
+            &catalogue,
+        )
+        .expect("Some");
+        assert_eq!(duration.shield_recharge_unapplied_modules, 1);
+        assert_eq!(duration.recharge_ms, Some(531250.0));
     }
 }
