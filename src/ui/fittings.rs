@@ -1851,23 +1851,32 @@ fn install_copied_fitting(state: &mut AppState, draft: ImportedFitting) {
     clear_editor_state(state);
 }
 
-/// Locked heading for the base resource block (design section 7).
-const FITTINGS_RESOURCES_HEADING: &str = "Fitting resources (base values)";
+/// Locked heading for the base resource block (output bonuses
+/// design section 7). The outputs include the fitted modules'
+/// and rigs' output bonuses; the needs stay base values, as
+/// the disclosure below states. Constant name kept from the
+/// base-values heading it replaces.
+const FITTINGS_RESOURCES_HEADING: &str = "Fitting resources (with fitted module bonuses)";
 
-/// Locked heading for the skill-applied block (fitting skill
-/// resources design section 6). Chosen only for an `Available`
-/// result with loaded skills; unavailable states keep the base
-/// heading.
-const FITTINGS_RESOURCES_APPLIED_HEADING: &str = "Fitting resources (with skill bonuses)";
+/// Locked heading for the skill-applied block (output bonuses
+/// design section 7). Both applied sets are named: the skill
+/// bonuses and reductions and the fitted modules' output
+/// bonuses. Chosen only for an `Available` result with loaded
+/// skills; unavailable states keep the base heading.
+const FITTINGS_RESOURCES_APPLIED_HEADING: &str =
+    "Fitting resources (with skill and fitted module bonuses)";
 
-/// Locked disclosure: the numbers are base values only, never
-/// in-game totals (design section 4).
-const FITTING_RESOURCES_DISCLOSURE: &str = "Base values from Mimir's bundled item data. Skills, implants, and bonuses from modules, rigs, subsystems, and the ship itself are not applied, so these numbers can differ from EVE.";
+/// Locked disclosure (output bonuses design section 7): the
+/// outputs include the fitted modules' and rigs' output
+/// bonuses, the needs are base values, and every fitted
+/// module counts as active.
+const FITTING_RESOURCES_DISCLOSURE: &str = "Ship outputs include the fitted modules' and rigs' output bonuses from Mimir's bundled item data, and module needs are base values. Every fitted module is counted as active, because the fitting data does not say which modules are on. Skills, implants, and bonuses or reductions from subsystems and the ship itself are not applied, so these numbers can differ from EVE.";
 
-/// Locked applied disclosure (fitting need reductions design
-/// section 8): the two skill bonuses and the five need
-/// reductions are applied, the rest stays named as excluded.
-const FITTING_RESOURCES_APPLIED_DISCLOSURE: &str = "Ship outputs and module needs include only the skill bonuses and reductions above, from Mimir's bundled item data and this character's trained skill levels. Implants, and bonuses and reductions from modules, rigs, subsystems, and the ship itself are not applied, so these numbers can differ from EVE.";
+/// Locked applied disclosure (output bonuses design section
+/// 7): the outputs and needs include the skill bonuses and
+/// reductions above and the fitted modules' and rigs' output
+/// bonuses; every fitted module counts as active.
+const FITTING_RESOURCES_APPLIED_DISCLOSURE: &str = "Ship outputs and module needs include only the skill bonuses and reductions above and the fitted modules' and rigs' output bonuses, from Mimir's bundled item data and this character's trained skill levels. Every fitted module is counted as active, because the fitting data does not say which modules are on. Implants, and bonuses and reductions from subsystems and the ship itself are not applied, so these numbers can differ from EVE.";
 
 const FITTING_RESOURCES_NO_CATALOGUE: &str =
     "Fitting resources unavailable: Mimir's bundled item data failed to load.";
@@ -2110,6 +2119,21 @@ fn base_need_line(label: &str, budget: &ResourceBudget, unit: &str) -> String {
     )
 }
 
+/// One before-module-bonuses output line (output bonuses
+/// design section 7), pure like `base_need_line`: `label` is
+/// "CPU" or "Power grid", `unit` the resource unit. Always
+/// rendered in both arms, even when the bonused `output`
+/// equals `base_output`, so today's output figure is never
+/// replaced silently; on the applied arm the figure includes
+/// the skill factor, which the adjacent `skill_line`s
+/// already narrate.
+fn base_output_line(label: &str, budget: &ResourceBudget, unit: &str) -> String {
+    format!(
+        "{label} output before fitted module bonuses: {}.",
+        widgets::format_fitting_amount(budget.base_output, unit)
+    )
+}
+
 /// One need-reduction skill line (fitting need reductions design
 /// section 8), pure like `skill_line`: `dimension` is "CPU need
 /// of matching modules" or "Power grid need of matching modules"
@@ -2178,16 +2202,55 @@ fn power_grid_unreduced_line(unreduced: usize) -> Option<String> {
     }
 }
 
+/// Per-dimension output-unapplied-module disclosure for CPU,
+/// or `None` when every counted carrier's CPU output bonus
+/// could be applied (output bonuses design section 7).
+fn cpu_output_unapplied_line(unapplied: usize) -> Option<String> {
+    if unapplied == 0 {
+        None
+    } else if unapplied == 1 {
+        Some(
+            "1 fitted module has a CPU output bonus Mimir's bundled item data cannot describe, so that bonus is not applied."
+                .to_string(),
+        )
+    } else {
+        Some(format!(
+            "{unapplied} fitted modules have CPU output bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied."
+        ))
+    }
+}
+
+/// Per-dimension output-unapplied-module disclosure for power
+/// grid, or `None` when every counted carrier's power grid
+/// output bonus could be applied (output bonuses design
+/// section 7).
+fn power_grid_output_unapplied_line(unapplied: usize) -> Option<String> {
+    if unapplied == 0 {
+        None
+    } else if unapplied == 1 {
+        Some(
+            "1 fitted module has a power grid output bonus Mimir's bundled item data cannot describe, so that bonus is not applied."
+                .to_string(),
+        )
+    } else {
+        Some(format!(
+            "{unapplied} fitted modules have power grid output bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied."
+        ))
+    }
+}
+
 /// CPU and power grid block shared by the saved and imported
 /// fitting details (design section 7, extended by the fitting
-/// skill resources design sections 5-6 and the fitting need
-/// reductions design section 8). `levels` is `Some` only when
-/// the owning character's skills are loaded (`Ready`); `None`
-/// renders the base block byte-identically to before. The heading
-/// is chosen after the outcome is known, so the applied heading
-/// never sits over an unavailable sentence. Renders even when
-/// the fitting has no items. Logs nothing itself: the pure
-/// function already logged counts.
+/// skill resources design sections 5-6, the fitting need
+/// reductions design section 8, and the output bonuses design
+/// section 6). `levels` is `Some` only when the owning
+/// character's skills are loaded (`Ready`); module output
+/// bonuses render on both arms from the fitting and catalogue
+/// alone, and the `None` arm remains the base-needs arm. The
+/// heading is chosen after the outcome is known, so the
+/// applied heading never sits over an unavailable sentence.
+/// Renders even when the fitting has no items. Logs nothing
+/// itself: the pure function already logged counts.
 fn render_fitting_resources(
     ui: &mut egui::Ui,
     fitting: &CharacterFitting,
@@ -2220,6 +2283,8 @@ fn render_fitting_resources(
                 } else {
                     ui.label(power_line);
                 }
+                ui.label(base_output_line("CPU", &cpu, "tf"));
+                ui.label(base_output_line("Power grid", &power, "MW"));
                 ui.label(skill_line(
                     "CPU output",
                     &sde.skill_name_quiet(CPU_MANAGEMENT_SKILL_ID),
@@ -2274,6 +2339,13 @@ fn render_fitting_resources(
                 if let Some(line) = power_grid_unreduced_line(power.unreduced_modules) {
                     ui.label(line);
                 }
+                if let Some(line) = cpu_output_unapplied_line(cpu.output_unapplied_modules) {
+                    ui.label(line);
+                }
+                if let Some(line) = power_grid_output_unapplied_line(power.output_unapplied_modules)
+                {
+                    ui.label(line);
+                }
                 ui.label(FITTING_RESOURCES_APPLIED_DISCLOSURE);
             }
             None => {
@@ -2290,10 +2362,19 @@ fn render_fitting_resources(
                 } else {
                     ui.label(power_line);
                 }
+                ui.label(base_output_line("CPU", &cpu, "tf"));
+                ui.label(base_output_line("Power grid", &power, "MW"));
                 if let Some(line) = cpu_excluded_line(cpu.excluded_modules) {
                     ui.label(line);
                 }
                 if let Some(line) = power_grid_excluded_line(power.excluded_modules) {
+                    ui.label(line);
+                }
+                if let Some(line) = cpu_output_unapplied_line(cpu.output_unapplied_modules) {
+                    ui.label(line);
+                }
+                if let Some(line) = power_grid_output_unapplied_line(power.output_unapplied_modules)
+                {
                     ui.label(line);
                 }
                 ui.label(FITTING_RESOURCES_DISCLOSURE);
@@ -5772,10 +5853,78 @@ mod tests {
     }
 
     #[test]
+    fn fitting_resource_output_unapplied_lines_match_the_locked_templates() {
+        assert_eq!(cpu_output_unapplied_line(0), None);
+        assert_eq!(
+            cpu_output_unapplied_line(1).as_deref(),
+            Some(
+                "1 fitted module has a CPU output bonus Mimir's bundled item data cannot describe, so that bonus is not applied."
+            )
+        );
+        assert_eq!(
+            cpu_output_unapplied_line(2).as_deref(),
+            Some("2 fitted modules have CPU output bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied.")
+        );
+        assert_eq!(power_grid_output_unapplied_line(0), None);
+        assert_eq!(
+            power_grid_output_unapplied_line(1).as_deref(),
+            Some(
+                "1 fitted module has a power grid output bonus Mimir's bundled item data cannot describe, so that bonus is not applied."
+            )
+        );
+        assert_eq!(
+            power_grid_output_unapplied_line(2).as_deref(),
+            Some("2 fitted modules have power grid output bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied.")
+        );
+    }
+
+    #[test]
+    fn fitting_resource_base_output_lines_match_the_locked_templates() {
+        // Template pins through the extended budget() helper,
+        // where base equals output.
+        assert_eq!(
+            base_output_line("CPU", &budget(114.0, 130.0), "tf"),
+            "CPU output before fitted module bonuses: 130.0 tf."
+        );
+        assert_eq!(
+            base_output_line("Power grid", &budget(31.0, 41.0), "MW"),
+            "Power grid output before fitted module bonuses: 41.0 MW."
+        );
+        // Bonused pair on the applied arm: the before-figure
+        // includes the skill factor (162.5/51.25).
+        let bonused = ResourceBudget {
+            used: 40.0,
+            output: 178.75,
+            excluded_modules: 0,
+            base_used: 40.0,
+            unreduced_modules: 0,
+            base_output: 162.5,
+            output_unapplied_modules: 0,
+        };
+        assert_eq!(
+            base_output_line("CPU", &bonused, "tf"),
+            "CPU output before fitted module bonuses: 162.5 tf."
+        );
+        let bonused_power = ResourceBudget {
+            used: 1.0,
+            output: 76.1875,
+            excluded_modules: 0,
+            base_used: 1.0,
+            unreduced_modules: 0,
+            base_output: 51.25,
+            output_unapplied_modules: 0,
+        };
+        assert_eq!(
+            base_output_line("Power grid", &bonused_power, "MW"),
+            "Power grid output before fitted module bonuses: 51.3 MW."
+        );
+    }
+
+    #[test]
     fn fitting_resource_unavailable_and_disclosure_wording() {
         assert_eq!(
             FITTINGS_RESOURCES_HEADING,
-            "Fitting resources (base values)"
+            "Fitting resources (with fitted module bonuses)"
         );
         assert_eq!(
             FITTING_RESOURCES_NO_CATALOGUE,
@@ -5787,7 +5936,7 @@ mod tests {
         );
         assert_eq!(
             FITTING_RESOURCES_DISCLOSURE,
-            "Base values from Mimir's bundled item data. Skills, implants, and bonuses from modules, rigs, subsystems, and the ship itself are not applied, so these numbers can differ from EVE."
+            "Ship outputs include the fitted modules' and rigs' output bonuses from Mimir's bundled item data, and module needs are base values. Every fitted module is counted as active, because the fitting data does not say which modules are on. Skills, implants, and bonuses or reductions from subsystems and the ship itself are not applied, so these numbers can differ from EVE."
         );
     }
 
@@ -5847,6 +5996,21 @@ mod tests {
             resource_line("Power grid", &brawler.1, "MW"),
             "Power grid: 3.0 MW of 41.0 MW used (38.0 MW left)"
         );
+        // Output-bonus identity (design section 8, pin 4): no
+        // demo fitting fits an output carrier, so outputs and
+        // before-figures equal and nothing is unapplied.
+        assert_eq!(brawler.0.base_output, brawler.0.output);
+        assert_eq!(brawler.1.base_output, brawler.1.output);
+        assert_eq!(brawler.0.output_unapplied_modules, 0);
+        assert_eq!(brawler.1.output_unapplied_modules, 0);
+        assert_eq!(
+            cpu_excluded_line(brawler.0.excluded_modules).as_deref(),
+            Some("CPU does not count 3 fitted modules with no CPU data in Mimir's bundled item data.")
+        );
+        assert_eq!(
+            power_grid_excluded_line(brawler.1.excluded_modules).as_deref(),
+            Some("Power grid does not count 3 fitted modules with no power grid data in Mimir's bundled item data.")
+        );
 
         // Mission Runner: one counted module, one excluded.
         let mission = match fitting_resources(&find("Mission Runner"), &catalogue) {
@@ -5857,6 +6021,10 @@ mod tests {
         assert_close(mission.1.used, 1.0);
         assert_eq!(mission.0.excluded_modules, 1);
         assert_eq!(mission.1.excluded_modules, 1);
+        assert_eq!(mission.0.base_output, mission.0.output);
+        assert_eq!(mission.1.base_output, mission.1.output);
+        assert_eq!(mission.0.output_unapplied_modules, 0);
+        assert_eq!(mission.1.output_unapplied_modules, 0);
 
         // Demo Runner (Punisher, 140.0 tf / 67.0 MW).
         let runner = match fitting_resources(&find("Demo Runner"), &catalogue) {
@@ -5869,6 +6037,10 @@ mod tests {
         assert_close(runner.1.output, 67.0);
         assert_eq!(runner.0.excluded_modules, 1);
         assert_eq!(runner.1.excluded_modules, 1);
+        assert_eq!(runner.0.base_output, runner.0.output);
+        assert_eq!(runner.1.base_output, runner.1.output);
+        assert_eq!(runner.0.output_unapplied_modules, 0);
+        assert_eq!(runner.1.output_unapplied_modules, 0);
 
         // The clean showcase: the demo sample import, through
         // the shared synthesis path, with no excluded lines.
@@ -5894,11 +6066,11 @@ mod tests {
     fn fitting_resource_applied_wording() {
         assert_eq!(
             FITTINGS_RESOURCES_APPLIED_HEADING,
-            "Fitting resources (with skill bonuses)"
+            "Fitting resources (with skill and fitted module bonuses)"
         );
         assert_eq!(
             FITTING_RESOURCES_APPLIED_DISCLOSURE,
-            "Ship outputs and module needs include only the skill bonuses and reductions above, from Mimir's bundled item data and this character's trained skill levels. Implants, and bonuses and reductions from modules, rigs, subsystems, and the ship itself are not applied, so these numbers can differ from EVE."
+            "Ship outputs and module needs include only the skill bonuses and reductions above and the fitted modules' and rigs' output bonuses, from Mimir's bundled item data and this character's trained skill levels. Every fitted module is counted as active, because the fitting data does not say which modules are on. Implants, and bonuses and reductions from subsystems and the ship itself are not applied, so these numbers can differ from EVE."
         );
         // Names resolve through the real bundled SDE, never raw ids.
         let sde = Sde::load_bundled().expect("bundled SDE loads");
@@ -6166,6 +6338,105 @@ mod tests {
         );
     }
 
+    // Catalogue lines by construction (output bonuses design
+    // section 8, pin 3): real bundled catalogue through the pure
+    // function, strings through the pure line helpers, so
+    // catalogue or rounding drift fails here.
+    #[test]
+    fn fitting_resources_with_output_bonuses_catalogue_lines() {
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        // Rifter + Reactor Control Unit II: power output
+        // 41.0 x 1.15 renders at the formatter's tenth.
+        let rcu = fitting_with_items(vec![item("LoSlot0", 1, 1355)]);
+        let (cpu, power) = match fitting_resources(&rcu, &catalogue) {
+            FittingResources::Available { cpu, power } => (cpu, power),
+            FittingResources::ShipNoOutput => panic!("Rifter plus RCU must have ship output"),
+        };
+        assert_eq!(
+            resource_line("Power grid", &power, "MW"),
+            "Power grid: 0.0 MW of 47.1 MW used (47.1 MW left)"
+        );
+        assert_eq!(
+            base_output_line("Power grid", &power, "MW"),
+            "Power grid output before fitted module bonuses: 41.0 MW."
+        );
+        assert_eq!(cpu.output_unapplied_modules, 0);
+        assert_eq!(power.output_unapplied_modules, 0);
+        assert_eq!(
+            cpu_output_unapplied_line(cpu.output_unapplied_modules),
+            None
+        );
+        assert_eq!(
+            power_grid_output_unapplied_line(power.output_unapplied_modules),
+            None
+        );
+        // Rifter + Co-Processor II: CPU output 130.0 x 1.1.
+        let coproc = fitting_with_items(vec![item("LoSlot0", 1, 3888)]);
+        let (cpu, _power) = match fitting_resources(&coproc, &catalogue) {
+            FittingResources::Available { cpu, power } => (cpu, power),
+            FittingResources::ShipNoOutput => {
+                panic!("Rifter plus co-processor must have ship output")
+            }
+        };
+        assert_eq!(
+            resource_line("CPU", &cpu, "tf"),
+            "CPU: 0.0 tf of 143.0 tf used (143.0 tf left)"
+        );
+        // Oracle 5 fit at L5/L5: (41.0 + 12.0) x 1.15 x 1.25
+        // renders 76.2 MW.
+        let oracle5 = fitting_with_items(vec![
+            item("LoSlot0", 1, 1355),
+            item("LoSlot1", 1, 3888),
+            item("LoSlot2", 1, 4254),
+        ]);
+        let levels = ResourceSkillLevels {
+            cpu_management: 5,
+            power_grid_management: 5,
+            weapon_upgrades: 0,
+            advanced_weapon_upgrades: 0,
+            energy_grid_upgrades: 0,
+            electronics_upgrades: 0,
+            shield_upgrades: 0,
+        };
+        let (_cpu, power) = match fitting_resources_with_skills(&oracle5, &catalogue, Some(levels))
+        {
+            FittingResources::Available { cpu, power } => (cpu, power),
+            FittingResources::ShipNoOutput => panic!("Oracle 5 fit must have ship output"),
+        };
+        assert_eq!(
+            resource_line("Power grid", &power, "MW"),
+            "Power grid: 1.0 MW of 76.2 MW used (75.2 MW left)"
+        );
+        // Rifter + Capacitor Power Relay I: the power
+        // output-unapplied singular line, no CPU one, both
+        // resource lines at base figures.
+        let relay = fitting_with_items(vec![item("LoSlot0", 1, 1445)]);
+        let (cpu, power) = match fitting_resources(&relay, &catalogue) {
+            FittingResources::Available { cpu, power } => (cpu, power),
+            FittingResources::ShipNoOutput => panic!("Rifter plus relay must have ship output"),
+        };
+        assert_eq!(
+            resource_line("CPU", &cpu, "tf"),
+            "CPU: 4.0 tf of 130.0 tf used (126.0 tf left)"
+        );
+        assert_eq!(
+            resource_line("Power grid", &power, "MW"),
+            "Power grid: 0.0 MW of 41.0 MW used (41.0 MW left)"
+        );
+        assert_eq!(cpu.output_unapplied_modules, 0);
+        assert_eq!(power.output_unapplied_modules, 1);
+        assert_eq!(
+            cpu_output_unapplied_line(cpu.output_unapplied_modules),
+            None
+        );
+        assert_eq!(
+            power_grid_output_unapplied_line(power.output_unapplied_modules).as_deref(),
+            Some(
+                "1 fitted module has a power grid output bonus Mimir's bundled item data cannot describe, so that bonus is not applied."
+            )
+        );
+    }
+
     // Applied demo story (fitting skill resources design section 5):
     // levels come from the real demo skill fixture through
     // `resource_skill_levels`, outputs through the pure function,
@@ -6284,6 +6555,12 @@ mod tests {
         );
         assert_eq!(brawler.0.excluded_modules, 3);
         assert_eq!(brawler.1.excluded_modules, 3);
+        // Output-bonus identity (design section 8, pin 4), on
+        // the applied arm.
+        assert_eq!(brawler.0.base_output, brawler.0.output);
+        assert_eq!(brawler.1.base_output, brawler.1.output);
+        assert_eq!(brawler.0.output_unapplied_modules, 0);
+        assert_eq!(brawler.1.output_unapplied_modules, 0);
         assert_eq!(
             skill_line("CPU output", &cpu_name, aria_levels.cpu_management),
             "CPU output includes no bonus: CPU Management is level 0."
@@ -6376,6 +6653,10 @@ mod tests {
         );
         assert_eq!(mission.0.excluded_modules, 1);
         assert_eq!(mission.1.excluded_modules, 1);
+        assert_eq!(mission.0.base_output, mission.0.output);
+        assert_eq!(mission.1.base_output, mission.1.output);
+        assert_eq!(mission.0.output_unapplied_modules, 0);
+        assert_eq!(mission.1.output_unapplied_modules, 0);
         assert_eq!(mission.0.base_used, mission.0.used);
         assert_eq!(mission.1.base_used, mission.1.used);
         assert_eq!(
@@ -6419,6 +6700,10 @@ mod tests {
             ),
             "Power grid output includes no bonus: Power Grid Management is level 0."
         );
+        assert_eq!(runner.0.base_output, runner.0.output);
+        assert_eq!(runner.1.base_output, runner.1.output);
+        assert_eq!(runner.0.output_unapplied_modules, 0);
+        assert_eq!(runner.1.output_unapplied_modules, 0);
         assert_eq!(runner.0.base_used, runner.0.used);
         assert_eq!(runner.1.base_used, runner.1.used);
         assert_eq!(runner.0.unreduced_modules, 0);
