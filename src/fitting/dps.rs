@@ -1224,6 +1224,43 @@ mod tests {
         assert_close(dps.drones.expect("drone family").dps, 0.0);
     }
 
+    // A charge on a non-weapon row of a non-EFT draft flips
+    // the pairing surface on (the locked gate is any charge
+    // present): families and volley become honest zeroes,
+    // the unloaded weapon still counts, and no damage is
+    // invented. Pinned so the gate formula and the design
+    // prose cannot drift apart unnoticed.
+    #[test]
+    fn non_weapon_charge_flips_created_surface_to_zeroes() {
+        let catalogue = bundled();
+        let mut imp = imported_eft(
+            587,
+            vec![imported_item(2889, 1, None), imported_item(1952, 1, None)],
+        );
+        imp.format = ImportFormat::Created;
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert!(dps.turrets.is_none());
+        assert!(dps.launchers.is_none());
+        assert!(dps.volley.is_none());
+        assert_eq!(dps.unloaded_weapons, 1);
+
+        let mut imp = imported_eft(
+            587,
+            vec![
+                imported_item(2889, 1, None),
+                imported_item(1952, 1, Some(charge(29009))),
+            ],
+        );
+        imp.format = ImportFormat::Created;
+        let synth = imp.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&imp), &catalogue));
+        assert_close(dps.turrets.expect("turret family").dps, 0.0);
+        assert_close(dps.launchers.expect("launcher family").dps, 0.0);
+        assert_close(dps.volley.expect("volley"), 0.0);
+        assert_eq!(dps.unloaded_weapons, 1);
+    }
+
     // Test 10: clamps and failures. Quantity 0 and negative,
     // type_id <= 0 rows invisible; i64::MAX drone quantity
     // stays finite. Unknown ship, non-category-6 ship ->

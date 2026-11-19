@@ -625,11 +625,16 @@ Each can flip `Available`/`Unavailable` at the margins
 through the shipped finals (`src/fitting/dps.rs:333-340`);
 nothing in this slice special-cases that. A charge on a
 non-weapon slot row (a script on a sensor booster, a
-booster charge on a capacitor booster) changes no DPS
-figure: the row fails the cycle gate before its charge is
+booster charge on a capacitor booster) changes no damage
+number: the row fails the cycle gate before its charge is
 read, counts as neither unloaded nor excluded, and shows
-only in the Loaded charges list and the charge disclosures —
+in the Loaded charges list and the charge disclosures —
 which is the honest display for pairings DPS does not model.
+On a non-EFT draft it does flip the pairing surface itself
+on (the locked gate above is any charge present), so the
+weapon families and volley render as honest zeroes instead
+of absent — the same zeroes a zero-charge EFT draft shows;
+no damage is invented either way (pinned by test).
 No compatibility predicate is consulted inside DPS:
 imported pairings, including incompatible ones, still
 compute exactly as recorded (section 4.4); the group
