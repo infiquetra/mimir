@@ -10,7 +10,8 @@
 //!
 //! Pure: no egui, no state, no network, no database. After every
 //! successful edit the charges counter is recounted from the
-//! current rows (design section 4.5); the parse-history counters
+//! current rows (design section 4.5), `set_charge` and
+//! `clear_charge` included; the parse-history counters
 //! stay frozen. One edit deliberately does not recount: a ship
 //! change cannot move a charge between rows, so it leaves the
 //! charges counter and the whole parse report untouched instead
@@ -24,8 +25,9 @@ use std::collections::HashMap;
 
 use crate::fitting::eft::{
     absorb_stack, classify_module, parse_stack_quantity, slot_section, ImportFormat,
-    ImportIssueKind, ImportReport, ImportSection, ImportedFitting, ImportedItem, ModuleOutcome,
-    CATEGORY_DRONE, CATEGORY_FIGHTER, CATEGORY_MODULE, CATEGORY_SHIP, CATEGORY_SUBSYSTEM,
+    ImportIssueKind, ImportReport, ImportSection, ImportedCharge, ImportedFitting, ImportedItem,
+    ModuleOutcome, CATEGORY_CHARGE, CATEGORY_DRONE, CATEGORY_FIGHTER, CATEGORY_MODULE,
+    CATEGORY_SHIP, CATEGORY_SUBSYSTEM,
 };
 use crate::names::fitting_types::{normalize_type_name, FittingTypes, NameLookup};
 
@@ -74,6 +76,41 @@ fn refusal_for_kind(kind: ImportIssueKind) -> EditRefusal {
 
 fn refused(kind: EditRefusal) -> EditRefusal {
     tracing::debug!("[FITTING] editor add refused kind={kind:?}");
+    kind
+}
+
+/// One refusal kind per charge-edit condition (charge-editing
+/// design section 4.1): a separate enum, not new
+/// [`EditRefusal`] variants. The first three reasons delegate
+/// to the matching [`ImportIssueKind::reason`] verbatim;
+/// `IncompatibleCharge` carries this design's one new fixed
+/// sentence.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChargeRefusal {
+    UnknownCharge,
+    AmbiguousCharge,
+    NotACharge,
+    IncompatibleCharge,
+}
+
+impl ChargeRefusal {
+    /// Fixed refusal wording: the first three share the
+    /// importer's reason strings; the fourth is this
+    /// design's locked sentence.
+    pub fn reason(&self) -> &'static str {
+        match self {
+            ChargeRefusal::UnknownCharge => ImportIssueKind::UnknownCharge.reason(),
+            ChargeRefusal::AmbiguousCharge => ImportIssueKind::AmbiguousCharge.reason(),
+            ChargeRefusal::NotACharge => ImportIssueKind::NotACharge.reason(),
+            ChargeRefusal::IncompatibleCharge => {
+                "Mimir's bundled data does not list this charge as one this module can be loaded with"
+            }
+        }
+    }
+}
+
+fn charge_refused(kind: ChargeRefusal) -> ChargeRefusal {
+    tracing::debug!("[FITTING] editor charge refused kind={kind:?}");
     kind
 }
 
@@ -511,6 +548,107 @@ pub fn set_quantity(
         fitting.items.len()
     );
     Ok(())
+}
+
+/// Set or change the loaded charge on the slot row at
+/// `index` by exact catalogue name (charge-editing design
+/// section 4.2). Proof order: the row must sit in a slot
+/// section; the name resolves by the importer's lookup;
+/// the found row's category must be 8; and the charge's
+/// group must be listed among the module's accepted
+/// groups. Any refusal mutates nothing and logs only the
+/// refusal line. On success the stored pair is the
+/// catalogue row's canonical name and type number, the
+/// charges counter is recounted, and the set line logs.
+pub fn set_charge(
+    fitting: &mut ImportedFitting,
+    types: &FittingTypes,
+    index: usize,
+    name: &str,
+) -> Result<(), ChargeRefusal> {
+    let type_id = match fitting
+        .items
+        .get(index)
+        .map(|item| (item.type_id, item.section))
+    {
+        Some((
+            type_id,
+            ImportSection::Low
+            | ImportSection::Medium
+            | ImportSection::High
+            | ImportSection::Rig
+            | ImportSection::Subsystem,
+        )) => type_id,
+        _ => return Err(charge_refused(ChargeRefusal::IncompatibleCharge)),
+    };
+    let (charge_type_id, charge_name, charge_group_id) = match types.lookup(name) {
+        NameLookup::Unknown => return Err(charge_refused(ChargeRefusal::UnknownCharge)),
+        NameLookup::Ambiguous => return Err(charge_refused(ChargeRefusal::AmbiguousCharge)),
+        NameLookup::Found(row) => {
+            if row.category_id != CATEGORY_CHARGE {
+                return Err(charge_refused(ChargeRefusal::NotACharge));
+            }
+            (row.type_id, row.name.clone(), row.charge_group_id)
+        }
+    };
+    let Some(module_row) = types.lookup_by_id(type_id) else {
+        return Err(charge_refused(ChargeRefusal::IncompatibleCharge));
+    };
+    let Some(charge_group) = charge_group_id else {
+        return Err(charge_refused(ChargeRefusal::IncompatibleCharge));
+    };
+    let Some(accepted) = module_row.charge_group_ids.as_deref() else {
+        return Err(charge_refused(ChargeRefusal::IncompatibleCharge));
+    };
+    if accepted.is_empty() || !accepted.contains(&charge_group) {
+        return Err(charge_refused(ChargeRefusal::IncompatibleCharge));
+    }
+    if let Some(item) = fitting.items.get_mut(index) {
+        item.charge = Some(ImportedCharge {
+            type_id: charge_type_id,
+            name: charge_name.clone(),
+        });
+    }
+    recount_charges(fitting);
+    tracing::debug!(
+        "[FITTING] editor charge set name={charge_name} charges={}",
+        fitting.report.charges_noted
+    );
+    Ok(())
+}
+
+/// Clear the loaded charge on the slot row at `index`
+/// (charge-editing design section 4.3). Returns `false`
+/// and changes nothing when `index` is out of range, the
+/// row is not a slot row, or the row carries no charge;
+/// otherwise it clears the charge, recounts, logs, and
+/// returns `true`.
+pub fn clear_charge(fitting: &mut ImportedFitting, index: usize) -> bool {
+    let eligible = matches!(
+        fitting.items.get(index).map(|item| item.section),
+        Some(
+            ImportSection::Low
+                | ImportSection::Medium
+                | ImportSection::High
+                | ImportSection::Rig
+                | ImportSection::Subsystem
+        )
+    ) && fitting
+        .items
+        .get(index)
+        .is_some_and(|item| item.charge.is_some());
+    if !eligible {
+        return false;
+    }
+    if let Some(item) = fitting.items.get_mut(index) {
+        item.charge = None;
+    }
+    recount_charges(fitting);
+    tracing::debug!(
+        "[FITTING] editor charge cleared charges={}",
+        fitting.report.charges_noted
+    );
+    true
 }
 
 /// Rename the fitting to the trimmed text. Empty is allowed:
@@ -1480,6 +1618,430 @@ mod tests {
                     panic!("{text:?} must re-import: {fatal:?}")
                 }
             }
+        }
+    }
+
+    const CHARGE_DEMO_EFT: &str = "[Rifter, Sample Brawler]\nDamage Control II\nSmall Armor Repairer II\n\n1MN Afterburner II\nWarp Scrambler II\n\n200mm AutoCannon II, Republic Fleet EMP S\n200mm AutoCannon II\n200mm AutoCannon II\n\nSmall Projectile Burst Aerator I\n[Empty Rig slot]\n\nHobgoblin II x2\n\nEMP S x200\nNanite Repair Paste x8";
+
+    fn assert_charge_draft_unchanged(before: &ImportedFitting, after: &ImportedFitting) {
+        assert_eq!(after.name, before.name);
+        assert_eq!(after.format, before.format);
+        assert_eq!(after.ship_type_id, before.ship_type_id);
+        assert_eq!(after.ship_name, before.ship_name);
+        assert_eq!(after.items, before.items);
+        assert_eq!(after.report.imported_lines, before.report.imported_lines);
+        assert_eq!(
+            after.report.placeholder_lines,
+            before.report.placeholder_lines
+        );
+        assert_eq!(after.report.charges_noted, before.report.charges_noted);
+        assert_eq!(after.report.issues, before.report.issues);
+    }
+
+    fn find_slot_index(fitting: &ImportedFitting, type_id: i64, want_charge: bool) -> usize {
+        fitting
+            .items
+            .iter()
+            .position(|item| {
+                item.type_id == type_id
+                    && item.charge.is_some() == want_charge
+                    && matches!(
+                        item.section,
+                        ImportSection::Low
+                            | ImportSection::Medium
+                            | ImportSection::High
+                            | ImportSection::Rig
+                            | ImportSection::Subsystem
+                    )
+            })
+            .expect("slot row present")
+    }
+
+    // Test 3: set on a chargeless row.
+    #[test]
+    fn charge_set_stores_canonical_and_recounts() {
+        let types = bundled_types();
+        let mut fitting = draft(CHARGE_DEMO_EFT, &types);
+        assert_eq!(fitting.report.charges_noted, 1);
+        let index = find_slot_index(&fitting, 2889, false);
+        let before = fitting.clone();
+        set_charge(&mut fitting, &types, index, "EMP S").expect("EMP S sets");
+        assert_eq!(
+            fitting.items[index].charge.as_ref().map(|c| c.type_id),
+            Some(185)
+        );
+        assert_eq!(
+            fitting.items[index]
+                .charge
+                .as_ref()
+                .map(|c| c.name.as_str()),
+            Some("EMP S")
+        );
+        assert_eq!(fitting.report.charges_noted, 2);
+        assert_eq!(fitting.name, before.name);
+        assert_eq!(fitting.format, before.format);
+        assert_eq!(fitting.items.len(), before.items.len());
+        for (now, old) in fitting.items.iter().zip(before.items.iter()) {
+            if std::ptr::eq(now, &fitting.items[index]) {
+                assert_eq!(now.type_id, old.type_id);
+                assert_eq!(now.name, old.name);
+                assert_eq!(now.section, old.section);
+                assert_eq!(now.quantity, old.quantity);
+            } else {
+                assert_eq!(now, old);
+            }
+        }
+        assert_eq!(fitting.report.imported_lines, before.report.imported_lines);
+        assert_eq!(
+            fitting.report.placeholder_lines,
+            before.report.placeholder_lines
+        );
+        assert_eq!(fitting.report.issues, before.report.issues);
+    }
+
+    // Test 4: change and re-set.
+    #[test]
+    fn charge_change_and_reset() {
+        let types = bundled_types();
+        let mut fitting = draft(CHARGE_DEMO_EFT, &types);
+        let index = find_slot_index(&fitting, 2889, true);
+        assert_eq!(fitting.report.charges_noted, 1);
+        set_charge(&mut fitting, &types, index, "EMP S").expect("change to EMP S");
+        assert_eq!(
+            fitting.items[index].charge.as_ref().map(|c| c.type_id),
+            Some(185)
+        );
+        assert_eq!(fitting.report.charges_noted, 1);
+        let before = fitting.clone();
+        set_charge(&mut fitting, &types, index, "EMP S").expect("re-set succeeds");
+        assert_eq!(fitting.items[index].charge, before.items[index].charge);
+        assert_eq!(fitting.report.charges_noted, 1);
+        set_charge(&mut fitting, &types, index, "  eMp   s  ").expect("respelling succeeds");
+        assert_eq!(
+            fitting.items[index].charge.as_ref().map(|c| c.type_id),
+            Some(185)
+        );
+        assert_eq!(
+            fitting.items[index]
+                .charge
+                .as_ref()
+                .map(|c| c.name.as_str()),
+            Some("EMP S")
+        );
+        assert_eq!(fitting.report.charges_noted, 1);
+    }
+
+    // Test 5: clear.
+    #[test]
+    fn charge_clear_and_false_cases() {
+        let types = bundled_types();
+        let mut fitting = draft(CHARGE_DEMO_EFT, &types);
+        let charged = find_slot_index(&fitting, 2889, true);
+        assert!(clear_charge(&mut fitting, charged));
+        assert!(fitting.items[charged].charge.is_none());
+        assert_eq!(fitting.report.charges_noted, 0);
+        let before = fitting.clone();
+        assert!(!clear_charge(&mut fitting, charged));
+        assert_charge_draft_unchanged(&before, &fitting);
+        let stacked = fitting
+            .items
+            .iter()
+            .position(|item| item.type_id == 2456)
+            .expect("stacked Hobgoblin present");
+        assert!(!matches!(
+            fitting.items[stacked].section,
+            ImportSection::Low
+                | ImportSection::Medium
+                | ImportSection::High
+                | ImportSection::Rig
+                | ImportSection::Subsystem
+        ));
+        let before = fitting.clone();
+        assert!(!clear_charge(&mut fitting, stacked));
+        assert_charge_draft_unchanged(&before, &fitting);
+        let before = fitting.clone();
+        let out_of_range = fitting.items.len();
+        assert!(!clear_charge(&mut fitting, out_of_range));
+        assert_charge_draft_unchanged(&before, &fitting);
+    }
+
+    // Test 6: every refusal changes nothing.
+    #[test]
+    fn charge_refusals_change_nothing() {
+        let types = bundled_types();
+        let mut fitting = draft(CHARGE_DEMO_EFT, &types);
+        let autocannon = find_slot_index(&fitting, 2889, false);
+        let damage_control = find_slot_index(&fitting, 2048, false);
+        let stacked = fitting
+            .items
+            .iter()
+            .position(|item| item.type_id == 2456)
+            .expect("stacked Hobgoblin present");
+        let launcher = draft("[Rifter, T]\nLight Missile Launcher I\n", &types)
+            .items
+            .len();
+        let mut launcher_draft = draft("[Rifter, T]\nLight Missile Launcher I\n", &types);
+        assert_eq!(launcher, 1);
+        let launcher_index = 0;
+        let cases: &[(usize, &str, ChargeRefusal)] = &[
+            (autocannon, "No Such Charge", ChargeRefusal::UnknownCharge),
+            (autocannon, "  ", ChargeRefusal::UnknownCharge),
+            (autocannon, "Tritanium", ChargeRefusal::NotACharge),
+            (autocannon, "Damage Control II", ChargeRefusal::NotACharge),
+            (
+                autocannon,
+                "Scourge Light Missile",
+                ChargeRefusal::IncompatibleCharge,
+            ),
+            (autocannon, "Radio S", ChargeRefusal::IncompatibleCharge),
+            (damage_control, "EMP S", ChargeRefusal::IncompatibleCharge),
+            (stacked, "EMP S", ChargeRefusal::IncompatibleCharge),
+        ];
+        for (index, name, expected) in cases {
+            let before = fitting.clone();
+            assert_eq!(
+                set_charge(&mut fitting, &types, *index, name),
+                Err(*expected),
+                "{name:?}"
+            );
+            assert_charge_draft_unchanged(&before, &fitting);
+        }
+        // Row-eligibility-first ordering: an unknown name on a
+        // stacked row is still the row refusal, never Unknown.
+        let before = fitting.clone();
+        assert_eq!(
+            set_charge(&mut fitting, &types, stacked, "No Such Charge"),
+            Err(ChargeRefusal::IncompatibleCharge)
+        );
+        assert_charge_draft_unchanged(&before, &fitting);
+        let before = fitting.clone();
+        let out_of_range = fitting.items.len();
+        assert_eq!(
+            set_charge(&mut fitting, &types, out_of_range, "EMP S"),
+            Err(ChargeRefusal::IncompatibleCharge)
+        );
+        assert_charge_draft_unchanged(&before, &fitting);
+        let before = launcher_draft.clone();
+        assert_eq!(
+            set_charge(
+                &mut launcher_draft,
+                &types,
+                launcher_index,
+                "Standup Light Missile"
+            ),
+            Err(ChargeRefusal::IncompatibleCharge)
+        );
+        assert_charge_draft_unchanged(&before, &launcher_draft);
+    }
+
+    // Test 6 (synthetic): ambiguous and unprovable rows.
+    #[test]
+    fn charge_refusals_synthetic_fixtures() {
+        let catalogue = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":700,"typeName":"Fixture Gun","categoryId":7,"slotEffects":[12],"chargeGroupIds":[83]},
+                {"typeId":800,"typeName":"Shared Name","categoryId":8,"slotEffects":[],"chargeGroupId":83},
+                {"typeId":801,"typeName":"Shared Name","categoryId":8,"slotEffects":[],"chargeGroupId":83},
+                {"typeId":802,"typeName":"No Group Charge","categoryId":8,"slotEffects":[]},
+                {"typeId":803,"typeName":"Good Charge","categoryId":8,"slotEffects":[],"chargeGroupId":83}]}"#,
+        )
+        .expect("synthetic catalogue parses");
+        let mut fitting = ImportedFitting {
+            name: "Fixture".to_string(),
+            ship_type_id: 587,
+            ship_name: "Rifter".to_string(),
+            format: ImportFormat::Eft,
+            items: vec![ImportedItem {
+                type_id: 700,
+                name: "Fixture Gun".to_string(),
+                section: ImportSection::High,
+                quantity: 1,
+                charge: None,
+            }],
+            report: ImportReport {
+                imported_lines: 1,
+                placeholder_lines: 0,
+                charges_noted: 0,
+                issues: Vec::new(),
+            },
+        };
+        let before = fitting.clone();
+        assert_eq!(
+            set_charge(&mut fitting, &catalogue, 0, "Shared Name"),
+            Err(ChargeRefusal::AmbiguousCharge)
+        );
+        assert_charge_draft_unchanged(&before, &fitting);
+        let before = fitting.clone();
+        assert_eq!(
+            set_charge(&mut fitting, &catalogue, 0, "No Group Charge"),
+            Err(ChargeRefusal::IncompatibleCharge)
+        );
+        assert_charge_draft_unchanged(&before, &fitting);
+        let mut hostile = ImportedFitting {
+            name: "Fixture".to_string(),
+            ship_type_id: 587,
+            ship_name: "Rifter".to_string(),
+            format: ImportFormat::Eft,
+            items: vec![ImportedItem {
+                type_id: 999_999,
+                name: "Orphan Row".to_string(),
+                section: ImportSection::High,
+                quantity: 1,
+                charge: None,
+            }],
+            report: ImportReport {
+                imported_lines: 1,
+                placeholder_lines: 0,
+                charges_noted: 0,
+                issues: Vec::new(),
+            },
+        };
+        let before = hostile.clone();
+        assert_eq!(
+            set_charge(&mut hostile, &catalogue, 0, "Good Charge"),
+            Err(ChargeRefusal::IncompatibleCharge)
+        );
+        assert_charge_draft_unchanged(&before, &hostile);
+    }
+
+    // Test 7: families beyond turrets.
+    #[test]
+    fn charge_families_beyond_turrets() {
+        let types = bundled_types();
+        let mut fitting = draft("[Rifter, T]\nLight Missile Launcher I\n", &types);
+        set_charge(&mut fitting, &types, 0, "Scourge Light Missile").expect("light missile sets");
+        assert_eq!(
+            fitting.items[0].charge.as_ref().map(|c| c.type_id),
+            Some(210)
+        );
+        assert_eq!(fitting.report.charges_noted, 1);
+        let kept = fitting.items[0].charge.clone();
+        assert_eq!(
+            set_charge(&mut fitting, &types, 0, "Scourge Torpedo"),
+            Err(ChargeRefusal::IncompatibleCharge)
+        );
+        assert_eq!(fitting.items[0].charge, kept);
+        assert_eq!(
+            fitting.items[0].charge.as_ref().map(|c| c.type_id),
+            Some(210)
+        );
+        assert_eq!(fitting.report.charges_noted, 1);
+        add_item(&mut fitting, &types, "Sensor Booster II", None).expect("sensor booster adds");
+        let sensor_index = fitting.items.len() - 1;
+        assert_eq!(fitting.items[sensor_index].type_id, 1952);
+        set_charge(&mut fitting, &types, sensor_index, "Targeting Range Script")
+            .expect("script sets");
+        assert_eq!(
+            fitting.items[sensor_index]
+                .charge
+                .as_ref()
+                .map(|c| c.type_id),
+            Some(29_009)
+        );
+        let kept = fitting.items[sensor_index].charge.clone();
+        assert_eq!(
+            set_charge(&mut fitting, &types, sensor_index, "EMP S"),
+            Err(ChargeRefusal::IncompatibleCharge)
+        );
+        assert_eq!(fitting.items[sensor_index].charge, kept);
+        add_item(&mut fitting, &types, "Small Capacitor Booster II", None)
+            .expect("cap booster adds");
+        let cap_index = fitting.items.len() - 1;
+        assert_eq!(fitting.items[cap_index].type_id, 3568);
+        set_charge(&mut fitting, &types, cap_index, "Cap Booster 400").expect("cap charge sets");
+        assert_eq!(
+            fitting.items[cap_index].charge.as_ref().map(|c| c.type_id),
+            Some(11_287)
+        );
+    }
+
+    // Test 8: the locked non-check.
+    #[test]
+    fn charge_size_deferral_accepts_wrong_size() {
+        let types = bundled_types();
+        let mut fitting = draft("[Rifter, T]\nGatling Pulse Laser I\n", &types);
+        set_charge(&mut fitting, &types, 0, "Radio M").expect("Radio M sets by group");
+        assert_eq!(
+            fitting.items[0].charge.as_ref().map(|c| c.type_id),
+            Some(247)
+        );
+        assert_eq!(fitting.report.charges_noted, 1);
+    }
+
+    // Test 9: exhaustive over every carrier.
+    #[test]
+    fn charge_groups_exhaustive_over_carriers() {
+        let types = bundled_types();
+        let carriers: Vec<_> = types
+            .types
+            .iter()
+            .filter(|row| row.charge_group_ids.is_some())
+            .collect();
+        assert_eq!(carriers.len(), 980);
+        for module in carriers {
+            let accepted = module
+                .charge_group_ids
+                .as_ref()
+                .expect("carrier lists groups");
+            let charge = types
+                .types
+                .iter()
+                .find(|row| {
+                    row.category_id == 8
+                        && row
+                            .charge_group_id
+                            .is_some_and(|group| accepted.contains(&group))
+                })
+                .expect("each carrier has a charge");
+            let section = slot_section(&module.slot_effects).expect("carrier has a slot");
+            let mut fitting = ImportedFitting {
+                name: "Sweep".to_string(),
+                ship_type_id: 587,
+                ship_name: "Rifter".to_string(),
+                format: ImportFormat::Created,
+                items: vec![ImportedItem {
+                    type_id: module.type_id,
+                    name: module.name.clone(),
+                    section,
+                    quantity: 1,
+                    charge: None,
+                }],
+                report: ImportReport {
+                    imported_lines: 0,
+                    placeholder_lines: 0,
+                    charges_noted: 0,
+                    issues: Vec::new(),
+                },
+            };
+            set_charge(&mut fitting, &types, 0, &charge.name).expect("first listed charge sets");
+            assert_eq!(
+                fitting.items[0].charge.as_ref().map(|c| c.type_id),
+                Some(charge.type_id)
+            );
+            assert_eq!(
+                fitting.items[0].charge.as_ref().map(|c| c.name.as_str()),
+                Some(charge.name.as_str())
+            );
+        }
+    }
+
+    // Test 10: copy round trip.
+    #[test]
+    fn charge_copy_round_trip_excludes() {
+        let types = bundled_types();
+        let mut fitting = draft(CHARGE_DEMO_EFT, &types);
+        let index = find_slot_index(&fitting, 2889, false);
+        set_charge(&mut fitting, &types, index, "EMP S").expect("editor charge sets");
+        let synth = fitting.to_character_fitting();
+        let eft = fitting_to_eft(&synth, &fitting.name_resolver()).expect("EFT export");
+        match parse_import(&eft.text, &types) {
+            EftImportOutcome::Imported(reimported) => {
+                assert!(reimported.report.issues.is_empty());
+                assert_eq!(reimported.items.len(), fitting.items.len());
+                assert_eq!(reimported.report.charges_noted, 0);
+                assert!(reimported.items.iter().all(|item| item.charge.is_none()));
+            }
+            EftImportOutcome::Failed(fatal) => panic!("copy must re-import: {fatal:?}"),
         }
     }
 }

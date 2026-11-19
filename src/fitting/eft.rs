@@ -30,7 +30,7 @@ pub const MAX_STACK_QUANTITY: i64 = 2_147_483_647;
 // plus charge 8 from generate_dogma_sde.py TARGET_CATEGORIES).
 pub(crate) const CATEGORY_SHIP: i64 = 6;
 pub(crate) const CATEGORY_MODULE: i64 = 7;
-const CATEGORY_CHARGE: i64 = 8;
+pub(crate) const CATEGORY_CHARGE: i64 = 8;
 pub(crate) const CATEGORY_DRONE: i64 = 18;
 pub(crate) const CATEGORY_SUBSYSTEM: i64 = 32;
 pub(crate) const CATEGORY_FIGHTER: i64 = 87;
