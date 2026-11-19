@@ -747,11 +747,17 @@ fn demo_planets_render_resolved_for_both_characters() {
     assert_eq!(aria_detail.selection.planet_id, 700000001);
     let pins = aria_detail.result.as_ref().expect("detail ok").pins.clone();
     let counts = pin_type_counts(&pins, &resolver);
-    assert_eq!(counts.len(), 2);
+    assert_eq!(counts.len(), 4);
     assert!(counts
         .iter()
         .any(|r| r.type_name == "Demo Extractor" && r.count >= 2));
     assert!(counts.iter().any(|r| r.type_name == "Demo Factory"));
+    assert!(counts
+        .iter()
+        .any(|r| r.type_name == "Temperate Advanced Industry Facility" && r.count == 1));
+    assert!(counts
+        .iter()
+        .any(|r| r.type_name == "Temperate Basic Industry Facility" && r.count == 1));
     let extractors = extractor_product_rows(&pins, &resolver);
     assert!(extractors
         .iter()

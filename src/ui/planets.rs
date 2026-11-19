@@ -9,6 +9,7 @@ use super::widgets;
 use crate::app::state::{AppState, LoadState, PlanetaryData, SectionError, StepUpRequest};
 use crate::config::EveConfig;
 use crate::esi::models::{PlanetColony, PlanetPin};
+use crate::names::planet_schematics::PlanetSchematicsRef;
 use crate::names::resolver::NameResolver;
 use chrono::{DateTime, Utc};
 
@@ -183,6 +184,151 @@ pub fn storage_content_rows(pins: &[PlanetPin], resolver: &NameResolver) -> Vec<
     rows
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct FactoryTypeRow {
+    pub type_id: i64,
+    pub type_name: String,
+    pub quantity: i64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum FactoryResolution {
+    Resolved {
+        schematic_name: String,
+        cycle_time: i64,
+        output: FactoryTypeRow,
+        inputs: Vec<FactoryTypeRow>,
+        pin_listed: bool,
+    },
+    NotInExtract,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FactoryPinRow {
+    pub pin_id: i64,
+    pub pin_type_name: String,
+    pub resolution: FactoryResolution,
+}
+
+/// Factory-pin rows for one colony, resolved against the bundled
+/// planet schematics. Membership is by `schematic_id` alone: a pin
+/// with a positive installed schematic yields a row, whatever its
+/// extractor details or contents. The schematic name is the bundled
+/// English string, never resolved; every type name goes through the
+/// resolver, like stored-item names.
+pub fn factory_pin_rows(
+    pins: &[PlanetPin],
+    schematics: &PlanetSchematicsRef,
+    resolver: &NameResolver,
+) -> Vec<FactoryPinRow> {
+    let mut rows: Vec<FactoryPinRow> = Vec::new();
+    let mut skipped: usize = 0;
+    for pin in pins {
+        let Some(schematic_id) = pin.schematic_id else {
+            continue;
+        };
+        if schematic_id <= 0 {
+            skipped = skipped.saturating_add(1);
+            continue;
+        }
+        let pin_type_name = resolver.name(pin.type_id);
+        match schematics.schematic(schematic_id) {
+            Some(schematic) => {
+                let output = FactoryTypeRow {
+                    type_id: schematic.output.type_id,
+                    type_name: resolver.name(schematic.output.type_id),
+                    quantity: schematic.output.quantity,
+                };
+                let inputs = schematic
+                    .inputs
+                    .iter()
+                    .map(|input| FactoryTypeRow {
+                        type_id: input.type_id,
+                        type_name: resolver.name(input.type_id),
+                        quantity: input.quantity,
+                    })
+                    .collect();
+                rows.push(FactoryPinRow {
+                    pin_id: pin.pin_id,
+                    pin_type_name,
+                    resolution: FactoryResolution::Resolved {
+                        schematic_name: schematic.name.clone(),
+                        cycle_time: schematic.cycle_time,
+                        output,
+                        inputs,
+                        pin_listed: schematic.allows_pin_type(pin.type_id),
+                    },
+                });
+            }
+            None => rows.push(FactoryPinRow {
+                pin_id: pin.pin_id,
+                pin_type_name,
+                resolution: FactoryResolution::NotInExtract,
+            }),
+        }
+    }
+    rows.sort_by(|a, b| {
+        let a_resolved = matches!(a.resolution, FactoryResolution::Resolved { .. });
+        let b_resolved = matches!(b.resolution, FactoryResolution::Resolved { .. });
+        match (a_resolved, b_resolved) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            (true, true) => {
+                let (a_name, b_name) = match (&a.resolution, &b.resolution) {
+                    (
+                        FactoryResolution::Resolved {
+                            schematic_name: a_name,
+                            ..
+                        },
+                        FactoryResolution::Resolved {
+                            schematic_name: b_name,
+                            ..
+                        },
+                    ) => (a_name, b_name),
+                    _ => unreachable!(),
+                };
+                a_name
+                    .to_lowercase()
+                    .cmp(&b_name.to_lowercase())
+                    .then_with(|| a_name.cmp(b_name))
+                    .then_with(|| a.pin_type_name.cmp(&b.pin_type_name))
+                    .then(a.pin_id.cmp(&b.pin_id))
+            }
+            (false, false) => a
+                .pin_type_name
+                .to_lowercase()
+                .cmp(&b.pin_type_name.to_lowercase())
+                .then_with(|| a.pin_type_name.cmp(&b.pin_type_name))
+                .then(a.pin_id.cmp(&b.pin_id)),
+        }
+    });
+    let resolved = rows
+        .iter()
+        .filter(|row| matches!(row.resolution, FactoryResolution::Resolved { .. }))
+        .count();
+    let unlisted_pin = rows
+        .iter()
+        .filter(|row| {
+            matches!(
+                &row.resolution,
+                FactoryResolution::Resolved {
+                    pin_listed: false,
+                    ..
+                }
+            )
+        })
+        .count();
+    tracing::debug!(
+        "[PI] factory pin rows={} resolved={} not_in_extract={} unlisted_pin={} skipped={}",
+        rows.len(),
+        resolved,
+        rows.len() - resolved,
+        unlisted_pin,
+        skipped
+    );
+    rows
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColonySummaryState {
     NoPins,
@@ -329,6 +475,13 @@ pub fn has_active_extractor(pins: &[PlanetPin], now: DateTime<Utc>) -> bool {
 pub const PIN_TYPE_RENDER_MAX: usize = 100;
 pub const EXTRACTOR_RENDER_MAX: usize = 100;
 pub const STORAGE_RENDER_MAX: usize = 100;
+pub const FACTORY_RENDER_MAX: usize = 100;
+pub const FACTORY_SCHEMATICS_UNAVAILABLE: &str =
+    "Factory schematics unavailable: Mimir's bundled planet schematic data failed to load.";
+pub const FACTORY_SCHEMATIC_NOT_IN_EXTRACT: &str =
+    "Installed schematic is not in Mimir's bundled planet schematics.";
+pub const FACTORY_PIN_NOT_LISTED: &str =
+    "This pin's type is not listed for this schematic in Mimir's bundled data.";
 
 /// Uniform per-section failure line, copying the industry helper:
 /// a scope failure points at the step-up panel above when it is
@@ -422,6 +575,7 @@ fn show_detail_section(
     state: &mut AppState,
     bundle: &PlanetaryData,
     resolver: &NameResolver,
+    planet_schematics: Option<&PlanetSchematicsRef>,
     panel_shown: bool,
 ) {
     ui.heading("Selected colony");
@@ -509,6 +663,57 @@ fn show_detail_section(
                     }
                 }
             }
+            ui.heading("Factories");
+            let factory_pin_count = pins
+                .iter()
+                .filter(|pin| matches!(pin.schematic_id, Some(id) if id > 0))
+                .count();
+            if factory_pin_count == 0 {
+                ui.label("No factory pins were reported for this colony.");
+            } else if planet_schematics.is_none() {
+                ui.label(FACTORY_SCHEMATICS_UNAVAILABLE);
+            } else {
+                let factory_rows =
+                    factory_pin_rows(pins, planet_schematics.expect("checked above"), resolver);
+                if factory_rows.len() > FACTORY_RENDER_MAX {
+                    ui.label(format!(
+                        "Showing {} of {} factories.",
+                        FACTORY_RENDER_MAX,
+                        factory_rows.len()
+                    ));
+                }
+                for row in factory_rows.iter().take(FACTORY_RENDER_MAX) {
+                    match &row.resolution {
+                        FactoryResolution::NotInExtract => {
+                            ui.label(&row.pin_type_name);
+                            ui.label(FACTORY_SCHEMATIC_NOT_IN_EXTRACT);
+                        }
+                        FactoryResolution::Resolved {
+                            schematic_name,
+                            cycle_time,
+                            output,
+                            inputs,
+                            pin_listed,
+                        } => {
+                            ui.label(format!("{} \u{2014} {}", schematic_name, row.pin_type_name));
+                            ui.label(format!(
+                                "Output per cycle: {} \u{00d7} {}",
+                                output.quantity, output.type_name
+                            ));
+                            for input in inputs {
+                                ui.label(format!(
+                                    "Input per cycle: {} \u{00d7} {}",
+                                    input.quantity, input.type_name
+                                ));
+                            }
+                            ui.label(format!("Cycle time: {cycle_time} seconds"));
+                            if !pin_listed {
+                                ui.label(FACTORY_PIN_NOT_LISTED);
+                            }
+                        }
+                    }
+                }
+            }
             ui.heading("Stored items");
             let storage_rows = storage_content_rows(pins, resolver);
             if storage_rows.is_empty() {
@@ -529,7 +734,12 @@ fn show_detail_section(
     }
 }
 
-pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
+pub fn show(
+    ui: &mut egui::Ui,
+    state: &mut AppState,
+    resolver: &NameResolver,
+    planet_schematics: Option<&PlanetSchematicsRef>,
+) {
     ui.heading("Planetary Industry");
     widgets::mode_notice(ui, state.demo, state.offline);
     if state.active_character().is_none() {
@@ -557,7 +767,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState, resolver: &NameResolver) {
                 planetary_reauthorize_panel(ui, state);
             }
             show_colonies_section(ui, state, &bundle.colonies, resolver, panel_shown);
-            show_detail_section(ui, state, &bundle, resolver, panel_shown);
+            show_detail_section(ui, state, &bundle, resolver, planet_schematics, panel_shown);
         }
     }
 }
@@ -577,6 +787,12 @@ mod tests {
         r.insert(36, "Mexallon".to_string());
         r.insert(37, "Isogen".to_string());
         r.insert(16679, "Ferrogel".to_string());
+        r.insert(2389, "Plasmoids".to_string());
+        r.insert(3645, "Water".to_string());
+        r.insert(9838, "Superconductors".to_string());
+        r.insert(2268, "Aqueous Liquids".to_string());
+        r.insert(2480, "Temperate Advanced Industry Facility".to_string());
+        r.insert(2481, "Temperate Basic Industry Facility".to_string());
         r.insert(30000142, "Jita".to_string());
         r.insert(30002187, "Amarr".to_string());
         r
@@ -604,6 +820,13 @@ mod tests {
             pin_id,
             type_id,
             ..Default::default()
+        }
+    }
+
+    fn schematic_pin(pin_id: i64, type_id: i64, schematic_id: Option<i64>) -> PlanetPin {
+        PlanetPin {
+            schematic_id,
+            ..pin(pin_id, type_id)
         }
     }
 
@@ -1073,5 +1296,295 @@ mod tests {
         );
         assert_eq!(rows[0].system_name, "Unknown Location");
         assert!(rows[0].system_name.parse::<i64>().is_err());
+    }
+
+    fn type_row(type_id: i64, type_name: &str, quantity: i64) -> FactoryTypeRow {
+        FactoryTypeRow {
+            type_id,
+            type_name: type_name.to_string(),
+            quantity,
+        }
+    }
+
+    fn resolved_superconductors(pin_id: i64, pin_listed: bool) -> FactoryPinRow {
+        FactoryPinRow {
+            pin_id,
+            pin_type_name: "Temperate Advanced Industry Facility".to_string(),
+            resolution: FactoryResolution::Resolved {
+                schematic_name: "Superconductors".to_string(),
+                cycle_time: 3600,
+                output: type_row(9838, "Superconductors", 5),
+                inputs: vec![type_row(2389, "Plasmoids", 40), type_row(3645, "Water", 40)],
+                pin_listed,
+            },
+        }
+    }
+
+    #[test]
+    fn factory_rows_resolved_listed() {
+        let schematics = PlanetSchematicsRef::load_bundled().expect("bundled loads");
+        let pins = vec![schematic_pin(700000915, 2480, Some(65))];
+        let rows = factory_pin_rows(&pins, &schematics, &resolver());
+        assert_eq!(rows, vec![resolved_superconductors(700000915, true)]);
+        assert_eq!(
+            rows[0].pin_type_name,
+            "Temperate Advanced Industry Facility"
+        );
+    }
+
+    #[test]
+    fn factory_rows_resolved_basic() {
+        let schematics = PlanetSchematicsRef::load_bundled().expect("bundled loads");
+        let pins = vec![schematic_pin(700000916, 2481, Some(121))];
+        let rows = factory_pin_rows(&pins, &schematics, &resolver());
+        assert_eq!(
+            rows,
+            vec![FactoryPinRow {
+                pin_id: 700000916,
+                pin_type_name: "Temperate Basic Industry Facility".to_string(),
+                resolution: FactoryResolution::Resolved {
+                    schematic_name: "Water".to_string(),
+                    cycle_time: 1800,
+                    output: type_row(3645, "Water", 20),
+                    inputs: vec![type_row(2268, "Aqueous Liquids", 3000)],
+                    pin_listed: true,
+                },
+            }]
+        );
+    }
+
+    #[test]
+    fn factory_rows_unlisted_still_resolves() {
+        let schematics = PlanetSchematicsRef::load_bundled().expect("bundled loads");
+        let pins = vec![schematic_pin(700000917, 2481, Some(65))];
+        let rows = factory_pin_rows(&pins, &schematics, &resolver());
+        assert_eq!(rows.len(), 1);
+        let mut expected = resolved_superconductors(700000917, false);
+        expected.pin_type_name = "Temperate Basic Industry Facility".to_string();
+        assert_eq!(rows, vec![expected]);
+    }
+
+    #[test]
+    fn factory_rows_absent_carries_no_name() {
+        let schematics = PlanetSchematicsRef::load_bundled().expect("bundled loads");
+        let pins = vec![
+            schematic_pin(700000915, 20001, Some(15462)),
+            schematic_pin(700000916, 20002, Some(93)),
+        ];
+        let rows = factory_pin_rows(&pins, &schematics, &resolver());
+        assert_eq!(
+            rows,
+            vec![
+                FactoryPinRow {
+                    pin_id: 700000915,
+                    pin_type_name: "Demo Extractor".to_string(),
+                    resolution: FactoryResolution::NotInExtract,
+                },
+                FactoryPinRow {
+                    pin_id: 700000916,
+                    pin_type_name: "Demo Factory".to_string(),
+                    resolution: FactoryResolution::NotInExtract,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn factory_rows_no_row_arms() {
+        let schematics = PlanetSchematicsRef::load_bundled().expect("bundled loads");
+        let pins = vec![
+            schematic_pin(700000915, 2480, None),
+            schematic_pin(700000916, 2480, Some(0)),
+            schematic_pin(700000917, 2480, Some(-2)),
+        ];
+        assert!(factory_pin_rows(&pins, &schematics, &resolver()).is_empty());
+        assert!(factory_pin_rows(&[], &schematics, &resolver()).is_empty());
+    }
+
+    #[test]
+    fn factory_pin_appears_in_both_sections() {
+        let schematics = PlanetSchematicsRef::load_bundled().expect("bundled loads");
+        let mut both = schematic_pin(700000915, 2480, Some(65));
+        both.extractor_details = Some(ExtractorDetails {
+            product_type_id: Some(34),
+            qty_per_cycle: None,
+            cycle_time: None,
+        });
+        let pins = vec![both];
+        let extractors = extractor_product_rows(&pins, &resolver());
+        let factories = factory_pin_rows(&pins, &schematics, &resolver());
+        assert_eq!(extractors.len(), 1);
+        assert_eq!(extractors[0].product_name, "Tritanium");
+        assert_eq!(factories, vec![resolved_superconductors(700000915, true)]);
+    }
+
+    #[test]
+    fn factory_rows_unknown_item_honesty() {
+        let schematics = PlanetSchematicsRef::load_bundled().expect("bundled loads");
+        let pins = vec![schematic_pin(700000915, 2480, Some(65))];
+        let rows = factory_pin_rows(&pins, &schematics, &NameResolver::new());
+        assert_eq!(rows.len(), 1);
+        match &rows[0].resolution {
+            FactoryResolution::Resolved {
+                schematic_name,
+                cycle_time,
+                output,
+                inputs,
+                pin_listed,
+            } => {
+                assert_eq!(schematic_name, "Superconductors");
+                assert_eq!(*cycle_time, 3600);
+                assert_eq!(output.type_name, "Unknown Item");
+                assert_eq!(output.quantity, 5);
+                assert_eq!(output.type_id, 9838);
+                assert_eq!(
+                    inputs
+                        .iter()
+                        .map(|row| (row.type_id, row.quantity))
+                        .collect::<Vec<_>>(),
+                    vec![(2389, 40), (3645, 40)]
+                );
+                assert!(inputs.iter().all(|row| row.type_name == "Unknown Item"));
+                assert!(*pin_listed);
+                for rendered in [&rows[0].pin_type_name, schematic_name].into_iter() {
+                    assert!(rendered.parse::<i64>().is_err());
+                }
+                for row in [output].into_iter().chain(inputs.iter()) {
+                    assert!(row.type_name.parse::<i64>().is_err());
+                }
+            }
+            FactoryResolution::NotInExtract => panic!("65 must resolve"),
+        }
+    }
+
+    #[test]
+    fn factory_rows_sort_resolved_then_absent() {
+        let schematics = PlanetSchematicsRef::load_bundled().expect("bundled loads");
+        let pins = vec![
+            schematic_pin(700000918, 2481, Some(121)),
+            schematic_pin(700000915, 2480, Some(65)),
+            schematic_pin(700000920, 2480, Some(65)),
+            schematic_pin(700000921, 20001, Some(15462)),
+            schematic_pin(700000922, 20002, Some(93)),
+        ];
+        let rows = factory_pin_rows(&pins, &schematics, &resolver());
+        assert_eq!(rows.len(), 5);
+        let names: Vec<_> = rows
+            .iter()
+            .map(|row| match &row.resolution {
+                FactoryResolution::Resolved { schematic_name, .. } => schematic_name.clone(),
+                FactoryResolution::NotInExtract => row.pin_type_name.clone(),
+            })
+            .collect();
+        assert_eq!(
+            names,
+            vec![
+                "Superconductors",
+                "Superconductors",
+                "Water",
+                "Demo Extractor",
+                "Demo Factory"
+            ]
+        );
+        assert_eq!(rows[0].pin_id, 700000915);
+        assert_eq!(rows[1].pin_id, 700000920);
+        assert!(matches!(
+            rows[3].resolution,
+            FactoryResolution::NotInExtract
+        ));
+        assert!(matches!(
+            rows[4].resolution,
+            FactoryResolution::NotInExtract
+        ));
+        let mut reversed = pins.clone();
+        reversed.reverse();
+        assert_eq!(factory_pin_rows(&reversed, &schematics, &resolver()), rows);
+    }
+
+    #[test]
+    fn factory_consts_verbatim() {
+        assert_eq!(FACTORY_RENDER_MAX, 100);
+        assert_eq!(
+            FACTORY_SCHEMATICS_UNAVAILABLE,
+            "Factory schematics unavailable: Mimir's bundled planet schematic data failed to load."
+        );
+        assert_eq!(
+            FACTORY_SCHEMATIC_NOT_IN_EXTRACT,
+            "Installed schematic is not in Mimir's bundled planet schematics."
+        );
+        assert_eq!(
+            FACTORY_PIN_NOT_LISTED,
+            "This pin's type is not listed for this schematic in Mimir's bundled data."
+        );
+    }
+
+    #[test]
+    fn demo_colony_factory_rows() {
+        let bundle = crate::demo::data::load_demo_bundle().expect("bundled bundle loads");
+        let demo_resolver = crate::demo::data::demo_resolver().expect("demo resolver");
+        let schematics = PlanetSchematicsRef::load_bundled().expect("bundled loads");
+        let data = bundle
+            .character_data(90000001)
+            .expect("aria demo data")
+            .planets
+            .as_ref()
+            .expect("aria planets");
+        let pins = &data.details[&700000001].pins;
+        assert_eq!(pins.len(), 6);
+        let rows = factory_pin_rows(pins, &schematics, &demo_resolver);
+        assert_eq!(rows.len(), 4);
+        assert_eq!(
+            rows[0].resolution,
+            FactoryResolution::Resolved {
+                schematic_name: "Superconductors".to_string(),
+                cycle_time: 3600,
+                output: type_row(9838, "Superconductors", 5),
+                inputs: vec![type_row(2389, "Plasmoids", 40), type_row(3645, "Water", 40),],
+                pin_listed: true,
+            }
+        );
+        assert_eq!(
+            rows[1].resolution,
+            FactoryResolution::Resolved {
+                schematic_name: "Water".to_string(),
+                cycle_time: 1800,
+                output: type_row(3645, "Water", 20),
+                inputs: vec![type_row(2268, "Aqueous Liquids", 3000)],
+                pin_listed: true,
+            }
+        );
+        assert_eq!(
+            rows[0].pin_type_name,
+            "Temperate Advanced Industry Facility"
+        );
+        assert_eq!(rows[1].pin_type_name, "Temperate Basic Industry Facility");
+        for row in &rows[..2] {
+            match &row.resolution {
+                FactoryResolution::Resolved { output, inputs, .. } => {
+                    assert_ne!(output.type_name, "Unknown Item");
+                    assert!(
+                        inputs.iter().all(|input| input.type_name != "Unknown Item"),
+                        "every type name resolved"
+                    );
+                }
+                FactoryResolution::NotInExtract => panic!("first two demo rows resolve"),
+            }
+        }
+        assert_eq!(
+            rows[2],
+            FactoryPinRow {
+                pin_id: 700000011,
+                pin_type_name: "Demo Extractor".to_string(),
+                resolution: FactoryResolution::NotInExtract,
+            }
+        );
+        assert_eq!(
+            rows[3],
+            FactoryPinRow {
+                pin_id: 700000012,
+                pin_type_name: "Demo Extractor".to_string(),
+                resolution: FactoryResolution::NotInExtract,
+            }
+        );
     }
 }
