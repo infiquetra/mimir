@@ -839,14 +839,15 @@ pub struct AppState {
     // 4.1): sibling fields beside the import fields. Memory only,
     // like the import draft itself: cleared at every site that
     // clears `fittings_imported`, plus the panel's Clear import,
-    // demo-sample, and new-import paths. The per-row quantity
-    // drafts are keyed by draft row index and dropped on any
-    // successful edit, since indices shift when rows are removed.
+    // demo-sample, and new-import paths. The per-row quantity and
+    // charge drafts are keyed by draft row index and dropped on
+    // any successful edit, since indices shift when rows are removed.
     pub fittings_editor_add_name: String,
     pub fittings_editor_add_quantity: String,
     pub fittings_editor_error: Option<String>,
     pub fittings_import_edited: bool,
     pub fittings_editor_quantity: HashMap<usize, String>,
+    pub fittings_editor_charge: HashMap<usize, String>,
     // Rename box draft: None until the panel seeds it from the
     // imported fitting's name; the draft name changes only
     // when the Rename control applies this text.
@@ -1162,6 +1163,7 @@ impl AppState {
                 self.fittings_editor_error = None;
                 self.fittings_import_edited = false;
                 self.fittings_editor_quantity.clear();
+                self.fittings_editor_charge.clear();
                 self.fittings_editor_name = None;
                 self.fittings_browser_section = ImportSection::High;
                 self.fittings_browser_search.clear();
@@ -1379,6 +1381,7 @@ impl AppState {
             self.fittings_editor_error = None;
             self.fittings_import_edited = false;
             self.fittings_editor_quantity.clear();
+            self.fittings_editor_charge.clear();
             self.fittings_editor_name = None;
             self.fittings_browser_section = ImportSection::High;
             self.fittings_browser_search.clear();
@@ -1448,6 +1451,7 @@ impl AppState {
             self.fittings_editor_error = None;
             self.fittings_import_edited = false;
             self.fittings_editor_quantity.clear();
+            self.fittings_editor_charge.clear();
             self.fittings_editor_name = None;
             self.fittings_browser_section = ImportSection::High;
             self.fittings_browser_search.clear();
@@ -2808,6 +2812,7 @@ mod tests {
         state.fittings_editor_error = Some("Could not add: refused.".to_string());
         state.fittings_import_edited = true;
         state.fittings_editor_quantity.insert(0, "7".to_string());
+        state.fittings_editor_charge.insert(0, "EMP S".to_string());
         state.fittings_editor_name = Some("Renamed".to_string());
         state.fittings_browser_section = ImportSection::Low;
         state.fittings_browser_search = "damage".to_string();
@@ -2837,6 +2842,7 @@ mod tests {
         assert_eq!(state.fittings_editor_error, None);
         assert!(!state.fittings_import_edited);
         assert!(state.fittings_editor_quantity.is_empty());
+        assert!(state.fittings_editor_charge.is_empty());
         assert_eq!(state.fittings_editor_name, None);
         assert_eq!(state.fittings_browser_section, ImportSection::High);
         assert_eq!(state.fittings_browser_search, "");
@@ -2864,6 +2870,10 @@ mod tests {
         assert_eq!(state.fittings_import_owner, Some(1));
         assert_eq!(state.fittings_editor_add_name, "Damage Control II");
         assert!(state.fittings_import_edited);
+        assert_eq!(
+            state.fittings_editor_charge.get(&0).map(String::as_str),
+            Some("EMP S")
+        );
         assert_eq!(state.fittings_browser_section, ImportSection::Low);
         assert_eq!(state.fittings_browser_search, "damage");
         assert_eq!(state.fittings_browser_rows.len(), 1);
@@ -2890,6 +2900,10 @@ mod tests {
         state.remove_character(3);
         assert!(state.fittings_imported.is_some());
         assert_eq!(state.fittings_import_owner, Some(1));
+        assert_eq!(
+            state.fittings_editor_charge.get(&0).map(String::as_str),
+            Some("EMP S")
+        );
         assert_eq!(state.fittings_browser_section, ImportSection::Low);
         assert_eq!(state.fittings_browser_rows.len(), 1);
         assert_eq!(state.fittings_ship_search, "rift");

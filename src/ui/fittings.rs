@@ -20,9 +20,9 @@ use crate::fitting::dna::parse_import;
 use crate::fitting::dps::{fitting_dps, FamilyDps, FittingDps, FittingDpsOutcome};
 use crate::fitting::editor::{
     add_item as editor_add_item, browser_candidates, change_ship as editor_change_ship,
-    new_fitting, remove_item as editor_remove_item, rename as editor_rename,
-    set_quantity as editor_set_quantity, ship_candidates, BrowserRow, EditRefusal,
-    ShipChangeOutcome, ShipRow,
+    clear_charge as editor_clear_charge, new_fitting, remove_item as editor_remove_item,
+    rename as editor_rename, set_charge as editor_set_charge, set_quantity as editor_set_quantity,
+    ship_candidates, BrowserRow, ChargeRefusal, EditRefusal, ShipChangeOutcome, ShipRow,
 };
 use crate::fitting::eft::{
     EftImportOutcome, ImportFormat, ImportIssue, ImportSection, ImportedFitting,
@@ -897,17 +897,18 @@ fn draft_label(format: ImportFormat) -> &'static str {
     }
 }
 
-/// Standing editor note by provenance (design section 7.2):
-/// the created note differs by the provenance word only. The
-/// loaded-charge sentence is inert for a created draft (it
-/// can never hold a charge) and is kept so the two notes
-/// differ by exactly the provenance claim and nothing else.
-/// The copied note additionally states that the saved fitting
+/// Standing editor note by provenance (design section 7.2,
+/// extended by charge-editing design section 8.2): the
+/// created note differs by the provenance word only. The
+/// charge sentences are live for every provenance — a
+/// created draft can hold charges once set — and are kept
+/// identical so the notes differ only by provenance. The
+/// copied note additionally states that the saved fitting
 /// stays as it is and that saving adds a new fitting.
 fn editor_note(format: ImportFormat) -> &'static str {
     match format {
-        ImportFormat::Created => "Edits change only this fitting in Mimir. Nothing is sent to EVE unless you save below. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit.",
-        ImportFormat::Copied => "Edits change only this copy in Mimir. The saved fitting in EVE stays as it is. Nothing is sent to EVE unless you save below, and saving adds a new fitting. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit.",
+        ImportFormat::Created => "Edits change only this fitting in Mimir. Nothing is sent to EVE unless you save below. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit. Set or clear a module's loaded charge on its item row below. A charge can be set only when Mimir's bundled data lists it as a kind that module can be loaded with; the charge's size is not checked.",
+        ImportFormat::Copied => "Edits change only this copy in Mimir. The saved fitting in EVE stays as it is. Nothing is sent to EVE unless you save below, and saving adds a new fitting. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit. Set or clear a module's loaded charge on its item row below. A charge can be set only when Mimir's bundled data lists it as a kind that module can be loaded with; the charge's size is not checked.",
         ImportFormat::Eft | ImportFormat::Dna => FITTINGS_EDITOR_NOTE,
     }
 }
@@ -1392,9 +1393,10 @@ fn render_fitting_items(
 /// Fitting-editor heading (fitting-editor design section 6.2).
 const FITTINGS_EDITOR_HEADING: &str = "Edit this fitting";
 
-/// Standing editor note (design section 6.3), shown while a draft
+/// Standing editor note (design section 6.3, extended by
+/// charge-editing design section 8.2), shown while a draft
 /// is shown.
-const FITTINGS_EDITOR_NOTE: &str = "Edits change only this imported fitting in Mimir. Nothing is sent to EVE unless you save below. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit.";
+const FITTINGS_EDITOR_NOTE: &str = "Edits change only this imported fitting in Mimir. Nothing is sent to EVE unless you save below. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit. Set or clear a module's loaded charge on its item row below. A charge can be set only when Mimir's bundled data lists it as a kind that module can be loaded with; the charge's size is not checked.";
 
 /// Edited summary suffix (design section 6.3): honest parse
 /// history once the draft diverges from the paste.
@@ -1405,8 +1407,18 @@ const FITTINGS_EDITOR_EDITED_SUFFIX: &str = " Edited since import.";
 /// never imported, so it cannot have changed "since import".
 const FITTINGS_CREATED_EDITED_SUFFIX: &str = " Edited.";
 
+/// Charge box hint (charge-editing design section 8.1).
+const CHARGE_HINT: &str = "Exact charge name, like Republic Fleet EMP S";
+/// Charge buttons (charge-editing design section 8.1).
+const SET_CHARGE_LABEL: &str = "Set charge";
+const CLEAR_CHARGE_LABEL: &str = "Clear charge";
+
 /// One imported-draft row for display, carrying the draft index so
-/// the remove and quantity controls target the exact row.
+/// the remove, quantity, and charge controls target the exact row.
+/// `charge_name` is the row's stored canonical charge name, and
+/// `lists_groups` says whether the catalogue lists accepted
+/// charges for the row's module (charge-editing design
+/// section 7.1).
 #[derive(Debug, Clone, PartialEq)]
 struct ImportedItemRow {
     index: usize,
@@ -1415,6 +1427,8 @@ struct ImportedItemRow {
     section: FittingSection,
     quantity: i64,
     stacked: bool,
+    charge_name: Option<String>,
+    lists_groups: bool,
 }
 
 /// Mirror of [`ImportedFitting::to_character_fitting`] flag
@@ -1457,7 +1471,11 @@ fn imported_flag_for(section: ImportSection, counters: &mut [usize; 5]) -> Strin
 /// `fitting_item_rows` renders them today (section order, then
 /// flag, then name, then type id), so an unedited draft renders
 /// byte-identically.
-fn imported_item_rows(imported: &ImportedFitting, resolver: &NameResolver) -> Vec<ImportedItemRow> {
+fn imported_item_rows(
+    imported: &ImportedFitting,
+    resolver: &NameResolver,
+    catalogue: &FittingTypes,
+) -> Vec<ImportedItemRow> {
     let mut counters = [0usize; 5];
     let mut rows: Vec<(ImportedItemRow, String)> = Vec::new();
     for (index, item) in imported.items.iter().enumerate() {
@@ -1470,6 +1488,16 @@ fn imported_item_rows(imported: &ImportedFitting, resolver: &NameResolver) -> Ve
             section,
             FittingSection::Drones | FittingSection::Fighters | FittingSection::Cargo
         );
+        let charge_name = item.charge.as_ref().map(|charge| charge.name.clone());
+        let lists_groups = if stacked {
+            false
+        } else {
+            catalogue.lookup_by_id(item.type_id).is_some_and(|row| {
+                row.charge_group_ids
+                    .as_deref()
+                    .is_some_and(|groups| !groups.is_empty())
+            })
+        };
         rows.push((
             ImportedItemRow {
                 index,
@@ -1478,6 +1506,8 @@ fn imported_item_rows(imported: &ImportedFitting, resolver: &NameResolver) -> Ve
                 section,
                 quantity: item.quantity.max(0),
                 stacked,
+                charge_name,
+                lists_groups,
             },
             flag,
         ));
@@ -1498,14 +1528,19 @@ fn imported_item_rows(imported: &ImportedFitting, resolver: &NameResolver) -> Ve
 enum ImportedEditIntent {
     Remove(usize),
     SetQuantity(usize, String),
+    SetCharge(usize, String),
+    ClearCharge(usize),
 }
 
 /// Imported-draft item rendering: the same section headings,
 /// caps, and text as `render_fitting_items` through `None`, plus
-/// a remove control per row and, on stacked rows only, a quantity
-/// box with its set control (design sections 6.1 and 6.2). The
-/// first intent of the frame wins; simultaneous clicks collapse
-/// into one edit per frame.
+/// a remove control per row, on stacked rows only a quantity
+/// box with its set control, and on slot rows that carry a
+/// charge or list accepted charges a charge box with its set
+/// and clear controls (design sections 6.1, 6.2, and
+/// charge-editing sections 7.1 and 7.2). The first intent of
+/// the frame wins; simultaneous clicks collapse into one edit
+/// per frame.
 fn render_imported_item_rows(
     ui: &mut egui::Ui,
     state: &mut AppState,
@@ -1554,6 +1589,39 @@ fn render_imported_item_rows(
                             .unwrap_or_default();
                         intent = Some(ImportedEditIntent::SetQuantity(row.index, text));
                     }
+                } else if row.charge_name.is_some() || row.lists_groups {
+                    let draft = state
+                        .fittings_editor_charge
+                        .entry(row.index)
+                        .or_insert_with(|| row.charge_name.clone().unwrap_or_default());
+                    let response = ui.add(
+                        egui::TextEdit::singleline(draft)
+                            .hint_text(CHARGE_HINT)
+                            .desired_width(90.0),
+                    );
+                    state.text_input_focused |= response.has_focus();
+                    let charge_enabled = state
+                        .fittings_editor_charge
+                        .get(&row.index)
+                        .is_some_and(|text| !text.trim().is_empty());
+                    if ui
+                        .add_enabled(charge_enabled, egui::Button::new(SET_CHARGE_LABEL))
+                        .clicked()
+                        && intent.is_none()
+                    {
+                        let text = state
+                            .fittings_editor_charge
+                            .get(&row.index)
+                            .cloned()
+                            .unwrap_or_default();
+                        intent = Some(ImportedEditIntent::SetCharge(row.index, text));
+                    }
+                    if row.charge_name.is_some()
+                        && ui.button(CLEAR_CHARGE_LABEL).clicked()
+                        && intent.is_none()
+                    {
+                        intent = Some(ImportedEditIntent::ClearCharge(row.index));
+                    }
                 }
                 if ui.button("Remove").clicked() && intent.is_none() {
                     intent = Some(ImportedEditIntent::Remove(row.index));
@@ -1589,13 +1657,20 @@ fn quantity_refusal_message(refusal: EditRefusal) -> String {
     format!("Could not set the quantity: {}.", refusal.reason())
 }
 
+/// Charge-refusal template (charge-editing design section 8.3).
+fn charge_refusal_message(refusal: ChargeRefusal) -> String {
+    format!("Could not set the charge: {}.", refusal.reason())
+}
+
 /// Shared bookkeeping for every successful edit (design sections
-/// 4.1 and 5.3): mark the draft edited, clear the refusal, drop
-/// index-keyed quantity drafts, and disarm any armed save.
+/// 4.1 and 5.3, extended by charge-editing section 7.3): mark
+/// the draft edited, clear the refusal, drop index-keyed
+/// quantity and charge drafts, and disarm any armed save.
 fn note_successful_edit(state: &mut AppState) {
     state.fittings_import_edited = true;
     state.fittings_editor_error = None;
     state.fittings_editor_quantity.clear();
+    state.fittings_editor_charge.clear();
     state.fittings_write_confirm = None;
 }
 
@@ -1650,13 +1725,15 @@ const BROWSER_TABS: [(ImportSection, &str); 7] = [
 ];
 
 /// Clear every editor field; called wherever the draft dies or is
-/// replaced (design section 4.1).
+/// replaced (design section 4.1, extended by charge-editing
+/// section 9).
 fn clear_editor_state(state: &mut AppState) {
     state.fittings_editor_add_name.clear();
     state.fittings_editor_add_quantity.clear();
     state.fittings_editor_error = None;
     state.fittings_import_edited = false;
     state.fittings_editor_quantity.clear();
+    state.fittings_editor_charge.clear();
     state.fittings_editor_name = None;
     state.fittings_browser_section = ImportSection::High;
     state.fittings_browser_search.clear();
@@ -2652,12 +2729,13 @@ const FITTINGS_DPS_HEADING: &str = "Damage per second (base values)";
 /// Locked disclosure: base damage rates with every included
 /// and excluded factor named, and the no-combined-DPS-total
 /// rule stated plainly (fitting DPS design section 6, as
-/// extended by volley-ranges design section 6.2). This block's
-/// own sentence; it names the EFT charge-pairing surface, the
-/// online/launched assumptions, and every unapplied term,
+/// extended by volley-ranges design section 6.2 and
+/// charge-editing design section 8.4). This block's own
+/// sentence; it names the recorded charge-pairing surface,
+/// the online/launched assumptions, and every unapplied term,
 /// which the bay and calibration disclosures above do not
 /// cover in the same words.
-const FITTING_DPS_DISCLOSURE: &str = "Base damage per second from Mimir's bundled item data: base charge, drone, and fighter damage per firing cycle, with no skill, implant, ship, module, rig, or subsystem bonuses applied. Turret and launcher damage counts only a loaded charge listed after the module in imported EFT text, exactly as listed; saved and DNA fittings list no loaded charges, and no charge is assumed. Volley is the turret and launcher damage in one firing cycle from those same listed charges; drone and fighter damage is not in the volley. Turret optimal and falloff ranges are averages of the fitted turrets' base ranges, weighted by each turret's share of the turret volley, and each is shown only when every counted turret has that range in the bundled data. Fitted weapons are treated as online, drones and fighters as launched up to the ship's base drone bandwidth and fighter tubes, and every shot is counted at full damage, with no tracking, missile application, reload time, or flight time applied. No combined damage-per-second total is shown, because any family's damage can be unknown while another's is counted.";
+const FITTING_DPS_DISCLOSURE: &str = "Base damage per second from Mimir's bundled item data: base charge, drone, and fighter damage per firing cycle, with no skill, implant, ship, module, rig, or subsystem bonuses applied. Turret and launcher damage counts only a loaded charge recorded with its module, listed after the module in imported EFT text or set on the module's item row in a fitting draft, counted exactly as recorded; saved fittings record no loaded charges, and no charge is assumed. Volley is the turret and launcher damage in one firing cycle from those same recorded charges; drone and fighter damage is not in the volley. Turret optimal and falloff ranges are averages of the fitted turrets' base ranges, weighted by each turret's share of the turret volley, and each is shown only when every counted turret has that range in the bundled data. Fitted weapons are treated as online, drones and fighters as launched up to the ship's base drone bandwidth and fighter tubes, and every shot is counted at full damage, with no tracking, missile application, reload time, or flight time applied. No combined damage-per-second total is shown, because any family's damage can be unknown while another's is counted.";
 
 const FITTING_DPS_NO_CATALOGUE: &str =
     "Damage per second unavailable: Mimir's bundled item data failed to load.";
@@ -3540,7 +3618,7 @@ fn fittings_import_panel(
         }
     }
     let local_resolver = imported.name_resolver();
-    let item_rows = imported_item_rows(&imported, &local_resolver);
+    let item_rows = imported_item_rows(&imported, &local_resolver, catalogue);
     if item_rows.is_empty() {
         ui.label("This fitting has no items to show.");
     } else if let Some(intent) = render_imported_item_rows(ui, state, &item_rows) {
@@ -3556,6 +3634,19 @@ fn fittings_import_panel(
                     Err(refusal) => {
                         state.fittings_editor_error = Some(quantity_refusal_message(refusal));
                     }
+                }
+            }
+            ImportedEditIntent::SetCharge(index, text) => {
+                match editor_set_charge(&mut imported, catalogue, index, &text) {
+                    Ok(()) => note_successful_edit(state),
+                    Err(refusal) => {
+                        state.fittings_editor_error = Some(charge_refusal_message(refusal));
+                    }
+                }
+            }
+            ImportedEditIntent::ClearCharge(index) => {
+                if editor_clear_charge(&mut imported, index) {
+                    note_successful_edit(state);
                 }
             }
         }
@@ -8535,7 +8626,7 @@ mod tests {
         assert_eq!(dps_lines(&dps), ["Drone DPS: 0.0 DPS".to_string()]);
     }
 
-    // Test 13 (volley-ranges design section 8): heading,
+    // Charge-editing test 16 (disclosure half): heading,
     // disclosure, and both unavailable sentences byte-exact.
     // Only the disclosure moves; heading and unavailable
     // sentences are byte-identical to shipped.
@@ -8552,7 +8643,7 @@ mod tests {
         );
         assert_eq!(
             FITTING_DPS_DISCLOSURE,
-            "Base damage per second from Mimir's bundled item data: base charge, drone, and fighter damage per firing cycle, with no skill, implant, ship, module, rig, or subsystem bonuses applied. Turret and launcher damage counts only a loaded charge listed after the module in imported EFT text, exactly as listed; saved and DNA fittings list no loaded charges, and no charge is assumed. Volley is the turret and launcher damage in one firing cycle from those same listed charges; drone and fighter damage is not in the volley. Turret optimal and falloff ranges are averages of the fitted turrets' base ranges, weighted by each turret's share of the turret volley, and each is shown only when every counted turret has that range in the bundled data. Fitted weapons are treated as online, drones and fighters as launched up to the ship's base drone bandwidth and fighter tubes, and every shot is counted at full damage, with no tracking, missile application, reload time, or flight time applied. No combined damage-per-second total is shown, because any family's damage can be unknown while another's is counted."
+            "Base damage per second from Mimir's bundled item data: base charge, drone, and fighter damage per firing cycle, with no skill, implant, ship, module, rig, or subsystem bonuses applied. Turret and launcher damage counts only a loaded charge recorded with its module, listed after the module in imported EFT text or set on the module's item row in a fitting draft, counted exactly as recorded; saved fittings record no loaded charges, and no charge is assumed. Volley is the turret and launcher damage in one firing cycle from those same recorded charges; drone and fighter damage is not in the volley. Turret optimal and falloff ranges are averages of the fitted turrets' base ranges, weighted by each turret's share of the turret volley, and each is shown only when every counted turret has that range in the bundled data. Fitted weapons are treated as online, drones and fighters as launched up to the ship's base drone bandwidth and fighter tubes, and every shot is counted at full damage, with no tracking, missile application, reload time, or flight time applied. No combined damage-per-second total is shown, because any family's damage can be unknown while another's is counted."
         );
     }
 
@@ -9016,17 +9107,19 @@ mod tests {
     fn editor_successful_edit_disarms_save_confirmation() {
         // Locked test 15: arming then editing disarms; the
         // bookkeeping also clears the refusal and the quantity
-        // drafts and marks the draft edited.
+        // and charge drafts and marks the draft edited.
         let mut state = AppState::new(false);
         state.active_character_id = Some(42);
         state.fittings_write_confirm = Some(FittingWriteConfirm::SaveImported { character_id: 42 });
         state.fittings_editor_error = Some("Could not add: refused.".to_string());
         state.fittings_editor_quantity.insert(0, "9".to_string());
+        state.fittings_editor_charge.insert(0, "EMP S".to_string());
         note_successful_edit(&mut state);
         assert_eq!(state.fittings_write_confirm, None);
         assert!(state.fittings_import_edited);
         assert_eq!(state.fittings_editor_error, None);
         assert!(state.fittings_editor_quantity.is_empty());
+        assert!(state.fittings_editor_charge.is_empty());
     }
 
     #[test]
@@ -9037,6 +9130,7 @@ mod tests {
         state.fittings_editor_error = Some("Could not add: refused.".to_string());
         state.fittings_import_edited = true;
         state.fittings_editor_quantity.insert(2, "3".to_string());
+        state.fittings_editor_charge.insert(2, "EMP S".to_string());
         state.fittings_editor_name = Some("Renamed".to_string());
         state.fittings_browser_section = ImportSection::Low;
         state.fittings_browser_search = "damage".to_string();
@@ -9060,6 +9154,7 @@ mod tests {
         assert_eq!(state.fittings_editor_error, None);
         assert!(!state.fittings_import_edited);
         assert!(state.fittings_editor_quantity.is_empty());
+        assert!(state.fittings_editor_charge.is_empty());
         assert_eq!(state.fittings_editor_name, None);
         assert_eq!(state.fittings_browser_section, ImportSection::High);
         assert_eq!(state.fittings_browser_search, "");
@@ -9108,18 +9203,18 @@ mod tests {
     #[test]
     fn created_wording_selection_by_format() {
         // New fitting design section 7.2, created column as
-        // literals through the render's own helpers, beside
-        // the shipped EFT wording kept byte-identical.
+        // literals through the render's own helpers, with the
+        // charge-editing section 8.2 sentences appended.
         assert_eq!(draft_label(ImportFormat::Created), "Created fitting");
         assert_eq!(draft_label(ImportFormat::Eft), "Imported fitting");
         assert_eq!(draft_label(ImportFormat::Dna), "Imported fitting");
         assert_eq!(
             editor_note(ImportFormat::Created),
-            "Edits change only this fitting in Mimir. Nothing is sent to EVE unless you save below. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit."
+            "Edits change only this fitting in Mimir. Nothing is sent to EVE unless you save below. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit. Set or clear a module's loaded charge on its item row below. A charge can be set only when Mimir's bundled data lists it as a kind that module can be loaded with; the charge's size is not checked."
         );
         assert_eq!(
             editor_note(ImportFormat::Eft),
-            "Edits change only this imported fitting in Mimir. Nothing is sent to EVE unless you save below. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit."
+            "Edits change only this imported fitting in Mimir. Nothing is sent to EVE unless you save below. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit. Set or clear a module's loaded charge on its item row below. A charge can be set only when Mimir's bundled data lists it as a kind that module can be loaded with; the charge's size is not checked."
         );
         assert_eq!(
             copy_eft_button_label(ImportFormat::Created),
@@ -9376,6 +9471,7 @@ mod tests {
         // section order the saved renderer uses.
         use crate::fitting::eft::{ImportedCharge, ImportedItem};
         let resolver = test_resolver();
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
         let imported = ImportedFitting {
             name: "T".to_string(),
             ship_type_id: 587,
@@ -9414,7 +9510,7 @@ mod tests {
                 issues: Vec::new(),
             },
         };
-        let rows = imported_item_rows(&imported, &resolver);
+        let rows = imported_item_rows(&imported, &resolver, &catalogue);
         assert_eq!(rows.len(), 3);
         // High before Drones before Cargo, like SECTION_ORDER.
         assert_eq!(rows[0].index, 1);
@@ -9439,6 +9535,7 @@ mod tests {
         // lexicographic, so a naive regroup would drift).
         use crate::fitting::eft::ImportedItem;
         let resolver = test_resolver();
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
         let items: Vec<ImportedItem> = (0..12)
             .map(|_| ImportedItem {
                 type_id: 2048,
@@ -9463,7 +9560,7 @@ mod tests {
         };
         let synth = imported.to_character_fitting();
         let saved = fitting_item_rows(&synth, &resolver);
-        let rows = imported_item_rows(&imported, &resolver);
+        let rows = imported_item_rows(&imported, &resolver, &catalogue);
         assert_eq!(rows.len(), saved.len());
         for (mine, theirs) in rows.iter().zip(saved.iter()) {
             assert_eq!(mine.type_id, theirs.type_id);
@@ -9608,11 +9705,12 @@ mod tests {
     fn copied_wording_selection_by_format() {
         // Edit-saved-copy design tests 9 (label, note, and
         // buttons) and section 6.2: the copied column as
-        // literals through the render's own helpers.
+        // literals through the render's own helpers, with the
+        // charge-editing section 8.2 sentences appended.
         assert_eq!(draft_label(ImportFormat::Copied), "Copied fitting");
         assert_eq!(
             editor_note(ImportFormat::Copied),
-            "Edits change only this copy in Mimir. The saved fitting in EVE stays as it is. Nothing is sent to EVE unless you save below, and saving adds a new fitting. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit."
+            "Edits change only this copy in Mimir. The saved fitting in EVE stays as it is. Nothing is sent to EVE unless you save below, and saving adds a new fitting. Removing a module also removes its loaded charge. Items can be added only when Mimir's bundled data proves which slot they fit. Set or clear a module's loaded charge on its item row below. A charge can be set only when Mimir's bundled data lists it as a kind that module can be loaded with; the charge's size is not checked."
         );
         assert_eq!(
             copy_eft_button_label(ImportFormat::Copied),
@@ -9644,6 +9742,160 @@ mod tests {
         assert_eq!(draft_label(ImportFormat::Created), "Created fitting");
         assert_eq!(draft_label(ImportFormat::Eft), "Imported fitting");
         assert_eq!(draft_label(ImportFormat::Dna), "Imported fitting");
+    }
+
+    #[test]
+    fn charge_controls_and_refusal_wording() {
+        // Charge-editing test 16 (controls and refusals):
+        // hint and buttons as rendered, and all four
+        // Could-not-set forms with no type or group number.
+        assert_eq!(CHARGE_HINT, "Exact charge name, like Republic Fleet EMP S");
+        assert_eq!(SET_CHARGE_LABEL, "Set charge");
+        assert_eq!(CLEAR_CHARGE_LABEL, "Clear charge");
+        assert_eq!(
+            ChargeRefusal::UnknownCharge.reason(),
+            ImportIssueKind::UnknownCharge.reason()
+        );
+        assert_eq!(
+            ChargeRefusal::AmbiguousCharge.reason(),
+            ImportIssueKind::AmbiguousCharge.reason()
+        );
+        assert_eq!(
+            ChargeRefusal::NotACharge.reason(),
+            ImportIssueKind::NotACharge.reason()
+        );
+        assert_eq!(
+            charge_refusal_message(ChargeRefusal::UnknownCharge),
+            format!(
+                "Could not set the charge: {}.",
+                ImportIssueKind::UnknownCharge.reason()
+            )
+        );
+        assert_eq!(
+            charge_refusal_message(ChargeRefusal::AmbiguousCharge),
+            format!(
+                "Could not set the charge: {}.",
+                ImportIssueKind::AmbiguousCharge.reason()
+            )
+        );
+        assert_eq!(
+            charge_refusal_message(ChargeRefusal::NotACharge),
+            format!(
+                "Could not set the charge: {}.",
+                ImportIssueKind::NotACharge.reason()
+            )
+        );
+        assert_eq!(
+            charge_refusal_message(ChargeRefusal::IncompatibleCharge),
+            "Could not set the charge: Mimir's bundled data does not list this charge as one this module can be loaded with."
+        );
+        for message in [
+            charge_refusal_message(ChargeRefusal::UnknownCharge),
+            charge_refusal_message(ChargeRefusal::AmbiguousCharge),
+            charge_refusal_message(ChargeRefusal::NotACharge),
+            charge_refusal_message(ChargeRefusal::IncompatibleCharge),
+        ] {
+            assert!(
+                !message.chars().any(|c| c.is_ascii_digit()),
+                "refusal names a number: {message}"
+            );
+        }
+    }
+
+    #[test]
+    fn charge_row_derivation_offers_controls() {
+        // Charge-editing test 17: row derivation over the
+        // demo draft and an imported pairing.
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let demo = match parse_eft(DEMO_SAMPLE_EFT, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting,
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import: {fatal:?}"),
+        };
+        let resolver = demo.name_resolver();
+        let rows = imported_item_rows(&demo, &resolver, &catalogue);
+        let offers = |row: &ImportedItemRow| row.charge_name.is_some() || row.lists_groups;
+        let autocannons: Vec<_> = rows.iter().filter(|row| row.type_id == 2889).collect();
+        assert_eq!(autocannons.len(), 3);
+        for row in &autocannons {
+            assert!(offers(row), "autocannon offers controls: {row:?}");
+            assert!(row.lists_groups);
+        }
+        let charged: Vec<_> = autocannons
+            .iter()
+            .filter(|row| row.charge_name.is_some())
+            .collect();
+        assert_eq!(charged.len(), 1);
+        assert_eq!(
+            charged[0].charge_name.as_deref(),
+            Some("Republic Fleet EMP S")
+        );
+        assert!(charged[0].charge_name.is_some());
+        for type_id in [2048, 1183, 438, 448, 31668] {
+            let row = rows
+                .iter()
+                .find(|row| row.type_id == type_id)
+                .unwrap_or_else(|| panic!("demo row {type_id} present"));
+            assert!(!offers(row), "row {type_id} offers no controls");
+            assert!(row.charge_name.is_none());
+            assert!(!row.lists_groups);
+        }
+        assert!(rows
+            .iter()
+            .filter(|row| row.stacked)
+            .all(|row| !offers(row)));
+        let pairing = match parse_eft("[Rifter, Test]\nDamage Control II, EMP S\n", &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting,
+            EftImportOutcome::Failed(fatal) => panic!("pairing draft must import: {fatal:?}"),
+        };
+        let resolver = pairing.name_resolver();
+        let rows = imported_item_rows(&pairing, &resolver, &catalogue);
+        assert_eq!(rows.len(), 1);
+        let row = &rows[0];
+        assert_eq!(row.type_id, 2048);
+        assert_eq!(row.charge_name.as_deref(), Some("EMP S"));
+        assert!(!row.lists_groups);
+        assert!(offers(row));
+    }
+
+    #[test]
+    fn charge_demo_round_trip_keeps_words() {
+        // Charge-editing test 18: the demo charge clears and
+        // re-sets with the shipped disclosure literals.
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let mut demo = match parse_eft(DEMO_SAMPLE_EFT, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting,
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import: {fatal:?}"),
+        };
+        let charged = demo
+            .items
+            .iter()
+            .position(|item| item.type_id == 2889 && item.charge.is_some())
+            .expect("charged autocannon present");
+        assert_eq!(demo.report.charges_noted, 1);
+        assert!(editor_clear_charge(&mut demo, charged));
+        assert_eq!(demo.report.charges_noted, 0);
+        assert_eq!(charges_note(0), None);
+        editor_set_charge(&mut demo, &catalogue, charged, "Republic Fleet EMP S")
+            .expect("fleet EMP re-sets");
+        assert_eq!(demo.report.charges_noted, 1);
+        assert_eq!(
+            charges_note(1).as_deref(),
+            Some(
+                "1 loaded charge is listed below the items. It is not included when you copy this fitting as EFT."
+            )
+        );
+        assert_eq!(
+            copy_imported_status_message("Sample Brawler", 1),
+            "Copied \"Sample Brawler\" as EFT (1 loaded charge left out: copied EFT fittings do not store loaded charges)"
+        );
+        assert_eq!(
+            copy_imported_dna_status_message("Sample Brawler", 1, 0),
+            "Copied \"Sample Brawler\" as a DNA link (1 loaded charge left out: DNA links do not store loaded charges)"
+        );
+        assert_eq!(
+            charges_not_sent_line(1),
+            "1 loaded charge(s) are shown above but are not part of a saved fitting and will not be sent to EVE."
+        );
     }
 
     #[test]
