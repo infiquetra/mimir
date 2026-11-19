@@ -325,6 +325,19 @@ pub struct FittingType {
     pub group_id: Option<i64>,
     #[serde(rename = "requiredSkillIds", default)]
     pub required_skill_ids: Option<Vec<i64>>,
+    // Charge editing (docs/charge-editing-design.md section
+    // 3.3): `chargeGroupIds` aggregates dogma attributes
+    // 604/605/606/609/610 in slot order (604 chargeGroup1
+    // through 610 chargeGroup5; 607 carries no row and 608 is
+    // powerNeedMultiplier), sparse on category-7-or-32 slot
+    // rows; `chargeGroupId` is a charge's inventory group on
+    // every category-8 row. Group numbers are internal keys:
+    // never rendered and never logged. `default` so old assets
+    // and hand-built fixtures without the keys load.
+    #[serde(rename = "chargeGroupIds", default)]
+    pub charge_group_ids: Option<Vec<i64>>,
+    #[serde(rename = "chargeGroupId", default)]
+    pub charge_group_id: Option<i64>,
 }
 
 /// Outcome of a reverse name lookup. `Found` carries the unique
@@ -1239,6 +1252,54 @@ mod tests {
                     row.name
                 );
             }
+            // Charge groups (docs/charge-editing-design.md
+            // section 3.3): `charge_group_ids` is `Some` only on
+            // category-7-or-32 rows with a slot effect, holds
+            // one to five entries, every entry positive, none
+            // repeated; `charge_group_id` is `Some` exactly on
+            // category-8 rows, always positive. `None` means
+            // this catalogue carries no such data for the row.
+            if let Some(group_ids) = &row.charge_group_ids {
+                assert!(
+                    matches!(row.category_id, 7 | 32) && !row.slot_effects.is_empty(),
+                    "chargeGroupIds on non-slot row: {:?}",
+                    row.name
+                );
+                assert!(
+                    (1..=5).contains(&group_ids.len()),
+                    "chargeGroupIds count outside one to five: {:?}",
+                    row.name
+                );
+                for group_id in group_ids {
+                    assert!(
+                        *group_id > 0,
+                        "non-positive charge group {group_id} on {:?}",
+                        row.name
+                    );
+                }
+                let mut deduped = group_ids.clone();
+                deduped.sort_unstable();
+                deduped.dedup();
+                assert_eq!(
+                    deduped.len(),
+                    group_ids.len(),
+                    "repeated charge group on {:?}",
+                    row.name
+                );
+            }
+            assert_eq!(
+                row.charge_group_id.is_some(),
+                row.category_id == 8,
+                "charge_group_id presence does not match charge category: {:?}",
+                row.name
+            );
+            if let Some(group_id) = row.charge_group_id {
+                assert!(
+                    group_id > 0,
+                    "non-positive chargeGroupId {group_id} on {:?}",
+                    row.name
+                );
+            }
         }
         // Spot pins mirroring the generator oracles (design section
         // 5), read from dgmTypeAttributes.csv.bz2 during design.
@@ -1957,6 +2018,108 @@ mod tests {
             .filter_map(|row| row.required_skill_ids.as_ref().map(|ids| ids.len()))
             .sum();
         assert_eq!(skill_values_count, 4306);
+        // Charge-group spot pins, identical to the generator
+        // oracles (docs/charge-editing-design.md section 3.2),
+        // read from invTypes.csv.bz2 / dgmTypeAttributes.csv.bz2
+        // during design: 2889 [83, 372]; 450 [86]; 499
+        // [384, 394]; 4256 [90, 863, 864]; 1952 [910];
+        // 3568 [87]; 17912 [482]; charges 21898 and 185 83,
+        // 210 384, 267 89, 239 86, 28668 916, 29009 910,
+        // 11287 87; 2048/482/16631/587 list no ids,
+        // 587/2889/2456 carry no id, 21898 lists no ids.
+        let autocannon = types.lookup_by_id(2889).expect("200mm AutoCannon II row");
+        assert_eq!(autocannon.charge_group_ids, Some(vec![83, 372]));
+        let gatling_pulse = types.lookup_by_id(450).expect("Gatling Pulse Laser I row");
+        assert_eq!(gatling_pulse.charge_group_ids, Some(vec![86]));
+        let light_launcher = types
+            .lookup_by_id(499)
+            .expect("Light Missile Launcher I row");
+        assert_eq!(light_launcher.charge_group_ids, Some(vec![384, 394]));
+        let bomb_launcher = types.lookup_by_id(4256).expect("Bomb Launcher II row");
+        assert_eq!(bomb_launcher.charge_group_ids, Some(vec![90, 863, 864]));
+        let sensor_booster = types.lookup_by_id(1952).expect("Sensor Booster II row");
+        assert_eq!(sensor_booster.charge_group_ids, Some(vec![910]));
+        let cap_booster = types
+            .lookup_by_id(3568)
+            .expect("Small Capacitor Booster II row");
+        assert_eq!(cap_booster.charge_group_ids, Some(vec![87]));
+        let strip_miner = types
+            .lookup_by_id(17912)
+            .expect("Modulated Strip Miner II row");
+        assert_eq!(strip_miner.charge_group_ids, Some(vec![482]));
+        let fleet_emp = types.lookup_by_id(21898).expect("Republic Fleet EMP S row");
+        assert_eq!(fleet_emp.charge_group_id, Some(83));
+        let emp = types.lookup_by_id(185).expect("EMP S row");
+        assert_eq!(emp.charge_group_id, Some(83));
+        let scourge_light = types.lookup_by_id(210).expect("Scourge Light Missile row");
+        assert_eq!(scourge_light.charge_group_id, Some(384));
+        let scourge_torpedo = types.lookup_by_id(267).expect("Scourge Torpedo row");
+        assert_eq!(scourge_torpedo.charge_group_id, Some(89));
+        let radio = types.lookup_by_id(239).expect("Radio S row");
+        assert_eq!(radio.charge_group_id, Some(86));
+        let paste = types.lookup_by_id(28668).expect("Nanite Repair Paste row");
+        assert_eq!(paste.charge_group_id, Some(916));
+        let range_script = types
+            .lookup_by_id(29009)
+            .expect("Targeting Range Script row");
+        assert_eq!(range_script.charge_group_id, Some(910));
+        let cap_charge = types.lookup_by_id(11287).expect("Cap Booster 400 row");
+        assert_eq!(cap_charge.charge_group_id, Some(87));
+        let damage_control = types.lookup_by_id(2048).expect("DC II row");
+        assert_eq!(damage_control.charge_group_ids, None);
+        let miner = types.lookup_by_id(482).expect("Miner II row");
+        assert_eq!(miner.charge_group_ids, None);
+        let artillery = types
+            .lookup_by_id(16631)
+            .expect("Small Artillery Battery row");
+        assert_eq!(artillery.charge_group_ids, None);
+        let rifter = types.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(rifter.charge_group_ids, None);
+        assert_eq!(rifter.charge_group_id, None);
+        let autocannon = types.lookup_by_id(2889).expect("200mm AutoCannon II row");
+        assert_eq!(autocannon.charge_group_id, None);
+        let fleet_emp = types.lookup_by_id(21898).expect("Republic Fleet EMP S row");
+        assert_eq!(fleet_emp.charge_group_ids, None);
+        let hobgoblin = types.lookup_by_id(2456).expect("Hobgoblin II row");
+        assert_eq!(hobgoblin.charge_group_id, None);
+        // Charge-group key counts over the bundled catalogue
+        // (charge-editing-design section 3.3, the generator's
+        // CHARGE_GROUP_EXPECTED_COUNTS twins) and the join
+        // coverage: every accepted group names a shipped charge.
+        let charge_group_rows_count = types
+            .types
+            .iter()
+            .filter(|row| row.charge_group_ids.is_some())
+            .count();
+        assert_eq!(charge_group_rows_count, 980);
+        let charge_group_values_count: usize = types
+            .types
+            .iter()
+            .filter_map(|row| row.charge_group_ids.as_ref().map(|ids| ids.len()))
+            .sum();
+        assert_eq!(charge_group_values_count, 1489);
+        let charge_ids_count = types
+            .types
+            .iter()
+            .filter(|row| row.charge_group_id.is_some())
+            .count();
+        assert_eq!(charge_ids_count, 1005);
+        let charge_groups: HashSet<i64> = types
+            .types
+            .iter()
+            .filter_map(|row| row.charge_group_id)
+            .collect();
+        for row in &types.types {
+            if let Some(group_ids) = &row.charge_group_ids {
+                for group_id in group_ids {
+                    assert!(
+                        charge_groups.contains(group_id),
+                        "accepted charge group {group_id} names no charge: {:?}",
+                        row.name
+                    );
+                }
+            }
+        }
     }
 
     #[test]
@@ -2108,5 +2271,33 @@ mod tests {
         assert!(!ship.armor_repair);
         assert!(!ship.fueled_armor_repair);
         assert!(!ship.structure_repair);
+    }
+
+    #[test]
+    fn fixture_parse_charge_group_fields() {
+        // A row with the new keys loads into the new fields;
+        // a row without them loads as None (old-catalogue
+        // tolerance, the `default` pattern).
+        let with_keys = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":2889,"typeName":"200mm AutoCannon II","categoryId":7,"slotEffects":[12],"chargeGroupIds":[83,372]},
+                {"typeId":185,"typeName":"EMP S","categoryId":8,"slotEffects":[],"chargeGroupId":83}]}"#,
+        )
+        .expect("fixture parses");
+        let gun = with_keys.lookup_by_id(2889).expect("gun row");
+        assert_eq!(gun.charge_group_ids, Some(vec![83, 372]));
+        assert_eq!(gun.charge_group_id, None);
+        let emp = with_keys.lookup_by_id(185).expect("charge row");
+        assert_eq!(emp.charge_group_id, Some(83));
+        assert_eq!(emp.charge_group_ids, None);
+
+        let without_keys = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[]}]}"#,
+        )
+        .expect("fixture parses");
+        let ship = without_keys.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(ship.charge_group_ids, None);
+        assert_eq!(ship.charge_group_id, None);
     }
 }

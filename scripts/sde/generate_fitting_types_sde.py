@@ -123,6 +123,14 @@ locked order: `groupId` (the invTypes `groupID` column) and
 present including as an empty list) on exactly the category-7
 slot rows carrying a need key. Rigs, ships, and every other row
 gain neither key.
+Charge editing (docs/charge-editing-design.md section 3) appends
+two further keys after `requiredSkillIds` in the locked order:
+`chargeGroupIds` (the five charge-group slots 604, 605, 606, 609,
+610 in attribute order, absent slots skipped) on exactly the
+category-7-or-32 rows carrying a slot effect and at least one
+group, sparse, and `chargeGroupId` (the invTypes `groupID`
+column) on every category-8 row. Any other row gains neither
+key, and no row gains both.
 """
 
 import bz2
@@ -157,6 +165,17 @@ MODULE_POWER_NEED_ATTR = 30
 # the literal `None`), so values parse from `valueFloat` like every
 # other attribute set.
 REQUIRED_SKILL_ATTR_IDS = (182, 183, 184, 1285, 1289, 1290)
+
+# Charge-group attribute ids (docs/charge-editing-design.md
+# section 2.3): the five charge-group slots 604, 605, 606, 609,
+# 610. Source: dogmaAttributes.jsonl in
+# scripts/sde/eve-online-static-data-3503375-jsonl.zip names
+# 604/605/606/609/610 chargeGroup1-5; 607 carries no row and 608
+# is powerNeedMultiplier, both never read. The tuple order is
+# the locked emission order. Every cached row carries
+# `valueFloat`, parsed like every other attribute set and
+# emitted as an integer.
+CHARGE_GROUP_ATTR_IDS = (604, 605, 606, 609, 610)
 
 # Base ship attribute ids (docs/ship-base-stats-design.md section 2):
 # dogmaAttributes.jsonl _key 263 "shieldCapacity", 265 "armorHP",
@@ -1226,6 +1245,53 @@ NEED_FILTER_EXPECTED_COUNTS = {
     "requiredSkillValues": 4306,
 }
 
+# Charge-group oracles (docs/charge-editing-design.md section
+# 3.2): each value read directly from invTypes.csv.bz2 /
+# dgmTypeAttributes.csv.bz2 during design. Tuple shape mirrors
+# NEED_FILTER_ORACLES: (typeId, key, expected-or-None). A None
+# expected means the key must be absent from that row (2048
+# lists no groups, 482 Miner II takes no crystal, 16631 is a
+# cache carrier outside the emission scope, 2889 is a module
+# not a charge, 21898 is a charge not a module). `chargeGroupIds`
+# lists are complete lists in the locked attribute order 604,
+# 605, 606, 609, 610 (absent slots skipped).
+CHARGE_GROUP_ORACLES = [
+    (2889, "chargeGroupIds", [83, 372]),
+    (450, "chargeGroupIds", [86]),
+    (499, "chargeGroupIds", [384, 394]),
+    (4256, "chargeGroupIds", [90, 863, 864]),
+    (1952, "chargeGroupIds", [910]),
+    (3568, "chargeGroupIds", [87]),
+    (17912, "chargeGroupIds", [482]),
+    (21898, "chargeGroupId", 83),
+    (185, "chargeGroupId", 83),
+    (210, "chargeGroupId", 384),
+    (267, "chargeGroupId", 89),
+    (239, "chargeGroupId", 86),
+    (28668, "chargeGroupId", 916),
+    (29009, "chargeGroupId", 910),
+    (11287, "chargeGroupId", 87),
+    (2048, "chargeGroupIds", None),
+    (482, "chargeGroupIds", None),
+    (16631, "chargeGroupIds", None),
+    (587, "chargeGroupIds", None),
+    (587, "chargeGroupId", None),
+    (2889, "chargeGroupId", None),
+    (21898, "chargeGroupIds", None),
+    (2456, "chargeGroupId", None),
+]
+
+# Expected charge-group key counts (charge-editing-design
+# section 3.2, scripted over the cache joined to the shipped
+# catalogue: the 980 category-7-or-32 slot rows carrying at
+# least one group gain `chargeGroupIds`, 1,489 group values in
+# total, and every category-8 row gains `chargeGroupId`).
+CHARGE_GROUP_EXPECTED_COUNTS = {
+    "chargeGroupIds": 980,
+    "chargeGroupValues": 1489,
+    "chargeGroupId": 1005,
+}
+
 _STACKED_SUFFIX_RE = re.compile(r" x[0-9]+$")
 
 
@@ -1793,6 +1859,48 @@ def main():
         seen_required_keys.add(key)
         existing[attribute_id] = skill_id
 
+    # Charge groups per type (docs/charge-editing-design.md
+    # section 3.1): only the five locked attributes, each parsed
+    # from valueFloat. An unparseable, duplicated, non-finite,
+    # non-integral, or non-positive wanted row fails loudly and
+    # writes nothing (the capacitor block's global fail-loud
+    # shape; the cache carries none of those rows).
+    charge_groups_by_type = {}
+    seen_charge_group_keys = set()
+    for row in type_attributes:
+        attribute_id = int(row["attributeID"])
+        if attribute_id not in CHARGE_GROUP_ATTR_IDS:
+            continue
+        type_id = int(row["typeID"])
+        key = (type_id, attribute_id)
+        if key in seen_charge_group_keys:
+            fail(
+                f"duplicate charge-group row (type {type_id}, "
+                f"attribute {attribute_id}) in dgmTypeAttributes"
+            )
+        try:
+            value = float(row["valueFloat"])
+        except (TypeError, ValueError):
+            fail(
+                f"unparseable charge-group value {row['valueFloat']!r} "
+                f"for (type {type_id}, attribute {attribute_id})"
+            )
+        if not math.isfinite(value):
+            fail(
+                f"non-finite charge-group value {value!r} for "
+                f"(type {type_id}, attribute {attribute_id})"
+            )
+        if value.is_integer() is False or value <= 0:
+            fail(
+                f"non-integral or non-positive charge-group value "
+                f"{value!r} for (type {type_id}, "
+                f"attribute {attribute_id})"
+            )
+        seen_charge_group_keys.add(key)
+        charge_groups_by_type.setdefault(type_id, {})[attribute_id] = int(
+            value
+        )
+
     types = []
     missing_group = 0
     resource_key_counts = Counter()
@@ -1806,6 +1914,7 @@ def main():
     cap_key_counts = Counter()
     repair_key_counts = Counter()
     need_filter_key_counts = Counter()
+    charge_group_key_counts = Counter()
     for row in inv_types:
         if row["published"] != "1":
             continue
@@ -2312,6 +2421,39 @@ def main():
             need_filter_key_counts["requiredSkillValues"] += len(
                 required_skill_ids
             )
+        # Additive charge-group emission
+        # (docs/charge-editing-design.md section 3.1): two keys
+        # append after `requiredSkillIds` in the locked order
+        # `chargeGroupIds`, then `chargeGroupId`, on mutually
+        # exclusive populations. A category-7-or-32 row carrying
+        # a slot effect and at least one group gains its accepted
+        # groups as integers in attribute order, sparse; a
+        # category-8 row gains its inventory group. The
+        # category-23 and category-66 group carriers gain no key,
+        # because no locked computation reads them.
+        if category_id in (7, 32) and slot_effects:
+            groups = charge_groups_by_type.get(type_id, {})
+            if groups:
+                charge_group_ids = [
+                    groups[attribute_id]
+                    for attribute_id in CHARGE_GROUP_ATTR_IDS
+                    if attribute_id in groups
+                ]
+                entry["chargeGroupIds"] = charge_group_ids
+                charge_group_key_counts["chargeGroupIds"] += 1
+                charge_group_key_counts["chargeGroupValues"] += len(
+                    charge_group_ids
+                )
+        if category_id == 8:
+            try:
+                charge_group_id = int(row["groupID"])
+            except (TypeError, ValueError):
+                fail(
+                    f"unparseable groupID {row['groupID']!r} "
+                    f"for type {type_id}"
+                )
+            entry["chargeGroupId"] = charge_group_id
+            charge_group_key_counts["chargeGroupId"] += 1
         types.append(entry)
 
     types.sort(key=lambda entry: entry["typeId"])
@@ -3033,6 +3175,66 @@ def main():
                     f"type {entry['typeId']} carries a repeated "
                     f"requiredSkillIds entry: {skill_list}"
                 )
+        # Charge-group invariants (charge-editing-design section
+        # 3.1, restated as fail-loud checks): `chargeGroupId` is
+        # present exactly when the row is category 8, always a
+        # positive int (not a bool); `chargeGroupIds` appears
+        # only on category-7-or-32 rows with a slot effect,
+        # always a list of one to five positive ints with none
+        # repeated. Absence means no group data for the row.
+        if ("chargeGroupId" in entry) != (entry["categoryId"] == 8):
+            fail(
+                f"type {entry['typeId']} chargeGroupId presence does "
+                f"not match its category"
+            )
+        if "chargeGroupId" in entry:
+            charge_group_value = entry["chargeGroupId"]
+            if (
+                not isinstance(charge_group_value, int)
+                or isinstance(charge_group_value, bool)
+                or charge_group_value <= 0
+            ):
+                fail(
+                    f"type {entry['typeId']} chargeGroupId="
+                    f"{charge_group_value!r} is not a positive "
+                    "integral id"
+                )
+        if "chargeGroupIds" in entry:
+            if (
+                entry["categoryId"] not in (7, 32)
+                or not entry["slotEffects"]
+            ):
+                fail(
+                    f"type {entry['typeId']} carries chargeGroupIds "
+                    f"on non-slot category {entry['categoryId']} "
+                    f"with slotEffects {entry['slotEffects']}"
+                )
+            group_list = entry["chargeGroupIds"]
+            if not 1 <= len(group_list) <= 5:
+                fail(
+                    f"type {entry['typeId']} carries "
+                    f"{len(group_list)} chargeGroupIds, "
+                    "expected one to five"
+                )
+            for group_item in group_list:
+                if (
+                    not isinstance(group_item, int)
+                    or isinstance(group_item, bool)
+                    or group_item <= 0
+                ):
+                    fail(
+                        f"type {entry['typeId']} chargeGroupIds entry "
+                        f"{group_item!r} is not a positive integral id"
+                    )
+            if len(set(group_list)) != len(group_list):
+                fail(
+                    f"type {entry['typeId']} carries a repeated "
+                    f"chargeGroupIds entry: {group_list}"
+                )
+        if "chargeGroupIds" in entry and "chargeGroupId" in entry:
+            fail(
+                f"type {entry['typeId']} carries both charge group keys"
+            )
 
     # Invariants the parser relies on (design sections 5.2, 6.3): no
     # shipment name may contain the header delimiters, and no published
@@ -3235,6 +3437,31 @@ def main():
                 f"expected {expected}"
             )
 
+    # Charge-group oracles (design section 3.2). A None expected
+    # value means the key must be absent from that row.
+    for type_id, key, expected in CHARGE_GROUP_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(f"charge-group oracle type {type_id} missing")
+        if expected is None:
+            if key in entry:
+                fail(
+                    f"charge-group oracle type {type_id} "
+                    f"carries {key}={entry[key]!r}, expected absent"
+                )
+        elif entry.get(key) != expected:
+            fail(
+                f"charge-group oracle type {type_id} "
+                f"{key}={entry.get(key)!r}, expected {expected!r}"
+            )
+    for key, expected in CHARGE_GROUP_EXPECTED_COUNTS.items():
+        actual = charge_group_key_counts[key]
+        if actual != expected:
+            fail(
+                f"charge-group key {key} count {actual}, "
+                f"expected {expected}"
+            )
+
     duplicate_names = sum(
         1
         for count in Counter(
@@ -3368,6 +3595,11 @@ def main():
         f"need_filter_keys groupId={need_filter_key_counts['groupId']} "
         f"requiredSkillIds={need_filter_key_counts['requiredSkillIds']} "
         f"requiredSkillValues={need_filter_key_counts['requiredSkillValues']}"
+    )
+    print(
+        f"charge_group_keys chargeGroupIds={charge_group_key_counts['chargeGroupIds']} "
+        f"chargeGroupValues={charge_group_key_counts['chargeGroupValues']} "
+        f"chargeGroupId={charge_group_key_counts['chargeGroupId']}"
     )
 
 
