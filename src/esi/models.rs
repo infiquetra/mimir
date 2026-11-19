@@ -636,8 +636,9 @@ pub struct PlanetColonyDetail {
 /// identity: an invisible sort tie-break only, never rendered and
 /// never name-resolved. `type_id` resolves via the item-name path.
 /// `latitude`/`longitude` and `install_time` are carried but never
-/// rendered; `schematic_id` is carried but never rendered,
-/// resolved, or computed with (no calculator in this slice).
+/// rendered; `schematic_id` is resolved against the bundled planet
+/// schematics in the colony detail and is itself never rendered or
+/// name-scheduled (no calculator).
 /// Nullability is preserved exactly: `None` is never coerced to
 /// zero.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

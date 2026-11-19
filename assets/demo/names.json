@@ -39,5 +39,11 @@
   { "id": 10000043, "name": "Domain", "category": "region" },
   { "id": 10000032, "name": "Sinq Laison", "category": "region" },
   { "id": 10000042, "name": "Metropolis", "category": "region" },
-  { "id": 10000030, "name": "Heimatar", "category": "region" }
+  { "id": 10000030, "name": "Heimatar", "category": "region" },
+  { "id": 2268, "name": "Aqueous Liquids", "category": "inventory_type" },
+  { "id": 2389, "name": "Plasmoids", "category": "inventory_type" },
+  { "id": 3645, "name": "Water", "category": "inventory_type" },
+  { "id": 9838, "name": "Superconductors", "category": "inventory_type" },
+  { "id": 2480, "name": "Temperate Advanced Industry Facility", "category": "inventory_type" },
+  { "id": 2481, "name": "Temperate Basic Industry Facility", "category": "inventory_type" }
 ]

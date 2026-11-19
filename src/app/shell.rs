@@ -28,6 +28,7 @@ use crate::esi::models::{
 use crate::names::exploration_ref::ExplorationRef;
 use crate::names::fitting_types::FittingTypes;
 use crate::names::industry_ref::IndustryRef;
+use crate::names::planet_schematics::PlanetSchematicsRef;
 use crate::names::resolver::{
     is_displayable_name, is_structure_id, structure_lookup_batch, NameResolver,
 };
@@ -126,6 +127,7 @@ pub struct MimirApp {
     pub sde: Sde,
     pub fitting_types: Option<Arc<FittingTypes>>,
     pub industry_data: Option<Arc<IndustryRef>>,
+    pub planet_schematics: Option<Arc<PlanetSchematicsRef>>,
     pub resolver: NameResolver,
     pub log_buffer: Arc<Mutex<Vec<String>>>,
     runtime: Option<tokio::runtime::Runtime>,
@@ -704,6 +706,30 @@ fn industry_load(result: crate::error::AppResult<IndustryRef>) -> Option<Arc<Ind
     }
 }
 
+/// One-time startup load of the bundled planet schematics
+/// (pi-schematics design section 5): success stores the validated
+/// catalogue and logs its count once; any failure logs a `[PI]`
+/// warning and stores `None`, so any colony with factory pins shows
+/// the fixed unavailable sentence instead of treating an empty
+/// catalogue as valid.
+fn planet_schematics_load(
+    result: crate::error::AppResult<PlanetSchematicsRef>,
+) -> Option<Arc<PlanetSchematicsRef>> {
+    match result {
+        Ok(catalogue) => {
+            tracing::info!(
+                "[PI] bundled planet schematics loaded schematics={}",
+                catalogue.schematic_count()
+            );
+            Some(Arc::new(catalogue))
+        }
+        Err(e) => {
+            tracing::warn!("[PI] bundled planet schematics failed to load: {}", e);
+            None
+        }
+    }
+}
+
 /// One-time startup load of the bundled Exploration reference
 /// (design sections 5.2 and 9): success stores the validated
 /// catalogue and logs its counts once; any failure becomes the
@@ -873,6 +899,7 @@ impl MimirApp {
         });
         let fitting_types = fitting_types_load(FittingTypes::load_bundled());
         let industry_data = industry_load(IndustryRef::load_bundled());
+        let planet_schematics = planet_schematics_load(PlanetSchematicsRef::load_bundled());
         let (tx, rx) = std::sync::mpsc::channel();
         let mut state = AppState::new(demo);
         // Bundled offline reference, loaded exactly once (design
@@ -969,6 +996,7 @@ impl MimirApp {
             sde,
             fitting_types,
             industry_data,
+            planet_schematics,
             resolver,
             log_buffer,
             runtime,
@@ -1152,7 +1180,9 @@ impl MimirApp {
         }
         // Planetary IDs (PI design section 10): colony solar-system
         // IDs behind the structure guard (location path), plus pin,
-        // extractor-product, and stored-item type IDs (item path).
+        // extractor-product, stored-item, and schematic input/output
+        // type IDs (item path; schematic type IDs come through the
+        // bundled extract first, never schematic IDs themselves).
         // Planet/pin instance IDs, schematic IDs, anything inside
         // raw links/routes, and the planet-type word are never
         // scheduled.
@@ -1175,6 +1205,14 @@ impl MimirApp {
                         }
                         for content in &pin.contents {
                             ids.push(content.type_id);
+                        }
+                        if let (Some(schematic_id), Some(schematics)) =
+                            (pin.schematic_id, self.planet_schematics.as_deref())
+                        {
+                            if let Some(schematic) = schematics.schematic(schematic_id) {
+                                ids.push(schematic.output.type_id);
+                                ids.extend(schematic.inputs.iter().map(|input| input.type_id));
+                            }
                         }
                     }
                 }
@@ -3834,7 +3872,12 @@ impl eframe::App for MimirApp {
                     self.industry_data.as_deref(),
                     self.fitting_types.as_deref(),
                 ),
-                View::Planets => ui::planets::show(ui, &mut self.state, &self.resolver),
+                View::Planets => ui::planets::show(
+                    ui,
+                    &mut self.state,
+                    &self.resolver,
+                    self.planet_schematics.as_deref(),
+                ),
                 View::Fittings => ui::fittings::show(
                     ui,
                     &mut self.state,
@@ -4475,6 +4518,16 @@ mod tests {
         // A failed load stores None so the reaction block shows its
         // fixed unavailable sentence; never an empty catalogue.
         assert!(industry_load(IndustryRef::from_json("{not json")).is_none());
+    }
+
+    #[test]
+    fn planet_schematics_startup_load_is_catalogue_or_none() {
+        let loaded = planet_schematics_load(PlanetSchematicsRef::load_bundled())
+            .expect("bundled planet schematics must load");
+        assert_eq!(loaded.schematic_count(), 68);
+        // A failed load stores None so colonies with factory pins show
+        // the fixed unavailable sentence; never an empty catalogue.
+        assert!(planet_schematics_load(PlanetSchematicsRef::from_json("{not json")).is_none());
     }
 
     #[test]
