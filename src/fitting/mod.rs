@@ -46,7 +46,10 @@ pub use ship_ehp::{
     ShipBaseEhp, ShipBaseEhpOutcome,
 };
 pub use ship_nav_targeting::{ship_nav_targeting, ShipNavTargeting, ShipNavTargetingOutcome};
-pub use ship_peak_recharge::{ship_base_peak_recharge, ShipBasePeakRecharge};
+pub use ship_peak_recharge::{
+    ship_base_peak_recharge, ship_shield_peak_recharge_with_module_bonuses,
+    BonusedShieldPeakRecharge, BonusedShieldPeakRechargeOutcome, ShipBasePeakRecharge,
+};
 pub use ship_resistances::{
     resistance_stacking_penalty, ship_resistances, ship_resistances_with_module_bonuses,
     BonusedShipResistances, BonusedShipResistancesOutcome, ResistLayer, ShipResistances,

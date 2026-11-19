@@ -47,7 +47,10 @@ use crate::fitting::ship_ehp::{
 use crate::fitting::ship_nav_targeting::{
     ship_nav_targeting, ShipNavTargeting, ShipNavTargetingOutcome,
 };
-use crate::fitting::ship_peak_recharge::ship_base_peak_recharge;
+use crate::fitting::ship_peak_recharge::{
+    ship_base_peak_recharge, ship_shield_peak_recharge_with_module_bonuses,
+    BonusedShieldPeakRecharge, BonusedShieldPeakRechargeOutcome,
+};
 use crate::fitting::ship_resistances::{
     ship_resistances, ship_resistances_with_module_bonuses, BonusedShipResistancesOutcome,
     ResistLayer, ShipResistances, ShipResistancesOutcome,
@@ -2049,9 +2052,10 @@ fn bonused_ehp_excluded_line(excluded: usize) -> Option<String> {
 }
 
 /// Hit-point-dimension unapplied-carrier disclosure for the
-/// bonused EHP block, or `None` when every counted carrier's
-/// hit point bonus could be applied (hit point bonuses design
-/// section 6).
+/// bonused EHP block and the bonused shield peak recharge
+/// block, or `None` when every counted carrier's hit point
+/// bonus could be applied (hit point bonuses design
+/// section 6; shield recharge bonuses design section 6).
 fn bonused_ehp_hit_point_unapplied_line(unapplied: usize) -> Option<String> {
     if unapplied == 0 {
         None
@@ -2363,6 +2367,131 @@ fn render_ship_base_stats(
         ShipBaseStatsOutcome::Unavailable => {
             ui.heading(FITTINGS_SHIP_BASE_STATS_HEADING);
             ui.label(FITTING_SHIP_BASE_STATS_NO_SHIP_DATA);
+        }
+    }
+}
+
+/// Locked heading for the shield peak recharge block with
+/// fitted module bonuses (shield recharge bonuses design
+/// section 7). The base line's label ("Shield peak recharge")
+/// promoted to a heading with the sibling qualifier, parallel
+/// to "Capacitor (with fitted module bonuses)"; "Peak" is
+/// load-bearing and keeps the figure from reading as a
+/// sustained or average rate.
+const FITTINGS_SHIELD_PEAK_RECHARGE_WITH_BONUSES_HEADING: &str =
+    "Shield peak recharge (with fitted module bonuses)";
+
+/// Locked disclosure: the hit point and shield recharge
+/// bonuses applied and the passive-only limit are named,
+/// with "counted as active" in #615's locked plain form
+/// (shield recharge bonuses design section 7). This block's
+/// own sentence; the ship base values disclosure names a
+/// different applied and excluded set.
+const FITTING_SHIELD_PEAK_RECHARGE_WITH_BONUSES_DISCLOSURE: &str = "This number adds the fitted modules' and rigs' shield hit point and shield recharge bonuses from Mimir's bundled item data to the base values above. Every fitted module is counted as active, because the fitting data does not say which modules are on. This is the peak of passive shield recharge only: shield boosters and other repair are not included. Ship bonuses, subsystems, skills, implants, and shield changes from anything outside this ship are not applied, so this number can differ from EVE.";
+
+const FITTING_SHIELD_PEAK_RECHARGE_WITH_BONUSES_NO_CATALOGUE: &str =
+    "Shield peak recharge with fitted module bonuses unavailable: Mimir's bundled item data failed to load.";
+const FITTING_SHIELD_PEAK_RECHARGE_WITH_BONUSES_NO_SHIP_DATA: &str = "Shield peak recharge with fitted module bonuses unavailable: Mimir's bundled item data has no complete shield hit point and shield recharge data for this fitting's ship.";
+
+/// Bonus-dimension excluded-module disclosure for the
+/// bonused shield peak recharge block, or `None` when
+/// every counted fitting row had a catalogue row (shield
+/// recharge bonuses design section 7).
+fn bonused_shield_peak_excluded_line(excluded: usize) -> Option<String> {
+    if excluded == 0 {
+        None
+    } else if excluded == 1 {
+        Some("1 fitted module is not in Mimir's bundled item data, so any hit point or shield recharge bonus from it is not counted.".to_string())
+    } else {
+        Some(format!("{excluded} fitted modules are not in Mimir's bundled item data, so any hit point or shield recharge bonuses from them are not counted."))
+    }
+}
+
+/// Shield recharge-dimension unapplied-carrier disclosure
+/// for the bonused shield peak recharge block, or `None`
+/// when every counted carrier's shield recharge bonus
+/// could be applied (shield recharge bonuses design
+/// section 7). Wording uses "shield recharge bonus",
+/// never "recharge rate bonus": attribute 479 is a
+/// duration and no rate figure for a single module's
+/// bonus exists to print.
+fn bonused_shield_recharge_unapplied_line(unapplied: usize) -> Option<String> {
+    if unapplied == 0 {
+        None
+    } else if unapplied == 1 {
+        Some("1 fitted module has a shield recharge bonus Mimir's bundled item data cannot describe, so that bonus is not applied.".to_string())
+    } else {
+        Some(format!("{unapplied} fitted modules have shield recharge bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied."))
+    }
+}
+
+/// The bonused block's lines in locked order (shield peak
+/// recharge, then the three count lines that apply —
+/// excluded, hit-point-unapplied, shield-recharge-
+/// unapplied). The peak reuses the base block's helper
+/// verbatim; the three count lines are separate
+/// per-dimension disclosures, never summed. This takes the
+/// `Available` payload, so there is no `Unavailable` case
+/// to empty out — the renderer branches on the outcome
+/// enum first.
+fn ship_shield_peak_recharge_with_bonuses_lines(
+    bonused: &BonusedShieldPeakRecharge,
+) -> Vec<String> {
+    let mut lines: Vec<String> = [ship_stat_line(
+        "Shield peak recharge",
+        Some(bonused.shield_hp_per_sec),
+        "HP/s",
+    )]
+    .into_iter()
+    .flatten()
+    .collect();
+    if let Some(line) = bonused_shield_peak_excluded_line(bonused.excluded_modules) {
+        lines.push(line);
+    }
+    if let Some(line) = bonused_ehp_hit_point_unapplied_line(bonused.hit_point_unapplied_modules) {
+        lines.push(line);
+    }
+    if let Some(line) =
+        bonused_shield_recharge_unapplied_line(bonused.shield_recharge_unapplied_modules)
+    {
+        lines.push(line);
+    }
+    lines
+}
+
+/// Shield peak recharge with fitted module bonuses block
+/// shared by the saved and imported fitting details
+/// (shield recharge bonuses design section 6). Depends
+/// only on the fitting and the catalogue: no skill
+/// levels, no SDE handle, so it renders identically for
+/// every viewing character. The heading always renders,
+/// so the view never silently omits the feature;
+/// `Unavailable` swaps all lines and the disclosure for
+/// the fixed unavailable sentence and no count line. The
+/// bonused block renders even when the bonused peak
+/// equals the base peak. Logs nothing itself: the pure
+/// function logs nothing (render cadence).
+fn render_ship_shield_peak_recharge_with_module_bonuses(
+    ui: &mut egui::Ui,
+    fitting: &CharacterFitting,
+    fitting_types: Option<&FittingTypes>,
+) {
+    let Some(catalogue) = fitting_types else {
+        ui.heading(FITTINGS_SHIELD_PEAK_RECHARGE_WITH_BONUSES_HEADING);
+        ui.label(FITTING_SHIELD_PEAK_RECHARGE_WITH_BONUSES_NO_CATALOGUE);
+        return;
+    };
+    match ship_shield_peak_recharge_with_module_bonuses(fitting, catalogue) {
+        BonusedShieldPeakRechargeOutcome::Available(bonused) => {
+            ui.heading(FITTINGS_SHIELD_PEAK_RECHARGE_WITH_BONUSES_HEADING);
+            for line in ship_shield_peak_recharge_with_bonuses_lines(&bonused) {
+                ui.label(line);
+            }
+            ui.label(FITTING_SHIELD_PEAK_RECHARGE_WITH_BONUSES_DISCLOSURE);
+        }
+        BonusedShieldPeakRechargeOutcome::Unavailable => {
+            ui.heading(FITTINGS_SHIELD_PEAK_RECHARGE_WITH_BONUSES_HEADING);
+            ui.label(FITTING_SHIELD_PEAK_RECHARGE_WITH_BONUSES_NO_SHIP_DATA);
         }
     }
 }
@@ -4010,6 +4139,7 @@ fn fittings_import_panel(
     render_fitting_active_repair(ui, &synth, fitting_types);
     render_slot_layout(ui, &synth, fitting_types);
     render_ship_base_stats(ui, &synth, fitting_types);
+    render_ship_shield_peak_recharge_with_module_bonuses(ui, &synth, fitting_types);
     render_ship_resistances(ui, &synth, fitting_types);
     render_ship_resistances_with_module_bonuses(ui, &synth, fitting_types);
     render_ship_base_ehp(ui, &synth, fitting_types);
@@ -4322,6 +4452,11 @@ pub fn show(
                     render_fitting_active_repair(ui, selected, fitting_types);
                     render_slot_layout(ui, selected, fitting_types);
                     render_ship_base_stats(ui, selected, fitting_types);
+                    render_ship_shield_peak_recharge_with_module_bonuses(
+                        ui,
+                        selected,
+                        fitting_types,
+                    );
                     render_ship_resistances(ui, selected, fitting_types);
                     render_ship_resistances_with_module_bonuses(ui, selected, fitting_types);
                     render_ship_base_ehp(ui, selected, fitting_types);
@@ -6660,6 +6795,191 @@ mod tests {
             }
         };
         assert_eq!(lines_for(&synth_dna), rifter_block);
+    }
+
+    #[test]
+    fn ship_shield_peak_recharge_with_bonuses_wording_constants() {
+        assert_eq!(
+            FITTINGS_SHIELD_PEAK_RECHARGE_WITH_BONUSES_HEADING,
+            "Shield peak recharge (with fitted module bonuses)"
+        );
+        assert_eq!(
+            FITTING_SHIELD_PEAK_RECHARGE_WITH_BONUSES_DISCLOSURE,
+            "This number adds the fitted modules' and rigs' shield hit point and shield recharge bonuses from Mimir's bundled item data to the base values above. Every fitted module is counted as active, because the fitting data does not say which modules are on. This is the peak of passive shield recharge only: shield boosters and other repair are not included. Ship bonuses, subsystems, skills, implants, and shield changes from anything outside this ship are not applied, so this number can differ from EVE."
+        );
+        assert_eq!(
+            FITTING_SHIELD_PEAK_RECHARGE_WITH_BONUSES_NO_CATALOGUE,
+            "Shield peak recharge with fitted module bonuses unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            FITTING_SHIELD_PEAK_RECHARGE_WITH_BONUSES_NO_SHIP_DATA,
+            "Shield peak recharge with fitted module bonuses unavailable: Mimir's bundled item data has no complete shield hit point and shield recharge data for this fitting's ship."
+        );
+    }
+
+    #[test]
+    fn bonused_shield_peak_count_lines() {
+        assert_eq!(bonused_shield_peak_excluded_line(0), None);
+        assert_eq!(
+            bonused_shield_peak_excluded_line(1).as_deref(),
+            Some("1 fitted module is not in Mimir's bundled item data, so any hit point or shield recharge bonus from it is not counted.")
+        );
+        assert_eq!(
+            bonused_shield_peak_excluded_line(2).as_deref(),
+            Some("2 fitted modules are not in Mimir's bundled item data, so any hit point or shield recharge bonuses from them are not counted.")
+        );
+        assert_eq!(bonused_shield_recharge_unapplied_line(0), None);
+        assert_eq!(
+            bonused_shield_recharge_unapplied_line(1).as_deref(),
+            Some("1 fitted module has a shield recharge bonus Mimir's bundled item data cannot describe, so that bonus is not applied.")
+        );
+        assert_eq!(
+            bonused_shield_recharge_unapplied_line(2).as_deref(),
+            Some("2 fitted modules have shield recharge bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied.")
+        );
+    }
+
+    #[test]
+    fn ship_shield_peak_recharge_with_bonuses_lines_order_and_omission() {
+        // Every count non-zero renders all four lines in
+        // the locked order, the peak in the base block's
+        // template (lines by construction, design section
+        // 8): the base helper is reused verbatim.
+        let full = BonusedShieldPeakRecharge {
+            shield_hp_per_sec: 5.0,
+            excluded_modules: 2,
+            hit_point_unapplied_modules: 1,
+            shield_recharge_unapplied_modules: 3,
+        };
+        assert_eq!(
+            ship_shield_peak_recharge_with_bonuses_lines(&full),
+            [
+                "Shield peak recharge: 5.0 HP/s",
+                "2 fitted modules are not in Mimir's bundled item data, so any hit point or shield recharge bonuses from them are not counted.",
+                "1 fitted module has a hit point bonus Mimir's bundled item data cannot describe, so that bonus is not applied.",
+                "3 fitted modules have shield recharge bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied.",
+            ]
+        );
+        // Each zero count omits only its own line.
+        let bare = BonusedShieldPeakRecharge {
+            shield_hp_per_sec: 5.0,
+            excluded_modules: 0,
+            hit_point_unapplied_modules: 0,
+            shield_recharge_unapplied_modules: 0,
+        };
+        assert_eq!(
+            ship_shield_peak_recharge_with_bonuses_lines(&bare),
+            ["Shield peak recharge: 5.0 HP/s"]
+        );
+        let partial = BonusedShieldPeakRecharge {
+            shield_recharge_unapplied_modules: 4,
+            ..bare
+        };
+        assert_eq!(
+            ship_shield_peak_recharge_with_bonuses_lines(&partial),
+            [
+                "Shield peak recharge: 5.0 HP/s",
+                "4 fitted modules have shield recharge bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied.",
+            ]
+        );
+        // A real-zero peak renders like any other value.
+        let zero = BonusedShieldPeakRecharge {
+            shield_hp_per_sec: 0.0,
+            excluded_modules: 0,
+            hit_point_unapplied_modules: 0,
+            shield_recharge_unapplied_modules: 0,
+        };
+        assert_eq!(
+            ship_shield_peak_recharge_with_bonuses_lines(&zero),
+            ["Shield peak recharge: 0.0 HP/s"]
+        );
+    }
+
+    #[test]
+    fn ship_shield_peak_recharge_with_bonuses_catalogue_lines() {
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let fitting = fitting_with_items(vec![item("MedSlot0", 1, 394)]);
+        let base_lines = match ship_base_stats(&fitting, &catalogue) {
+            ShipBaseStatsOutcome::Available(stats) => ship_base_stat_lines(&stats),
+            ShipBaseStatsOutcome::Unavailable => panic!("Rifter must have base stats"),
+        };
+        assert!(
+            base_lines
+                .iter()
+                .any(|line| line == "Shield peak recharge: 1.8 HP/s"),
+            "base lines keep the 1.8 HP/s peak: {base_lines:?}"
+        );
+        let bonused = match ship_shield_peak_recharge_with_module_bonuses(&fitting, &catalogue) {
+            BonusedShieldPeakRechargeOutcome::Available(bonused) => bonused,
+            BonusedShieldPeakRechargeOutcome::Unavailable => {
+                panic!("Rifter plus recharger must have bonused peak")
+            }
+        };
+        // 2.5 * 450 / 531.25 = 2.117... at the formatter's tenth.
+        assert_eq!(
+            ship_shield_peak_recharge_with_bonuses_lines(&bonused),
+            ["Shield peak recharge: 2.1 HP/s"]
+        );
+    }
+
+    // Demo story (design section 8): the visible form of the
+    // empty==base identity with honest counts. The demo
+    // fittings carry no hit point or shield recharge carrier
+    // in a counted slot, so the bonused lines are the single
+    // base peak line plus exactly the excluded line on Demo
+    // Brawler, whose counted row is catalogue-absent.
+    #[test]
+    fn demo_fixture_ship_shield_peak_recharge_with_bonuses_match_the_locked_demo_story() {
+        use crate::demo::data::DEMO_FITTINGS_JSON;
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let bonused_for =
+            |fitting: &CharacterFitting| match ship_shield_peak_recharge_with_module_bonuses(
+                fitting, &catalogue,
+            ) {
+                BonusedShieldPeakRechargeOutcome::Available(bonused) => {
+                    ship_shield_peak_recharge_with_bonuses_lines(&bonused)
+                }
+                BonusedShieldPeakRechargeOutcome::Unavailable => {
+                    panic!("demo fitting must have bonused shield peak")
+                }
+            };
+
+        assert_eq!(
+            bonused_for(&find("Demo Brawler")),
+            [
+                "Shield peak recharge: 1.8 HP/s",
+                "1 fitted module is not in Mimir's bundled item data, so any hit point or shield recharge bonus from it is not counted.",
+            ],
+            "bonused Brawler lines are the base peak plus exactly the excluded line"
+        );
+        assert_eq!(
+            bonused_for(&find("Mission Runner")),
+            ["Shield peak recharge: 1.8 HP/s"],
+            "bonused Mission Runner lines are the single base peak line"
+        );
+        assert_eq!(
+            bonused_for(&find("Demo Runner")),
+            ["Shield peak recharge: 1.4 HP/s"],
+            "bonused Demo Runner lines are the single base peak line"
+        );
     }
 
     #[test]

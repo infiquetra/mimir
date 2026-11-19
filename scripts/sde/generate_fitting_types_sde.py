@@ -170,6 +170,18 @@ bonus cannot be grounded in that dimension. Both families
 reuse the same `dogmaEffects.jsonl` read and the same
 `dgmTypeAttributes` pass with the wanted set extended to the
 capacitor modifying attributes.
+Fitted-module shield recharge modifiers
+(docs/shield-recharge-bonuses-design.md section 3) append
+two further keys after `capacitorRechargeModifiersUnapplied`
+in locked order: `shieldRechargeModifiers`, a sparse array
+of [modifiedAttributeId, operator, operand] triples on
+category-7 rows only (modified id 479), and
+`shieldRechargeModifiersUnapplied`, a sparse `true` beside
+that array when the carrier's shield recharge bonus cannot
+be grounded from the bundled data. This family reuses the
+same `dogmaEffects.jsonl` read and the same
+`dgmTypeAttributes` pass with the wanted set extended to the
+shield recharge modifying attributes.
 """
 
 import bz2
@@ -290,6 +302,17 @@ HIT_POINT_MODIFIER_ATTRS = {263, 265, 9}
 CAPACITOR_MODIFIER_ORDER = [482, 55]
 CAPACITOR_MODIFIER_OPERATORS = {2, 4, 6}
 CAPACITOR_MODIFIER_ATTRS = {482, 55}
+# Fitted-module shield recharge modifiers
+# (docs/shield-recharge-bonuses-design.md section 3): the
+# single modified attribute 479 (dogma `shieldRechargeRate`,
+# a millisecond duration, lower is faster; Flutter
+# dogma_attributes.dart `shieldRechargeTime = 479` at
+# ed698d3) with operators 2 (modAdd), 4 (postMulAlt), 6
+# (postPercent) per Flutter dogma_engine.dart at ed698d3
+# (operators 0/3/5 and others are unsupported → unapplied).
+SHIELD_RECHARGE_MODIFIER_ORDER = [479]
+SHIELD_RECHARGE_MODIFIER_OPERATORS = {2, 4, 6}
+SHIELD_RECHARGE_MODIFIER_ATTRS = {479}
 SDE_ZIP_NAME = "eve-online-static-data-3503375-jsonl.zip"
 SDE_ZIP_MEMBER = "dogmaEffects.jsonl"
 SHIELD_EM_RESONANCE_ATTR = 271
@@ -789,6 +812,49 @@ CAPACITOR_RECHARGE_MODIFIER_ROWS = 103
 CAPACITOR_RECHARGE_MODIFIER_NONEMPTY_ROWS = 103
 CAPACITOR_RECHARGE_MODIFIER_MARKED_ROWS = 0
 CAPACITOR_RECHARGE_MODIFIER_ENTRIES = 103
+
+# Fitted-module shield recharge modifier oracles
+# (docs/shield-recharge-bonuses-design.md section 3): each
+# value read from dogmaEffects.jsonl (committed zip) joined
+# through dgmTypeEffects / dgmTypeAttributes during design.
+# Tuple shape mirrors CAPACITOR_RECHARGE_MODIFIER_ORACLES:
+# (typeId, expected-entries-or-None, expected-unapplied).
+SHIELD_RECHARGE_MODIFIER_ORACLES = [
+    (393, [[479, 4, 0.9]], False),
+    (394, [[479, 4, 0.85]], False),
+    (6485, [[479, 4, 0.875]], False),
+    (37805, [[479, 4, 0.84]], False),
+    (37825, [[479, 4, 0.69]], False),
+    (1256, [[479, 4, 0.7]], False),
+    (1537, [[479, 4, 0.95]], False),
+    (1541, [[479, 4, 0.915]], False),
+    (1353, [[479, 4, 1.0]], False),
+    (4395, [[479, 4, 1.05]], False),
+    (4399, [[479, 4, 1.1]], False),
+    (1419, [[479, 6, -15.0]], False),
+    (2331, [[479, 6, -20.0]], False),
+    (1422, [[479, 6, -25.0]], False),
+    (37820, [[479, 6, -26.0]], False),
+    (26084, [[479, 6, -20.0]], False),
+    (26450, [[479, 6, -25.0]], False),
+    (1445, [], True),
+    (509, [], True),
+    (3831, None, False),
+    (2048, None, False),
+    (587, None, False),
+    (3416, None, False),
+    (3088, None, False),
+    (45623, None, False),
+]
+
+# Catalogue-wide counts for the shield recharge modifier
+# emission (docs/shield-recharge-bonuses-design.md section 3,
+# design-scripted over today's data): rows carrying the key
+# (77 with entries plus 26 marked-empty), marked, entries.
+SHIELD_RECHARGE_MODIFIER_ROWS = 103
+SHIELD_RECHARGE_MODIFIER_NONEMPTY_ROWS = 77
+SHIELD_RECHARGE_MODIFIER_MARKED_ROWS = 26
+SHIELD_RECHARGE_MODIFIER_ENTRIES = 77
 
 # Bay oracles (docs/bay-capacities-design.md section 3.3): each
 # value read directly from invTypes.csv.bz2 / dgmTypeAttributes.csv.bz2
@@ -1627,12 +1693,14 @@ def main():
     # Modifying attributes worth reading operands for:
     # every modifying id appearing in an ItemModifier/shipID
     # resonance modifier anywhere in the zip, extended to
-    # the hit point and capacitor modifying attributes so one
-    # operand pass serves all legs (design section 3).
+    # the hit point, capacitor, and shield recharge
+    # modifying attributes so one operand pass serves all
+    # legs (design section 3).
     wanted_modifying_ids = set()
     wanted_resist_modifying_ids = set()
     wanted_hit_point_modifying_ids = set()
     wanted_capacitor_modifying_ids = set()
+    wanted_shield_recharge_modifying_ids = set()
     for modifier_info in effect_modifiers.values():
         for modifier in modifier_info:
             if not (
@@ -1653,10 +1721,15 @@ def main():
                 wanted_capacitor_modifying_ids.add(
                     modifier["modifyingAttributeID"]
                 )
+            if modified_id in SHIELD_RECHARGE_MODIFIER_ATTRS:
+                wanted_shield_recharge_modifying_ids.add(
+                    modifier["modifyingAttributeID"]
+                )
     wanted_modifying_ids = (
         wanted_resist_modifying_ids
         | wanted_hit_point_modifying_ids
         | wanted_capacitor_modifying_ids
+        | wanted_shield_recharge_modifying_ids
     )
     category_by_type = {}
     for row in inv_types:
@@ -1671,11 +1744,14 @@ def main():
         in_resist = attribute_id in wanted_resist_modifying_ids
         in_hp = attribute_id in wanted_hit_point_modifying_ids
         in_cap = attribute_id in wanted_capacitor_modifying_ids
-        if in_cap and not in_resist and not in_hp:
+        in_sr = attribute_id in wanted_shield_recharge_modifying_ids
+        if in_sr and not in_resist and not in_hp and not in_cap:
+            return "shield recharge modifier operand"
+        if in_cap and not in_resist and not in_hp and not in_sr:
             return "capacitor modifier operand"
-        if in_hp and not in_resist and not in_cap:
+        if in_hp and not in_resist and not in_cap and not in_sr:
             return "hit point modifier operand"
-        if in_resist and not in_hp and not in_cap:
+        if in_resist and not in_hp and not in_cap and not in_sr:
             return "resistance modifier operand"
         return "modifier operand"
 
@@ -2020,6 +2096,87 @@ def main():
         )
         if applicable or unapplied:
             capacitor_recharge_modifiers_by_type[type_id] = (
+                applicable,
+                unapplied,
+            )
+
+    # Fitted-module shield recharge modifiers
+    # (docs/shield-recharge-bonuses-design.md section 3): one
+    # per-attribute family beside the capacitor recharge leg,
+    # category-7 only, over ItemModifier/shipID modifiers on
+    # 479 (shieldRechargeRate, a millisecond duration, lower
+    # is faster) with operators {2, 4, 6}. Messages say
+    # "shield recharge modifier", never "capacitor modifier",
+    # "hit point modifier", or "resistance modifier".
+    shield_recharge_modifiers_by_type = {}
+    for type_id, type_category in category_by_type.items():
+        if type_category != 7:
+            continue
+        triple_list = []
+        for effect_id in effects_by_type.get(type_id, set()):
+            for modifier in effect_modifiers.get(effect_id, []):
+                if (
+                    modifier.get("func") == "ItemModifier"
+                    and modifier.get("domain") == "shipID"
+                    and modifier.get("modifiedAttributeID") == 479
+                ):
+                    triple_list.append(
+                        (
+                            modifier["modifiedAttributeID"],
+                            modifier["modifyingAttributeID"],
+                            modifier["operation"],
+                        )
+                    )
+        for triple, count in Counter(triple_list).items():
+            if count > 1:
+                fail(
+                    f"duplicated shield recharge modifier triple "
+                    f"{triple} on type {type_id}"
+                )
+        triples = set(triple_list)
+        if not triples:
+            continue
+        operands = operands_by_type.get(type_id, {})
+        applicable = []
+        has_unsupported = False
+        has_zero = False
+        has_absent = False
+        seen_modified = set()
+        seen_triples = set()
+        for modified_id, modifying_id, operator in sorted(triples):
+            triple = (modified_id, modifying_id, operator)
+            if triple in seen_triples:
+                fail(
+                    f"duplicated shield recharge modifier triple "
+                    f"{triple} on type {type_id}"
+                )
+            seen_triples.add(triple)
+            if modifying_id not in operands:
+                has_absent = True
+                continue
+            operand = operands[modifying_id]
+            if operand == 0.0:
+                has_zero = True
+                continue
+            if operator not in SHIELD_RECHARGE_MODIFIER_OPERATORS:
+                has_unsupported = True
+                continue
+            if modified_id in seen_modified:
+                fail(
+                    f"two applicable shield recharge modifier entries "
+                    f"on modified attribute {modified_id} for "
+                    f"type {type_id}"
+                )
+            seen_modified.add(modified_id)
+            applicable.append([modified_id, operator, operand])
+        applicable.sort(
+            key=lambda entry: SHIELD_RECHARGE_MODIFIER_ORDER.index(entry[0])
+        )
+        unapplied = has_unsupported or (
+            not applicable and not has_zero and has_absent
+        )
+        if applicable or unapplied:
+            shield_recharge_modifiers_by_type[type_id] = (
                 applicable,
                 unapplied,
             )
@@ -2595,6 +2752,7 @@ def main():
     hit_point_modifier_counts = Counter()
     capacitor_capacity_modifier_counts = Counter()
     capacitor_recharge_modifier_counts = Counter()
+    shield_recharge_modifier_counts = Counter()
     for row in inv_types:
         if row["published"] != "1":
             continue
@@ -3207,6 +3365,27 @@ def main():
             if mod_unapplied:
                 entry["capacitorRechargeModifiersUnapplied"] = True
                 capacitor_recharge_modifier_counts["unappliedRows"] += 1
+        # Additive, sparse fitted-module shield recharge
+        # modifier emission (design section 3): category 7
+        # rows gain the two keys after the capacitor recharge
+        # modifier block, in locked order shield recharge then
+        # shield recharge unapplied. A carrier emits
+        # shieldRechargeModifiers iff it has at least one
+        # applicable entry or is marked unapplied (possibly
+        # empty); an all-zero carrier emits neither key.
+        # Every other row is byte-identical.
+        if category_id == 7 and type_id in shield_recharge_modifiers_by_type:
+            mod_entries, mod_unapplied = shield_recharge_modifiers_by_type[
+                type_id
+            ]
+            entry["shieldRechargeModifiers"] = mod_entries
+            shield_recharge_modifier_counts["shieldRechargeModifiers"] += 1
+            if mod_entries:
+                shield_recharge_modifier_counts["nonEmptyRows"] += 1
+            shield_recharge_modifier_counts["totalEntries"] += len(mod_entries)
+            if mod_unapplied:
+                entry["shieldRechargeModifiersUnapplied"] = True
+                shield_recharge_modifier_counts["unappliedRows"] += 1
         types.append(entry)
 
     types.sort(key=lambda entry: entry["typeId"])
@@ -3577,6 +3756,70 @@ def main():
             f"capacitor recharge modifier total entries "
             f"{capacitor_recharge_modifier_counts['totalEntries']}, expected "
             f"{CAPACITOR_RECHARGE_MODIFIER_ENTRIES}"
+        )
+
+    # Fitted-module shield recharge modifier oracles (design
+    # section 3). A None entries means neither
+    # shieldRechargeModifiers nor
+    # shieldRechargeModifiersUnapplied may be present at all.
+    for type_id, expected, expected_unapplied in SHIELD_RECHARGE_MODIFIER_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(
+                f"shield recharge modifier oracle type {type_id} "
+                "missing from extract"
+            )
+        if expected is None:
+            if (
+                "shieldRechargeModifiers" in entry
+                or "shieldRechargeModifiersUnapplied" in entry
+            ):
+                fail(
+                    f"shield recharge modifier oracle type {type_id} "
+                    "carries shield recharge modifier keys, expected "
+                    "neither"
+                )
+        else:
+            if entry.get("shieldRechargeModifiers") != expected:
+                fail(
+                    f"shield recharge modifier oracle type {type_id} "
+                    f"shieldRechargeModifiers="
+                    f"{entry.get('shieldRechargeModifiers')!r}, "
+                    f"expected {expected!r}"
+                )
+            if (
+                entry.get("shieldRechargeModifiersUnapplied", False)
+                != expected_unapplied
+            ):
+                fail(
+                    f"shield recharge modifier oracle type {type_id} "
+                    "unapplied marker "
+                    f"{entry.get('shieldRechargeModifiersUnapplied')!r}, "
+                    f"expected {expected_unapplied!r}"
+                )
+    if shield_recharge_modifier_counts["shieldRechargeModifiers"] != SHIELD_RECHARGE_MODIFIER_ROWS:
+        fail(
+            f"shield recharge modifier rows "
+            f"{shield_recharge_modifier_counts['shieldRechargeModifiers']}, "
+            f"expected {SHIELD_RECHARGE_MODIFIER_ROWS}"
+        )
+    if shield_recharge_modifier_counts["nonEmptyRows"] != SHIELD_RECHARGE_MODIFIER_NONEMPTY_ROWS:
+        fail(
+            f"shield recharge modifier non-empty rows "
+            f"{shield_recharge_modifier_counts['nonEmptyRows']}, expected "
+            f"{SHIELD_RECHARGE_MODIFIER_NONEMPTY_ROWS}"
+        )
+    if shield_recharge_modifier_counts["unappliedRows"] != SHIELD_RECHARGE_MODIFIER_MARKED_ROWS:
+        fail(
+            f"shield recharge modifier marked rows "
+            f"{shield_recharge_modifier_counts['unappliedRows']}, expected "
+            f"{SHIELD_RECHARGE_MODIFIER_MARKED_ROWS}"
+        )
+    if shield_recharge_modifier_counts["totalEntries"] != SHIELD_RECHARGE_MODIFIER_ENTRIES:
+        fail(
+            f"shield recharge modifier total entries "
+            f"{shield_recharge_modifier_counts['totalEntries']}, expected "
+            f"{SHIELD_RECHARGE_MODIFIER_ENTRIES}"
         )
 
     # Bay oracles (design section 3.3). A None expected value
@@ -3976,6 +4219,70 @@ def main():
                     "without capacitorRechargeModifiers"
                 )
             if entry["capacitorRechargeModifiersUnapplied"] is not True:
+                fail(
+                    f"type {entry['typeId']} unapplied marker "
+                    "not true"
+                )
+        # Fitted-module shield recharge modifier invariants
+        # (design section 3): every present
+        # shieldRechargeModifiers value is on a category 7 row;
+        # its entries' modified id is 479, operators in
+        # {2, 4, 6}, operands finite and != 0.0, no duplicate
+        # modified id; shieldRechargeModifiersUnapplied appears
+        # only beside shieldRechargeModifiers and only as true.
+        if "shieldRechargeModifiers" in entry:
+            if entry["categoryId"] != 7:
+                fail(
+                    f"non-module type {entry['typeId']} carries "
+                    "shieldRechargeModifiers"
+                )
+            modified_ids = []
+            for triple in entry["shieldRechargeModifiers"]:
+                if (
+                    not isinstance(triple, list)
+                    or len(triple) != 3
+                    or not all(
+                        isinstance(part, (int, float))
+                        and not isinstance(part, bool)
+                        for part in triple
+                    )
+                ):
+                    fail(
+                        f"type {entry['typeId']} malformed "
+                        f"shield recharge modifier {triple!r}"
+                    )
+                modified_id, operator, operand = triple
+                if modified_id != 479:
+                    fail(
+                        f"type {entry['typeId']} modified id "
+                        f"{modified_id} not a shield recharge"
+                    )
+                if operator not in SHIELD_RECHARGE_MODIFIER_OPERATORS:
+                    fail(
+                        f"type {entry['typeId']} operator "
+                        f"{operator} not in (2, 4, 6)"
+                    )
+                if (
+                    not math.isfinite(float(operand))
+                    or float(operand) == 0.0
+                ):
+                    fail(
+                        f"type {entry['typeId']} operand "
+                        f"{operand!r} not finite or zero"
+                    )
+                modified_ids.append(modified_id)
+            if len(modified_ids) != len(set(modified_ids)):
+                fail(
+                    f"type {entry['typeId']} shield recharge modifiers "
+                    "duplicated"
+                )
+        if "shieldRechargeModifiersUnapplied" in entry:
+            if "shieldRechargeModifiers" not in entry:
+                fail(
+                    f"type {entry['typeId']} unapplied marker "
+                    "without shieldRechargeModifiers"
+                )
+            if entry["shieldRechargeModifiersUnapplied"] is not True:
                 fail(
                     f"type {entry['typeId']} unapplied marker "
                     "not true"
@@ -4793,6 +5100,12 @@ def main():
         f"nonEmptyRows={capacitor_recharge_modifier_counts['nonEmptyRows']} "
         f"unappliedRows={capacitor_recharge_modifier_counts['unappliedRows']} "
         f"totalEntries={capacitor_recharge_modifier_counts['totalEntries']}"
+    )
+    print(
+        f"shield_recharge_modifier_keys shieldRechargeModifiers={shield_recharge_modifier_counts['shieldRechargeModifiers']} "
+        f"nonEmptyRows={shield_recharge_modifier_counts['nonEmptyRows']} "
+        f"unappliedRows={shield_recharge_modifier_counts['unappliedRows']} "
+        f"totalEntries={shield_recharge_modifier_counts['totalEntries']}"
     )
     print(
         f"bay_keys volume={bay_key_counts['volume']} "

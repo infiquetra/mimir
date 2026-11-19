@@ -144,6 +144,22 @@ pub struct FittingType {
     pub capacitor_recharge_modifiers: Option<Vec<CapacitorModifier>>,
     #[serde(rename = "capacitorRechargeModifiersUnapplied", default)]
     pub capacitor_recharge_modifiers_unapplied: bool,
+    // Fitted-module shield recharge modifiers
+    // (docs/shield-recharge-bonuses-design.md section 3):
+    // entries are generation-time-proven ItemModifier/shipID
+    // shield recharge bonuses on attribute 479 with the
+    // operand baked in (operator 2 is modAdd, 4 is postMulAlt,
+    // 6 is postPercent). Attribute 479 is a millisecond
+    // duration, lower is faster (design section 2).
+    // `Some(empty)` with the unapplied flag is a carrier
+    // whose bonus the bundled data cannot ground and must
+    // be counted, never read as "no bonus"; `None` is a
+    // non-carrier or an all-zero carrier. `default` so old
+    // assets and from_json fixtures without the keys load.
+    #[serde(rename = "shieldRechargeModifiers", default)]
+    pub shield_recharge_modifiers: Option<Vec<ShieldRechargeModifier>>,
+    #[serde(rename = "shieldRechargeModifiersUnapplied", default)]
+    pub shield_recharge_modifiers_unapplied: bool,
     // Bay usage (docs/bay-capacities-design.md section 3.1):
     // `volume` is the invTypes `volume` column on every row,
     // `cargoCapacity` is the invTypes `capacity` column on
@@ -477,6 +493,46 @@ pub struct CapacitorModifier {
 }
 
 impl<'de> Deserialize<'de> for CapacitorModifier {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let (modified_attribute_id, operator, operand) =
+            <(i64, i64, f64)>::deserialize(deserializer)?;
+        Ok(Self {
+            modified_attribute_id,
+            operator,
+            operand,
+        })
+    }
+}
+
+/// One fitted-module shield recharge modifier entry
+/// (`docs/shield-recharge-bonuses-design.md` section 3):
+/// `[modifiedAttributeId, operator, operand]`, with the
+/// operand baked in at generation time (deserialized from
+/// the 3-element array by the same manual tuple impl as
+/// `CapacitorModifier`). Entries are generation-time-proven
+/// `ItemModifier`/`shipID` shield recharge bonuses on
+/// attribute 479 with the operand baked in (operator 2 is
+/// modAdd, 4 is postMulAlt, 6 is postPercent). Attribute
+/// 479 is a millisecond duration, lower is faster (design
+/// section 2). `Some(empty)` with the unapplied flag is a
+/// carrier whose shield recharge bonus the bundled data
+/// cannot ground and must be counted, never read as
+/// "no bonus"; `None` is a non-carrier or an all-zero
+/// carrier. A new struct, deliberately, not a reuse of
+/// `CapacitorModifier`: that struct's locked meaning is the
+/// capacitor families (482/55) and reusing it would misname
+/// every invariant and call site in this slice.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ShieldRechargeModifier {
+    pub modified_attribute_id: i64,
+    pub operator: i64,
+    pub operand: f64,
+}
+
+impl<'de> Deserialize<'de> for ShieldRechargeModifier {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -1635,6 +1691,51 @@ mod tests {
                 assert!(
                     row.capacitor_recharge_modifiers.is_some(),
                     "capacitorRechargeModifiersUnapplied without capacitorRechargeModifiers: {:?}",
+                    row.name
+                );
+            }
+            // Fitted-module shield recharge modifiers
+            // (docs/shield-recharge-bonuses-design.md section 3):
+            // `Some` only on category 7 rows; entries' modified
+            // id is 479 with no duplicate, operator 2, 4, or 6,
+            // operand finite and != 0.0; the unapplied marker
+            // appears only beside `Some`.
+            if let Some(modifiers) = &row.shield_recharge_modifiers {
+                assert_eq!(
+                    row.category_id, 7,
+                    "shieldRechargeModifiers on non-module row: {:?}",
+                    row.name
+                );
+                let mut seen = std::collections::HashSet::new();
+                for modifier in modifiers {
+                    assert_eq!(
+                        modifier.modified_attribute_id, 479,
+                        "shield recharge modified id {} on {:?}",
+                        modifier.modified_attribute_id, row.name
+                    );
+                    assert!(
+                        seen.insert(modifier.modified_attribute_id),
+                        "shield recharge modifiers duplicated on {:?}",
+                        row.name
+                    );
+                    assert!(
+                        matches!(modifier.operator, 2 | 4 | 6),
+                        "shield recharge modifier operator {} on {:?}",
+                        modifier.operator,
+                        row.name
+                    );
+                    assert!(
+                        modifier.operand.is_finite() && modifier.operand != 0.0,
+                        "shield recharge modifier operand {} on {:?}",
+                        modifier.operand,
+                        row.name
+                    );
+                }
+            }
+            if row.shield_recharge_modifiers_unapplied {
+                assert!(
+                    row.shield_recharge_modifiers.is_some(),
+                    "shieldRechargeModifiersUnapplied without shieldRechargeModifiers: {:?}",
                     row.name
                 );
             }
@@ -3025,6 +3126,302 @@ mod tests {
                 operand: 0.95,
             }]
         );
+        // Fitted-module shield recharge modifier counts and
+        // spot pins (docs/shield-recharge-bonuses-design.md
+        // section 3, the generator's
+        // SHIELD_RECHARGE_MODIFIER_ORACLES twins): 103 keyed
+        // rows (77 non-empty), 26 marked unapplied, 77 entries.
+        let sr_rows_count = types
+            .types
+            .iter()
+            .filter(|row| row.shield_recharge_modifiers.is_some())
+            .count();
+        assert_eq!(sr_rows_count, 103);
+        let sr_nonempty_count = types
+            .types
+            .iter()
+            .filter(|row| {
+                row.shield_recharge_modifiers
+                    .as_ref()
+                    .is_some_and(|modifiers| !modifiers.is_empty())
+            })
+            .count();
+        assert_eq!(sr_nonempty_count, 77);
+        let sr_marked_count = types
+            .types
+            .iter()
+            .filter(|row| row.shield_recharge_modifiers_unapplied)
+            .count();
+        assert_eq!(sr_marked_count, 26);
+        let sr_entries_count: usize = types
+            .types
+            .iter()
+            .filter_map(|row| row.shield_recharge_modifiers.as_ref().map(Vec::len))
+            .sum();
+        assert_eq!(sr_entries_count, 77);
+        let recharger_i = types.lookup_by_id(393).expect("Shield Recharger I row");
+        assert_eq!(
+            recharger_i
+                .shield_recharge_modifiers
+                .as_ref()
+                .expect("recharger i shieldRechargeModifiers"),
+            &[ShieldRechargeModifier {
+                modified_attribute_id: 479,
+                operator: 4,
+                operand: 0.9,
+            }]
+        );
+        assert!(!recharger_i.shield_recharge_modifiers_unapplied);
+        let recharger_ii = types.lookup_by_id(394).expect("Shield Recharger II row");
+        assert_eq!(
+            recharger_ii
+                .shield_recharge_modifiers
+                .as_ref()
+                .expect("recharger ii shieldRechargeModifiers"),
+            &[ShieldRechargeModifier {
+                modified_attribute_id: 479,
+                operator: 4,
+                operand: 0.85,
+            }]
+        );
+        let dread_flux = types
+            .lookup_by_id(37825)
+            .expect("Dread Guristas Shield Flux Coil row");
+        assert_eq!(
+            dread_flux
+                .shield_recharge_modifiers
+                .as_ref()
+                .expect("dread flux shieldRechargeModifiers"),
+            &[ShieldRechargeModifier {
+                modified_attribute_id: 479,
+                operator: 4,
+                operand: 0.69,
+            }]
+        );
+        let rcu_i = types
+            .lookup_by_id(1353)
+            .expect("Reactor Control Unit I row");
+        assert_eq!(
+            rcu_i
+                .shield_recharge_modifiers
+                .as_ref()
+                .expect("rcu i shieldRechargeModifiers"),
+            &[ShieldRechargeModifier {
+                modified_attribute_id: 479,
+                operator: 4,
+                operand: 1.0,
+            }]
+        );
+        assert!(!rcu_i.shield_recharge_modifiers_unapplied);
+        let oc_ii = types
+            .lookup_by_id(4399)
+            .expect("Medium Processor Overclocking Unit II row");
+        assert_eq!(
+            oc_ii
+                .shield_recharge_modifiers
+                .as_ref()
+                .expect("oc ii shieldRechargeModifiers"),
+            &[ShieldRechargeModifier {
+                modified_attribute_id: 479,
+                operator: 4,
+                operand: 1.1,
+            }]
+        );
+        let relay_ii = types.lookup_by_id(2331).expect("Shield Power Relay I row");
+        assert_eq!(
+            relay_ii
+                .shield_recharge_modifiers
+                .as_ref()
+                .expect("relay shieldRechargeModifiers"),
+            &[ShieldRechargeModifier {
+                modified_attribute_id: 479,
+                operator: 6,
+                operand: -20.0,
+            }]
+        );
+        assert_eq!(
+            relay_ii
+                .capacitor_recharge_modifiers
+                .as_ref()
+                .expect("relay capacitorRechargeModifiers"),
+            &[CapacitorModifier {
+                modified_attribute_id: 55,
+                operator: 4,
+                operand: 1.3,
+            }]
+        );
+        let purger = types
+            .lookup_by_id(26084)
+            .expect("Large Core Defense Field Purger I row");
+        assert_eq!(
+            purger
+                .shield_recharge_modifiers
+                .as_ref()
+                .expect("purger shieldRechargeModifiers"),
+            &[ShieldRechargeModifier {
+                modified_attribute_id: 479,
+                operator: 6,
+                operand: -20.0,
+            }]
+        );
+        let flux_ii = types.lookup_by_id(1256).expect("Shield Flux Coil II row");
+        assert_eq!(
+            flux_ii
+                .shield_recharge_modifiers
+                .as_ref()
+                .expect("flux ii shieldRechargeModifiers"),
+            &[ShieldRechargeModifier {
+                modified_attribute_id: 479,
+                operator: 4,
+                operand: 0.7,
+            }]
+        );
+        assert_eq!(
+            flux_ii
+                .hit_point_modifiers
+                .as_ref()
+                .expect("flux ii hitPointModifiers"),
+            &[HitPointModifier {
+                modified_attribute_id: 263,
+                operator: 4,
+                operand: 0.85,
+            }]
+        );
+        let pds_basic_sr = types
+            .lookup_by_id(1537)
+            .expect("'Basic' Power Diagnostic System row");
+        assert_eq!(
+            pds_basic_sr
+                .shield_recharge_modifiers
+                .as_ref()
+                .expect("pds basic shieldRechargeModifiers"),
+            &[ShieldRechargeModifier {
+                modified_attribute_id: 479,
+                operator: 4,
+                operand: 0.95,
+            }]
+        );
+        assert!(
+            pds_basic_sr.hit_point_modifiers.is_some(),
+            "pds basic must still carry hitPointModifiers"
+        );
+        assert!(
+            pds_basic_sr.capacitor_capacity_modifiers.is_some(),
+            "pds basic must still carry capacitorCapacityModifiers"
+        );
+        assert!(
+            pds_basic_sr.capacitor_recharge_modifiers.is_some(),
+            "pds basic must still carry capacitorRechargeModifiers"
+        );
+        let relay_cap = types
+            .lookup_by_id(1445)
+            .expect("Capacitor Power Relay I row");
+        assert_eq!(
+            relay_cap
+                .shield_recharge_modifiers
+                .as_ref()
+                .expect("relay cap shieldRechargeModifiers"),
+            &[]
+        );
+        assert!(relay_cap.shield_recharge_modifiers_unapplied);
+        assert_eq!(
+            relay_cap
+                .hit_point_modifiers
+                .as_ref()
+                .expect("relay cap hitPointModifiers"),
+            &[]
+        );
+        assert!(relay_cap.hit_point_modifiers_unapplied);
+        assert_eq!(
+            relay_cap
+                .capacitor_capacity_modifiers
+                .as_ref()
+                .expect("relay cap capacitorCapacityModifiers"),
+            &[]
+        );
+        assert!(relay_cap.capacitor_capacity_modifiers_unapplied);
+        assert_eq!(
+            relay_cap
+                .capacitor_recharge_modifiers
+                .as_ref()
+                .expect("relay cap capacitorRechargeModifiers"),
+            &[CapacitorModifier {
+                modified_attribute_id: 55,
+                operator: 4,
+                operand: 0.8,
+            }]
+        );
+        assert!(!relay_cap.capacitor_recharge_modifiers_unapplied);
+        let flux_basic = types
+            .lookup_by_id(509)
+            .expect("'Basic' Capacitor Flux Coil row");
+        assert_eq!(
+            flux_basic
+                .shield_recharge_modifiers
+                .as_ref()
+                .expect("flux basic shieldRechargeModifiers"),
+            &[]
+        );
+        assert!(flux_basic.shield_recharge_modifiers_unapplied);
+        let extender = types
+            .lookup_by_id(3831)
+            .expect("Medium Shield Extender II row");
+        assert_eq!(extender.shield_recharge_modifiers, None);
+        assert!(!extender.shield_recharge_modifiers_unapplied);
+        let dc = types.lookup_by_id(2048).expect("DC II row");
+        assert_eq!(dc.shield_recharge_modifiers, None);
+        assert!(!dc.shield_recharge_modifiers_unapplied);
+        let rifter_sr = types.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(rifter_sr.shield_recharge_modifiers, None);
+        assert!(!rifter_sr.shield_recharge_modifiers_unapplied);
+        let skill = types.lookup_by_id(3416).expect("Shield Operation row");
+        assert_eq!(skill.shield_recharge_modifiers, None);
+        assert!(!skill.shield_recharge_modifiers_unapplied);
+        let implant = types
+            .lookup_by_id(3088)
+            .expect("Zainou Gnome Shield Operation SP-902 row");
+        assert_eq!(implant.shield_recharge_modifiers, None);
+        assert!(!implant.shield_recharge_modifiers_unapplied);
+        let subsystem_sr = types
+            .lookup_by_id(45623)
+            .expect("Legion Core - Augmented Antimatter Reactor row");
+        assert_eq!(subsystem_sr.shield_recharge_modifiers, None);
+        assert!(!subsystem_sr.shield_recharge_modifiers_unapplied);
+    }
+
+    #[test]
+    fn fixture_parse_shield_recharge_modifier_fields() {
+        // A row with the new keys loads into the new fields;
+        // a row without them loads as None/false (old-catalogue
+        // tolerance, the `default` pattern).
+        let with_keys = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":394,"typeName":"Shield Recharger II","categoryId":7,"slotEffects":[13],"shieldRechargeModifiers":[[479,4,0.85]]},
+                {"typeId":1445,"typeName":"Capacitor Power Relay I","categoryId":7,"slotEffects":[11],"shieldRechargeModifiers":[],"shieldRechargeModifiersUnapplied":true}]}"#,
+        )
+        .expect("fixture parses");
+        let recharger = with_keys.lookup_by_id(394).expect("recharger row");
+        assert_eq!(
+            recharger.shield_recharge_modifiers.as_ref().expect("mods"),
+            &[ShieldRechargeModifier {
+                modified_attribute_id: 479,
+                operator: 4,
+                operand: 0.85,
+            }]
+        );
+        assert!(!recharger.shield_recharge_modifiers_unapplied);
+        let relay = with_keys.lookup_by_id(1445).expect("relay row");
+        assert_eq!(relay.shield_recharge_modifiers.as_ref().expect("mods"), &[]);
+        assert!(relay.shield_recharge_modifiers_unapplied);
+
+        let without_keys = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[]}]}"#,
+        )
+        .expect("fixture parses");
+        let ship = without_keys.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(ship.shield_recharge_modifiers, None);
+        assert!(!ship.shield_recharge_modifiers_unapplied);
     }
 
     #[test]
