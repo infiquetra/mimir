@@ -1,8 +1,9 @@
 //! Pure fitting-resources calculation over the bundled catalogue.
 //!
 //! [`fitting_resources`] computes CPU and power grid used versus
-//! the hull's base output for one [`CharacterFitting`] from base
-//! (unmodified) dogma attributes only.
+//! the hull's output for one [`CharacterFitting`] from base
+//! (unmodified) dogma attributes plus the fitted modules' and
+//! rigs' output bonuses (see below).
 //! [`fitting_resources_with_skills`] is the skill-aware entry point:
 //! with `Some(levels)` it raises ship outputs by CPU Management
 //! (skill 3426, +5% ship CPU output per trained level) and Power
@@ -17,10 +18,13 @@
 //! unpenalized post-percent factor per matched modifier entry,
 //! `need * (1 + percent * level / 100)`, level 5 = ×0.75 or
 //! ×0.90 respectively). With `None` it returns exactly
-//! [`fitting_resources`]. The base function never scales
-//! anything. Implants, and bonuses or reductions from modules,
-//! rigs, subsystems, and the ship itself, are not applied, so
-//! totals can differ from EVE. See
+//! [`fitting_resources`]. The base function applies no skill
+//! scaling. Outputs are composed with the fitted modules' and
+//! rigs' output bonuses on both arms (`docs/output-bonuses-
+//! design.md` section 4); implants, and bonuses or reductions
+//! from module need modifiers beyond the shipped skill
+//! reductions, subsystems, and the ship itself, are not
+//! applied, so totals can differ from EVE. See
 //! `docs/fitting-skill-resources-design.md` and
 //! `docs/fitting-need-reductions-design.md`.
 //!
@@ -342,6 +346,11 @@ pub fn resource_skill_levels(skills: &CharacterSkills) -> ResourceSkillLevels {
 pub struct ResourceBudget {
     pub used: f64,
     pub output: f64,
+    /// Output before fitted-module output bonuses: the hull
+    /// output on the None path, and the hull output times
+    /// the shipped skill factor on the Some path. Equals
+    /// `output` exactly when no output carrier is counted.
+    pub base_output: f64,
     /// Consuming-section rows with no usable value for this
     /// dimension (absent from the catalogue, no attribute row, or
     /// an unusable value). Counted in rows, never silently zero.
@@ -357,6 +366,12 @@ pub struct ResourceBudget {
     /// full base need in `used` and is counted here, never
     /// excluded. Zero on the shipped catalogue.
     pub unreduced_modules: usize,
+    /// Counted rows the catalogue marks as carriers in this
+    /// dimension whose output bonus cannot be applied, in
+    /// quantity units, on both arms. Never summed with the
+    /// other dimension's count, with `excluded_modules`, or
+    /// with `unreduced_modules`.
+    pub output_unapplied_modules: usize,
 }
 
 impl ResourceBudget {
@@ -388,6 +403,15 @@ fn is_consuming_flag(flag: &str) -> bool {
     flag.starts_with("LoSlot") || flag.starts_with("MedSlot") || flag.starts_with("HiSlot")
 }
 
+/// Rig or subsystem flags whose catalogue-absent rows still
+/// exclude in both dimensions (docs/output-bonuses-design.md
+/// section 4): a wholly absent counted row may be an output
+/// rig the bundled data cannot describe. Present rows under
+/// these flags still neither consume nor exclude for needs.
+fn is_rig_or_subsystem_flag(flag: &str) -> bool {
+    flag.starts_with("RigSlot") || flag.starts_with("SubSystemSlot")
+}
+
 /// A catalogue value is usable only when present, finite, and
 /// non-negative. A present `0.0` stays a real zero; anything else
 /// is treated as no data for that dimension.
@@ -395,21 +419,29 @@ fn usable(value: Option<f64>) -> Option<f64> {
     value.filter(|v| v.is_finite() && *v >= 0.0)
 }
 
-/// Base CPU / power grid resources for one fitting. Equivalent to
+/// CPU / power grid resources for one fitting. Equivalent to
 /// [`fitting_resources_with_skills`] with `None`.
 pub fn fitting_resources(fitting: &CharacterFitting, catalogue: &FittingTypes) -> FittingResources {
     fitting_resources_with_skills(fitting, catalogue, None)
 }
 
-/// Base resources, with ship outputs raised by the two skills
+/// Resources, with ship outputs raised by the two skills
 /// and module needs reduced by the five need-reduction skills
 /// when `levels` is `Some`. `None` is exactly
-/// [`fitting_resources`]. `output` scales by `1 + 0.05 *
-/// clamped_level` per dimension; each counted need is reduced
-/// per module by `dimension_factor` before the quantity
-/// multiplication, `used` carries the reduced sum and
-/// `base_used` the pre-reduction sum. Excluded-need checks
-/// run first: an excluded module is never also unreduced.
+/// [`fitting_resources`]. `output` is
+/// `(base_output + fitted-module adds) * fitted-module muls *
+/// sorted percents` per dimension (`docs/output-bonuses-
+/// design.md` section 4), where `base_output` scales by
+/// `1 + 0.05 * clamped_level` per dimension and the two
+/// skill percentages sit inside the same sorted percent
+/// chain as the fitted modules' percents; `base_output`
+/// itself is the shipped skill-scaled hull output. Each
+/// counted need is reduced per module by `dimension_factor`
+/// before the quantity multiplication, `used` carries the
+/// reduced sum and `base_used` the pre-reduction sum.
+/// Excluded-need checks run first: an excluded module is
+/// never also unreduced, and an excluded row is never also
+/// output-unapplied.
 pub fn fitting_resources_with_skills(
     fitting: &CharacterFitting,
     catalogue: &FittingTypes,
@@ -437,8 +469,11 @@ pub fn fitting_resources_with_skills(
     };
 
     // Skill scaling: defensive re-clamp so a hand-built
-    // ResourceSkillLevels cannot exceed ×1.25.
-    let (cpu_output, power_output) = match levels {
+    // ResourceSkillLevels cannot exceed ×1.25. This shipped
+    // expression is `base_output` verbatim, never re-derived
+    // from the helper, so it is bit-identical to the output
+    // this block has always shown.
+    let (cpu_base_output, power_base_output) = match levels {
         None => (cpu_output, power_output),
         Some(levels) => {
             let cpu_factor = 1.0 + 0.05 * clamp_level(levels.cpu_management) as f64;
@@ -446,6 +481,28 @@ pub fn fitting_resources_with_skills(
             (cpu_output * cpu_factor, power_output * power_factor)
         }
     };
+
+    // Fitted-module output bonuses (docs/output-bonuses-
+    // design.md section 4): the helper reads no catalogue
+    // field itself and is called exactly once per dimension
+    // pair. A helper `None` here is unreachable (the ship
+    // gate above already passed) but returns `ShipNoOutput`
+    // without panicking; a bonused `None` in either
+    // dimension takes the whole result unavailable (no
+    // per-dimension partial budget).
+    let bonused = crate::fitting::ship_resistances::bonused_outputs(
+        fitting,
+        catalogue,
+        levels.map(|l| (l.cpu_management, l.power_grid_management)),
+    );
+    let Some(bonused) = bonused else {
+        return FittingResources::ShipNoOutput;
+    };
+    let (Some(cpu_output), Some(power_output)) = (bonused.values[0], bonused.values[1]) else {
+        return FittingResources::ShipNoOutput;
+    };
+    let cpu_output_unapplied = bonused.cpu_output_unapplied_modules;
+    let power_output_unapplied = bonused.power_output_unapplied_modules;
 
     let mut cpu_used: f64 = 0.0;
     let mut cpu_base_used: f64 = 0.0;
@@ -462,6 +519,20 @@ pub fn fitting_resources_with_skills(
     let power_relevant = levels.is_some_and(|l| any_relevant_level(&l, false));
     for item in &fitting.items {
         if !consuming_item(item) {
+            // A catalogue-absent counted (rig/subsystem)
+            // row excludes in both dimensions: it may be an
+            // output rig the bundled data cannot describe.
+            // Present rows under these flags neither consume
+            // nor exclude for needs.
+            if item.type_id > 0
+                && item.quantity.max(0) > 0
+                && is_rig_or_subsystem_flag(&item.flag)
+                && catalogue.lookup_by_id(item.type_id).is_none()
+            {
+                let quantity_units = usize::try_from(item.quantity.max(0)).unwrap_or(0);
+                cpu_excluded = cpu_excluded.saturating_add(quantity_units);
+                power_excluded = power_excluded.saturating_add(quantity_units);
+            }
             continue;
         }
         let quantity = item.quantity.max(0);
@@ -523,16 +594,20 @@ pub fn fitting_resources_with_skills(
         cpu: ResourceBudget {
             used: cpu_used,
             output: cpu_output,
+            base_output: cpu_base_output,
             excluded_modules: cpu_excluded,
             base_used: cpu_base_used,
             unreduced_modules: cpu_unreduced,
+            output_unapplied_modules: cpu_output_unapplied,
         },
         power: ResourceBudget {
             used: power_used,
             output: power_output,
+            base_output: power_base_output,
             excluded_modules: power_excluded,
             base_used: power_base_used,
             unreduced_modules: power_unreduced,
+            output_unapplied_modules: power_output_unapplied,
         },
     }
 }
@@ -1932,5 +2007,823 @@ mod tests {
         ));
         assert_close(cpu.used, 56.25);
         assert_close(power.used, 50.0);
+    }
+
+    // --- Fitted-module output bonus oracles
+    // (docs/output-bonuses-design.md sections 4, 8). Base
+    // inputs re-read from the cache at design time: Rifter
+    // 130.0/41.0; needs 1355 22.0/0.0, 4254 18.0/0.0,
+    // 3888 0.0/1.0, 1541 22.0/0.0, 1445 4.0/0.0. ---
+
+    fn assert_budgets_counts(
+        cpu: &ResourceBudget,
+        power: &ResourceBudget,
+        excluded: (usize, usize),
+        unreduced: (usize, usize),
+        unapplied: (usize, usize),
+    ) {
+        assert_eq!(cpu.excluded_modules, excluded.0, "cpu excluded");
+        assert_eq!(power.excluded_modules, excluded.1, "power excluded");
+        assert_eq!(cpu.unreduced_modules, unreduced.0, "cpu unreduced");
+        assert_eq!(power.unreduced_modules, unreduced.1, "power unreduced");
+        assert_eq!(
+            cpu.output_unapplied_modules, unapplied.0,
+            "cpu output-unapplied"
+        );
+        assert_eq!(
+            power.output_unapplied_modules, unapplied.1,
+            "power output-unapplied"
+        );
+    }
+
+    #[test]
+    fn output_oracle_rcu_multiplier() {
+        let catalogue = bundled();
+        let fit = fitting(587, vec![item("LoSlot0", 1, 1355)]);
+        let (cpu, power) = budgets(fitting_resources(&fit, &catalogue));
+        assert_close(cpu.used, 22.0);
+        assert_close(power.used, 0.0);
+        assert_close(cpu.output, 130.0);
+        assert_eq!(cpu.output, cpu.base_output);
+        assert_close(power.output, 47.15);
+        assert_close(power.base_output, 41.0);
+        assert_close(cpu.remaining(), 108.0);
+        assert_close(power.remaining(), 47.15);
+        assert_budgets_counts(&cpu, &power, (0, 0), (0, 0), (0, 0));
+        // Two units multiply in full, both ways.
+        let two_slots = fitting(
+            587,
+            vec![item("LoSlot0", 1, 1355), item("LoSlot1", 1, 1355)],
+        );
+        let (_, power) = budgets(fitting_resources(&two_slots, &catalogue));
+        assert_close(power.output, 54.2225);
+        let stacked = fitting(587, vec![item("LoSlot0", 2, 1355)]);
+        let (_, power) = budgets(fitting_resources(&stacked, &catalogue));
+        assert_close(power.output, 54.2225);
+    }
+
+    #[test]
+    fn output_oracle_mapc_flat_add() {
+        let catalogue = bundled();
+        let fit = fitting(587, vec![item("LoSlot0", 1, 4254)]);
+        let (cpu, power) = budgets(fitting_resources(&fit, &catalogue));
+        assert_close(cpu.used, 18.0);
+        assert_close(power.output, 53.0);
+        assert_close(power.base_output, 41.0);
+        assert_eq!(cpu.output, cpu.base_output);
+        assert_budgets_counts(&cpu, &power, (0, 0), (0, 0), (0, 0));
+        let fit = fitting(587, vec![item("LoSlot0", 2, 4254)]);
+        let (_, power) = budgets(fitting_resources(&fit, &catalogue));
+        assert_close(power.output, 65.0);
+    }
+
+    #[test]
+    fn output_oracle_coprocessor_cpu_only() {
+        let catalogue = bundled();
+        let fit = fitting(587, vec![item("LoSlot0", 1, 3888)]);
+        let (cpu, power) = budgets(fitting_resources(&fit, &catalogue));
+        assert_close(cpu.used, 0.0);
+        assert_close(power.used, 1.0);
+        assert_close(cpu.output, 143.0);
+        assert_close(cpu.base_output, 130.0);
+        assert_eq!(power.output, power.base_output);
+        assert_close(cpu.remaining(), 143.0);
+        assert_close(power.remaining(), 40.0);
+        assert_budgets_counts(&cpu, &power, (0, 0), (0, 0), (0, 0));
+    }
+
+    #[test]
+    fn output_oracle_pds_dual_and_two_multipliers() {
+        let catalogue = bundled();
+        let fit = fitting(587, vec![item("LoSlot0", 1, 1541)]);
+        let (cpu, power) = budgets(fitting_resources(&fit, &catalogue));
+        assert_close(power.output, 43.46);
+        assert_eq!(cpu.output, cpu.base_output);
+        assert_close(cpu.used, 22.0);
+        assert_budgets_counts(&cpu, &power, (0, 0), (0, 0), (0, 0));
+        let fit = fitting(
+            587,
+            vec![item("LoSlot0", 1, 1541), item("LoSlot1", 1, 1355)],
+        );
+        let (cpu, _) = budgets(fitting_resources(&fit, &catalogue));
+        assert_close(cpu.used, 44.0);
+        let (_, power) = budgets(fitting_resources(&fit, &catalogue));
+        assert_close(power.output, 49.979);
+        let fit = fitting(
+            587,
+            vec![item("LoSlot0", 1, 1355), item("LoSlot1", 1, 1541)],
+        );
+        let (_, power) = budgets(fitting_resources(&fit, &catalogue));
+        assert_close(power.output, 49.979);
+    }
+
+    #[test]
+    fn output_oracle_with_skills_adds_before_percent() {
+        let catalogue = bundled();
+        let fit = fitting(
+            587,
+            vec![
+                item("LoSlot0", 1, 1355),
+                item("LoSlot1", 1, 3888),
+                item("LoSlot2", 1, 4254),
+            ],
+        );
+        // None and Some all-zero are equal.
+        let none_result = fitting_resources(&fit, &catalogue);
+        let zero_result = fitting_resources_with_skills(&fit, &catalogue, Some(levels(0, 0)));
+        assert_eq!(none_result, zero_result);
+        let (cpu, power) = budgets(none_result);
+        assert_close(cpu.used, 40.0);
+        assert_close(power.used, 1.0);
+        assert_close(cpu.output, 143.0);
+        assert_close(cpu.remaining(), 103.0);
+        assert_close(power.output, 60.95);
+        assert_close(power.remaining(), 59.95);
+        assert_close(cpu.base_output, 130.0);
+        assert_close(power.base_output, 41.0);
+        assert_eq!(cpu.base_used, cpu.used);
+        assert_eq!(power.base_used, power.used);
+        assert_budgets_counts(&cpu, &power, (0, 0), (0, 0), (0, 0));
+        // With CPU Management 5 + Power Grid Management 5
+        // (all need skills 0): the adds-first composition.
+        // The skill-scales-base-then-adds mutant gives
+        // (41.0 * 1.25 + 12.0) * 1.15 = 72.7375.
+        let (cpu, power) = budgets(fitting_resources_with_skills(
+            &fit,
+            &catalogue,
+            Some(levels(5, 5)),
+        ));
+        assert_close(cpu.output, 178.75);
+        assert_close(power.output, 76.1875);
+        assert_close(cpu.base_output, 162.5);
+        assert_close(power.base_output, 51.25);
+        assert_close(cpu.used, 40.0);
+        assert_close(power.used, 1.0);
+        assert_eq!(cpu.base_used, cpu.used);
+        assert_eq!(power.base_used, power.used);
+        // Both helper values pinned through bonused_outputs
+        // directly (the ship_resistances oracle pins).
+        let helper =
+            crate::fitting::ship_resistances::bonused_outputs(&fit, &catalogue, Some((5, 5)))
+                .expect("Some");
+        assert_close(helper.values[0].expect("cpu Some"), 178.75);
+        assert_close(helper.values[1].expect("power Some"), 76.1875);
+    }
+
+    #[test]
+    fn output_oracle_rig_percents_counted_population() {
+        let catalogue = bundled();
+        // (a) CPU rig: counted for output, invisible to needs
+        let fit = fitting(587, vec![item("RigSlot0", 1, 4399)]);
+        let (cpu, power) = budgets(fitting_resources(&fit, &catalogue));
+        assert_close(cpu.output, 142.48);
+        assert_close(cpu.used, 0.0);
+        assert_close(power.used, 0.0);
+        assert_budgets_counts(&cpu, &power, (0, 0), (0, 0), (0, 0));
+        // (b) power rig reaches the operator-4 number by the
+        // operator-6 route
+        let fit = fitting(587, vec![item("RigSlot0", 1, 26370)]);
+        let (_, power) = budgets(fitting_resources(&fit, &catalogue));
+        assert_close(power.output, 47.15);
+        // (c) two power rigs, percents sorted 15.0 before 10.0
+        let fit = fitting(
+            587,
+            vec![item("RigSlot0", 1, 26370), item("RigSlot1", 1, 25956)],
+        );
+        let (_, power) = budgets(fitting_resources(&fit, &catalogue));
+        assert_close(power.output, 51.865);
+        // (d) the same rig under Cargo: exactly base under ==,
+        // counts all zero
+        let fit = fitting(587, vec![item("Cargo", 1, 4399)]);
+        let (cpu, power) = budgets(fitting_resources(&fit, &catalogue));
+        assert_eq!(cpu.output, cpu.base_output);
+        assert_eq!(power.output, power.base_output);
+        assert_eq!(cpu.output, 130.0);
+        assert_eq!(power.output, 41.0);
+        assert_budgets_counts(&cpu, &power, (0, 0), (0, 0), (0, 0));
+    }
+
+    #[test]
+    fn output_oracle_drawback_shrinks_and_flips() {
+        let catalogue = bundled();
+        let fit = fitting(587, vec![item("RigSlot0", 1, 25908)]);
+        let (cpu, _) = budgets(fitting_resources(&fit, &catalogue));
+        assert_close(cpu.output, 117.0);
+        assert_close(cpu.base_output, 130.0);
+        assert!(cpu.output < cpu.base_output);
+        // With 5x DC (150.0 CPU) the rig flips the judgment
+        // over; at CPU Management 5 the output (146.25) is
+        // still over, where without the rig it judges under
+        // at 162.5.
+        let items: Vec<FittingItem> = (0..5)
+            .map(|n| item(&format!("LoSlot{n}"), 1, 2048))
+            .chain([item("RigSlot0", 1, 25908)])
+            .collect();
+        let (cpu, _) = budgets(fitting_resources(&fitting(587, items), &catalogue));
+        assert_close(cpu.used, 150.0);
+        assert_close(cpu.output, 117.0);
+        assert!(cpu.is_over());
+        let fit = fitting(
+            587,
+            vec![
+                item("LoSlot0", 1, 2048),
+                item("LoSlot1", 1, 2048),
+                item("LoSlot2", 1, 2048),
+                item("LoSlot3", 1, 2048),
+                item("LoSlot4", 1, 2048),
+                item("RigSlot0", 1, 25908),
+            ],
+        );
+        let (cpu, _) = budgets(fitting_resources_with_skills(
+            &fit,
+            &catalogue,
+            Some(levels(5, 0)),
+        ));
+        assert_close(cpu.output, 146.25);
+        assert!(cpu.is_over());
+        let items_no_rig: Vec<FittingItem> = (0..5)
+            .map(|n| item(&format!("LoSlot{n}"), 1, 2048))
+            .collect();
+        let (cpu, _) = budgets(fitting_resources_with_skills(
+            &fitting(587, items_no_rig),
+            &catalogue,
+            Some(levels(5, 0)),
+        ));
+        assert_close(cpu.output, 162.5);
+        assert!(!cpu.is_over());
+    }
+
+    #[test]
+    fn output_oracle_absent_split() {
+        let catalogue = bundled();
+        let fit = fitting(587, vec![item("LoSlot0", 1, 1445)]);
+        let (cpu, power) = budgets(fitting_resources(&fit, &catalogue));
+        assert_eq!(power.output, power.base_output);
+        assert_eq!(power.output, 41.0);
+        assert_eq!(power.output_unapplied_modules, 1);
+        assert_eq!(cpu.output_unapplied_modules, 0);
+        assert_eq!(cpu.output, cpu.base_output);
+        assert_close(cpu.used, 4.0);
+        assert_close(power.used, 0.0);
+        assert_eq!(cpu.excluded_modules, 0);
+        assert_eq!(power.excluded_modules, 0);
+        let fit = fitting(587, vec![item("LoSlot0", 2, 1445)]);
+        let (_, power) = budgets(fitting_resources(&fit, &catalogue));
+        assert_eq!(power.output_unapplied_modules, 2);
+        // Not level-gated: at Some((5, 5)) the output is
+        // 51.25 == base_output with the count still 1.
+        let fit = fitting(587, vec![item("LoSlot0", 1, 1445)]);
+        let (_, power) = budgets(fitting_resources_with_skills(
+            &fit,
+            &catalogue,
+            Some(levels(5, 5)),
+        ));
+        assert_eq!(power.output, power.base_output);
+        assert_eq!(power.output, 51.25);
+        assert_eq!(power.output_unapplied_modules, 1);
+    }
+
+    #[test]
+    fn output_oracle_skill_inside_sorted_chain() {
+        let catalogue = bundled();
+        // (a) power: skill 25.0 then rig 15.0 after the sort
+        let fit = fitting(587, vec![item("RigSlot0", 1, 26370)]);
+        let (_, power) = budgets(fitting_resources_with_skills(
+            &fit,
+            &catalogue,
+            Some(levels(0, 5)),
+        ));
+        assert_eq!(power.output, (41.0 + 0.0) * 1.0 * ((1.0 * 1.25) * 1.15));
+        // (b) CPU: skill 25.0 then rig 9.6
+        let fit = fitting(587, vec![item("RigSlot0", 1, 4399)]);
+        let (cpu, _) = budgets(fitting_resources_with_skills(
+            &fit,
+            &catalogue,
+            Some(levels(5, 0)),
+        ));
+        assert_eq!(
+            cpu.output,
+            (130.0 + 0.0) * 1.0 * ((1.0 * 1.25) * (1.0 + 9.6 / 100.0))
+        );
+        // (c) equal absolute values keep module-then-skill
+        // order; the value is 130.0 * 0.9 * 1.1 = 128.7
+        let fit = fitting(587, vec![item("RigSlot0", 1, 25908)]);
+        let (cpu, _) = budgets(fitting_resources_with_skills(
+            &fit,
+            &catalogue,
+            Some(levels(2, 0)),
+        ));
+        assert_close(cpu.output, 128.7);
+    }
+
+    #[test]
+    fn output_oracle_over_flip_against_bonused() {
+        let catalogue = bundled();
+        let items: Vec<FittingItem> = (0..5)
+            .map(|n| item(&format!("LoSlot{n}"), 1, 2048))
+            .chain([item("LoSlot5", 1, 3888)])
+            .collect();
+        let (cpu, _) = budgets(fitting_resources(&fitting(587, items), &catalogue));
+        assert_close(cpu.output, 143.0);
+        assert!(cpu.is_over());
+        assert_close(cpu.remaining(), -7.0);
+        assert_close(cpu.used, 150.0);
+        let (cpu, _) = budgets(fitting_resources_with_skills(
+            &fitting(
+                587,
+                vec![
+                    item("LoSlot0", 1, 2048),
+                    item("LoSlot1", 1, 2048),
+                    item("LoSlot2", 1, 2048),
+                    item("LoSlot3", 1, 2048),
+                    item("LoSlot4", 1, 2048),
+                    item("LoSlot5", 1, 3888),
+                ],
+            ),
+            &catalogue,
+            Some(levels(5, 0)),
+        ));
+        assert_close(cpu.output, 178.75);
+        assert!(!cpu.is_over());
+    }
+
+    #[test]
+    fn output_empty_equals_current_exactly() {
+        let catalogue = bundled();
+        // Whole-outcome assert_eq carrying today's numbers
+        assert_eq!(
+            fitting_resources(&fitting(587, vec![]), &catalogue),
+            FittingResources::Available {
+                cpu: ResourceBudget {
+                    used: 0.0,
+                    output: 130.0,
+                    base_output: 130.0,
+                    excluded_modules: 0,
+                    base_used: 0.0,
+                    unreduced_modules: 0,
+                    output_unapplied_modules: 0,
+                },
+                power: ResourceBudget {
+                    used: 0.0,
+                    output: 41.0,
+                    base_output: 41.0,
+                    excluded_modules: 0,
+                    base_used: 0.0,
+                    unreduced_modules: 0,
+                    output_unapplied_modules: 0,
+                },
+            }
+        );
+        // Hull-only table asserted by assert_eq against
+        // base * (1.0 + 0.05 * level) evaluated in the test
+        // (the shipped assert_close table keeps pinning the
+        // decimal literals unmodified).
+        for level in 0..=5 {
+            let (cpu, power) = budgets(fitting_resources_with_skills(
+                &fitting(587, vec![]),
+                &catalogue,
+                Some(levels(level, level)),
+            ));
+            assert_eq!(cpu.output, 130.0 * (1.0 + 0.05 * level as f64));
+            assert_eq!(power.output, 41.0 * (1.0 + 0.05 * level as f64));
+            assert_eq!(cpu.output, cpu.base_output);
+            assert_eq!(power.output, power.base_output);
+        }
+        let (cpu, power) = budgets(fitting_resources_with_skills(
+            &fitting(597, vec![]),
+            &catalogue,
+            Some(levels(5, 5)),
+        ));
+        assert_eq!(cpu.output, 140.0 * 1.25);
+        assert_eq!(power.output, 67.0 * 1.25);
+        assert_eq!(cpu.output, cpu.base_output);
+        assert_eq!(power.output, power.base_output);
+        // Only non-counted and non-consuming items
+        for (flag, quantity, type_id) in [
+            ("RigSlot0", 1, 2048),
+            ("SubSystemSlot0", 1, 2048),
+            ("Cargo", 1, 3888),
+            ("DroneBay", 1, 2048),
+            ("LoSlot0", 0, 3888),
+            ("LoSlot0", -5, 3888),
+            ("LoSlot0", 1, 0),
+            ("LoSlot0", 1, -1),
+        ] {
+            let (cpu, power) = budgets(fitting_resources(
+                &fitting(587, vec![item(flag, quantity, type_id)]),
+                &catalogue,
+            ));
+            assert_eq!(cpu.output, cpu.base_output, "flag {flag}");
+            assert_eq!(power.output, power.base_output, "flag {flag}");
+            assert_eq!(cpu.output_unapplied_modules, 0, "flag {flag}");
+            assert_eq!(power.output_unapplied_modules, 0, "flag {flag}");
+        }
+        // Counted non-carriers (resistance carriers that are
+        // output non-carriers), low and rig slots
+        for flag in ["LoSlot0", "RigSlot0"] {
+            let (cpu, power) = budgets(fitting_resources(
+                &fitting(587, vec![item(flag, 1, 2048)]),
+                &catalogue,
+            ));
+            assert_eq!(cpu.output, cpu.base_output, "flag {flag}");
+            assert_eq!(power.output, power.base_output, "flag {flag}");
+            assert_eq!(cpu.output_unapplied_modules, 0, "flag {flag}");
+            assert_eq!(power.output_unapplied_modules, 0, "flag {flag}");
+        }
+        // EFT sample-fit oracle (rig 31668 is not a carrier)
+        let sample = concat!(
+            "[Rifter, Sample Brawler]\n",
+            "Damage Control II\n",
+            "Small Armor Repairer II\n",
+            "\n",
+            "1MN Afterburner II\n",
+        );
+        match parse_eft(sample, &catalogue) {
+            EftImportOutcome::Imported(imported) => {
+                let fit = imported.to_character_fitting();
+                let (cpu, power) = budgets(fitting_resources(&fit, &catalogue));
+                assert_eq!(cpu.output, cpu.base_output);
+                assert_eq!(power.output, power.base_output);
+                assert_eq!(cpu.output, 130.0);
+                assert_eq!(power.output, 41.0);
+                assert_eq!(cpu.output_unapplied_modules, 0);
+                assert_eq!(power.output_unapplied_modules, 0);
+            }
+            EftImportOutcome::Failed(fatal) => panic!("sample must import, got {fatal:?}"),
+        }
+        // Synthetic Flutter oracle stays bit-identical
+        let synthetic = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[],"cpuOutput":125.0,"powerOutput":37.0}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let (cpu, power) = budgets(fitting_resources_with_skills(
+            &fitting(587, vec![]),
+            &synthetic,
+            Some(levels(5, 5)),
+        ));
+        assert_eq!(cpu.output, 156.25);
+        assert_eq!(power.output, 46.25);
+        assert_eq!(cpu.output, cpu.base_output);
+        assert_eq!(power.output, power.base_output);
+    }
+
+    #[test]
+    fn output_base_output_is_todays_output() {
+        let catalogue = bundled();
+        // On carrier fits, base_output is today's figure and
+        // output carries the bonuses.
+        let fit = fitting(587, vec![item("LoSlot0", 1, 1355)]);
+        let (_, power) = budgets(fitting_resources(&fit, &catalogue));
+        assert_eq!(power.base_output, 41.0);
+        assert_close(power.output, 47.15);
+        let fit = fitting(
+            587,
+            vec![
+                item("LoSlot0", 1, 1355),
+                item("LoSlot1", 1, 3888),
+                item("LoSlot2", 1, 4254),
+            ],
+        );
+        let (cpu, power) = budgets(fitting_resources_with_skills(
+            &fit,
+            &catalogue,
+            Some(levels(5, 5)),
+        ));
+        assert_eq!(cpu.base_output, 130.0 * (1.0 + 0.05 * 5.0));
+        assert_eq!(power.base_output, 41.0 * (1.0 + 0.05 * 5.0));
+        // Hand-built levels beyond 0..=5 re-clamp for the
+        // new field (shipped pin semantics).
+        let wild = ResourceSkillLevels {
+            cpu_management: 99,
+            power_grid_management: -1,
+            weapon_upgrades: 0,
+            advanced_weapon_upgrades: 0,
+            energy_grid_upgrades: 0,
+            electronics_upgrades: 0,
+            shield_upgrades: 0,
+        };
+        let (cpu, power) = budgets(fitting_resources_with_skills(
+            &fitting(587, vec![]),
+            &catalogue,
+            Some(wild),
+        ));
+        assert_eq!(cpu.base_output, 130.0 * (1.0 + 0.05 * 5.0));
+        assert_eq!(power.base_output, 41.0);
+        assert_eq!(cpu.output, cpu.base_output);
+        assert_eq!(power.output, power.base_output);
+        // No-carrier fits have output == base_output exactly
+        let (cpu, power) = budgets(fitting_resources(
+            &fitting(587, vec![item("LoSlot0", 1, 2048)]),
+            &catalogue,
+        ));
+        assert_eq!(cpu.output, cpu.base_output);
+        assert_eq!(power.output, power.base_output);
+    }
+
+    #[test]
+    fn output_excluded_widening_absent_counted_rows() {
+        let catalogue = bundled();
+        // Unknown type at RigSlot0 and SubSystemSlot0: both
+        // dimensions +1 per unit, used/outputs untouched,
+        // output-unapplied 0.
+        for flag in ["RigSlot0", "SubSystemSlot0"] {
+            let fit = fitting(587, vec![item(flag, 1, 999999)]);
+            let (cpu, power) = budgets(fitting_resources(&fit, &catalogue));
+            assert_close(cpu.used, 0.0);
+            assert_close(power.used, 0.0);
+            assert_eq!(cpu.output, 130.0);
+            assert_eq!(power.output, 41.0);
+            assert_eq!(cpu.excluded_modules, 1, "flag {flag}");
+            assert_eq!(power.excluded_modules, 1, "flag {flag}");
+            assert_eq!(cpu.output_unapplied_modules, 0, "flag {flag}");
+            assert_eq!(power.output_unapplied_modules, 0, "flag {flag}");
+            let fit = fitting(587, vec![item(flag, 5, 999999)]);
+            let (cpu, power) = budgets(fitting_resources(&fit, &catalogue));
+            assert_eq!(cpu.excluded_modules, 5, "flag {flag}");
+            assert_eq!(power.excluded_modules, 5, "flag {flag}");
+        }
+        // Unknown under non-counted flags still counts
+        // nowhere (shipped pin stands).
+        for flag in ["DroneBay", "Cargo"] {
+            let fit = fitting(587, vec![item(flag, 1, 999999)]);
+            let (cpu, power) = budgets(fitting_resources(&fit, &catalogue));
+            assert_eq!(cpu.excluded_modules, 0, "flag {flag}");
+            assert_eq!(power.excluded_modules, 0, "flag {flag}");
+        }
+        // A present non-carrier rig still 0.
+        let fit = fitting(587, vec![item("RigSlot0", 1, 31668)]);
+        let (cpu, power) = budgets(fitting_resources(&fit, &catalogue));
+        assert_eq!(cpu.excluded_modules, 0);
+        assert_eq!(power.excluded_modules, 0);
+        assert_eq!(cpu.output_unapplied_modules, 0);
+        assert_eq!(power.output_unapplied_modules, 0);
+    }
+
+    #[test]
+    fn output_partiality_and_zero_rules() {
+        // Absent powerOutput with a MAPC-equivalent fitted:
+        // helper shows the split, public is ShipNoOutput
+        // on both arms (no resurrection).
+        let no_power = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[],"cpuOutput":130.0},
+                {"typeId":101,"typeName":"Mapc","categoryId":7,"slotEffects":[11],"cpu":18.0,"power":0.0,"powerOutputModifiers":[[11,2,12.0]]}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let fit = fitting(587, vec![item("LoSlot0", 1, 101)]);
+        let helper =
+            crate::fitting::ship_resistances::bonused_outputs(&fit, &no_power, None).expect("Some");
+        assert_eq!(helper.values, [Some(130.0), None]);
+        assert_eq!(
+            fitting_resources(&fit, &no_power),
+            FittingResources::ShipNoOutput
+        );
+        assert_eq!(
+            fitting_resources_with_skills(&fit, &no_power, Some(levels(5, 5))),
+            FittingResources::ShipNoOutput
+        );
+        // Mirror with cpuOutput absent
+        let no_cpu = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[],"powerOutput":41.0},
+                {"typeId":101,"typeName":"Coproc","categoryId":7,"slotEffects":[11],"cpu":0.0,"power":1.0,"cpuOutputModifiers":[[48,4,1.1]]}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let fit = fitting(587, vec![item("LoSlot0", 1, 101)]);
+        let helper =
+            crate::fitting::ship_resistances::bonused_outputs(&fit, &no_cpu, None).expect("Some");
+        assert_eq!(helper.values, [None, Some(41.0)]);
+        assert_eq!(
+            fitting_resources(&fit, &no_cpu),
+            FittingResources::ShipNoOutput
+        );
+        // Present 0.0 + flat add raises output (application
+        // to a present zero, not resurrection of absence).
+        let zero_cat = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":2078,"typeName":"Zephyr","categoryId":6,"slotEffects":[],"cpuOutput":0.0,"powerOutput":0.0},
+                {"typeId":101,"typeName":"Mapc","categoryId":7,"slotEffects":[11],"cpu":30.0,"power":1.0,"powerOutputModifiers":[[11,2,12.0]]}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let (cpu, power) = budgets(fitting_resources(
+            &fitting(2078, vec![item("LoSlot0", 1, 101)]),
+            &zero_cat,
+        ));
+        assert_eq!(cpu.output, 0.0);
+        assert_eq!(power.output, 12.0);
+        // Fixture -100% gives a real zero judging over.
+        let zeroed = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[],"cpuOutput":130.0,"powerOutput":41.0},
+                {"typeId":101,"typeName":"Zero","categoryId":7,"slotEffects":[11],"cpu":30.0,"power":1.0,"powerOutputModifiers":[[11,6,-100.0]]}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let helper = crate::fitting::ship_resistances::bonused_outputs(
+            &fitting(587, vec![item("LoSlot0", 1, 101)]),
+            &zeroed,
+            None,
+        )
+        .expect("Some");
+        assert_eq!(helper.values[1], Some(0.0));
+        let (_, power) = budgets(fitting_resources(
+            &fitting(587, vec![item("LoSlot0", 1, 101)]),
+            &zeroed,
+        ));
+        assert_eq!(power.output, 0.0);
+        assert!(power.is_over());
+    }
+
+    #[test]
+    fn output_hostile_bounded_every_outcome_asserted() {
+        let bundled_cat = bundled();
+        // Fixture -20% rig at i64::MAX stalls subnormal:
+        // helper None in that dimension, public ShipNoOutput
+        // on both arms.
+        let fixture = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[],"cpuOutput":130.0,"powerOutput":41.0},
+                {"typeId":101,"typeName":"Host","categoryId":7,"slotEffects":[13],"powerOutputModifiers":[[11,6,-20.0]]}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let fit = fitting(587, vec![item("RigSlot0", i64::MAX, 101)]);
+        let helper =
+            crate::fitting::ship_resistances::bonused_outputs(&fit, &fixture, None).expect("Some");
+        assert_eq!(helper.values[1], None);
+        assert_eq!(helper.values[0], Some(130.0));
+        assert_eq!(
+            fitting_resources(&fit, &fixture),
+            FittingResources::ShipNoOutput
+        );
+        assert_eq!(
+            fitting_resources_with_skills(&fit, &fixture, Some(levels(5, 5))),
+            FittingResources::ShipNoOutput
+        );
+        // Real 25908 at i64::MAX stalls subnormal.
+        let fit = fitting(587, vec![item("RigSlot0", i64::MAX, 25908)]);
+        let helper = crate::fitting::ship_resistances::bonused_outputs(&fit, &bundled_cat, None)
+            .expect("Some");
+        assert_eq!(helper.values[0], None);
+        assert_eq!(helper.values[1], Some(41.0));
+        assert_eq!(
+            fitting_resources(&fit, &bundled_cat),
+            FittingResources::ShipNoOutput
+        );
+        // Real 1355 at i64::MAX overflows non-finite.
+        let fit = fitting(587, vec![item("LoSlot0", i64::MAX, 1355)]);
+        let helper = crate::fitting::ship_resistances::bonused_outputs(&fit, &bundled_cat, None)
+            .expect("Some");
+        assert_eq!(helper.values[1], None);
+        assert_eq!(
+            fitting_resources(&fit, &bundled_cat),
+            FittingResources::ShipNoOutput
+        );
+        // Real 4254 at i64::MAX stays finite by formula
+        // and stays Available.
+        let fit = fitting(587, vec![item("LoSlot0", i64::MAX, 4254)]);
+        let helper = crate::fitting::ship_resistances::bonused_outputs(&fit, &bundled_cat, None)
+            .expect("Some");
+        assert_eq!(helper.values[1], Some(41.0 + 12.0 * (i64::MAX as f64)));
+        let (cpu, power) = budgets(fitting_resources(&fit, &bundled_cat));
+        assert!(cpu.used.is_finite());
+        assert!(power.used.is_finite());
+        assert!(cpu.is_over());
+        assert!(!power.is_over());
+        // Negative results are ShipNoOutput, never a
+        // negative output.
+        for entries in ["[[11,6,-150.0]]", "[[11,4,-1.15]]"] {
+            let negative = FittingTypes::from_json(
+                &format!(
+                    r#"{{"types":[{{"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[],"cpuOutput":130.0,"powerOutput":41.0}},
+                    {{"typeId":101,"typeName":"Neg","categoryId":7,"slotEffects":[11],"cpu":30.0,"power":1.0,"powerOutputModifiers":{entries}}}]}}"#
+                ),
+            )
+            .expect("fixture catalogue parses");
+            let fit = fitting(587, vec![item("LoSlot0", 1, 101)]);
+            let helper = crate::fitting::ship_resistances::bonused_outputs(&fit, &negative, None)
+                .expect("Some");
+            assert_eq!(helper.values[1], None, "entries {entries}");
+            assert_eq!(
+                fitting_resources(&fit, &negative),
+                FittingResources::ShipNoOutput,
+                "entries {entries}"
+            );
+        }
+        let negative = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[],"cpuOutput":130.0,"powerOutput":41.0},
+                {"typeId":101,"typeName":"NegAdd","categoryId":7,"slotEffects":[11],"cpu":30.0,"power":1.0,"powerOutputModifiers":[[11,2,-50.0]]}]}"#,
+        )
+        .expect("fixture catalogue parses");
+        let fit = fitting(587, vec![item("LoSlot0", 1, 101)]);
+        let helper =
+            crate::fitting::ship_resistances::bonused_outputs(&fit, &negative, None).expect("Some");
+        assert_eq!(helper.values[1], None);
+        assert_eq!(
+            fitting_resources(&fit, &negative),
+            FittingResources::ShipNoOutput
+        );
+    }
+
+    #[test]
+    fn output_runtime_guards_never_sum() {
+        let hull = r#"{"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[],"cpuOutput":130.0,"powerOutput":41.0}"#;
+        // Marked-unapplied with an applicable entry: counted
+        // once in power, applied (the output proves it), and
+        // neither excluded nor unreduced.
+        let cat = FittingTypes::from_json(
+            &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"Marked","categoryId":7,"slotEffects":[11],"cpu":30.0,"power":1.0,"powerOutputModifiers":[[11,4,1.15]],"powerOutputModifiersUnapplied":true}}]}}"#),
+        )
+        .expect("fixture parses");
+        let (cpu, power) = budgets(fitting_resources(
+            &fitting(587, vec![item("LoSlot0", 1, 101)]),
+            &cat,
+        ));
+        assert_eq!(power.output_unapplied_modules, 1);
+        assert_eq!(cpu.output_unapplied_modules, 0);
+        assert_close(power.output, 47.15);
+        assert_eq!(power.excluded_modules, 0);
+        assert_eq!(cpu.unreduced_modules, 0);
+        // Bad operators, wrong ids, and zero each count once
+        // in that family only; a good sibling entry still
+        // applies. One bad entry here carries the pin; the
+        // helper tests pin every operator exhaustively.
+        let cat = FittingTypes::from_json(
+            &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"Bad","categoryId":7,"slotEffects":[11],"cpu":30.0,"power":1.0,"powerOutputModifiers":[[11,0,1.15],[11,4,0.0],[11,4,1.1]]}}]}}"#),
+        )
+        .expect("fixture parses");
+        let (cpu, power) = budgets(fitting_resources(
+            &fitting(587, vec![item("LoSlot0", 1, 101)]),
+            &cat,
+        ));
+        assert_eq!(power.output_unapplied_modules, 1);
+        assert_eq!(cpu.output_unapplied_modules, 0);
+        assert_close(power.output, 45.1);
+        assert_eq!(power.excluded_modules, 0);
+        assert_eq!(power.unreduced_modules, 0);
+        // The grounded CPU flat add applies through the
+        // public budget as well, skilled and unskilled.
+        let cat = FittingTypes::from_json(
+            &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"CpuAdd","categoryId":7,"slotEffects":[11],"cpu":30.0,"power":1.0,"cpuOutputModifiers":[[48,2,25.0]]}}]}}"#),
+        )
+        .expect("fixture parses");
+        let (cpu, _) = budgets(fitting_resources(
+            &fitting(587, vec![item("LoSlot0", 1, 101)]),
+            &cat,
+        ));
+        assert_close(cpu.output, 155.0);
+        assert_close(cpu.base_output, 130.0);
+        let (cpu, _) = budgets(fitting_resources_with_skills(
+            &fitting(587, vec![item("LoSlot0", 1, 101)]),
+            &cat,
+            Some(levels(5, 0)),
+        ));
+        assert_close(cpu.output, 193.75);
+        assert_close(cpu.base_output, 162.5);
+    }
+
+    #[test]
+    fn output_need_and_sibling_independence() {
+        let catalogue = bundled();
+        // Fitting carriers leaves used/base_used/unreduced at
+        // their shipped oracles on the same fit.
+        let fit = fitting(
+            587,
+            vec![
+                item("LoSlot0", 1, 1355),
+                item("LoSlot1", 1, 4254),
+                item("LoSlot2", 1, 1541),
+            ],
+        );
+        let (cpu, power) = budgets(fitting_resources(&fit, &catalogue));
+        assert_close(cpu.used, 22.0 + 18.0 + 22.0);
+        assert_close(power.used, 0.0);
+        assert_close(cpu.base_used, cpu.used);
+        assert_close(power.base_used, power.used);
+        assert_eq!(cpu.unreduced_modules, 0);
+        assert_eq!(power.unreduced_modules, 0);
+        // 4254 (a non-carrier in every sibling family) moves
+        // no sibling base figure: base stats and base
+        // resistances equal the hull-only case.
+        let carrier = fitting(587, vec![item("LoSlot0", 1, 4254)]);
+        let hull_only = fitting(587, vec![]);
+        assert_eq!(
+            crate::fitting::ship_stats::ship_base_stats(&carrier, &catalogue),
+            crate::fitting::ship_stats::ship_base_stats(&hull_only, &catalogue)
+        );
+        assert_eq!(
+            crate::fitting::ship_resistances::ship_resistances(&carrier, &catalogue),
+            crate::fitting::ship_resistances::ship_resistances(&hull_only, &catalogue)
+        );
+        // The bonused sibling helpers for a 4254 fit equal
+        // the hull-only case (no sibling entry exists to
+        // apply), while the resources helper moves.
+        let helper_carrier =
+            crate::fitting::ship_resistances::bonused_outputs(&carrier, &catalogue, None)
+                .expect("Some");
+        let helper_hull =
+            crate::fitting::ship_resistances::bonused_outputs(&hull_only, &catalogue, None)
+                .expect("Some");
+        assert_ne!(helper_carrier.values[1], helper_hull.values[1]);
     }
 }

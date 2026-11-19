@@ -5711,8 +5711,14 @@ mod tests {
             // Mechanical extension for the need-reduction
             // fields (design section 6): base equals used and
             // nothing is unreduced in these template pins.
+            // Mechanical extension for the output-bonus
+            // fields (docs/output-bonuses-design.md pin 9(a)):
+            // base equals output and nothing is unapplied in
+            // these template pins.
             base_used: used,
             unreduced_modules: 0,
+            base_output: output,
+            output_unapplied_modules: 0,
         }
     }
 
@@ -5819,8 +5825,10 @@ mod tests {
         let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
 
         // Demo Brawler (Rifter, 130.0 tf / 41.0 MW): Damage Control
-        // II + 2x Gistum hardener counted; blueprint and ore
-        // excluded on both dimensions.
+        // II + 2x Gistum hardener counted; blueprint, ore, and
+        // the catalogue-absent rig excluded on both dimensions
+        // (docs/output-bonuses-design.md pin 4: the absent
+        // rig is counted, not dismissed as a rig).
         let brawler = match fitting_resources(&find("Demo Brawler"), &catalogue) {
             FittingResources::Available { cpu, power } => (cpu, power),
             FittingResources::ShipNoOutput => panic!("Demo Brawler must have ship output"),
@@ -5829,8 +5837,8 @@ mod tests {
         assert_close(brawler.0.output, 130.0);
         assert_close(brawler.1.used, 3.0);
         assert_close(brawler.1.output, 41.0);
-        assert_eq!(brawler.0.excluded_modules, 2);
-        assert_eq!(brawler.1.excluded_modules, 2);
+        assert_eq!(brawler.0.excluded_modules, 3);
+        assert_eq!(brawler.1.excluded_modules, 3);
         assert_eq!(
             resource_line("CPU", &brawler.0, "tf"),
             "CPU: 84.0 tf of 130.0 tf used (46.0 tf left)"
@@ -5943,6 +5951,8 @@ mod tests {
             excluded_modules: 0,
             base_used: 114.0,
             unreduced_modules: 0,
+            base_output: 130.0,
+            output_unapplied_modules: 0,
         };
         assert_eq!(
             base_need_line("CPU", &before, "tf"),
@@ -5954,6 +5964,8 @@ mod tests {
             excluded_modules: 0,
             base_used: 31.0,
             unreduced_modules: 0,
+            base_output: 41.0,
+            output_unapplied_modules: 0,
         };
         assert_eq!(
             base_need_line("Power grid", &before_power, "MW"),
@@ -6251,7 +6263,9 @@ mod tests {
         assert_eq!(aria_gunnery.trained_skill_level, 4);
 
         // Demo Brawler (Aria, PG L5 only): CPU stays base, PG scales
-        // to 51.25, rendered half away from zero as 51.3.
+        // to 51.25, rendered half away from zero as 51.3. The
+        // catalogue-absent rig is the third excluded row on
+        // both dimensions (docs/output-bonuses-design.md pin 4).
         let brawler = match fitting_resources_with_skills(
             &find("Demo Brawler"),
             &catalogue,
@@ -6268,8 +6282,8 @@ mod tests {
             resource_line("Power grid", &brawler.1, "MW"),
             "Power grid: 3.0 MW of 51.3 MW used (48.3 MW left)"
         );
-        assert_eq!(brawler.0.excluded_modules, 2);
-        assert_eq!(brawler.1.excluded_modules, 2);
+        assert_eq!(brawler.0.excluded_modules, 3);
+        assert_eq!(brawler.1.excluded_modules, 3);
         assert_eq!(
             skill_line("CPU output", &cpu_name, aria_levels.cpu_management),
             "CPU output includes no bonus: CPU Management is level 0."
