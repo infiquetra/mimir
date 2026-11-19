@@ -45,7 +45,10 @@ pub use ship_ehp::{
     ship_base_ehp, ship_ehp_with_module_bonuses, BonusedShipEhp, BonusedShipEhpOutcome,
     ShipBaseEhp, ShipBaseEhpOutcome,
 };
-pub use ship_nav_targeting::{ship_nav_targeting, ShipNavTargeting, ShipNavTargetingOutcome};
+pub use ship_nav_targeting::{
+    ship_nav_targeting, ship_nav_targeting_with_module_bonuses, BonusedShipNavTargeting,
+    BonusedShipNavTargetingOutcome, ShipNavTargeting, ShipNavTargetingOutcome,
+};
 pub use ship_peak_recharge::{
     ship_base_peak_recharge, ship_shield_peak_recharge_with_module_bonuses,
     BonusedShieldPeakRecharge, BonusedShieldPeakRechargeOutcome, ShipBasePeakRecharge,
