@@ -158,6 +158,18 @@ modifier leg reuses the same `dogmaEffects.jsonl` read;
 the operand leg reuses the same `dgmTypeAttributes` pass
 with the wanted-modifying-ids set extended to the hit
 point modifying attributes.
+Fitted-module capacitor modifiers
+(docs/cap-bonuses-design.md section 3) append four further
+keys after `hitPointModifiersUnapplied` in locked capacity-
+then-recharge order: `capacitorCapacityModifiers` and
+`capacitorRechargeModifiers`, each a sparse array of
+[modifiedAttributeId, operator, operand] triples on
+category-7 rows only, and the two `...Unapplied` sparse
+`true` markers beside that family's array when the carrier's
+bonus cannot be grounded in that dimension. Both families
+reuse the same `dogmaEffects.jsonl` read and the same
+`dgmTypeAttributes` pass with the wanted set extended to the
+capacitor modifying attributes.
 """
 
 import bz2
@@ -269,6 +281,15 @@ RESIST_MODIFIER_OPERATORS = {0, 6}
 HIT_POINT_MODIFIER_ORDER = [263, 265, 9]
 HIT_POINT_MODIFIER_OPERATORS = {2, 4, 6}
 HIT_POINT_MODIFIER_ATTRS = {263, 265, 9}
+# Fitted-module capacitor modifiers
+# (docs/cap-bonuses-design.md section 3): the locked display
+# order (capacitorCapacity 482, rechargeRate 55) and operators 2
+# (modAdd), 4 (postMulAlt), 6 (postPercent) per Flutter
+# dogma_engine.dart at ed698d3 for the ship path. Attribute 55 is a
+# millisecond duration, lower is faster (design section 2).
+CAPACITOR_MODIFIER_ORDER = [482, 55]
+CAPACITOR_MODIFIER_OPERATORS = {2, 4, 6}
+CAPACITOR_MODIFIER_ATTRS = {482, 55}
 SDE_ZIP_NAME = "eve-online-static-data-3503375-jsonl.zip"
 SDE_ZIP_MEMBER = "dogmaEffects.jsonl"
 SHIELD_EM_RESONANCE_ATTR = 271
@@ -708,6 +729,66 @@ HIT_POINT_MODIFIER_ROWS = 675
 HIT_POINT_MODIFIER_NONEMPTY_ROWS = 643
 HIT_POINT_MODIFIER_MARKED_ROWS = 32
 HIT_POINT_MODIFIER_ENTRIES = 643
+
+# Fitted-module capacitor modifier oracles
+# (docs/cap-bonuses-design.md section 3): each value read
+# from dogmaEffects.jsonl (committed zip) joined through
+# dgmTypeEffects / dgmTypeAttributes during design. Tuple
+# shape mirrors HIT_POINT_MODIFIER_ORACLES: (typeId,
+# expected-entries-or-None, expected-unapplied). A None
+# entries means neither capacitorCapacityModifiers nor
+# capacitorCapacityModifiersUnapplied may be present at all
+# (resp. neither recharge key). An empty list means the
+# (possibly empty) array must be present and the unapplied
+# marker must be true.
+CAPACITOR_CAPACITY_MODIFIER_ORACLES = [
+    (522, [[482, 2, 60.0]], False),
+    (3488, [[482, 2, 150.0]], False),
+    (2020, [[482, 2, 1300.0]], False),
+    (3504, [[482, 2, 1625.0]], False),
+    (509, [[482, 4, 0.8]], False),
+    (1541, [[482, 4, 1.05]], False),
+    (1353, [[482, 4, 1.0]], False),
+    (25954, [[482, 6, 15.0]], False),
+    (26376, [[482, 6, 20.0]], False),
+    (1445, [], True),
+    (48431, [], True),
+    (47408, [], True),
+    (421, None, False),
+    (2048, None, False),
+    (587, None, False),
+    (45623, None, False),
+]
+
+CAPACITOR_RECHARGE_MODIFIER_ORACLES = [
+    (421, [[55, 4, 0.88]], False),
+    (1195, [[55, 4, 0.85]], False),
+    (2032, [[55, 4, 0.8]], False),
+    (509, [[55, 4, 0.66]], False),
+    (1541, [[55, 4, 0.915]], False),
+    (1353, [[55, 4, 1.0]], False),
+    (31370, [[55, 6, -15.0]], False),
+    (26374, [[55, 6, -20.0]], False),
+    (1445, [[55, 4, 0.8]], False),
+    (522, None, False),
+    (2048, None, False),
+    (587, None, False),
+    (45623, None, False),
+]
+
+# Catalogue-wide counts for the capacitor modifier emissions
+# (docs/cap-bonuses-design.md section 3, design-scripted over
+# today's data): capacity rows carrying the key (155 with
+# entries plus 27 marked-empty), marked, entries; recharge
+# rows (103 with entries), marked, entries.
+CAPACITOR_CAPACITY_MODIFIER_ROWS = 182
+CAPACITOR_CAPACITY_MODIFIER_NONEMPTY_ROWS = 155
+CAPACITOR_CAPACITY_MODIFIER_MARKED_ROWS = 27
+CAPACITOR_CAPACITY_MODIFIER_ENTRIES = 155
+CAPACITOR_RECHARGE_MODIFIER_ROWS = 103
+CAPACITOR_RECHARGE_MODIFIER_NONEMPTY_ROWS = 103
+CAPACITOR_RECHARGE_MODIFIER_MARKED_ROWS = 0
+CAPACITOR_RECHARGE_MODIFIER_ENTRIES = 103
 
 # Bay oracles (docs/bay-capacities-design.md section 3.3): each
 # value read directly from invTypes.csv.bz2 / dgmTypeAttributes.csv.bz2
@@ -1546,11 +1627,12 @@ def main():
     # Modifying attributes worth reading operands for:
     # every modifying id appearing in an ItemModifier/shipID
     # resonance modifier anywhere in the zip, extended to
-    # the hit point modifying attributes so one operand
-    # pass serves both legs (design section 3).
+    # the hit point and capacitor modifying attributes so one
+    # operand pass serves all legs (design section 3).
     wanted_modifying_ids = set()
     wanted_resist_modifying_ids = set()
     wanted_hit_point_modifying_ids = set()
+    wanted_capacitor_modifying_ids = set()
     for modifier_info in effect_modifiers.values():
         for modifier in modifier_info:
             if not (
@@ -1567,8 +1649,14 @@ def main():
                 wanted_hit_point_modifying_ids.add(
                     modifier["modifyingAttributeID"]
                 )
+            if modified_id in CAPACITOR_MODIFIER_ATTRS:
+                wanted_capacitor_modifying_ids.add(
+                    modifier["modifyingAttributeID"]
+                )
     wanted_modifying_ids = (
-        wanted_resist_modifying_ids | wanted_hit_point_modifying_ids
+        wanted_resist_modifying_ids
+        | wanted_hit_point_modifying_ids
+        | wanted_capacitor_modifying_ids
     )
     category_by_type = {}
     for row in inv_types:
@@ -1582,9 +1670,12 @@ def main():
     def modifier_operand_label(attribute_id):
         in_resist = attribute_id in wanted_resist_modifying_ids
         in_hp = attribute_id in wanted_hit_point_modifying_ids
-        if in_hp and not in_resist:
+        in_cap = attribute_id in wanted_capacitor_modifying_ids
+        if in_cap and not in_resist and not in_hp:
+            return "capacitor modifier operand"
+        if in_hp and not in_resist and not in_cap:
             return "hit point modifier operand"
-        if in_resist and not in_hp:
+        if in_resist and not in_hp and not in_cap:
             return "resistance modifier operand"
         return "modifier operand"
 
@@ -1773,6 +1864,162 @@ def main():
         )
         if applicable or unapplied:
             hit_point_modifiers_by_type[type_id] = (
+                applicable,
+                unapplied,
+            )
+
+    # Fitted-module capacitor modifiers
+    # (docs/cap-bonuses-design.md section 3): two per-attribute
+    # families beside the hit point leg, category-7 only, over
+    # ItemModifier/shipID modifiers on 482 (capacity) and 55
+    # (recharge) with operators {2, 4, 6}. Messages say
+    # "capacitor modifier", never "resistance modifier" or
+    # "hit point modifier". Per-attribute classification is
+    # forced by the power relay census row (482 absent, 55
+    # applicable) which a combined per-type predicate would
+    # silently drop.
+    capacitor_capacity_modifiers_by_type = {}
+    for type_id, type_category in category_by_type.items():
+        if type_category != 7:
+            continue
+        triple_list = []
+        for effect_id in effects_by_type.get(type_id, set()):
+            for modifier in effect_modifiers.get(effect_id, []):
+                if (
+                    modifier.get("func") == "ItemModifier"
+                    and modifier.get("domain") == "shipID"
+                    and modifier.get("modifiedAttributeID") == 482
+                ):
+                    triple_list.append(
+                        (
+                            modifier["modifiedAttributeID"],
+                            modifier["modifyingAttributeID"],
+                            modifier["operation"],
+                        )
+                    )
+        for triple, count in Counter(triple_list).items():
+            if count > 1:
+                fail(
+                    f"duplicated capacitor modifier triple "
+                    f"{triple} on type {type_id}"
+                )
+        triples = set(triple_list)
+        if not triples:
+            continue
+        operands = operands_by_type.get(type_id, {})
+        applicable = []
+        has_unsupported = False
+        has_zero = False
+        has_absent = False
+        seen_modified = set()
+        seen_triples = set()
+        for modified_id, modifying_id, operator in sorted(triples):
+            triple = (modified_id, modifying_id, operator)
+            if triple in seen_triples:
+                fail(
+                    f"duplicated capacitor modifier triple "
+                    f"{triple} on type {type_id}"
+                )
+            seen_triples.add(triple)
+            if modifying_id not in operands:
+                has_absent = True
+                continue
+            operand = operands[modifying_id]
+            if operand == 0.0:
+                has_zero = True
+                continue
+            if operator not in CAPACITOR_MODIFIER_OPERATORS:
+                has_unsupported = True
+                continue
+            if modified_id in seen_modified:
+                fail(
+                    f"two applicable capacitor modifier entries "
+                    f"on modified attribute {modified_id} for "
+                    f"type {type_id}"
+                )
+            seen_modified.add(modified_id)
+            applicable.append([modified_id, operator, operand])
+        applicable.sort(
+            key=lambda entry: CAPACITOR_MODIFIER_ORDER.index(entry[0])
+        )
+        unapplied = has_unsupported or (
+            not applicable and not has_zero and has_absent
+        )
+        if applicable or unapplied:
+            capacitor_capacity_modifiers_by_type[type_id] = (
+                applicable,
+                unapplied,
+            )
+
+    capacitor_recharge_modifiers_by_type = {}
+    for type_id, type_category in category_by_type.items():
+        if type_category != 7:
+            continue
+        triple_list = []
+        for effect_id in effects_by_type.get(type_id, set()):
+            for modifier in effect_modifiers.get(effect_id, []):
+                if (
+                    modifier.get("func") == "ItemModifier"
+                    and modifier.get("domain") == "shipID"
+                    and modifier.get("modifiedAttributeID") == 55
+                ):
+                    triple_list.append(
+                        (
+                            modifier["modifiedAttributeID"],
+                            modifier["modifyingAttributeID"],
+                            modifier["operation"],
+                        )
+                    )
+        for triple, count in Counter(triple_list).items():
+            if count > 1:
+                fail(
+                    f"duplicated capacitor modifier triple "
+                    f"{triple} on type {type_id}"
+                )
+        triples = set(triple_list)
+        if not triples:
+            continue
+        operands = operands_by_type.get(type_id, {})
+        applicable = []
+        has_unsupported = False
+        has_zero = False
+        has_absent = False
+        seen_modified = set()
+        seen_triples = set()
+        for modified_id, modifying_id, operator in sorted(triples):
+            triple = (modified_id, modifying_id, operator)
+            if triple in seen_triples:
+                fail(
+                    f"duplicated capacitor modifier triple "
+                    f"{triple} on type {type_id}"
+                )
+            seen_triples.add(triple)
+            if modifying_id not in operands:
+                has_absent = True
+                continue
+            operand = operands[modifying_id]
+            if operand == 0.0:
+                has_zero = True
+                continue
+            if operator not in CAPACITOR_MODIFIER_OPERATORS:
+                has_unsupported = True
+                continue
+            if modified_id in seen_modified:
+                fail(
+                    f"two applicable capacitor modifier entries "
+                    f"on modified attribute {modified_id} for "
+                    f"type {type_id}"
+                )
+            seen_modified.add(modified_id)
+            applicable.append([modified_id, operator, operand])
+        applicable.sort(
+            key=lambda entry: CAPACITOR_MODIFIER_ORDER.index(entry[0])
+        )
+        unapplied = has_unsupported or (
+            not applicable and not has_zero and has_absent
+        )
+        if applicable or unapplied:
+            capacitor_recharge_modifiers_by_type[type_id] = (
                 applicable,
                 unapplied,
             )
@@ -2346,6 +2593,8 @@ def main():
     charge_group_key_counts = Counter()
     resist_modifier_counts = Counter()
     hit_point_modifier_counts = Counter()
+    capacitor_capacity_modifier_counts = Counter()
+    capacitor_recharge_modifier_counts = Counter()
     for row in inv_types:
         if row["published"] != "1":
             continue
@@ -2920,6 +3169,44 @@ def main():
             if mod_unapplied:
                 entry["hitPointModifiersUnapplied"] = True
                 hit_point_modifier_counts["unappliedRows"] += 1
+        # Additive, sparse fitted-module capacitor modifier
+        # emission (design section 3): category 7 rows gain
+        # the four keys after the hit point modifier block,
+        # in locked order capacity then recharge. Each family
+        # emits independently, exactly as if it were its own
+        # hit point leg: a carrier emits
+        # capacitorCapacityModifiers iff it has at least one
+        # applicable capacity entry or is marked capacity-
+        # unapplied, and likewise
+        # capacitorRechargeModifiers for recharge. A marked
+        # type additionally emits that family's unapplied
+        # marker beside the (possibly empty) array. An
+        # all-zero carrier emits neither of that family's
+        # keys. Every other row is byte-identical.
+        if category_id == 7 and type_id in capacitor_capacity_modifiers_by_type:
+            mod_entries, mod_unapplied = capacitor_capacity_modifiers_by_type[
+                type_id
+            ]
+            entry["capacitorCapacityModifiers"] = mod_entries
+            capacitor_capacity_modifier_counts["capacitorCapacityModifiers"] += 1
+            if mod_entries:
+                capacitor_capacity_modifier_counts["nonEmptyRows"] += 1
+            capacitor_capacity_modifier_counts["totalEntries"] += len(mod_entries)
+            if mod_unapplied:
+                entry["capacitorCapacityModifiersUnapplied"] = True
+                capacitor_capacity_modifier_counts["unappliedRows"] += 1
+        if category_id == 7 and type_id in capacitor_recharge_modifiers_by_type:
+            mod_entries, mod_unapplied = capacitor_recharge_modifiers_by_type[
+                type_id
+            ]
+            entry["capacitorRechargeModifiers"] = mod_entries
+            capacitor_recharge_modifier_counts["capacitorRechargeModifiers"] += 1
+            if mod_entries:
+                capacitor_recharge_modifier_counts["nonEmptyRows"] += 1
+            capacitor_recharge_modifier_counts["totalEntries"] += len(mod_entries)
+            if mod_unapplied:
+                entry["capacitorRechargeModifiersUnapplied"] = True
+                capacitor_recharge_modifier_counts["unappliedRows"] += 1
         types.append(entry)
 
     types.sort(key=lambda entry: entry["typeId"])
@@ -3167,6 +3454,129 @@ def main():
             f"hit point modifier total entries "
             f"{hit_point_modifier_counts['totalEntries']}, expected "
             f"{HIT_POINT_MODIFIER_ENTRIES}"
+        )
+
+    # Fitted-module capacitor modifier oracles (design
+    # section 3). A None entries means neither of that
+    # family's keys may be present at all.
+    for type_id, expected, expected_unapplied in CAPACITOR_CAPACITY_MODIFIER_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(
+                f"capacitor capacity modifier oracle type {type_id} "
+                "missing from extract"
+            )
+        if expected is None:
+            if (
+                "capacitorCapacityModifiers" in entry
+                or "capacitorCapacityModifiersUnapplied" in entry
+            ):
+                fail(
+                    f"capacitor capacity modifier oracle type {type_id} "
+                    "carries capacitor capacity modifier keys, expected "
+                    "neither"
+                )
+        else:
+            if entry.get("capacitorCapacityModifiers") != expected:
+                fail(
+                    f"capacitor capacity modifier oracle type {type_id} "
+                    f"capacitorCapacityModifiers="
+                    f"{entry.get('capacitorCapacityModifiers')!r}, "
+                    f"expected {expected!r}"
+                )
+            if (
+                entry.get("capacitorCapacityModifiersUnapplied", False)
+                != expected_unapplied
+            ):
+                fail(
+                    f"capacitor capacity modifier oracle type {type_id} "
+                    "unapplied marker "
+                    f"{entry.get('capacitorCapacityModifiersUnapplied')!r}, "
+                    f"expected {expected_unapplied!r}"
+                )
+    if capacitor_capacity_modifier_counts["capacitorCapacityModifiers"] != CAPACITOR_CAPACITY_MODIFIER_ROWS:
+        fail(
+            f"capacitor capacity modifier rows "
+            f"{capacitor_capacity_modifier_counts['capacitorCapacityModifiers']}, "
+            f"expected {CAPACITOR_CAPACITY_MODIFIER_ROWS}"
+        )
+    if capacitor_capacity_modifier_counts["nonEmptyRows"] != CAPACITOR_CAPACITY_MODIFIER_NONEMPTY_ROWS:
+        fail(
+            f"capacitor capacity modifier non-empty rows "
+            f"{capacitor_capacity_modifier_counts['nonEmptyRows']}, expected "
+            f"{CAPACITOR_CAPACITY_MODIFIER_NONEMPTY_ROWS}"
+        )
+    if capacitor_capacity_modifier_counts["unappliedRows"] != CAPACITOR_CAPACITY_MODIFIER_MARKED_ROWS:
+        fail(
+            f"capacitor capacity modifier marked rows "
+            f"{capacitor_capacity_modifier_counts['unappliedRows']}, expected "
+            f"{CAPACITOR_CAPACITY_MODIFIER_MARKED_ROWS}"
+        )
+    if capacitor_capacity_modifier_counts["totalEntries"] != CAPACITOR_CAPACITY_MODIFIER_ENTRIES:
+        fail(
+            f"capacitor capacity modifier total entries "
+            f"{capacitor_capacity_modifier_counts['totalEntries']}, expected "
+            f"{CAPACITOR_CAPACITY_MODIFIER_ENTRIES}"
+        )
+
+    for type_id, expected, expected_unapplied in CAPACITOR_RECHARGE_MODIFIER_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(
+                f"capacitor recharge modifier oracle type {type_id} "
+                "missing from extract"
+            )
+        if expected is None:
+            if (
+                "capacitorRechargeModifiers" in entry
+                or "capacitorRechargeModifiersUnapplied" in entry
+            ):
+                fail(
+                    f"capacitor recharge modifier oracle type {type_id} "
+                    "carries capacitor recharge modifier keys, expected "
+                    "neither"
+                )
+        else:
+            if entry.get("capacitorRechargeModifiers") != expected:
+                fail(
+                    f"capacitor recharge modifier oracle type {type_id} "
+                    f"capacitorRechargeModifiers="
+                    f"{entry.get('capacitorRechargeModifiers')!r}, "
+                    f"expected {expected!r}"
+                )
+            if (
+                entry.get("capacitorRechargeModifiersUnapplied", False)
+                != expected_unapplied
+            ):
+                fail(
+                    f"capacitor recharge modifier oracle type {type_id} "
+                    "unapplied marker "
+                    f"{entry.get('capacitorRechargeModifiersUnapplied')!r}, "
+                    f"expected {expected_unapplied!r}"
+                )
+    if capacitor_recharge_modifier_counts["capacitorRechargeModifiers"] != CAPACITOR_RECHARGE_MODIFIER_ROWS:
+        fail(
+            f"capacitor recharge modifier rows "
+            f"{capacitor_recharge_modifier_counts['capacitorRechargeModifiers']}, "
+            f"expected {CAPACITOR_RECHARGE_MODIFIER_ROWS}"
+        )
+    if capacitor_recharge_modifier_counts["nonEmptyRows"] != CAPACITOR_RECHARGE_MODIFIER_NONEMPTY_ROWS:
+        fail(
+            f"capacitor recharge modifier non-empty rows "
+            f"{capacitor_recharge_modifier_counts['nonEmptyRows']}, expected "
+            f"{CAPACITOR_RECHARGE_MODIFIER_NONEMPTY_ROWS}"
+        )
+    if capacitor_recharge_modifier_counts["unappliedRows"] != CAPACITOR_RECHARGE_MODIFIER_MARKED_ROWS:
+        fail(
+            f"capacitor recharge modifier marked rows "
+            f"{capacitor_recharge_modifier_counts['unappliedRows']}, expected "
+            f"{CAPACITOR_RECHARGE_MODIFIER_MARKED_ROWS}"
+        )
+    if capacitor_recharge_modifier_counts["totalEntries"] != CAPACITOR_RECHARGE_MODIFIER_ENTRIES:
+        fail(
+            f"capacitor recharge modifier total entries "
+            f"{capacitor_recharge_modifier_counts['totalEntries']}, expected "
+            f"{CAPACITOR_RECHARGE_MODIFIER_ENTRIES}"
         )
 
     # Bay oracles (design section 3.3). A None expected value
@@ -3443,6 +3853,129 @@ def main():
                     "without hitPointModifiers"
                 )
             if entry["hitPointModifiersUnapplied"] is not True:
+                fail(
+                    f"type {entry['typeId']} unapplied marker "
+                    "not true"
+                )
+        # Fitted-module capacitor modifier invariants
+        # (design section 3): every present capacitorCapacity
+        # value is on a category 7 row; its entries' modified
+        # id is 482 with operators in {2, 4, 6}, operands finite
+        # and != 0.0, no duplicate modified id;
+        # capacitorCapacityModifiersUnapplied appears only beside
+        # the capacity array and only as true. Per-family.
+        if "capacitorCapacityModifiers" in entry:
+            if entry["categoryId"] != 7:
+                fail(
+                    f"non-module type {entry['typeId']} carries "
+                    "capacitorCapacityModifiers"
+                )
+            modified_ids = []
+            for triple in entry["capacitorCapacityModifiers"]:
+                if (
+                    not isinstance(triple, list)
+                    or len(triple) != 3
+                    or not all(
+                        isinstance(part, (int, float))
+                        and not isinstance(part, bool)
+                        for part in triple
+                    )
+                ):
+                    fail(
+                        f"type {entry['typeId']} malformed "
+                        f"capacitor capacity modifier {triple!r}"
+                    )
+                modified_id, operator, operand = triple
+                if modified_id != 482:
+                    fail(
+                        f"type {entry['typeId']} modified id "
+                        f"{modified_id} not a capacitor capacity"
+                    )
+                if operator not in CAPACITOR_MODIFIER_OPERATORS:
+                    fail(
+                        f"type {entry['typeId']} operator "
+                        f"{operator} not in (2, 4, 6)"
+                    )
+                if (
+                    not math.isfinite(float(operand))
+                    or float(operand) == 0.0
+                ):
+                    fail(
+                        f"type {entry['typeId']} operand "
+                        f"{operand!r} not finite or zero"
+                    )
+                modified_ids.append(modified_id)
+            if len(modified_ids) != len(set(modified_ids)):
+                fail(
+                    f"type {entry['typeId']} capacitor capacity modifiers "
+                    "duplicated"
+                )
+        if "capacitorCapacityModifiersUnapplied" in entry:
+            if "capacitorCapacityModifiers" not in entry:
+                fail(
+                    f"type {entry['typeId']} unapplied marker "
+                    "without capacitorCapacityModifiers"
+                )
+            if entry["capacitorCapacityModifiersUnapplied"] is not True:
+                fail(
+                    f"type {entry['typeId']} unapplied marker "
+                    "not true"
+                )
+        # Fitted-module capacitor recharge modifier invariants
+        # (design section 3): same shape, modified id 55.
+        if "capacitorRechargeModifiers" in entry:
+            if entry["categoryId"] != 7:
+                fail(
+                    f"non-module type {entry['typeId']} carries "
+                    "capacitorRechargeModifiers"
+                )
+            modified_ids = []
+            for triple in entry["capacitorRechargeModifiers"]:
+                if (
+                    not isinstance(triple, list)
+                    or len(triple) != 3
+                    or not all(
+                        isinstance(part, (int, float))
+                        and not isinstance(part, bool)
+                        for part in triple
+                    )
+                ):
+                    fail(
+                        f"type {entry['typeId']} malformed "
+                        f"capacitor recharge modifier {triple!r}"
+                    )
+                modified_id, operator, operand = triple
+                if modified_id != 55:
+                    fail(
+                        f"type {entry['typeId']} modified id "
+                        f"{modified_id} not a capacitor recharge"
+                    )
+                if operator not in CAPACITOR_MODIFIER_OPERATORS:
+                    fail(
+                        f"type {entry['typeId']} operator "
+                        f"{operator} not in (2, 4, 6)"
+                    )
+                if (
+                    not math.isfinite(float(operand))
+                    or float(operand) == 0.0
+                ):
+                    fail(
+                        f"type {entry['typeId']} operand "
+                        f"{operand!r} not finite or zero"
+                    )
+                modified_ids.append(modified_id)
+            if len(modified_ids) != len(set(modified_ids)):
+                fail(
+                    f"type {entry['typeId']} capacitor recharge modifiers "
+                    "duplicated"
+                )
+        if "capacitorRechargeModifiersUnapplied" in entry:
+            if "capacitorRechargeModifiers" not in entry:
+                fail(
+                    f"type {entry['typeId']} unapplied marker "
+                    "without capacitorRechargeModifiers"
+                )
+            if entry["capacitorRechargeModifiersUnapplied"] is not True:
                 fail(
                     f"type {entry['typeId']} unapplied marker "
                     "not true"
@@ -4248,6 +4781,18 @@ def main():
         f"nonEmptyRows={hit_point_modifier_counts['nonEmptyRows']} "
         f"unappliedRows={hit_point_modifier_counts['unappliedRows']} "
         f"totalEntries={hit_point_modifier_counts['totalEntries']}"
+    )
+    print(
+        f"capacitor_capacity_modifier_keys capacitorCapacityModifiers={capacitor_capacity_modifier_counts['capacitorCapacityModifiers']} "
+        f"nonEmptyRows={capacitor_capacity_modifier_counts['nonEmptyRows']} "
+        f"unappliedRows={capacitor_capacity_modifier_counts['unappliedRows']} "
+        f"totalEntries={capacitor_capacity_modifier_counts['totalEntries']}"
+    )
+    print(
+        f"capacitor_recharge_modifier_keys capacitorRechargeModifiers={capacitor_recharge_modifier_counts['capacitorRechargeModifiers']} "
+        f"nonEmptyRows={capacitor_recharge_modifier_counts['nonEmptyRows']} "
+        f"unappliedRows={capacitor_recharge_modifier_counts['unappliedRows']} "
+        f"totalEntries={capacitor_recharge_modifier_counts['totalEntries']}"
     )
     print(
         f"bay_keys volume={bay_key_counts['volume']} "
