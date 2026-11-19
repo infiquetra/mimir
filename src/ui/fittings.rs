@@ -45,7 +45,8 @@ use crate::fitting::ship_ehp::{
     ShipBaseEhpOutcome,
 };
 use crate::fitting::ship_nav_targeting::{
-    ship_nav_targeting, ShipNavTargeting, ShipNavTargetingOutcome,
+    ship_nav_targeting, ship_nav_targeting_with_module_bonuses, BonusedShipNavTargeting,
+    BonusedShipNavTargetingOutcome, ShipNavTargeting, ShipNavTargetingOutcome,
 };
 use crate::fitting::ship_peak_recharge::{
     ship_base_peak_recharge, ship_shield_peak_recharge_with_module_bonuses,
@@ -1991,6 +1992,27 @@ const FITTING_SHIP_NAV_TARGETING_NO_CATALOGUE: &str =
     "Ship navigation and targeting unavailable: Mimir's bundled item data failed to load.";
 const FITTING_SHIP_NAV_TARGETING_NO_SHIP_DATA: &str = "Ship navigation and targeting unavailable: Mimir's bundled item data has no navigation or targeting data for this fitting's ship.";
 
+/// Locked heading for the ship navigation and targeting block
+/// with fitted module bonuses (navigation and targeting
+/// bonuses design section 7). The "(with fitted module
+/// bonuses)" qualifier keeps every bonused hull number from
+/// reading as a base value or as a complete fitted total.
+const FITTINGS_SHIP_NAV_TARGETING_WITH_BONUSES_HEADING: &str =
+    "Ship navigation and targeting (with fitted module bonuses)";
+
+/// Locked disclosure: the numbers are the hull's navigation
+/// and targeting values with the fitted modules' and rigs'
+/// navigation and targeting bonuses applied, align time
+/// re-derived from the bonused agility and mass, counted as
+/// active, with max speed excluded (navigation and targeting
+/// bonuses design section 7). This block's own sentence; the
+/// base block's disclosure names a different set.
+const FITTING_SHIP_NAV_TARGETING_WITH_BONUSES_DISCLOSURE: &str = "These navigation and targeting values add the fitted modules' and rigs' navigation and targeting bonuses from Mimir's bundled item data to the base values above. Align time follows from the bonused agility and mass. Every fitted module is counted as active, because the fitting data does not say which modules are on. Ship bonuses, subsystems, skills, implants, loaded scripts, and navigation or targeting changes from anything outside this ship are not applied, and max speed is not included: it is a base value in the Ship block above, and afterburner and microwarpdrive speed bonuses are not applied anywhere, so these numbers can differ from EVE.";
+
+const FITTING_SHIP_NAV_TARGETING_WITH_BONUSES_NO_CATALOGUE: &str =
+    "Ship navigation and targeting with fitted module bonuses unavailable: Mimir's bundled item data failed to load.";
+const FITTING_SHIP_NAV_TARGETING_WITH_BONUSES_NO_SHIP_DATA: &str = "Ship navigation and targeting with fitted module bonuses unavailable: Mimir's bundled item data has no navigation or targeting data for this fitting's ship.";
+
 /// One CPU or power grid line (design section 7): `left` with the
 /// room remaining, or `over` with the positive overage. Exactly at
 /// budget is `0.0 left`, in the normal colour.
@@ -2235,6 +2257,44 @@ fn power_grid_output_unapplied_line(unapplied: usize) -> Option<String> {
     } else {
         Some(format!(
             "{unapplied} fitted modules have power grid output bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied."
+        ))
+    }
+}
+
+/// Excluded-module disclosure for the bonused navigation
+/// and targeting block, or `None` when every counted
+/// fitting row had a catalogue row (navigation and
+/// targeting bonuses design section 7).
+fn bonused_nav_targeting_excluded_line(excluded: usize) -> Option<String> {
+    if excluded == 0 {
+        None
+    } else if excluded == 1 {
+        Some("1 fitted module is not in Mimir's bundled item data, so any navigation or targeting bonus from it is not counted.".to_string())
+    } else {
+        Some(format!("{excluded} fitted modules are not in Mimir's bundled item data, so any navigation or targeting bonuses from them are not counted."))
+    }
+}
+
+/// Per-attribute unapplied-carrier disclosure for the
+/// bonused navigation and targeting block, or `None` when
+/// every counted carrier's bonus in that attribute could
+/// be applied (navigation and targeting bonuses design
+/// section 7). `noun` is the attribute's block vocabulary
+/// in `NAV_TARGETING_ORDER`: warp speed, agility, mass,
+/// signature radius, targeting range, scan resolution,
+/// RADAR/Ladar/Magnetometric/Gravimetric sensor strength,
+/// max locked targets. One helper for eleven dimensions,
+/// never summed.
+fn bonused_nav_targeting_unapplied_line(noun: &str, unapplied: usize) -> Option<String> {
+    if unapplied == 0 {
+        None
+    } else if unapplied == 1 {
+        Some(format!(
+            "1 fitted module has a {noun} bonus Mimir's bundled item data cannot describe, so that bonus is not applied."
+        ))
+    } else {
+        Some(format!(
+            "{unapplied} fitted modules have {noun} bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied."
         ))
     }
 }
@@ -2900,6 +2960,127 @@ fn render_ship_nav_targeting(
         ShipNavTargetingOutcome::Unavailable => {
             ui.heading(FITTINGS_SHIP_NAV_TARGETING_HEADING);
             ui.label(FITTING_SHIP_NAV_TARGETING_NO_SHIP_DATA);
+        }
+    }
+}
+
+/// The bonused block's lines in locked order (the eight
+/// shipped number lines, then the twelve count lines that
+/// apply — excluded, then eleven per-attribute unapplied in
+/// `NAV_TARGETING_ORDER`). The numbers reuse the base
+/// block's helper verbatim; the count lines are separate
+/// per-dimension disclosures, never summed. This takes the
+/// `Available` payload, so there is no `Unavailable` case
+/// to empty out — the renderer branches on the outcome
+/// enum first.
+fn ship_nav_targeting_with_bonuses_lines(bonused: &BonusedShipNavTargeting) -> Vec<String> {
+    let mut lines = ship_nav_targeting_lines(&bonused.targeting);
+    if let Some(line) = bonused_nav_targeting_excluded_line(bonused.excluded_modules) {
+        lines.push(line);
+    }
+    if let Some(line) =
+        bonused_nav_targeting_unapplied_line("warp speed", bonused.warp_speed_unapplied_modules)
+    {
+        lines.push(line);
+    }
+    if let Some(line) =
+        bonused_nav_targeting_unapplied_line("agility", bonused.agility_unapplied_modules)
+    {
+        lines.push(line);
+    }
+    if let Some(line) = bonused_nav_targeting_unapplied_line("mass", bonused.mass_unapplied_modules)
+    {
+        lines.push(line);
+    }
+    if let Some(line) = bonused_nav_targeting_unapplied_line(
+        "signature radius",
+        bonused.signature_radius_unapplied_modules,
+    ) {
+        lines.push(line);
+    }
+    if let Some(line) = bonused_nav_targeting_unapplied_line(
+        "targeting range",
+        bonused.max_target_range_unapplied_modules,
+    ) {
+        lines.push(line);
+    }
+    if let Some(line) = bonused_nav_targeting_unapplied_line(
+        "scan resolution",
+        bonused.scan_resolution_unapplied_modules,
+    ) {
+        lines.push(line);
+    }
+    if let Some(line) = bonused_nav_targeting_unapplied_line(
+        "RADAR sensor strength",
+        bonused.sensor_radar_unapplied_modules,
+    ) {
+        lines.push(line);
+    }
+    if let Some(line) = bonused_nav_targeting_unapplied_line(
+        "Ladar sensor strength",
+        bonused.sensor_ladar_unapplied_modules,
+    ) {
+        lines.push(line);
+    }
+    if let Some(line) = bonused_nav_targeting_unapplied_line(
+        "Magnetometric sensor strength",
+        bonused.sensor_magnetometric_unapplied_modules,
+    ) {
+        lines.push(line);
+    }
+    if let Some(line) = bonused_nav_targeting_unapplied_line(
+        "Gravimetric sensor strength",
+        bonused.sensor_gravimetric_unapplied_modules,
+    ) {
+        lines.push(line);
+    }
+    if let Some(line) = bonused_nav_targeting_unapplied_line(
+        "max locked targets",
+        bonused.max_locked_targets_unapplied_modules,
+    ) {
+        lines.push(line);
+    }
+    lines
+}
+
+/// Ship navigation and targeting with fitted module bonuses
+/// block shared by the saved and imported fitting details
+/// (navigation and targeting bonuses design sections 6-7).
+/// Depends only on the fitting and the catalogue: no skill
+/// levels, no SDE handle, so it renders identically for
+/// every viewing character. The heading always renders, so
+/// the view never silently omits the feature; `Unavailable`
+/// swaps all lines and the disclosure for the fixed
+/// unavailable sentence. The number lines reuse the shipped
+/// builder verbatim over the bonused struct; the twelve
+/// count lines (one excluded, eleven per-attribute
+/// unapplied in `NAV_TARGETING_ORDER`) follow the numbers
+/// and precede the disclosure, each `None` at zero and
+/// never summed. The base block above is untouched. Renders
+/// even when the bonused numbers equal the base numbers.
+/// Logs nothing itself: the pure function logs nothing
+/// (render cadence).
+fn render_ship_nav_targeting_with_module_bonuses(
+    ui: &mut egui::Ui,
+    fitting: &CharacterFitting,
+    fitting_types: Option<&FittingTypes>,
+) {
+    let Some(catalogue) = fitting_types else {
+        ui.heading(FITTINGS_SHIP_NAV_TARGETING_WITH_BONUSES_HEADING);
+        ui.label(FITTING_SHIP_NAV_TARGETING_WITH_BONUSES_NO_CATALOGUE);
+        return;
+    };
+    match ship_nav_targeting_with_module_bonuses(fitting, catalogue) {
+        BonusedShipNavTargetingOutcome::Available(bonused) => {
+            ui.heading(FITTINGS_SHIP_NAV_TARGETING_WITH_BONUSES_HEADING);
+            for line in ship_nav_targeting_with_bonuses_lines(&bonused) {
+                ui.label(line);
+            }
+            ui.label(FITTING_SHIP_NAV_TARGETING_WITH_BONUSES_DISCLOSURE);
+        }
+        BonusedShipNavTargetingOutcome::Unavailable => {
+            ui.heading(FITTINGS_SHIP_NAV_TARGETING_WITH_BONUSES_HEADING);
+            ui.label(FITTING_SHIP_NAV_TARGETING_WITH_BONUSES_NO_SHIP_DATA);
         }
     }
 }
@@ -4226,6 +4407,7 @@ fn fittings_import_panel(
     render_ship_base_ehp(ui, &synth, fitting_types);
     render_ship_ehp_with_module_bonuses(ui, &synth, fitting_types);
     render_ship_nav_targeting(ui, &synth, fitting_types);
+    render_ship_nav_targeting_with_module_bonuses(ui, &synth, fitting_types);
     // Loaded charges, in item order (design section 8.2).
     let charged_total = imported
         .items
@@ -4543,6 +4725,7 @@ pub fn show(
                     render_ship_base_ehp(ui, selected, fitting_types);
                     render_ship_ehp_with_module_bonuses(ui, selected, fitting_types);
                     render_ship_nav_targeting(ui, selected, fitting_types);
+                    render_ship_nav_targeting_with_module_bonuses(ui, selected, fitting_types);
                     if ui.button("Copy as EFT").clicked() {
                         tracing::info!(
                             "[FITTING] copy as EFT requested for fitting name={}",
@@ -9051,6 +9234,346 @@ mod tests {
             }
         };
         assert_eq!(lines_for(&synth_dna), rifter_block);
+    }
+
+    // Full synthetic bonused targeting struct fixture: the
+    // shipped Rifter base values with the oracle-4 grouped
+    // mass, so the grouping path is exercised. All counts
+    // zero isolates the eight number lines.
+    fn full_bonused_nav_targeting() -> BonusedShipNavTargeting {
+        BonusedShipNavTargeting {
+            targeting: ShipNavTargeting {
+                warp_speed: Some(5.0),
+                align_time_secs: Some(4.7),
+                agility: Some(3.2),
+                mass: Some(4_817_000.0),
+                signature_radius: Some(35.0),
+                max_target_range_km: Some(22.5),
+                scan_resolution: Some(660.0),
+                sensor_radar: Some(0.0),
+                sensor_ladar: Some(8.0),
+                sensor_magnetometric: Some(0.0),
+                sensor_gravimetric: Some(0.0),
+                max_locked_targets: Some(4),
+            },
+            excluded_modules: 0,
+            warp_speed_unapplied_modules: 0,
+            agility_unapplied_modules: 0,
+            mass_unapplied_modules: 0,
+            signature_radius_unapplied_modules: 0,
+            max_target_range_unapplied_modules: 0,
+            scan_resolution_unapplied_modules: 0,
+            sensor_radar_unapplied_modules: 0,
+            sensor_ladar_unapplied_modules: 0,
+            sensor_magnetometric_unapplied_modules: 0,
+            sensor_gravimetric_unapplied_modules: 0,
+            max_locked_targets_unapplied_modules: 0,
+        }
+    }
+
+    // Pin 29 (navigation and targeting bonuses design
+    // section 8): the eight shipped lines verbatim through
+    // the unedited builder — one-decimal formatter, grouped
+    // mass 4,817,000.0 kg (oracle 4), joined sensors, bare
+    // count — with no agility line and no max-speed line.
+    #[test]
+    fn ship_nav_targeting_with_bonuses_lines_match_the_locked_templates() {
+        let full = full_bonused_nav_targeting();
+        assert_eq!(
+            ship_nav_targeting_with_bonuses_lines(&full),
+            [
+                "Warp speed: 5.0 AU/s",
+                "Align time: 4.7 s",
+                "Mass: 4,817,000.0 kg",
+                "Signature radius: 35.0 m",
+                "Targeting range: 22.5 km",
+                "Scan resolution: 660.0 mm",
+                "Sensor strength: RADAR 0.0 points, Ladar 8.0 points, Magnetometric 0.0 points, Gravimetric 0.0 points",
+                "Max locked targets: 4",
+            ]
+        );
+        // None fields omit exactly their lines; a present
+        // 0.0 warp renders like any other value.
+        let mut partial = full_bonused_nav_targeting();
+        partial.targeting.warp_speed = None;
+        partial.targeting.scan_resolution = None;
+        partial.targeting.max_locked_targets = None;
+        assert_eq!(
+            ship_nav_targeting_with_bonuses_lines(&partial),
+            [
+                "Align time: 4.7 s",
+                "Mass: 4,817,000.0 kg",
+                "Signature radius: 35.0 m",
+                "Targeting range: 22.5 km",
+                "Sensor strength: RADAR 0.0 points, Ladar 8.0 points, Magnetometric 0.0 points, Gravimetric 0.0 points",
+            ]
+        );
+        let mut zero_warp = full_bonused_nav_targeting();
+        zero_warp.targeting.warp_speed = Some(0.0);
+        let zero_lines = ship_nav_targeting_with_bonuses_lines(&zero_warp);
+        assert_eq!(zero_lines[0], "Warp speed: 0.0 AU/s");
+        for bonused in [&full, &partial, &zero_warp] {
+            let lines = ship_nav_targeting_with_bonuses_lines(bonused);
+            assert!(
+                lines
+                    .iter()
+                    .all(|line| !line.starts_with("Agility") && !line.starts_with("Max speed")),
+                "no agility or max-speed line: {lines:?}"
+            );
+        }
+    }
+
+    // Pin 30: heading, disclosure, and both unavailable
+    // constants equal section 7 verbatim; excluded
+    // singular/plural; the unapplied template instantiated
+    // for all eleven nouns with singular and plural
+    // asserted for warp speed and max locked targets and
+    // None at zero for all.
+    #[test]
+    fn ship_nav_targeting_with_bonuses_wording_and_count_helpers() {
+        assert_eq!(
+            FITTINGS_SHIP_NAV_TARGETING_WITH_BONUSES_HEADING,
+            "Ship navigation and targeting (with fitted module bonuses)"
+        );
+        assert_eq!(
+            FITTING_SHIP_NAV_TARGETING_WITH_BONUSES_NO_CATALOGUE,
+            "Ship navigation and targeting with fitted module bonuses unavailable: Mimir's bundled item data failed to load."
+        );
+        assert_eq!(
+            FITTING_SHIP_NAV_TARGETING_WITH_BONUSES_NO_SHIP_DATA,
+            "Ship navigation and targeting with fitted module bonuses unavailable: Mimir's bundled item data has no navigation or targeting data for this fitting's ship."
+        );
+        assert_eq!(
+            FITTING_SHIP_NAV_TARGETING_WITH_BONUSES_DISCLOSURE,
+            "These navigation and targeting values add the fitted modules' and rigs' navigation and targeting bonuses from Mimir's bundled item data to the base values above. Align time follows from the bonused agility and mass. Every fitted module is counted as active, because the fitting data does not say which modules are on. Ship bonuses, subsystems, skills, implants, loaded scripts, and navigation or targeting changes from anything outside this ship are not applied, and max speed is not included: it is a base value in the Ship block above, and afterburner and microwarpdrive speed bonuses are not applied anywhere, so these numbers can differ from EVE."
+        );
+        assert_eq!(bonused_nav_targeting_excluded_line(0), None);
+        assert_eq!(
+            bonused_nav_targeting_excluded_line(1).as_deref(),
+            Some("1 fitted module is not in Mimir's bundled item data, so any navigation or targeting bonus from it is not counted.")
+        );
+        assert_eq!(
+            bonused_nav_targeting_excluded_line(2).as_deref(),
+            Some("2 fitted modules are not in Mimir's bundled item data, so any navigation or targeting bonuses from them are not counted.")
+        );
+        let nouns = [
+            "warp speed",
+            "agility",
+            "mass",
+            "signature radius",
+            "targeting range",
+            "scan resolution",
+            "RADAR sensor strength",
+            "Ladar sensor strength",
+            "Magnetometric sensor strength",
+            "Gravimetric sensor strength",
+            "max locked targets",
+        ];
+        for noun in nouns {
+            assert_eq!(bonused_nav_targeting_unapplied_line(noun, 0), None);
+            assert_eq!(
+                bonused_nav_targeting_unapplied_line(noun, 1),
+                Some(format!(
+                    "1 fitted module has a {noun} bonus Mimir's bundled item data cannot describe, so that bonus is not applied."
+                ))
+            );
+            assert_eq!(
+                bonused_nav_targeting_unapplied_line(noun, 2),
+                Some(format!(
+                    "2 fitted modules have {noun} bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied."
+                ))
+            );
+        }
+        // Verbatim anchors for the two named nouns.
+        assert_eq!(
+            bonused_nav_targeting_unapplied_line("warp speed", 1).as_deref(),
+            Some("1 fitted module has a warp speed bonus Mimir's bundled item data cannot describe, so that bonus is not applied.")
+        );
+        assert_eq!(
+            bonused_nav_targeting_unapplied_line("warp speed", 3).as_deref(),
+            Some("3 fitted modules have warp speed bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied.")
+        );
+        assert_eq!(
+            bonused_nav_targeting_unapplied_line("max locked targets", 1).as_deref(),
+            Some("1 fitted module has a max locked targets bonus Mimir's bundled item data cannot describe, so that bonus is not applied.")
+        );
+        assert_eq!(
+            bonused_nav_targeting_unapplied_line("max locked targets", 3).as_deref(),
+            Some("3 fitted modules have max locked targets bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied.")
+        );
+    }
+
+    // Count-line order: numbers first in shipped order,
+    // then the excluded line, then the eleven unapplied
+    // lines in NAV_TARGETING_ORDER. A single non-zero
+    // count renders only its own line in place.
+    #[test]
+    fn ship_nav_targeting_with_bonuses_count_line_order() {
+        let mut bonused = full_bonused_nav_targeting();
+        bonused.excluded_modules = 2;
+        bonused.mass_unapplied_modules = 1;
+        bonused.max_locked_targets_unapplied_modules = 4;
+        assert_eq!(
+            ship_nav_targeting_with_bonuses_lines(&bonused),
+            [
+                "Warp speed: 5.0 AU/s",
+                "Align time: 4.7 s",
+                "Mass: 4,817,000.0 kg",
+                "Signature radius: 35.0 m",
+                "Targeting range: 22.5 km",
+                "Scan resolution: 660.0 mm",
+                "Sensor strength: RADAR 0.0 points, Ladar 8.0 points, Magnetometric 0.0 points, Gravimetric 0.0 points",
+                "Max locked targets: 4",
+                "2 fitted modules are not in Mimir's bundled item data, so any navigation or targeting bonuses from them are not counted.",
+                "1 fitted module has a mass bonus Mimir's bundled item data cannot describe, so that bonus is not applied.",
+                "4 fitted modules have max locked targets bonuses Mimir's bundled item data cannot describe, so those bonuses are not applied.",
+            ]
+        );
+    }
+
+    // Pin 31: the hostile bound — every unapplied count at
+    // 1 renders exactly eleven unapplied lines in
+    // NAV_TARGETING_ORDER (plus the excluded line at 1 for
+    // twelve count lines), after the eight number lines.
+    #[test]
+    fn ship_nav_targeting_with_bonuses_all_eleven_count_lines() {
+        let bonused = BonusedShipNavTargeting {
+            excluded_modules: 1,
+            warp_speed_unapplied_modules: 1,
+            agility_unapplied_modules: 1,
+            mass_unapplied_modules: 1,
+            signature_radius_unapplied_modules: 1,
+            max_target_range_unapplied_modules: 1,
+            scan_resolution_unapplied_modules: 1,
+            sensor_radar_unapplied_modules: 1,
+            sensor_ladar_unapplied_modules: 1,
+            sensor_magnetometric_unapplied_modules: 1,
+            sensor_gravimetric_unapplied_modules: 1,
+            max_locked_targets_unapplied_modules: 1,
+            ..full_bonused_nav_targeting()
+        };
+        let lines = ship_nav_targeting_with_bonuses_lines(&bonused);
+        assert_eq!(
+            lines,
+            [
+                "Warp speed: 5.0 AU/s",
+                "Align time: 4.7 s",
+                "Mass: 4,817,000.0 kg",
+                "Signature radius: 35.0 m",
+                "Targeting range: 22.5 km",
+                "Scan resolution: 660.0 mm",
+                "Sensor strength: RADAR 0.0 points, Ladar 8.0 points, Magnetometric 0.0 points, Gravimetric 0.0 points",
+                "Max locked targets: 4",
+                "1 fitted module is not in Mimir's bundled item data, so any navigation or targeting bonus from it is not counted.",
+                "1 fitted module has a warp speed bonus Mimir's bundled item data cannot describe, so that bonus is not applied.",
+                "1 fitted module has a agility bonus Mimir's bundled item data cannot describe, so that bonus is not applied.",
+                "1 fitted module has a mass bonus Mimir's bundled item data cannot describe, so that bonus is not applied.",
+                "1 fitted module has a signature radius bonus Mimir's bundled item data cannot describe, so that bonus is not applied.",
+                "1 fitted module has a targeting range bonus Mimir's bundled item data cannot describe, so that bonus is not applied.",
+                "1 fitted module has a scan resolution bonus Mimir's bundled item data cannot describe, so that bonus is not applied.",
+                "1 fitted module has a RADAR sensor strength bonus Mimir's bundled item data cannot describe, so that bonus is not applied.",
+                "1 fitted module has a Ladar sensor strength bonus Mimir's bundled item data cannot describe, so that bonus is not applied.",
+                "1 fitted module has a Magnetometric sensor strength bonus Mimir's bundled item data cannot describe, so that bonus is not applied.",
+                "1 fitted module has a Gravimetric sensor strength bonus Mimir's bundled item data cannot describe, so that bonus is not applied.",
+                "1 fitted module has a max locked targets bonus Mimir's bundled item data cannot describe, so that bonus is not applied.",
+            ]
+        );
+        assert_eq!(lines.len(), 20);
+    }
+
+    // Pin 32: demo story over the real bundle. Demo Brawler
+    // and Mission Runner render the base Rifter numbers in
+    // the bonused block, Brawler with the excluded line at
+    // 1, Mission Runner with none; Demo Runner renders the
+    // base Punisher numbers with no count line. Built from
+    // the real demo fixture over the real catalogue, so
+    // fixture or catalogue drift fails here.
+    #[test]
+    fn demo_fixture_ship_nav_targeting_with_bonuses_match_the_locked_demo_story() {
+        use crate::demo::data::DEMO_FITTINGS_JSON;
+
+        #[derive(Debug, serde::Deserialize)]
+        struct DemoFittingEntry {
+            fittings: Vec<CharacterFitting>,
+        }
+
+        let by_character: HashMap<String, DemoFittingEntry> =
+            serde_json::from_str(DEMO_FITTINGS_JSON).expect("demo fittings fixture parses");
+        let all: Vec<CharacterFitting> = by_character
+            .values()
+            .flat_map(|entry| entry.fittings.iter().cloned())
+            .collect();
+        let find = |name: &str| {
+            all.iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("demo fitting {name} present"))
+                .clone()
+        };
+        let catalogue = FittingTypes::load_bundled().expect("bundled catalogue loads");
+        let bonused_for = |fitting: &CharacterFitting| match ship_nav_targeting_with_module_bonuses(
+            fitting, &catalogue,
+        ) {
+            BonusedShipNavTargetingOutcome::Available(bonused) => {
+                ship_nav_targeting_with_bonuses_lines(&bonused)
+            }
+            BonusedShipNavTargetingOutcome::Unavailable => {
+                panic!("demo fitting must have bonused navigation and targeting")
+            }
+        };
+        let base_for = |fitting: &CharacterFitting| match ship_nav_targeting(fitting, &catalogue) {
+            ShipNavTargetingOutcome::Available(targeting) => ship_nav_targeting_lines(&targeting),
+            ShipNavTargetingOutcome::Unavailable => {
+                panic!("demo fitting must have base navigation and targeting")
+            }
+        };
+
+        let rifter_numbers = [
+            "Warp speed: 5.0 AU/s",
+            "Align time: 4.7 s",
+            "Mass: 1,067,000.0 kg",
+            "Signature radius: 35.0 m",
+            "Targeting range: 22.5 km",
+            "Scan resolution: 660.0 mm",
+            "Sensor strength: RADAR 0.0 points, Ladar 8.0 points, Magnetometric 0.0 points, Gravimetric 0.0 points",
+            "Max locked targets: 4",
+        ];
+        assert_eq!(base_for(&find("Demo Brawler")), rifter_numbers);
+        assert_eq!(
+            bonused_for(&find("Demo Brawler")),
+            [
+                rifter_numbers[0],
+                rifter_numbers[1],
+                rifter_numbers[2],
+                rifter_numbers[3],
+                rifter_numbers[4],
+                rifter_numbers[5],
+                rifter_numbers[6],
+                rifter_numbers[7],
+                "1 fitted module is not in Mimir's bundled item data, so any navigation or targeting bonus from it is not counted.",
+            ],
+            "bonused Brawler lines are the base numbers plus exactly the excluded line"
+        );
+        assert_eq!(
+            bonused_for(&find("Mission Runner")),
+            rifter_numbers,
+            "bonused Mission Runner lines are the base numbers with no count line"
+        );
+        let punisher_numbers = [
+            "Warp speed: 5.0 AU/s",
+            "Align time: 4.8 s",
+            "Mass: 1,190,000.0 kg",
+            "Signature radius: 37.0 m",
+            "Targeting range: 25.0 km",
+            "Scan resolution: 640.0 mm",
+            "Sensor strength: RADAR 10.0 points, Ladar 0.0 points, Magnetometric 0.0 points, Gravimetric 0.0 points",
+            "Max locked targets: 4",
+        ];
+        assert_eq!(base_for(&find("Demo Runner")), punisher_numbers);
+        assert_eq!(
+            bonused_for(&find("Demo Runner")),
+            punisher_numbers,
+            "bonused Runner lines are the base numbers with no count line"
+        );
     }
 
     fn bay_budget(used: f64, capacity: f64) -> BayBudget {
