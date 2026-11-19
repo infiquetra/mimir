@@ -146,6 +146,18 @@ sibling-generator pattern); the operand leg is the type's
 own `dgmTypeAttributes` value for the modifier's modifying
 attribute. The generator still never downloads: a missing
 or unreadable zip fails loudly before anything is written.
+Fitted-module hit point modifiers
+(docs/hp-bonuses-design.md section 3) append two further
+keys after `resistanceModifiersUnapplied` in the locked
+order: `hitPointModifiers`, a sparse array of
+[modifiedAttributeId, operator, operand] triples on
+category-7 rows only, and `hitPointModifiersUnapplied`,
+a sparse `true` beside that array when the carrier's bonus
+cannot be grounded from the bundled data. The effect-to-
+modifier leg reuses the same `dogmaEffects.jsonl` read;
+the operand leg reuses the same `dgmTypeAttributes` pass
+with the wanted-modifying-ids set extended to the hit
+point modifying attributes.
 """
 
 import bz2
@@ -249,6 +261,14 @@ RESIST_ATTR_IDS = {271, 274, 273, 272, 267, 270, 269, 268,
 RESIST_MODIFIER_ORDER = [271, 274, 273, 272, 267, 270, 269, 268,
                          113, 110, 109, 111]
 RESIST_MODIFIER_OPERATORS = {0, 6}
+# Fitted-module hit point modifiers
+# (docs/hp-bonuses-design.md section 3): the locked display
+# order (shield 263, armor 265, hull 9) and operators 2
+# (modAdd), 4 (postMulAlt), 6 (postPercent) per Flutter
+# dogma_engine.dart at ed698d3 for the ship path.
+HIT_POINT_MODIFIER_ORDER = [263, 265, 9]
+HIT_POINT_MODIFIER_OPERATORS = {2, 4, 6}
+HIT_POINT_MODIFIER_ATTRS = {263, 265, 9}
 SDE_ZIP_NAME = "eve-online-static-data-3503375-jsonl.zip"
 SDE_ZIP_MEMBER = "dogmaEffects.jsonl"
 SHIELD_EM_RESONANCE_ATTR = 271
@@ -644,6 +664,50 @@ RESIST_MODIFIER_ROWS = 791
 RESIST_MODIFIER_NONEMPTY_ROWS = 777
 RESIST_MODIFIER_MARKED_ROWS = 14
 RESIST_MODIFIER_ENTRIES = 1332
+
+# Fitted-module hit point modifier oracles
+# (docs/hp-bonuses-design.md section 3): each value read
+# from dogmaEffects.jsonl (committed zip) joined through
+# dgmTypeEffects / dgmTypeAttributes during design. Tuple
+# shape mirrors RESIST_MODIFIER_ORACLES: (typeId,
+# expected-entries-or-None, expected-unapplied). A None
+# entries means neither hitPointModifiers nor
+# hitPointModifiersUnapplied may be present at all. An
+# empty list means the (possibly empty) array must be
+# present and the unapplied marker must be true.
+HIT_POINT_MODIFIER_ORACLES = [
+    (3831, [[263, 2, 1100.0]], False),
+    (3841, [[263, 2, 2600.0]], False),
+    (20353, [[265, 2, 4800.0]], False),
+    (20349, [[265, 2, 1200.0]], False),
+    (1335, [[9, 4, 1.25]], False),
+    (2605, [[9, 4, 0.8]], False),
+    (1256, [[263, 4, 0.85]], False),
+    (25894, [[265, 6, 15.0]], False),
+    (26302, [[265, 6, 20.0]], False),
+    (26088, [[263, 6, 15.0]], False),
+    (33898, [[9, 6, 20.0]], False),
+    (26056, [[265, 6, -10.0]], False),
+    (1197, [[265, 4, 1.0]], False),
+    (47804, [], True),
+    (47817, [], True),
+    (1447, [], True),
+    (1808, None, False),
+    (2048, None, False),
+    (587, None, False),
+    (2456, None, False),
+    (45590, None, False),
+]
+
+# Catalogue-wide counts for the hit point modifier emission
+# (docs/hp-bonuses-design.md section 3, design-scripted over
+# today's data): rows carrying the key (643 with entries
+# plus 32 marked-empty), rows marked unapplied, total
+# emitted entries.
+HIT_POINT_MODIFIER_ROWS = 675
+HIT_POINT_MODIFIER_NONEMPTY_ROWS = 643
+HIT_POINT_MODIFIER_MARKED_ROWS = 32
+HIT_POINT_MODIFIER_ENTRIES = 643
 
 # Bay oracles (docs/bay-capacities-design.md section 3.3): each
 # value read directly from invTypes.csv.bz2 / dgmTypeAttributes.csv.bz2
@@ -1481,19 +1545,31 @@ def main():
             fail(f"unreadable SDE zip member {SDE_ZIP_MEMBER}")
     # Modifying attributes worth reading operands for:
     # every modifying id appearing in an ItemModifier/shipID
-    # resonance modifier anywhere in the zip.
+    # resonance modifier anywhere in the zip, extended to
+    # the hit point modifying attributes so one operand
+    # pass serves both legs (design section 3).
     wanted_modifying_ids = set()
+    wanted_resist_modifying_ids = set()
+    wanted_hit_point_modifying_ids = set()
     for modifier_info in effect_modifiers.values():
         for modifier in modifier_info:
-            if (
+            if not (
                 modifier.get("func") == "ItemModifier"
                 and modifier.get("domain") == "shipID"
-                and modifier.get("modifiedAttributeID")
-                in RESIST_ATTR_IDS
             ):
-                wanted_modifying_ids.add(
+                continue
+            modified_id = modifier.get("modifiedAttributeID")
+            if modified_id in RESIST_ATTR_IDS:
+                wanted_resist_modifying_ids.add(
                     modifier["modifyingAttributeID"]
                 )
+            if modified_id in HIT_POINT_MODIFIER_ATTRS:
+                wanted_hit_point_modifying_ids.add(
+                    modifier["modifyingAttributeID"]
+                )
+    wanted_modifying_ids = (
+        wanted_resist_modifying_ids | wanted_hit_point_modifying_ids
+    )
     category_by_type = {}
     for row in inv_types:
         if row["published"] != "1":
@@ -1503,6 +1579,15 @@ def main():
             category_by_type[type_id] = group_to_category.get(
                 int(row["groupID"]), 0
             )
+    def modifier_operand_label(attribute_id):
+        in_resist = attribute_id in wanted_resist_modifying_ids
+        in_hp = attribute_id in wanted_hit_point_modifying_ids
+        if in_hp and not in_resist:
+            return "hit point modifier operand"
+        if in_resist and not in_hp:
+            return "resistance modifier operand"
+        return "modifier operand"
+
     operands_by_type = {}
     seen_operand_keys = set()
     for row in type_attributes:
@@ -1515,21 +1600,21 @@ def main():
         key = (type_id, attribute_id)
         if key in seen_operand_keys:
             fail(
-                f"duplicate resistance modifier operand row "
-                f"(type {type_id}, attribute {attribute_id}) "
+                f"duplicate {modifier_operand_label(attribute_id)} "
+                f"row (type {type_id}, attribute {attribute_id}) "
                 "in dgmTypeAttributes"
             )
         try:
             value = float(row["valueFloat"])
         except (TypeError, ValueError):
             fail(
-                f"unparseable resistance modifier operand "
+                f"unparseable {modifier_operand_label(attribute_id)} "
                 f"{row['valueFloat']!r} for (type {type_id}, "
                 f"attribute {attribute_id})"
             )
         if not math.isfinite(value):
             fail(
-                f"non-finite resistance modifier operand "
+                f"non-finite {modifier_operand_label(attribute_id)} "
                 f"{value!r} for (type {type_id}, attribute "
                 f"{attribute_id})"
             )
@@ -1608,6 +1693,86 @@ def main():
         )
         if applicable or unapplied:
             resist_modifiers_by_type[type_id] = (
+                applicable,
+                unapplied,
+            )
+
+    # Fitted-module hit point modifiers
+    # (docs/hp-bonuses-design.md section 3): the same
+    # classification beside the resistance leg, category-7
+    # only, over ItemModifier/shipID modifiers on
+    # {263, 265, 9} with operators {2, 4, 6}. Messages say
+    # "hit point modifier", never "resistance modifier".
+    hit_point_modifiers_by_type = {}
+    for type_id, type_category in category_by_type.items():
+        if type_category != 7:
+            continue
+        triple_list = []
+        for effect_id in effects_by_type.get(type_id, set()):
+            for modifier in effect_modifiers.get(effect_id, []):
+                if (
+                    modifier.get("func") == "ItemModifier"
+                    and modifier.get("domain") == "shipID"
+                    and modifier.get("modifiedAttributeID")
+                    in HIT_POINT_MODIFIER_ATTRS
+                ):
+                    triple_list.append(
+                        (
+                            modifier["modifiedAttributeID"],
+                            modifier["modifyingAttributeID"],
+                            modifier["operation"],
+                        )
+                    )
+        for triple, count in Counter(triple_list).items():
+            if count > 1:
+                fail(
+                    f"duplicated hit point modifier triple "
+                    f"{triple} on type {type_id}"
+                )
+        triples = set(triple_list)
+        if not triples:
+            continue
+        operands = operands_by_type.get(type_id, {})
+        applicable = []
+        has_unsupported = False
+        has_zero = False
+        has_absent = False
+        seen_modified = set()
+        seen_triples = set()
+        for modified_id, modifying_id, operator in sorted(triples):
+            triple = (modified_id, modifying_id, operator)
+            if triple in seen_triples:
+                fail(
+                    f"duplicated hit point modifier triple "
+                    f"{triple} on type {type_id}"
+                )
+            seen_triples.add(triple)
+            if modifying_id not in operands:
+                has_absent = True
+                continue
+            operand = operands[modifying_id]
+            if operand == 0.0:
+                has_zero = True
+                continue
+            if operator not in HIT_POINT_MODIFIER_OPERATORS:
+                has_unsupported = True
+                continue
+            if modified_id in seen_modified:
+                fail(
+                    f"two applicable hit point modifier entries "
+                    f"on modified attribute {modified_id} for "
+                    f"type {type_id}"
+                )
+            seen_modified.add(modified_id)
+            applicable.append([modified_id, operator, operand])
+        applicable.sort(
+            key=lambda entry: HIT_POINT_MODIFIER_ORDER.index(entry[0])
+        )
+        unapplied = has_unsupported or (
+            not applicable and not has_zero and has_absent
+        )
+        if applicable or unapplied:
+            hit_point_modifiers_by_type[type_id] = (
                 applicable,
                 unapplied,
             )
@@ -2180,6 +2345,7 @@ def main():
     need_filter_key_counts = Counter()
     charge_group_key_counts = Counter()
     resist_modifier_counts = Counter()
+    hit_point_modifier_counts = Counter()
     for row in inv_types:
         if row["published"] != "1":
             continue
@@ -2737,6 +2903,23 @@ def main():
             if mod_unapplied:
                 entry["resistanceModifiersUnapplied"] = True
                 resist_modifier_counts["unappliedRows"] += 1
+        # Additive, sparse fitted-module hit point modifier
+        # emission (design section 3): category 7 rows gain
+        # the two keys after the resistance modifier block,
+        # in this locked order. A carrier with at least one
+        # applicable entry or an unapplied mark emits the
+        # array (possibly empty); an all-zero carrier emits
+        # neither key. Every other row is byte-identical.
+        if category_id == 7 and type_id in hit_point_modifiers_by_type:
+            mod_entries, mod_unapplied = hit_point_modifiers_by_type[type_id]
+            entry["hitPointModifiers"] = mod_entries
+            hit_point_modifier_counts["hitPointModifiers"] += 1
+            if mod_entries:
+                hit_point_modifier_counts["nonEmptyRows"] += 1
+            hit_point_modifier_counts["totalEntries"] += len(mod_entries)
+            if mod_unapplied:
+                entry["hitPointModifiersUnapplied"] = True
+                hit_point_modifier_counts["unappliedRows"] += 1
         types.append(entry)
 
     types.sort(key=lambda entry: entry["typeId"])
@@ -2920,6 +3103,70 @@ def main():
             f"resistance modifier total entries "
             f"{resist_modifier_counts['totalEntries']}, expected "
             f"{RESIST_MODIFIER_ENTRIES}"
+        )
+
+    # Fitted-module hit point modifier oracles (design
+    # section 3). A None entries means neither
+    # hitPointModifiers nor hitPointModifiersUnapplied
+    # may be present at all.
+    for type_id, expected, expected_unapplied in HIT_POINT_MODIFIER_ORACLES:
+        entry = by_id.get(type_id)
+        if entry is None:
+            fail(
+                f"hit point modifier oracle type {type_id} "
+                "missing from extract"
+            )
+        if expected is None:
+            if (
+                "hitPointModifiers" in entry
+                or "hitPointModifiersUnapplied" in entry
+            ):
+                fail(
+                    f"hit point modifier oracle type {type_id} "
+                    "carries hit point modifier keys, expected "
+                    "neither"
+                )
+        else:
+            if entry.get("hitPointModifiers") != expected:
+                fail(
+                    f"hit point modifier oracle type {type_id} "
+                    f"hitPointModifiers="
+                    f"{entry.get('hitPointModifiers')!r}, "
+                    f"expected {expected!r}"
+                )
+            if (
+                entry.get("hitPointModifiersUnapplied", False)
+                != expected_unapplied
+            ):
+                fail(
+                    f"hit point modifier oracle type {type_id} "
+                    "unapplied marker "
+                    f"{entry.get('hitPointModifiersUnapplied')!r}, "
+                    f"expected {expected_unapplied!r}"
+                )
+    if hit_point_modifier_counts["hitPointModifiers"] != HIT_POINT_MODIFIER_ROWS:
+        fail(
+            f"hit point modifier rows "
+            f"{hit_point_modifier_counts['hitPointModifiers']}, "
+            f"expected {HIT_POINT_MODIFIER_ROWS}"
+        )
+    if hit_point_modifier_counts["nonEmptyRows"] != HIT_POINT_MODIFIER_NONEMPTY_ROWS:
+        fail(
+            f"hit point modifier non-empty rows "
+            f"{hit_point_modifier_counts['nonEmptyRows']}, expected "
+            f"{HIT_POINT_MODIFIER_NONEMPTY_ROWS}"
+        )
+    if hit_point_modifier_counts["unappliedRows"] != HIT_POINT_MODIFIER_MARKED_ROWS:
+        fail(
+            f"hit point modifier marked rows "
+            f"{hit_point_modifier_counts['unappliedRows']}, expected "
+            f"{HIT_POINT_MODIFIER_MARKED_ROWS}"
+        )
+    if hit_point_modifier_counts["totalEntries"] != HIT_POINT_MODIFIER_ENTRIES:
+        fail(
+            f"hit point modifier total entries "
+            f"{hit_point_modifier_counts['totalEntries']}, expected "
+            f"{HIT_POINT_MODIFIER_ENTRIES}"
         )
 
     # Bay oracles (design section 3.3). A None expected value
@@ -3128,6 +3375,74 @@ def main():
                     "without resistanceModifiers"
                 )
             if entry["resistanceModifiersUnapplied"] is not True:
+                fail(
+                    f"type {entry['typeId']} unapplied marker "
+                    "not true"
+                )
+        # Fitted-module hit point modifier invariants
+        # (design section 3): every present hitPointModifiers
+        # value is on a category 7 row; entries are in
+        # HIT_POINT_MODIFIER_ORDER with no duplicate modified
+        # id, operators in {2, 4, 6}, operands finite and
+        # != 0.0; hitPointModifiersUnapplied appears only
+        # beside hitPointModifiers and only as true.
+        if "hitPointModifiers" in entry:
+            if entry["categoryId"] != 7:
+                fail(
+                    f"non-module type {entry['typeId']} carries "
+                    "hitPointModifiers"
+                )
+            modified_ids = []
+            for triple in entry["hitPointModifiers"]:
+                if (
+                    not isinstance(triple, list)
+                    or len(triple) != 3
+                    or not all(
+                        isinstance(part, (int, float))
+                        and not isinstance(part, bool)
+                        for part in triple
+                    )
+                ):
+                    fail(
+                        f"type {entry['typeId']} malformed "
+                        f"hit point modifier {triple!r}"
+                    )
+                modified_id, operator, operand = triple
+                if modified_id not in HIT_POINT_MODIFIER_ORDER:
+                    fail(
+                        f"type {entry['typeId']} modified id "
+                        f"{modified_id} not a ship hit point"
+                    )
+                if operator not in HIT_POINT_MODIFIER_OPERATORS:
+                    fail(
+                        f"type {entry['typeId']} operator "
+                        f"{operator} not in (2, 4, 6)"
+                    )
+                if (
+                    not math.isfinite(float(operand))
+                    or float(operand) == 0.0
+                ):
+                    fail(
+                        f"type {entry['typeId']} operand "
+                        f"{operand!r} not finite or zero"
+                    )
+                modified_ids.append(modified_id)
+            order = [
+                HIT_POINT_MODIFIER_ORDER.index(modified_id)
+                for modified_id in modified_ids
+            ]
+            if order != sorted(order) or len(set(order)) != len(order):
+                fail(
+                    f"type {entry['typeId']} hit point modifiers "
+                    "not in locked order without duplicates"
+                )
+        if "hitPointModifiersUnapplied" in entry:
+            if "hitPointModifiers" not in entry:
+                fail(
+                    f"type {entry['typeId']} unapplied marker "
+                    "without hitPointModifiers"
+                )
+            if entry["hitPointModifiersUnapplied"] is not True:
                 fail(
                     f"type {entry['typeId']} unapplied marker "
                     "not true"
@@ -3927,6 +4242,12 @@ def main():
         f"nonEmptyRows={resist_modifier_counts['nonEmptyRows']} "
         f"unappliedRows={resist_modifier_counts['unappliedRows']} "
         f"totalEntries={resist_modifier_counts['totalEntries']}"
+    )
+    print(
+        f"hit_point_modifier_keys hitPointModifiers={hit_point_modifier_counts['hitPointModifiers']} "
+        f"nonEmptyRows={hit_point_modifier_counts['nonEmptyRows']} "
+        f"unappliedRows={hit_point_modifier_counts['unappliedRows']} "
+        f"totalEntries={hit_point_modifier_counts['totalEntries']}"
     )
     print(
         f"bay_keys volume={bay_key_counts['volume']} "
