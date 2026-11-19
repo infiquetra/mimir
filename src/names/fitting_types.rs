@@ -160,6 +160,28 @@ pub struct FittingType {
     pub shield_recharge_modifiers: Option<Vec<ShieldRechargeModifier>>,
     #[serde(rename = "shieldRechargeModifiersUnapplied", default)]
     pub shield_recharge_modifiers_unapplied: bool,
+    // Fitted-module output modifiers
+    // (docs/output-bonuses-design.md section 3): entries are
+    // generation-time-proven ItemModifier/shipID output bonuses
+    // on attribute 48 (CPU family) or 11 (power family) with
+    // the operand baked in (operator 2 is modAdd, 4 is
+    // postMulAlt, 6 is postPercent). Operands can shrink the
+    // output (rig drawbacks carry -10.0 percents) and are
+    // applied as written. `Some(empty)` with the unapplied
+    // flag is a carrier whose bonus in that family the
+    // bundled data cannot ground and must be counted, never
+    // read as "no bonus"; `None` is a non-carrier or an
+    // all-zero carrier in that family — the other family is
+    // judged independently. `default` so old assets and
+    // from_json fixtures without the keys load.
+    #[serde(rename = "cpuOutputModifiers", default)]
+    pub cpu_output_modifiers: Option<Vec<OutputModifier>>,
+    #[serde(rename = "cpuOutputModifiersUnapplied", default)]
+    pub cpu_output_modifiers_unapplied: bool,
+    #[serde(rename = "powerOutputModifiers", default)]
+    pub power_output_modifiers: Option<Vec<OutputModifier>>,
+    #[serde(rename = "powerOutputModifiersUnapplied", default)]
+    pub power_output_modifiers_unapplied: bool,
     // Bay usage (docs/bay-capacities-design.md section 3.1):
     // `volume` is the invTypes `volume` column on every row,
     // `cargoCapacity` is the invTypes `capacity` column on
@@ -533,6 +555,48 @@ pub struct ShieldRechargeModifier {
 }
 
 impl<'de> Deserialize<'de> for ShieldRechargeModifier {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let (modified_attribute_id, operator, operand) =
+            <(i64, i64, f64)>::deserialize(deserializer)?;
+        Ok(Self {
+            modified_attribute_id,
+            operator,
+            operand,
+        })
+    }
+}
+
+/// One fitted-module output modifier entry
+/// (`docs/output-bonuses-design.md` section 3):
+/// `[modifiedAttributeId, operator, operand]`, with the
+/// operand baked in at generation time (deserialized from
+/// the 3-element array by the same manual tuple impl as
+/// `ShieldRechargeModifier`). Entries are generation-time-
+/// proven `ItemModifier`/`shipID` output bonuses on attribute
+/// 48 (CPU family) or 11 (power family) with the operand baked
+/// in (operator 2 is modAdd, 4 is postMulAlt, 6 is
+/// postPercent). Operands can shrink the output (rig
+/// drawbacks carry -10.0 percents) and are applied as
+/// written. `Some(empty)` with the unapplied flag is a
+/// carrier whose bonus in that family the bundled data
+/// cannot ground and must be counted, never read as
+/// "no bonus"; `None` is a non-carrier or an all-zero
+/// carrier in that family — the other family is judged
+/// independently. One struct for both families,
+/// deliberately: the two families are one slice, one operator
+/// set, and one triple shape, with the modified attribute id
+/// carried in every entry.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct OutputModifier {
+    pub modified_attribute_id: i64,
+    pub operator: i64,
+    pub operand: f64,
+}
+
+impl<'de> Deserialize<'de> for OutputModifier {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -1736,6 +1800,91 @@ mod tests {
                 assert!(
                     row.shield_recharge_modifiers.is_some(),
                     "shieldRechargeModifiersUnapplied without shieldRechargeModifiers: {:?}",
+                    row.name
+                );
+            }
+            // Fitted-module output modifiers
+            // (docs/output-bonuses-design.md section 3):
+            // `Some` only on category 7 rows; entries'
+            // modified id is the family's attribute (48
+            // resp. 11) with no duplicate, operator 2, 4,
+            // or 6, operand finite and != 0.0; each unapplied
+            // marker appears only beside its family's `Some`.
+            if let Some(modifiers) = &row.cpu_output_modifiers {
+                assert_eq!(
+                    row.category_id, 7,
+                    "cpuOutputModifiers on non-module row: {:?}",
+                    row.name
+                );
+                let mut seen = std::collections::HashSet::new();
+                for modifier in modifiers {
+                    assert_eq!(
+                        modifier.modified_attribute_id, 48,
+                        "cpu output modified id {} on {:?}",
+                        modifier.modified_attribute_id, row.name
+                    );
+                    assert!(
+                        seen.insert(modifier.modified_attribute_id),
+                        "cpu output modifiers duplicated on {:?}",
+                        row.name
+                    );
+                    assert!(
+                        matches!(modifier.operator, 2 | 4 | 6),
+                        "cpu output modifier operator {} on {:?}",
+                        modifier.operator,
+                        row.name
+                    );
+                    assert!(
+                        modifier.operand.is_finite() && modifier.operand != 0.0,
+                        "cpu output modifier operand {} on {:?}",
+                        modifier.operand,
+                        row.name
+                    );
+                }
+            }
+            if row.cpu_output_modifiers_unapplied {
+                assert!(
+                    row.cpu_output_modifiers.is_some(),
+                    "cpuOutputModifiersUnapplied without cpuOutputModifiers: {:?}",
+                    row.name
+                );
+            }
+            if let Some(modifiers) = &row.power_output_modifiers {
+                assert_eq!(
+                    row.category_id, 7,
+                    "powerOutputModifiers on non-module row: {:?}",
+                    row.name
+                );
+                let mut seen = std::collections::HashSet::new();
+                for modifier in modifiers {
+                    assert_eq!(
+                        modifier.modified_attribute_id, 11,
+                        "power output modified id {} on {:?}",
+                        modifier.modified_attribute_id, row.name
+                    );
+                    assert!(
+                        seen.insert(modifier.modified_attribute_id),
+                        "power output modifiers duplicated on {:?}",
+                        row.name
+                    );
+                    assert!(
+                        matches!(modifier.operator, 2 | 4 | 6),
+                        "power output modifier operator {} on {:?}",
+                        modifier.operator,
+                        row.name
+                    );
+                    assert!(
+                        modifier.operand.is_finite() && modifier.operand != 0.0,
+                        "power output modifier operand {} on {:?}",
+                        modifier.operand,
+                        row.name
+                    );
+                }
+            }
+            if row.power_output_modifiers_unapplied {
+                assert!(
+                    row.power_output_modifiers.is_some(),
+                    "powerOutputModifiersUnapplied without powerOutputModifiers: {:?}",
                     row.name
                 );
             }
@@ -3387,6 +3536,297 @@ mod tests {
             .expect("Legion Core - Augmented Antimatter Reactor row");
         assert_eq!(subsystem_sr.shield_recharge_modifiers, None);
         assert!(!subsystem_sr.shield_recharge_modifiers_unapplied);
+        // Fitted-module output modifier counts and spot pins
+        // (docs/output-bonuses-design.md section 3, the
+        // generator's CPU_OUTPUT_MODIFIER_ORACLES and
+        // POWER_OUTPUT_MODIFIER_ORACLES twins): CPU 91 keyed
+        // rows (91 non-empty), 0 marked, 91 entries; power 85
+        // keyed rows (59 non-empty), 26 marked, 59 entries.
+        let cpu_rows_count = types
+            .types
+            .iter()
+            .filter(|row| row.cpu_output_modifiers.is_some())
+            .count();
+        assert_eq!(cpu_rows_count, 91);
+        let cpu_nonempty_count = types
+            .types
+            .iter()
+            .filter(|row| {
+                row.cpu_output_modifiers
+                    .as_ref()
+                    .is_some_and(|modifiers| !modifiers.is_empty())
+            })
+            .count();
+        assert_eq!(cpu_nonempty_count, 91);
+        let cpu_marked_count = types
+            .types
+            .iter()
+            .filter(|row| row.cpu_output_modifiers_unapplied)
+            .count();
+        assert_eq!(cpu_marked_count, 0);
+        let cpu_entries_count: usize = types
+            .types
+            .iter()
+            .filter_map(|row| row.cpu_output_modifiers.as_ref().map(Vec::len))
+            .sum();
+        assert_eq!(cpu_entries_count, 91);
+        let power_rows_count = types
+            .types
+            .iter()
+            .filter(|row| row.power_output_modifiers.is_some())
+            .count();
+        assert_eq!(power_rows_count, 85);
+        let power_nonempty_count = types
+            .types
+            .iter()
+            .filter(|row| {
+                row.power_output_modifiers
+                    .as_ref()
+                    .is_some_and(|modifiers| !modifiers.is_empty())
+            })
+            .count();
+        assert_eq!(power_nonempty_count, 59);
+        let power_marked_count = types
+            .types
+            .iter()
+            .filter(|row| row.power_output_modifiers_unapplied)
+            .count();
+        assert_eq!(power_marked_count, 26);
+        let power_entries_count: usize = types
+            .types
+            .iter()
+            .filter_map(|row| row.power_output_modifiers.as_ref().map(Vec::len))
+            .sum();
+        assert_eq!(power_entries_count, 59);
+        let coproc_basic = types.lookup_by_id(3469).expect("'Basic' Co-Processor row");
+        assert_eq!(
+            coproc_basic
+                .cpu_output_modifiers
+                .as_ref()
+                .expect("coproc basic cpuOutputModifiers"),
+            &[OutputModifier {
+                modified_attribute_id: 48,
+                operator: 4,
+                operand: 1.07,
+            }]
+        );
+        assert!(!coproc_basic.cpu_output_modifiers_unapplied);
+        let coproc_ii = types.lookup_by_id(3888).expect("Co-Processor II row");
+        assert_eq!(
+            coproc_ii
+                .cpu_output_modifiers
+                .as_ref()
+                .expect("coproc ii cpuOutputModifiers"),
+            &[OutputModifier {
+                modified_attribute_id: 48,
+                operator: 4,
+                operand: 1.1,
+            }]
+        );
+        assert_eq!(coproc_ii.power_output_modifiers, None);
+        assert!(!coproc_ii.power_output_modifiers_unapplied);
+        let oc_i = types
+            .lookup_by_id(4395)
+            .expect("Medium Processor Overclocking Unit I row");
+        assert_eq!(
+            oc_i.cpu_output_modifiers
+                .as_ref()
+                .expect("oc i cpuOutputModifiers"),
+            &[OutputModifier {
+                modified_attribute_id: 48,
+                operator: 6,
+                operand: 7.1,
+            }]
+        );
+        let oc_ii_out = types
+            .lookup_by_id(4399)
+            .expect("Medium Processor Overclocking Unit II row");
+        assert_eq!(
+            oc_ii_out
+                .cpu_output_modifiers
+                .as_ref()
+                .expect("oc ii cpuOutputModifiers"),
+            &[OutputModifier {
+                modified_attribute_id: 48,
+                operator: 6,
+                operand: 9.6,
+            }]
+        );
+        assert_eq!(
+            oc_ii_out
+                .shield_recharge_modifiers
+                .as_ref()
+                .expect("oc ii shieldRechargeModifiers"),
+            &[ShieldRechargeModifier {
+                modified_attribute_id: 479,
+                operator: 4,
+                operand: 1.1,
+            }]
+        );
+        let drawback = types
+            .lookup_by_id(25908)
+            .expect("Large Drone Control Range Augmentor I row");
+        assert_eq!(
+            drawback
+                .cpu_output_modifiers
+                .as_ref()
+                .expect("drawback cpuOutputModifiers"),
+            &[OutputModifier {
+                modified_attribute_id: 48,
+                operator: 6,
+                operand: -10.0,
+            }]
+        );
+        let rcu_ii = types
+            .lookup_by_id(1355)
+            .expect("Reactor Control Unit II row");
+        assert_eq!(
+            rcu_ii
+                .power_output_modifiers
+                .as_ref()
+                .expect("rcu ii powerOutputModifiers"),
+            &[OutputModifier {
+                modified_attribute_id: 11,
+                operator: 4,
+                operand: 1.15,
+            }]
+        );
+        assert_eq!(rcu_ii.cpu_output_modifiers, None);
+        assert!(!rcu_ii.cpu_output_modifiers_unapplied);
+        let pds_ii = types
+            .lookup_by_id(1541)
+            .expect("Power Diagnostic System II row");
+        assert_eq!(
+            pds_ii
+                .power_output_modifiers
+                .as_ref()
+                .expect("pds ii powerOutputModifiers"),
+            &[OutputModifier {
+                modified_attribute_id: 11,
+                operator: 4,
+                operand: 1.06,
+            }]
+        );
+        assert_eq!(pds_ii.cpu_output_modifiers, None);
+        assert!(!pds_ii.cpu_output_modifiers_unapplied);
+        assert!(
+            pds_ii.hit_point_modifiers.is_some(),
+            "pds ii must still carry hitPointModifiers"
+        );
+        assert!(
+            pds_ii.capacitor_capacity_modifiers.is_some(),
+            "pds ii must still carry capacitorCapacityModifiers"
+        );
+        assert!(
+            pds_ii.capacitor_recharge_modifiers.is_some(),
+            "pds ii must still carry capacitorRechargeModifiers"
+        );
+        assert!(
+            pds_ii.shield_recharge_modifiers.is_some(),
+            "pds ii must still carry shieldRechargeModifiers"
+        );
+        let mapc_ii = types
+            .lookup_by_id(4254)
+            .expect("Micro Auxiliary Power Core II row");
+        assert_eq!(
+            mapc_ii
+                .power_output_modifiers
+                .as_ref()
+                .expect("mapc ii powerOutputModifiers"),
+            &[OutputModifier {
+                modified_attribute_id: 11,
+                operator: 2,
+                operand: 12.0,
+            }]
+        );
+        let acr_ii = types
+            .lookup_by_id(26370)
+            .expect("Large Ancillary Current Router II row");
+        assert_eq!(
+            acr_ii
+                .power_output_modifiers
+                .as_ref()
+                .expect("acr ii powerOutputModifiers"),
+            &[OutputModifier {
+                modified_attribute_id: 11,
+                operator: 6,
+                operand: 15.0,
+            }]
+        );
+        let relay_out = types
+            .lookup_by_id(1445)
+            .expect("Capacitor Power Relay I row");
+        assert_eq!(
+            relay_out
+                .power_output_modifiers
+                .as_ref()
+                .expect("relay cap powerOutputModifiers"),
+            &[]
+        );
+        assert!(relay_out.power_output_modifiers_unapplied);
+        assert_eq!(relay_out.cpu_output_modifiers, None);
+        assert!(!relay_out.cpu_output_modifiers_unapplied);
+        let flux_basic_out = types
+            .lookup_by_id(506)
+            .expect("'Basic' Capacitor Power Relay row");
+        assert_eq!(
+            flux_basic_out
+                .power_output_modifiers
+                .as_ref()
+                .expect("flux basic powerOutputModifiers"),
+            &[]
+        );
+        assert!(flux_basic_out.power_output_modifiers_unapplied);
+        assert_eq!(flux_basic_out.cpu_output_modifiers, None);
+        assert!(!flux_basic_out.cpu_output_modifiers_unapplied);
+        for type_id in [2048, 587, 3413, 3426, 2589, 45623, 45625] {
+            let row = types.lookup_by_id(type_id).expect("output non-carrier row");
+            assert_eq!(row.cpu_output_modifiers, None, "type {type_id}");
+            assert!(!row.cpu_output_modifiers_unapplied, "type {type_id}");
+            assert_eq!(row.power_output_modifiers, None, "type {type_id}");
+            assert!(!row.power_output_modifiers_unapplied, "type {type_id}");
+        }
+    }
+
+    #[test]
+    fn fixture_parse_output_modifier_fields() {
+        // A row with the new keys loads into the new fields;
+        // a row without them loads as None/false (old-catalogue
+        // tolerance, the `default` pattern).
+        let with_keys = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":3888,"typeName":"Co-Processor II","categoryId":7,"slotEffects":[11],"cpuOutputModifiers":[[48,4,1.1]]},
+                {"typeId":1445,"typeName":"Capacitor Power Relay I","categoryId":7,"slotEffects":[11],"powerOutputModifiers":[],"powerOutputModifiersUnapplied":true}]}"#,
+        )
+        .expect("fixture parses");
+        let coproc = with_keys.lookup_by_id(3888).expect("coproc row");
+        assert_eq!(
+            coproc.cpu_output_modifiers.as_ref().expect("mods"),
+            &[OutputModifier {
+                modified_attribute_id: 48,
+                operator: 4,
+                operand: 1.1,
+            }]
+        );
+        assert!(!coproc.cpu_output_modifiers_unapplied);
+        assert_eq!(coproc.power_output_modifiers, None);
+        assert!(!coproc.power_output_modifiers_unapplied);
+        let relay = with_keys.lookup_by_id(1445).expect("relay row");
+        assert_eq!(relay.power_output_modifiers.as_ref().expect("mods"), &[]);
+        assert!(relay.power_output_modifiers_unapplied);
+        assert_eq!(relay.cpu_output_modifiers, None);
+        assert!(!relay.cpu_output_modifiers_unapplied);
+
+        let without_keys = FittingTypes::from_json(
+            r#"{"types":[
+                {"typeId":587,"typeName":"Rifter","categoryId":6,"slotEffects":[]}]}"#,
+        )
+        .expect("fixture parses");
+        let ship = without_keys.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(ship.cpu_output_modifiers, None);
+        assert!(!ship.cpu_output_modifiers_unapplied);
+        assert_eq!(ship.power_output_modifiers, None);
+        assert!(!ship.power_output_modifiers_unapplied);
     }
 
     #[test]

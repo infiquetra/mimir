@@ -48,6 +48,16 @@
 //! milliseconds for
 //! `ship_shield_peak_recharge_with_module_bonuses` only.
 //!
+//! The crate-internal `bonused_outputs` helper is the
+//! output sibling serving fitting resources under
+//! `docs/output-bonuses-design.md` section 4: the same
+//! counted-item scan and bounded run arithmetic produce
+//! bonused CPU output (tf) and power grid output (MW),
+//! composed with the two trained output-skill percents when
+//! levels are supplied, for
+//! `crate::fitting::resources::fitting_resources_with_skills`
+//! only.
+//!
 //! The module is pure computation over the bundled catalogue — no
 //! egui, no state, no network, no database. It depends on
 //! [`CharacterFitting`] and [`FittingTypes`], the same
@@ -230,6 +240,11 @@ const CAPACITOR_ORDER: [i64; 2] = [482, 55];
 /// scalar `Vec<(f64, u64)>` triples, not arrays.
 const SHIELD_RECHARGE_MODIFIED_ATTRIBUTE_ID: i64 = 479;
 
+/// Catalogue output attribute ids in the locked order
+/// (cpuOutput 48, powerOutput 11). Position is the
+/// accumulator index used below.
+const OUTPUT_ORDER: [i64; 2] = [48, 11];
+
 /// The twelve base resonances of a ship row in
 /// `RESONANCE_ORDER` position.
 fn base_resonances(ship: &crate::names::fitting_types::FittingType) -> [Option<f64>; 12] {
@@ -260,6 +275,18 @@ fn base_hit_points(ship: &crate::names::fitting_types::FittingType) -> [Option<f
 /// milliseconds).
 fn base_capacitor(ship: &crate::names::fitting_types::FittingType) -> [Option<f64>; 2] {
     [ship.capacitor_capacity, ship.capacitor_recharge_rate]
+}
+
+/// The two base outputs of a ship row in `OUTPUT_ORDER`
+/// position (CPU output tf, power grid output MW).
+fn base_outputs(ship: &crate::names::fitting_types::FittingType) -> [Option<f64>; 2] {
+    [ship.cpu_output, ship.power_output]
+}
+
+/// Defensive re-clamp for the output-skill levels: a
+/// hand-built pair cannot exceed ×1.25.
+fn clamp_output_level(level: i32) -> i32 {
+    level.clamp(0, 5)
 }
 
 /// Fitted sections whose items commit to the ship's bonuses:
@@ -954,6 +981,235 @@ pub(crate) fn bonused_shield_recharge_duration(
         recharge_ms,
         excluded_modules,
         shield_recharge_unapplied_modules,
+    })
+}
+
+/// Bonused CPU output (tf) and power grid output (MW),
+/// composed with the two trained output-skill percents
+/// when levels are supplied, plus the fitted-module
+/// counts the caller must disclose beside any number
+/// derived from them. The shared catalogue-absent
+/// excluded count is deliberately not carried: the
+/// sole caller discloses excluded rows per resource
+/// dimension from its own scan (the
+/// `bonused_hit_points` precedent).
+pub(crate) struct BonusedOutputs {
+    /// [cpu_output, power_output] in OUTPUT_ORDER
+    /// position, each `None` exactly where the base
+    /// value is absent, negative, or non-finite, or
+    /// the bonused result is negative, non-finite, or
+    /// a positive subnormal.
+    pub values: [Option<f64>; 2],
+    /// CPU-output-dimension count: counted fitted rows
+    /// the catalogue marks as CPU output carriers whose
+    /// bonus cannot be applied, in quantity units.
+    /// Never summed with
+    /// `power_output_unapplied_modules`.
+    pub cpu_output_unapplied_modules: usize,
+    /// Power-output-dimension count: same shape for the
+    /// power family. Never summed with
+    /// `cpu_output_unapplied_modules`.
+    pub power_output_unapplied_modules: usize,
+}
+
+/// `None` only when the ship gate fails (`ship_type_id
+/// <= 0`, no catalogue row, or the row is not category
+/// 6). Otherwise `Some`, per-value `None` as documented
+/// on `values`. `output_skill_levels` is
+/// (cpu_management, power_grid_management) raw trained
+/// levels — only the two output skills, so no
+/// need-reduction concept can enter this module —
+/// defensively clamped to 0..=5 inside; `None` composes
+/// module bonuses with no skill entry.
+pub(crate) fn bonused_outputs(
+    fitting: &CharacterFitting,
+    catalogue: &FittingTypes,
+    output_skill_levels: Option<(i32, i32)>,
+) -> Option<BonusedOutputs> {
+    let ship_row = if fitting.ship_type_id > 0 {
+        catalogue.lookup_by_id(fitting.ship_type_id)
+    } else {
+        None
+    };
+    let ship = ship_row?;
+    if ship.category_id != 6 {
+        return None;
+    }
+    let mut cpu_output_unapplied_modules: usize = 0;
+    let mut power_output_unapplied_modules: usize = 0;
+    let mut add_runs: [Vec<(f64, u64)>; 2] = Default::default();
+    let mut mul_runs: [Vec<(f64, u64)>; 2] = Default::default();
+    let mut percent_runs: [Vec<(f64, u64)>; 2] = Default::default();
+    for item in &fitting.items {
+        if item.type_id <= 0 {
+            continue;
+        }
+        if item.quantity.max(0) <= 0 {
+            continue;
+        }
+        if !counted_flag(&item.flag) {
+            continue;
+        }
+        let units = usize::try_from(item.quantity).unwrap_or(0);
+        let units_u64 = units as u64;
+        let Some(row) = catalogue.lookup_by_id(item.type_id) else {
+            continue;
+        };
+        // CPU family (48)
+        let mut counted_cpu_unapplied = false;
+        if row.cpu_output_modifiers_unapplied {
+            cpu_output_unapplied_modules = cpu_output_unapplied_modules.saturating_add(units);
+            counted_cpu_unapplied = true;
+        }
+        if let Some(modifiers) = &row.cpu_output_modifiers {
+            for modifier in modifiers {
+                let Some(index) = OUTPUT_ORDER
+                    .iter()
+                    .position(|id| *id == modifier.modified_attribute_id)
+                else {
+                    if !counted_cpu_unapplied {
+                        cpu_output_unapplied_modules =
+                            cpu_output_unapplied_modules.saturating_add(units);
+                        counted_cpu_unapplied = true;
+                    }
+                    continue;
+                };
+                if index != 0 {
+                    if !counted_cpu_unapplied {
+                        cpu_output_unapplied_modules =
+                            cpu_output_unapplied_modules.saturating_add(units);
+                        counted_cpu_unapplied = true;
+                    }
+                    continue;
+                }
+                if !modifier.operand.is_finite()
+                    || modifier.operand == 0.0
+                    || !matches!(modifier.operator, 2 | 4 | 6)
+                {
+                    if !counted_cpu_unapplied {
+                        cpu_output_unapplied_modules =
+                            cpu_output_unapplied_modules.saturating_add(units);
+                        counted_cpu_unapplied = true;
+                    }
+                    continue;
+                }
+                let runs = match modifier.operator {
+                    2 => &mut add_runs[index],
+                    4 => &mut mul_runs[index],
+                    _ => &mut percent_runs[index],
+                };
+                if let Some((_, count)) = runs
+                    .iter_mut()
+                    .find(|(existing, _)| existing == &modifier.operand)
+                {
+                    *count = count.saturating_add(units_u64);
+                } else {
+                    runs.push((modifier.operand, units_u64));
+                }
+            }
+        }
+        // Power family (11)
+        let mut counted_power_unapplied = false;
+        if row.power_output_modifiers_unapplied {
+            power_output_unapplied_modules = power_output_unapplied_modules.saturating_add(units);
+            counted_power_unapplied = true;
+        }
+        if let Some(modifiers) = &row.power_output_modifiers {
+            for modifier in modifiers {
+                let Some(index) = OUTPUT_ORDER
+                    .iter()
+                    .position(|id| *id == modifier.modified_attribute_id)
+                else {
+                    if !counted_power_unapplied {
+                        power_output_unapplied_modules =
+                            power_output_unapplied_modules.saturating_add(units);
+                        counted_power_unapplied = true;
+                    }
+                    continue;
+                };
+                if index != 1 {
+                    if !counted_power_unapplied {
+                        power_output_unapplied_modules =
+                            power_output_unapplied_modules.saturating_add(units);
+                        counted_power_unapplied = true;
+                    }
+                    continue;
+                }
+                if !modifier.operand.is_finite()
+                    || modifier.operand == 0.0
+                    || !matches!(modifier.operator, 2 | 4 | 6)
+                {
+                    if !counted_power_unapplied {
+                        power_output_unapplied_modules =
+                            power_output_unapplied_modules.saturating_add(units);
+                        counted_power_unapplied = true;
+                    }
+                    continue;
+                }
+                let runs = match modifier.operator {
+                    2 => &mut add_runs[index],
+                    4 => &mut mul_runs[index],
+                    _ => &mut percent_runs[index],
+                };
+                if let Some((_, count)) = runs
+                    .iter_mut()
+                    .find(|(existing, _)| existing == &modifier.operand)
+                {
+                    *count = count.saturating_add(units_u64);
+                } else {
+                    runs.push((modifier.operand, units_u64));
+                }
+            }
+        }
+    }
+    // One skill percent run per dimension, appended after
+    // the module runs and before the sort: Flutter's
+    // `0.05 * level * 100` spelling, only when the clamped
+    // level is above 0. `Some((0, 0))` is therefore
+    // identical to `None` in every value and count.
+    if let Some((cpu_level, power_level)) = output_skill_levels {
+        let cpu_level = clamp_output_level(cpu_level);
+        if cpu_level > 0 {
+            percent_runs[0].push((0.05 * cpu_level as f64 * 100.0, 1));
+        }
+        let power_level = clamp_output_level(power_level);
+        if power_level > 0 {
+            percent_runs[1].push((0.05 * power_level as f64 * 100.0, 1));
+        }
+    }
+    let bases = base_outputs(ship);
+    let mut values: [Option<f64>; 2] = [None, None];
+    for index in 0..2 {
+        let Some(base) = bases[index].filter(|v| v.is_finite() && *v >= 0.0) else {
+            continue;
+        };
+        let mut add_total = 0.0;
+        for (operand, count) in &add_runs[index] {
+            add_total += operand * (*count as f64);
+        }
+        let mut mul_total = 1.0;
+        for (operand, count) in &mul_runs[index] {
+            mul_total *= mul_product(*operand, *count);
+        }
+        let mut sorted_percent = percent_runs[index].clone();
+        sorted_percent.sort_by(|a, b| b.0.abs().total_cmp(&a.0.abs()));
+        let mut percent_total = 1.0;
+        for (value, count) in &sorted_percent {
+            percent_total *= mul_product(1.0 + value / 100.0, *count);
+        }
+        let bonused = (base + add_total) * mul_total * percent_total;
+        // A positive subnormal is stall residue from a
+        // hostile-quantity run underflowing toward zero,
+        // not an honest output: reject it as no data so
+        // downstream never renders it. An exact 0.0 stays
+        // a real zero.
+        values[index] =
+            Some(bonused).filter(|v| v.is_finite() && *v >= 0.0 && (*v == 0.0 || v.is_normal()));
+    }
+    Some(BonusedOutputs {
+        values,
+        cpu_output_unapplied_modules,
+        power_output_unapplied_modules,
     })
 }
 
@@ -1881,5 +2137,440 @@ mod tests {
         .expect("Some");
         assert_eq!(duration.shield_recharge_unapplied_modules, 1);
         assert_eq!(duration.recharge_ms, Some(531250.0));
+    }
+
+    // --- Bonused outputs helper pins
+    // (docs/output-bonuses-design.md sections 4, 8) ---
+
+    fn assert_output_close(actual: Option<f64>, expected: f64, label: &str) {
+        let actual = actual.unwrap_or_else(|| panic!("{label}: expected Some, got None"));
+        assert!(
+            (actual - expected).abs() < 1e-9,
+            "{label}: expected {expected}, got {actual}"
+        );
+    }
+
+    #[test]
+    fn bonused_outputs_oracle_helper_values() {
+        let catalogue = bundled();
+        // Oracle 1: RCU multiplier
+        let fit = fitting(587, vec![item("LoSlot0", 1, 1355)]);
+        let out = bonused_outputs(&fit, &catalogue, None).expect("Some");
+        assert_output_close(out.values[0], 130.0, "oracle 1 cpu");
+        assert_output_close(out.values[1], 47.15, "oracle 1 power");
+        assert_eq!(out.cpu_output_unapplied_modules, 0);
+        assert_eq!(out.power_output_unapplied_modules, 0);
+        // Two units both ways (two slots then one quantity-2 row)
+        let two_slots = fitting(
+            587,
+            vec![item("LoSlot0", 1, 1355), item("LoSlot1", 1, 1355)],
+        );
+        let out = bonused_outputs(&two_slots, &catalogue, None).expect("Some");
+        assert_output_close(out.values[1], 54.2225, "oracle 1 two slots");
+        let stacked = fitting(587, vec![item("LoSlot0", 2, 1355)]);
+        let out = bonused_outputs(&stacked, &catalogue, None).expect("Some");
+        assert_output_close(out.values[1], 54.2225, "oracle 1 stacked");
+        // Oracle 2: MAPC flat add
+        let fit = fitting(587, vec![item("LoSlot0", 1, 4254)]);
+        let out = bonused_outputs(&fit, &catalogue, None).expect("Some");
+        assert_output_close(out.values[1], 53.0, "oracle 2 power");
+        assert_output_close(out.values[0], 130.0, "oracle 2 cpu");
+        let fit = fitting(587, vec![item("LoSlot0", 2, 4254)]);
+        let out = bonused_outputs(&fit, &catalogue, None).expect("Some");
+        assert_output_close(out.values[1], 65.0, "oracle 2 stacked");
+        // Oracle 3: Co-Processor
+        let fit = fitting(587, vec![item("LoSlot0", 1, 3888)]);
+        let out = bonused_outputs(&fit, &catalogue, None).expect("Some");
+        assert_output_close(out.values[0], 143.0, "oracle 3 cpu");
+        assert_output_close(out.values[1], 41.0, "oracle 3 power");
+        assert_eq!(out.cpu_output_unapplied_modules, 0);
+        assert_eq!(out.power_output_unapplied_modules, 0);
+        // Oracle 4: PDS dual + two multipliers
+        let fit = fitting(587, vec![item("LoSlot0", 1, 1541)]);
+        let out = bonused_outputs(&fit, &catalogue, None).expect("Some");
+        assert_output_close(out.values[1], 43.46, "oracle 4a power");
+        assert_output_close(out.values[0], 130.0, "oracle 4a cpu");
+        let fit = fitting(
+            587,
+            vec![item("LoSlot0", 1, 1541), item("LoSlot1", 1, 1355)],
+        );
+        let out = bonused_outputs(&fit, &catalogue, None).expect("Some");
+        assert_output_close(out.values[1], 49.979, "oracle 4b power");
+        let fit = fitting(
+            587,
+            vec![item("LoSlot0", 1, 1355), item("LoSlot1", 1, 1541)],
+        );
+        let out = bonused_outputs(&fit, &catalogue, None).expect("Some");
+        assert_output_close(out.values[1], 49.979, "oracle 4b reversed");
+        // Oracle 6: rig percents
+        let fit = fitting(587, vec![item("RigSlot0", 1, 4399)]);
+        let out = bonused_outputs(&fit, &catalogue, None).expect("Some");
+        assert_output_close(out.values[0], 142.48, "oracle 6a cpu");
+        assert_output_close(out.values[1], 41.0, "oracle 6a power");
+        let fit = fitting(587, vec![item("RigSlot0", 1, 26370)]);
+        let out = bonused_outputs(&fit, &catalogue, None).expect("Some");
+        assert_output_close(out.values[1], 47.15, "oracle 6b power");
+        let fit = fitting(
+            587,
+            vec![item("RigSlot0", 1, 26370), item("RigSlot1", 1, 25956)],
+        );
+        let out = bonused_outputs(&fit, &catalogue, None).expect("Some");
+        assert_output_close(out.values[1], 51.865, "oracle 6c power");
+        // Oracle 6(d): non-counted flags never contribute
+        let fit = fitting(587, vec![item("Cargo", 1, 4399)]);
+        let out = bonused_outputs(&fit, &catalogue, None).expect("Some");
+        assert_eq!(out.values[0], Some(130.0));
+        assert_eq!(out.values[1], Some(41.0));
+        assert_eq!(out.cpu_output_unapplied_modules, 0);
+        assert_eq!(out.power_output_unapplied_modules, 0);
+        // Oracle 7: drawback shrinks the output
+        let fit = fitting(587, vec![item("RigSlot0", 1, 25908)]);
+        let out = bonused_outputs(&fit, &catalogue, None).expect("Some");
+        assert_output_close(out.values[0], 117.0, "oracle 7 cpu");
+        // Oracle 8: absent-split, exact identity under the
+        // marked carrier with the count still raised
+        let fit = fitting(587, vec![item("LoSlot0", 1, 1445)]);
+        let out = bonused_outputs(&fit, &catalogue, None).expect("Some");
+        assert_eq!(out.values[0], Some(130.0));
+        assert_eq!(out.values[1], Some(41.0));
+        assert_eq!(out.cpu_output_unapplied_modules, 0);
+        assert_eq!(out.power_output_unapplied_modules, 1);
+        let fit = fitting(587, vec![item("LoSlot0", 2, 1445)]);
+        let out = bonused_outputs(&fit, &catalogue, None).expect("Some");
+        assert_eq!(out.power_output_unapplied_modules, 2);
+        let fit = fitting(587, vec![item("LoSlot0", 1, 1445)]);
+        let out = bonused_outputs(&fit, &catalogue, Some((5, 5))).expect("Some");
+        assert_eq!(out.values[1], Some(51.25));
+        assert_eq!(out.power_output_unapplied_modules, 1);
+        // Oracle 10 helper side: 5x DC + Co-Processor
+        let items: Vec<FittingItem> = (0..5)
+            .map(|n| item(&format!("LoSlot{n}"), 1, 2048))
+            .chain([item("LoSlot5", 1, 3888)])
+            .collect();
+        let out = bonused_outputs(&fitting(587, items), &catalogue, None).expect("Some");
+        assert_output_close(out.values[0], 143.0, "oracle 10 cpu");
+    }
+
+    #[test]
+    fn bonused_outputs_composition_and_identity() {
+        let catalogue = bundled();
+        // Oracle 5: adds before skill percent, on the helper
+        let fit = fitting(
+            587,
+            vec![
+                item("LoSlot0", 1, 1355),
+                item("LoSlot1", 1, 3888),
+                item("LoSlot2", 1, 4254),
+            ],
+        );
+        let none = bonused_outputs(&fit, &catalogue, None).expect("Some");
+        assert_output_close(none.values[0], 143.0, "oracle 5 cpu None");
+        assert_output_close(none.values[1], 60.95, "oracle 5 power None");
+        let zero = bonused_outputs(&fit, &catalogue, Some((0, 0))).expect("Some");
+        assert_eq!(zero.values, none.values);
+        assert_eq!(
+            zero.cpu_output_unapplied_modules,
+            none.cpu_output_unapplied_modules
+        );
+        assert_eq!(
+            zero.power_output_unapplied_modules,
+            none.power_output_unapplied_modules
+        );
+        let skilled = bonused_outputs(&fit, &catalogue, Some((5, 5))).expect("Some");
+        assert_output_close(skilled.values[0], 178.75, "oracle 5 cpu skilled");
+        assert_output_close(skilled.values[1], 76.1875, "oracle 5 power skilled");
+        // Internal re-clamp: Some((99, -1)) equals Some((5, 0))
+        let reclamped = bonused_outputs(&fit, &catalogue, Some((99, -1))).expect("Some");
+        let clamped = bonused_outputs(&fit, &catalogue, Some((5, 0))).expect("Some");
+        assert_eq!(reclamped.values, clamped.values);
+        assert_eq!(
+            reclamped.cpu_output_unapplied_modules,
+            clamped.cpu_output_unapplied_modules
+        );
+        assert_eq!(
+            reclamped.power_output_unapplied_modules,
+            clamped.power_output_unapplied_modules
+        );
+        // Oracle 7 at CPU Management 5: 117.0 * 1.25 = 146.25
+        let fit = fitting(587, vec![item("RigSlot0", 1, 25908)]);
+        let out = bonused_outputs(&fit, &catalogue, Some((5, 0))).expect("Some");
+        assert_output_close(out.values[0], 146.25, "oracle 7 skilled");
+        // Oracle 9: bit-exact association (assert_eq against
+        // the locked order, not within tolerance)
+        let fit = fitting(587, vec![item("RigSlot0", 1, 26370)]);
+        let out = bonused_outputs(&fit, &catalogue, Some((0, 5))).expect("Some");
+        assert_eq!(
+            out.values[1],
+            Some((41.0 + 0.0) * 1.0 * ((1.0 * 1.25) * 1.15))
+        );
+        let fit = fitting(587, vec![item("RigSlot0", 1, 4399)]);
+        let out = bonused_outputs(&fit, &catalogue, Some((5, 0))).expect("Some");
+        assert_eq!(
+            out.values[0],
+            Some((130.0 + 0.0) * 1.0 * ((1.0 * 1.25) * (1.0 + 9.6 / 100.0)))
+        );
+        let fit = fitting(587, vec![item("RigSlot0", 1, 25908)]);
+        let out = bonused_outputs(&fit, &catalogue, Some((2, 0))).expect("Some");
+        assert_output_close(out.values[0], 128.7, "oracle 9c");
+        // Empty == base exactly on both arms; None equals
+        // Some((0, 0)); skill factor bit-identical to shipped
+        let hull_only = fitting(587, vec![]);
+        let none = bonused_outputs(&hull_only, &catalogue, None).expect("Some");
+        assert_eq!(none.values, [Some(130.0), Some(41.0)]);
+        assert_eq!(none.cpu_output_unapplied_modules, 0);
+        assert_eq!(none.power_output_unapplied_modules, 0);
+        let zero = bonused_outputs(&hull_only, &catalogue, Some((0, 0))).expect("Some");
+        assert_eq!(zero.values, none.values);
+        for level in 0..=5 {
+            let out = bonused_outputs(&hull_only, &catalogue, Some((level, level))).expect("Some");
+            assert_eq!(out.values[0], Some(130.0 * (1.0 + 0.05 * level as f64)));
+            assert_eq!(out.values[1], Some(41.0 * (1.0 + 0.05 * level as f64)));
+        }
+        // Ship gate: helper None exactly on gate
+        for ship in [999999, 2048, 0, -1] {
+            assert!(
+                bonused_outputs(&fitting(ship, vec![]), &catalogue, None).is_none(),
+                "ship {ship}"
+            );
+        }
+        // Catalogue-absent counted rows are not counted by
+        // this helper (the resources-side excluded rule owns
+        // them): a fully absent rig leaves values at base
+        // with no unapplied count.
+        let fit = fitting(587, vec![item("RigSlot0", 1, 999999)]);
+        let out = bonused_outputs(&fit, &catalogue, None).expect("Some");
+        assert_eq!(out.values, [Some(130.0), Some(41.0)]);
+        assert_eq!(out.cpu_output_unapplied_modules, 0);
+        assert_eq!(out.power_output_unapplied_modules, 0);
+    }
+
+    #[test]
+    fn bonused_outputs_partiality_zero_and_hostile() {
+        // Absent base never resurrected, per dimension
+        let hull = r#"{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"cpuOutput":130.0,"powerOutput":41.0}"#;
+        let no_power = FittingTypes::from_json(
+            r#"{"types":[{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"cpuOutput":130.0},
+                {"typeId":101,"typeName":"Mapc","categoryId":7,"slotEffects":[11],"powerOutputModifiers":[[11,2,12.0]]}]}"#,
+        )
+        .expect("fixture parses");
+        let out = bonused_outputs(&fitting(42, vec![item("LoSlot0", 1, 101)]), &no_power, None)
+            .expect("Some");
+        assert_eq!(out.values, [Some(130.0), None]);
+        let no_cpu = FittingTypes::from_json(
+            r#"{"types":[{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"powerOutput":41.0},
+                {"typeId":101,"typeName":"Coproc","categoryId":7,"slotEffects":[11],"cpuOutputModifiers":[[48,4,1.1]]}]}"#,
+        )
+        .expect("fixture parses");
+        let out = bonused_outputs(&fitting(42, vec![item("LoSlot0", 1, 101)]), &no_cpu, None)
+            .expect("Some");
+        assert_eq!(out.values, [None, Some(41.0)]);
+        // Present 0.0 is a real zero: a flat add raises it,
+        // a -100% percent zeroes it honestly.
+        let zero_hull = FittingTypes::from_json(
+            r#"{"types":[{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"cpuOutput":130.0,"powerOutput":0.0},
+                {"typeId":101,"typeName":"Mapc","categoryId":7,"slotEffects":[11],"powerOutputModifiers":[[11,2,12.0]]}]}"#,
+        )
+        .expect("fixture parses");
+        let out = bonused_outputs(
+            &fitting(42, vec![item("LoSlot0", 1, 101)]),
+            &zero_hull,
+            None,
+        )
+        .expect("Some");
+        assert_eq!(out.values[1], Some(12.0));
+        assert_eq!(out.values[0], Some(130.0));
+        let minus_hundred = FittingTypes::from_json(
+            &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"Zero","categoryId":7,"slotEffects":[11],"powerOutputModifiers":[[11,6,-100.0]]}}]}}"#),
+        )
+        .expect("fixture parses");
+        let out = bonused_outputs(
+            &fitting(42, vec![item("LoSlot0", 1, 101)]),
+            &minus_hundred,
+            None,
+        )
+        .expect("Some");
+        assert_eq!(out.values[1], Some(0.0));
+
+        // hostile -20% rig stalls to a positive subnormal
+        let catalogue = FittingTypes::from_json(
+            &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"Host","categoryId":7,"slotEffects":[13],"powerOutputModifiers":[[11,6,-20.0]]}}]}}"#),
+        )
+        .expect("fixture parses");
+        let out = bonused_outputs(
+            &fitting(42, vec![item("RigSlot0", i64::MAX, 101)]),
+            &catalogue,
+            None,
+        )
+        .expect("Some");
+        assert_eq!(out.values[1], None);
+        assert_eq!(out.values[0], Some(130.0));
+        // Real 25908 (0.9) stalls subnormal under shipped
+        // mul_product (settles at 0x0.0000000000005p-1022)
+        let catalogue = bundled();
+        let out = bonused_outputs(
+            &fitting(587, vec![item("RigSlot0", i64::MAX, 25908)]),
+            &catalogue,
+            None,
+        )
+        .expect("Some");
+        assert_eq!(out.values[0], None);
+        assert_eq!(out.values[1], Some(41.0));
+        // Real 1355 (1.15) overflows non-finite
+        let out = bonused_outputs(
+            &fitting(587, vec![item("LoSlot0", i64::MAX, 1355)]),
+            &catalogue,
+            None,
+        )
+        .expect("Some");
+        assert_eq!(out.values[1], None);
+        // Real 4254 flat add stays finite by formula
+        let out = bonused_outputs(
+            &fitting(587, vec![item("LoSlot0", i64::MAX, 4254)]),
+            &catalogue,
+            None,
+        )
+        .expect("Some");
+        assert_eq!(out.values[1], Some(41.0 + 12.0 * (i64::MAX as f64)));
+        // Negative results are no data
+        for entries in ["[[11,6,-150.0]]", "[[11,4,-1.15]]"] {
+            let catalogue = FittingTypes::from_json(
+                &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"Neg","categoryId":7,"slotEffects":[11],"powerOutputModifiers":{entries}}}]}}"#),
+            )
+            .expect("fixture parses");
+            let out = bonused_outputs(
+                &fitting(42, vec![item("LoSlot0", 1, 101)]),
+                &catalogue,
+                None,
+            )
+            .expect("Some");
+            assert_eq!(out.values[1], None, "entries {entries}");
+        }
+        let catalogue = FittingTypes::from_json(
+            &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"NegAdd","categoryId":7,"slotEffects":[11],"powerOutputModifiers":[[11,2,-50.0]]}}]}}"#),
+        )
+        .expect("fixture parses");
+        let out = bonused_outputs(
+            &fitting(42, vec![item("LoSlot0", 1, 101)]),
+            &catalogue,
+            None,
+        )
+        .expect("Some");
+        assert_eq!(out.values[1], None);
+    }
+
+    #[test]
+    fn bonused_outputs_runtime_guards() {
+        let hull = r#"{"typeId":42,"typeName":"Fixture Hull","categoryId":6,"slotEffects":[],"cpuOutput":130.0,"powerOutput":41.0}"#;
+        // Marked-unapplied with an applicable entry: counted
+        // once, entry still applied.
+        let catalogue = FittingTypes::from_json(
+            &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"Marked","categoryId":7,"slotEffects":[11],"powerOutputModifiers":[[11,4,1.15]],"powerOutputModifiersUnapplied":true}}]}}"#),
+        )
+        .expect("fixture parses");
+        let out = bonused_outputs(
+            &fitting(42, vec![item("LoSlot0", 1, 101)]),
+            &catalogue,
+            None,
+        )
+        .expect("Some");
+        assert_eq!(out.power_output_unapplied_modules, 1);
+        assert_eq!(out.cpu_output_unapplied_modules, 0);
+        assert_output_close(out.values[1], 47.15, "marked still applied");
+        // Unsupported operators count once in that family
+        // only and contribute nothing (a non-finite operand
+        // shares this same guard branch; JSON cannot carry
+        // one, so the zero-operand case below pins it).
+        for operator in [0, 3, 5, 7] {
+            let catalogue = FittingTypes::from_json(
+                &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"Bad","categoryId":7,"slotEffects":[11],"powerOutputModifiers":[[11,{operator},1.15]]}}]}}"#),
+            )
+            .expect("fixture parses");
+            let out = bonused_outputs(
+                &fitting(42, vec![item("LoSlot0", 1, 101)]),
+                &catalogue,
+                None,
+            )
+            .expect("Some");
+            assert_eq!(out.power_output_unapplied_modules, 1, "operator {operator}");
+            assert_eq!(out.cpu_output_unapplied_modules, 0, "operator {operator}");
+            assert_eq!(out.values[1], Some(41.0), "operator {operator}");
+            assert_eq!(out.values[0], Some(130.0), "operator {operator}");
+        }
+        // Two bad entries on one item still count once; a
+        // good entry on the same item still applies.
+        let catalogue = FittingTypes::from_json(
+            &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"Bad","categoryId":7,"slotEffects":[11],"powerOutputModifiers":[[11,0,1.15],[11,3,1.2],[11,4,1.1]]}}]}}"#),
+        )
+        .expect("fixture parses");
+        let out = bonused_outputs(
+            &fitting(42, vec![item("LoSlot0", 1, 101)]),
+            &catalogue,
+            None,
+        )
+        .expect("Some");
+        assert_eq!(out.power_output_unapplied_modules, 1);
+        assert_output_close(out.values[1], 45.1, "good still applies");
+        // Wrong modified ids count in the family they sit in
+        // only; the other dimension is untouched.
+        let catalogue = FittingTypes::from_json(
+            &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"Bad","categoryId":7,"slotEffects":[11],"powerOutputModifiers":[[482,4,1.15]]}}]}}"#),
+        )
+        .expect("fixture parses");
+        let out = bonused_outputs(
+            &fitting(42, vec![item("LoSlot0", 1, 101)]),
+            &catalogue,
+            None,
+        )
+        .expect("Some");
+        assert_eq!(out.power_output_unapplied_modules, 1);
+        assert_eq!(out.cpu_output_unapplied_modules, 0);
+        assert_eq!(out.values, [Some(130.0), Some(41.0)]);
+        let catalogue = FittingTypes::from_json(
+            &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"Bad","categoryId":7,"slotEffects":[11],"cpuOutputModifiers":[[11,4,1.15]]}}]}}"#),
+        )
+        .expect("fixture parses");
+        let out = bonused_outputs(
+            &fitting(42, vec![item("LoSlot0", 1, 101)]),
+            &catalogue,
+            None,
+        )
+        .expect("Some");
+        assert_eq!(out.cpu_output_unapplied_modules, 1);
+        assert_eq!(out.power_output_unapplied_modules, 0);
+        assert_eq!(out.values, [Some(130.0), Some(41.0)]);
+        // Zero operand counts once and contributes nothing
+        let catalogue = FittingTypes::from_json(
+            &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"Bad","categoryId":7,"slotEffects":[11],"powerOutputModifiers":[[11,4,0.0]]}}]}}"#),
+        )
+        .expect("fixture parses");
+        let out = bonused_outputs(
+            &fitting(42, vec![item("LoSlot0", 1, 101)]),
+            &catalogue,
+            None,
+        )
+        .expect("Some");
+        assert_eq!(out.power_output_unapplied_modules, 1);
+        assert_eq!(out.cpu_output_unapplied_modules, 0);
+        assert_eq!(out.values[1], Some(41.0));
+        // The grounded-but-uncensused CPU flat add applies
+        // as a flat add, composed with the skill percent.
+        let catalogue = FittingTypes::from_json(
+            &format!(r#"{{"types":[{hull},{{"typeId":101,"typeName":"CpuAdd","categoryId":7,"slotEffects":[11],"cpuOutputModifiers":[[48,2,25.0]]}}]}}"#),
+        )
+        .expect("fixture parses");
+        let out = bonused_outputs(
+            &fitting(42, vec![item("LoSlot0", 1, 101)]),
+            &catalogue,
+            None,
+        )
+        .expect("Some");
+        assert_output_close(out.values[0], 155.0, "cpu add");
+        let out = bonused_outputs(
+            &fitting(42, vec![item("LoSlot0", 1, 101)]),
+            &catalogue,
+            Some((5, 0)),
+        )
+        .expect("Some");
+        assert_output_close(out.values[0], 193.75, "cpu add skilled");
     }
 }
