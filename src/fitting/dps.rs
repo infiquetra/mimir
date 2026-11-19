@@ -11,8 +11,9 @@
 //! The module is pure computation over the bundled catalogue —
 //! no egui, no state, no network, no database. It depends on
 //! [`CharacterFitting`] / [`FittingItem`] (the saved shape),
-//! [`ImportedFitting`] (charge pairings, EFT surface only),
-//! and [`FittingTypes`], mirroring the [`bay_usage`] shape. It
+//! [`ImportedFitting`] (charge pairings on the pairing
+//! surface: every Eft draft, and any other draft carrying a
+//! recorded charge), and [`FittingTypes`], mirroring the [`bay_usage`] shape. It
 //! tests ESI flag strings itself instead of depending on the
 //! UI enum, following the `bay_usage` flag-prefix independence
 //! precedent. It logs nothing: it runs at render cadence, so
@@ -43,7 +44,7 @@ pub struct FamilyDps {
 
 /// Base damage rates for one fitting. Each family is `None`
 /// when that family has no honest number on this surface
-/// (design section 5): turrets/launchers without an EFT
+/// (design section 5): turrets/launchers without a pairing
 /// surface, drones without ship bandwidth, fighters without
 /// fighter capacity plus tubes. A present `Some` at 0.0 DPS
 /// is a real zero, never a placeholder.
@@ -59,9 +60,9 @@ pub struct FittingDps {
     pub unloaded_weapons: usize,
     /// Combined turret + launcher damage in one firing
     /// cycle (drones and fighters excluded). `Some` exactly
-    /// on the EFT surface, mirroring `turrets` / `launchers`;
-    /// `None` on saved/DNA surfaces. A present 0.0 is a
-    /// real zero.
+    /// on the pairing surface, mirroring `turrets` /
+    /// `launchers`; `None` off it. A present 0.0 is a real
+    /// zero.
     pub volley: Option<f64>,
     /// Turret-volley-weighted average of attribute 54, in
     /// metres. `Some` only under the completeness rule
@@ -165,11 +166,13 @@ fn item_units(item: &FittingItem) -> usize {
 }
 
 /// Base damage rates for one fitting. `imported` is the
-/// imported fitting on the imported detail (EFT pairings are
-/// read from it; DNA behaves like the saved surface) and
-/// `None` on the saved detail. Ship resolution mirrors
-/// `bay_usage`: `ship_type_id` must be positive, resolve in
-/// the catalogue, and be category 6, else `Unavailable`.
+/// imported fitting on the imported detail (recorded
+/// pairings are read from it whenever the pairing surface is
+/// present — every Eft draft, and any other draft carrying a
+/// recorded charge) and `None` on the saved detail. Ship
+/// resolution mirrors `bay_usage`: `ship_type_id` must be
+/// positive, resolve in the catalogue, and be category 6,
+/// else `Unavailable`.
 pub fn fitting_dps(
     fitting: &CharacterFitting,
     imported: Option<&ImportedFitting>,
@@ -188,16 +191,19 @@ pub fn fitting_dps(
     }
 
     // Weapon pass (turrets and launchers), in input order.
-    // On the EFT surface both families start as `Some(0.0)`
-    // (design section 4), so an EFT fitting lists them even
-    // when nothing pairs; on saved/DNA surfaces they stay
-    // `None` and candidates count as unloaded instead.
-    let is_eft = imported.is_some_and(|imp| imp.format == ImportFormat::Eft);
-    let mut turret_state: Option<FamilyDps> = is_eft.then_some(FamilyDps {
+    // On the pairing surface both families start as
+    // `Some(0.0)` (design section 4), so a pairing-surface
+    // fitting lists them even when nothing pairs; off it
+    // they stay `None` and candidates count as unloaded
+    // instead.
+    let has_pairing_surface = imported.is_some_and(|imp| {
+        imp.format == ImportFormat::Eft || imp.items.iter().any(|item| item.charge.is_some())
+    });
+    let mut turret_state: Option<FamilyDps> = has_pairing_surface.then_some(FamilyDps {
         dps: 0.0,
         excluded_items: 0,
     });
-    let mut launcher_state: Option<FamilyDps> = is_eft.then_some(FamilyDps {
+    let mut launcher_state: Option<FamilyDps> = has_pairing_surface.then_some(FamilyDps {
         dps: 0.0,
         excluded_items: 0,
     });
@@ -233,9 +239,11 @@ pub fn fitting_dps(
         if units == 0 {
             continue;
         }
-        if !is_eft {
-            // Saved and DNA surfaces carry no pairing by
-            // construction (design section 2.3).
+        if !has_pairing_surface {
+            // Off the pairing surface no pairing is read:
+            // the saved detail carries none, and a non-Eft
+            // draft with no recorded charge carries none
+            // (design section 2.3 as widened).
             unloaded_weapons = unloaded_weapons.saturating_add(units);
             continue;
         }
@@ -243,9 +251,13 @@ pub fn fitting_dps(
         // never by the hardpoint booleans.
         let is_turret = row.damage_multiplier.is_some();
         let family = if is_turret {
-            turret_state.as_mut().expect("EFT turret family exists")
+            turret_state
+                .as_mut()
+                .expect("pairing-surface turret family exists")
         } else {
-            launcher_state.as_mut().expect("EFT launcher family exists")
+            launcher_state
+                .as_mut()
+                .expect("pairing-surface launcher family exists")
         };
         let Some(charge_id) = charge_type_id else {
             unloaded_weapons = unloaded_weapons.saturating_add(units);
@@ -306,18 +318,18 @@ pub fn fitting_dps(
 
     // Volley and range finals
     // (docs/volley-ranges-design.md section 4). Volley is
-    // `Some` exactly on the EFT surface; a range is `Some`
+    // `Some` exactly on the pairing surface; a range is `Some`
     // only when its attribute is complete over every counted
     // turret, turret volley is positive, and the weighted
     // average is positive.
-    let volley = is_eft.then_some(volley_total);
-    let optimal_range = if is_eft && optimal_complete && turret_volley > 0.0 {
+    let volley = has_pairing_surface.then_some(volley_total);
+    let optimal_range = if has_pairing_surface && optimal_complete && turret_volley > 0.0 {
         let average = optimal_weighted / turret_volley;
         (average > 0.0).then_some(average)
     } else {
         None
     };
-    let falloff_range = if is_eft && falloff_complete && turret_volley > 0.0 {
+    let falloff_range = if has_pairing_surface && falloff_complete && turret_volley > 0.0 {
         let average = falloff_weighted / turret_volley;
         (average > 0.0).then_some(average)
     } else {
@@ -642,6 +654,9 @@ fn int_part(value: f64) -> usize {
 mod tests {
     use super::*;
     use crate::fitting::dna::parse_import;
+    use crate::fitting::editor::{
+        add_item, clear_charge, new_fitting, set_charge, ship_candidates,
+    };
     use crate::fitting::eft::{
         parse_eft, EftImportOutcome, ImportFormat, ImportReport, ImportSection, ImportedCharge,
         ImportedFitting, ImportedItem,
@@ -1801,5 +1816,125 @@ mod tests {
         assert_eq!(dps.optimal_range, None);
         assert_eq!(dps.falloff_range, None);
         assert_eq!(dps.unloaded_weapons, 3);
+    }
+
+    const DPS_DEMO_EFT: &str = "[Rifter, Sample Brawler]\nDamage Control II\nSmall Armor Repairer II\n\n1MN Afterburner II\nWarp Scrambler II\n\n200mm AutoCannon II, Republic Fleet EMP S\n200mm AutoCannon II\n200mm AutoCannon II\n\nSmall Projectile Burst Aerator I\n[Empty Rig slot]\n\nHobgoblin II x2\n\nEMP S x200\nNanite Repair Paste x8";
+
+    // Charge-editing test 11: created surface.
+    #[test]
+    fn charge_created_surface() {
+        let catalogue = bundled();
+        let rows = ship_candidates(&catalogue);
+        let rifter = rows
+            .iter()
+            .find(|row| row.name == "Rifter")
+            .expect("Rifter lists")
+            .clone();
+        let mut fitting = new_fitting(&catalogue, &rifter).expect("Rifter constructs");
+        add_item(&mut fitting, &catalogue, "200mm AutoCannon II", None).expect("autocannon adds");
+        assert_eq!(fitting.items.len(), 1);
+        let synth = fitting.to_character_fitting();
+        let before = available(fitting_dps(&synth, Some(&fitting), &catalogue));
+        assert!(before.turrets.is_none());
+        assert!(before.launchers.is_none());
+        assert_eq!(before.volley, None);
+        assert_eq!(before.optimal_range, None);
+        assert_eq!(before.falloff_range, None);
+        assert_eq!(before.unloaded_weapons, 1);
+        set_charge(&mut fitting, &catalogue, 0, "Republic Fleet EMP S").expect("fleet EMP sets");
+        let synth = fitting.to_character_fitting();
+        let after = available(fitting_dps(&synth, Some(&fitting), &catalogue));
+        assert_close(after.turrets.expect("turrets").dps, 12.7512);
+        assert_close(after.launchers.expect("launchers").dps, 0.0);
+        assert_close(after.volley.expect("volley"), 47.817);
+        assert_close(after.optimal_range.expect("optimal"), 1200.0);
+        assert_close(after.falloff_range.expect("falloff"), 5160.0);
+        assert_eq!(after.unloaded_weapons, 0);
+        assert!(clear_charge(&mut fitting, 0));
+        let synth = fitting.to_character_fitting();
+        let cleared = available(fitting_dps(&synth, Some(&fitting), &catalogue));
+        assert!(cleared.turrets.is_none());
+        assert!(cleared.launchers.is_none());
+        assert_eq!(cleared.volley, None);
+        assert_eq!(cleared.optimal_range, None);
+        assert_eq!(cleared.falloff_range, None);
+        assert_eq!(cleared.unloaded_weapons, 1);
+    }
+
+    // Charge-editing test 13: EFT demo transitions.
+    #[test]
+    fn charge_eft_demo_transitions() {
+        let catalogue = bundled();
+        let mut fitting = match parse_eft(DPS_DEMO_EFT, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting,
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import: {fatal:?}"),
+        };
+        let charged = fitting
+            .items
+            .iter()
+            .position(|item| item.type_id == 2889 && item.charge.is_some())
+            .expect("charged autocannon present");
+        assert!(clear_charge(&mut fitting, charged));
+        let synth = fitting.to_character_fitting();
+        let cleared = available(fitting_dps(&synth, Some(&fitting), &catalogue));
+        assert_close(cleared.turrets.expect("turrets").dps, 0.0);
+        assert_close(cleared.volley.expect("volley"), 0.0);
+        assert_eq!(cleared.unloaded_weapons, 3);
+        let mut fitting = match parse_eft(DPS_DEMO_EFT, &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting,
+            EftImportOutcome::Failed(fatal) => panic!("demo sample must import: {fatal:?}"),
+        };
+        let charged = fitting
+            .items
+            .iter()
+            .position(|item| item.type_id == 2889 && item.charge.is_some())
+            .expect("charged autocannon present");
+        set_charge(&mut fitting, &catalogue, charged, "EMP S").expect("EMP S sets");
+        let synth = fitting.to_character_fitting();
+        let changed = available(fitting_dps(&synth, Some(&fitting), &catalogue));
+        assert_close(changed.turrets.expect("turrets").dps, 11.088);
+        assert_close(changed.volley.expect("volley"), 41.58);
+        let mut launcher = match parse_eft("[Rifter, T]\nLight Missile Launcher I\n", &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting,
+            EftImportOutcome::Failed(fatal) => panic!("launcher draft must import: {fatal:?}"),
+        };
+        set_charge(&mut launcher, &catalogue, 0, "Scourge Light Missile").expect("missile sets");
+        let synth = launcher.to_character_fitting();
+        let dps = available(fitting_dps(&synth, Some(&launcher), &catalogue));
+        assert_close(dps.launchers.expect("launchers").dps, 5.1875);
+    }
+
+    // Charge-editing test 14: non-weapon charge.
+    #[test]
+    fn charge_non_weapon_is_byte_neutral() {
+        let catalogue = bundled();
+        let mut fitting = match parse_eft("[Rifter, T]\nLight Missile Launcher I\n", &catalogue) {
+            EftImportOutcome::Imported(fitting) => fitting,
+            EftImportOutcome::Failed(fatal) => panic!("launcher draft must import: {fatal:?}"),
+        };
+        set_charge(&mut fitting, &catalogue, 0, "Scourge Light Missile").expect("missile sets");
+        add_item(&mut fitting, &catalogue, "Sensor Booster II", None).expect("sensor booster adds");
+        let sensor_index = fitting.items.len() - 1;
+        let synth = fitting.to_character_fitting();
+        let before = available(fitting_dps(&synth, Some(&fitting), &catalogue));
+        set_charge(
+            &mut fitting,
+            &catalogue,
+            sensor_index,
+            "Targeting Range Script",
+        )
+        .expect("script sets");
+        let synth = fitting.to_character_fitting();
+        let after = available(fitting_dps(&synth, Some(&fitting), &catalogue));
+        assert_eq!(before, after);
+        assert_eq!(before.unloaded_weapons, after.unloaded_weapons);
+        assert_eq!(
+            before.turrets.expect("turrets").excluded_items,
+            after.turrets.expect("turrets").excluded_items
+        );
+        assert_eq!(
+            before.launchers.expect("launchers").excluded_items,
+            after.launchers.expect("launchers").excluded_items
+        );
     }
 }

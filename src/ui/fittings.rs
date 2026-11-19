@@ -8703,6 +8703,66 @@ mod tests {
             ]
         );
 
+        // Charge-editing test 12: setting the charge on one
+        // of the DNA draft's three autocannon rows yields the
+        // demo-EFT numbers with unloaded 2.
+        use crate::fitting::editor::set_charge;
+        let mut dna_charged = imported_dna.clone();
+        let autocannon = dna_charged
+            .items
+            .iter()
+            .position(|item| item.type_id == 2889)
+            .expect("DNA autocannon present");
+        set_charge(
+            &mut dna_charged,
+            &catalogue,
+            autocannon,
+            "Republic Fleet EMP S",
+        )
+        .expect("fleet EMP sets on DNA");
+        let synth_charged = dna_charged.to_character_fitting();
+        let charged = match fitting_dps(&synth_charged, Some(&dna_charged), &catalogue) {
+            FittingDpsOutcome::Available(dps) => dps,
+            FittingDpsOutcome::Unavailable => panic!("charged DNA must have damage data"),
+        };
+        let turrets = charged.turrets.expect("charged DNA carries turrets");
+        assert!(
+            (turrets.dps - 12.7512).abs() < 1e-9,
+            "turret DPS is 12.7512, got {}",
+            turrets.dps
+        );
+        let launchers = charged.launchers.expect("charged DNA carries launchers");
+        assert!((launchers.dps - 0.0).abs() < 1e-9);
+        assert_eq!(charged.unloaded_weapons, 2);
+        let volley = charged.volley.expect("charged DNA carries volley");
+        assert!(
+            (volley - 47.817).abs() < 1e-9,
+            "volley is 47.817, got {volley}"
+        );
+        let optimal = charged.optimal_range.expect("charged DNA carries optimal");
+        assert!(
+            (optimal - 1200.0).abs() < 1e-9,
+            "optimal is 1200.0, got {optimal}"
+        );
+        let falloff = charged.falloff_range.expect("charged DNA carries falloff");
+        assert!(
+            (falloff - 5160.0).abs() < 1e-9,
+            "falloff is 5160.0, got {falloff}"
+        );
+        assert_eq!(
+            dps_lines(&charged),
+            [
+                "Turret DPS: 12.8 DPS".to_string(),
+                "Launcher DPS: 0.0 DPS".to_string(),
+                "Drone DPS: 0.0 DPS".to_string(),
+                "Volley: 47.8 damage".to_string(),
+                "Turret optimal range: 1.2 km".to_string(),
+                "Turret falloff range: 5.2 km".to_string(),
+                "2 fitted weapons have no loaded charge listed, so they are not counted above."
+                    .to_string(),
+            ]
+        );
+
         // No fighter line anywhere in demo.
         for name in ["Demo Brawler", "Mission Runner", "Demo Runner"] {
             assert!(
