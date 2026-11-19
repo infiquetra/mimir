@@ -7643,6 +7643,7 @@ mod tests {
             },
             excluded_modules: 0,
             unapplied_modules: 0,
+            hit_point_unapplied_modules: 0,
         };
         assert_eq!(
             ship_base_ehp_lines(&full.ehp),
@@ -7665,6 +7666,7 @@ mod tests {
             },
             excluded_modules: 0,
             unapplied_modules: 0,
+            hit_point_unapplied_modules: 0,
         };
         assert_eq!(
             ship_base_ehp_lines(&zero_shield.ehp),
@@ -7682,6 +7684,7 @@ mod tests {
             },
             excluded_modules: 0,
             unapplied_modules: 0,
+            hit_point_unapplied_modules: 0,
         };
         let lines = ship_base_ehp_lines(&partial.ehp);
         assert_eq!(lines, ["Shield EHP: 450.0 HP", "Armor EHP: 450.0 HP"]);
