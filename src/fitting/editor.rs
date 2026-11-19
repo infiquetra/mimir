@@ -1262,6 +1262,10 @@ mod tests {
         assert_eq!(fitting.report.placeholder_lines, 1);
         assert_eq!(fitting.report.charges_noted, 1);
         assert_eq!(fitting.report.issues.len(), 1);
+        // A stale counter that disagrees with the live charged
+        // items must survive verbatim: ship change never
+        // recounts charges (a recount would rewrite it to 1).
+        fitting.report.charges_noted = 99;
         let before = fitting.clone();
 
         let punisher = ship_row(&ship_candidates(&types), "Punisher").clone();
@@ -1305,6 +1309,10 @@ mod tests {
         let types = bundled_types();
         let rows = ship_candidates(&types);
         let mut fitting = draft("[Rifter, Stay]\n200mm AutoCannon II\n", &types);
+        // A draft ship_name can diverge from the catalogue
+        // spelling (copied drafts carry resolver names);
+        // SameShip must not respell it from the catalogue row.
+        fitting.ship_name = "Rifter (resolver spelling)".to_string();
         let before = fitting.clone();
 
         let own = ship_row(&rows, "Rifter").clone();
