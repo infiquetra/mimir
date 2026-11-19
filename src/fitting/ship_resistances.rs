@@ -21,6 +21,13 @@
 //! bonuses, subsystems, skills, implants, and everything
 //! else the design defers contribute nothing.
 //!
+//! The crate-internal `bonused_hit_points` helper is the
+//! hit-point sibling serving the EHP numerator under
+//! `docs/hp-bonuses-design.md` section 4: the same
+//! counted-item scan and bounded run arithmetic produce
+//! bonused shield/armor/hull hit points for
+//! `ship_ehp_with_module_bonuses` only.
+//!
 //! The module is pure computation over the bundled catalogue — no
 //! egui, no state, no network, no database. It depends on
 //! [`CharacterFitting`] and [`FittingTypes`], the same
@@ -186,6 +193,11 @@ pub fn resistance_stacking_penalty(n: usize) -> f64 {
 /// index used below.
 const RESONANCE_ORDER: [i64; 12] = [271, 274, 273, 272, 267, 270, 269, 268, 113, 110, 109, 111];
 
+/// Catalogue hit point attribute ids in the locked order
+/// (shield 263, armor 265, hull 9). Position is the
+/// accumulator index used below.
+const HIT_POINT_ORDER: [i64; 3] = [263, 265, 9];
+
 /// The twelve base resonances of a ship row in
 /// `RESONANCE_ORDER` position.
 fn base_resonances(ship: &crate::names::fitting_types::FittingType) -> [Option<f64>; 12] {
@@ -203,6 +215,12 @@ fn base_resonances(ship: &crate::names::fitting_types::FittingType) -> [Option<f
         ship.hull_kinetic_resonance,
         ship.hull_explosive_resonance,
     ]
+}
+
+/// The three base hit points of a ship row in
+/// `HIT_POINT_ORDER` position (shield, armor, hull).
+fn base_hit_points(ship: &crate::names::fitting_types::FittingType) -> [Option<f64>; 3] {
+    [ship.shield_capacity, ship.armor_hp, ship.hull_hp]
 }
 
 /// Fitted sections whose items commit to the ship's bonuses:
@@ -426,6 +444,124 @@ pub fn ship_resistances_with_module_bonuses(
         resistances,
         excluded_modules: bonused.excluded_modules,
         unapplied_modules: bonused.unapplied_modules,
+    })
+}
+
+/// Bonused hit points per layer (shield, armor, hull) plus
+/// the hit-point-dimension unapplied count the caller must
+/// disclose beside any number derived from them.
+pub(crate) struct BonusedHitPoints {
+    pub hit_points: [Option<f64>; 3],
+    pub hit_point_unapplied_modules: usize,
+}
+
+/// `None` only when the ship gate fails (`ship_type_id <= 0`,
+/// no catalogue row, or the row is not category 6). Otherwise
+/// `Some`, with each layer `None` exactly where the base hit
+/// points are absent, negative, or non-finite, or the
+/// bonused result is negative or non-finite.
+pub(crate) fn bonused_hit_points(
+    fitting: &CharacterFitting,
+    catalogue: &FittingTypes,
+) -> Option<BonusedHitPoints> {
+    let ship_row = if fitting.ship_type_id > 0 {
+        catalogue.lookup_by_id(fitting.ship_type_id)
+    } else {
+        None
+    };
+    let ship = ship_row?;
+    if ship.category_id != 6 {
+        return None;
+    }
+    let mut hit_point_unapplied_modules: usize = 0;
+    let mut add_runs: [Vec<(f64, u64)>; 3] = Default::default();
+    let mut mul_runs: [Vec<(f64, u64)>; 3] = Default::default();
+    let mut percent_runs: [Vec<(f64, u64)>; 3] = Default::default();
+    for item in &fitting.items {
+        if item.type_id <= 0 {
+            continue;
+        }
+        if item.quantity.max(0) <= 0 {
+            continue;
+        }
+        if !counted_flag(&item.flag) {
+            continue;
+        }
+        let units = usize::try_from(item.quantity).unwrap_or(0);
+        let units_u64 = units as u64;
+        let Some(row) = catalogue.lookup_by_id(item.type_id) else {
+            continue;
+        };
+        let mut counted_unapplied = false;
+        if row.hit_point_modifiers_unapplied {
+            hit_point_unapplied_modules = hit_point_unapplied_modules.saturating_add(units);
+            counted_unapplied = true;
+        }
+        let Some(modifiers) = &row.hit_point_modifiers else {
+            continue;
+        };
+        for modifier in modifiers {
+            let Some(index) = HIT_POINT_ORDER
+                .iter()
+                .position(|id| *id == modifier.modified_attribute_id)
+            else {
+                if !counted_unapplied {
+                    hit_point_unapplied_modules = hit_point_unapplied_modules.saturating_add(units);
+                    counted_unapplied = true;
+                }
+                continue;
+            };
+            if !modifier.operand.is_finite()
+                || modifier.operand == 0.0
+                || !matches!(modifier.operator, 2 | 4 | 6)
+            {
+                if !counted_unapplied {
+                    hit_point_unapplied_modules = hit_point_unapplied_modules.saturating_add(units);
+                    counted_unapplied = true;
+                }
+                continue;
+            }
+            let runs = match modifier.operator {
+                2 => &mut add_runs[index],
+                4 => &mut mul_runs[index],
+                _ => &mut percent_runs[index],
+            };
+            if let Some((_, count)) = runs
+                .iter_mut()
+                .find(|(existing, _)| existing == &modifier.operand)
+            {
+                *count = count.saturating_add(units_u64);
+            } else {
+                runs.push((modifier.operand, units_u64));
+            }
+        }
+    }
+    let bases = base_hit_points(ship);
+    let mut hit_points: [Option<f64>; 3] = [None, None, None];
+    for index in 0..3 {
+        let Some(base) = bases[index].filter(|v| v.is_finite() && *v >= 0.0) else {
+            continue;
+        };
+        let mut add_total = 0.0;
+        for (operand, count) in &add_runs[index] {
+            add_total += operand * (*count as f64);
+        }
+        let mut mul_total = 1.0;
+        for (operand, count) in &mul_runs[index] {
+            mul_total *= mul_product(*operand, *count);
+        }
+        let mut sorted_percent = percent_runs[index].clone();
+        sorted_percent.sort_by(|a, b| b.0.abs().total_cmp(&a.0.abs()));
+        let mut percent_total = 1.0;
+        for (value, count) in &sorted_percent {
+            percent_total *= mul_product(1.0 + value / 100.0, *count);
+        }
+        let bonused = (base + add_total) * mul_total * percent_total;
+        hit_points[index] = Some(bonused).filter(|v| v.is_finite() && *v >= 0.0);
+    }
+    Some(BonusedHitPoints {
+        hit_points,
+        hit_point_unapplied_modules,
     })
 }
 

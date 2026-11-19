@@ -108,6 +108,20 @@ pub struct FittingType {
     pub resistance_modifiers: Option<Vec<ResistanceModifier>>,
     #[serde(rename = "resistanceModifiersUnapplied", default)]
     pub resistance_modifiers_unapplied: bool,
+    // Fitted-module hit point modifiers
+    // (docs/hp-bonuses-design.md section 3): entries are
+    // generation-time-proven ItemModifier/shipID hit point
+    // bonuses with the operand baked in (operator 2 is
+    // modAdd, 4 is postMulAlt, 6 is postPercent).
+    // `Some(empty)` with the unapplied flag is a carrier
+    // whose bonus the bundled data cannot ground and must
+    // be counted, never read as "no bonus"; `None` is a
+    // non-carrier or an all-zero carrier. `default` so old
+    // assets and from_json fixtures without the keys load.
+    #[serde(rename = "hitPointModifiers", default)]
+    pub hit_point_modifiers: Option<Vec<HitPointModifier>>,
+    #[serde(rename = "hitPointModifiersUnapplied", default)]
+    pub hit_point_modifiers_unapplied: bool,
     // Bay usage (docs/bay-capacities-design.md section 3.1):
     // `volume` is the invTypes `volume` column on every row,
     // `cargoCapacity` is the invTypes `capacity` column on
@@ -371,6 +385,36 @@ pub struct ResistanceModifier {
 }
 
 impl<'de> Deserialize<'de> for ResistanceModifier {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let (modified_attribute_id, operator, operand) =
+            <(i64, i64, f64)>::deserialize(deserializer)?;
+        Ok(Self {
+            modified_attribute_id,
+            operator,
+            operand,
+        })
+    }
+}
+
+/// One fitted-module hit point modifier entry
+/// (`docs/hp-bonuses-design.md` section 3):
+/// `[modifiedAttributeId, operator, operand]`, with the
+/// operand baked in at generation time (deserialized from
+/// the 3-element array by the same manual tuple impl as
+/// `ResistanceModifier`). Operator 2 is modAdd, 4 is
+/// postMulAlt, 6 is postPercent (Flutter `dogma_engine` at
+/// `ed698d3`); the pure layer guards every field.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct HitPointModifier {
+    pub modified_attribute_id: i64,
+    pub operator: i64,
+    pub operand: f64,
+}
+
+impl<'de> Deserialize<'de> for HitPointModifier {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -1396,6 +1440,57 @@ mod tests {
                     row.name
                 );
             }
+            // Fitted-module hit point modifiers
+            // (docs/hp-bonuses-design.md section 3):
+            // `Some` only on category 7 rows; entries in the
+            // locked order with no duplicate modified id,
+            // operator 2, 4, or 6, operand finite and != 0.0;
+            // the unapplied marker appears only beside `Some`.
+            const HP_ORDER: [i64; 3] = [263, 265, 9];
+            if let Some(modifiers) = &row.hit_point_modifiers {
+                assert_eq!(
+                    row.category_id, 7,
+                    "hitPointModifiers on non-module row: {:?}",
+                    row.name
+                );
+                let mut last_rank: Option<usize> = None;
+                for modifier in modifiers {
+                    let rank = HP_ORDER
+                        .iter()
+                        .position(|id| *id == modifier.modified_attribute_id)
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "non-hit-point modified id {} on {:?}",
+                                modifier.modified_attribute_id, row.name
+                            )
+                        });
+                    assert!(
+                        last_rank.is_none_or(|last| rank > last),
+                        "hit point modifiers out of locked order or duplicated on {:?}",
+                        row.name
+                    );
+                    last_rank = Some(rank);
+                    assert!(
+                        matches!(modifier.operator, 2 | 4 | 6),
+                        "hit point modifier operator {} on {:?}",
+                        modifier.operator,
+                        row.name
+                    );
+                    assert!(
+                        modifier.operand.is_finite() && modifier.operand != 0.0,
+                        "hit point modifier operand {} on {:?}",
+                        modifier.operand,
+                        row.name
+                    );
+                }
+            }
+            if row.hit_point_modifiers_unapplied {
+                assert!(
+                    row.hit_point_modifiers.is_some(),
+                    "hitPointModifiersUnapplied without hitPointModifiers: {:?}",
+                    row.name
+                );
+            }
         }
         // Spot pins mirroring the generator oracles (design section
         // 5), read from dgmTypeAttributes.csv.bz2 during design.
@@ -2346,6 +2441,146 @@ mod tests {
         assert!(!layered.resistance_modifiers_unapplied);
         let rifter = types.lookup_by_id(587).expect("Rifter row");
         assert_eq!(rifter.resistance_modifiers, None);
+        // Fitted-module hit point modifier counts and spot
+        // pins (docs/hp-bonuses-design.md section 3, the
+        // generator's HIT_POINT_MODIFIER_ORACLES twins):
+        // 675 keyed rows (643 non-empty), 32 marked
+        // unapplied, 643 entries.
+        let hp_rows_count = types
+            .types
+            .iter()
+            .filter(|row| row.hit_point_modifiers.is_some())
+            .count();
+        assert_eq!(hp_rows_count, 675);
+        let hp_nonempty_count = types
+            .types
+            .iter()
+            .filter(|row| {
+                row.hit_point_modifiers
+                    .as_ref()
+                    .is_some_and(|modifiers| !modifiers.is_empty())
+            })
+            .count();
+        assert_eq!(hp_nonempty_count, 643);
+        let hp_marked_count = types
+            .types
+            .iter()
+            .filter(|row| row.hit_point_modifiers_unapplied)
+            .count();
+        assert_eq!(hp_marked_count, 32);
+        let hp_entries_count: usize = types
+            .types
+            .iter()
+            .filter_map(|row| row.hit_point_modifiers.as_ref().map(Vec::len))
+            .sum();
+        assert_eq!(hp_entries_count, 643);
+        let extender = types
+            .lookup_by_id(3831)
+            .expect("Medium Shield Extender II row");
+        assert_eq!(
+            extender
+                .hit_point_modifiers
+                .as_ref()
+                .expect("extender hitPointModifiers"),
+            &[HitPointModifier {
+                modified_attribute_id: 263,
+                operator: 2,
+                operand: 1100.0,
+            }]
+        );
+        assert!(!extender.hit_point_modifiers_unapplied);
+        let plates = types
+            .lookup_by_id(20353)
+            .expect("1600mm Steel Plates II row");
+        assert_eq!(
+            plates
+                .hit_point_modifiers
+                .as_ref()
+                .expect("plates hitPointModifiers"),
+            &[HitPointModifier {
+                modified_attribute_id: 265,
+                operator: 2,
+                operand: 4800.0,
+            }]
+        );
+        let bulkheads = types
+            .lookup_by_id(1335)
+            .expect("Reinforced Bulkheads II row");
+        assert_eq!(
+            bulkheads
+                .hit_point_modifiers
+                .as_ref()
+                .expect("bulkheads hitPointModifiers"),
+            &[HitPointModifier {
+                modified_attribute_id: 9,
+                operator: 4,
+                operand: 1.25,
+            }]
+        );
+        let trimark = types
+            .lookup_by_id(25894)
+            .expect("Large Trimark Armor Pump I row");
+        assert_eq!(
+            trimark
+                .hit_point_modifiers
+                .as_ref()
+                .expect("trimark hitPointModifiers"),
+            &[HitPointModifier {
+                modified_attribute_id: 265,
+                operator: 6,
+                operand: 15.0,
+            }]
+        );
+        let valve = types
+            .lookup_by_id(26056)
+            .expect("Large Dynamic Fuel Valve I row");
+        assert_eq!(
+            valve
+                .hit_point_modifiers
+                .as_ref()
+                .expect("valve hitPointModifiers"),
+            &[HitPointModifier {
+                modified_attribute_id: 265,
+                operator: 6,
+                operand: -10.0,
+            }]
+        );
+        // EM Coating I carries both families: the identity
+        // [[265, 4, 1.0]] beside its resistance entry.
+        let coating = types.lookup_by_id(1197).expect("EM Coating I row");
+        assert_eq!(
+            coating
+                .hit_point_modifiers
+                .as_ref()
+                .expect("coating hitPointModifiers"),
+            &[HitPointModifier {
+                modified_attribute_id: 265,
+                operator: 4,
+                operand: 1.0,
+            }]
+        );
+        assert!(!coating.hit_point_modifiers_unapplied);
+        assert!(
+            coating.resistance_modifiers.is_some(),
+            "EM Coating I must still carry resistanceModifiers"
+        );
+        for type_id in [47804, 1447] {
+            let row = types.lookup_by_id(type_id).expect("unapplied HP row");
+            assert_eq!(row.hit_point_modifiers.as_ref().expect("empty array"), &[]);
+            assert!(row.hit_point_modifiers_unapplied);
+        }
+        let amplifier = types.lookup_by_id(1808).expect("EM Shield Amplifier I row");
+        assert_eq!(amplifier.hit_point_modifiers, None);
+        assert!(!amplifier.hit_point_modifiers_unapplied);
+        let damage_control = types.lookup_by_id(2048).expect("DC II row");
+        assert_eq!(damage_control.hit_point_modifiers, None);
+        assert!(!damage_control.hit_point_modifiers_unapplied);
+        let rifter = types.lookup_by_id(587).expect("Rifter row");
+        assert_eq!(rifter.hit_point_modifiers, None);
+        assert!(!rifter.hit_point_modifiers_unapplied);
+        let subsystem = types.lookup_by_id(45590).expect("Tengu subsystem row");
+        assert_eq!(subsystem.hit_point_modifiers, None);
+        assert!(!subsystem.hit_point_modifiers_unapplied);
     }
 
     #[test]
